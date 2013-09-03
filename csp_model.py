@@ -5,58 +5,81 @@ import math
 import json
 import datetime
 
+import yaml
 import numpy as np
 import pandas as pd
 import coopr.opt as co
 import coopr.pyomo as cp
 
-from csp_model_settings import *
 
 #
 # --- INITIAL SETUP ---
 #
 
+# Load settings
+class AttrDict(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+    def __init__(self, arg=None):
+        super(AttrDict, self).__init__()
+        if isinstance(arg, dict):
+            self.init_from_dict(arg)
+
+    def init_from_dict(self, d):
+        for k, v in d.iteritems():
+            if isinstance(v, dict):
+                self[k] = AttrDict(v)
+            else:
+                self[k] = v
+
+o = AttrDict(yaml.load(open('settings.yaml', 'r')))
+
+
 # Redefine some parameters based on given options
-if use_scale_sf:
-    sf_max = scale_sf * P_max
-if use_E_time:
+if o.use_scale_sf:
+    o.sf_max = o.scale_sf * o.P_max
+if o.use_E_time:
     r_temp_amb = 25
     r_temp_op = 590
     tmax = r_temp_op - (r_temp_op - r_temp_amb) * 0.05
     carnot_mod = 1 - math.sqrt((r_temp_amb + 273) / (tmax + 273))
-    E_max = E_time * P_max / carnot_mod
+    o.E_max = o.E_time * o.P_max / carnot_mod
 
 # Calculate depreciation coefficient for LEC
-dep_csp = ((interest_csp * (1 + interest_csp) ** plant_life)
-           / (((1 + interest_csp) ** plant_life) - 1))
-dep_noncsp = ((interest_noncsp * (1 + interest_noncsp) ** plant_life)
-              / (((1 + interest_noncsp) ** plant_life) - 1))
+dep_csp = ((o.interest.csp * (1 + o.interest.csp) ** o.plant_life)
+           / (((1 + o.interest.csp) ** o.plant_life) - 1))
+dep_noncsp = ((o.interest.noncsp * (1 + o.interest.noncsp) ** o.plant_life)
+              / (((1 + o.interest.noncsp) ** o.plant_life) - 1))
 
 #
 # --- READ INPUT DATA ---
 #
 
-table_t = pd.read_csv(os.path.join(path_input, 'datetimes.csv'), header=None)
+table_t = pd.read_csv(os.path.join(o.path_input, 'datetimes.csv'), header=None)
 list_t = [int(t) for t in table_t[0].tolist()]
-table_i = pd.read_csv(os.path.join(path_input, 'PlantSet.csv'))
+table_i = pd.read_csv(os.path.join(o.path_input, 'PlantSet.csv'))
 list_i = [int(i) for i in table_i.columns.tolist()]
-if i_subset:
-    list_i = sorted(i_subset)
+if o.i_subset:
+    list_i = sorted(o.i_subset)
 
 DTINDEX = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
            for dt in table_t[1]]
 
 # Combined efficiency factor in time step t for plant i [1]
-table_n_el = pd.read_csv(os.path.join(path_input, 'EfficiencyTable.csv'),
+table_n_el = pd.read_csv(os.path.join(o.path_input, 'EfficiencyTable.csv'),
                          index_col=0)
 # DNI [W/m2]
-table_dni = pd.read_csv(os.path.join(path_input, 'DNITable.csv'), index_col=0)
+table_dni = pd.read_csv(os.path.join(o.path_input, 'DNITable.csv'),
+                        index_col=0)
 # Solar field efficiency [1]
-table_n_sf = pd.read_csv(os.path.join(path_input,
+table_n_sf = pd.read_csv(os.path.join(o.path_input,
                          'SolarfieldEfficiencyTable.csv'), index_col=0)
 # Aggregate power demand [kWh]
-table_D = D_scale * pd.read_csv(os.path.join(path_input, demand_filename),
-                                index_col=0, header=None)
+table_D = (o.D_scale *
+           pd.read_csv(os.path.join(o.path_input, o.demand_filename),
+                       index_col=0, header=None))
 
 # Columns: str -> int
 for table in [table_n_el, table_dni, table_n_sf, table_D]:
@@ -65,7 +88,7 @@ for table in [table_n_el, table_dni, table_n_sf, table_D]:
 D_max = float(table_D.max())  # Maximum demand over all timesteps
 
 # last value of index t for which model may still use startup exceptions
-startup_time_bounds = list_t[(startup_time // time_res)]
+startup_time_bounds = list_t[(o.startup_time // o.time_res)]
 
 
 #
@@ -73,7 +96,7 @@ startup_time_bounds = list_t[(startup_time // time_res)]
 #
 
 def generate_model(mode='plan', t_start=None,
-                   horizon=None, E_init=E_init):
+                   horizon=None, E_init=o.E_init):
     """
     Args:
         mode : 'plan' or 'operate'
@@ -143,8 +166,8 @@ def generate_model(mode='plan', t_start=None,
     #
 
     def obj_rule(m):
-        return (lambda_csp * sum(m.cost_csp[i] for i in m.i)
-                + lambda_noncsp * m.cost_noncsp + lambda_slack * m.cost_slack)
+        return (o.lambda_csp * sum(m.cost_csp[i] for i in m.i)
+                + o.lambda_noncsp * m.cost_noncsp + o.lambda_slack * m.cost_slack)
 
     m.obj = cp.Objective(sense=cp.minimize)
     #m.obj.domain = cp.NonNegativeReals
@@ -157,14 +180,14 @@ def generate_model(mode='plan', t_start=None,
         return m.cost_csp[i] == m.cost_csp_con[i] + m.cost_csp_op[i]
 
     def c_cost_csp_con_rule(m, i):
-        return (m.cost_csp_con[i] == dep_csp * ((len(m.t) * time_res) / 8760)
-                * (cost_csp_stor * m.E_built[i]
-                + (cost_csp_sf + csp_rec_per_sf * cost_csp_rec) * m.sf_built[i]
-                + cost_csp_pb * m.P_built[i]))
+        return (m.cost_csp_con[i] == dep_csp * ((len(m.t) * o.time_res) / 8760)
+                * (o.cost.csp_stor * m.E_built[i]
+                + (o.cost.csp_sf + o.csp_rec_per_sf * o.cost.csp_rec) * m.sf_built[i]
+                + o.cost.csp_pb * m.P_built[i]))
 
     def c_cost_csp_op_rule(m, i):
-        return (m.cost_csp_op[i] == m.cost_csp_con[i] * cost_csp_omfrac
-                + (cost_csp_omvar * sum(m.P[t, i] for t in m.t)))
+        return (m.cost_csp_op[i] == m.cost_csp_con[i] * o.cost.csp_omfrac
+                + (o.cost.csp_omvar * sum(m.P[t, i] for t in m.t)))
         # If hybridization allowed:
         # Also add + (cost_burner * sum(m.Q_bak[t, i] for t in m.t))
 
@@ -172,16 +195,16 @@ def generate_model(mode='plan', t_start=None,
         return m.cost_noncsp == (m.cost_noncsp_con + m.cost_noncsp_op)
 
     def c_cost_noncsp_con_rule(m):
-        return (m.cost_noncsp_con == dep_noncsp * ((len(m.t) * time_res) / 8760)
-                * m.P_noncsp_built * cost_noncsp_build)
+        return (m.cost_noncsp_con == dep_noncsp * ((len(m.t) * o.time_res) / 8760)
+                * m.P_noncsp_built * o.cost.noncsp_build)
 
     def c_cost_noncsp_op_rule(m):
         # return (m.cost_noncsp_op == m.cost_noncsp_con * cost_noncsp_omfrac
         #         + sum(m.P_noncsp[t] for t in m.t
         #               if t > startup_time_bounds)
         #         * cost_noncsp_fuel)
-        return (m.cost_noncsp_op == m.cost_noncsp_con * cost_noncsp_omfrac
-                + sum(m.P_noncsp[t] for t in m.t) * cost_noncsp_fuel)
+        return (m.cost_noncsp_op == m.cost_noncsp_con * o.cost.noncsp_omfrac
+                + sum(m.P_noncsp[t] for t in m.t) * o.cost.noncsp_fuel)
 
     def c_cost_slack_rule(m):
         return m.cost_slack == sum(m.P_slack[t] for t in m.t)
@@ -194,27 +217,27 @@ def generate_model(mode='plan', t_start=None,
 
     def c_Q_balance_rule(m, t, i):
         if m.t.order_dict[t] > 1:
-            E_stor_minus_one = ((1 - mu_stor) ** time_res) * m.E_stor[t - 1, i]
+            E_stor_minus_one = ((1 - o.mu_stor) ** o.time_res) * m.E_stor[t - 1, i]
         else:
             E_stor_minus_one = E_init[i]
-        return (m.E_stor[t, i] == E_stor_minus_one + eff_stor * m.Q_sf[t, i]
+        return (m.E_stor[t, i] == E_stor_minus_one + o.eff_stor * m.Q_sf[t, i]
                 + m.Q_bak[t, i] - m.Q_gen[t, i] - m.Q_diss[t, i])
 
     def c_Q_bak_rule(m, t, i):
         # Q_bak is allowed only during the hours within startup_time
         if t < startup_time_bounds:
-            return m.Q_bak[t, i] <= (time_res * m.P_built[i]) / m.n_el[t, i]
+            return m.Q_bak[t, i] <= (o.time_res * m.P_built[i]) / m.n_el[t, i]
         else:
             return m.Q_bak[t, i] == 0
 
     def c_pwr_max_rule(m, t, i):
-        return m.P[t, i] <= time_res * m.P_built[i]
+        return m.P[t, i] <= o.time_res * m.P_built[i]
 
     def c_storage_max_rule(m, t, i):
         return m.E_stor[t, i] <= m.E_built[i]
 
     def c_noncsp_rule(m, t):
-        return m.P_noncsp[t] <= time_res * m.P_noncsp_built
+        return m.P_noncsp[t] <= o.time_res * m.P_noncsp_built
 
     def c_fleet_rule(m, t):
         return (sum(m.P[t, i] for i in m.i) + m.P_noncsp[t]
@@ -222,28 +245,28 @@ def generate_model(mode='plan', t_start=None,
 
     def c_csp_hourly_rule(m, t):
         return (sum(m.P[t, i] for i in m.i) + m.P_slack[t]
-                >= m.D[t] - (noncsp_avail * D_max))
+                >= m.D[t] - (o.noncsp_avail * D_max))
 
     def c_storage_built_rule(m, i):
         if mode == 'plan':
-            return m.E_built[i] <= E_max
+            return m.E_built[i] <= o.E_max
         elif mode == 'operate':
-            return m.E_built[i] == E_max
+            return m.E_built[i] == o.E_max
 
     def c_solarfield_built_rule(m, i):
         if mode == 'plan':
-            return m.sf_built[i] <= sf_max
+            return m.sf_built[i] <= o.sf_max
         elif mode == 'operate':
-            return m.sf_built[i] == sf_max
+            return m.sf_built[i] == o.sf_max
 
     def c_powerblock_built_rule(m, i):
         if mode == 'plan':
-            return m.P_built[i] <= P_max
+            return m.P_built[i] <= o.P_max
         elif mode == 'operate':
-            return m.P_built[i] == P_max
+            return m.P_built[i] == o.P_max
 
     def c_noncsp_built_rule(m):
-        P_noncsp_max = noncsp_avail * (D_max / time_res)
+        P_noncsp_max = o.noncsp_avail * (D_max / o.time_res)
         return m.P_noncsp_built == P_noncsp_max  # [TEMP] was <=
 
     # Build the constraints
@@ -299,7 +322,7 @@ def solve(m, debug=False, save_json=False):
     # TODO
     # opt.log_file
     if save_json:
-        with open(results_file_json, 'w') as f:
+        with open(o.results_file_json, 'w') as f:
             json.dump(results.json_repn(), f, indent=4)
     return instance, opt, results
 
@@ -366,9 +389,9 @@ def get_costs(m):
     lcoe_total = cost_csp.sum() / P.sum()
     # cf per plant and total
     P_built = get_var(m.P_built, [m.i])
-    cf = P / (P_built * len(DTINDEX) * time_res)
+    cf = P / (P_built * len(DTINDEX) * o.time_res)
     cf = cf.fillna(0)
-    cf_total = P.sum() / (P_built.sum() * len(DTINDEX) * time_res)
+    cf_total = P.sum() / (P_built.sum() * len(DTINDEX) * o.time_res)
     # combine
     df = pd.DataFrame({'lcoe': lcoe, 'cf': cf})
     df = df.append(pd.DataFrame({'lcoe': lcoe_total, 'cf': cf_total},
@@ -379,7 +402,7 @@ def get_costs(m):
     except ZeroDivisionError:
         lcoe_noncsp = 0
     cf_noncsp = (get_var(m.P_noncsp, [m.t]).sum()
-                 / (m.P_noncsp_built.value * len(DTINDEX) * time_res))
+                 / (m.P_noncsp_built.value * len(DTINDEX) * o.time_res))
     if np.isnan(cf_noncsp):
         cf_noncsp = 0
     df = df.append(pd.DataFrame({'lcoe': lcoe_noncsp, 'cf': cf_noncsp},
@@ -387,28 +410,28 @@ def get_costs(m):
     return df
 
 
-def solve_iterative(horizon=48, window=24, E_init=E_init):
-    steps = [t for t in list_t if t % (window // time_res) == 0]
+def solve_iterative(horizon=48, window=24, E_init=o.E_init):
+    steps = [t for t in list_t if t % (window // o.time_res) == 0]
     # TODO currently E_init is passed as global, not good!
     aggregates = []
     plantlevels = []
     for step in steps:
         m = generate_model(mode='operate', t_start=step,
-                           horizon=horizon // time_res,
+                           horizon=horizon // o.time_res,
                            E_init=E_init)
         instance, opt, results = solve(m)
         instance.load(results)
         # Gather relevant model results over decision interval, so
         # we only grab [0:window/time_res] steps!
         df = get_aggregate_variables(m)
-        aggregates.append(df.iloc[0:window // time_res])
+        aggregates.append(df.iloc[0:window // o.time_res])
         # Get plant variables
         panel = get_plantlevel_variables(m)
-        plantlevels.append(panel.iloc[:, 0:window // time_res, :])
+        plantlevels.append(panel.iloc[:, 0:window // o.time_res, :])
         # Get E_stor state at the end of the interval to pass on
         # to the next iteration
         _E_stor = get_var(m.E_stor, [m.t, m.i])
-        storage_state_index = (window // time_res) - 1  # -1 for len --> idx
+        storage_state_index = (window // o.time_res) - 1  # -1 for len --> idx
         E_init = _E_stor.iloc[storage_state_index, :]
     return (pd.concat(aggregates), pd.concat(plantlevels, axis=1))
 
