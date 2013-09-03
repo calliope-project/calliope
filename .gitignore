@@ -1,0 +1,5 @@
+*.pyc
+.ipynb_checkpoints
+.venv
+Input
+Output
