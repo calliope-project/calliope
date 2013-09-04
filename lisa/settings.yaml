@@ -55,3 +55,8 @@ plant_life: 25  # Lifetime of a plant [years] (assumption)
 lambda_csp: 1
 lambda_noncsp: 1
 lambda_slack: 1.0e+9
+
+# Operation mode settings
+opmode:
+    horizon: 48
+    window: 24
