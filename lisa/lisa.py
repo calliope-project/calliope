@@ -28,17 +28,25 @@ class Lisa(object):
     >>> lisa.utils.notify()
 
     """
-    def __init__(self, options=None):
+    def __init__(self, config_model=None, config_run=None):
         """
         Args:
             options : override default YAML file containing model settings.
         """
         super(Lisa, self).__init__()
         # Load settings
-        if not options:
-            options = os.path.join(os.path.dirname(__file__), 'settings.yaml')
-        self.options = utils.AttrDict(yaml.load(open(options, 'r')))
-        o = self.options  # For easier access
+        if not config_model:
+            config_model = os.path.join(os.path.dirname(__file__),
+                                        'model_settings.yaml')
+        if not config_run:
+            config_run = os.path.join(os.path.dirname(__file__),
+                                      'run_settings.yaml')
+        self.config_model = utils.AttrDict(yaml.load(open(config_model, 'r')))
+        self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
+        # Override config_model settings if specificed in config_run
+        for k, v in self.config_run.override.iteritems():
+            self.config_model[k] = v
+        o = self.config_model  # For easier access
         # Redefine some parameters based on given options
         if o.use_scale_sf:
             o.sf_max = o.scale_sf * o.P_max
@@ -63,29 +71,30 @@ class Lisa(object):
         Read input data.
 
         """
-        o = self.options
+        o = self.config_model
         d = self.data
-        table_t = pd.read_csv(os.path.join(o.path_input, 'datetimes.csv'),
-                              header=None)
+        path = self.config_run.input.path
+        # Read files
+        table_t = pd.read_csv(os.path.join(path, 'datetimes.csv'), header=None)
         d._t = [int(t) for t in table_t[0].tolist()]
-        table_i = pd.read_csv(os.path.join(o.path_input, 'PlantSet.csv'))
+        table_i = pd.read_csv(os.path.join(path, 'PlantSet.csv'))
         d._i = [int(i) for i in table_i.columns.tolist()]
-        if o.i_subset:
-            d._i = sorted(o.i_subset)
+        if self.config_run.subset_i:
+            d._i = sorted(self.config_run.subset_i)
         d._dt = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
                  for dt in table_t[1]]
         # Combined efficiency factor in time step t for plant i [1]
-        d.n_el = pd.read_csv(os.path.join(o.path_input, 'EfficiencyTable.csv'),
+        d.n_el = pd.read_csv(os.path.join(path, 'EfficiencyTable.csv'),
                              index_col=0)
         # DNI [W/m2]
-        d.dni = pd.read_csv(os.path.join(o.path_input, 'DNITable.csv'),
+        d.dni = pd.read_csv(os.path.join(path, 'DNITable.csv'),
                             index_col=0)
         # Solar field efficiency [1]
-        d.n_sf = pd.read_csv(os.path.join(o.path_input,
+        d.n_sf = pd.read_csv(os.path.join(path,
                              'SolarfieldEfficiencyTable.csv'), index_col=0)
         # Aggregate power demand [kWh]
-        d.D = (o.D_scale *
-               pd.read_csv(os.path.join(o.path_input, o.demand_filename),
+        d.D = (self.config_run.input.D_scale *
+               pd.read_csv(os.path.join(path, self.config_run.input.demand),
                index_col=0, header=None))
         # Columns: str -> int
         for table in [d.n_el, d.dni, d.n_sf, d.D]:
@@ -105,7 +114,7 @@ class Lisa(object):
 
         """
         m = cp.ConcreteModel()
-        o = self.options
+        o = self.config_model
         d = self.data
 
         if not np.iterable(o.E_init):
@@ -308,18 +317,22 @@ class Lisa(object):
     # --- INSTANTIATE & SOLVE THE MODEL ---
     #
 
+    def run(self):
+        self.generate_model()  # model gets attached to model.m property
+        self.solve()
+        self.process_outputs()
+
     def solve(self, debug=False, save_json=False):
         """
         Args:
             debug : (default False)
             save_json : (default False) Save optimization results to
-                        disk as results.json
+                        the given file as JSON.
 
         Returns:
             (instance, opt, results)
 
         """
-        o = self.options
         m = self.m
         instance = m.create()
         instance.preprocess()
@@ -336,9 +349,12 @@ class Lisa(object):
         # TODO
         # opt.log_file
         if save_json:
-            with open(o.results_file_json, 'w') as f:
+            with open(save_json, 'w') as f:
                 json.dump(results.json_repn(), f, indent=4)
-        return (instance, opt, results)
+        self.instance = instance
+        self.opt = opt
+        self.results = results
+        self.pyomo_output = out
 
     def get_var(self, var, dims):
         """Return output for variable `var` as a series or dataframe
@@ -397,7 +413,7 @@ class Lisa(object):
     def get_costs(self):
         m = self.m
         d = self.data
-        o = self.options
+        o = self.config_model
         # lcoe per plant and total
         cost_csp = self.get_var(m.cost_csp, [m.i])
         P = self.get_var(m.P, [m.t, m.i]).sum()  # sum over t
@@ -429,7 +445,7 @@ class Lisa(object):
     def solve_iterative(self):
         m = self.m
         d = self.data
-        o = self.options
+        o = self.config_model
         window_adj = o.opmode.window // o.time_res
         steps = [t for t in d._t if (t % window_adj) == 0]
         aggregates = []
@@ -453,8 +469,20 @@ class Lisa(object):
             self.d.E_init = _E_stor.iloc[storage_state_index, :]
         return (pd.concat(aggregates), pd.concat(plantlevels, axis=1))
 
-
-if __name__ == '__main__':
-    model = Lisa()
-    model.generate_model()  # attached to model.m property
-    instance, opt, results = model.solve()
+    def process_outputs(self):
+        # Load results into model instance for access via model variables
+        r = self.instance.load(self.results)
+        if r is False:
+            raise UserWarning('Could not load results into model instance.')
+        # Save results to disk if specified in configuration
+        if self.config_run.output.save is True:
+            overall = self.get_aggregate_variables()
+            plant_parameters = self.get_plant_parameters(built_only=False)
+            plants_output = self.get_plantlevel_variables().to_frame()
+            costs = self.get_costs()
+            output_files = {'overall.csv': overall,
+                            'plant_parameters.csv': plant_parameters,
+                            'plants_output.csv': plants_output,
+                            'costs.csv': costs}
+            for k, v in output_files.iteritems():
+                v.to_csv(os.path.join(self.config_run.output.path, k))

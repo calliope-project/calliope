@@ -1,0 +1,25 @@
+#
+# RUN SETTINGS
+#
+
+input:
+    path:  'Input/NA-6hr-2005'
+    demand: 'DemandTable_EU.csv'
+    D_scale: 0.32
+
+output:
+    save: false
+    path: 'Output'
+
+subset_i: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable subsetting
+
+#
+# MODEL SETTINGS OVERRIDE
+#
+
+override:
+    time_res: 6  # Make sure to adjust this according to the input data selected above
+    P_max: 100000
+    sf_max: 7950000
+    E_time: 30
+    scale_sf: 32

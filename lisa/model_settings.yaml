@@ -1,0 +1,48 @@
+# General parameters
+time_res: 1  # Time resolution [hours per time step]
+startup_time: 12  # Length of startup time (during which backup burner is allowed) [h]
+
+# Constraints
+noncsp_avail: 0.0  # Available non-CSP generation capacity [fraction of peak demand]
+                   # TODO Set to `none` to disable this constraint and allow free determination of non-CSP capacity built
+
+# Objective function weights
+lambda_csp: 1
+lambda_noncsp: 1
+lambda_slack: 1.0e+9
+
+# CSP plant sizing
+use_E_time: true  # Use E_time to calculate E_max?
+use_scale_sf: false  # Use scale_sf to calculate sf_max based on P_max?
+P_max: 20000  # Maximum turbine size [kWe]
+sf_max: 318000  # Maximum solar field size [m2], overridden if scale_sf is True
+E_time: 15  # Maximum storage time [h]
+E_max: 745321  # Maximum storage size [kWht], overriden by E_time_ if use_E_time = 1
+scale_sf: 15.9  # Scaling factor for solar field, default is the ratio of the Gemasolar plant
+
+# Other CSP plant parameters
+eff_stor: 1.0  # Storage throughput efficiency [dimensionless]
+mu_stor: 0.002  # Storage heat loss rate [per hour]
+E_init: 0  # Initial storage contents [kWht]
+
+# Costs and related parameters
+csp_rec_per_sf: 0.54  # kWt of receiver needed per m2 of solar field [dimensionless]
+cost:
+    csp_stor: 30  # Cost of storage [USD/kWht]
+    csp_sf: 200  # Cost of solar field [USD/m2]
+    csp_rec: 200  # Cost of tower and receiver [EUR/kWt]
+    csp_pb: 1350  # Cost of power block [USD/kWe]
+    csp_omfrac: 0  # Yearly O&M costs [fraction of total investment]
+    csp_omvar: 0.002  # Variable O&M costs [USD/kWe]
+    noncsp_build: 750  # Cost of construction for non-CSP plants [USD/kWe]
+    noncsp_fuel: 0.12  # Cost of running non-CSP plants [USD/kWhe]
+    noncsp_omfrac: 0  # Yearly non-CSP O&M costs [fraction of total investment
+interest:
+    csp: 0.10  # Interest rate for CSP plants [dimensionless]
+    noncsp: 0.10  # Interest rate for non-CSP plants [dimensionless]
+plant_life: 25  # Lifetime of a plant [years]
+
+# Operation mode settings
+opmode:
+    horizon: 48  # Optimization period length [hours]
+    window: 24  # Operation period length [hours]
