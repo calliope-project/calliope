@@ -18,7 +18,6 @@ subset_i: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable sub
 #
 
 override:
-    time_res: 6  # Make sure to adjust this according to the input data selected above
     P_max: 100000
     sf_max: 7950000
     E_time: 30

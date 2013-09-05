@@ -1,5 +1,4 @@
 # General parameters
-time_res: 1  # Time resolution [hours per time step]
 startup_time: 12  # Length of startup time (during which backup burner is allowed) [h]
 
 # Constraints
