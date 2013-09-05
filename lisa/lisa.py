@@ -20,12 +20,11 @@ class Lisa(object):
     """
     Large-scale international solar power arrangement (Lisa) model
 
-    Canonical usage:
+    Canonical use in an IPython notebook cell:
 
-    >>> model = lisa.Lisa()
-    >>> model.generate_model()  # Pyomo model attached to model.m property
-    >>> instance, opt, results = model.solve()
-    >>> lisa.utils.notify()
+        model = lisa.Lisa()
+        model.run()
+        lisa.utils.notify()
 
     """
     def __init__(self, config_model=None, config_run=None):
@@ -484,5 +483,11 @@ class Lisa(object):
                             'plant_parameters.csv': plant_parameters,
                             'plants_output.csv': plants_output,
                             'costs.csv': costs}
+            # Create output dir, but ignore if it already exists
+            try:
+                os.makedirs(self.config_run.output.path)
+            except OSError:  # Hoping this isn't raised for more serious stuff
+                pass
+            # Write all files to output dir
             for k, v in output_files.iteritems():
                 v.to_csv(os.path.join(self.config_run.output.path, k))

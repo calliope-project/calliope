@@ -1,0 +1,37 @@
+#
+# PARALLELIZATION SETTINGS
+#
+
+# NB: run_settings.output.save is always set to true and
+# run_settings.output.path is overridden by the name
+# defined here:
+
+name: noncsp_avail_test  # Name of this parallel run
+
+#
+# ITERATIONS
+#
+
+# Give iterations  as `parameter: [values]` entries
+
+iterations_model:
+    noncsp_avail: [0.0, 0.5, 0.9]
+
+iterations_run:
+    input.demand: ['DemandTable_EU.csv', 'DemandTable_CA.csv', 'DemandTable_Flat.csv']
+
+#
+# RUN SETTINGS
+#
+
+run_settings:
+    input:
+        path: '../../Input/NA-6hr-2005'
+        D_scale: 0.32
+    subset_i: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable subsetting
+    override:
+        time_res: 6  # Make sure to adjust this according to the input data selected above
+        P_max: 100000
+        sf_max: 7950000
+        E_time: 30
+        scale_sf: 32

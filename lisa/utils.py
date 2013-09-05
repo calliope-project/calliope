@@ -23,6 +23,34 @@ class AttrDict(dict):
             else:
                 self[k] = v
 
+    def set_key(self, key, value):
+        if '.' in key:
+            key, remainder = key.split('.', 1)
+            try:
+                self[key].set_key(remainder, value)
+            except KeyError:
+                self[key] = AttrDict()
+                self[key].set_key(remainder, value)
+        else:
+            self[key] = value
+
+    def get_key(self, key):
+        if '.' in key:
+            key, remainder = key.split('.', 1)
+            value = self[key].get_key(remainder)
+        else:
+            return self[key]
+        return value
+
+    def as_dict(self):
+        d = {}
+        for k, v in self.iteritems():
+            if isinstance(v, AttrDict):
+                d[k] = v.as_dict()
+            else:
+                d[k] = v
+        return d
+
 
 @contextlib.contextmanager
 def capture_output():
