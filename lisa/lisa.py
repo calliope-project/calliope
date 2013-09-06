@@ -82,13 +82,17 @@ class Lisa(object):
         path = self.config_run.input.path
         # Read files
         table_t = pd.read_csv(os.path.join(path, 'datetimes.csv'), header=None)
+        table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+                         for dt in table_t[1]]
+        if self.config_run.subset_t:
+            table_t = table_t.loc[self.config_run.subset_t[0]:
+                                  self.config_run.subset_t[1]]
         d._t = [int(t) for t in table_t[0].tolist()]
+        d._dt = table_t.index
         table_i = pd.read_csv(os.path.join(path, 'PlantSet.csv'))
         d._i = [int(i) for i in table_i.columns.tolist()]
         if self.config_run.subset_i:
             d._i = sorted(self.config_run.subset_i)
-        d._dt = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-                 for dt in table_t[1]]
         # Combined efficiency factor in time step t for plant i [1]
         d.n_el = pd.read_csv(os.path.join(path, 'EfficiencyTable.csv'),
                              index_col=0)

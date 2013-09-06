@@ -3,15 +3,16 @@
 #
 
 input:
-    path:  'Input/NA-6hr-2005'
+    path:  'Input/NA-6hr-full'
     demand: 'DemandTable_EU.csv'
-    D_max: 800000  # 100000 * 10 * 0.8
+    D_max: 800000  # Set to: P_max * len(subset_i) * 0.8
 
 output:
     save: false
     path: 'Output'
 
 subset_i: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable subsetting
+subset_t: ['2005-01-01', '2005-12-31']
 
 #
 # MODEL SETTINGS OVERRIDE
