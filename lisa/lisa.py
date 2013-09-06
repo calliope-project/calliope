@@ -99,14 +99,15 @@ class Lisa(object):
         d.n_sf = pd.read_csv(os.path.join(path,
                              'SolarfieldEfficiencyTable.csv'), index_col=0)
         # Aggregate power demand [kWh]
-        d.D = (self.config_run.input.D_scale *
-               pd.read_csv(os.path.join(path, self.config_run.input.demand),
-               index_col=0, header=None))
+        d.D = pd.read_csv(os.path.join(path, self.config_run.input.demand),
+                          index_col=0, header=None)
+        # Normalize demand to (0, 1), then multiply by the desired demand peak,
+        # scaling this peak according to time_res
+        d.D_max = self.config_run.input.D_max
+        d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res
         # Columns: str -> int
         for table in [d.n_el, d.dni, d.n_sf, d.D]:
             table.columns = [int(c) for c in table.columns]
-        # Maximum demand over all timesteps
-        d.D_max = float(d.D.max())
         # Last index t for which model may still use startup exceptions
         d.startup_time_bounds = d._t[int(o.startup_time / d.time_res)]
 

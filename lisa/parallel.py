@@ -11,10 +11,19 @@ from . import utils
 
 
 class LisaParallelizer(object):
-    """docstring for LisaParallelizer"""
-    def __init__(self, config=None):
+    """docstring for LisaParallelizer
+
+    Args:
+        additional_lines : can override additional_lines setting from
+                           the parallel_settings.yaml file.
+
+    """
+    def __init__(self, config=None, target_dir=None, additional_lines=None):
         super(LisaParallelizer, self).__init__()
         self.config = utils.AttrDict(yaml.load(open(config, 'r')))
+        self.target_dir = target_dir
+        if additional_lines:
+            self.config.additional_lines = additional_lines
 
     def generate_iterations(self):
         keys = (['override.' + c for c in self.config.iterations_model.keys()]
@@ -24,11 +33,11 @@ class LisaParallelizer(object):
         df = pd.DataFrame(list(itertools.product(*values)), columns=keys)
         return df
 
-    def generate_runs(self, target_dir=None):
+    def generate_runs(self):
         c = self.config
         # Create output directory
-        if target_dir:
-            out_dir = os.path.join(target_dir, c.name)
+        if self.target_dir:
+            out_dir = os.path.join(self.target_dir, c.name)
         else:
             out_dir = c.name
         os.makedirs(out_dir)
@@ -53,10 +62,16 @@ class LisaParallelizer(object):
             with open(os.path.join(out_dir, settings), 'w') as f:
                 yaml.dump(iteration_config.as_dict(), f)
             # Write model run script
-            run = 'run_{}.py'.format(index_str)
+            run = 'run_{}.sh'.format(index_str)
             with open(os.path.join(out_dir, run), 'w') as f:
-                f.write('#!/usr/bin/env python\n')
-                f.write('import lisa\n')
+                f.write('#!/bin/sh\n')
+                if c.additional_lines:
+                    f.write(c.additional_lines + '\n')
+                # Set job name
+                if c.environment == 'bsub':
+                    f.write('#BSUB -J {}{}'.format(c.name, index_str))
+                # Write model commands
+                f.write('python -c "import lisa\n')
                 f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(settings))
-                f.write('model.run()\n')
+                f.write('model.run()"\n')
             os.chmod(os.path.join(out_dir, run), 0755)

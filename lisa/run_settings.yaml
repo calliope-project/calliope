@@ -5,7 +5,7 @@
 input:
     path:  'Input/NA-6hr-2005'
     demand: 'DemandTable_EU.csv'
-    D_scale: 0.32
+    D_max: 800000  # 100000 * 10 * 0.8
 
 output:
     save: false

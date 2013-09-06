@@ -7,6 +7,8 @@
 # defined here:
 
 name: noncsp_avail_test  # Name of this parallel run
+environment: bsub  # Choices: local, bsub
+additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
 
 #
 # ITERATIONS
@@ -27,10 +29,9 @@ iterations_run:
 run_settings:
     input:
         path: '../../Input/NA-6hr-2005'
-        D_scale: 0.32
+        D_max: 800000  # 100000 * 10 * 0.8
     subset_i: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable subsetting
     override:
         P_max: 100000
         sf_max: 7950000
         E_time: 30
-        scale_sf: 32
