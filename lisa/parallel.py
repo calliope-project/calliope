@@ -3,6 +3,7 @@ from __future__ import division
 
 import itertools
 import os
+import shutil
 
 import pandas as pd
 import yaml
@@ -11,8 +12,7 @@ from . import utils
 
 
 class LisaParallelizer(object):
-    """docstring for LisaParallelizer
-
+    """
     Args:
         additional_lines : can override additional_lines setting from
                            the parallel_settings.yaml file.
@@ -20,6 +20,7 @@ class LisaParallelizer(object):
     """
     def __init__(self, config=None, target_dir=None, additional_lines=None):
         super(LisaParallelizer, self).__init__()
+        self.config_file = config
         self.config = utils.AttrDict(yaml.load(open(config, 'r')))
         self.target_dir = target_dir
         if additional_lines:
@@ -42,9 +43,14 @@ class LisaParallelizer(object):
             out_dir = c.name
         os.makedirs(out_dir)
         iterations = self.generate_iterations()
-        # Save iterations to disk to figure out what all the numbers mean!
+        # Save run settings in out_dir to figure out what all the numbers mean!
         os.makedirs(os.path.join(out_dir, 'Output'))
         iterations.to_csv(os.path.join(out_dir, 'Output', 'iterations.csv'))
+        shutil.copy(self.config_file, os.path.join(out_dir, 'Output',
+                                                   'parallel_settings.yaml'))
+        # TODO also save model settings object to out_dir to ensure
+        # that even if defaults change,
+        # can recreate exact model settings at any time
         for row in iterations.iterrows():
             # Generate configuration object
             index, item = row
@@ -69,7 +75,7 @@ class LisaParallelizer(object):
                     f.write(c.additional_lines + '\n')
                 # Set job name
                 if c.environment == 'bsub':
-                    f.write('#BSUB -J {}{}'.format(c.name, index_str))
+                    f.write('#BSUB -J {}{}\n'.format(c.name, index_str))
                 # Write model commands
                 f.write('python -c "import lisa\n')
                 f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(settings))
