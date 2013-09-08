@@ -64,14 +64,3 @@ def capture_output():
         sys.stdout, sys.stderr = old_out, old_err
         out[0] = out[0].getvalue()
         out[1] = out[1].getvalue()
-
-
-def notify(text=None, title='Model run is done'):
-    try:
-        import gntp.notifier
-    except ImportError:
-        raise UserWarning('Could not import gntp.notifier, '
-                          'cannot send notification.')
-    image_path = os.path.join(os.path.dirname(__file__), 'notify.png')
-    image = open(image_path, 'rb').read()
-    gntp.notifier.mini(text, title=title, applicationIcon=image)
