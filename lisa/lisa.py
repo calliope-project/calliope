@@ -78,7 +78,6 @@ class Lisa(object):
         """
         o = self.config_model
         d = self.data
-        d.time_res = self.get_timeres()
         path = self.config_run.input.path
         # Read files
         table_t = pd.read_csv(os.path.join(path, 'datetimes.csv'), header=None)
@@ -87,33 +86,40 @@ class Lisa(object):
         if self.config_run.subset_t:
             table_t = table_t.loc[self.config_run.subset_t[0]:
                                   self.config_run.subset_t[1]]
-        d._t = [int(t) for t in table_t[0].tolist()]
-        d._dt = table_t.index
+            s = slice(table_t[0][0], table_t[0][-1] + 1)
+        else:
+            s = slice(None)
+        d._t = pd.Series([int(t) for t in table_t[0].tolist()])
+        d._dt = pd.Series(table_t.index)
+        # First set time_res_static across all data
+        d.time_res_static = self.get_timeres()
+        # From time_res_static, initialize time_res_series
+        d.time_res_series = pd.Series(d.time_res_static, index=d._t.index)
         table_i = pd.read_csv(os.path.join(path, 'PlantSet.csv'))
         d._i = [int(i) for i in table_i.columns.tolist()]
         if self.config_run.subset_i:
             d._i = sorted(self.config_run.subset_i)
         # Combined efficiency factor in time step t for plant i [1]
         d.n_el = pd.read_csv(os.path.join(path, 'EfficiencyTable.csv'),
-                             index_col=0)
+                             index_col=0)[s]
         # DNI [W/m2]
         d.dni = pd.read_csv(os.path.join(path, 'DNITable.csv'),
-                            index_col=0)
+                            index_col=0)[s]
         # Solar field efficiency [1]
         d.n_sf = pd.read_csv(os.path.join(path,
-                             'SolarfieldEfficiencyTable.csv'), index_col=0)
+                             'SolarfieldEfficiencyTable.csv'), index_col=0)[s]
         # Aggregate power demand [kWh]
         d.D = pd.read_csv(os.path.join(path, self.config_run.input.demand),
-                          index_col=0, header=None)
+                          index_col=0, header=None)[s]
         # Normalize demand to (0, 1), then multiply by the desired demand peak,
         # scaling this peak according to time_res
         d.D_max = self.config_run.input.D_max
-        d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res
+        d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res_static
         # Columns: str -> int
         for table in [d.n_el, d.dni, d.n_sf, d.D]:
             table.columns = [int(c) for c in table.columns]
         # Last index t for which model may still use startup exceptions
-        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res)]
+        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
 
     def generate_model(self, mode='plan', t_start=None):
         """
@@ -124,6 +130,26 @@ class Lisa(object):
             t_start : must be specified for mode=='operate'
 
         """
+        #
+        # Helper functions
+        #
+
+        def prev(t):
+            """Return `t-1` even if `t` is not continuous.
+
+            E.g. if t is [0, 1, 2, 6, 7, 8] prev(6) will return 2.
+
+            """
+            idx = self.data._t.index.get_loc(t) - 1
+            if idx >= 0:
+                return self.data._t.iat[idx]
+            else:
+                raise KeyError('<0')
+
+        #
+        # Setup
+        #
+
         m = cp.ConcreteModel()
         o = self.config_model
         d = self.data
@@ -142,7 +168,7 @@ class Lisa(object):
         if mode == 'plan':
             m.t = cp.Set(initialize=d._t, ordered=True)
         elif mode == 'operate':
-            horizon_adj = int(o.opmode.horizon / d.time_res)
+            horizon_adj = int(o.opmode.horizon / d.time_res_static)
             m.t = cp.Set(initialize=d._t[t_start:t_start+horizon_adj],
                          ordered=True)
         # Sites
@@ -160,6 +186,8 @@ class Lisa(object):
                           initialize=lambda m, t, i: float(d.n_sf.loc[t, i]))
         # table_D is a pandas dataframe with one column, named 1
         m.D = cp.Param(m.t, initialize=lambda m, t: float(d.D.loc[t, 1]))
+        m.time_res = cp.Param(m.t,
+                              initialize=lambda m, t: float(d.time_res_series.loc[t]))
 
         #
         # Variables
@@ -206,7 +234,7 @@ class Lisa(object):
 
         def c_cost_csp_con_rule(m, i):
             return (m.cost_csp_con[i] == d.dep_csp
-                    * ((len(m.t) * d.time_res) / 8760)
+                    * (sum(m.time_res[t] for t in m.t) / 8760)
                     * (o.cost.csp_stor * m.E_built[i]
                     + (o.cost.csp_sf + o.csp_rec_per_sf * o.cost.csp_rec)
                     * m.sf_built[i] + o.cost.csp_pb * m.P_built[i]))
@@ -222,7 +250,7 @@ class Lisa(object):
 
         def c_cost_noncsp_con_rule(m):
             return (m.cost_noncsp_con == d.dep_noncsp
-                    * ((len(m.t) * d.time_res) / 8760)
+                    * (sum(m.time_res[t] for t in m.t) / 8760)
                     * m.P_noncsp_built * o.cost.noncsp_build)
 
         def c_cost_noncsp_op_rule(m):
@@ -245,8 +273,9 @@ class Lisa(object):
 
         def c_Q_balance_rule(m, t, i):
             if m.t.order_dict[t] > 1:
-                E_stor_minus_one = ((1 - o.mu_stor)
-                                    ** d.time_res) * m.E_stor[t - 1, i]
+                E_stor_minus_one = (((1 - o.mu_stor)
+                                    ** m.time_res[prev(t)])
+                                    * m.E_stor[prev(t), i])
             else:
                 E_stor_minus_one = d.E_init[i]
             return (m.E_stor[t, i] == E_stor_minus_one
@@ -256,19 +285,19 @@ class Lisa(object):
         def c_Q_bak_rule(m, t, i):
             # Q_bak is allowed only during the hours within startup_time
             if t < d.startup_time_bounds:
-                return m.Q_bak[t, i] <= (d.time_res
+                return m.Q_bak[t, i] <= (m.time_res[t]
                                          * m.P_built[i]) / m.n_el[t, i]
             else:
                 return m.Q_bak[t, i] == 0
 
         def c_pwr_max_rule(m, t, i):
-            return m.P[t, i] <= d.time_res * m.P_built[i]
+            return m.P[t, i] <= m.time_res[t] * m.P_built[i]
 
         def c_storage_max_rule(m, t, i):
             return m.E_stor[t, i] <= m.E_built[i]
 
         def c_noncsp_rule(m, t):
-            return m.P_noncsp[t] <= d.time_res * m.P_noncsp_built
+            return m.P_noncsp[t] <= m.time_res[t] * m.P_noncsp_built
 
         def c_fleet_rule(m, t):
             return (sum(m.P[t, i] for i in m.i) + m.P_noncsp[t]
@@ -297,7 +326,7 @@ class Lisa(object):
                 return m.P_built[i] == o.P_max
 
         def c_noncsp_built_rule(m):
-            P_noncsp_max = o.noncsp_avail * (d.D_max / d.time_res)
+            P_noncsp_max = o.noncsp_avail * (d.D_max / d.time_res_static)
             return m.P_noncsp_built == P_noncsp_max  # [TEMP] was <=
 
         # Build the constraints
@@ -423,7 +452,6 @@ class Lisa(object):
 
     def get_costs(self):
         m = self.m
-        d = self.data
         # lcoe per plant and total
         cost_csp = self.get_var(m.cost_csp, [m.i])
         P = self.get_var(m.P, [m.t, m.i]).sum()  # sum over t
@@ -432,9 +460,9 @@ class Lisa(object):
         lcoe_total = cost_csp.sum() / P.sum()
         # cf per plant and total
         P_built = self.get_var(m.P_built, [m.i])
-        cf = P / (P_built * len(d._dt) * d.time_res)
+        cf = P / (P_built * sum(m.time_res[t] for t in m.t))
         cf = cf.fillna(0)
-        cf_total = P.sum() / (P_built.sum() * len(d._dt) * d.time_res)
+        cf_total = P.sum() / (P_built.sum() * sum(m.time_res[t] for t in m.t))
         # combine
         df = pd.DataFrame({'lcoe': lcoe, 'cf': cf})
         df = df.append(pd.DataFrame({'lcoe': lcoe_total, 'cf': cf_total},
@@ -445,7 +473,7 @@ class Lisa(object):
         except ZeroDivisionError:
             lcoe_noncsp = 0
         cf_noncsp = (self.get_var(m.P_noncsp, [m.t]).sum()
-                     / (m.P_noncsp_built.value * len(d._dt) * d.time_res))
+                     / (m.P_noncsp_built.value * sum(m.time_res[t] for t in m.t)))
         if np.isnan(cf_noncsp):
             cf_noncsp = 0
         df = df.append(pd.DataFrame({'lcoe': lcoe_noncsp, 'cf': cf_noncsp},
@@ -456,7 +484,7 @@ class Lisa(object):
         m = self.m
         d = self.data
         o = self.config_model
-        window_adj = int(o.opmode.window / d.time_res)
+        window_adj = int(o.opmode.window / d.time_res_static)
         steps = [t for t in d._t if (t % window_adj) == 0]
         aggregates = []
         plantlevels = []

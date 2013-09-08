@@ -3,7 +3,7 @@
 #
 
 input:
-    path:  'Input/NA-6hr-full'
+    path:  'Input/NA-1hr-full'
     demand: 'DemandTable_EU.csv'
     D_max: 800000  # Set to: P_max * len(subset_i) * 0.8
 
