@@ -75,6 +75,11 @@ class Lisa(object):
         """
         Read input data.
 
+        Data indexing: if subset_t is set, a subset of the data is
+        selected, and all data including their indices are subsetted.
+        d._t maps a simple [0, data length] index to the actual t index
+        used.
+
         """
         o = self.config_model
         d = self.data
@@ -90,11 +95,11 @@ class Lisa(object):
         else:
             s = slice(None)
         d._t = pd.Series([int(t) for t in table_t[0].tolist()])
-        d._dt = pd.Series(table_t.index)
+        d._dt = pd.Series(table_t.index, index=d._t)
         # First set time_res_static across all data
         d.time_res_static = self.get_timeres()
         # From time_res_static, initialize time_res_series
-        d.time_res_series = pd.Series(d.time_res_static, index=d._t.index)
+        d.time_res_series = pd.Series(d.time_res_static, index=d._t)
         table_i = pd.read_csv(os.path.join(path, 'PlantSet.csv'))
         d._i = [int(i) for i in table_i.columns.tolist()]
         if self.config_run.subset_i:
@@ -140,9 +145,17 @@ class Lisa(object):
             E.g. if t is [0, 1, 2, 6, 7, 8] prev(6) will return 2.
 
             """
-            idx = self.data._t.index.get_loc(t) - 1
-            if idx >= 0:
-                return self.data._t.iat[idx]
+            # Create an index to look up t, and save it for later use
+            try:
+                # Check if _t_index exists
+                self._t_index.name
+            except AttributeError:
+                self._t_index = pd.Index(self.data._t)
+            # Get the location of t in the index and use it to retrieve
+            # the desired value, raising an error if it's <0
+            loc = self._t_index.get_loc(t) - 1
+            if loc >= 0:
+                return self.data._t.iat[loc]
             else:
                 raise KeyError('<0')
 
@@ -407,7 +420,7 @@ class Lisa(object):
             df = pd.Series([cp.value(var[i]) for i in sorted(dims[0].value)])
             idx = dims[0]
             if idx.name == 't':
-                df.index = d._dt[idx.first():idx.last() + 1]
+                df.index = d._dt.loc[idx.first():idx.last()]
             elif idx.name == 'i':
                 df.index = sorted(idx.value)
         elif len(dims) == 2:
@@ -415,7 +428,7 @@ class Lisa(object):
                               columns=sorted(dims[1].value))
             for i, v in var.iteritems():
                 df.loc[i[0], i[1]] = cp.value(v)
-            df.index = d._dt[dims[0].first():dims[0].last() + 1]
+            df.index = d._dt.loc[dims[0].first():dims[0].last()]
         return df
 
     def get_aggregate_variables(self):
