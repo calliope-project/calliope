@@ -3,7 +3,6 @@ from __future__ import division
 
 import contextlib
 from cStringIO import StringIO
-import os
 
 
 class AttrDict(dict):
@@ -50,6 +49,18 @@ class AttrDict(dict):
             else:
                 d[k] = v
         return d
+
+    def keys_nested(self, subkeys_as='list'):
+        keys = []
+        for k, v in self.iteritems():
+            if isinstance(v, AttrDict):
+                if subkeys_as == 'list':
+                    keys.extend([k + '.' + kk for kk in v.keys_nested()])
+                elif subkeys_as == 'dict':
+                    keys.append({k: v.keys_nested(subkeys_as=subkeys_as)})
+            else:
+                keys.append(k)
+        return keys
 
 
 @contextlib.contextmanager
