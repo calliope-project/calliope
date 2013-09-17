@@ -47,10 +47,26 @@ class TimeSummarizer(object):
                 how = self.known_data_types[k]
                 if len(how) == 2:
                     method = self.methods[how[0]]
-                    data[k][s] = method(data[k][s], data[how[1]])
+                    df = method(data[k][s], data[how[1]])
+                    # If not t_range implies working on whole time series,
+                    # so we replace the existing time series completely
+                    # to get around indexing problems
+                    if not t_range:
+                        data[k] = df
+                    else:
+                        data[k][s] = df
                 else:
                     method = self.methods[how]
-                    data[k][s] = method(data[k][s])
+                    df = method(data[k][s])
+                    if not t_range:
+                        data[k] = df
+                    else:
+                        data[k][s] = df
+                    data[k][s] = df
+        # If not t_range (implies working on entire time series), also add
+        # time_res to dataset (if t_range set, this happens inside
+        # dynamic_timestepper)
+        data['time_res_series'] = pd.Series(resolution, index=data['_t'])
 
     def mask_where_zero_dni(self, data):
         """Return a mask to summarize where DNI across all sites is zero"""
@@ -107,7 +123,7 @@ class TimeSummarizer(object):
                              * target.iloc[i*self.resolution+j, :])
             weighted = weighted / weight.iloc[i*self.resolution:i*self.resolution+self.resolution, :].sum()
             weighted[weighted.isnull()] = 0
-            df.iloc[i*self.resolution, :] = weighted
+            df.iloc[i, :] = weighted
         target = df
         return target
 
