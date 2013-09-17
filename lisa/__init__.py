@@ -7,3 +7,4 @@ from .lisa import Lisa
 from .parallel import LisaParallelizer
 from .time import TimeSummarizer
 from . import utils
+from . import parallel_tools

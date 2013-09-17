@@ -21,6 +21,7 @@ iterations_model:
 
 iterations_run:
     input.demand: ['DemandTable_EU.csv', 'DemandTable_CA.csv', 'DemandTable_Flat.csv']
+    subset_t: [['2005-01-01', '2005-12-31'], ['2006-01-01', '2006-12-31']]
 
 #
 # RUN SETTINGS
