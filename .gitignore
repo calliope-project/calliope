@@ -1,5 +1,9 @@
 *.pyc
+*.ipynb
 .ipynb_checkpoints
 .venv
 Input
 Output
+runs
+runs_configs
+Logs

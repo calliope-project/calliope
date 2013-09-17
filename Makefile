@@ -1,2 +1,5 @@
 deploy:
-	scp -r * chemeng_cluster:~/lisa-pyomo
+	scp -r lisa brutus:~/lisa
+
+deploy-data:
+	rsync --progress -avhe ssh Input/* brutus:~/lisa/Input
