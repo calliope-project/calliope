@@ -95,11 +95,11 @@ class Lisa(object):
         else:
             s = slice(None)
         d._t = pd.Series([int(t) for t in table_t[0].tolist()])
-        d._dt = pd.Series(table_t.index, index=d._t)
+        d._dt = pd.Series(table_t.index, index=d._t.tolist())
         # First set time_res_static across all data
         d.time_res_static = self.get_timeres()
         # From time_res_static, initialize time_res_series
-        d.time_res_series = pd.Series(d.time_res_static, index=d._t)
+        d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
         table_i = pd.read_csv(os.path.join(path, 'PlantSet.csv'))
         d._i = [int(i) for i in table_i.columns.tolist()]
         if self.config_run.subset_i:

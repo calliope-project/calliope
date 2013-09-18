@@ -62,11 +62,11 @@ class TimeSummarizer(object):
                         data[k] = df
                     else:
                         data[k][s] = df
-                    data[k][s] = df
         # If not t_range (implies working on entire time series), also add
         # time_res to dataset (if t_range set, this happens inside
         # dynamic_timestepper)
-        data['time_res_series'] = pd.Series(resolution, index=data['_t'])
+        if not t_range:
+            data['time_res_series'] = pd.Series(resolution, index=data['_t'])
 
     def mask_where_zero_dni(self, data):
         """Return a mask to summarize where DNI across all sites is zero"""
@@ -142,6 +142,9 @@ class TimeSummarizer(object):
         return df
 
     def _reduce_cut(self, df):
-        """Only keep the first timestep"""
-        df = df.reindex(self.new_index)
+        """Cut away unwanted rows"""
+        if len(self.new_index) == 1:
+            df = pd.Series(df.iloc[0], index=self.new_index)
+        else:
+            df = df.reindex(self.new_index)
         return df
