@@ -32,15 +32,14 @@ class TimeSummarizer(object):
         if not t_range:
             s = slice(None)
             data_len = len(data['_t'])
-            self.new_index = range(0, data_len, resolution)
-            self.rolling_new_index = range(resolution - 1, data_len,
-                                           resolution)
+            start_idx = data['_t'][0]
         else:
             s = slice(*t_range)
             data_len = len(data['_t'][s])
-            self.new_index = range(s.start, s.start + data_len, resolution)
-            self.rolling_new_index = range(s.start + resolution - 1,
-                                           s.start + data_len, resolution)
+            start_idx = data['_t'][s.start]
+        self.new_index = range(start_idx, start_idx + data_len, resolution)
+        self.rolling_new_index = range(start_idx + resolution - 1,
+                                       start_idx + data_len, resolution)
         # Go through each item in data and apply the appropriate method to it
         for k in data.keys():
             if k in self.known_data_types.keys():
@@ -105,10 +104,14 @@ class TimeSummarizer(object):
             # Reduce time_res of all relevant series with an appropriate method
             self.reduce_resolution(data, resolution, t_range=[ifrom, ito])
             df.summarize[ifrom+1:ito] = 2
-            df.time_res[ifrom] = len(df.summarize[ifrom:ito])
+            df.time_res.iloc[ifrom] = len(df.summarize[ifrom:ito])
             istart = ito
         for k in data.keys():
-            if k in self.known_data_types.keys():
+            # Special case for `_t`, which is the only known_data_type which is always 0-indexed
+            # To get around non-matching index, we simply turn the boolean mask df into a list
+            if k == '_t':
+                data[k] = data[k][(df.summarize < 2).tolist()]
+            elif k in self.known_data_types.keys():
                 data[k] = data[k][df.summarize < 2]
         df = df[df.summarize < 2]
         data['time_res_series'] = df['time_res']
