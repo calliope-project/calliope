@@ -40,6 +40,8 @@ class Lisa(object):
         if not config_run:
             config_run = os.path.join(os.path.dirname(__file__),
                                       'run_settings.yaml')
+        self.config_model_file = config_model
+        self.config_run_file = config_run
         self.config_model = utils.AttrDict(yaml.load(open(config_model, 'r')))
         self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
         # Override config_model settings if specificed in config_run
@@ -375,10 +377,9 @@ class Lisa(object):
         self.solve()
         self.process_outputs()
 
-    def solve(self, debug=False, save_json=False):
+    def solve(self, save_json=False):
         """
         Args:
-            debug : (default False)
             save_json : (default False) Save optimization results to
                         the given file as JSON.
 
@@ -390,11 +391,19 @@ class Lisa(object):
         instance = m.create()
         instance.preprocess()
         opt = co.SolverFactory('cplex')  # could set solver_io='python'
-        # opt.options["threads"] = 4
-        if debug:
+        # Set solver options from run_settings file, if it exists
+        try:
+            for k, v in self.config_run.solver_options.iteritems():
+                opt.options[k] = v
+        except KeyError:
+            pass
+        if self.config_run.debug:
             opt.keepfiles = True
             opt.symbolic_solver_labels = True
-            TempfileManager.tempdir = 'Logs'
+            logid = os.path.splitext(os.path.basename(self.config_run_file))[0]
+            logdir = os.path.join('Logs', logid)
+            os.makedirs(logdir)
+            TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr
         with utils.capture_output() as out:
             results = opt.solve(instance)

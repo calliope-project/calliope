@@ -12,7 +12,7 @@ output:
     path: 'Output'
 
 subset_i: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable subsetting
-subset_t: ['2005-01-01', '2005-12-31']
+subset_t: ['2006-01-01', '2006-12-31']
 
 #
 # MODEL SETTINGS OVERRIDE
@@ -23,3 +23,15 @@ override:
     sf_max: 7950000
     E_time: 30
     scale_sf: 32
+
+#
+# SOLVER AND LOGGING
+#
+# These will usually be set/overridden in parallel_settings.yaml
+#
+
+debug: false
+
+#solver_options:
+#    threads: 1
+#    lpmethod: 4  # Use barrier method

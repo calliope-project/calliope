@@ -34,6 +34,11 @@ class LisaParallelizer(object):
         df = pd.DataFrame(list(itertools.product(*values)), columns=keys)
         return df
 
+    def _write_modelcommands(self, f, settings):
+        f.write('python -c "import lisa\n')
+        f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(settings))
+        f.write('model.run()"\n')
+
     def generate_runs(self):
         c = self.config
         # Create output directory
@@ -48,9 +53,30 @@ class LisaParallelizer(object):
         iterations.to_csv(os.path.join(out_dir, 'Output', 'iterations.csv'))
         shutil.copy(self.config_file, os.path.join(out_dir, 'Output',
                                                    'parallel_settings.yaml'))
-        # TODO also save model settings object to out_dir to ensure
-        # that even if defaults change,
-        # can recreate exact model settings at any time
+        if c.style == 'array':
+            array_submitter = 'array_submitter.sh'
+            array_submission = 'array_submission.sh'
+            array_run = 'array_run.sh'
+            # Write array submitter script
+            with open(os.path.join(out_dir, array_submitter), 'w') as f:
+                if c.environment == 'qsub':
+                    f.write('#! /bin/sh\n')
+                    f.write('qsub -t 1-{} -N {} {}\n'.format(len(iterations),
+                                                             c.name,
+                                                             array_submission))
+            # Write array submission script
+            with open(os.path.join(out_dir, array_submission), 'w') as f:
+                f.write('#!/bin/sh\n')
+                if c.environment == 'qsub':
+                    f.write('#$ -j y -o Output/array_$JOB_ID.log\n')
+                    f.write('#$ -cwd\n')
+                    f.write('./{} '.format(array_run) +
+                            '${JOB_ID} ${SGE_TASK_ID}\n')
+            # Set up array run script
+            with open(os.path.join(out_dir, array_run), 'w') as f:
+                f.write('#!/bin/sh\n')
+                f.write('case "$2" in\n\n')
+        # Write settings and scripts for each iteration
         for row in iterations.iterrows():
             # Generate configuration object
             index, item = row
@@ -67,17 +93,28 @@ class LisaParallelizer(object):
             settings = 'settings_{}.yaml'.format(index_str)
             with open(os.path.join(out_dir, settings), 'w') as f:
                 yaml.dump(iteration_config.as_dict(), f)
-            # Write model run script
-            run = 'run_{}.sh'.format(index_str)
-            with open(os.path.join(out_dir, run), 'w') as f:
-                f.write('#!/bin/sh\n')
-                if c.additional_lines:
-                    f.write(c.additional_lines + '\n')
-                # Set job name
-                if c.environment == 'bsub':
-                    f.write('#BSUB -J {}{}\n'.format(c.name, index_str))
-                # Write model commands
-                f.write('python -c "import lisa\n')
-                f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(settings))
-                f.write('model.run()"\n')
-            os.chmod(os.path.join(out_dir, run), 0755)
+            if c.style == 'single':
+                # Write model run script
+                run = 'run_{}.sh'.format(index_str)
+                with open(os.path.join(out_dir, run), 'w') as f:
+                    f.write('#!/bin/sh\n')
+                    if c.additional_lines:
+                        f.write(c.additional_lines + '\n')
+                    # Set job name
+                    if c.environment == 'bsub':
+                        f.write('#BSUB -J {}{}\n'.format(c.name, index_str))
+                    # Write model commands
+                    self._write_modelcommands(f, settings)
+                os.chmod(os.path.join(out_dir, run), 0755)
+            elif c.style == 'array':
+                with open(os.path.join(out_dir, array_run), 'a') as f:
+                    # Write index + 1 because the array jobs are 1-indexed
+                    f.write('{}) '.format(index + 1))
+                    if c.additional_lines:
+                        f.write(c.additional_lines + '\n')
+                    self._write_modelcommands(f, settings)
+                    f.write(';;\n\n')
+        # Final tasks after going through all iterations
+        if c.style == 'array':
+            with open(os.path.join(out_dir, array_run), 'a') as f:
+                f.write('esac\n')

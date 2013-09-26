@@ -7,7 +7,8 @@
 # defined here:
 
 name: noncsp_avail_test  # Name of this parallel run
-environment: bsub  # Choices: local, bsub
+environment: local  # Choices: local, bsub, qsub
+style: single  # Choices: single, array
 additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
 
 #
@@ -37,3 +38,4 @@ run_settings:
         P_max: 100000
         sf_max: 7950000
         E_time: 30
+    debug: true
