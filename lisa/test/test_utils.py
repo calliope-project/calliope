@@ -65,6 +65,31 @@ class TestAttrDict:
         with pytest.raises(KeyError):
             d.get_key('foo')
 
+    def test_get_key_second_inexistant(self, attr_dict):
+        d = attr_dict
+        with pytest.raises(KeyError):
+            d.get_key('foo.bar')
+
+    def test_get_key_default(self, attr_dict):
+        d = attr_dict
+        assert d.get_key('c.x', default='bar') == 'foo'
+
+    def test_get_key_inexistant_default(self, attr_dict):
+        d = attr_dict
+        assert d.get_key('foo', default='baz') == 'baz'
+
+    def test_get_key_second_inexistant_default(self, attr_dict):
+        d = attr_dict
+        assert d.get_key('foo.bar', default='baz') == 'baz'
+
+    def test_get_key_inexistant_default_false(self, attr_dict):
+        d = attr_dict
+        assert d.get_key('foo', default=False) is False
+
+    def test_get_key_second_inexistant_default_false(self, attr_dict):
+        d = attr_dict
+        assert d.get_key('foo.bar', default=False) is False
+
     def test_as_dict(self, attr_dict):
         d = attr_dict
         dd = d.as_dict()

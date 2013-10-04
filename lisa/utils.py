@@ -33,12 +33,25 @@ class AttrDict(dict):
         else:
             self[key] = value
 
-    def get_key(self, key):
+    def get_key(self, key, default=None):
+        """If default is given and not None (it may be, for example, False),
+        returns default if encounters a KeyError during lookup"""
         if '.' in key:
+        # Nested key of form "foo.bar"
             key, remainder = key.split('.', 1)
-            value = self[key].get_key(remainder)
+            if default is not None:
+                try:
+                    value = self[key].get_key(remainder)
+                except KeyError:
+                    return default
+            else:
+                value = self[key].get_key(remainder)
         else:
-            return self[key]
+        # Single, non-nested key of form "foo"
+            if default is not None:
+                return self.get(key, default)
+            else:
+                return self[key]
         return value
 
     def as_dict(self):
