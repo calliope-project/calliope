@@ -397,9 +397,10 @@ class Lisa(object):
                 opt.options[k] = v
         except KeyError:
             pass
-        if self.config_run.debug:
-            opt.keepfiles = True
+        if self.config_run.get_key('debug.symbolic_solver_labels', default=False):
             opt.symbolic_solver_labels = True
+        if self.config_run.get_key('debug.keepfiles', default=False):
+            opt.keepfiles = True
             logid = os.path.splitext(os.path.basename(self.config_run_file))[0]
             logdir = os.path.join('Logs', logid)
             os.makedirs(logdir)

@@ -30,7 +30,9 @@ override:
 # These will usually be set/overridden in parallel_settings.yaml
 #
 
-debug: false
+debug:
+    keepfiles: false
+    symbolic_solver_labels: false
 
 #solver_options:
 #    threads: 1

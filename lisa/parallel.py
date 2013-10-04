@@ -35,8 +35,9 @@ class LisaParallelizer(object):
         return df
 
     def _write_modelcommands(self, f, settings):
+        pth = os.path.join('Runs', settings)
         f.write('python -c "import lisa\n')
-        f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(settings))
+        f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(pth))
         f.write('model.run()"\n')
 
     def generate_runs(self):
@@ -47,36 +48,50 @@ class LisaParallelizer(object):
         else:
             out_dir = c.name
         os.makedirs(out_dir)
+        os.makedirs(os.path.join(out_dir, 'Runs'))
+        os.makedirs(os.path.join(out_dir, 'Logs'))
         iterations = self.generate_iterations()
         # Save run settings in out_dir to figure out what all the numbers mean!
         os.makedirs(os.path.join(out_dir, 'Output'))
         iterations.to_csv(os.path.join(out_dir, 'Output', 'iterations.csv'))
         shutil.copy(self.config_file, os.path.join(out_dir, 'Output',
                                                    'parallel_settings.yaml'))
+        #
+        # SET UP ADDITIONAL FILES FOR ARRAY RUNS
+        #
         if c.style == 'array':
-            array_submitter = 'array_submitter.sh'
-            array_submission = 'array_submission.sh'
+            array_submission = 'run.sh'
             array_run = 'array_run.sh'
-            # Write array submitter script
-            with open(os.path.join(out_dir, array_submitter), 'w') as f:
-                if c.environment == 'qsub':
-                    f.write('#! /bin/sh\n')
-                    f.write('qsub -t 1-{} -N {} {}\n'.format(len(iterations),
-                                                             c.name,
-                                                             array_submission))
             # Write array submission script
             with open(os.path.join(out_dir, array_submission), 'w') as f:
                 f.write('#!/bin/sh\n')
                 if c.environment == 'qsub':
-                    f.write('#$ -j y -o Output/array_$JOB_ID.log\n')
+                    f.write('#$ -t 1-{}\n'.format(len(iterations)))
+                    f.write('#$ -N {}\n'.format(c.name))
+                    f.write('#$ -j y -o Logs/array_$JOB_ID.log\n')
                     f.write('#$ -cwd\n')
-                    f.write('./{} '.format(array_run) +
-                            '${JOB_ID} ${SGE_TASK_ID}\n')
+                    f.write('\n./{} '.format(array_run) + '${SGE_TASK_ID}\n\n')
+                elif c.environment == 'bsub':
+                    f.write('#BSUB -J {}[1-{}]\n'.format(c.name,
+                                                         len(iterations)))
+                    t = 'run_settings.resources.memory'
+                    if c.get_key(t, default=False):
+                        f.write('#BSUB -R "rusage[mem={}]"\n'.format(c.get_key(t)))
+                    t = 'run_settings.resources.threads'
+                    if c.get_key(t, default=False):
+                        f.write('#BSUB -n {}\n'.format(c.get_key(t)))
+                    t = 'run_settings.resources.wall_time'
+                    if c.get_key(t, default=False):
+                        f.write('#BSUB -W {}\n'.format(c.get_key(t)))
+                    f.write('#BSUB -o Logs/lsf_%I.log\n')
+                    f.write('\n./{} '.format(array_run) + '${LSB_JOBINDEX}\n\n')
             # Set up array run script
             with open(os.path.join(out_dir, array_run), 'w') as f:
                 f.write('#!/bin/sh\n')
-                f.write('case "$2" in\n\n')
-        # Write settings and scripts for each iteration
+                f.write('case "$1" in\n\n')
+        #
+        # WRITE SETTINGS AND SCRIPTS FOR EACH ITERATION
+        #
         for row in iterations.iterrows():
             # Generate configuration object
             index, item = row
@@ -91,7 +106,7 @@ class LisaParallelizer(object):
                                                                  index_str))
             # Write configuration object to YAML file
             settings = 'settings_{}.yaml'.format(index_str)
-            with open(os.path.join(out_dir, settings), 'w') as f:
+            with open(os.path.join(out_dir, 'Runs', settings), 'w') as f:
                 yaml.dump(iteration_config.as_dict(), f)
             if c.style == 'single':
                 # Write model run script
@@ -102,6 +117,10 @@ class LisaParallelizer(object):
                         f.write(c.additional_lines + '\n')
                     # Set job name
                     if c.environment == 'bsub':
+                        if c.get_key('run_settings.limit_memory',
+                                     default=False):
+                            mem = c.get_key('run_settings.limit_memory')
+                            f.write('#BSUB -R "rusage[mem={}]"\n'.format(mem))
                         f.write('#BSUB -J {}{}\n'.format(c.name, index_str))
                     # Write model commands
                     self._write_modelcommands(f, settings)
@@ -118,3 +137,5 @@ class LisaParallelizer(object):
         if c.style == 'array':
             with open(os.path.join(out_dir, array_run), 'a') as f:
                 f.write('esac\n')
+        os.chmod(os.path.join(out_dir, array_submission), 0755)
+        os.chmod(os.path.join(out_dir, array_run), 0755)

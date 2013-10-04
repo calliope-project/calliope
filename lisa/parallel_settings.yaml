@@ -38,4 +38,15 @@ run_settings:
         P_max: 100000
         sf_max: 7950000
         E_time: 30
-    debug: true
+    debug:
+        keepfiles: true
+        symbolic_solver_labels: false
+    resources:
+        threads:  # set to request a non-default number of threads (bsub)
+        wall_time:   # set to request a non-default run time in minutes (bsub)
+        memory:  # set to request a non-default amount of memory in megabytes (bsub)
+    # solver_options:
+        # emphasis.memory: 1  # Set to 1 to conserve memory where possible
+        # workmem: 1000  # Limit CPLEX memory use to 1000 MB, default: 128
+        # threads: 1
+        # lpmethod: 4  # Use barrier method
