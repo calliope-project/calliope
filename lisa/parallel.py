@@ -11,7 +11,7 @@ import yaml
 from . import utils
 
 
-class LisaParallelizer(object):
+class Parallelizer(object):
     """
     Args:
         additional_lines : can override additional_lines setting from
@@ -19,7 +19,7 @@ class LisaParallelizer(object):
 
     """
     def __init__(self, config=None, target_dir=None, additional_lines=None):
-        super(LisaParallelizer, self).__init__()
+        super(Parallelizer, self).__init__()
         self.config_file = config
         self.config = utils.AttrDict(yaml.load(open(config, 'r')))
         self.target_dir = target_dir

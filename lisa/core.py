@@ -16,15 +16,15 @@ import yaml
 from . import utils
 
 
-class Lisa(object):
+class Model(object):
     """
     Large-scale international solar power arrangement (Lisa) model
 
     Canonical use in an IPython notebook cell:
 
-        model = lisa.Lisa()
+        import lisa
+        model = lisa.Model()
         model.run()
-        lisa.utils.notify()
 
     """
     def __init__(self, config_model=None, config_run=None):
@@ -32,7 +32,7 @@ class Lisa(object):
         Args:
             options : override default YAML file containing model settings.
         """
-        super(Lisa, self).__init__()
+        super(Model, self).__init__()
         # Load settings
         if not config_model:
             config_model = os.path.join(os.path.dirname(__file__),

@@ -18,6 +18,5 @@ parser.add_argument('-d', '--dir', type=str, default='runs',
                     help='target directory (default: runs)')
 args = parser.parse_args(arguments)
 
-parallelizer = lisa.LisaParallelizer(args.settings,
-                                     target_dir='runs')
+parallelizer = lisa.Parallelizer(args.settings, target_dir='runs')
 parallelizer.generate_runs()
