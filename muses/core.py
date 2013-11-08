@@ -18,12 +18,12 @@ from . import utils
 
 class Model(object):
     """
-    Large-scale international solar power arrangement (Lisa) model
+    Multi-scale energy systems (Muses) model
 
     Canonical use in an IPython notebook cell:
 
-        import lisa
-        model = lisa.Model()
+        import muses
+        model = muses.Model()
         model.run()
 
     """
