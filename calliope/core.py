@@ -46,8 +46,10 @@ class Model(object):
         self.config_model = utils.AttrDict(yaml.load(open(config_model, 'r')))
         self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
         # Override config_model settings if specified in config_run
-        for k, v in self.config_run.override.iteritems():
-            self.config_model[k] = v
+        if ('override' in self.config_run
+                and isinstance(self.config_run.override, utils.AttrDict)):
+            for k, v in self.config_run.override.iteritems():
+                self.config_model[k] = v
         o = self.config_model  # For easier access
         # Perform any tech-specific setup by instantiating tech classes
         self.technologies = utils.AttrDict()
@@ -112,11 +114,14 @@ class Model(object):
                   model.get_option('tech_weights', 'csp')
 
         """
+        o = self.config_model
         key = group + '.{}'
         if option:
             key += '.' + option
-        return self.config_model.get_key(key.format(tech),
-                                         default=key.format('default'))
+        try:
+            return o.get_key(key.format(tech))
+        except KeyError:
+            return o.get_key(key.format('default'))
 
     def read_data(self):
         """
@@ -176,7 +181,7 @@ class Model(object):
         #
         table_x = pd.read_csv(os.path.join(path, 'set_x.csv'))
         d._x = [int(i) for i in table_x.columns.tolist()]
-        if self.config_run.subset_x:
+        if self.config_run.get_key('subset_x', default=False):
             d._x = sorted(self.config_run.subset_x)
         #
         # y: Technologies set (read from YAML settings)
@@ -209,10 +214,14 @@ class Model(object):
                         # [s] to do time subset if needed
                         # Results in e.g. d.r_eff['csp'] being a dataframe
                         # of efficiencies for each time step t at location x
-                        getattr(d, i)[y] = pd.read_csv(d_path, index_col=0)[s]
+                        df = pd.read_csv(d_path, index_col=0)[s]
+                        # Columns (x) from str to int
+                        df.columns = [int(c) for c in df.columns]
+                        getattr(d, i)[y] = df
                     except IOError:
                         # Final try: Default YAML setting
                         getattr(d, i)[y] = o.constraints.default[i]
+                        # TODO raise helpful error message if this fails
         #
         # Demand (TODO: replace this with a general node)
         #
@@ -224,8 +233,7 @@ class Model(object):
         d.D_max = self.config_run.input.D_max
         d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res_static
         # Columns (x): str -> int
-        for table in params_in_time_and_space + [d.D]:
-            table.columns = [int(c) for c in table.columns]
+        d.D.columns = [int(c) for c in d.D.columns]
         # Last index t for which model may still use startup exceptions
         d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
 
@@ -245,12 +253,6 @@ class Model(object):
         o = self.config_model
         d = self.data
         self.mode = mode
-        # TODO: generalize, move somewhere else, extend to (y, x)
-        if not np.iterable(o.s_init):
-            # Set it to default for all y
-            d.s_init = {y: o.s_init for y in d._y}
-        else:
-            d.s_init = o.s_init
 
         #
         # Sets
@@ -271,7 +273,7 @@ class Model(object):
         def param_populator(src):
             def getter(m, y, x, t):
                 if isinstance(src[y], pd.core.frame.DataFrame):
-                    return float(src[y].loc[x, t])
+                    return float(src[y].loc[t, x])
                 else:
                     return float(src[y])
             return getter
@@ -293,11 +295,11 @@ class Model(object):
         #
         # 1. Required
         constraints.node_energy_balance(m, o, d, self)
-        constraints.node_costs(m, o, d, self)
-        constraints.node_constraints_operational(m, o, d)
         constraints.node_constraints_build(m, o, d, self)
-        constraints.model_constraints(m, o, d)
+        constraints.node_constraints_operational(m, o, d)
+        constraints.node_costs(m, o, d, self)
         constraints.model_slack(m, o, d)
+        constraints.model_constraints(m, o, d)
 
         # 2. Optional
         # (none yet)
