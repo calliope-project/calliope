@@ -22,3 +22,14 @@ The recommended way to obtain all required Python modules with the exception of 
 Installation is manual for now. A quick and dirty way is to symlink the Python module in the Calliope repository (i.e., `./calliope`) into the appropriate site-packages directory:
 
     ln -s /path/to/calliope /path/to/site-packages/calliope
+
+## Use
+
+### Running on a Sun Grid Engine or compatible cluster (`qsub`)
+
+* Create a configuration in `runs_configs`, based on `calliope/parallel_settings.yaml`.
+* Run `model_run.py runs_configs/your_settings.yaml`.
+* If not running on the cluster controller machine already, copy the resulting folder from `runs` to the cluster.
+* On the cluster controller, `cd` into the runs folder and submit the jobs by `qsub run.sh`.
+
+Other supported ways to run the model are stand-alone runs (locally e.g. from within an IPython notebook) and Platform LSF clusters (`bsub`).
