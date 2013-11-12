@@ -1,5 +1,5 @@
-__title__ = 'Lisa Model'
-__version__ = 'dev'
+__title__ = 'Calliope -- a multi-scale energy systems (MUSES) model'
+__version__ = '0.1'
 __author__ = 'Stefan Pfenninger'
 __copyright__ = 'Copyright 2013 Stefan Pfenninger'
 

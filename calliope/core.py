@@ -3,7 +3,6 @@ from __future__ import division
 
 import datetime
 import json
-import math
 import os
 
 import coopr.opt as co
@@ -13,17 +12,19 @@ import pandas as pd
 from pyutilib.services import TempfileManager
 import yaml
 
+from . import constraints
+from . import techs
 from . import utils
 
 
 class Model(object):
     """
-    Multi-scale energy systems (Muses) model
+    Calliope -- a multi-scale energy systems (MUSES) model
 
     Canonical use in an IPython notebook cell:
 
-        import muses
-        model = muses.Model()
+        import calliope
+        model = calliope.Model()
         model.run()
 
     """
@@ -44,50 +45,118 @@ class Model(object):
         self.config_run_file = config_run
         self.config_model = utils.AttrDict(yaml.load(open(config_model, 'r')))
         self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
-        # Override config_model settings if specificed in config_run
+        # Override config_model settings if specified in config_run
         for k, v in self.config_run.override.iteritems():
             self.config_model[k] = v
         o = self.config_model  # For easier access
-        # Redefine some parameters based on given options
-        if o.use_scale_sf:
-            o.sf_max = o.scale_sf * o.P_max
-        if o.use_E_time:
-            r_temp_amb = 25
-            r_temp_op = 590
-            tmax = r_temp_op - (r_temp_op - r_temp_amb) * 0.05
-            carnot_mod = 1 - math.sqrt((r_temp_amb + 273) / (tmax + 273))
-            o.E_max = o.E_time * o.P_max / carnot_mod
-        # Calculate depreciation coefficient for LEC
+        # Perform any tech-specific setup by instantiating tech classes
+        self.technologies = utils.AttrDict()
+        for t in o.techs:
+            try:
+                techname = t.capitalize() + 'Technology'
+                self.technologies[t] = techs.getattr(techname)(o=o)
+            except AttributeError:
+                self.technologies[t] = techs.Technology(o=o, name=t)
+        # Calculate depreciation coefficients for LEC
         self.data = utils.AttrDict()
         d = self.data
-        d.dep_csp = ((o.interest.csp * (1 + o.interest.csp) ** o.plant_life)
-                     / (((1 + o.interest.csp) ** o.plant_life) - 1))
-        d.dep_noncsp = ((o.interest.noncsp * (1 + o.interest.noncsp)
-                        ** o.plant_life)
-                        / (((1 + o.interest.noncsp) ** o.plant_life) - 1))
+        d.depreciation = utils.AttrDict()
+        for y in o.techs:
+            interest = self.get_option('depreciation', y, 'interest')
+            plant_life = self.get_option('depreciation', y, 'plant_life')
+            dep = ((interest * (1 + interest) ** plant_life)
+                   / (((1 + interest) ** plant_life) - 1))
+            d.depreciation[y] = dep
         self.read_data()
 
+    # def get_timeres(self):
+    #     """Backwards (GAMS) compatible method to get time resolution."""
+    #     # TODO: needs updating!
+    #     path = self.config_run.input.path
+    #     with open(os.path.join(path, 'ModelSettings.gms'), 'r') as f:
+    #         gms = f.read()
+    #     return float(gms.split('time_resolution')[-1].strip())
+
     def get_timeres(self):
-        path = self.config_run.input.path
-        with open(os.path.join(path, 'ModelSettings.gms'), 'r') as f:
-            gms = f.read()
-        return float(gms.split('time_resolution')[-1].strip())
+        """Temporary hack: assume data always has 1.0 time resolution"""
+        return 1.0
+
+    def prev(self, t):
+        """Using the timesteps set of this model instance, return `t-1`,
+        even if the set is not continuous.
+
+        E.g., if t is [0, 1, 2, 6, 7, 8], model.prev(6) will return 2.
+
+        """
+        # Create an index to look up t, and save it for later use
+        try:
+            # Check if _t_index exists
+            self._t_index.name
+        except AttributeError:
+            self._t_index = pd.Index(self.data._t)
+        # Get the location of t in the index and use it to retrieve
+        # the desired value, raising an error if it's <0
+        loc = self._t_index.get_loc(t) - 1
+        if loc >= 0:
+            return self.data._t.iat[loc]
+        else:
+            raise KeyError('<0')
+
+    @utils.memoize
+    def get_option(self, group, tech, option=None):
+        """Retrieves options from model settings for the given tech,
+        falling back to the default if the option is not defined for the
+        tech.
+
+        Examples: model.get_option('costs', 'ccgt', 'om_var') or
+                  model.get_option('tech_weights', 'csp')
+
+        """
+        key = group + '.{}'
+        if option:
+            key += '.' + option
+        return self.config_model.get_key(key.format(tech),
+                                         default=key.format('default'))
 
     def read_data(self):
         """
         Read input data.
 
-        Data indexing: if subset_t is set, a subset of the data is
+        Note on indexing: if subset_t is set, a subset of the data is
         selected, and all data including their indices are subsetted.
         d._t maps a simple [0, data length] index to the actual t index
         used.
+
+        Data is stored in the `self.data` AttrDict as follows:
+
+            self.data.<parameter> = z
+
+        where z is
+
+        * an AttrDict containing the below items if <parameter> differs
+          across different technologies `y`.
+        * or directly one of the below if <parameter> is uniform across
+          all technologies `y`.
+
+        The data container is one of:
+
+        * a pandas DataFrame if <parameter> is defined over `t` and `x`
+        * a pandas Series if <parameter> is defined over `t`
+        * a Dict or AttrDict if <parameter> is defined over `x`
+        * a single value if <parameter> is uniform across `t` and `x`
+
+        Each <parameter> starting with an _ (underscore) will be made into
+        a Pyomo object in the generate_model() method, else it will be accessed
+        directly.
 
         """
         o = self.config_model
         d = self.data
         path = self.config_run.input.path
-        # Read files
-        table_t = pd.read_csv(os.path.join(path, 'datetimes.csv'), header=None)
+        #
+        # t: Time steps set (read from CSV file)
+        #
+        table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None)
         table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
                          for dt in table_t[1]]
         if self.config_run.subset_t:
@@ -102,19 +171,51 @@ class Model(object):
         d.time_res_static = self.get_timeres()
         # From time_res_static, initialize time_res_series
         d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
-        table_i = pd.read_csv(os.path.join(path, 'PlantSet.csv'))
-        d._i = [int(i) for i in table_i.columns.tolist()]
-        if self.config_run.subset_i:
-            d._i = sorted(self.config_run.subset_i)
-        # Combined efficiency factor in time step t for plant i [1]
-        d.n_el = pd.read_csv(os.path.join(path, 'EfficiencyTable.csv'),
-                             index_col=0)[s]
-        # DNI [W/m2]
-        d.dni = pd.read_csv(os.path.join(path, 'DNITable.csv'),
-                            index_col=0)[s]
-        # Solar field efficiency [1]
-        d.n_sf = pd.read_csv(os.path.join(path,
-                             'SolarfieldEfficiencyTable.csv'), index_col=0)[s]
+        #
+        # x: Locations set (read from CSV file)
+        #
+        table_x = pd.read_csv(os.path.join(path, 'set_x.csv'))
+        d._x = [int(i) for i in table_x.columns.tolist()]
+        if self.config_run.subset_x:
+            d._x = sorted(self.config_run.subset_x)
+        #
+        # y: Technologies set (read from YAML settings)
+        #
+        d._y = o.techs
+        #
+        # Energy resource and efficiencies that may be defined over (x, t)
+        # for a given technology y
+        params_in_time_and_space = ['r', 'r_eff', 'e_eff']
+
+        # Important -- the order of precendence is as follows:
+        #   * custom setting in YAML model_settings (applied over all x, t for
+        #     the given technology)
+        #   * CSV file with explicit values for all x, t
+        #   * default setting in YAML model_settings
+        #   * KeyError if not defined anywhere at all
+        for i in params_in_time_and_space:
+            setattr(d, i, utils.AttrDict())
+        for y in d._y:
+            for i in params_in_time_and_space:
+                # Check if y-i combination doesn't exist in model_settings YAML
+                if i in o.constraints[y]:
+                    # First try: Custom YAML setting
+                    getattr(d, i)[y] = o.constraints[y][i]
+                else:
+                    try:
+                        # Second try: CSV file
+                        # File format e.g. 'csp_r_eff.csv'
+                        d_path = os.path.join(path, y + '_' + i + '.csv')
+                        # [s] to do time subset if needed
+                        # Results in e.g. d.r_eff['csp'] being a dataframe
+                        # of efficiencies for each time step t at location x
+                        getattr(d, i)[y] = pd.read_csv(d_path, index_col=0)[s]
+                    except IOError:
+                        # Final try: Default YAML setting
+                        getattr(d, i)[y] = o.constraints.default[i]
+        #
+        # Demand (TODO: replace this with a general node)
+        #
         # Aggregate power demand [kWh]
         d.D = pd.read_csv(os.path.join(path, self.config_run.input.demand),
                           index_col=0, header=None)[s]
@@ -122,8 +223,8 @@ class Model(object):
         # scaling this peak according to time_res
         d.D_max = self.config_run.input.D_max
         d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res_static
-        # Columns: str -> int
-        for table in [d.n_el, d.dni, d.n_sf, d.D]:
+        # Columns (x): str -> int
+        for table in params_in_time_and_space + [d.D]:
             table.columns = [int(c) for c in table.columns]
         # Last index t for which model may still use startup exceptions
         d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
@@ -138,243 +239,79 @@ class Model(object):
 
         """
         #
-        # Helper functions
-        #
-
-        def prev(t):
-            """Return `t-1` even if `t` is not continuous.
-
-            E.g. if t is [0, 1, 2, 6, 7, 8] prev(6) will return 2.
-
-            """
-            # Create an index to look up t, and save it for later use
-            try:
-                # Check if _t_index exists
-                self._t_index.name
-            except AttributeError:
-                self._t_index = pd.Index(self.data._t)
-            # Get the location of t in the index and use it to retrieve
-            # the desired value, raising an error if it's <0
-            loc = self._t_index.get_loc(t) - 1
-            if loc >= 0:
-                return self.data._t.iat[loc]
-            else:
-                raise KeyError('<0')
-
-        #
         # Setup
         #
-
         m = cp.ConcreteModel()
         o = self.config_model
         d = self.data
-
-        if not np.iterable(o.E_init):
-            # Set it to default for all i
-            d.E_init = pd.Series(o.E_init, index=d._i)
+        self.mode = mode
+        # TODO: generalize, move somewhere else, extend to (y, x)
+        if not np.iterable(o.s_init):
+            # Set it to default for all y
+            d.s_init = {y: o.s_init for y in d._y}
         else:
-            d.E_init = o.E_init
+            d.s_init = o.s_init
 
         #
         # Sets
         #
-
         # Time steps
-        if mode == 'plan':
+        if self.mode == 'plan':
             m.t = cp.Set(initialize=d._t, ordered=True)
-        elif mode == 'operate':
+        elif self.mode == 'operate':
             horizon_adj = int(o.opmode.horizon / d.time_res_static)
             m.t = cp.Set(initialize=d._t[t_start:t_start+horizon_adj],
                          ordered=True)
-        # Sites
-        m.i = cp.Set(initialize=d._i, ordered=True)
+        m.x = cp.Set(initialize=d._x, ordered=True)  # Locations
+        m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
 
         #
         # Parameters
         #
+        def param_populator(src):
+            def getter(m, y, x, t):
+                if isinstance(src[y], pd.core.frame.DataFrame):
+                    return float(src[y].loc[x, t])
+                else:
+                    return float(src[y])
+            return getter
 
-        m.n_el = cp.Param(m.t, m.i,
-                          initialize=lambda m, t, i: float(d.n_el.loc[t, i]))
-        m.dni = cp.Param(m.t, m.i,
-                         initialize=lambda m, t, i: float(d.dni.loc[t, i]))
-        m.n_sf = cp.Param(m.t, m.i,
-                          initialize=lambda m, t, i: float(d.n_sf.loc[t, i]))
+        # was dni
+        m.r = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.r))
+        # was n_sf
+        m.r_eff = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.r_eff))
+        # was n_el
+        m.e_eff = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.e_eff))
+
         # table_D is a pandas dataframe with one column, named 1
         m.D = cp.Param(m.t, initialize=lambda m, t: float(d.D.loc[t, 1]))
-        m.time_res = cp.Param(m.t,
-                              initialize=lambda m, t: float(d.time_res_series.loc[t]))
-
-        #
-        # Variables
-        #
-
-        m.cost_csp = cp.Var(m.i, within=cp.NonNegativeReals)
-        m.cost_csp_con = cp.Var(m.i, within=cp.NonNegativeReals)
-        m.cost_csp_op = cp.Var(m.i, within=cp.NonNegativeReals)
-        m.cost_noncsp = cp.Var(within=cp.NonNegativeReals)
-        m.cost_noncsp_con = cp.Var(within=cp.NonNegativeReals)
-        m.cost_noncsp_op = cp.Var(within=cp.NonNegativeReals)
-        m.cost_slack = cp.Var(within=cp.NonNegativeReals)
-        m.Q_sf = cp.Var(m.t, m.i, within=cp.NonNegativeReals)  # Solar field heat in
-        m.Q_gen = cp.Var(m.t, m.i, within=cp.NonNegativeReals)  # Generator heat out
-        m.Q_diss = cp.Var(m.t, m.i, within=cp.NonNegativeReals)  # Dissipated heat out
-        m.Q_bak = cp.Var(m.t, m.i, within=cp.NonNegativeReals)  # Backup burner heat in
-        m.P = cp.Var(m.t, m.i, within=cp.NonNegativeReals)
-        m.P_noncsp = cp.Var(m.t, within=cp.NonNegativeReals)
-        m.P_slack = cp.Var(m.t, within=cp.NonNegativeReals)
-        m.E_stor = cp.Var(m.t, m.i, within=cp.NonNegativeReals)
-        m.E_built = cp.Var(m.i, within=cp.NonNegativeReals)
-        m.sf_built = cp.Var(m.i, within=cp.NonNegativeReals)
-        m.P_built = cp.Var(m.i, within=cp.NonNegativeReals)
-        m.P_noncsp_built = cp.Var(within=cp.NonNegativeReals)
-
-        #
-        # Objective
-        #
-
-        def obj_rule(m):
-            return (o.lambda_csp * sum(m.cost_csp[i] for i in m.i)
-                    + o.lambda_noncsp * m.cost_noncsp
-                    + o.lambda_slack * m.cost_slack)
-
-        m.obj = cp.Objective(sense=cp.minimize)
-        #m.obj.domain = cp.NonNegativeReals
+        m.time_res = (cp.Param(m.t,
+                      initialize=lambda m, t: float(d.time_res_series.loc[t])))
 
         #
         # Constraints
         #
+        # 1. Required
+        constraints.node_energy_balance(m, o, d, self)
+        constraints.node_costs(m, o, d, self)
+        constraints.node_constraints_operational(m, o, d)
+        constraints.node_constraints_build(m, o, d, self)
+        constraints.model_constraints(m, o, d)
+        constraints.model_slack(m, o, d)
 
-        def c_cost_csp_rule(m, i):
-            return m.cost_csp[i] == m.cost_csp_con[i] + m.cost_csp_op[i]
+        # 2. Optional
+        # (none yet)
 
-        def c_cost_csp_con_rule(m, i):
-            return (m.cost_csp_con[i] == d.dep_csp
-                    * (sum(m.time_res[t] for t in m.t) / 8760)
-                    * (o.cost.csp_stor * m.E_built[i]
-                    + (o.cost.csp_sf + o.csp_rec_per_sf * o.cost.csp_rec)
-                    * m.sf_built[i] + o.cost.csp_pb * m.P_built[i]))
+        # 3. Objective function
+        constraints.model_objective(m, o, d, self)
 
-        def c_cost_csp_op_rule(m, i):
-            return (m.cost_csp_op[i] == m.cost_csp_con[i] * o.cost.csp_omfrac
-                    + (o.cost.csp_omvar * sum(m.P[t, i] for t in m.t)))
-            # If hybridization allowed:
-            # Also add + (cost_burner * sum(m.Q_bak[t, i] for t in m.t))
-
-        def c_cost_noncsp_rule(m):
-            return m.cost_noncsp == (m.cost_noncsp_con + m.cost_noncsp_op)
-
-        def c_cost_noncsp_con_rule(m):
-            return (m.cost_noncsp_con == d.dep_noncsp
-                    * (sum(m.time_res[t] for t in m.t) / 8760)
-                    * m.P_noncsp_built * o.cost.noncsp_build)
-
-        def c_cost_noncsp_op_rule(m):
-            # return (m.cost_noncsp_op == m.cost_noncsp_con * cost_noncsp_omfrac
-            #         + sum(m.P_noncsp[t] for t in m.t
-            #               if t > startup_time_bounds)
-            #         * cost_noncsp_fuel)
-            return (m.cost_noncsp_op == m.cost_noncsp_con * o.cost.noncsp_omfrac
-                    + sum(m.P_noncsp[t] for t in m.t) * o.cost.noncsp_fuel)
-
-        def c_cost_slack_rule(m):
-            return m.cost_slack == sum(m.P_slack[t] for t in m.t)
-
-        def c_P_rule(m, t, i):
-            return m.P[t, i] == m.Q_gen[t, i] * m.n_el[t, i]
-
-        def c_Q_sf_rule(m, t, i):
-            return (m.Q_sf[t, i] == m.dni[t, i]
-                    * 0.001 * m.sf_built[i] * m.n_sf[t, i])
-
-        def c_Q_balance_rule(m, t, i):
-            if m.t.order_dict[t] > 1:
-                E_stor_minus_one = (((1 - o.mu_stor)
-                                    ** m.time_res[prev(t)])
-                                    * m.E_stor[prev(t), i])
-            else:
-                E_stor_minus_one = d.E_init[i]
-            return (m.E_stor[t, i] == E_stor_minus_one
-                    + o.eff_stor * m.Q_sf[t, i] + m.Q_bak[t, i]
-                    - m.Q_gen[t, i] - m.Q_diss[t, i])
-
-        def c_Q_bak_rule(m, t, i):
-            # Q_bak is allowed only during the hours within startup_time
-            if t < d.startup_time_bounds:
-                return m.Q_bak[t, i] <= (m.time_res[t]
-                                         * m.P_built[i]) / m.n_el[t, i]
-            else:
-                return m.Q_bak[t, i] == 0
-
-        def c_pwr_max_rule(m, t, i):
-            return m.P[t, i] <= m.time_res[t] * m.P_built[i]
-
-        def c_storage_max_rule(m, t, i):
-            return m.E_stor[t, i] <= m.E_built[i]
-
-        def c_noncsp_rule(m, t):
-            return m.P_noncsp[t] <= m.time_res[t] * m.P_noncsp_built
-
-        def c_fleet_rule(m, t):
-            return (sum(m.P[t, i] for i in m.i) + m.P_noncsp[t]
-                    + m.P_slack[t] >= m.D[t])
-
-        def c_csp_hourly_rule(m, t):
-            return (sum(m.P[t, i] for i in m.i) + m.P_slack[t]
-                    >= m.D[t] - (o.noncsp_avail * d.D_max))
-
-        def c_storage_built_rule(m, i):
-            if mode == 'plan':
-                return m.E_built[i] <= o.E_max
-            elif mode == 'operate':
-                return m.E_built[i] == o.E_max
-
-        def c_solarfield_built_rule(m, i):
-            if mode == 'plan':
-                return m.sf_built[i] <= o.sf_max
-            elif mode == 'operate':
-                return m.sf_built[i] == o.sf_max
-
-        def c_powerblock_built_rule(m, i):
-            if mode == 'plan':
-                return m.P_built[i] <= o.P_max
-            elif mode == 'operate':
-                return m.P_built[i] == o.P_max
-
-        def c_noncsp_built_rule(m):
-            P_noncsp_max = o.noncsp_avail * (d.D_max / d.time_res_static)
-            return m.P_noncsp_built == P_noncsp_max  # [TEMP] was <=
-
-        # Build the constraints
-        m.c_cost_csp = cp.Constraint(m.i)
-        m.c_cost_csp_con = cp.Constraint(m.i)
-        m.c_cost_csp_op = cp.Constraint(m.i)
-        m.c_cost_noncsp = cp.Constraint()
-        m.c_cost_noncsp_con = cp.Constraint()
-        m.c_cost_noncsp_op = cp.Constraint()
-        m.c_cost_slack = cp.Constraint()
-        m.c_P = cp.Constraint(m.t, m.i)
-        m.c_Q_sf = cp.Constraint(m.t, m.i)
-        m.c_Q_balance = cp.Constraint(m.t, m.i)
-        m.c_Q_bak = cp.Constraint(m.t, m.i)
-        m.c_pwr_max = cp.Constraint(m.t, m.i)
-        m.c_storage_max = cp.Constraint(m.t, m.i)
-        m.c_noncsp = cp.Constraint(m.t)
-        m.c_fleet = cp.Constraint(m.t)
-        m.c_csp_hourly = cp.Constraint(m.t)
-        m.c_storage_built = cp.Constraint(m.i)
-        m.c_solarfield_built = cp.Constraint(m.i)
-        m.c_powerblock_built = cp.Constraint(m.i)
-        m.c_noncsp_built = cp.Constraint()
-
+        # Add Pyomo model object as a property
         self.m = m
 
-    #
-    # --- INSTANTIATE & SOLVE THE MODEL ---
-    #
-
-    def run(self):
-        self.generate_model()  # model gets attached to model.m property
-        self.solve()
+    def run(self, save_json=False):
+        """Instantiate and solve the model"""
+        self.generate_model()  # Generated model is attached to `m` property
+        self.solve(save_json)
         self.process_outputs()
 
     def solve(self, save_json=False):
@@ -397,7 +334,8 @@ class Model(object):
                 opt.options[k] = v
         except KeyError:
             pass
-        if self.config_run.get_key('debug.symbolic_solver_labels', default=False):
+        if self.config_run.get_key('debug.symbolic_solver_labels',
+                                   default=False):
             opt.symbolic_solver_labels = True
         if self.config_run.get_key('debug.keepfiles', default=False):
             opt.keepfiles = True

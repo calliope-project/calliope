@@ -7,7 +7,7 @@ import lisa
 
 
 arguments = sys.argv[1:]
-parser = argparse.ArgumentParser(description='Run the Lisa model.')
+parser = argparse.ArgumentParser(description='Run the Calliope model.')
 parser.add_argument('settings', metavar='settings', type=str, default='',
                     help='parallel_settings file to use')
 parser.add_argument('-s', '--single', dest='single', action='store_const',

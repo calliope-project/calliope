@@ -1,8 +1,9 @@
 from __future__ import print_function
 from __future__ import division
 
-import contextlib
+from contextlib import contextmanager
 from cStringIO import StringIO
+from functools import wraps
 
 
 class AttrDict(dict):
@@ -76,7 +77,7 @@ class AttrDict(dict):
         return keys
 
 
-@contextlib.contextmanager
+@contextmanager
 def capture_output():
     import sys
     old_out, old_err = sys.stdout, sys.stderr
@@ -88,3 +89,17 @@ def capture_output():
         sys.stdout, sys.stderr = old_out, old_err
         out[0] = out[0].getvalue()
         out[1] = out[1].getvalue()
+
+
+def memoize(f):
+    """ Memoization decorator for a function taking one or more arguments."""
+    @wraps(f)
+    class MemoDict(dict):
+        def __getitem__(self, *key):
+            return dict.__getitem__(self, key)
+
+        def __missing__(self, key):
+            ret = self[key] = f(*key)
+            return ret
+
+    return MemoDict().__getitem__
