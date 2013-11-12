@@ -16,7 +16,8 @@ opmode:
 #
 
 # Allowed technologies
-techs: ['csp', 'ccgt', 'demand_power']
+techs: ['csp']
+#techs: ['csp', 'ccgt', 'demand_power']
 
 # Objective function weights
 tech_weights:
@@ -28,7 +29,8 @@ slack_weight: 1.0e+9
 # Technology constraints
 constraints:
     default:
-        r_eff: 1.0  # WAS eff_store # Storage throughput efficiency [dimensionless]
+        r_eff: 1.0  # Storage throughput efficiency [dimensionless]
+        r_cap_max: 1.0e+9
         s_init: 0  # Initial storage contents [kWht]
         s_cap_max: 0  # Maximum storage size [kWht]
         s_loss: 0  # Storage heat loss rate [per hour]
@@ -41,7 +43,7 @@ constraints:
         s_time: 15  # Maximum storage time [h]
         # -- End CSP-specific constraints --
         r_area_max: 318000  # Maximum solar field size [m2], overridden if scale_sf is True
-        s_cap_max: 745321  # overriden by E_time_ if use_E_time = 1
+        s_cap_max: 745321  # overriden by s_time if use_s_time = 1
         s_loss: 0.002  # Storage heat loss rate [per hour]
         e_cap_max: 20000  # Maximum turbine size [kWe]
     demand_power:
