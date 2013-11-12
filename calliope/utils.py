@@ -3,7 +3,6 @@ from __future__ import division
 
 from contextlib import contextmanager
 from cStringIO import StringIO
-from functools import wraps
 
 
 class AttrDict(dict):
@@ -93,7 +92,6 @@ def capture_output():
 
 def memoize(f):
     """ Memoization decorator for a function taking one or more arguments."""
-    @wraps(f)
     class MemoDict(dict):
         def __getitem__(self, *key):
             return dict.__getitem__(self, key)
