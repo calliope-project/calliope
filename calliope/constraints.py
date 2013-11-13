@@ -18,24 +18,24 @@ def node_energy_balance(m, o, d, model):
 
     """
     # Variables
-    m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)  # was E_stor
-    m.rs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)  # was Q_sf
-    m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)  # was Q_bak
-    m.es = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)  # was Q_gen
-    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)  # was Q_diss
-    m.e = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)  # was P
-    m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)  # was sf_built
+    m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.rs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.es = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.e = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
-    def c_e_rule(m, y, x, t):  # was c_P_rule
+    def c_e_rule(m, y, x, t):
         return m.e[y, x, t] == m.es[y, x, t] * m.e_eff[y, x, t]
 
-    def c_rs_rule(m, y, x, t):  # was c_Q_sf_rule
+    def c_rs_rule(m, y, x, t):
         return (m.rs[y, x, t] == m.r[y, x, t]
                 * 0.001 * m.r_area[y, x] * m.r_eff[y, x, t])
         # TODO remove 0.001 and instead scale the dni input files!
 
-    def c_s_balance_rule(m, y, x, t):  # was c_Q_balance_rule
+    def c_s_balance_rule(m, y, x, t):
         # TODO add another check whether s_cap is 0, and if yes,
         # simply set s_minus_one=0 to make model setup a bit faster?
         if m.t.order_dict[t] > 1:
@@ -65,9 +65,9 @@ def node_constraints_build(m, o, d, model):
 
     """
     # Variables
-    m.s_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)  # was E_built
+    m.s_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
     m.r_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.e_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)  # was P_built
+    m.e_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
@@ -124,7 +124,7 @@ def node_constraints_operational(m, o, d):
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
 
-    def c_bs_rule(m, y, x, t):  # was c_Q_bak_rule
+    def c_bs_rule(m, y, x, t):
         # bs (backup resource) is allowed only during
         # the hours within startup_time
         if t < d.startup_time_bounds:
