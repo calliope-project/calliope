@@ -1,9 +1,10 @@
+Makefile
 *.pyc
 *.ipynb
 .ipynb_checkpoints
 .venv
-Input
-Output
+Input*
+Output*
 runs
 runs_configs
 Logs
