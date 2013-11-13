@@ -105,10 +105,14 @@ class Model(object):
             raise KeyError('<0')
 
     #@utils.memoize
-    def get_option(self, group, tech, option=None):
+    def get_option(self, group, tech, option=None, allow_default=True):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
         tech.
+
+        If allow_default is False, then the lookup will raise a KeyError
+        if no setting exists for the given tech/option combination, if
+        it is True, the default will be looked up instead.
 
         Examples: model.get_option('costs', 'ccgt', 'om_var') or
                   model.get_option('tech_weights', 'csp')
@@ -119,9 +123,19 @@ class Model(object):
         if option:
             key += '.' + option
         try:
-            return o.get_key(key.format(tech))
+            result = o.get_key(key.format(tech))
         except KeyError:
-            return o.get_key(key.format('default'))
+            if allow_default:
+                result = o.get_key(key.format('default'))
+            else:
+                raise KeyError
+        # Deal with 'inf' settings
+        if result == 'inf':
+            # NB: somewhat of a hack because actually returning float('inf')
+            # causes strange problems so it is probably not compatible with
+            # either Pyomo or CPLEX or both!
+            result = 1e15
+        return result
 
     def read_data(self):
         """
@@ -205,7 +219,8 @@ class Model(object):
                 # Check if y-i combination doesn't exist in model_settings YAML
                 if i in o.constraints[y]:
                     # First try: Custom YAML setting
-                    getattr(d, i)[y] = o.constraints[y][i]
+                    getattr(d, i)[y] = self.get_option('constraints', y, i,
+                                                       allow_default=False)
                 else:
                     try:
                         # Second try: CSV file
@@ -220,7 +235,8 @@ class Model(object):
                         getattr(d, i)[y] = df
                     except IOError:
                         # Final try: Default YAML setting
-                        getattr(d, i)[y] = o.constraints.default[i]
+                        getattr(d, i)[y] = self.get_option('constraints',
+                                                           'default', i)
                         # TODO raise helpful error message if this fails
         #
         # Demand (TODO: replace this with a general node)
@@ -271,6 +287,12 @@ class Model(object):
         # Parameters
         #
         def param_populator(src):
+            """Returns a `getter` function that returns either
+            (x, t)-specific values for parameters that define such, or
+            always the same static value if only a static value is given.
+
+            """
+            # TODO also allow for setting over t or x only?
             def getter(m, y, x, t):
                 if isinstance(src[y], pd.core.frame.DataFrame):
                     return float(src[y].loc[t, x])
@@ -343,6 +365,7 @@ class Model(object):
             opt.keepfiles = True
             logid = os.path.splitext(os.path.basename(self.config_run_file))[0]
             logdir = os.path.join('Logs', logid)
+            # TODO this should be done during __init__ so it can fail sooner
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr
@@ -415,7 +438,7 @@ class Model(object):
 
     def get_costs(self):
         # Levelized cost of electricity (LCOE)
-        cost = self.get_var('c', ['y', 'x'])
+        cost = self.get_var('cost', ['y', 'x'])
         e = self.get_var('e', ['y', 'x', 't']).sum(axis='major')  # sum over t
         lcoe = cost / e
         lcoe[np.isinf(lcoe)] = 0

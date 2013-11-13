@@ -93,7 +93,9 @@ def node_constraints_build(m, o, d, model):
                                                      'r_cap_max')
 
     def c_r_area_rule(m, y, x):
-        if model.mode == 'plan':
+        if model.get_option('constraints', y, 'r_area_max') is False:
+            return m.r_area[y, x] == 1.0
+        elif model.mode == 'plan':
             return m.r_area[y, x] <= model.get_option('constraints', y,
                                                       'r_area_max')
         elif model.mode == 'operate':
@@ -145,40 +147,40 @@ def node_costs(m, o, d, model):
 
     Defines variables:
 
-    * c: total costs
-    * c_con: construction costs
-    * c_op: operation costs
+    * cost: total costs
+    * cost_con: construction costs
+    * cost_op: operation costs
 
     """
     # Variables
-    m.c = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.c_con = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.c_op = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
+    m.cost = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
+    m.cost_con = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
+    m.cost_op = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
-    def c_c_rule(m, y, x):
-        return m.c[y, x] == m.c_con[y, x] + m.c_op[y, x]
+    def c_cost_rule(m, y, x):
+        return m.cost[y, x] == m.cost_con[y, x] + m.cost_op[y, x]
 
-    def c_c_con_rule(m, y, x):
-        return (m.c_con[y, x] == d.depreciation[y]
+    def c_cost_con_rule(m, y, x):
+        return (m.cost_con[y, x] == d.depreciation[y]
                 * (sum(m.time_res[t] for t in m.t) / 8760)
                 * (model.get_option('costs', y, 's_cap') * m.s_cap[y, x]
                    + model.get_option('costs', y, 'r_cap') * m.r_cap[y, x]
                    + model.get_option('costs', y, 'r_area') * m.r_area[y, x]
                    + model.get_option('costs', y, 'e_cap') * m.e_cap[y, x]))
 
-    def c_c_op_rule(m, y, x):
-        return (m.c_op[y, x] ==
-                model.get_option('costs', y, 'om_frac') * m.c_con[y, x]
+    def c_cost_op_rule(m, y, x):
+        return (m.cost_op[y, x] ==
+                model.get_option('costs', y, 'om_frac') * m.cost_con[y, x]
                 + (model.get_option('costs', y, 'om_var')
                    * sum(m.e[y, x, t] for t in m.t))
                 + (model.get_option('costs', y, 'om_fuel')
                    * sum(m.rs[y, x, t] for t in m.t)))
 
     # Constraints
-    m.c_c = cp.Constraint(m.y, m.x)
-    m.c_c_con = cp.Constraint(m.y, m.x)
-    m.c_c_op = cp.Constraint(m.y, m.x)
+    m.c_cost = cp.Constraint(m.y, m.x)
+    m.c_cost_con = cp.Constraint(m.y, m.x)
+    m.c_cost_op = cp.Constraint(m.y, m.x)
 
 
 def model_slack(m, o, d):
@@ -190,14 +192,14 @@ def model_slack(m, o, d):
     """
     # Variables
     m.slack = cp.Var(m.t, within=cp.NonNegativeReals)
-    m.c_slack = cp.Var(within=cp.NonNegativeReals)
+    m.cost_slack = cp.Var(within=cp.NonNegativeReals)
 
     # Constraint rules
-    def c_c_slack_rule(m):
-        return m.c_slack == sum(m.slack[t] for t in m.t)
+    def c_cost_slack_rule(m):
+        return m.cost_slack == sum(m.slack[t] for t in m.t)
 
     # Constraints
-    m.c_c_slack = cp.Constraint()
+    m.c_cost_slack = cp.Constraint()
 
 
 def model_constraints(m, o, d):
@@ -216,8 +218,8 @@ def model_objective(m, o, d, model):
         return model.get_option('tech_weights', y)
 
     def obj_rule(m):
-        return (sum(weight(y) * sum(m.c[y, x] for x in m.x) for y in m.y)
-                + o.slack_weight * m.c_slack)
+        return (sum(weight(y) * sum(m.cost[y, x] for x in m.x) for y in m.y)
+                + o.slack_weight * m.cost_slack)
 
     m.obj = cp.Objective(sense=cp.minimize)
     #m.obj.domain = cp.NonNegativeReals
