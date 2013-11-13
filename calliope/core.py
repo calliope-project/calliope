@@ -360,90 +360,80 @@ class Model(object):
         self.pyomo_output = out
 
     def get_var(self, var, dims):
-        """Return output for variable `var` as a series or dataframe
+        """Return output for variable `var` as a series, dataframe or panel
 
         Args:
-            dims : list of indices, e.g. (m.t, m.i)
+            var : variable name as string, e.g. 'e'
+            dims : list of indices as strings, e.g. ('y', 'x', 't')
         """
+        var = getattr(self.m, var)
+        dims = [getattr(self.m, dim) for dim in dims]
         d = self.data
         if len(dims) == 1:
-            df = pd.Series([cp.value(var[i]) for i in sorted(dims[0].value)])
+            result = pd.Series([cp.value(var[i])
+                                for i in sorted(dims[0].value)])
             idx = dims[0]
             if idx.name == 't':
-                df.index = d._dt.loc[idx.first():idx.last()]
-            elif idx.name == 'i':
-                df.index = sorted(idx.value)
-        elif len(dims) == 2:
-            df = pd.DataFrame(0, index=sorted(dims[0].value),
-                              columns=sorted(dims[1].value))
+                result.index = d._dt.loc[idx.first():idx.last()]
+            elif idx.name == 'x':
+                result.index = sorted(idx.value)
+        elif [i.name for i in dims] == ['y', 'x']:
+            result = pd.DataFrame(0, index=sorted(dims[1].value),
+                                  columns=sorted(dims[0].value))
             for i, v in var.iteritems():
-                df.loc[i[0], i[1]] = cp.value(v)
-            df.index = d._dt.loc[dims[0].first():dims[0].last()]
-        return df
+                result.loc[i[1], i[0]] = cp.value(v)
+        elif [i.name for i in dims] == ['y', 'x', 't']:
+            result = pd.Panel(data=None, items=sorted(dims[0].value),
+                              major_axis=sorted(dims[2].value),
+                              minor_axis=sorted(dims[1].value))
+            for i, v in var.iteritems():
+                result.loc[i[0], i[2], i[1]] = cp.value(v)
+            new_index = d._dt.loc[dims[2].first():dims[2].last()]
+            result.major_axis = new_index.tolist()
+        return result
 
-    def get_aggregate_variables(self):
-        m = self.m
-        D = self.get_var(m.D, [m.t])
-        P_slack = self.get_var(m.P_slack, [m.t])
-        P_noncsp = self.get_var(m.P_noncsp, [m.t])
-        P = self.get_var(m.P, [m.t, m.i]).sum(1)
-        return pd.DataFrame({'D': D, 'P_slack': P_slack,
-                            'P_noncsp': P_noncsp, 'P': P})
+    def get_system_variables(self):
+        e = self.get_var('e', ['y', 'x', 't'])
+        e = e.sum(axis=2)
+        e['slack'] = self.get_var('slack', ['t'])
+        e['D'] = self.get_var('D', ['t'])  # TODO temp while D still exists
+        return e
 
-    def get_plantlevel_variables(self):
-        m = self.m
-        detail = {'Q_sf': m.Q_sf,
-                  'Q_gen': m.Q_gen,
-                  'Q_bak': m.Q_bak,
-                  'Q_diss': m.Q_diss,
-                  'E_stor': m.E_stor,
-                  'P': m.P}
-        return pd.Panel({k: self.get_var(v, [m.t, m.i])
-                        for k, v in detail.iteritems()})
+    def get_node_variables(self):
+        detail = ['s', 'rs', 'bs', 'es', 'os', 'e']
+        return pd.Panel4D({v: self.get_var(v, ['y', 'x', 't'])
+                          for v in detail})
 
-    def get_plant_parameters(self, built_only=False):
-        """If built_only==True, disregard locations where P_built==0"""
-        m = self.m
-        detail = {'P_built': m.P_built,
-                  'E_built': m.E_built,
-                  'sf_built': m.sf_built}
-        df = pd.DataFrame({k: self.get_var(v, [m.i])
-                          for k, v in detail.iteritems()})
+    def get_node_parameters(self, built_only=False):
+        """If built_only is True, disregard locations where e_cap==0"""
+        detail = ['s_cap', 'r_cap', 'r_area', 'e_cap']
+        result = pd.Panel({v: self.get_var(v, ['y', 'x']) for v in detail})
         if built_only:
-            df = df[df.P_built > 0]
-        return df
+            result = result.to_frame()
+            result = result[result.e_cap > 0].dropna(axis=1)
+        return result
 
     def get_costs(self):
-        m = self.m
-        # lcoe per plant and total
-        cost_csp = self.get_var(m.cost_csp, [m.i])
-        P = self.get_var(m.P, [m.t, m.i]).sum()  # sum over t
-        lcoe = cost_csp / P
+        # Levelized cost of electricity (LCOE)
+        cost = self.get_var('c', ['y', 'x'])
+        e = self.get_var('e', ['y', 'x', 't']).sum(axis='major')  # sum over t
+        lcoe = cost / e
         lcoe[np.isinf(lcoe)] = 0
-        lcoe_total = cost_csp.sum() / P.sum()
-        # cf per plant and total
-        P_built = self.get_var(m.P_built, [m.i])
-        cf = P / (P_built * sum(m.time_res[t] for t in m.t))
+        lcoe_total = cost.sum() / e.sum()
+        lcoe = lcoe.append(pd.DataFrame(lcoe_total.to_dict(), index=['total']))
+        # Capacity factor (CF)
+        e_cap = self.get_var('e_cap', ['y', 'x'])
+        cf = e / (e_cap * sum(self.m.time_res[t] for t in self.m.t))
         cf = cf.fillna(0)
-        cf_total = P.sum() / (P_built.sum() * sum(m.time_res[t] for t in m.t))
-        # combine
-        df = pd.DataFrame({'lcoe': lcoe, 'cf': cf})
-        df = df.append(pd.DataFrame({'lcoe': lcoe_total, 'cf': cf_total},
-                                    index=['total']))
-        # add non-CSP
-        try:
-            lcoe_noncsp = m.cost_noncsp.value / m.P_noncsp_built.value
-        except ZeroDivisionError:
-            lcoe_noncsp = 0
-        cf_noncsp = (self.get_var(m.P_noncsp, [m.t]).sum()
-                     / (m.P_noncsp_built.value * sum(m.time_res[t] for t in m.t)))
-        if np.isnan(cf_noncsp):
-            cf_noncsp = 0
-        df = df.append(pd.DataFrame({'lcoe': lcoe_noncsp, 'cf': cf_noncsp},
-                                    index=['noncsp']))
+        cf_total = e.sum() / (e_cap.sum() * sum(self.m.time_res[t]
+                                                for t in self.m.t))
+        cf = cf.append(pd.DataFrame(cf_total.to_dict(), index=['total']))
+        # Combine everything
+        df = pd.Panel({'lcoe': lcoe, 'cf': cf})
         return df
 
     def solve_iterative(self):
+        # TODO needs updating for Calliope compatibility
         m = self.m
         d = self.data
         o = self.config_model
@@ -477,13 +467,14 @@ class Model(object):
             raise UserWarning('Could not load results into model instance.')
         # Save results to disk if specified in configuration
         if self.config_run.output.save is True:
-            overall = self.get_aggregate_variables()
-            plant_parameters = self.get_plant_parameters(built_only=False)
-            plants_output = self.get_plantlevel_variables().to_frame()
-            costs = self.get_costs()
-            output_files = {'overall.csv': overall,
-                            'plant_parameters.csv': plant_parameters,
-                            'plants_output.csv': plants_output,
+            # TODO probably doesn't work in Calliope
+            system_variables = self.get_system_variables()
+            node_parameters = self.get_node_parameters(built_only=False)
+            node_variables = self.get_node_variables().to_frame()
+            costs = self.get_costs().to_frame()
+            output_files = {'system_variables.csv': system_variables,
+                            'node_parameters.csv': node_parameters,
+                            'node_variables.csv': node_variables,
                             'costs.csv': costs}
             # Create output dir, but ignore if it already exists
             try:
