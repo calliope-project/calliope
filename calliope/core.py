@@ -198,7 +198,7 @@ class Model(object):
             d._x = sorted(self.config_run.subset_x)
         else:
             table_x = pd.read_csv(os.path.join(path, 'set_x.csv'))
-            d._x = [int(i) for i in table_x.columns.tolist()]
+            d._x = table_x.columns.tolist()
         #
         # y: Technologies set
         #
@@ -235,8 +235,6 @@ class Model(object):
                         # Results in e.g. d.r_eff['csp'] being a dataframe
                         # of efficiencies for each time step t at location x
                         df = pd.read_csv(d_path, index_col=0)[s]
-                        # Columns (x) from str to int
-                        df.columns = [int(c) for c in df.columns]
                         getattr(d, i)[y] = df
                     except IOError:
                         # Final try: Default YAML setting
@@ -253,8 +251,6 @@ class Model(object):
         # scaling this peak according to time_res
         d.D_max = self.config_run.input.D_max
         d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res_static
-        # Columns (x): str -> int
-        d.D.columns = [int(c) for c in d.D.columns]
         # Last index t for which model may still use startup exceptions
         d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
 
