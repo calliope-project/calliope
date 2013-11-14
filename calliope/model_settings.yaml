@@ -15,9 +15,8 @@ opmode:
 # TECHNOLOGIES
 #
 
-# Allowed technologies
-techs: ['csp', 'ccgt']
-#techs: ['csp', 'ccgt', 'demand']
+# Defines the set of possible technologies
+techs: ['csp', 'ccgt', 'demand']
 
 # Cost weights in objective function (higher: relatively more expensive)
 tech_weights:

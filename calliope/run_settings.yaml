@@ -11,7 +11,11 @@ output:
     save: false
     path: 'Output'
 
-#subset_x: [33, 75, 34, 23, 85, 86, 16, 98, 57, 36]  # Leave empty to disable subsetting
+#
+# SUBSETTING
+#
+
+subset_y: ['csp', 'ccgt']
 subset_x: [33, 75, 34]  # Leave empty to disable subsetting
 subset_t: ['2005-01-01', '2005-03-31']
 
@@ -20,10 +24,9 @@ subset_t: ['2005-01-01', '2005-03-31']
 #
 
 override:
-#    P_max: 100000
-#    sf_max: 7950000
-#    E_time: 30
-#    scale_sf: 32
+    # constraints:
+    #     default:
+    #         r_eff: 0.9
 
 #
 # SOLVER AND LOGGING

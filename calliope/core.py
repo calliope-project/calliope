@@ -81,6 +81,7 @@ class Model(object):
 
     def get_timeres(self):
         """Temporary hack: assume data always has 1.0 time resolution"""
+        # TODO this needs to be replaced with actual functionality
         return 1.0
 
     def prev(self, t):
@@ -173,7 +174,7 @@ class Model(object):
         d = self.data
         path = self.config_run.input.path
         #
-        # t: Time steps set (read from CSV file)
+        # t: Timesteps set
         #
         table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None)
         table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
@@ -191,16 +192,20 @@ class Model(object):
         # From time_res_static, initialize time_res_series
         d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
         #
-        # x: Locations set (read from CSV file)
+        # x: Nodes set
         #
-        table_x = pd.read_csv(os.path.join(path, 'set_x.csv'))
-        d._x = [int(i) for i in table_x.columns.tolist()]
         if self.config_run.get_key('subset_x', default=False):
             d._x = sorted(self.config_run.subset_x)
+        else:
+            table_x = pd.read_csv(os.path.join(path, 'set_x.csv'))
+            d._x = [int(i) for i in table_x.columns.tolist()]
         #
-        # y: Technologies set (read from YAML settings)
+        # y: Technologies set
         #
-        d._y = o.techs
+        if self.config_run.get_key('subset_y', default=False):
+            d._y = self.config_run.subset_y
+        else:
+            d._y = o.techs
         #
         # Energy resource and efficiencies that may be defined over (x, t)
         # for a given technology y
@@ -280,7 +285,7 @@ class Model(object):
             horizon_adj = int(o.opmode.horizon / d.time_res_static)
             m.t = cp.Set(initialize=d._t[t_start:t_start+horizon_adj],
                          ordered=True)
-        m.x = cp.Set(initialize=d._x, ordered=True)  # Locations
+        m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
         m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
 
         #
