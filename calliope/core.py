@@ -211,7 +211,9 @@ class Model(object):
         if self.config_run.get_key('subset_y', default=False):
             d._y = self.config_run.subset_y
         else:
-            d._y = o.techs
+            d._y = []
+            for i in self.config_run.nodes.itervalues():
+                d._y += i.techs
         #
         # x: Nodes set
         #
