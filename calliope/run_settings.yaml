@@ -28,7 +28,7 @@ nodes:
 #
 # Leave any of these empty to disable subsetting
 
-subset_y: ['csp', 'ccgt', 'demand']
+subset_y: []
 subset_x: []
 subset_t: ['2005-01-01', '2005-01-31']
 
