@@ -112,7 +112,7 @@ def node_constraints_build(m, o, d, model):
 
     def c_e_cap_rule(m, y, x):
         # First check whether this tech is allowed at this node
-        if d.nodes.ix[x, y] == 0:
+        if not d.nodes.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
         elif model.mode == 'plan':
             return m.e_cap[y, x] <= model.get_option('constraints', y,
