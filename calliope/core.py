@@ -32,7 +32,8 @@ class Model(object):
     def __init__(self, config_model=None, config_run=None):
         """
         Args:
-            options : override default YAML file containing model settings.
+            config_model : path to YAML file with model settings
+            config_run : path to YAML file with run settings
         """
         super(Model, self).__init__()
         # Load settings
@@ -47,11 +48,12 @@ class Model(object):
         self.config_model = utils.AttrDict(yaml.load(open(config_model, 'r')))
         self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
         # Override config_model settings if specified in config_run
-        if ('override' in self.config_run
-                and isinstance(self.config_run.override, utils.AttrDict)):
-            for k, v in self.config_run.override.iteritems():
-                self.config_model[k] = v
-        o = self.config_model  # For easier access
+        cr = self.config_run
+        o = self.config_model
+        if ('override' in cr
+                and isinstance(cr.override, utils.AttrDict)):
+            for k in cr.override.keys_nested():
+                o.set_key(k, cr.override.get_key(k))
         # Perform any tech-specific setup by instantiating tech classes
         self.technologies = utils.AttrDict()
         for t in o.techs:
@@ -133,11 +135,22 @@ class Model(object):
                 raise KeyError
         # Deal with 'inf' settings
         if result == 'inf':
-            # NB: somewhat of a hack because actually returning float('inf')
-            # causes strange problems so it is probably not compatible with
-            # either Pyomo or CPLEX or both!
-            result = 1e15
+            result = float('inf')
         return result
+
+    def scale_to_peak(self, df, peak, symmetric=True):
+        """Returns the given dataframe scaled to the given peak value."""
+        # Normalize to (0, 1), then multiply by the desired maximum,
+        # scaling this peak according to time_res
+        # TODO write unit tests for this to make sure it does what it should,
+        # and clearly define what it does for negative, positive, mixed values,
+        # etc.!
+        d = self.data
+        if symmetric and df.max() < 0:
+            scale = df.min()
+        else:
+            scale = df.max()
+        return (df / scale) * peak * d.time_res_static
 
     def read_data(self):
         """
@@ -242,6 +255,11 @@ class Model(object):
                         # Results in e.g. d.r_eff['csp'] being a dataframe
                         # of efficiencies for each time step t at location x
                         df = pd.read_csv(d_path, index_col=0)[s]
+                        # Scale r to a given maximum if necessary
+                        scale_to_peak = self.get_option('constraints', y,
+                                                        'r_scale_to_peak')
+                        if i == 'r' and scale_to_peak:
+                            df = self.scale_to_peak(df, scale_to_peak)
                         # Add missing columns as all zeros
                         missing_cols = list(set(d._x) - set(df.columns))
                         for c in missing_cols:
@@ -252,16 +270,7 @@ class Model(object):
                         getattr(d, i)[y] = self.get_option('constraints',
                                                            'default', i)
                         # TODO raise helpful error message if this fails
-        #
-        # Demand (TODO: replace this with a general node)
-        #
-        # Aggregate power demand [kWh]
-        d.D = pd.read_csv(os.path.join(path, self.config_run.input.demand),
-                          index_col=0, header=None)[s]
-        # Normalize demand to (0, 1), then multiply by the desired demand peak,
-        # scaling this peak according to time_res
-        d.D_max = self.config_run.input.D_max
-        d.D = (d.D / float(d.D.max())) * d.D_max * d.time_res_static
+
         # Last index t for which model may still use startup exceptions
         d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
 
@@ -312,15 +321,9 @@ class Model(object):
                     return float(src[y])
             return getter
 
-        # was dni
         m.r = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.r))
-        # was n_sf
         m.r_eff = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.r_eff))
-        # was n_el
         m.e_eff = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.e_eff))
-
-        # table_D is a pandas dataframe with one column, named 1
-        m.D = cp.Param(m.t, initialize=lambda m, t: float(d.D.loc[t, 1]))
         m.time_res = (cp.Param(m.t,
                       initialize=lambda m, t: float(d.time_res_series.loc[t])))
 
@@ -330,7 +333,7 @@ class Model(object):
         # 1. Required
         constraints.node_energy_balance(m, o, d, self)
         constraints.node_constraints_build(m, o, d, self)
-        constraints.node_constraints_operational(m, o, d)
+        constraints.node_constraints_operational(m, o, d, self)
         constraints.node_costs(m, o, d, self)
         constraints.model_slack(m, o, d)
         constraints.model_constraints(m, o, d)
@@ -431,7 +434,6 @@ class Model(object):
         e = self.get_var('e', ['y', 'x', 't'])
         e = e.sum(axis=2)
         e['slack'] = self.get_var('slack', ['t'])
-        e['D'] = self.get_var('D', ['t'])  # TODO temp while D still exists
         return e
 
     def get_node_variables(self):
