@@ -26,17 +26,24 @@ def _append_node(v, d):
 
 
 def _explode_nodes(k):
-    """Expands keys of the form '1--3' into the list form ['1', '2', '3'].
+    """Expands keys of the form '1--3' into the list form ['1', '2', '3'],
+    and keys of the form '1,3,4' into the list form ['1', '3', '4'].
+    Can deal with any combination, e.g. '1--3,6,9--12'.
 
     Always returns a list, even if `k` is just a single key, i.e.
     _explode_nodes('1') returns ['1'].
 
     """
-    if '--' in k:
-        begin, end = k.split('--')
-        return [str(i) for i in range(int(begin), int(end)+1)]
-    else:
-        return [k]
+    finalkeys = []
+    subkeys = k.split(',')
+    for sk in subkeys:
+        if '--' in sk:
+            begin, end = sk.split('--')
+            finalkeys += [str(i).strip()
+                          for i in range(int(begin), int(end)+1)]
+        else:
+            finalkeys += [sk.strip()]
+    return finalkeys
 
 
 def get_nodes(d):

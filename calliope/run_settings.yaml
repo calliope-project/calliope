@@ -18,7 +18,7 @@ nodes:
         level: 1
         within:
         techs: ['ccgt', 'demand']
-    0--99:
+    33,75,34:
         level: 0
         within: a
         techs: ['csp']
@@ -29,7 +29,7 @@ nodes:
 # Leave any of these empty to disable subsetting
 
 subset_y: ['csp', 'ccgt', 'demand']
-subset_x: ['a', '33', '75', '34']
+subset_x: []
 subset_t: ['2005-01-01', '2005-01-31']
 
 #
