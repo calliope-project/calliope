@@ -64,6 +64,8 @@ def node_constraints_build(m, o, d, model):
     * e_cap: installed storage <> electricity conversion capacity
 
     """
+    d = model.data
+
     # Variables
     m.s_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
     m.r_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
@@ -103,7 +105,10 @@ def node_constraints_build(m, o, d, model):
                                                       'r_area_max')
 
     def c_e_cap_rule(m, y, x):
-        if model.mode == 'plan':
+        # First check whether this tech is allowed at this node
+        if d.nodes.ix[x, y] == 0:
+            return m.e_cap[y, x] == 0
+        elif model.mode == 'plan':
             return m.e_cap[y, x] <= model.get_option('constraints', y,
                                                      'e_cap_max')
         elif model.mode == 'operate':
