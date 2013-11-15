@@ -29,7 +29,6 @@ slack_weight: 1.0e+9  # Discourage slack
 # Technology constraints
 constraints:
     default:
-        r: 0  # By default, technologies have no resource
         r_unlimited: false
         r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
         r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
@@ -45,6 +44,7 @@ constraints:
         e_cap_max: 0  # Maximum turbine size [kWe]
         e_can_be_negative: false
     ccgt:
+        r: 0
         r_unlimited: true
         e_cap_max: 40000  # Maximum installed generation capacity [kWe]
     csp:

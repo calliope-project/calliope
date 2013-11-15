@@ -73,7 +73,7 @@ def generate_node_matrix(d, techs):
     for y in techs:
         df[y] = []
     for k, v in d.iteritems():
-        if '--' in k:
+        if '--' in k or ',' in k:
             allnodes = _explode_nodes(k)
             for n in allnodes:
                 df._node.append(n)
