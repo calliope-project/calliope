@@ -129,9 +129,13 @@ def node_constraints_operational(m, o, d):
     def c_bs_rule(m, y, x, t):
         # bs (backup resource) is allowed only during
         # the hours within startup_time
-        if t < d.startup_time_bounds:
-            return m.bs[y, x, t] <= (m.time_res[t]
-                                     * m.e_cap[y, x]) / m.e_eff[y, x, t]
+        # TODO this entire thing is a hack right now
+        if y == 'csp' and t < d.startup_time_bounds:
+            try:
+                return m.bs[y, x, t] <= (m.time_res[t]
+                                         * m.e_cap[y, x]) / m.e_eff[y, x, t]
+            except ZeroDivisionError:
+                return m.bs[y, x, t] == 0
         else:
             return m.bs[y, x, t] == 0
 
