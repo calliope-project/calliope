@@ -17,6 +17,8 @@ class AttrDict(dict):
 
     def init_from_dict(self, d):
         for k, v in d.iteritems():
+            if isinstance(k, int):
+                k = str(k)  # Keys must be strings, not ints
             if isinstance(v, dict):
                 self[k] = AttrDict(v)
             else:
