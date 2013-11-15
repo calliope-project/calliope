@@ -29,17 +29,24 @@ slack_weight: 1.0e+9  # Discourage slack
 # Technology constraints
 constraints:
     default:
+        r: 0  # By default, technologies have no resource
+        r_unlimited: false
         r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
         r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
         r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
+        r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
+        r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
+                                # NB: this only works if r is read as a time series from CSV, otherwise simply set
+                                # r statically to the desired value!
         s_init: 0  # Initial storage level [kWht]
         s_cap_max: 0  # Maximum storage size [kWht]
         s_loss: 0  # Storage heat loss rate [per hour]
         e_eff: 1.0
         e_cap_max: 0  # Maximum turbine size [kWe]
+        e_can_be_negative: false
     ccgt:
-        r: inf
-        e_cap_max: 10000  # Maximum installed generation capacity [kWe]
+        r_unlimited: true
+        e_cap_max: 40000  # Maximum installed generation capacity [kWe]
     csp:
         # -- Begin CSP-specific constraints --
         use_s_time: true  # Use s_time to calculate s_cap_max?
@@ -50,7 +57,8 @@ constraints:
         s_loss: 0.002
         e_cap_max: 20000  # Maximum turbine size [kWe]
     demand:
-        e_cap_max: inf  # TODO
+        e_cap_max: inf
+        e_can_be_negative: true
 
 # Technology costs
 costs:

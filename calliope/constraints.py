@@ -19,11 +19,11 @@ def node_energy_balance(m, o, d, model):
     """
     # Variables
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.rs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.es = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.es = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.e = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.e = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
@@ -31,8 +31,15 @@ def node_energy_balance(m, o, d, model):
         return m.e[y, x, t] == m.es[y, x, t] * m.e_eff[y, x, t]
 
     def c_rs_rule(m, y, x, t):
-        return (m.rs[y, x, t] == m.r[y, x, t]
-                * 0.001 * m.r_area[y, x] * m.r_eff[y, x, t])
+        # `rs` is forced to 0 if technology not allowed at this location
+        if d.nodes.ix[x, y] == 0:
+            return m.rs[y, x, t] == 0
+        elif model.get_option('constraints', y, 'r_unlimited'):
+            return m.rs[y, x, t] >= 0
+        else:
+            return (m.rs[y, x, t] == m.r[y, x, t]
+                    * model.get_option('constraints', y, 'r_scale')
+                    * m.r_area[y, x] * m.r_eff[y, x, t])
         # TODO remove 0.001 and instead scale the dni input files!
 
     def c_s_balance_rule(m, y, x, t):
@@ -44,8 +51,7 @@ def node_energy_balance(m, o, d, model):
                            * m.s[y, x, model.prev(t)])
         else:
             s_minus_one = model.get_option('constraints', y, 's_init')
-        return (m.s[y, x, t] == s_minus_one
-                + m.r_eff[y, x, t] * m.rs[y, x, t] + m.bs[y, x, t]
+        return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
                 - m.es[y, x, t] - m.os[y, x, t])
 
     # Constraints
@@ -122,11 +128,18 @@ def node_constraints_build(m, o, d, model):
     m.c_e_cap = cp.Constraint(m.y, m.x)
 
 
-def node_constraints_operational(m, o, d):
+def node_constraints_operational(m, o, d, model):
     """Depends on: node_energy_balance, node_constraints_build"""
     # Constraint rules
     def c_e_max_rule(m, y, x, t):
         return m.e[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
+
+    def c_e_min_rule(m, y, x, t):
+        if model.get_option('constraints', y, 'e_can_be_negative'):
+            # return cp.Constraint.Skip
+            return m.e[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
+        else:
+            return m.e[y, x, t] >= 0
 
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
@@ -146,6 +159,7 @@ def node_constraints_operational(m, o, d):
 
     # Constraints
     m.c_e_max = cp.Constraint(m.y, m.x, m.t)
+    m.c_e_min = cp.Constraint(m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
     m.c_bs = cp.Constraint(m.y, m.x, m.t)
 
@@ -216,7 +230,7 @@ def model_constraints(m, o, d):
     # Constraint rules
     def c_system_balance_rule(m, t):
         return (sum(m.e[y, x, t] for x in m.x for y in m.y)
-                + m.slack[t] >= m.D[t])
+                + m.slack[t] == 0)
 
     # Constraints
     m.c_system_balance = cp.Constraint(m.t)

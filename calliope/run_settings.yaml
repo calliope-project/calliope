@@ -4,8 +4,6 @@
 
 input:
     path:  'Input-Calliope/NA-1hr-full'
-    demand: 'D_EU.csv'
-    D_max: 80000  # Set to: P_max * len(subset_i) * 0.8
 
 output:
     save: false
@@ -19,7 +17,7 @@ nodes:
     a:
         level: 1
         within:
-        techs: ['ccgt']  # TODO add 'demand' when removing hardcoded 'D'
+        techs: ['ccgt', 'demand']
     0--99:
         level: 0
         within: a
@@ -28,19 +26,22 @@ nodes:
 #
 # SUBSETTING
 #
+# Leave any of these empty to disable subsetting
 
-subset_y: ['csp', 'ccgt']
-subset_x: ['a', '33', '75', '34']  # Leave empty to disable subsetting
-subset_t: ['2005-01-01', '2005-03-31']
+subset_y: ['csp', 'ccgt', 'demand']
+subset_x: ['a', '33', '75', '34']
+subset_t: ['2005-01-01', '2005-01-31']
 
 #
 # MODEL SETTINGS OVERRIDE
 #
 
 override:
-    # constraints:
-    #     default:
-    #         r_eff: 0.9
+    constraints:
+        csp:
+            r_scale: 0.001  # Convert from Wh in DNI input data to kWh for model
+        demand:
+            r_scale_to_peak: -60000  # Scale demand such that its maximum is as defined here
 
 #
 # SOLVER AND LOGGING
