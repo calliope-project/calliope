@@ -12,11 +12,25 @@ output:
     path: 'Output'
 
 #
+# NODES
+#
+
+nodes:
+    a:
+        level: 1
+        within:
+        techs: ['ccgt']  # TODO add 'demand' when removing hardcoded 'D'
+    0--99:
+        level: 0
+        within: a
+        techs: ['csp']
+
+#
 # SUBSETTING
 #
 
 subset_y: ['csp', 'ccgt']
-subset_x: [33, 75, 34]  # Leave empty to disable subsetting
+subset_x: ['a', '33', '75', '34']  # Leave empty to disable subsetting
 subset_t: ['2005-01-01', '2005-03-31']
 
 #

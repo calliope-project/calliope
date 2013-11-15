@@ -14,6 +14,7 @@ import yaml
 
 from . import constraints
 from . import techs
+from . import nodes
 from . import utils
 
 
@@ -192,20 +193,26 @@ class Model(object):
         # From time_res_static, initialize time_res_series
         d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
         #
-        # x: Nodes set
-        #
-        if self.config_run.get_key('subset_x', default=False):
-            d._x = sorted(self.config_run.subset_x)
-        else:
-            table_x = pd.read_csv(os.path.join(path, 'set_x.csv'))
-            d._x = table_x.columns.tolist()
-        #
         # y: Technologies set
         #
         if self.config_run.get_key('subset_y', default=False):
             d._y = self.config_run.subset_y
         else:
             d._y = o.techs
+        #
+        # x: Nodes set
+        #
+        if self.config_run.get_key('subset_x', default=False):
+            d._x = sorted(self.config_run.subset_x)
+        else:
+            d._x = nodes.get_nodes(self.config_run.nodes)
+        #
+        # Nodes settings matrix
+        #
+        d.nodes = nodes.generate_node_matrix(self.config_run.nodes,
+                                             techs=d._y)
+        # For simplicity, only keep the nodes that are actually in set `x`
+        d.nodes = d.nodes.ix[d._x, :]
         #
         # Energy resource and efficiencies that may be defined over (x, t)
         # for a given technology y
@@ -235,6 +242,10 @@ class Model(object):
                         # Results in e.g. d.r_eff['csp'] being a dataframe
                         # of efficiencies for each time step t at location x
                         df = pd.read_csv(d_path, index_col=0)[s]
+                        # Add missing columns as all zeros
+                        missing_cols = list(set(d._x) - set(df.columns))
+                        for c in missing_cols:
+                            df[c] = 0
                         getattr(d, i)[y] = df
                     except IOError:
                         # Final try: Default YAML setting
