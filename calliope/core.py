@@ -54,14 +54,6 @@ class Model(object):
                 and isinstance(cr.override, utils.AttrDict)):
             for k in cr.override.keys_nested():
                 o.set_key(k, cr.override.get_key(k))
-        # Perform any tech-specific setup by instantiating tech classes
-        self.technologies = utils.AttrDict()
-        for t in o.techs:
-            try:
-                techname = t.capitalize() + 'Technology'
-                self.technologies[t] = techs.getattr(techname)(o=o)
-            except AttributeError:
-                self.technologies[t] = techs.Technology(o=o, name=t)
         # Calculate depreciation coefficients for LEC
         self.data = utils.AttrDict()
         d = self.data
@@ -72,7 +64,22 @@ class Model(object):
             dep = ((interest * (1 + interest) ** plant_life)
                    / (((1 + interest) ** plant_life) - 1))
             d.depreciation[y] = dep
+        # Other initialization tasks
+        self.initialize_sets()
+        self.initialize_techs()
         self.read_data()
+
+    def initialize_techs(self):
+        """Perform any tech-specific setup by instantiating tech classes"""
+        o = self.config_model
+        d = self.data
+        self.technologies = utils.AttrDict()
+        for t in d._y:
+            try:
+                techname = t.capitalize() + 'Technology'
+                self.technologies[t] = techs.getattr(techname)(o=o)
+            except AttributeError:
+                self.technologies[t] = techs.Technology(o=o, name=t)
 
     # def get_timeres(self):
     #     """Backwards (GAMS) compatible method to get time resolution."""
@@ -152,6 +159,51 @@ class Model(object):
             scale = df.max()
         return (df / scale) * peak * d.time_res_static
 
+    def initialize_sets(self):
+        d = self.data
+        path = self.config_run.input.path
+        #
+        # t: Timesteps set
+        #
+        table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None)
+        table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+                         for dt in table_t[1]]
+        if self.config_run.subset_t:
+            table_t = table_t.loc[self.config_run.subset_t[0]:
+                                  self.config_run.subset_t[1]]
+            self.slice = slice(table_t[0][0], table_t[0][-1] + 1)
+        else:
+            self.slice = slice(None)
+        d._t = pd.Series([int(t) for t in table_t[0].tolist()])
+        d._dt = pd.Series(table_t.index, index=d._t.tolist())
+        # First set time_res_static across all data
+        d.time_res_static = self.get_timeres()
+        # From time_res_static, initialize time_res_series
+        d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
+        #
+        # y: Technologies set
+        #
+        if self.config_run.get_key('subset_y', default=False):
+            d._y = self.config_run.subset_y
+        else:
+            d._y = []
+            for i in self.config_run.nodes.itervalues():
+                d._y += i.techs
+        #
+        # x: Nodes set
+        #
+        if self.config_run.get_key('subset_x', default=False):
+            d._x = sorted(self.config_run.subset_x)
+        else:
+            d._x = nodes.get_nodes(self.config_run.nodes)
+        #
+        # Nodes settings matrix
+        #
+        d.nodes = nodes.generate_node_matrix(self.config_run.nodes,
+                                             techs=d._y)
+        # For simplicity, only keep the nodes that are actually in set `x`
+        d.nodes = d.nodes.ix[d._x, :]
+
     def read_data(self):
         """
         Read input data.
@@ -187,48 +239,7 @@ class Model(object):
         o = self.config_model
         d = self.data
         path = self.config_run.input.path
-        #
-        # t: Timesteps set
-        #
-        table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None)
-        table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-                         for dt in table_t[1]]
-        if self.config_run.subset_t:
-            table_t = table_t.loc[self.config_run.subset_t[0]:
-                                  self.config_run.subset_t[1]]
-            s = slice(table_t[0][0], table_t[0][-1] + 1)
-        else:
-            s = slice(None)
-        d._t = pd.Series([int(t) for t in table_t[0].tolist()])
-        d._dt = pd.Series(table_t.index, index=d._t.tolist())
-        # First set time_res_static across all data
-        d.time_res_static = self.get_timeres()
-        # From time_res_static, initialize time_res_series
-        d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
-        #
-        # y: Technologies set
-        #
-        if self.config_run.get_key('subset_y', default=False):
-            d._y = self.config_run.subset_y
-        else:
-            d._y = []
-            for i in self.config_run.nodes.itervalues():
-                d._y += i.techs
-        #
-        # x: Nodes set
-        #
-        if self.config_run.get_key('subset_x', default=False):
-            d._x = sorted(self.config_run.subset_x)
-        else:
-            d._x = nodes.get_nodes(self.config_run.nodes)
-        #
-        # Nodes settings matrix
-        #
-        d.nodes = nodes.generate_node_matrix(self.config_run.nodes,
-                                             techs=d._y)
-        # For simplicity, only keep the nodes that are actually in set `x`
-        d.nodes = d.nodes.ix[d._x, :]
-        #
+
         # Energy resource and efficiencies that may be defined over (x, t)
         # for a given technology y
         params_in_time_and_space = ['r', 'r_eff', 'e_eff']
@@ -253,10 +264,10 @@ class Model(object):
                         # Second try: CSV file
                         # File format e.g. 'csp_r_eff.csv'
                         d_path = os.path.join(path, y + '_' + i + '.csv')
-                        # [s] to do time subset if needed
+                        # [self.slice] to do time subset if needed
                         # Results in e.g. d.r_eff['csp'] being a dataframe
                         # of efficiencies for each time step t at location x
-                        df = pd.read_csv(d_path, index_col=0)[s]
+                        df = pd.read_csv(d_path, index_col=0)[self.slice]
                         # Scale r to a given maximum if necessary
                         scale_to_peak = self.get_option('constraints', y,
                                                         'r_scale_to_peak')
