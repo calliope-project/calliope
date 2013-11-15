@@ -13,11 +13,17 @@ output:
 # NODES
 #
 
+# Tech aliases use all settings of their parent technology, but use their alias
+# name to read data. E.g. setting `demand: ['demand-eu']` means that `demand-eu`
+# acts just like `demand`, but reads its resource data from `demand-eu_r.csv`.
+tech_aliases:
+    demand: ['demand-eu', 'demand-ca']
+
 nodes:
     a:
         level: 1
         within:
-        techs: ['ccgt', 'demand']
+        techs: ['ccgt', 'demand-eu']
     33,75,34:
         level: 0
         within: a

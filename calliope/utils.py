@@ -78,6 +78,26 @@ class AttrDict(dict):
         return keys
 
 
+def invert_dict(d):
+    """Inverts a dict of the form:
+
+    {'a': ['b-1', 'b-2'], 'b': ['bbb'], 'c': 'foo'}
+
+    to:
+
+    {'b-1': 'a', 'b-2': 'a', 'bbb': 'b', 'foo': 'c'}
+
+    """
+    mapping = {}
+    for key, v in [(v, k) for k, v in d.iteritems()]:
+        if isinstance(key, list):
+            for k in key:
+                mapping[k] = v
+        else:
+            mapping[key] = v
+    return mapping
+
+
 @contextmanager
 def capture_output():
     import sys

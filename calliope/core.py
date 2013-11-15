@@ -160,6 +160,7 @@ class Model(object):
         return (df / scale) * peak * d.time_res_static
 
     def initialize_sets(self):
+        o = self.config_model
         d = self.data
         path = self.config_run.input.path
         #
@@ -184,11 +185,15 @@ class Model(object):
         # y: Technologies set
         #
         if self.config_run.get_key('subset_y', default=False):
-            d._y = self.config_run.subset_y
+            d._y_aliased = self.config_run.subset_y
         else:
-            d._y = []
+            d._y_aliased = []
             for i in self.config_run.nodes.itervalues():
-                d._y += i.techs
+                d._y_aliased += i.techs
+        # Resolve tech aliases
+        d.tech_aliases = utils.invert_dict(self.config_run.tech_aliases)
+        d._y = [d.tech_aliases[y] if y not in o.techs else y
+                for y in d._y_aliased]
         #
         # x: Nodes set
         #
@@ -200,7 +205,12 @@ class Model(object):
         # Nodes settings matrix
         #
         d.nodes = nodes.generate_node_matrix(self.config_run.nodes,
-                                             techs=d._y)
+                                             techs=d._y_aliased)
+        # Un-alias column names
+        d.nodes.columns = [d.tech_aliases[c]
+                           if c not in o.techs and not c.startswith('_')
+                           else c
+                           for c in d.nodes.columns]
         # For simplicity, only keep the nodes that are actually in set `x`
         d.nodes = d.nodes.ix[d._x, :]
 
@@ -252,7 +262,12 @@ class Model(object):
         #   * KeyError if not defined anywhere at all
         for i in params_in_time_and_space:
             setattr(d, i, utils.AttrDict())
-        for y in d._y:
+        for y_aliased in d._y_aliased:  # Use aliased set to read data
+            # Use real set to store data
+            if y_aliased not in o.techs:
+                y = d.tech_aliases[y_aliased]
+            else:
+                y = y_aliased
             for i in params_in_time_and_space:
                 # Check if y-i combination doesn't exist in model_settings YAML
                 if i in o.constraints[y]:
@@ -263,7 +278,8 @@ class Model(object):
                     try:
                         # Second try: CSV file
                         # File format e.g. 'csp_r_eff.csv'
-                        d_path = os.path.join(path, y + '_' + i + '.csv')
+                        d_path = os.path.join(path,
+                                              y_aliased + '_' + i + '.csv')
                         # [self.slice] to do time subset if needed
                         # Results in e.g. d.r_eff['csp'] being a dataframe
                         # of efficiencies for each time step t at location x
