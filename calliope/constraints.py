@@ -31,16 +31,29 @@ def node_energy_balance(m, o, d, model):
         return m.e[y, x, t] == m.es[y, x, t] * m.e_eff[y, x, t]
 
     def c_rs_rule(m, y, x, t):
-        # `rs` is forced to 0 if technology not allowed at this location
-        if d.nodes.ix[x, y] == 0:
+        this_r = m.r[y, x, t]
+        #
+        # If `r` is set to `inf`, it is interpreted as unconstrained `r`/`rs`
+        #
+        if this_r == float('inf'):
+            return cp.Constraint.NoConstraint
+        #
+        # Otherwise, set up a context-dependent `rs` constraint
+        #
+        if (d.nodes.ix[x, y] != 1) or (this_r == 0):
+            # `rs` is forced to 0 if technology not allowed at this location,
+            # and also if `r` is 0
             return m.rs[y, x, t] == 0
-        elif model.get_option('constraints', y, 'r_unlimited'):
-            return m.rs[y, x, t] >= 0
         else:
-            return (m.rs[y, x, t] == m.r[y, x, t]
-                    * model.get_option('constraints', y, 'r_scale')
-                    * m.r_area[y, x] * m.r_eff[y, x, t])
-        # TODO remove 0.001 and instead scale the dni input files!
+            r_avail = (this_r
+                       * model.get_option('constraints', y, 'r_scale')
+                       * m.r_area[y, x] * m.r_eff[y, x, t])
+            if model.get_option('constraints', y, 'force_r'):
+                return m.rs[y, x, t] == r_avail
+            elif this_r > 0:
+                return m.rs[y, x, t] <= r_avail
+            else:
+                return m.rs[y, x, t] >= r_avail
 
     def c_s_balance_rule(m, y, x, t):
         # TODO add another check whether s_cap is 0, and if yes,
@@ -131,12 +144,17 @@ def node_constraints_build(m, o, d, model):
 def node_constraints_operational(m, o, d, model):
     """Depends on: node_energy_balance, node_constraints_build"""
     # Constraint rules
+    def c_r_max_rule(m, y, x, t):
+        return m.rs[y, x, t] <= m.time_res[t] * m.r_cap[y, x]
+
+    def c_r_min_rule(m, y, x, t):
+        return m.rs[y, x, t] >= -1 * m.time_res[t] * m.r_cap[y, x]
+
     def c_e_max_rule(m, y, x, t):
         return m.e[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
 
     def c_e_min_rule(m, y, x, t):
         if model.get_option('constraints', y, 'e_can_be_negative'):
-            # return cp.Constraint.Skip
             return m.e[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
         else:
             return m.e[y, x, t] >= 0
@@ -158,6 +176,8 @@ def node_constraints_operational(m, o, d, model):
             return m.bs[y, x, t] == 0
 
     # Constraints
+    m.c_r_max = cp.Constraint(m.y, m.x, m.t)
+    m.c_r_min = cp.Constraint(m.y, m.x, m.t)
     m.c_e_max = cp.Constraint(m.y, m.x, m.t)
     m.c_e_min = cp.Constraint(m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
