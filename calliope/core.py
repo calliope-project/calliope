@@ -115,7 +115,7 @@ class Model(object):
         else:
             raise KeyError('<0')
 
-    #@utils.memoize
+    @utils.memoize_instancemethod
     def get_option(self, group, tech, option=None, allow_default=True):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
