@@ -81,18 +81,17 @@ class Model(object):
             except AttributeError:
                 self.technologies[t] = techs.Technology(o=o, name=t)
 
-    # def get_timeres(self):
-    #     """Backwards (GAMS) compatible method to get time resolution."""
-    #     # TODO: needs updating!
-    #     path = self.config_run.input.path
-    #     with open(os.path.join(path, 'ModelSettings.gms'), 'r') as f:
-    #         gms = f.read()
-    #     return float(gms.split('time_resolution')[-1].strip())
-
     def get_timeres(self):
-        """Temporary hack: assume data always has 1.0 time resolution"""
-        # TODO this needs to be replaced with actual functionality
-        return 1.0
+        """Returns resolution of data in hours. Needs a properly
+        formatted `set_t.csv` file to work.
+
+        """
+        path = self.config_run.input.path
+        df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
+                         header=None, parse_dates=[1])
+        seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
+        hours = abs(seconds) / 3600
+        return hours
 
     def prev(self, t):
         """Using the timesteps set of this model instance, return `t-1`,
@@ -409,15 +408,11 @@ class Model(object):
             opt.keepfiles = True
             logid = os.path.splitext(os.path.basename(self.config_run_file))[0]
             logdir = os.path.join('Logs', logid)
-            # TODO this should be done during __init__ so it can fail sooner
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr
         with utils.capture_output() as out:
             results = opt.solve(instance)
-        # Copy results file to script folder
-        # TODO
-        # opt.log_file
         if save_json:
             with open(save_json, 'w') as f:
                 json.dump(results.json_repn(), f, indent=4)
@@ -527,26 +522,39 @@ class Model(object):
         return (pd.concat(aggregates), pd.concat(plantlevels, axis=1))
 
     def process_outputs(self):
-        # Load results into model instance for access via model variables
+        """Load results into model instance for access via model
+        variables, and if ``self.config_run.output.save`` is ``True``,
+        save outputs to CSV.
+
+        """
         r = self.instance.load(self.results)
         if r is False:
             raise UserWarning('Could not load results into model instance.')
         # Save results to disk if specified in configuration
         if self.config_run.output.save is True:
-            # TODO probably doesn't work in Calliope
-            system_variables = self.get_system_variables()
-            node_parameters = self.get_node_parameters(built_only=False)
-            node_variables = self.get_node_variables().to_frame()
-            costs = self.get_costs().to_frame()
-            output_files = {'system_variables.csv': system_variables,
-                            'node_parameters.csv': node_parameters,
-                            'node_variables.csv': node_variables,
-                            'costs.csv': costs}
-            # Create output dir, but ignore if it already exists
-            try:
-                os.makedirs(self.config_run.output.path)
-            except OSError:  # Hoping this isn't raised for more serious stuff
-                pass
-            # Write all files to output dir
-            for k, v in output_files.iteritems():
-                v.to_csv(os.path.join(self.config_run.output.path, k))
+            self.save_outputs()
+
+    def save_outputs(self):
+        """Save model outputs as CSV to ``self.config_run.output.path``"""
+        nodes = self.data.nodes
+        system_variables = self.get_system_variables()
+        node_parameters = self.get_node_parameters(built_only=False)
+        node_variables = self.get_node_variables()
+        costs = self.get_costs()
+        output_files = {'nodes.csv': nodes,
+                        'system_variables.csv': system_variables,
+                        'node_parameters.csv': node_parameters.to_frame(),
+                        'costs_lcoe.csv': costs.lcoe,
+                        'costs_cf.csv': costs.cf}
+        for var in node_variables.labels:
+            k = 'node_variables_{}.csv'.format(var)
+            v = node_variables[var].to_frame()
+            output_files[k] = v
+        # Create output dir, but ignore if it already exists
+        try:
+            os.makedirs(self.config_run.output.path)
+        except OSError:  # Hoping this isn't raised for more serious stuff
+            pass
+        # Write all files to output dir
+        for k, v in output_files.iteritems():
+            v.to_csv(os.path.join(self.config_run.output.path, k))
