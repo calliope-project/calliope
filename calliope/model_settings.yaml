@@ -29,7 +29,7 @@ slack_weight: 1.0e+9  # Discourage slack
 # Technology constraints
 constraints:
     default:
-        r_unlimited: false
+        force_r: false
         r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
         r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
         r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
@@ -44,8 +44,7 @@ constraints:
         e_cap_max: 0  # Maximum turbine size [kWe]
         e_can_be_negative: false
     ccgt:
-        r: 0
-        r_unlimited: true
+        r: inf
         e_cap_max: 40000  # Maximum installed generation capacity [kWe]
     csp:
         # -- Begin CSP-specific constraints --
@@ -57,6 +56,7 @@ constraints:
         s_loss: 0.002
         e_cap_max: 20000  # Maximum turbine size [kWe]
     demand:
+        force_r: true
         e_cap_max: inf
         e_can_be_negative: true
 
@@ -82,8 +82,6 @@ costs:
         # -- Begin CSP-specific costs --
         rec_per_sf: 0.54  # kWt of receiver needed per m2 of solar field
         # -- End CSP-specific costs --
-    demand:
-        e_cap: 0
 
 # Capital depreciation
 depreciation:
