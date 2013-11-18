@@ -3,6 +3,8 @@ from __future__ import division
 
 import coopr.pyomo as cp
 
+import utils
+
 
 def node_energy_balance(m, o, d, model):
     """
@@ -46,9 +48,9 @@ def node_energy_balance(m, o, d, model):
             return m.rs[y, x, t] == 0
         else:
             r_avail = (this_r
-                       * model.get_option('constraints', y, 'r_scale')
+                       * model.get_option(y + '.constraints.r_scale')
                        * m.r_area[y, x] * m.r_eff[y, x, t])
-            if model.get_option('constraints', y, 'force_r'):
+            if model.get_option(y + '.constraints.force_r'):
                 return m.rs[y, x, t] == r_avail
             elif this_r > 0:
                 return m.rs[y, x, t] <= r_avail
@@ -59,11 +61,11 @@ def node_energy_balance(m, o, d, model):
         # TODO add another check whether s_cap is 0, and if yes,
         # simply set s_minus_one=0 to make model setup a bit faster?
         if m.t.order_dict[t] > 1:
-            s_minus_one = (((1 - model.get_option('constraints', y, 's_loss'))
+            s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
                             ** m.time_res[model.prev(t)])
                            * m.s[y, x, model.prev(t)])
         else:
-            s_minus_one = model.get_option('constraints', y, 's_init')
+            s_minus_one = model.get_option(y + '.constraints.s_init')
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
                 - m.es[y, x, t] - m.os[y, x, t])
 
@@ -92,47 +94,37 @@ def node_constraints_build(m, o, d, model):
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
+        s_cap_max = model.get_option(y + '.constraints.s_cap_max', x=x)
         if model.mode == 'plan':
-            return m.s_cap[y, x] <= model.get_option('constraints',
-                                                     y, 's_cap_max')
+            return m.s_cap[y, x] <= s_cap_max
         elif model.mode == 'operate':
-            # TODO need a better way to load an existing system's built
-            # capacities with spatial differentiation!
-            # TODO also need a flexible approach to disable one of the max
-            # constraints e.g. by letting get_option parse 'infinity'
-            # and either return a really high number or some sort of
-            # infinity Pyomo object
-            return m.s_cap[y, x] == model.get_option('constraints',
-                                                     y, 's_cap_max')
+            return m.s_cap[y, x] == s_cap_max
 
     def c_r_cap_rule(m, y, x):
+        r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
         if model.mode == 'plan':
-            return m.r_cap[y, x] <= model.get_option('constraints', y,
-                                                     'r_cap_max')
+            return m.r_cap[y, x] <= r_cap_max
         elif model.mode == 'operate':
-            return m.r_cap[y, x] == model.get_option('constraints', y,
-                                                     'r_cap_max')
+            return m.r_cap[y, x] == r_cap_max
 
     def c_r_area_rule(m, y, x):
-        if model.get_option('constraints', y, 'r_area_max') is False:
+        r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
+        if r_area_max is False:
             return m.r_area[y, x] == 1.0
         elif model.mode == 'plan':
-            return m.r_area[y, x] <= model.get_option('constraints', y,
-                                                      'r_area_max')
+            return m.r_area[y, x] <= r_area_max
         elif model.mode == 'operate':
-            return m.r_area[y, x] == model.get_option('constraints', y,
-                                                      'r_area_max')
+            return m.r_area[y, x] == r_area_max
 
     def c_e_cap_rule(m, y, x):
+        e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
         # First check whether this tech is allowed at this node
         if not d.nodes.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
         elif model.mode == 'plan':
-            return m.e_cap[y, x] <= model.get_option('constraints', y,
-                                                     'e_cap_max')
+            return m.e_cap[y, x] <= e_cap_max
         elif model.mode == 'operate':
-            return m.e_cap[y, x] == model.get_option('constraints', y,
-                                                     'e_cap_max')
+            return m.e_cap[y, x] == e_cap_max
 
     # Constraints
     m.c_s_cap = cp.Constraint(m.y, m.x)
@@ -154,7 +146,7 @@ def node_constraints_operational(m, o, d, model):
         return m.e[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
 
     def c_e_min_rule(m, y, x, t):
-        if model.get_option('constraints', y, 'e_can_be_negative'):
+        if model.get_option(y + '.constraints.e_can_be_negative'):
             return m.e[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
         else:
             return m.e[y, x, t] >= 0
@@ -195,6 +187,15 @@ def node_costs(m, o, d, model):
     * cost_op: operation costs
 
     """
+
+    @utils.memoize
+    def _depreciation_rate(y):
+        interest = model.get_option(y + '.depreciation.interest')
+        plant_life = model.get_option(y + '.depreciation.plant_life')
+        dep = ((interest * (1 + interest) ** plant_life)
+               / (((1 + interest) ** plant_life) - 1))
+        return dep
+
     # Variables
     m.cost = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
     m.cost_con = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
@@ -205,19 +206,19 @@ def node_costs(m, o, d, model):
         return m.cost[y, x] == m.cost_con[y, x] + m.cost_op[y, x]
 
     def c_cost_con_rule(m, y, x):
-        return (m.cost_con[y, x] == d.depreciation[y]
+        return (m.cost_con[y, x] == _depreciation_rate(y)
                 * (sum(m.time_res[t] for t in m.t) / 8760)
-                * (model.get_option('costs', y, 's_cap') * m.s_cap[y, x]
-                   + model.get_option('costs', y, 'r_cap') * m.r_cap[y, x]
-                   + model.get_option('costs', y, 'r_area') * m.r_area[y, x]
-                   + model.get_option('costs', y, 'e_cap') * m.e_cap[y, x]))
+                * (model.get_option(y + '.costs.s_cap') * m.s_cap[y, x]
+                   + model.get_option(y + '.costs.r_cap') * m.r_cap[y, x]
+                   + model.get_option(y + '.costs.r_area') * m.r_area[y, x]
+                   + model.get_option(y + '.costs.e_cap') * m.e_cap[y, x]))
 
     def c_cost_op_rule(m, y, x):
         return (m.cost_op[y, x] ==
-                model.get_option('costs', y, 'om_frac') * m.cost_con[y, x]
-                + (model.get_option('costs', y, 'om_var')
+                model.get_option(y + '.costs.om_frac') * m.cost_con[y, x]
+                + (model.get_option(y + '.costs.om_var')
                    * sum(m.e[y, x, t] for t in m.t))
-                + (model.get_option('costs', y, 'om_fuel')
+                + (model.get_option(y + '.costs.om_fuel')
                    * sum(m.rs[y, x, t] for t in m.t)))
 
     # Constraints
@@ -257,11 +258,9 @@ def model_constraints(m, o, d):
 
 
 def model_objective(m, o, d, model):
-    def weight(y):
-        return model.get_option('tech_weights', y)
-
     def obj_rule(m):
-        return (sum(weight(y) * sum(m.cost[y, x] for x in m.x) for y in m.y)
+        return (sum(model.get_option(y + '.weight') * sum(m.cost[y, x]
+                for x in m.x) for y in m.y)
                 + o.slack_weight * m.cost_slack)
 
     m.obj = cp.Objective(sense=cp.minimize)

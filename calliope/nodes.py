@@ -7,22 +7,30 @@ from __future__ import division
 
 import pandas as pd
 
-from . import utils
 
-
-def _append_node(v, d):
-    """Appends the settings for a node given by the AttrDict `v`
-    to the AttrDict `d`
-
+def _generate_node(node, items, techs):
     """
-    techs = [k for k in d.keys() if not k.startswith('_')]
-    d._level.append(v.level)
-    d._within.append(v.within)
+    Returns a dict for a given node. Dict keys for permitted technologies
+    are the only ones that don't start with '_'.
+
+    Args:
+        node : (str) name of the node
+        items : (AttrDict) node settings
+        techs : (list) list of available technologies
+    """
+    # Mandatory basics
+    d = {'_node': node, '_level': items.level, '_within': items.within}
+    # Override
+    if 'override' in items:
+        for k in items.override.keys_nested():
+            d['_override.' + k] = items.override.get_key(k)
+    # Permitted echnologies
     for y in techs:
-        if y in v.techs:
-            d[y].append(1)
+        if y in items.techs:
+            d[y] = 1
         else:
-            d[y].append(0)
+            d[y] = 0
+    return d
 
 
 def _explode_nodes(k):
@@ -67,21 +75,16 @@ def generate_node_matrix(d, techs):
     nodes into layers and grid zones, both currently unused.
 
     """
-    # Beware: all keys of the AttrDict that don't start with '_' are
-    # considered techs in append_node()!
-    df = utils.AttrDict({'_node': [], '_level': [], '_within': []})
-    for y in techs:
-        df[y] = []
+    rows = []
     for k, v in d.iteritems():
         if '--' in k or ',' in k:
             allnodes = _explode_nodes(k)
             for n in allnodes:
-                df._node.append(n)
-                _append_node(v, df)
+                rows.append(_generate_node(n, v, techs))
         else:
-            df._node.append(k)
-            _append_node(v, df)
-    df = pd.DataFrame(df)
+            rows.append(_generate_node(k, v, techs))
+    df = pd.DataFrame.from_records(rows)
     df.index = df._node
     df = df.drop(['_node'], axis=1)
     return df
+

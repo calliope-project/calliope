@@ -11,24 +11,15 @@ opmode:
     horizon: 48  # Optimization period length [hours]
     window: 24  # Operation period length [hours]
 
+slack_weight: 1.0e+9  # Discourage slack
+
 #
 # TECHNOLOGIES
 #
 
-# Defines the set of possible technologies
-techs: ['csp', 'ccgt', 'demand']
-
-# Cost weights in objective function (higher: relatively more expensive)
-tech_weights:
-    default: 1
-    csp: 1
-    ccgt: 1
-
-slack_weight: 1.0e+9  # Discourage slack
-
-# Technology constraints
-constraints:
-    default:
+# Defaults
+techs_defaults:
+    constraints:
         force_r: false
         r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
         r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
@@ -43,26 +34,7 @@ constraints:
         e_eff: 1.0
         e_cap_max: 0  # Maximum turbine size [kWe]
         e_can_be_negative: false
-    ccgt:
-        r: inf
-        e_cap_max: 40000  # Maximum installed generation capacity [kWe]
-    csp:
-        # -- Begin CSP-specific constraints --
-        use_s_time: true  # Use s_time to calculate s_cap_max?
-        s_time: 15  # Maximum storage time [h]
-        # -- End CSP-specific constraints --
-        r_area_max: 318000  # Maximum solar field size [m2]
-        s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
-        s_loss: 0.002
-        e_cap_max: 20000  # Maximum turbine size [kWe]
-    demand:
-        force_r: true
-        e_cap_max: inf
-        e_can_be_negative: true
-
-# Technology costs
-costs:
-    default:
+    costs:  # All costs should be set to 0 by default
         s_cap: 0  # Cost of storage [USD/kWht]
         r_area: 0  # Cost of collector field [USD/m2]
         r_cap: 0  # Cost of tower and receiver [EUR/kWt]
@@ -70,23 +42,53 @@ costs:
         om_frac: 0  # Yearly O&M costs [fraction of total investment]
         om_var: 0  # Variable O&M costs [USD/kWhe]
         om_fuel: 0  # Fuel costs [USD/kWht]
-    ccgt:
-        e_cap: 750
-        om_fuel: 0.12
-    csp:
-        s_cap: 30
-        r_area: 200
-        r_cap: 200
-        e_cap: 1350
-        om_var: 0.002
-        # -- Begin CSP-specific costs --
-        rec_per_sf: 0.54  # kWt of receiver needed per m2 of solar field
-        # -- End CSP-specific costs --
-
-# Capital depreciation
-depreciation:
-    default:
+    depreciation:  # Capital depreciation settings
         interest: 0.10  # Interest rate [dimensionless]
         plant_life: 25  # Lifetime of a plant [years]
+    weight: 1  # Cost weight in objective function (higher: relatively more expensive)
+
+# Technology definitions
+
+# 'parent: defaults' is a special parent representing the 'techs_defaults' defined above
+# May also set tech-specific parameters that do not exist in defaults (see CSP example)
+techs:
+    ccgt:
+        parent: defaults
+        constraints:
+            r: inf
+            e_cap_max: 40000  # Maximum installed generation capacity [kWe]
+        costs:
+            e_cap: 750
+            om_fuel: 0.12
     csp:
-        interest: 0.15
+        parent: defaults
+        constraints:
+            # -- Begin CSP-specific constraints --
+            use_s_time: true  # Use s_time to calculate s_cap_max?
+            s_time: 15  # Maximum storage time [h]
+            # -- End CSP-specific constraints --
+            r: file
+            r_eff: file
+            e_eff: file
+            r_area_max: 318000  # Maximum solar field size [m2]
+            s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
+            s_loss: 0.002
+            e_cap_max: 20000  # Maximum turbine size [kWe]
+        costs:
+            s_cap: 30
+            r_area: 200
+            r_cap: 200
+            e_cap: 1350
+            om_var: 0.002
+            # -- Begin CSP-specific costs --
+            rec_per_sf: 0.54  # kWt of receiver needed per m2 of solar field
+            # -- End CSP-specific costs --
+        depreciation:
+            interest: 0.15
+    demand:
+        parent: defaults
+        constraints:
+            r: file
+            force_r: true
+            e_cap_max: inf
+            e_can_be_negative: true
