@@ -13,7 +13,7 @@ output:
 # NODES
 #
 
-# ONLY the following options can be overriden on a per-node basis (for now):
+# ONLY the following constraints can be overriden on a per-node basis (for now):
 # s_cap_max, r_cap_max, r_area_max, e_cap_max
 
 nodes:
@@ -58,12 +58,8 @@ override:
                 r_scale_to_peak: -60000  # Scale demand such that its maximum is as defined here
         demand-eu:
             parent: demand
-            constraints:
-                r: file
         demand-ca:
             parent: demand
-            constraints:
-                r: file
         csp:
             constraints:
                 r_scale: 0.001  # Convert from Wh in DNI input data to kWh for model
