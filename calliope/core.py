@@ -54,17 +54,8 @@ class Model(object):
                 and isinstance(cr.override, utils.AttrDict)):
             for k in cr.override.keys_nested():
                 o.set_key(k, cr.override.get_key(k))
-        # Calculate depreciation coefficients for LEC
-        self.data = utils.AttrDict()
-        d = self.data
-        d.depreciation = utils.AttrDict()
-        for y in o.techs:
-            interest = self.get_option('depreciation', y, 'interest')
-            plant_life = self.get_option('depreciation', y, 'plant_life')
-            dep = ((interest * (1 + interest) ** plant_life)
-                   / (((1 + interest) ** plant_life) - 1))
-            d.depreciation[y] = dep
         # Other initialization tasks
+        self.data = utils.AttrDict()
         self.initialize_sets()
         self.initialize_techs()
         self.read_data()
@@ -115,30 +106,55 @@ class Model(object):
             raise KeyError('<0')
 
     @utils.memoize_instancemethod
-    def get_option(self, group, tech, option=None, allow_default=True):
+    def get_option(self, option, x=None):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
         tech.
 
-        If allow_default is False, then the lookup will raise a KeyError
-        if no setting exists for the given tech/option combination, if
-        it is True, the default will be looked up instead.
+        If `x` is given, will attempt to use node-specific override
+        from the node matrix first before falling back to model-wide
+        settings.
 
-        Examples: model.get_option('costs', 'ccgt', 'om_var') or
-                  model.get_option('tech_weights', 'csp')
+        Examples: model.get_option('ccgt.costs.om_var') or
+                  model.get_option('csp.weight') or
+                  model.get_option('csp.r', x='33') or
 
         """
         o = self.config_model
-        key = group + '.{}'
-        if option:
-            key += '.' + option
-        try:
-            result = o.get_key(key.format(tech))
-        except KeyError:
-            if allow_default:
-                result = o.get_key(key.format('default'))
-            else:
+        d = self.data
+
+        def _get_option(option):
+            try:
+                result = o.get_key('techs.' + option)
+            except KeyError:
+                # Example: 'ccgt.costs.om_var'
+                tech = option.split('.')[0]  # 'ccgt'
+                remainder = '.'.join(option.split('.')[1:])  # 'costs.om_var'
+                parent = o.get_key('techs.' + tech + '.parent')  # 'defaults'
+                if parent == 'defaults':
+                    result = o.get_key('techs_defaults.' + remainder)
+                else:
+                    result = _get_option(parent + '.' + remainder)
+            return result
+
+        def _get_node_option(key, node):
+            # Raises KeyError if the specific _override column does not exist
+            result = d.nodes.ix[node, '_override.' + key.format(option)]
+            # Also raise KeyError if the result is NaN, i.e. if no
+            # node-specific override has been defined
+            if np.isnan(result):
                 raise KeyError
+            else:
+                return result
+
+        if x:
+            try:
+                result = _get_node_option(option, x)
+            # If can't find a node-specific option, fall back to model-wide
+            except KeyError:
+                result = _get_option(option)
+        else:
+            result = _get_option(option)
         # Deal with 'inf' settings
         if result == 'inf':
             result = float('inf')
@@ -180,19 +196,20 @@ class Model(object):
         d.time_res_static = self.get_timeres()
         # From time_res_static, initialize time_res_series
         d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
+        # Last index t for which model may still use startup exceptions
+        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
         #
         # y: Technologies set
         #
         if self.config_run.get_key('subset_y', default=False):
-            d._y_aliased = self.config_run.subset_y
+            d._y = self.config_run.subset_y
         else:
-            d._y_aliased = []
+            d._y = set()
             for i in self.config_run.nodes.itervalues():
-                d._y_aliased += i.techs
-        # Resolve tech aliases
-        d.tech_aliases = utils.invert_dict(self.config_run.tech_aliases)
-        d._y = [d.tech_aliases[y] if y not in o.techs else y
-                for y in d._y_aliased]
+                assert isinstance(i.techs, list)
+                for y in i.techs:
+                    d._y.add(y)
+            d._y = list(d._y)
         #
         # x: Nodes set
         #
@@ -204,103 +221,66 @@ class Model(object):
         # Nodes settings matrix
         #
         d.nodes = nodes.generate_node_matrix(self.config_run.nodes,
-                                             techs=d._y_aliased)
-        # Un-alias column names
-        d.nodes.columns = [d.tech_aliases[c]
-                           if c not in o.techs and not c.startswith('_')
-                           else c
-                           for c in d.nodes.columns]
+                                             techs=d._y)
         # For simplicity, only keep the nodes that are actually in set `x`
         d.nodes = d.nodes.ix[d._x, :]
 
     def read_data(self):
         """
-        Read input data.
+        Read parameter data from CSV files, if needed. Data that may be
+        defined in CSV files is read before generate_model() so that it
+        only has to be read from disk once, even if generate_model() is
+        repeatedly called.
 
         Note on indexing: if subset_t is set, a subset of the data is
         selected, and all data including their indices are subsetted.
         d._t maps a simple [0, data length] index to the actual t index
         used.
 
-        Data is stored in the `self.data` AttrDict as follows:
+        Data is stored in the `self.data` AttrDict as follows, for each
+        `param` and technology `y`:
 
-            self.data.<parameter> = z
+            self.data[param][y] = z
 
         where z is
 
-        * an AttrDict containing the below items if <parameter> differs
-          across different technologies `y`.
-        * or directly one of the below if <parameter> is uniform across
-          all technologies `y`.
-
-        The data container is one of:
-
-        * a pandas DataFrame if <parameter> is defined over `t` and `x`
-        * a pandas Series if <parameter> is defined over `t`
-        * a Dict or AttrDict if <parameter> is defined over `x`
-        * a single value if <parameter> is uniform across `t` and `x`
-
-        Each <parameter> starting with an _ (underscore) will be made into
-        a Pyomo object in the generate_model() method, else it will be accessed
-        directly.
+        * a single value if `param` is uniform across x and t
+        * a pandas DataFrame if `param` is defined over x and t
 
         """
-        o = self.config_model
+        def _get_option_from_csv(param, y):
+            # File format e.g. 'csp_r_eff.csv'
+            d_path = os.path.join(self.config_run.input.path,
+                                  y + '_' + param + '.csv')
+            # [self.slice] to do time subset if needed
+            # Results in e.g. d.r_eff['csp'] being a dataframe
+            # of efficiencies for each time step t at location x
+            df = pd.read_csv(d_path, index_col=0)[self.slice]
+            # Scale r to a given maximum if necessary
+            scale_to_peak = self.get_option(y + '.constraints.r_scale_to_peak')
+            if param == 'r' and scale_to_peak:
+                df = self.scale_to_peak(df, scale_to_peak)
+            # Add missing columns as all zeros
+            missing_cols = list(set(self.data._x) - set(df.columns))
+            for c in missing_cols:
+                df[c] = 0
+            return df
+
         d = self.data
-        path = self.config_run.input.path
+        # Parameters that may defined over (x, t) for a given technology y
+        d.params = ['r', 'r_eff', 'e_eff']
 
-        # Energy resource and efficiencies that may be defined over (x, t)
-        # for a given technology y
-        params_in_time_and_space = ['r', 'r_eff', 'e_eff']
-
-        # Important -- the order of precendence is as follows:
-        #   * custom setting in YAML model_settings (applied over all x, t for
-        #     the given technology)
-        #   * CSV file with explicit values for all x, t
-        #   * default setting in YAML model_settings
-        #   * KeyError if not defined anywhere at all
-        for i in params_in_time_and_space:
-            setattr(d, i, utils.AttrDict())
-        for y_aliased in d._y_aliased:  # Use aliased set to read data
-            # Use real set to store data
-            if y_aliased not in o.techs:
-                y = d.tech_aliases[y_aliased]
-            else:
-                y = y_aliased
-            for i in params_in_time_and_space:
-                # Check if y-i combination doesn't exist in model_settings YAML
-                if i in o.constraints[y]:
-                    # First try: Custom YAML setting
-                    getattr(d, i)[y] = self.get_option('constraints', y, i,
-                                                       allow_default=False)
+        for param in d.params:
+            d[param] = utils.AttrDict()
+            for y in d._y:
+                option = self.get_option(y + '.constraints.' + param)
+                if option == 'file':
+                    # If set to 'file', read from CSV
+                    # TODO allow params in d.params to be defined only over
+                    # x instead of either static or over (x, t) via CSV!
+                    d[param][y] = _get_option_from_csv(param, y)
                 else:
-                    try:
-                        # Second try: CSV file
-                        # File format e.g. 'csp_r_eff.csv'
-                        d_path = os.path.join(path,
-                                              y_aliased + '_' + i + '.csv')
-                        # [self.slice] to do time subset if needed
-                        # Results in e.g. d.r_eff['csp'] being a dataframe
-                        # of efficiencies for each time step t at location x
-                        df = pd.read_csv(d_path, index_col=0)[self.slice]
-                        # Scale r to a given maximum if necessary
-                        scale_to_peak = self.get_option('constraints', y,
-                                                        'r_scale_to_peak')
-                        if i == 'r' and scale_to_peak:
-                            df = self.scale_to_peak(df, scale_to_peak)
-                        # Add missing columns as all zeros
-                        missing_cols = list(set(d._x) - set(df.columns))
-                        for c in missing_cols:
-                            df[c] = 0
-                        getattr(d, i)[y] = df
-                    except IOError:
-                        # Final try: Default YAML setting
-                        getattr(d, i)[y] = self.get_option('constraints',
-                                                           'default', i)
-                        # TODO raise helpful error message if this fails
-
-        # Last index t for which model may still use startup exceptions
-        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
+                    d[param][y] = option
 
     def generate_model(self, mode='plan', t_start=None):
         """
@@ -341,7 +321,6 @@ class Model(object):
             always the same static value if only a static value is given.
 
             """
-            # TODO also allow for setting over t or x only?
             def getter(m, y, x, t):
                 if isinstance(src[y], pd.core.frame.DataFrame):
                     return float(src[y].loc[t, x])
@@ -349,9 +328,10 @@ class Model(object):
                     return float(src[y])
             return getter
 
-        m.r = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.r))
-        m.r_eff = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.r_eff))
-        m.e_eff = cp.Param(m.y, m.x, m.t, initialize=param_populator(d.e_eff))
+        for param in d.params:
+            initializer = param_populator(d[param])
+            setattr(m, param, cp.Param(m.y, m.x, m.t, initialize=initializer))
+
         m.time_res = (cp.Param(m.t,
                       initialize=lambda m, t: float(d.time_res_series.loc[t])))
 

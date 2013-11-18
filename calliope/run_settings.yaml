@@ -13,21 +13,30 @@ output:
 # NODES
 #
 
-# Tech aliases use all settings of their parent technology, but use their alias
-# name to read data. E.g. setting `demand: ['demand-eu']` means that `demand-eu`
-# acts just like `demand`, but reads its resource data from `demand-eu_r.csv`.
-tech_aliases:
-    demand: ['demand-eu', 'demand-ca']
+# ONLY the following options can be overriden on a per-node basis (for now):
+# s_cap_max, r_cap_max, r_area_max, e_cap_max
 
 nodes:
     a:
         level: 1
         within:
         techs: ['ccgt', 'demand-eu']
-    33,75,34:
+        override:
+            ccgt:
+                constraints:
+                    e_cap_max: 20000
+    33,75:
         level: 0
         within: a
         techs: ['csp']
+    34:
+        level: 0
+        within: a
+        techs: ['csp']
+        override:
+            csp:
+                constraints:
+                    e_cap_max: 40000
 
 #
 # SUBSETTING
@@ -43,11 +52,21 @@ subset_t: ['2005-01-01', '2005-01-31']
 #
 
 override:
-    constraints:
-        csp:
-            r_scale: 0.001  # Convert from Wh in DNI input data to kWh for model
+    techs:
         demand:
-            r_scale_to_peak: -60000  # Scale demand such that its maximum is as defined here
+            constraints:
+                r_scale_to_peak: -60000  # Scale demand such that its maximum is as defined here
+        demand-eu:
+            parent: demand
+            constraints:
+                r: file
+        demand-ca:
+            parent: demand
+            constraints:
+                r: file
+        csp:
+            constraints:
+                r_scale: 0.001  # Convert from Wh in DNI input data to kWh for model
 
 #
 # SOLVER AND LOGGING
