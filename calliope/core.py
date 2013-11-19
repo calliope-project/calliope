@@ -362,8 +362,8 @@ class Model(object):
         constraints.node_constraints_build(m, o, d, self)
         constraints.node_constraints_operational(m, o, d, self)
         constraints.node_costs(m, o, d, self)
-        constraints.model_slack(m, o, d)
-        constraints.model_constraints(m, o, d)
+        constraints.model_slack(m, o, d, self)
+        constraints.model_constraints(m, o, d, self)
 
         # 2. Optional
         # (none yet)
@@ -459,7 +459,7 @@ class Model(object):
         return e
 
     def get_node_variables(self):
-        detail = ['s', 'rs', 'bs', 'es', 'os', 'e']
+        detail = ['s', 'rs', 'bs', 'es_prod', 'es_con', 'os', 'e']
         return pd.Panel4D({v: self.get_var(v, ['y', 'x', 't'])
                           for v in detail})
 
