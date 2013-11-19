@@ -87,4 +87,3 @@ def generate_node_matrix(d, techs):
     df.index = df._node
     df = df.drop(['_node'], axis=1)
     return df
-

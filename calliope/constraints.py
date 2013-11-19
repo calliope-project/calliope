@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 import coopr.pyomo as cp
+import numpy as np
 
 import utils
 
@@ -64,6 +65,8 @@ def node_energy_balance(m, o, d, model):
             s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
                             ** m.time_res[model.prev(t)])
                            * m.s[y, x, model.prev(t)])
+        elif model.mode == 'operate' and 's_init' in model.data:
+            s_minus_one = model.data.s_init.at[x, y]
         else:
             s_minus_one = model.get_option(y + '.constraints.s_init')
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
@@ -102,7 +105,9 @@ def node_constraints_build(m, o, d, model):
 
     def c_r_cap_rule(m, y, x):
         r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
-        if model.mode == 'plan':
+        if model.mode == 'plan' or np.isinf(r_cap_max):
+            # We take this constraint even in operate mode, if r_cap_max
+            # is set to infinite!
             return m.r_cap[y, x] <= r_cap_max
         elif model.mode == 'operate':
             return m.r_cap[y, x] == r_cap_max
@@ -121,7 +126,9 @@ def node_constraints_build(m, o, d, model):
         # First check whether this tech is allowed at this node
         if not d.nodes.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
-        elif model.mode == 'plan':
+        elif model.mode == 'plan' or np.isinf(e_cap_max):
+            # We take this constraint even in operate mode, if e_cap_max
+            # is set to infinite!
             return m.e_cap[y, x] <= e_cap_max
         elif model.mode == 'operate':
             return m.e_cap[y, x] == e_cap_max

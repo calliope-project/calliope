@@ -367,8 +367,7 @@ class Model(object):
             save_json : (default False) Save optimization results to
                         the given file as JSON.
 
-        Returns:
-            (instance, opt, results)
+        Returns: None
 
         """
         m = self.m
@@ -474,32 +473,30 @@ class Model(object):
         return df
 
     def solve_iterative(self):
-        # TODO needs updating for Calliope compatibility
-        m = self.m
-        d = self.data
         o = self.config_model
+        d = self.data
         window_adj = int(o.opmode.window / d.time_res_static)
         steps = [t for t in d._t if (t % window_adj) == 0]
-        aggregates = []
-        plantlevels = []
+        system_vars = []
+        node_vars = []
         for step in steps:
-            m = self.generate_model(mode='operate', t_start=step)
-            instance, opt, results = self.solve()
-            instance.load(results)
+            self.generate_model(mode='operate', t_start=step)
+            self.solve()
+            self.instance.load(self.results)
             # Gather relevant model results over decision interval, so
             # we only grab [0:window/time_res] steps!
-            df = self.get_aggregate_variables()
-            aggregates.append(df.iloc[0:window_adj])
-            # Get plant variables
-            panel = self.get_plantlevel_variables()
-            plantlevels.append(panel.iloc[:, 0:window_adj, :])
-            # Get E_stor state at the end of the interval to pass on
-            # to the next iteration
-            _E_stor = self.get_var(m.E_stor, [m.t, m.i])
+            df = self.get_system_variables()
+            system_vars.append(df.iloc[0:window_adj])
+            # Get node variables
+            panel4d = self.get_node_variables()
+            node_vars.append(panel4d)
+            # Save stage of storage for carry over to next iteration
+            s = self.get_var('s', ['y', 'x', 't'])
             # NB: -1 to convert from length --> index
             storage_state_index = window_adj - 1
-            self.d.E_init = _E_stor.iloc[storage_state_index, :]
-        return (pd.concat(aggregates), pd.concat(plantlevels, axis=1))
+            d.s_init = s.iloc[:, storage_state_index, :]
+        return (pd.concat(system_vars),
+                pd.concat(node_vars, axis=2))
 
     def process_outputs(self):
         """Load results into model instance for access via model
