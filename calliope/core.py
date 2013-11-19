@@ -139,13 +139,12 @@ class Model(object):
 
         def _get_node_option(key, node):
             # Raises KeyError if the specific _override column does not exist
-            result = d.nodes.ix[node, '_override.' + key.format(option)]
+            result = d.nodes.ix[node, '_override.' + key]
             # Also raise KeyError if the result is NaN, i.e. if no
             # node-specific override has been defined
-            if np.isnan(result):
+            if not isinstance(result, str) and np.isnan(result):
                 raise KeyError
-            else:
-                return result
+            return result
 
         if x:
             try:
@@ -237,30 +236,19 @@ class Model(object):
         d._t maps a simple [0, data length] index to the actual t index
         used.
 
-        Data is stored in the `self.data` AttrDict as follows, for each
-        `param` and technology `y`:
-
-            self.data[param][y] = z
-
-        where z is
-
-        * a single value if `param` is uniform across x and t
-        * a pandas DataFrame if `param` is defined over x and t
+        Data is stored in the `self.data`  for each
+        `param` and technology `y`: ``self.data[param][y]``
 
         """
-        def _get_option_from_csv(param, y):
-            # File format e.g. 'csp_r_eff.csv'
-            d_path = os.path.join(self.config_run.input.path,
-                                  y + '_' + param + '.csv')
+        @utils.memoize
+        def _get_option_from_csv(filename):
+            """Read CSV time series"""
+            d_path = os.path.join(self.config_run.input.path, filename)
             # [self.slice] to do time subset if needed
             # Results in e.g. d.r_eff['csp'] being a dataframe
             # of efficiencies for each time step t at location x
             df = pd.read_csv(d_path, index_col=0)[self.slice]
-            # Scale r to a given maximum if necessary
-            scale_to_peak = self.get_option(y + '.constraints.r_scale_to_peak')
-            if param == 'r' and scale_to_peak:
-                df = self.scale_to_peak(df, scale_to_peak)
-            # Add missing columns as all zeros
+            # Fill columns that weren't defined with zeros
             missing_cols = list(set(self.data._x) - set(df.columns))
             for c in missing_cols:
                 df[c] = 0
@@ -270,17 +258,48 @@ class Model(object):
         # Parameters that may defined over (x, t) for a given technology y
         d.params = ['r', 'r_eff', 'e_eff']
 
+        # TODO allow params in d.params to be defined only over
+        # x instead of either static or over (x, t) via CSV!
         for param in d.params:
             d[param] = utils.AttrDict()
             for y in d._y:
-                option = self.get_option(y + '.constraints.' + param)
-                if option == 'file':
-                    # If set to 'file', read from CSV
-                    # TODO allow params in d.params to be defined only over
-                    # x instead of either static or over (x, t) via CSV!
-                    d[param][y] = _get_option_from_csv(param, y)
-                else:
-                    d[param][y] = option
+                d[param][y] = pd.DataFrame(0, index=d._t[self.slice],
+                                           columns=d._x)
+                for x in d._x:
+                    option = self.get_option(y + '.constraints.' + param, x=x)
+
+                    if isinstance(option, str) and option.startswith('file'):
+                        try:
+                            # Parse 'file=filename' option
+                            f = option.split('=')[1]
+                        except IndexError:
+                            # If set to just 'file', set filename with y and
+                            # param, e.g. 'csp_r_eff.csv'
+                            f = y + '_' + param + '.csv'
+                        df = _get_option_from_csv(f)
+                        # Set x_map if that option has been set
+                        try:
+                            x_map = self.get_option(y + '.x_map', x=x)
+                        except KeyError:
+                            x_map = None
+                        # Now, if x_map is available, remap cols accordingly
+                        if x_map:
+                            # Unpack dict from string
+                            x_map = {x.split(':')[0].strip():
+                                     x.split(':')[1].strip()
+                                     for x in x_map.split(',')}
+                            df = df[x_map.keys()]  # Keep only keys in x_map
+                            # Then remap column names
+                            df.columns = [x_map[c] for c in df.columns]
+                        d[param][y][x] = df[x]
+                    else:
+                        d[param][y][x] = option
+                    # Scale r to a given maximum if necessary
+                    scale = self.get_option(y + '.constraints.r_scale_to_peak',
+                                            x=x)
+                    if param == 'r' and scale:
+                        scaled = self.scale_to_peak(d[param][y][x], scale)
+                        d[param][y][x] = scaled
 
     def generate_model(self, mode='plan', t_start=None):
         """

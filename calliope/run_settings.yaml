@@ -13,25 +13,39 @@ output:
 # NODES
 #
 
-# ONLY the following constraints can be overriden on a per-node basis (for now):
-# s_cap_max, r_cap_max, r_area_max, e_cap_max
+# ONLY the following constraints can be overriden on a per-node and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
+# * x_map
+# * constraints: r, r_eff, e_eff, r_scale_to_peak, s_cap_max, r_cap_max, r_area_max, e_cap_max
+
+# x_map allows defining which columns in the underlying data file are to be mapped to the node indices defined here.
 
 nodes:
-    a:
+    r1:
         level: 1
         within:
-        techs: ['ccgt', 'demand-eu']
+        techs: ['demand']
+        override:
+            demand:
+                x_map: 'a: r1'
+                constraints:
+                    r: file=demand-eu_r.csv
+                    r_scale_to_peak: -60000
+
+    p:
+        level: 0
+        within: r1
+        techs: ['ccgt']
         override:
             ccgt:
                 constraints:
                     e_cap_max: 20000
     33,75:
         level: 0
-        within: a
+        within: r1
         techs: ['csp']
     34:
         level: 0
-        within: a
+        within: r1
         techs: ['csp']
         override:
             csp:
@@ -53,16 +67,9 @@ subset_t: ['2005-01-01', '2005-01-31']
 
 override:
     techs:
-        demand:
-            constraints:
-                r_scale_to_peak: -60000  # Scale demand such that its maximum is as defined here
-        demand-eu:
-            parent: demand
-        demand-ca:
-            parent: demand
         csp:
             constraints:
-                r_scale: 0.001  # Convert from Wh in DNI input data to kWh for model
+                r_scale: 0.001  # Wh in DNI input data --> kWh for model
 
 #
 # SOLVER AND LOGGING
