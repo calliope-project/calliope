@@ -24,14 +24,29 @@ def node_energy_balance(m, o, d, model):
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.es = cp.Var(m.y, m.x, m.t, within=cp.Reals)
-    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e = cp.Var(m.y, m.x, m.t, within=cp.Reals)
+    m.es_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.es_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
+    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.e_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.e_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
     m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
     def c_e_rule(m, y, x, t):
-        return m.e[y, x, t] == m.es[y, x, t] * m.e_eff[y, x, t]
+        return m.e[y, x, t] == m.e_prod[y, x, t] + m.e_con[y, x, t]
+
+    def c_e_prod_rule(m, y, x, t):
+        return m.e_prod[y, x, t] == m.es_prod[y, x, t] * m.e_eff[y, x, t]
+
+    def c_e_con_rule(m, y, x, t):
+        try:
+            return m.e_con[y, x, t] == m.es_con[y, x, t] * (1/m.e_eff[y, x, t])
+        # TODO this is an ugly hack. need to better relate es and e so that
+        # can constrain es to zero, possibly using es in all the calcs with
+        # capacity rather than e!
+        except ZeroDivisionError:
+            return m.e_con[y, x, t] == m.es_con[y, x, t] * 1.0e-12
 
     def c_rs_rule(m, y, x, t):
         this_r = m.r[y, x, t]
@@ -70,10 +85,12 @@ def node_energy_balance(m, o, d, model):
         else:
             s_minus_one = model.get_option(y + '.constraints.s_init')
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
-                - m.es[y, x, t] - m.os[y, x, t])
+                - m.es_prod[y, x, t] - m.es_con[y, x, t] - m.os[y, x, t])
 
     # Constraints
     m.c_e = cp.Constraint(m.y, m.x, m.t)
+    m.c_e_prod = cp.Constraint(m.y, m.x, m.t)
+    m.c_e_con = cp.Constraint(m.y, m.x, m.t)
     m.c_rs = cp.Constraint(m.y, m.x, m.t)
     m.c_s_balance = cp.Constraint(m.y, m.x, m.t)
 
@@ -150,13 +167,13 @@ def node_constraints_operational(m, o, d, model):
         return m.rs[y, x, t] >= -1 * m.time_res[t] * m.r_cap[y, x]
 
     def c_e_max_rule(m, y, x, t):
-        return m.e[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
+        return m.e_prod[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
 
     def c_e_min_rule(m, y, x, t):
         if model.get_option(y + '.constraints.e_can_be_negative'):
-            return m.e[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
+            return m.e_con[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
         else:
-            return m.e[y, x, t] >= 0
+            return m.e_con[y, x, t] == 0
 
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
@@ -221,10 +238,11 @@ def node_costs(m, o, d, model):
                    + model.get_option(y + '.costs.e_cap') * m.e_cap[y, x]))
 
     def c_cost_op_rule(m, y, x):
+        # TODO currently only counting e_prod for op costs, makes sense?
         return (m.cost_op[y, x] ==
                 model.get_option(y + '.costs.om_frac') * m.cost_con[y, x]
                 + (model.get_option(y + '.costs.om_var')
-                   * sum(m.e[y, x, t] for t in m.t))
+                   * sum(m.e_prod[y, x, t] for t in m.t))
                 + (model.get_option(y + '.costs.om_fuel')
                    * sum(m.rs[y, x, t] for t in m.t)))
 
@@ -234,7 +252,7 @@ def node_costs(m, o, d, model):
     m.c_cost_op = cp.Constraint(m.y, m.x)
 
 
-def model_slack(m, o, d):
+def model_slack(m, o, d, model):
     """Defines variables:
 
     * slack
@@ -253,11 +271,12 @@ def model_slack(m, o, d):
     m.c_cost_slack = cp.Constraint()
 
 
-def model_constraints(m, o, d):
+def model_constraints(m, o, d, model):
     """Depends on: node_energy_balance, model_slack"""
     # Constraint rules
     def c_system_balance_rule(m, t):
-        return (sum(m.e[y, x, t] for x in m.x for y in m.y)
+        return (sum(m.e_prod[y, x, t] for x in m.x for y in m.y)
+                + sum(m.e_con[y, x, t] for x in m.x for y in m.y)
                 + m.slack[t] == 0)
 
     # Constraints
