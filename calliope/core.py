@@ -301,6 +301,9 @@ class Model(object):
                         scaled = self.scale_to_peak(d[param][y][x], scale)
                         d[param][y][x] = scaled
 
+    def add_constraint(self, constraint, *args, **kwargs):
+        constraint(self, *args, **kwargs)
+
     def generate_model(self, mode='plan', t_start=None):
         """
         Generate the model and store it under the property `m`.
@@ -316,6 +319,7 @@ class Model(object):
         m = cp.ConcreteModel()
         o = self.config_model
         d = self.data
+        self.m = m
         self.mode = mode
 
         #
@@ -358,21 +362,20 @@ class Model(object):
         # Constraints
         #
         # 1. Required
-        constraints.node_energy_balance(m, o, d, self)
-        constraints.node_constraints_build(m, o, d, self)
-        constraints.node_constraints_operational(m, o, d, self)
-        constraints.node_costs(m, o, d, self)
-        constraints.model_slack(m, o, d, self)
-        constraints.model_constraints(m, o, d, self)
+        required = [constraints.node_energy_balance,
+                    constraints.node_constraints_build,
+                    constraints.node_constraints_operational,
+                    constraints.node_costs,
+                    constraints.model_slack,
+                    constraints.model_constraints]
+        for c in required:
+            self.add_constraint(c)
 
         # 2. Optional
         # (none yet)
 
         # 3. Objective function
-        constraints.model_objective(m, o, d, self)
-
-        # Add Pyomo model object as a property
-        self.m = m
+        self.add_constraint(constraints.model_objective)
 
     def run(self, save_json=False):
         """Instantiate and solve the model"""

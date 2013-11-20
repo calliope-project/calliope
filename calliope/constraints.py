@@ -7,7 +7,7 @@ import numpy as np
 import utils
 
 
-def node_energy_balance(m, o, d, model):
+def node_energy_balance(model):
     """
     Defines variables:
 
@@ -20,6 +20,9 @@ def node_energy_balance(m, o, d, model):
     * r_area: installed collector area
 
     """
+    m = model.m
+    d = model.data
+
     # Variables
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
@@ -95,7 +98,7 @@ def node_energy_balance(m, o, d, model):
     m.c_s_balance = cp.Constraint(m.y, m.x, m.t)
 
 
-def node_constraints_build(m, o, d, model):
+def node_constraints_build(model):
     """Depends on: node_energy_balance
 
     Defines variables:
@@ -105,6 +108,7 @@ def node_constraints_build(m, o, d, model):
     * e_cap: installed storage <> electricity conversion capacity
 
     """
+    m = model.m
     d = model.data
 
     # Variables
@@ -157,8 +161,11 @@ def node_constraints_build(m, o, d, model):
     m.c_e_cap = cp.Constraint(m.y, m.x)
 
 
-def node_constraints_operational(m, o, d, model):
+def node_constraints_operational(model):
     """Depends on: node_energy_balance, node_constraints_build"""
+    m = model.m
+    d = model.data
+
     # Constraint rules
     def c_r_max_rule(m, y, x, t):
         return m.rs[y, x, t] <= m.time_res[t] * m.r_cap[y, x]
@@ -200,7 +207,7 @@ def node_constraints_operational(m, o, d, model):
     m.c_bs = cp.Constraint(m.y, m.x, m.t)
 
 
-def node_costs(m, o, d, model):
+def node_costs(model):
     """
     Depends on: node_energy_balance, node_constraints_build
 
@@ -211,6 +218,7 @@ def node_costs(m, o, d, model):
     * cost_op: operation costs
 
     """
+    m = model.m
 
     @utils.memoize
     def _depreciation_rate(y):
@@ -252,13 +260,15 @@ def node_costs(m, o, d, model):
     m.c_cost_op = cp.Constraint(m.y, m.x)
 
 
-def model_slack(m, o, d, model):
+def model_slack(model):
     """Defines variables:
 
     * slack
     * c_slack
 
     """
+    m = model.m
+
     # Variables
     m.slack = cp.Var(m.t, within=cp.NonNegativeReals)
     m.cost_slack = cp.Var(within=cp.NonNegativeReals)
@@ -271,8 +281,10 @@ def model_slack(m, o, d, model):
     m.c_cost_slack = cp.Constraint()
 
 
-def model_constraints(m, o, d, model):
+def model_constraints(model):
     """Depends on: node_energy_balance, model_slack"""
+    m = model.m
+
     # Constraint rules
     def c_system_balance_rule(m, t):
         return (sum(m.e_prod[y, x, t] for x in m.x for y in m.y)
@@ -283,11 +295,13 @@ def model_constraints(m, o, d, model):
     m.c_system_balance = cp.Constraint(m.t)
 
 
-def model_objective(m, o, d, model):
+def model_objective(model):
+    m = model.m
+
     def obj_rule(m):
         return (sum(model.get_option(y + '.weight') * sum(m.cost[y, x]
                 for x in m.x) for y in m.y)
-                + o.slack_weight * m.cost_slack)
+                + model.config_model.slack_weight * m.cost_slack)
 
     m.obj = cp.Objective(sense=cp.minimize)
     #m.obj.domain = cp.NonNegativeReals
