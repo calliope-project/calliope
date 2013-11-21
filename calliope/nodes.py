@@ -1,5 +1,5 @@
 """
-Functions to deal with nodes their configuration
+Functions to deal with nodes and their configuration
 """
 
 from __future__ import print_function
