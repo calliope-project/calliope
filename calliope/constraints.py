@@ -275,29 +275,8 @@ def node_costs(model):
     m.c_cost_op = cp.Constraint(m.y, m.x)
 
 
-def model_slack(model):
-    """Defines variables:
-
-    * slack
-    * c_slack
-
-    """
-    m = model.m
-
-    # Variables
-    m.slack = cp.Var(m.t, within=cp.NonNegativeReals)
-    m.cost_slack = cp.Var(within=cp.NonNegativeReals)
-
-    # Constraint rules
-    def c_cost_slack_rule(m):
-        return m.cost_slack == sum(m.slack[t] for t in m.t)
-
-    # Constraints
-    m.c_cost_slack = cp.Constraint()
-
-
 def model_constraints(model):
-    """Depends on: node_energy_balance, model_slack"""
+    """Depends on: node_energy_balance"""
     m = model.m
 
     @utils.memoize
@@ -329,8 +308,7 @@ def model_objective(model):
 
     def obj_rule(m):
         return (sum(model.get_option(y + '.weight') * sum(m.cost[y, x]
-                for x in m.x) for y in m.y)
-                + model.config_model.slack_weight * m.cost_slack)
+                for x in m.x) for y in m.y))
 
     m.obj = cp.Objective(sense=cp.minimize)
     #m.obj.domain = cp.NonNegativeReals

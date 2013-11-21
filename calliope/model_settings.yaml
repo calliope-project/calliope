@@ -11,8 +11,6 @@ opmode:
     horizon: 48  # Optimization period length [hours]
     window: 24  # Operation period length [hours]
 
-slack_weight: 1.0e+9  # Discourage slack
-
 #
 # TECHNOLOGIES
 #
@@ -92,6 +90,13 @@ techs:
             force_r: true
             e_cap_max: inf
             e_can_be_negative: true
+    unmet_demand:
+        parent: defaults
+        constraints:
+            r: inf
+            e_cap_max: inf
+        costs:
+            om_fuel: 1.0e+9
     transmission:
         parent: defaults
         constraints:

@@ -397,7 +397,6 @@ class Model(object):
                     constraints.node_constraints_build,
                     constraints.node_constraints_operational,
                     constraints.node_costs,
-                    constraints.model_slack,
                     constraints.model_constraints]
         for c in required:
             self.add_constraint(c)
@@ -489,7 +488,6 @@ class Model(object):
     def get_system_variables(self):
         e = self.get_var('e', ['y', 'x', 't'])
         e = e.sum(axis=2)
-        e['slack'] = self.get_var('slack', ['t'])
         return e
 
     def get_node_variables(self):
