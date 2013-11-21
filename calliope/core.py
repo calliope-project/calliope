@@ -63,15 +63,13 @@ class Model(object):
 
     def initialize_techs(self):
         """Perform any tech-specific setup by instantiating tech classes"""
-        o = self.config_model
-        d = self.data
         self.technologies = utils.AttrDict()
-        for t in d._y:
+        for t in self.data._y:
             try:
                 techname = t.capitalize() + 'Technology'
-                self.technologies[t] = techs.getattr(techname)(o=o)
+                self.technologies[t] = getattr(techs, techname)(model=self)
             except AttributeError:
-                self.technologies[t] = techs.Technology(o=o, name=t)
+                self.technologies[t] = techs.Technology(model=self, name=t)
 
     def get_timeres(self):
         """Returns resolution of data in hours. Needs a properly
@@ -168,6 +166,13 @@ class Model(object):
         if result == 'inf':
             result = float('inf')
         return result
+
+    def set_option(self, option, value):
+        """Set ``option`` to ``value``. Returns None on success."""
+        # TODO add support for setting option at a specific x
+        # TODO add support for changing defaults?
+        o = self.config_model
+        o.set_key('techs.' + option, value)
 
     def scale_to_peak(self, df, peak, symmetric=True):
         """Returns the given dataframe scaled to the given peak value."""
