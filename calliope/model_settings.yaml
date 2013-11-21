@@ -20,6 +20,7 @@ techs_defaults:
     constraints:
         force_r: false
         r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
+        r_eff_ref: false  # If false, use r_eff
         r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
         r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
         r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
@@ -30,6 +31,7 @@ techs_defaults:
         s_cap_max: 0  # Maximum storage size [kWht]
         s_loss: 0  # Storage heat loss rate [per hour]
         e_eff: 1.0
+        e_eff_ref: false  # If false, use e_eff
         e_cap_max: 0  # Maximum turbine size [kWe]
         e_can_be_negative: false
     costs:  # All costs should be set to 0 by default
@@ -67,6 +69,7 @@ techs:
             # -- End CSP-specific constraints --
             r: file
             r_eff: file
+            r_eff_ref: 1.0
             e_eff: file
             r_area_max: 318000  # Maximum solar field size [m2]
             s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
