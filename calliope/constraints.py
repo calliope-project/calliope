@@ -40,28 +40,41 @@ def node_energy_balance(model):
         return m.e[y, x, t] == m.e_prod[y, x, t] + m.e_con[y, x, t]
 
     def c_e_prod_rule(m, y, x, t):
-        return m.e_prod[y, x, t] == m.es_prod[y, x, t] * m.e_eff[y, x, t]
+        if y in model.data.transmission_y:
+            y_remote = y.split(':')[0] + ':' + x
+            x_remote = y.split(':')[1]
+            if y_remote in model.data.transmission_y:
+                return m.e_prod[y, x, t] == (-1 * m.e_con[y_remote, x_remote, t]
+                                             * m.e_eff[y, x, t])
+            else:
+                return cp.Constraint.NoConstraint
+        else:
+            return m.e_prod[y, x, t] == m.es_prod[y, x, t] * m.e_eff[y, x, t]
 
     def c_e_con_rule(m, y, x, t):
-        try:
-            return m.e_con[y, x, t] == m.es_con[y, x, t] * (1/m.e_eff[y, x, t])
-        # TODO this is an ugly hack. need to better relate es and e so that
-        # can constrain es to zero, possibly using es in all the calcs with
-        # capacity rather than e!
-        except ZeroDivisionError:
-            return m.e_con[y, x, t] == m.es_con[y, x, t] * 1.0e-12
+        if y in model.data.transmission_y:
+            return cp.Constraint.NoConstraint
+        else:
+            try:
+                return m.e_con[y, x, t] == (m.es_con[y, x, t]
+                                            * (1/m.e_eff[y, x, t]))
+            # TODO this is an ugly hack. need to better relate es and e so that
+            # can constrain es to zero, possibly using es in all the calcs with
+            # capacity rather than e!
+            except ZeroDivisionError:
+                return m.e_con[y, x, t] == m.es_con[y, x, t] * 1.0e-12
 
     def c_rs_rule(m, y, x, t):
         this_r = m.r[y, x, t]
         #
         # If `r` is set to `inf`, it is interpreted as unconstrained `r`/`rs`
         #
-        if this_r == float('inf'):
+        if (this_r == float('inf')) or (y in model.data.transmission_y):
             return cp.Constraint.NoConstraint
         #
         # Otherwise, set up a context-dependent `rs` constraint
         #
-        if (d.nodes.ix[x, y] != 1) or (this_r == 0):
+        elif (d.nodes.ix[x, y] != 1) or (this_r == 0):
             # `rs` is forced to 0 if technology not allowed at this location,
             # and also if `r` is 0
             return m.rs[y, x, t] == 0
@@ -79,7 +92,9 @@ def node_energy_balance(model):
     def c_s_balance_rule(m, y, x, t):
         # TODO add another check whether s_cap is 0, and if yes,
         # simply set s_minus_one=0 to make model setup a bit faster?
-        if m.t.order_dict[t] > 1:
+        if y in model.data.transmission_y:
+            return cp.Constraint.NoConstraint
+        elif m.t.order_dict[t] > 1:
             s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
                             ** m.time_res[model.prev(t)])
                            * m.s[y, x, model.prev(t)])
@@ -285,14 +300,28 @@ def model_constraints(model):
     """Depends on: node_energy_balance, model_slack"""
     m = model.m
 
+    @utils.memoize
+    def get_parents(level):
+        return list(model.data.nodes[model.data.nodes._level == level].index)
+
+    @utils.memoize
+    def get_children(parent):
+        return list(model.data.nodes[model.data.nodes._within == parent].index)
+
     # Constraint rules
-    def c_system_balance_rule(m, t):
-        return (sum(m.e_prod[y, x, t] for x in m.x for y in m.y)
-                + sum(m.e_con[y, x, t] for x in m.x for y in m.y)
-                + m.slack[t] == 0)
+    def c_system_balance_rule(m, x, t):
+        # TODO for now, hardcoding level 1, so can only use levels 0 and 1
+        parents = get_parents(1)
+        if x not in parents:
+            return cp.Constraint.NoConstraint
+        else:
+            family = get_children(x) + [x]  # list of children + parent
+            return (sum(m.e_prod[y, xs, t] for xs in family for y in m.y)
+                    + sum(m.e_con[y, xs, t] for xs in family for y in m.y)
+                    == 0)
 
     # Constraints
-    m.c_system_balance = cp.Constraint(m.t)
+    m.c_system_balance = cp.Constraint(m.x, m.t)
 
 
 def model_objective(model):

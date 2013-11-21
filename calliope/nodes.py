@@ -33,13 +33,13 @@ def _generate_node(node, items, techs):
     return d
 
 
-def _explode_nodes(k):
+def explode_nodes(k):
     """Expands keys of the form '1--3' into the list form ['1', '2', '3'],
     and keys of the form '1,3,4' into the list form ['1', '3', '4'].
     Can deal with any combination, e.g. '1--3,6,9--12'.
 
     Always returns a list, even if `k` is just a single key, i.e.
-    _explode_nodes('1') returns ['1'].
+    explode_nodes('1') returns ['1'].
 
     """
     finalkeys = []
@@ -61,7 +61,7 @@ def get_nodes(d):
     """
     l = []
     for k in d.keys():
-        k = _explode_nodes(k)
+        k = explode_nodes(k)
         l.extend(k)
     return l
 
@@ -78,7 +78,7 @@ def generate_node_matrix(d, techs):
     rows = []
     for k, v in d.iteritems():
         if '--' in k or ',' in k:
-            allnodes = _explode_nodes(k)
+            allnodes = explode_nodes(k)
             for n in allnodes:
                 rows.append(_generate_node(n, v, techs))
         else:

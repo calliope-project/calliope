@@ -30,6 +30,16 @@ nodes:
                 constraints:
                     r: file=demand-eu_r.csv
                     r_scale_to_peak: -60000
+    r2:
+        level: 1
+        within:
+        techs: ['demand']
+        override:
+            demand:
+                x_map: 'a: r2'
+                constraints:
+                    r: file=demand-ca_r.csv
+                    r_scale_to_peak: -5000
 
     p:
         level: 0
@@ -51,6 +61,15 @@ nodes:
             csp:
                 constraints:
                     e_cap_max: 40000
+
+#
+# TRANSMISSION CAPACITIES
+#
+links:
+    r1,r2:
+        hvac:
+            constraints:
+                e_cap_max: 10000
 
 #
 # SUBSETTING

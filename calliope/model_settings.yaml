@@ -92,3 +92,19 @@ techs:
             force_r: true
             e_cap_max: inf
             e_can_be_negative: true
+    transmission:
+        parent: defaults
+        constraints:
+            r: inf  # Not used but still must be defined
+            e_cap_max: inf
+            e_can_be_negative: true
+        costs:
+            e_cap: 200
+    hvac:
+        parent: transmission
+        constraints:
+            e_eff: 0.85
+    hvdc:
+        parent: transmission
+        constraints:
+            e_eff: 0.95
