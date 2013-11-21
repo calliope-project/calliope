@@ -40,36 +40,23 @@ def node_energy_balance(model):
         return m.e[y, x, t] == m.e_prod[y, x, t] + m.e_con[y, x, t]
 
     def c_e_prod_rule(m, y, x, t):
-        if y in model.data.transmission_y:
-            y_remote = y.split(':')[0] + ':' + x
-            x_remote = y.split(':')[1]
-            if y_remote in model.data.transmission_y:
-                return m.e_prod[y, x, t] == (-1 * m.e_con[y_remote, x_remote, t]
-                                             * m.e_eff[y, x, t])
-            else:
-                return cp.Constraint.NoConstraint
-        else:
-            return m.e_prod[y, x, t] == m.es_prod[y, x, t] * m.e_eff[y, x, t]
+        return m.e_prod[y, x, t] == m.es_prod[y, x, t] * m.e_eff[y, x, t]
 
     def c_e_con_rule(m, y, x, t):
-        if y in model.data.transmission_y:
-            return cp.Constraint.NoConstraint
-        else:
-            try:
-                return m.e_con[y, x, t] == (m.es_con[y, x, t]
-                                            * (1/m.e_eff[y, x, t]))
-            # TODO this is an ugly hack. need to better relate es and e so that
-            # can constrain es to zero, possibly using es in all the calcs with
-            # capacity rather than e!
-            except ZeroDivisionError:
-                return m.e_con[y, x, t] == m.es_con[y, x, t] * 1.0e-12
+        try:
+            return m.e_con[y, x, t] == (m.es_con[y, x, t]
+                                        * (1/m.e_eff[y, x, t]))
+        except ZeroDivisionError:
+            return m.e_con[y, x, t] == 0
 
     def c_rs_rule(m, y, x, t):
         this_r = m.r[y, x, t]
         #
         # If `r` is set to `inf`, it is interpreted as unconstrained `r`/`rs`
         #
-        if (this_r == float('inf')) or (y in model.data.transmission_y):
+        if this_r == float('inf'):
+            # This also applies to transmission technologies which should
+            # always have their `r` set to `inf`
             return cp.Constraint.NoConstraint
         #
         # Otherwise, set up a context-dependent `rs` constraint
@@ -90,10 +77,18 @@ def node_energy_balance(model):
                 return m.rs[y, x, t] >= r_avail
 
     def c_s_balance_rule(m, y, x, t):
-        # TODO add another check whether s_cap is 0, and if yes,
-        # simply set s_minus_one=0 to make model setup a bit faster?
         if y in model.data.transmission_y:
-            return cp.Constraint.NoConstraint
+            # Transmission technologies need a different energy balance rule
+            y_remote = y.split(':')[0] + ':' + x
+            x_remote = y.split(':')[1]
+            if y_remote in model.data.transmission_y:
+                return (m.es_prod[y, x, t]
+                        == -1 * m.es_con[y_remote, x_remote, t]
+                        / m.e_eff[y, x, t])
+            else:
+                return cp.Constraint.NoConstraint
+        elif model.get_option(y + '.constraints.s_cap_max') == 0:
+            s_minus_one = 0
         elif m.t.order_dict[t] > 1:
             s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
                             ** m.time_res[model.prev(t)])
@@ -179,23 +174,48 @@ def node_constraints_build(model):
 def node_constraints_operational(model):
     """Depends on: node_energy_balance, node_constraints_build"""
     m = model.m
-    d = model.data
+
+    def eff_ref(var, y, x):
+        """Get reference efficiency, falling back to efficiency if no
+        reference efficiency has been set."""
+        base = y + '.constraints.' + var
+        eff_ref = model.get_option(base + '_eff_ref', x=x)
+        if eff_ref is False:
+            eff_ref = model.get_option(base + '_eff', x=x)
+        # NOTE: Will cause errors in the case where (1) eff_ref is not defined
+        # and (2) eff is set to "file". That is ok however because in this edge
+        # case eff_ref should be manually set as there is no straightforward
+        # way to derive it from the time series file.
+        return eff_ref
 
     # Constraint rules
-    def c_r_max_rule(m, y, x, t):
-        return m.rs[y, x, t] <= m.time_res[t] * m.r_cap[y, x]
+    def c_rs_max_rule(m, y, x, t):
+        return m.rs[y, x, t] <= m.time_res[t] * (m.r_cap[y, x]
+                                                 / eff_ref('r', y, x))
 
-    def c_r_min_rule(m, y, x, t):
-        return m.rs[y, x, t] >= -1 * m.time_res[t] * m.r_cap[y, x]
+    def c_rs_min_rule(m, y, x, t):
+        return m.rs[y, x, t] >= -1 * m.time_res[t] * (m.r_cap[y, x]
+                                                      / eff_ref('r', y, x))
 
     def c_e_max_rule(m, y, x, t):
         return m.e_prod[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
 
     def c_e_min_rule(m, y, x, t):
-        if model.get_option(y + '.constraints.e_can_be_negative'):
-            return m.e_con[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
-        else:
+        if model.get_option(y + '.constraints.e_can_be_negative') is False:
             return m.e_con[y, x, t] == 0
+        else:
+            return m.e_con[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
+
+    def c_es_max_rule(m, y, x, t):
+        return m.es_prod[y, x, t] <= m.time_res[t] * (m.e_cap[y, x]
+                                                      / eff_ref('e', y, x))
+
+    def c_es_min_rule(m, y, x, t):
+        if model.get_option(y + '.constraints.e_can_be_negative') is False:
+            return m.es_con[y, x, t] == 0
+        else:
+            return m.es_con[y, x, t] >= (-1 * m.time_res[t]
+                                         * (m.e_cap[y, x] / eff_ref('e', y, x)))
 
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
@@ -204,7 +224,7 @@ def node_constraints_operational(model):
         # bs (backup resource) is allowed only during
         # the hours within startup_time
         # TODO this entire thing is a hack right now
-        if y == 'csp' and t < d.startup_time_bounds:
+        if y == 'csp' and t < model.data.startup_time_bounds:
             try:
                 return m.bs[y, x, t] <= (m.time_res[t]
                                          * m.e_cap[y, x]) / m.e_eff[y, x, t]
@@ -214,10 +234,12 @@ def node_constraints_operational(model):
             return m.bs[y, x, t] == 0
 
     # Constraints
-    m.c_r_max = cp.Constraint(m.y, m.x, m.t)
-    m.c_r_min = cp.Constraint(m.y, m.x, m.t)
+    m.c_rs_max = cp.Constraint(m.y, m.x, m.t)
+    m.c_rs_min = cp.Constraint(m.y, m.x, m.t)
     m.c_e_max = cp.Constraint(m.y, m.x, m.t)
     m.c_e_min = cp.Constraint(m.y, m.x, m.t)
+    m.c_es_max = cp.Constraint(m.y, m.x, m.t)
+    m.c_es_min = cp.Constraint(m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
     m.c_bs = cp.Constraint(m.y, m.x, m.t)
 

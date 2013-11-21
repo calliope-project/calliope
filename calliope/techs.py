@@ -55,12 +55,15 @@ class CspTechnology(Technology):
 
         """
         super(CspTechnology, self).__init__()
-        # Redefine some parameters based on given options
+        r_temp_amb = 25
+        r_temp_op = 590
+        tmax = r_temp_op - (r_temp_op - r_temp_amb) * 0.05
+        carnot_mod = 1 - math.sqrt((r_temp_amb + 273) / (tmax + 273))
+        # Set reference electrical conversion efficiency
+        model.set_option('csp.constraints.e_eff_ref', carnot_mod)
+        # If necessary, set storage capacity based on s_time
+        # and reference efficiency
         if model.get_option('csp.constraints.use_s_time'):
-            r_temp_amb = 25
-            r_temp_op = 590
-            tmax = r_temp_op - (r_temp_op - r_temp_amb) * 0.05
-            carnot_mod = 1 - math.sqrt((r_temp_amb + 273) / (tmax + 273))
             s_time = model.get_option('csp.constraints.s_time')
             e_cap_max = model.get_option('csp.constraints.e_cap_max')
             model.set_option('csp.constraints.s_cap_max',
