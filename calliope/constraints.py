@@ -4,7 +4,8 @@ from __future__ import division
 import coopr.pyomo as cp
 import numpy as np
 
-import utils
+from . import transmission
+from . import utils
 
 
 def node_energy_balance(model):
@@ -79,8 +80,7 @@ def node_energy_balance(model):
     def c_s_balance_rule(m, y, x, t):
         if y in model.data.transmission_y:
             # Transmission technologies need a different energy balance rule
-            y_remote = y.split(':')[0] + ':' + x
-            x_remote = y.split(':')[1]
+            y_remote, x_remote = transmission.get_remotes(y, x)
             if y_remote in model.data.transmission_y:
                 return (m.es_prod[y, x, t]
                         == -1 * m.es_con[y_remote, x_remote, t]
@@ -242,6 +242,29 @@ def node_constraints_operational(model):
     m.c_es_min = cp.Constraint(m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
     m.c_bs = cp.Constraint(m.y, m.x, m.t)
+
+
+def transmission_constraints(model):
+    """Depends on: node_constraints_build
+
+    Constrains e_cap symmetrically for transmission nodes.
+
+    """
+    m = model.m
+
+    # Constraint rules
+    def c_transmission_capacity_rule(m, y, x):
+        if y in model.data.transmission_y:
+            y_remote, x_remote = transmission.get_remotes(y, x)
+            if y_remote in model.data.transmission_y:
+                return m.e_cap[y, x] == m.e_cap[y_remote, x_remote]
+            else:
+                return cp.Constraint.NoConstraint
+        else:
+            return cp.Constraint.NoConstraint
+
+    # Constraints
+    m.c_transmission_capacity = cp.Constraint(m.y, m.x)
 
 
 def node_costs(model):

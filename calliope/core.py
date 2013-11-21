@@ -402,6 +402,7 @@ class Model(object):
                     constraints.node_constraints_build,
                     constraints.node_constraints_operational,
                     constraints.node_costs,
+                    constraints.transmission_constraints,
                     constraints.model_constraints]
         for c in required:
             self.add_constraint(c)

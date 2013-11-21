@@ -9,6 +9,12 @@ from . import nodes
 from . import utils
 
 
+def get_remotes(y, x):
+    y_remote = y.split(':')[0] + ':' + x
+    x_remote = y.split(':')[1]
+    return (y_remote, x_remote)
+
+
 def get_transmission_techs(model):
     transmission_y = []
     links = model.config_run.links
