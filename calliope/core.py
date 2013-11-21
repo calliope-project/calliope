@@ -13,8 +13,9 @@ from pyutilib.services import TempfileManager
 import yaml
 
 from . import constraints
-from . import techs
 from . import nodes
+from . import techs
+from . import transmission
 from . import utils
 
 
@@ -115,6 +116,12 @@ class Model(object):
         from the node matrix first before falling back to model-wide
         settings.
 
+        If the first segment of the option containts ':', it will be
+        interpreted as implicit tech subsetting: e.g. asking for
+        'hvac:r1' implicitly uses 'hvac:r1' with the parent 'hvac', even
+        if that has not been defined, to search the option inheritance
+        chain.
+
         Examples: model.get_option('ccgt.costs.om_var') or
                   model.get_option('csp.weight') or
                   model.get_option('csp.r', x='33') or
@@ -130,7 +137,10 @@ class Model(object):
                 # Example: 'ccgt.costs.om_var'
                 tech = option.split('.')[0]  # 'ccgt'
                 remainder = '.'.join(option.split('.')[1:])  # 'costs.om_var'
-                parent = o.get_key('techs.' + tech + '.parent')  # 'defaults'
+                if ':' in tech:
+                    parent = tech.split(':')[0]
+                else:
+                    parent = o.get_key('techs.' + tech + '.parent')  # 'defaults'
                 if parent == 'defaults':
                     result = o.get_key('techs_defaults.' + remainder)
                 else:
@@ -223,6 +233,27 @@ class Model(object):
                                              techs=d._y)
         # For simplicity, only keep the nodes that are actually in set `x`
         d.nodes = d.nodes.ix[d._x, :]
+        #
+        # Add transmission technologies to y and nodes matrix
+        #
+        d.transmission_y = transmission.get_transmission_techs(self)
+        d._y.extend(d.transmission_y)
+        # Add transmission tech columns to nodes matrix
+        for y in d.transmission_y:
+            d.nodes[y] = 0
+        # Create representation of node-tech links
+        tree = transmission.explode_transmission_tree(self)
+        # Populate nodes matrix with allowed techs and overrides
+        for x in tree:
+            for y in tree[x]:
+                # Allow the tech
+                d.nodes.at[x, y] = 1
+                # Add constraints if needed
+                for c in tree[x][y].keys_nested():
+                    colname = '_override.' + y + '.' + c
+                    if not colname in d.nodes.columns:
+                        d.nodes[colname] = np.nan
+                    d.nodes.at[x, colname] = tree[x][y].get_key(c)
 
     def read_data(self):
         """
