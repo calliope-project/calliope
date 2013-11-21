@@ -19,9 +19,11 @@ The recommended way to obtain all required Python modules with the exception of 
 
 ## Installation
 
-Installation is manual for now. A quick and dirty way is to symlink the Python module in the Calliope repository (i.e., `./calliope`) into the appropriate site-packages directory:
+To install the latest stable version via `pip`:
 
-    ln -s /path/to/calliope /path/to/site-packages/calliope
+```
+pip install -e git+https://github.com/sjpfenninger/calliope.git@master#egg=calliope
+```
 
 ## Use
 
