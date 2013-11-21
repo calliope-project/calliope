@@ -464,11 +464,18 @@ class Model(object):
             var : variable name as string, e.g. 'e'
             dims : list of indices as strings, e.g. ('y', 'x', 't')
         """
+        def _get_value(value):
+            try:
+                return cp.value(value)
+            except ValueError:
+                # Catch this for uninitialized values
+                return np.nan
+
         var = getattr(self.m, var)
         dims = [getattr(self.m, dim) for dim in dims]
         d = self.data
         if len(dims) == 1:
-            result = pd.Series([cp.value(var[i])
+            result = pd.Series([_get_value(var[i])
                                 for i in sorted(dims[0].value)])
             idx = dims[0]
             if idx.name == 't':
@@ -479,13 +486,13 @@ class Model(object):
             result = pd.DataFrame(0, index=sorted(dims[1].value),
                                   columns=sorted(dims[0].value))
             for i, v in var.iteritems():
-                result.loc[i[1], i[0]] = cp.value(v)
+                result.loc[i[1], i[0]] = _get_value(v)
         elif [i.name for i in dims] == ['y', 'x', 't']:
             result = pd.Panel(data=None, items=sorted(dims[0].value),
                               major_axis=sorted(dims[2].value),
                               minor_axis=sorted(dims[1].value))
             for i, v in var.iteritems():
-                result.loc[i[0], i[2], i[1]] = cp.value(v)
+                result.loc[i[0], i[2], i[1]] = _get_value(v)
             new_index = d._dt.loc[dims[2].first():dims[2].last()]
             result.major_axis = new_index.tolist()
         return result
