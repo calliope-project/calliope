@@ -23,17 +23,20 @@ nodes:
     r1:
         level: 1
         within:
-        techs: ['demand']
+        techs: ['demand', 'unmet_demand', 'ccgt']
         override:
             demand:
                 x_map: 'a: r1'
                 constraints:
                     r: file=demand-eu_r.csv
                     r_scale_to_peak: -60000
+            ccgt:
+                constraints:
+                    e_cap_max: 20000
     r2:
         level: 1
         within:
-        techs: ['demand']
+        techs: ['demand', 'unmet_demand']
         override:
             demand:
                 x_map: 'a: r2'
@@ -41,14 +44,6 @@ nodes:
                     r: file=demand-ca_r.csv
                     r_scale_to_peak: -5000
 
-    p:
-        level: 0
-        within: r1
-        techs: ['ccgt']
-        override:
-            ccgt:
-                constraints:
-                    e_cap_max: 20000
     33,75:
         level: 0
         within: r1
