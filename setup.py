@@ -1,11 +1,18 @@
-from distutils.core import setup
+#!/usr/bin/env python
+
+import calliope
+
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 setup(
     name='calliope',
-    version='0.1.0',
+    version=calliope.__version__,
     author='Stefan Pfenninger',
     author_email='stefan@pfenninger.org',
-    description='Calliope: a multi-scale energy systems (MUSES) model',
+    description='A multi-scale energy systems (MUSES) modeling framework',
     packages=['calliope'],
     install_requires=[
         "coopr >= 3.4.7842",

@@ -1,3 +1,4 @@
 calliope.egg-info/
 *.pyc
 .venv
+doc/_build/
