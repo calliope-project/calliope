@@ -20,4 +20,9 @@ setup(
         "pandas >= 0.12.0",
         "pyyaml >= 3.10"
     ],
+    entry_points={
+        'console_scripts': [
+            'calliope_run = calliope.parallel:main',
+        ]
+    }
 )
