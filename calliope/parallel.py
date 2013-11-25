@@ -1,9 +1,11 @@
 from __future__ import print_function
 from __future__ import division
 
+import argparse
 import itertools
 import os
 import shutil
+import sys
 
 import pandas as pd
 import yaml
@@ -36,8 +38,8 @@ class Parallelizer(object):
 
     def _write_modelcommands(self, f, settings):
         pth = os.path.join('Runs', settings)
-        f.write('python -c "import lisa\n')
-        f.write('model = lisa.Lisa(config_run=\'{}\')\n'.format(pth))
+        f.write('python -c "import calliope\n')
+        f.write('model = calliope.Model(config_run=\'{}\')\n'.format(pth))
         f.write('model.run()"\n')
 
     def generate_runs(self):
@@ -139,3 +141,24 @@ class Parallelizer(object):
                 f.write('esac\n')
         os.chmod(os.path.join(out_dir, array_submission), 0755)
         os.chmod(os.path.join(out_dir, array_run), 0755)
+
+
+def main():
+    arguments = sys.argv[1:]
+    parser = argparse.ArgumentParser(description='Run the Calliope model.')
+    parser.add_argument('settings', metavar='settings', type=str, default='',
+                        help='parallel_settings file to use')
+    parser.add_argument('-s', '--single', dest='single', action='store_const',
+                        const=True, default=False,
+                        help='don\'t do a parallel run, '
+                             'interpret settings file as '
+                             'run_settings instead of parallel_settings')
+    parser.add_argument('-d', '--dir', type=str, default='runs',
+                        help='target directory (default: runs)')
+    args = parser.parse_args(arguments)
+    parallelizer = Parallelizer(args.settings, target_dir='runs')
+    parallelizer.generate_runs()
+
+
+if __name__ == '__main__':
+    main()
