@@ -13,11 +13,15 @@ def node_energy_balance(model):
     Defines variables:
 
     * s: storage level
-    * rs: energy resource <> storage
-    * bs: backup resource <> storage
-    * es: storage <> electricity
-    * os: storage <> overflow
-    * e: node <> grid
+    * rs: energy resource <-> storage
+    * bs: backup resource <-> storage
+    * e: storage <-> electricity (positive: to grid, negative: from grid)
+    * e_prod: electricity -> grid (always positive)
+    * e_con: electricity <- grid (always negative)
+    * es_prod: storage -> electricity (always positive)
+    * es_con: storage <- electricity (always negative)
+    * os: storage <-> overflow
+    * e: node <-> grid
     * r_area: installed collector area
 
     """
@@ -29,11 +33,11 @@ def node_energy_balance(model):
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e = cp.Var(m.y, m.x, m.t, within=cp.Reals)
+    m.e_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.e_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
     m.es_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.es_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
     m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.e_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.e_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
     m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
@@ -114,8 +118,8 @@ def node_constraints_build(model):
     Defines variables:
 
     * s_cap: installed storage capacity
-    * r_cap: installed resource <> storage conversion capacity
-    * e_cap: installed storage <> electricity conversion capacity
+    * r_cap: installed resource <-> storage conversion capacity
+    * e_cap: installed storage <-> electricity conversion capacity
 
     """
     m = model.m
