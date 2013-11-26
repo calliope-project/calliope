@@ -1,0 +1,74 @@
+#
+# RUN SETTINGS
+#
+
+input:
+    techs: '{{ module_config }}/techs.yaml'
+    nodes: '{{ module_config }}/nodes.yaml'
+    path:  'Input-Calliope/NA-1hr-full'
+
+output:
+    save: false
+    path: 'Output'
+
+# NB: Parallel settings are ignored except if the model is run in parallel mode.
+# If mode is parallel, output.save is always set to true and output.path is
+# overridden by the run name
+
+parallel:  # Options apply if mode is parallel
+    name: calliope_test  # Name of this run
+    environment: local  # Choices: local, bsub, qsub
+    style: single  # Choices: single, array
+    additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
+
+#
+# SUBSETS
+#
+# Leave any of these empty to disable subsetting
+
+subset_y: []
+subset_x: []
+subset_t: ['2005-01-01', '2005-01-31']
+
+#
+# MODEL SETTINGS OVERRIDE
+#
+
+override:
+    techs:
+        csp:
+            constraints:
+                r_scale: 0.001  # Wh in DNI input data --> kWh for model
+
+#
+# ADDITIONAL PARALLEL SETTINGS
+#
+
+parallel_settings:
+    # Give iterations  as `parameter: [values]` entries
+    # iterations is to iterate over anything defined in defaults.yaml,
+    # techs.yaml, or nodes.yaml
+    iterations:
+        nodes.r1.techs: [['demand', 'unmet_demand', 'ccgt'],
+                         ['demand', 'unmet_demand']]
+    # iterations_run is to iterate over anything defined in run.yaml (this file)
+    iterations_run:
+        subset_t: [['2005-01-01', '2005-01-31'], ['2005-02-01', '2006-02-31']]
+    resources:
+        threads:  # set to request a non-default number of threads
+        wall_time:   # set to request a non-default run time in minutes
+        memory:  # set to request a non-default amount of memory in MB
+
+#
+# DEBUG AND SOLVER OPTIONS
+#
+
+debug:
+    keepfiles: false
+    symbolic_solver_labels: false
+
+# solver_options:
+    # emphasis.memory: 1  # Set to 1 to conserve memory where possible
+    # workmem: 1000  # Allow CPLEX use to 1000 MB of memory, default: 128
+    # threads: 1
+    # lpmethod: 4  # Use barrier method

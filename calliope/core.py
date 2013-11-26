@@ -30,24 +30,39 @@ class Model(object):
         model.run()
 
     """
-    def __init__(self, config_model=None, config_run=None):
+    def __init__(self, config_run=None):
         """
         Args:
-            config_model : path to YAML file with model settings
-            config_run : path to YAML file with run settings
+            config_run : path to YAML file with run settings. If not given,
+                         ``{{ module_config }}/run.yaml`` is used as the
+                         default.
+
         """
         super(Model, self).__init__()
-        # Load settings
-        if not config_model:
-            config_model = os.path.join(os.path.dirname(__file__),
-                                        'model_settings.yaml')
+        # Load run configuration
+        config_path = os.path.join(os.path.dirname(__file__), 'config')
         if not config_run:
-            config_run = os.path.join(os.path.dirname(__file__),
-                                      'run_settings.yaml')
-        self.config_model_file = config_model
+            config_run = os.path.join(config_path, 'run.yaml')
         self.config_run_file = config_run
-        self.config_model = utils.AttrDict(yaml.load(open(config_model, 'r')))
         self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
+        # Load all model config files and combine them into one AttrDict
+        config_model_paths = [os.path.join(config_path, 'defaults.yaml'),
+                              self.config_run.input.techs,
+                              self.config_run.input.nodes]
+        placeholders = ['{{ module_config }}', '{{module_config}}']
+        for i, path in enumerate(config_model_paths):
+            for p in placeholders:
+                new_path = config_model_paths[i].replace(p, config_path)
+                config_model_paths[i] = new_path
+        configs = []
+        for path in config_model_paths:
+            configs.append(utils.AttrDict(yaml.load(open(path, 'r'))))
+        o = configs[0]
+        for i in configs[1:]:
+            for k in i:
+                o[k] = i[k]
+        self.config_model = o
+
         # Override config_model settings if specified in config_run
         cr = self.config_run
         o = self.config_model
@@ -219,7 +234,7 @@ class Model(object):
             d._y = self.config_run.subset_y
         else:
             d._y = set()
-            for i in self.config_run.nodes.itervalues():
+            for i in o.nodes.itervalues():
                 assert isinstance(i.techs, list)
                 for y in i.techs:
                     d._y.add(y)
@@ -230,24 +245,23 @@ class Model(object):
         if self.config_run.get_key('subset_x', default=False):
             d._x = sorted(self.config_run.subset_x)
         else:
-            d._x = nodes.get_nodes(self.config_run.nodes)
+            d._x = nodes.get_nodes(o.nodes)
         #
         # Nodes settings matrix
         #
-        d.nodes = nodes.generate_node_matrix(self.config_run.nodes,
-                                             techs=d._y)
+        d.nodes = nodes.generate_node_matrix(o.nodes, techs=d._y)
         # For simplicity, only keep the nodes that are actually in set `x`
         d.nodes = d.nodes.ix[d._x, :]
         #
         # Add transmission technologies to y and nodes matrix
         #
-        d.transmission_y = transmission.get_transmission_techs(self)
+        d.transmission_y = transmission.get_transmission_techs(o.links)
         d._y.extend(d.transmission_y)
         # Add transmission tech columns to nodes matrix
         for y in d.transmission_y:
             d.nodes[y] = 0
         # Create representation of node-tech links
-        tree = transmission.explode_transmission_tree(self)
+        tree = transmission.explode_transmission_tree(o.links, d._x)
         # Populate nodes matrix with allowed techs and overrides
         for x in tree:
             for y in tree[x]:

@@ -1,0 +1,71 @@
+#
+# TECHNOLOGY DEFINITIONS
+#
+
+# 'parent: defaults' is a special parent representing the 'techs_defaults' defined in defaults.yaml
+# May also set tech-specific parameters that do not exist in defaults but are used by a custom technology class (see CSP example)
+techs:
+    ccgt:
+        parent: defaults
+        constraints:
+            r: inf
+            e_cap_max: 40000  # Maximum installed generation capacity [kWe]
+        costs:
+            e_cap: 750
+            om_fuel: 0.12
+    csp:
+        parent: defaults
+        constraints:
+            # -- Begin CSP-specific constraints --
+            use_s_time: true  # Use s_time to calculate s_cap_max?
+            s_time: 15  # Maximum storage time [h]
+            # -- End CSP-specific constraints --
+            r: file
+            r_eff: file
+            r_eff_ref: 1.0
+            e_eff: file
+            r_area_max: 318000  # Maximum solar field size [m2]
+            s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
+            s_loss: 0.002
+            e_cap_max: 20000  # Maximum turbine size [kWe]
+        costs:
+            s_cap: 30
+            r_area: 200
+            r_cap: 200
+            e_cap: 1350
+            om_var: 0.002
+            # -- Begin CSP-specific costs --
+            rec_per_sf: 0.54  # kWt of receiver needed per m2 of solar field
+            # -- End CSP-specific costs --
+        depreciation:
+            interest: 0.15
+    demand:
+        parent: defaults
+        constraints:
+            r: file
+            force_r: true
+            e_cap_max: inf
+            e_can_be_negative: true
+    unmet_demand:
+        parent: defaults
+        constraints:
+            r: inf
+            e_cap_max: inf
+        costs:
+            om_fuel: 1.0e+9
+    transmission:
+        parent: defaults
+        constraints:
+            r: inf  # Not used but still must be defined
+            e_cap_max: inf
+            e_can_be_negative: true
+        costs:
+            e_cap: 200
+    hvac:
+        parent: transmission
+        constraints:
+            e_eff: 0.85
+    hvdc:
+        parent: transmission
+        constraints:
+            e_eff: 0.95

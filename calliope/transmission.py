@@ -15,9 +15,8 @@ def get_remotes(y, x):
     return (y_remote, x_remote)
 
 
-def get_transmission_techs(model):
+def get_transmission_techs(links):
     transmission_y = []
-    links = model.config_run.links
     for i in links:
         for y_base in links[i]:
             for x in nodes.explode_nodes(i):
@@ -25,14 +24,13 @@ def get_transmission_techs(model):
     return transmission_y
 
 
-def explode_transmission_tree(model):
+def explode_transmission_tree(links, possible_x):
     tree = utils.AttrDict()
-    links = model.config_run.links
     for k in links:
         pairs = [nodes.explode_nodes(k)]
         pairs.append(list(reversed(pairs[0])))
         for x, remote_x in pairs:
-            if x not in model.data._x:
+            if x not in possible_x:
                 raise KeyError('Transmission line to inexistent node.')
             if x not in tree:
                 tree[x] = utils.AttrDict()
