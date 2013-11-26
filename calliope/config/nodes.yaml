@@ -1,15 +1,4 @@
 #
-# RUN SETTINGS
-#
-
-input:
-    path:  'Input-Calliope/NA-1hr-full'
-
-output:
-    save: false
-    path: 'Output'
-
-#
 # NODES
 #
 
@@ -65,36 +54,3 @@ links:
         hvac:
             constraints:
                 e_cap_max: 10000
-
-#
-# SUBSETTING
-#
-# Leave any of these empty to disable subsetting
-
-subset_y: []
-subset_x: []
-subset_t: ['2005-01-01', '2005-01-31']
-
-#
-# MODEL SETTINGS OVERRIDE
-#
-
-override:
-    techs:
-        csp:
-            constraints:
-                r_scale: 0.001  # Wh in DNI input data --> kWh for model
-
-#
-# SOLVER AND LOGGING
-#
-# These will usually be set/overridden in parallel_settings.yaml
-#
-
-debug:
-    keepfiles: false
-    symbolic_solver_labels: false
-
-#solver_options:
-#    threads: 1
-#    lpmethod: 4  # Use barrier method
