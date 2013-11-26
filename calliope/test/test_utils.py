@@ -1,10 +1,12 @@
 from __future__ import print_function
 from __future__ import division
 
+import cStringIO as StringIO
+import os
 import pytest
 import sys
 
-import lisa
+from calliope import utils
 
 
 class TestAttrDict:
@@ -21,13 +23,39 @@ class TestAttrDict:
         return d
 
     @pytest.fixture
+    def yaml_file(self):
+        setup = StringIO.StringIO("""
+        a: 1
+        b: 2
+        c:
+            x: foo
+            y: bar
+            z:
+                I: 1
+                II: 2
+        """)
+        return setup
+
+    @pytest.fixture
     def attr_dict(self, regular_dict):
         d = regular_dict
-        return lisa.utils.AttrDict(d)
+        return utils.AttrDict(d)
 
     def test_init_from_dict(self, regular_dict):
-        d = lisa.utils.AttrDict(regular_dict)
+        d = utils.AttrDict(regular_dict)
         assert d.a == 1
+
+    def test_from_yaml_fobj(self, yaml_file):
+        d = utils.AttrDict.from_yaml(yaml_file)
+        assert d.a == 1
+        assert d.c.z.II == 2
+
+    def test_from_yaml_path(self):
+        this_path = os.path.dirname(__file__)
+        yaml_path = os.path.join(this_path, 'test_utils', 'yaml_file.yaml')
+        d = utils.AttrDict.from_yaml(yaml_path)
+        assert d.a == 1
+        assert d.c.z.II == 2
 
     def test_dot_access_firstl(self, attr_dict):
         d = attr_dict
@@ -96,6 +124,25 @@ class TestAttrDict:
         assert dd['a'] == 1
         assert dd['c']['x'] == 'foo'
 
+    def test_keys_nested_as_list(self, attr_dict):
+        d = attr_dict
+        dd = d.keys_nested()
+        assert dd == ['a', 'b', 'c.x', 'c.y', 'c.z.I', 'c.z.II']
+
+    def test_keys_nested_as_dict(self, attr_dict):
+        d = attr_dict
+        dd = d.keys_nested(subkeys_as='dict')
+        # The sort order is: dicts first, then string keys
+        assert dd == [{'c': [{'z': ['I', 'II']}, 'x', 'y']}, 'a', 'b']
+
+    def test_union(self, attr_dict):
+        d = attr_dict
+        d_new = utils.AttrDict()
+        d_new.set_key('c.z.II', 'foo')
+        d.union(d_new)
+        assert d.c.z.II == 'foo'
+        assert d.c.z.I == 1
+
 
 class TestCaptureOutput():
     def example_funct(self):
@@ -104,7 +151,30 @@ class TestCaptureOutput():
         print('the error thing', file=sys.stderr)
 
     def test_capture_output(self):
-        with lisa.utils.capture_output() as out:
+        with utils.capture_output() as out:
             self.example_funct()
         assert out[0] == 'the first thing\nthe second thing\n'
         assert out[1] == 'the error thing\n'
+
+
+class TestMemoization():
+    @utils.memoize_instancemethod
+    def instance_method(self, a, b):
+        return a + b
+
+    def test_memoize_one_arg(self):
+        @utils.memoize
+        def test(a):
+            return a + 1
+        assert test(1) == 2
+        assert test(1) == 2
+
+    def test_memoize_two_args(self):
+        def test(a, b):
+            return a + b
+        assert test(1, 2) == 3
+        assert test(1, 2) == 3
+
+    def test_memoize_instancemethod(self):
+        assert self.instance_method(1, 2) == 3
+        assert self.instance_method(1, 2) == 3
