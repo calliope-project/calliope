@@ -518,14 +518,23 @@ class Model(object):
         return result
 
     def get_costs(self):
+        """Get costs
+
+        NB: Currently only counts e_prod towards costs!
+
+        """
         # Levelized cost of electricity (LCOE)
+        # TODO currently counting only e_prod for costs, makes sense?
         cost = self.get_var('cost', ['y', 'x'])
-        e = self.get_var('e', ['y', 'x', 't']).sum(axis='major')  # sum over t
-        lcoe = cost / e
+        # sum over t
+        e_prod = self.get_var('e_prod', ['y', 'x', 't']).sum(axis='major')
+        lcoe = cost / e_prod
         lcoe[np.isinf(lcoe)] = 0
-        lcoe_total = cost.sum() / e.sum()
+        lcoe_total = cost.sum() / e_prod.sum()
         lcoe = lcoe.append(pd.DataFrame(lcoe_total.to_dict(), index=['total']))
         # Capacity factor (CF)
+        # NB: using .abs() to sum absolute values of e so cf always positive
+        e = self.get_var('e', ['y', 'x', 't']).abs().sum(axis='major')
         e_cap = self.get_var('e_cap', ['y', 'x'])
         cf = e / (e_cap * sum(self.m.time_res[t] for t in self.m.t))
         cf = cf.fillna(0)
