@@ -10,7 +10,6 @@ import coopr.pyomo as cp
 import numpy as np
 import pandas as pd
 from pyutilib.services import TempfileManager
-import yaml
 
 from . import constraints
 from . import nodes
@@ -44,7 +43,7 @@ class Model(object):
         if not config_run:
             config_run = os.path.join(config_path, 'run.yaml')
         self.config_run_file = config_run
-        self.config_run = utils.AttrDict(yaml.load(open(config_run, 'r')))
+        self.config_run = utils.AttrDict.from_yaml(config_run)
         # Load all model config files and combine them into one AttrDict
         config_model_paths = [os.path.join(config_path, 'defaults.yaml'),
                               self.config_run.input.techs,
@@ -56,7 +55,7 @@ class Model(object):
                 config_model_paths[i] = new_path
         configs = []
         for path in config_model_paths:
-            configs.append(utils.AttrDict(yaml.load(open(path, 'r'))))
+            configs.append(utils.AttrDict.from_yaml(path))
         o = configs[0]
         for i in configs[1:]:
             for k in i:
