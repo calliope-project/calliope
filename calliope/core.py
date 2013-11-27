@@ -38,42 +38,35 @@ class Model(object):
 
         """
         super(Model, self).__init__()
-        # Load run configuration
-        config_path = os.path.join(os.path.dirname(__file__), 'config')
-        if not config_run:
-            config_run = os.path.join(config_path, 'run.yaml')
-        self.config_run_file = config_run
-        self.config_run = utils.AttrDict.from_yaml(config_run)
-        # Load all model config files and combine them into one AttrDict
-        config_model_paths = [os.path.join(config_path, 'defaults.yaml'),
-                              self.config_run.input.techs,
-                              self.config_run.input.nodes]
-        placeholders = ['{{ module_config }}', '{{module_config}}']
-        for i, path in enumerate(config_model_paths):
-            for p in placeholders:
-                new_path = config_model_paths[i].replace(p, config_path)
-                config_model_paths[i] = new_path
-        configs = []
-        for path in config_model_paths:
-            configs.append(utils.AttrDict.from_yaml(path))
-        o = configs[0]
-        for i in configs[1:]:
-            for k in i:
-                o[k] = i[k]
-        self.config_model = o
-
-        # Override config_model settings if specified in config_run
-        cr = self.config_run
-        o = self.config_model
-        if ('override' in cr
-                and isinstance(cr.override, utils.AttrDict)):
-            for k in cr.override.keys_nested():
-                o.set_key(k, cr.override.get_key(k))
+        self.initialize_configuration(config_run)
         # Other initialization tasks
         self.data = utils.AttrDict()
         self.initialize_sets()
         self.initialize_techs()
         self.read_data()
+
+    def initialize_configuration(self, config_run):
+        # Load run configuration
+        config_path = os.path.join(os.path.dirname(__file__), 'config')
+        if not config_run:
+            config_run = os.path.join(config_path, 'run.yaml')
+        self.config_run_file = config_run
+        cr = utils.AttrDict.from_yaml(config_run)
+        self.config_run = cr
+        # Load all model config files and combine them into one AttrDict
+        o = utils.AttrDict.from_yaml(os.path.join(config_path,
+                                                  'defaults.yaml'))
+        config_model_paths = utils.replace_all([cr.input.techs, cr.input.nodes],
+                                               placeholder='module_config',
+                                               replacement=config_path)
+        for path in config_model_paths:
+            o.union(utils.AttrDict.from_yaml(path))
+        self.config_model = o
+        # Override config_model settings if specified in config_run
+        if ('override' in cr
+                and isinstance(cr.override, utils.AttrDict)):
+            for k in cr.override.keys_nested():
+                o.set_key(k, cr.override.get_key(k))
 
     def initialize_techs(self):
         """Perform any tech-specific setup by instantiating tech classes"""
