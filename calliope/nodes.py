@@ -33,15 +33,19 @@ def _generate_node(node, items, techs):
     return d
 
 
-def explode_nodes(k):
-    """Expands keys of the form '1--3' into the list form ['1', '2', '3'],
-    and keys of the form '1,3,4' into the list form ['1', '3', '4'].
-    Can deal with any combination, e.g. '1--3,6,9--12'.
+def explode_node(k):
+    """Expands the given key ``k``. ``k``s of the form ``'1--3'`` or
+    ``'1,2,3'`` are both expanded into the list ``['1', '2', '3']``.
 
-    Always returns a list, even if `k` is just a single key, i.e.
-    explode_nodes('1') returns ['1'].
+    Can deal with any combination, e.g. ``'1--3,6,9--11,a'`` results in::
+
+        ['1', '2', '3', '6', '9', '10', '11', 'a']
+
+    Always returns a list, even if ``k`` is just a simple key,
+    i.e. ``explode_nodes('1')`` returns ``['1']``.
 
     """
+    assert isinstance(k, str)  # Ensure sure we don't pass in other things
     finalkeys = []
     subkeys = k.split(',')
     for sk in subkeys:
@@ -51,6 +55,8 @@ def explode_nodes(k):
                           for i in range(int(begin), int(end)+1)]
         else:
             finalkeys += [sk.strip()]
+    if finalkeys == [] or finalkeys == ['']:
+        raise KeyError('Empty key')
     return finalkeys
 
 
@@ -61,7 +67,7 @@ def get_nodes(d):
     """
     l = []
     for k in d.keys():
-        k = explode_nodes(k)
+        k = explode_node(k)
         l.extend(k)
     return l
 
@@ -72,13 +78,13 @@ def generate_node_matrix(d, techs):
     use the technology, else 0.
 
     The DataFrame also contains _level and _within columns for grouping
-    nodes into layers and grid zones, both currently unused.
+    nodes into layers and zones.
 
     """
     rows = []
     for k, v in d.iteritems():
         if '--' in k or ',' in k:
-            allnodes = explode_nodes(k)
+            allnodes = explode_node(k)
             for n in allnodes:
                 rows.append(_generate_node(n, v, techs))
         else:
