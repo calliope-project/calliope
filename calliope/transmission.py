@@ -30,7 +30,7 @@ def get_transmission_techs(links):
     transmission_y = []
     for i in links:
         for y_base in links[i]:
-            for x in nodes.explode_nodes(i):
+            for x in nodes.explode_node(i):
                 transmission_y.append(y_base + ':' + x)
     # Pass through set to remove duplicates
     return list(set(transmission_y))
@@ -48,7 +48,7 @@ def explode_transmission_tree(links, possible_x):
         return None
     tree = utils.AttrDict()
     for k in links:
-        pairs = [nodes.explode_nodes(k)]
+        pairs = [nodes.explode_node(k)]
         pairs.append(list(reversed(pairs[0])))
         for x, remote_x in pairs:
             if x not in possible_x:
