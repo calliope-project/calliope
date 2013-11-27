@@ -144,7 +144,7 @@ class TestAttrDict:
         assert d.c.z.I == 1
 
 
-class TestCaptureOutput():
+class TestCaptureOutput:
     def example_funct(self):
         print('the first thing')
         print('the second thing')
@@ -157,7 +157,7 @@ class TestCaptureOutput():
         assert out[1] == 'the error thing\n'
 
 
-class TestMemoization():
+class TestMemoization:
     @utils.memoize_instancemethod
     def instance_method(self, a, b):
         return a + b
@@ -178,3 +178,31 @@ class TestMemoization():
     def test_memoize_instancemethod(self):
         assert self.instance_method(1, 2) == 3
         assert self.instance_method(1, 2) == 3
+
+
+class TestReplaceAll:
+    @pytest.fixture
+    def path_list(self):
+        return ['{{ foo }}', '{{foo}}', '{{foo }}', '{{ foo}}',
+                '{{ bar }}', '{{ foo }}/{{ foo }}/bar']
+
+    def test_replace_all(self, path_list):
+        assert (utils.replace_all(path_list[0:2], 'foo', 'baz')
+                == ['baz', 'baz'])
+
+    def test_replace_all_unbalanced(self, path_list):
+        assert (utils.replace_all(path_list[2:4], 'foo', 'baz')
+                == ['{{foo }}', '{{ foo}}'])
+
+    def test_replace_all_not_list(self, path_list):
+        with pytest.raises(TypeError):
+            utils.replace_all('{{ foo }}', 'foo', 'baz')
+
+    def test_replace_all_not_placeholder(self, path_list):
+        assert (utils.replace_all([path_list[4]], 'foo', 'baz')
+                == ['{{ bar }}'])
+
+    def test_replace_all_multiple(self, path_list):
+        assert (utils.replace_all([path_list[5]], 'foo', 'baz')
+                == ['baz/baz/bar'])
+

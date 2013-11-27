@@ -216,3 +216,19 @@ class memoize_instancemethod(object):
         except KeyError:
             res = cache[key] = self.func(*args, **kw)
         return res
+
+
+def replace_all(paths, placeholder, replacement):
+    """Replace all occurences of ``{{placeholder}}`` or
+    ``{{ placeholder }}`` in ``paths`` (a list of strings) with
+    ``replacement``. Returns a list of strings. Error if ``paths`` not
+    a list of strings.
+
+    """
+    placeholders = ['{{ ' + placeholder + ' }}',
+                    '{{' + placeholder + '}}']
+    for i, path in enumerate(paths):
+        for p in placeholders:
+            new_path = paths[i].replace(p, replacement)
+            paths[i] = new_path
+    return paths
