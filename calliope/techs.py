@@ -55,19 +55,14 @@ class CspTechnology(Technology):
 
         """
         super(CspTechnology, self).__init__()
-        r_temp_amb = 25
-        r_temp_op = 590
-        tmax = r_temp_op - (r_temp_op - r_temp_amb) * 0.05
-        carnot_mod = 1 - math.sqrt((r_temp_amb + 273) / (tmax + 273))
-        # Set reference electrical conversion efficiency
-        model.set_option('csp.constraints.e_eff_ref', carnot_mod)
         # If necessary, set storage capacity based on s_time
         # and reference efficiency
         if model.get_option('csp.constraints.use_s_time'):
             s_time = model.get_option('csp.constraints.s_time')
             e_cap_max = model.get_option('csp.constraints.e_cap_max')
+            e_eff_ref = model.get_option('csp.constraints.e_eff_ref')
             model.set_option('csp.constraints.s_cap_max',
-                             s_time * e_cap_max / carnot_mod)
+                             s_time * e_cap_max / e_eff_ref)
 
     def __repr__(self):
         return 'Concentrating solar power (CSP)'

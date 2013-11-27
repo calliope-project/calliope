@@ -118,7 +118,7 @@ class Model(object):
         else:
             raise KeyError('<0')
 
-    @utils.memoize_instancemethod
+    # @utils.memoize_instancemethod
     def get_option(self, option, x=None):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
@@ -212,7 +212,7 @@ class Model(object):
         table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None)
         table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
                          for dt in table_t[1]]
-        if self.config_run.subset_t:
+        if self.config_run.get_key('subset_t', default=False):
             table_t = table_t.loc[self.config_run.subset_t[0]:
                                   self.config_run.subset_t[1]]
             self.slice = slice(table_t[0][0], table_t[0][-1] + 1)
@@ -262,16 +262,17 @@ class Model(object):
         # Create representation of node-tech links
         tree = transmission.explode_transmission_tree(o.links, d._x)
         # Populate nodes matrix with allowed techs and overrides
-        for x in tree:
-            for y in tree[x]:
-                # Allow the tech
-                d.nodes.at[x, y] = 1
-                # Add constraints if needed
-                for c in tree[x][y].keys_nested():
-                    colname = '_override.' + y + '.' + c
-                    if not colname in d.nodes.columns:
-                        d.nodes[colname] = np.nan
-                    d.nodes.at[x, colname] = tree[x][y].get_key(c)
+        if tree:
+            for x in tree:
+                for y in tree[x]:
+                    # Allow the tech
+                    d.nodes.at[x, y] = 1
+                    # Add constraints if needed
+                    for c in tree[x][y].keys_nested():
+                        colname = '_override.' + y + '.' + c
+                        if not colname in d.nodes.columns:
+                            d.nodes[colname] = np.nan
+                        d.nodes.at[x, colname] = tree[x][y].get_key(c)
 
     def read_data(self):
         """
