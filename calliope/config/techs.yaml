@@ -20,10 +20,10 @@ techs:
             use_s_time: true  # Use s_time to calculate s_cap_max?
             s_time: 15  # Maximum storage time [h]
             # -- End CSP-specific constraints --
-            r: file
-            r_eff: file
+            r: 0  # was file
+            r_eff: 0  # was file
             r_eff_ref: 1.0
-            e_eff: file
+            e_eff: 0  # was file
             e_eff_ref: 0.4
             r_area_max: 318000  # Maximum solar field size [m2]
             s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
@@ -43,7 +43,7 @@ techs:
     demand:
         parent: defaults
         constraints:
-            r: file
+            r: 0  # was file
             force_r: true
             e_cap_max: inf
             e_can_be_negative: true

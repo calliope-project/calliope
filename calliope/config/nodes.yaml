@@ -17,7 +17,7 @@ nodes:
             demand:
                 x_map: 'a: r1'
                 constraints:
-                    r: file=demand-eu_r.csv
+                    r: file=demand-r1_r.csv
                     r_scale_to_peak: -60000
             ccgt:
                 constraints:
@@ -30,21 +30,17 @@ nodes:
             demand:
                 x_map: 'a: r2'
                 constraints:
-                    r: file=demand-ca_r.csv
+                    r: file=demand-r2_r.csv
                     r_scale_to_peak: -5000
 
-    33,75:
-        level: 0
-        within: r1
-        techs: ['csp']
-    34:
+    33,34,75:
         level: 0
         within: r1
         techs: ['csp']
         override:
             csp:
                 constraints:
-                    e_cap_max: 40000
+                    r: file
 
 #
 # TRANSMISSION CAPACITIES

@@ -3,9 +3,9 @@
 #
 
 input:
-    techs: '{{ module_config }}/techs.yaml'
-    nodes: '{{ module_config }}/nodes.yaml'
-    path:  'Input-Calliope/NA-1hr-full'
+    techs: '{{ module }}/config/techs.yaml'
+    nodes: '{{ module }}/config/nodes.yaml'
+    path:  '{{ module }}/simple_model_data'
 
 output:
     save: false
@@ -16,7 +16,7 @@ output:
 # overridden by the run name
 
 parallel:  # Options apply if mode is parallel
-    name: calliope_test  # Name of this run
+    name: simple_model  # Name of this run
     environment: local  # Choices: local, bsub, qsub
     style: single  # Choices: single, array
     additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
@@ -35,10 +35,6 @@ subset_t: ['2005-01-01', '2005-01-31']
 #
 
 override:
-    techs:
-        csp:
-            constraints:
-                r_scale: 0.001  # Wh in DNI input data --> kWh for model
 
 #
 # ADDITIONAL PARALLEL SETTINGS
@@ -50,7 +46,7 @@ parallel_settings:
     # techs.yaml, or nodes.yaml
     iterations:
         nodes.r1.techs: [['demand', 'unmet_demand', 'ccgt'],
-                         ['demand', 'unmet_demand']]
+                         ['demand', 'unmet_demand',]]
     # iterations_run is to iterate over anything defined in run.yaml (this file)
     iterations_run:
         subset_t: [['2005-01-01', '2005-01-31'], ['2005-02-01', '2006-02-31']]
