@@ -80,15 +80,23 @@ class Model(object):
             except AttributeError:
                 self.technologies[t] = techs.Technology(model=self, name=t)
 
-    def get_timeres(self):
+    def get_timeres(self, verify=False):
         """Returns resolution of data in hours. Needs a properly
-        formatted `set_t.csv` file to work.
+        formatted ``set_t.csv`` file to work.
+
+        If ``verify=True``, verifies that the entire file is at the same
+        resolution. ``model.get_timeres(verify=True)`` can be called
+        after Model initialization to verify this.
 
         """
         path = self.config_run.input.path
         df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
                          header=None, parse_dates=[1])
         seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
+        if verify:
+            for i in range(len(df) - 1):
+                assert ((df.iat[i, 0] - df.iat[i+1, 0]).total_seconds()
+                        == seconds)
         hours = abs(seconds) / 3600
         return hours
 
