@@ -218,17 +218,13 @@ class memoize_instancemethod(object):
         return res
 
 
-def replace_all(paths, placeholder, replacement):
+def replace(string, placeholder, replacement):
     """Replace all occurences of ``{{placeholder}}`` or
-    ``{{ placeholder }}`` in ``paths`` (a list of strings) with
-    ``replacement``. Returns a list of strings. Error if ``paths`` not
-    a list of strings.
+    ``{{ placeholder }}`` in ``string`` with ``replacement``.
 
     """
     placeholders = ['{{ ' + placeholder + ' }}',
                     '{{' + placeholder + '}}']
-    for i, path in enumerate(paths):
-        for p in placeholders:
-            new_path = paths[i].replace(p, replacement)
-            paths[i] = new_path
-    return paths
+    for p in placeholders:
+        string = string.replace(p, replacement)
+    return string

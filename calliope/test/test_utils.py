@@ -180,29 +180,26 @@ class TestMemoization:
         assert self.instance_method(1, 2) == 3
 
 
-class TestReplaceAll:
+class TestReplace:
     @pytest.fixture
     def path_list(self):
         return ['{{ foo }}', '{{foo}}', '{{foo }}', '{{ foo}}',
                 '{{ bar }}', '{{ foo }}/{{ foo }}/bar']
 
-    def test_replace_all(self, path_list):
-        assert (utils.replace_all(path_list[0:2], 'foo', 'baz')
-                == ['baz', 'baz'])
+    def test_replace(self, path_list):
+        assert utils.replace(path_list[0], 'foo', 'baz') == 'baz'
+        assert utils.replace(path_list[1], 'foo', 'baz') == 'baz'
 
-    def test_replace_all_unbalanced(self, path_list):
-        assert (utils.replace_all(path_list[2:4], 'foo', 'baz')
-                == ['{{foo }}', '{{ foo}}'])
+    def test_replace_unbalanced(self, path_list):
+        assert utils.replace(path_list[2], 'foo', 'baz') == '{{foo }}'
+        assert utils.replace(path_list[3], 'foo', 'baz') == '{{ foo}}'
 
-    def test_replace_all_not_list(self, path_list):
-        with pytest.raises(TypeError):
-            utils.replace_all('{{ foo }}', 'foo', 'baz')
+    def test_replace_not_string(self, path_list):
+        with pytest.raises(AttributeError):
+            utils.replace(10, 'foo', 'baz')
 
-    def test_replace_all_not_placeholder(self, path_list):
-        assert (utils.replace_all([path_list[4]], 'foo', 'baz')
-                == ['{{ bar }}'])
+    def test_replace_not_placeholder(self, path_list):
+        assert utils.replace(path_list[4], 'foo', 'baz') == '{{ bar }}'
 
-    def test_replace_all_multiple(self, path_list):
-        assert (utils.replace_all([path_list[5]], 'foo', 'baz')
-                == ['baz/baz/bar'])
-
+    def test_replace_multiple(self, path_list):
+        assert utils.replace(path_list[5], 'foo', 'baz') == 'baz/baz/bar'

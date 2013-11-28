@@ -33,7 +33,7 @@ class Model(object):
         """
         Args:
             config_run : path to YAML file with run settings. If not given,
-                         ``{{ module_config }}/run.yaml`` is used as the
+                         ``{{ module }}/config/run.yaml`` is used as the
                          default.
 
         """
@@ -53,13 +53,15 @@ class Model(object):
         self.config_run_file = config_run
         cr = utils.AttrDict.from_yaml(config_run)
         self.config_run = cr
+        # Expand {{ module }} placeholder
+        for p in ['input.techs', 'input.nodes', 'input.path']:
+            cr.set_key(p, utils.replace(cr.get_key(p),
+                       placeholder='module',
+                       replacement=os.path.dirname(__file__)))
         # Load all model config files and combine them into one AttrDict
         o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                                   'defaults.yaml'))
-        config_model_paths = utils.replace_all([cr.input.techs, cr.input.nodes],
-                                               placeholder='module_config',
-                                               replacement=config_path)
-        for path in config_model_paths:
+        for path in [cr.input.techs, cr.input.nodes]:
             o.union(utils.AttrDict.from_yaml(path))
         self.config_model = o
         # Override config_model settings if specified in config_run
