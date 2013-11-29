@@ -1,12 +1,15 @@
 from __future__ import print_function
 from __future__ import division
 
-
+import numpy as np
+import pandas as pd
 import pytest
+import tempfile
 
 import calliope
 
 import common
+from common import assert_almost_equal
 
 
 class TestInitialization:
@@ -15,6 +18,9 @@ class TestInitialization:
         assert hasattr(model, 'data')
         assert hasattr(model, 'config_run')
         assert hasattr(model, 'config_model')
+
+    def test_model_initialization_simple_model(self):
+        common.simple_model()
 
     def test_initialize_techs(self):
         model = common.simple_model()
@@ -40,22 +46,184 @@ class TestInitialization:
         with pytest.raises(AssertionError):
             model.get_timeres(verify=True)
 
-    def test_scale_to_peak(self):
-        pass
+    @pytest.fixture
+    def sine_wave(self):
+        return pd.DataFrame((np.sin(np.arange(0, 10, 0.1)) + 1.0) * 5/2 + 5)
 
-    def test_initialize_sets(self):
-        pass
+    def test_scale_to_peak_positive(self, sine_wave):
+        model = common.simple_model()
+        scaled = model.scale_to_peak(sine_wave, 100)
+        assert_almost_equal(scaled.max(), 100, tolerance=0.01)
+        assert_almost_equal(scaled.min(), 50, tolerance=0.01)
 
-    def test_read_data_generic_file(self):
-        # read from r:file
-        pass
+    def test_scale_to_peak_negative(self, sine_wave):
+        model = common.simple_model()
+        df = sine_wave * -1
+        scaled = model.scale_to_peak(df, -100)
+        assert_almost_equal(scaled.max(), -50, tolerance=0.01)
+        assert_almost_equal(scaled.min(), -100, tolerance=0.01)
 
-    def test_read_data_specific_file(self):
-        # read from r:file=something
-        pass
+    def test_scale_to_peak_scale_time_res_true(self, sine_wave):
+        model = common.simple_model(path='test/common/t_6h')
+        scaled = model.scale_to_peak(sine_wave, 100)
+        assert_almost_equal(scaled.max(), 600, tolerance=0.1)
+        assert_almost_equal(scaled.min(), 300, tolerance=0.1)
 
-    def test_model_initialization_simple_model(self):
-        common.simple_model()
+    def test_scale_to_peak_scale_time_res_false(self, sine_wave):
+        model = common.simple_model(path='test/common/t_6h')
+        scaled = model.scale_to_peak(sine_wave, 100, scale_time_res=False)
+        assert_almost_equal(scaled.max(), 100, tolerance=0.1)
+        assert_almost_equal(scaled.min(), 50, tolerance=0.1)
+
+    def test_scale_to_peak_positive_and_negative(self, sine_wave):
+        model = common.simple_model()
+        df = sine_wave - 6
+        scaled = model.scale_to_peak(df, 10)
+        assert_almost_equal(scaled.max(), 10, tolerance=0.01)
+        assert_almost_equal(scaled.min(), -2.5, tolerance=0.01)
+
+    def test_initialize_sets_timesteps(self):
+        model = common.simple_model()
+        assert model.data._t.tolist() == range(0, 1416)
+        assert model.data._dt[0].minute == 0
+        assert model.data._dt[0].hour == 0
+        assert model.data._dt[0].day == 1
+        assert model.data._dt[0].month == 1
+        assert model.data.time_res_static == 1
+        assert model.data.time_res_series.tolist() == [1] * 1416
+        assert model.data.startup_time_bounds == 12
+
+    def test_initialize_sets_timesteps_subset(self):
+        config_run = """
+                        input:
+                            techs: {techs}
+                            nodes: {nodes}
+                            path: '{path}'
+                        output:
+                            save: false
+                        subset_t: ['2005-01-02', '2005-01-03']
+                    """
+        model = common.simple_model(config_run=config_run)
+        assert model.data._t.tolist() == range(24, 72)
+        assert model.data._dt.iat[0].minute == 0
+        assert model.data._dt.iat[0].hour == 0
+        assert model.data._dt.iat[0].day == 2
+        assert model.data._dt.iat[0].month == 1
+        assert model.data.time_res_static == 1
+        assert model.data.time_res_series.tolist() == [1] * 48
+        assert model.data.startup_time_bounds == 24 + 12
+
+    def test_initialize_sets_technologies(self):
+        model = common.simple_model()
+        assert sorted(model.data._y) == ['ccgt', 'csp',
+                                         'demand', 'unmet_demand']
+
+    def test_initialize_sets_technologies_subset(self):
+        config_run = """
+                        input:
+                            techs: {techs}
+                            nodes: {nodes}
+                            path: '{path}'
+                        output:
+                            save: false
+                        subset_y: ['ccgt', 'demand']
+                    """
+        model = common.simple_model(config_run=config_run)
+        assert sorted(model.data._y) == ['ccgt',  'demand']
+
+    def test_initialize_sets_technologies_too_large_subset(self):
+        config_run = """
+                        input:
+                            techs: {techs}
+                            nodes: {nodes}
+                            path: '{path}'
+                        output:
+                            save: false
+                        subset_y: ['ccgt', 'demand', 'foo', 'bar']
+                    """
+        model = common.simple_model(config_run=config_run)
+        assert sorted(model.data._y) == ['ccgt',  'demand']
+
+    def test_initialize_sets_nodes(self):
+        model = common.simple_model()
+        assert sorted(model.data._x) == ['1', '2', 'demand']
+
+    def test_initialize_sets_nodes_subset(self):
+        config_run = """
+                        input:
+                            techs: {techs}
+                            nodes: {nodes}
+                            path: '{path}'
+                        output:
+                            save: false
+                        subset_x: ['1', 'demand']
+                    """
+        model = common.simple_model(config_run=config_run)
+        assert sorted(model.data._x) == ['1', 'demand']
+
+    def test_initialize_sets_nodes_too_large_subset(self):
+        config_run = """
+                        input:
+                            techs: {techs}
+                            nodes: {nodes}
+                            path: '{path}'
+                        output:
+                            save: false
+                        subset_x: ['1', 'demand', 'foo', 'bar']
+                    """
+        model = common.simple_model(config_run=config_run)
+        assert sorted(model.data._x) == ['1', 'demand']
+
+    def test_initialize_nodes_matrix(self):
+        model = common.simple_model()
+        cols = ['_level', '_override.ccgt.constraints.e_cap_max',
+                '_within', 'ccgt', 'csp', 'demand', 'unmet_demand']
+        assert sorted(model.data.nodes.columns) == cols
+        assert sorted(model.data.nodes.index.tolist()) == ['1', '2', 'demand']
+
+    @pytest.fixture
+    def model_transmission(self):
+        nodes = """
+            nodes:
+                demand:
+                    level: 0
+                    within:
+                    techs: ['demand']
+                1,2:
+                    level: 0
+                    within:
+                    techs: ['ccgt', 'csp']
+            links:
+                1,2:
+                    hvac:
+                        constraints:
+                            e_cap_max: 100
+        """
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(nodes)
+            print(f.read())
+            model = common.simple_model(config_nodes=f.name)
+        return model
+
+    def test_initialize_sets_nodes_with_transmission(self, model_transmission):
+        model = model_transmission
+        assert sorted(model.data._y) == ['ccgt', 'csp', 'demand',
+                                         'hvac:1', 'hvac:2']
+
+    def test_initialize_nodes_matrix_with_transmission(self,
+                                                       model_transmission):
+        model = model_transmission
+        cols = ['_level',
+                '_override.hvac:1.constraints.e_cap_max',
+                '_override.hvac:2.constraints.e_cap_max',
+                '_within', 'ccgt', 'csp', 'demand',
+                'hvac:1', 'hvac:2']
+        assert sorted(model.data.nodes.columns) == cols
+        assert sorted(model.data.nodes.index.tolist()) == ['1', '2', 'demand']
+        nodes = model.data.nodes
+        assert nodes.at['1', '_override.hvac:2.constraints.e_cap_max'] == 100
+        assert np.isnan(nodes.at['1', '_override.hvac:1.constraints.e_cap_max'])
+        assert nodes.at['2', '_override.hvac:1.constraints.e_cap_max'] == 100
 
 
 class TestOptions:
