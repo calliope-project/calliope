@@ -191,19 +191,24 @@ class Model(object):
         o = self.config_model
         o.set_key('techs.' + option, value)
 
-    def scale_to_peak(self, df, peak, symmetric=True):
-        """Returns the given dataframe scaled to the given peak value."""
+    def scale_to_peak(self, df, peak, scale_time_res=True):
+        """Returns the given dataframe scaled to the given peak value.
+
+        If ``scale_time_res`` is True, the peak is multiplied by the model's
+        time resolution. Set it to False to scale things like efficiencies.
+
+        """
         # Normalize to (0, 1), then multiply by the desired maximum,
         # scaling this peak according to time_res
-        # TODO write unit tests for this to make sure it does what it should,
-        # and clearly define what it does for negative, positive, mixed values,
-        # etc.!
-        d = self.data
-        if symmetric and df.max() < 0:
+        if scale_time_res:
+            adjustment = self.get_timeres()
+        else:
+            adjustment = 1
+        if peak < df.min():
             scale = df.min()
         else:
             scale = df.max()
-        return (df / scale) * peak * d.time_res_static
+        return (df / scale) * peak * adjustment
 
     def initialize_sets(self):
         o = self.config_model
@@ -232,22 +237,21 @@ class Model(object):
         #
         # y: Technologies set
         #
+        d._y = set()
+        for i in o.nodes.itervalues():
+            assert isinstance(i.techs, list)
+            for y in i.techs:
+                d._y.add(y)
+        d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
-            d._y = self.config_run.subset_y
-        else:
-            d._y = set()
-            for i in o.nodes.itervalues():
-                assert isinstance(i.techs, list)
-                for y in i.techs:
-                    d._y.add(y)
-            d._y = list(d._y)
+            d._y = [y for y in d._y if y in self.config_run.subset_y]
+
         #
         # x: Nodes set
         #
+        d._x = nodes.get_nodes(o.nodes)
         if self.config_run.get_key('subset_x', default=False):
-            d._x = sorted(self.config_run.subset_x)
-        else:
-            d._x = nodes.get_nodes(o.nodes)
+            d._x = [x for x in d._x if x in self.config_run.subset_x]
         #
         # Nodes settings matrix
         #
