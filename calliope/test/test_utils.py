@@ -18,7 +18,8 @@ class TestAttrDict:
                    'y': 'bar',
                    'z': {'I': 1,
                          'II': 2}
-                   }
+                   },
+             'd': None
              }
         return d
 
@@ -33,6 +34,7 @@ class TestAttrDict:
             z:
                 I: 1
                 II: 2
+        d:
         """)
         return setup
 
@@ -79,6 +81,17 @@ class TestAttrDict:
         d = attr_dict
         d.set_key('c.l.o.h.a', 'foo')
         assert d.c.l.o.h.a == 'foo'
+
+    def test_set_key_nested_on_string(self, attr_dict):
+        d = attr_dict
+        with pytest.raises(UserWarning):
+            d.set_key('a.foo', 'bar')
+
+    def test_set_key_nested_on_none(self, attr_dict):
+        d = attr_dict
+        assert d['d'] is None
+        d.set_key('d.foo', 'bar')
+        assert d.d.foo == 'bar'
 
     def test_get_key_first(self, attr_dict):
         d = attr_dict
@@ -127,13 +140,13 @@ class TestAttrDict:
     def test_keys_nested_as_list(self, attr_dict):
         d = attr_dict
         dd = d.keys_nested()
-        assert dd == ['a', 'b', 'c.x', 'c.y', 'c.z.I', 'c.z.II']
+        assert dd == ['a', 'b', 'c.x', 'c.y', 'c.z.I', 'c.z.II', 'd']
 
     def test_keys_nested_as_dict(self, attr_dict):
         d = attr_dict
         dd = d.keys_nested(subkeys_as='dict')
         # The sort order is: dicts first, then string keys
-        assert dd == [{'c': [{'z': ['I', 'II']}, 'x', 'y']}, 'a', 'b']
+        assert dd == [{'c': [{'z': ['I', 'II']}, 'x', 'y']}, 'a', 'b', 'd']
 
     def test_union(self, attr_dict):
         d = attr_dict
