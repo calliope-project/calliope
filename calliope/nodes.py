@@ -19,7 +19,7 @@ def _generate_node(node, items, techs):
         techs : (list) list of available technologies
     """
     # Mandatory basics
-    d = {'_node': node, '_level': items.level, '_within': items.within}
+    d = {'_node': node, '_level': items.level, '_within': str(items.within)}
     # Override
     if 'override' in items:
         for k in items.override.keys_nested():
