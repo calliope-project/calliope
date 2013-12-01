@@ -27,6 +27,13 @@ techs:
             r_cap: 5
             e_cap: 10
             om_var: 0.001
+    pv:
+        parent: defaults
+        constraints:
+            r: 0
+            e_cap_max: 50
+        costs:
+            e_cap: 20
     storage:
         parent: defaults
         constraints:
