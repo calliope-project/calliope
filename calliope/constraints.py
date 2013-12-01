@@ -100,7 +100,7 @@ def node_energy_balance(model):
         elif model.mode == 'operate' and 's_init' in model.data:
             s_minus_one = model.data.s_init.at[x, y]
         else:
-            s_minus_one = model.get_option(y + '.constraints.s_init')
+            s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
                 - m.es_prod[y, x, t] - m.es_con[y, x, t] - m.os[y, x, t])
 
@@ -330,11 +330,13 @@ def model_constraints(model):
 
     @utils.memoize
     def get_parents(level):
-        return list(model.data.nodes[model.data.nodes._level == level].index)
+        nodes = model.data.nodes
+        return list(nodes[nodes._level == level].index)
 
     @utils.memoize
     def get_children(parent):
-        return list(model.data.nodes[model.data.nodes._within == parent].index)
+        nodes = model.data.nodes
+        return list(nodes[nodes._within == parent].index)
 
     # Constraint rules
     def c_system_balance_rule(m, x, t):

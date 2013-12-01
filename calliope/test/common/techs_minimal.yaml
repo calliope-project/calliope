@@ -27,6 +27,17 @@ techs:
             r_cap: 5
             e_cap: 10
             om_var: 0.001
+    storage:
+        parent: defaults
+        constraints:
+            r: 0
+            e_cap_max: 100
+            e_can_be_negative: true
+            s_cap_max: 100
+            s_loss: 0.002
+        costs:
+            s_cap: 500
+            e_cap: 10
     demand:
         parent: defaults
         constraints:
