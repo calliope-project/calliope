@@ -46,6 +46,32 @@ class TestNodes:
         """)
         return utils.AttrDict.from_yaml(setup)
 
+    @pytest.fixture
+    def sample_nested_nodes(self):
+        setup = StringIO.StringIO("""
+        1,2,3:
+            level: 1
+            within:
+            techs: ['foo']
+        foo:
+            level: 1
+            within:
+            techs: ['foo']
+        10,11,12:
+            level: 0
+            within: 1
+            techs: ['foo']
+        20,21,22:
+            level: 0
+            within: 2
+            techs: ['foo']
+        bar,baz:
+            level: 0
+            within: foo
+            techs: ['foo']
+        """)
+        return utils.AttrDict.from_yaml(setup)
+
     def test_generate_node(self, sample_nodes):
         node = 'test'
         items = sample_nodes[node]
@@ -147,3 +173,10 @@ class TestNodes:
                        '_override.demand.x_map',
                        '_within', 'ccgt']
         assert sorted(df.columns) == wanted_cols
+
+    def test_generate_node_matrix_within_only_strings(self,
+                                                      sample_nested_nodes):
+        techs = ['foo']
+        df = nodes.generate_node_matrix(sample_nested_nodes, techs)
+        for i in df['_within'].tolist():
+            assert (i is None or isinstance(i, str))
