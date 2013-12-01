@@ -10,7 +10,7 @@ from common import assert_almost_equal
 
 class TestModel:
     @pytest.fixture(scope='module')
-    def model_one_tech_one_site(self):
+    def model(self):
         nodes = """
             nodes:
                 1:
@@ -44,12 +44,10 @@ class TestModel:
         model.run()
         return model
 
-    def test_one_tech_one_site_solves(self, model_one_tech_one_site):
-        model = model_one_tech_one_site
+    def test_model_solves(self, model):
         assert str(model.results.Solution.Status) == 'optimal'
 
-    def test_one_tech_one_site_balanced(self, model_one_tech_one_site):
-        model = model_one_tech_one_site
+    def test_model_balanced(self, model):
         df = model.get_system_variables()
         assert df.ix[0, 'ccgt'] == 7.5
         assert_almost_equal(df['ccgt'].mean(), 7.62, tolerance=0.01)

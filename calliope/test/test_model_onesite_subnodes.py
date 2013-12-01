@@ -5,11 +5,12 @@ import pytest
 import tempfile
 
 import common
+from common import assert_almost_equal
 
 
 class TestModel:
     @pytest.fixture(scope='module')
-    def model_one_tech_one_site(self):
+    def model(self):
         nodes = """
             nodes:
                 1:
@@ -47,17 +48,14 @@ class TestModel:
         model.run()
         return model
 
-    def test_one_tech_one_site_solves(self, model_one_tech_one_site):
-        model = model_one_tech_one_site
+    def test_model_solves(self, model):
         assert str(model.results.Solution.Status) == 'optimal'
 
-    def test_one_tech_one_site_balanced(self, model_one_tech_one_site):
-        model = model_one_tech_one_site
+    def test_model_balanced(self, model):
         df = model.get_system_variables()
         assert df['ccgt'].mean() == 50
         assert (df['ccgt'] == -1 * df['demand']).all()
 
-    def test_one_tech_one_site_costs(self, model_one_tech_one_site):
-        model = model_one_tech_one_site
+    def test_model_costs(self, model):
         df = model.get_costs()
-        assert df.at['lcoe', 'total', 'ccgt'] == 0.1
+        assert_almost_equal(df.at['lcoe', 'total', 'ccgt'], 0.1)
