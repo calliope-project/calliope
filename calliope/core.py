@@ -505,7 +505,7 @@ class Model(object):
             elif idx.name == 'x':
                 result.index = sorted(idx.value)
         elif [i.name for i in dims] == ['y', 'x']:
-            result = pd.DataFrame(0, index=sorted(dims[1].value),
+            result = pd.DataFrame(0.0, index=sorted(dims[1].value),
                                   columns=sorted(dims[0].value))
             for i, v in var.iteritems():
                 result.loc[i[1], i[0]] = _get_value(v)
