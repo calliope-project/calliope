@@ -67,6 +67,14 @@ class AttrDict(dict):
             except KeyError:
                 self[key] = AttrDict()
                 self[key].set_key(remainder, value)
+            except AttributeError:
+                if self[key] is None:  # If the value is None, we replace it
+                    self[key] = AttrDict()
+                    self[key].set_key(remainder, value)
+                # Else there is probably something there, and we don't just
+                # want to overwrite so stop and warn the user
+                else:
+                    raise UserWarning('Cannot set nested key on non-dict key.')
         else:
             self[key] = value
 
@@ -108,6 +116,11 @@ class AttrDict(dict):
             else:
                 d[k] = v
         return d
+
+    def to_yaml(self, path):
+        """Saves the AttrDict to the given path as YAML file"""
+        with open(path, 'w') as f:
+            yaml.dump(self.as_dict(), f)
 
     def keys_nested(self, subkeys_as='list'):
         """Returns all keys in the AttrDict, including the keys of
