@@ -21,9 +21,9 @@ techs:
             s_time: 15  # Maximum storage time [h]
             # -- End CSP-specific constraints --
             r: 0  # was file
-            r_eff: 0  # was file
+            r_eff: 1.0  # was file
             r_eff_ref: 1.0
-            e_eff: 0  # was file
+            e_eff: 0.4  # was file
             e_eff_ref: 0.4
             r_area_max: 318000  # Maximum solar field size [m2]
             s_cap_max: 745321  # Overriden by s_time if use_s_time = 1

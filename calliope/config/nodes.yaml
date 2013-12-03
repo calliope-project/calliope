@@ -18,10 +18,10 @@ nodes:
                 x_map: 'a: r1'
                 constraints:
                     r: file=demand-r1_r.csv
-                    r_scale_to_peak: -60000
+                    r_scale_to_peak: -50000
             ccgt:
                 constraints:
-                    e_cap_max: 20000
+                    e_cap_max: 40000
     r2:
         level: 1
         within:
@@ -33,7 +33,7 @@ nodes:
                     r: file=demand-r2_r.csv
                     r_scale_to_peak: -5000
 
-    33,34,75:
+    tamanrasset,cardak,toledo:
         level: 0
         within: r1
         techs: ['csp']
@@ -41,6 +41,8 @@ nodes:
             csp:
                 constraints:
                     r: file
+                    r_eff: file
+                    e_eff: file
 
 #
 # TRANSMISSION CAPACITIES
