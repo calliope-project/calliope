@@ -1,5 +1,5 @@
 __title__ = 'Calliope'
-__version__ = '0.0.1'
+__version__ = '0.1.0-dev'
 __author__ = 'Stefan Pfenninger'
 __copyright__ = 'Copyright 2013 Stefan Pfenninger'
 
