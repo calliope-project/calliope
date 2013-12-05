@@ -18,6 +18,17 @@ class TestInitialization:
         assert hasattr(model, 'data')
         assert hasattr(model, 'config_run')
         assert hasattr(model, 'config_model')
+        assert model.config_run.output.save is False
+
+    def test_model_initialization_override_dict(self):
+        override = {'output.save': True}
+        with pytest.raises(AssertionError):
+            calliope.Model(override=override)
+
+    def test_model_initialization_override_attrdict(self):
+        override = calliope.utils.AttrDict({'output': {'save': True}})
+        model = calliope.Model(override=override)
+        assert model.config_run.output.save is True
 
     def test_model_initialization_simple_model(self):
         common.simple_model()
@@ -34,7 +45,8 @@ class TestInitialization:
         assert model.get_timeres() == 1
 
     def test_gettimeres_6hourly(self):
-        model = common.simple_model(path='test/common/t_6h')
+        path = common._add_test_path('common/t_6h')
+        model = common.simple_model(path=path)
         assert model.get_timeres() == 6
 
     def test_gettimeres_verify_1hourly(self):
@@ -42,7 +54,8 @@ class TestInitialization:
         assert model.get_timeres(verify=True) == 1
 
     def test_gettimeres_verify_erroneous(self):
-        model = common.simple_model(path='test/common/t_erroneous')
+        path = common._add_test_path('common/t_erroneous')
+        model = common.simple_model(path=path)
         with pytest.raises(AssertionError):
             model.get_timeres(verify=True)
 
@@ -64,13 +77,15 @@ class TestInitialization:
         assert_almost_equal(scaled.min(), -100, tolerance=0.01)
 
     def test_scale_to_peak_scale_time_res_true(self, sine_wave):
-        model = common.simple_model(path='test/common/t_6h')
+        path = common._add_test_path('common/t_6h')
+        model = common.simple_model(path=path)
         scaled = model.scale_to_peak(sine_wave, 100)
         assert_almost_equal(scaled.max(), 600, tolerance=0.1)
         assert_almost_equal(scaled.min(), 300, tolerance=0.1)
 
     def test_scale_to_peak_scale_time_res_false(self, sine_wave):
-        model = common.simple_model(path='test/common/t_6h')
+        path = common._add_test_path('common/t_6h')
+        model = common.simple_model(path=path)
         scaled = model.scale_to_peak(sine_wave, 100, scale_time_res=False)
         assert_almost_equal(scaled.max(), 100, tolerance=0.1)
         assert_almost_equal(scaled.min(), 50, tolerance=0.1)
@@ -95,6 +110,7 @@ class TestInitialization:
 
     def test_initialize_sets_timesteps_subset(self):
         config_run = """
+                        mode: plan
                         input:
                             techs: {techs}
                             nodes: {nodes}
@@ -120,6 +136,7 @@ class TestInitialization:
 
     def test_initialize_sets_technologies_subset(self):
         config_run = """
+                        mode: plan
                         input:
                             techs: {techs}
                             nodes: {nodes}
@@ -133,6 +150,7 @@ class TestInitialization:
 
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
+                        mode: plan
                         input:
                             techs: {techs}
                             nodes: {nodes}
@@ -150,6 +168,7 @@ class TestInitialization:
 
     def test_initialize_sets_nodes_subset(self):
         config_run = """
+                        mode: plan
                         input:
                             techs: {techs}
                             nodes: {nodes}
@@ -163,6 +182,7 @@ class TestInitialization:
 
     def test_initialize_sets_nodes_too_large_subset(self):
         config_run = """
+                        mode: plan
                         input:
                             techs: {techs}
                             nodes: {nodes}

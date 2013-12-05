@@ -1,10 +1,12 @@
 """Common functions used in tests"""
 
 
-import cStringIO as StringIO
 import os
 
 import calliope
+
+
+solver = 'cplex'  # TODO this needs to be done differently
 
 
 def assert_almost_equal(x, y, tolerance=0.0001):
@@ -16,7 +18,7 @@ def _add_test_path(path):
 
 
 def simple_model(config_techs=None, config_nodes=None, path=None,
-                 config_run=None):
+                 config_run=None, override=None):
     if not config_techs:
         config_techs = _add_test_path('common/techs_minimal.yaml')
     if not config_nodes:
@@ -25,6 +27,7 @@ def simple_model(config_techs=None, config_nodes=None, path=None,
         path = _add_test_path('common/t_1h')
     if not config_run:
         config_run = """
+        mode: plan
         input:
             techs: '{techs}'
             nodes: '{nodes}'
@@ -35,5 +38,6 @@ def simple_model(config_techs=None, config_nodes=None, path=None,
     # Fill in `techs` and `nodes`
     config_run = config_run.format(techs=config_techs, nodes=config_nodes,
                                    path=path)
-    config_run = StringIO.StringIO(config_run)  # Make it a file object
-    return calliope.Model(config_run)
+    # Make it an AttrDict
+    config_run = calliope.utils.AttrDict.from_yaml_string(config_run)
+    return calliope.Model(config_run, override)

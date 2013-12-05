@@ -20,39 +20,54 @@ from . import utils
 
 class Model(object):
     """
-    Calliope -- a multi-scale energy systems (MUSES) model
-
-    Canonical use in an IPython notebook cell:
-
-        import calliope
-        model = calliope.Model()
-        model.run()
+    Calliope: a multi-scale energy systems (MUSES) modeling framework
 
     """
-    def __init__(self, config_run=None):
+    def __init__(self, config_run=None, override=None):
         """
         Args:
-            config_run : path to YAML file with run settings. If not given,
+            config_run : path to YAML file with run settings OR and AttrDict
+                         containing settings. If not given, the path
                          ``{{ module }}/config/run.yaml`` is used as the
                          default.
+            override : provide any additional options or override options
+                       from ``config_run`` by passing an AttrDict
+                       of the form ``{'input.path': 'foo', ...}``.
+                       Any option possible in ``run.yaml`` can be specified
+                       in the dict, inluding ``override.`` options.
 
         """
         super(Model, self).__init__()
-        self.initialize_configuration(config_run)
+        self.initialize_configuration(config_run, override)
         # Other initialization tasks
         self.data = utils.AttrDict()
         self.initialize_sets()
         self.initialize_techs()
         self.read_data()
+        self.mode = self.config_run.mode
 
-    def initialize_configuration(self, config_run):
+    def initialize_configuration(self, config_run, override):
         # Load run configuration
         config_path = os.path.join(os.path.dirname(__file__), 'config')
         if not config_run:
             config_run = os.path.join(config_path, 'run.yaml')
-        self.config_run_file = config_run
-        cr = utils.AttrDict.from_yaml(config_run)
+        if isinstance(config_run, str):
+            # 1) config_run is a string, assume it's a path
+            cr = utils.AttrDict.from_yaml(config_run)
+            # self.run_id is used to set an output folder for logs, if
+            # debug.keepfiles is set to True
+            self.run_id = os.path.splitext(os.path.basename(config_run))[0]
+        else:
+            # 2) config_run is not a string, assume it's an AttrDict
+            cr = config_run
+            assert isinstance(cr, utils.AttrDict)
+            # we have no filename so we just use current date/time
+            self.run_id = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.config_run = cr
+        if override:
+            assert isinstance(override, utils.AttrDict)
+            for k in override.keys_nested():
+                cr.set_key(k, override.get_key(k))
         # Expand {{ module }} placeholder
         for p in ['input.techs', 'input.nodes', 'input.path']:
             cr.set_key(p, utils.replace(cr.get_key(p),
@@ -361,13 +376,14 @@ class Model(object):
     def add_constraint(self, constraint, *args, **kwargs):
         constraint(self, *args, **kwargs)
 
-    def generate_model(self, mode='plan', t_start=None):
+    def generate_model(self, t_start=None):
         """
         Generate the model and store it under the property `m`.
 
         Args:
-            mode : 'plan' or 'operate'
-            t_start : must be specified for mode=='operate'
+            t_start : if self.mode == 'operate', this must be specified,
+            but that is done automatically via solve_iterative() when
+            calling run()
 
         """
         #
@@ -377,7 +393,6 @@ class Model(object):
         o = self.config_model
         d = self.data
         self.m = m
-        self.mode = mode
 
         #
         # Sets
@@ -434,11 +449,19 @@ class Model(object):
         # 3. Objective function
         self.add_constraint(constraints.model_objective)
 
-    def run(self, save_json=False):
+    def run(self):
         """Instantiate and solve the model"""
-        self.generate_model()  # Generated model is attached to `m` property
-        self.solve(save_json)
-        self.process_outputs()
+        if self.mode == 'plan':
+            self.generate_model()  # Generated model goes to self.m
+            self.solve()
+            self.process_outputs()
+        elif self.mode == 'operate':
+            # TODO this needs to be improved and get same level of
+            # functionality as mode == 'plan', at least to save results
+            # to disk!
+            self.operate_results = self.solve_iterative()
+        else:
+            raise UserWarning('Invalid mode')
 
     def solve(self, save_json=False):
         """
@@ -452,7 +475,7 @@ class Model(object):
         m = self.m
         instance = m.create()
         instance.preprocess()
-        opt = co.SolverFactory('cplex')  # could set solver_io='python'
+        opt = co.SolverFactory(self.config_run.solver)  # could set solver_io='python'
         # Set solver options from run_settings file, if it exists
         try:
             for k, v in self.config_run.solver_options.iteritems():
@@ -464,8 +487,7 @@ class Model(object):
             opt.symbolic_solver_labels = True
         if self.config_run.get_key('debug.keepfiles', default=False):
             opt.keepfiles = True
-            logid = os.path.splitext(os.path.basename(self.config_run_file))[0]
-            logdir = os.path.join('Logs', logid)
+            logdir = os.path.join('Logs', self.run_id)
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr
@@ -574,7 +596,7 @@ class Model(object):
         system_vars = []
         node_vars = []
         for step in steps:
-            self.generate_model(mode='operate', t_start=step)
+            self.generate_model(t_start=step)
             self.solve()
             self.instance.load(self.results)
             # Gather relevant model results over decision interval, so

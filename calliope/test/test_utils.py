@@ -23,9 +23,7 @@ class TestAttrDict:
              }
         return d
 
-    @pytest.fixture
-    def yaml_file(self):
-        setup = StringIO.StringIO("""
+    setup_string = """
         a: 1
         b: 2
         c:
@@ -35,8 +33,15 @@ class TestAttrDict:
                 I: 1
                 II: 2
         d:
-        """)
-        return setup
+    """
+
+    @pytest.fixture
+    def yaml_file(self):
+        return StringIO.StringIO(self.setup_string)
+
+    @pytest.fixture
+    def yaml_string(self):
+        return self.setup_string
 
     @pytest.fixture
     def attr_dict(self, regular_dict):
@@ -56,6 +61,11 @@ class TestAttrDict:
         this_path = os.path.dirname(__file__)
         yaml_path = os.path.join(this_path, 'test_utils', 'yaml_file.yaml')
         d = utils.AttrDict.from_yaml(yaml_path)
+        assert d.a == 1
+        assert d.c.z.II == 2
+
+    def test_from_yaml_string(self, yaml_string):
+        d = utils.AttrDict.from_yaml_string(yaml_string)
         assert d.a == 1
         assert d.c.z.II == 2
 
