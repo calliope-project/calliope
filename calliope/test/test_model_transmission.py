@@ -5,7 +5,7 @@ import pytest
 import tempfile
 
 import common
-from common import assert_almost_equal
+from common import assert_almost_equal, solver
 
 
 class TestModel:
@@ -41,6 +41,7 @@ class TestModel:
                             e_cap_max: 100
         """
         config_run = """
+            mode: plan
             input:
                 techs: {techs}
                 nodes: {nodes}
@@ -53,7 +54,8 @@ class TestModel:
             f.write(nodes)
             f.read()
             model = common.simple_model(config_run=config_run,
-                                        config_nodes=f.name)
+                                        config_nodes=f.name,
+                                        override={'solver': solver})
         model.run()
         return model
 

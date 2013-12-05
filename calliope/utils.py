@@ -51,6 +51,14 @@ class AttrDict(dict):
         else:
             return AttrDict(yaml.load(f))
 
+    @classmethod
+    def from_yaml_string(self, string):
+        """Returns and AttrDict initialized from the given string, which
+        must be valid YAML.
+
+        """
+        return AttrDict(yaml.load(string))
+
     def set_key(self, key, value):
         """Set the given ``key`` to the given ``value``. Handles nested
         keys, e.g.::

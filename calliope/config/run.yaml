@@ -11,6 +11,8 @@ output:
     save: false
     path: 'Output'
 
+mode: plan  # Choices: plan, operate
+
 # NB: Parallel settings are ignored except if the model is run in parallel mode.
 # If mode is parallel, output.save is always set to true and output.path is
 # overridden by the run name
@@ -46,15 +48,17 @@ subset_t: ['2005-01-01', '2005-01-31']
 override:
 
 #
-# DEBUG AND SOLVER OPTIONS
+# SOLVER AND DEBUG OPTIONS
 #
 
-debug:
-    keepfiles: false
-    symbolic_solver_labels: false
+solver: cplex
 
 # solver_options:
     # emphasis.memory: 1  # Set to 1 to conserve memory where possible
     # workmem: 1000  # Allow CPLEX use to 1000 MB of memory, default: 128
     # threads: 1
     # lpmethod: 4  # Use barrier method
+
+debug:
+    keepfiles: false
+    symbolic_solver_labels: false
