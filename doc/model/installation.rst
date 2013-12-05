@@ -16,7 +16,7 @@ The following Python modules are required:
 * Pandas
 * PyYAML
 
-In addition, Pyomo requires a solver. The default (hard-coded) configuration uses IBM ILOG CPLEX, but only a few lines of code need changing to use other solvers. A free/open-source alternative is `GLPK <https://www.gnu.org/software/glpk/>`_. GLPK is known to be memory-intensive and therefore possibly unsuitable for large problems.
+In addition,Pyomo requires a solver. Calliope has been tested with both `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_ and `GLPK <https://www.gnu.org/software/glpk/>`_.
 
 The recommended way to obtain all required Python modules with the exception of Coopr/Pyomo is to use the `Anaconda distribution <https://store.continuum.io/cshop/anaconda/>`_. Once that is set up and configured as the active Python interpreter, install Coopr/Pyomo with ``pip install coopr``.
 

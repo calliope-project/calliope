@@ -2,12 +2,6 @@
 # NODES
 #
 
-# ONLY the following constraints can be overriden on a per-node and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
-# * x_map
-# * constraints: r, r_eff, e_eff, r_scale_to_peak, s_cap_max, s_init, r_cap_max, r_area_max, e_cap_max
-
-# x_map allows defining which columns in the underlying data file are to be mapped to the node indices defined here.
-
 nodes:
     r1:
         level: 1
@@ -47,6 +41,7 @@ nodes:
 #
 # TRANSMISSION CAPACITIES
 #
+
 links:
     r1,r2:
         hvac:
