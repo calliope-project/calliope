@@ -4,6 +4,7 @@ from __future__ import division
 import pytest
 import tempfile
 
+from calliope.utils import AttrDict
 import common
 from common import assert_almost_equal, solver
 
@@ -42,7 +43,7 @@ class TestModel:
             f.read()
             model = common.simple_model(config_run=config_run,
                                         config_nodes=f.name,
-                                        override={'solver': solver})
+                                        override=AttrDict({'solver': solver}))
         model.run()
         return model
 
