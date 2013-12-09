@@ -103,13 +103,22 @@ class TimeSummarizer(object):
                     data[key].loc[i] = r
 
     def dynamic_timestepper(self, data, mask):
-        """``mask`` can be a simple or complex mask.
+        """``mask`` must be a df with the same index as the other dfs in
+        data, and a ``summarize`` column that gives information on how to
+        adjust timesteps.
 
-        If simple, it must be a df with the same index as the other dfs in
-        data, and a 'summarize' column containing only ``0`` and ``1``.
-        Contiguous groups of ``1`` are compressed into a single time step.
+        For each timestep, the ``summarize`` can either be 0 (no
+        adjustment), >0 (marks the first timestep to be compressed, with
+        the integer value giving the number of timesteps to compress) or
+        -1 (marks timesteps following a >0 timestep that will be compressed).
 
-        If complex, TODO
+        For example, the summarize column could contain::
+
+            [0, 0, 0, 3, -1, -1, 0, 0, 2, -1, 2, -1]
+
+        This would result in data with the following new timestep resolution::
+
+            [1, 1, 1, 3, 1, 1, 2, 2]
 
         Warning: modifies the passed data object in-place.
         Returns None on success.
@@ -118,24 +127,17 @@ class TimeSummarizer(object):
         # Set up the mask
         df = mask
         df['time_res'] = 1
-        # Apply the variable time step algorithm
-        istart = 0
-        end = False
-        while not end:
-            ifrom = istart + df.summarize[istart:].argmax()
-            ito = ifrom + df.summarize[ifrom:].argmin()
-            if ifrom == ito:  # Reached the end!
-                # TODO this works if the final timesteps are part of a summary step
-                # but need to verify if it also works if final timesteps are NOT
-                # going to be folded into a summary step!
-                ito = len(df.summarize)
-                end = True
-            resolution = ito - ifrom
-            # Reduce time_res of all relevant series with an appropriate method
+        df['to_keep'] = True
+        # Get all time steps that need summarizing
+        entry_points = df.summarize[df.summarize > 0]
+        for i, v in entry_points.iteritems():
+            ifrom = i
+            ito = i + v
+            resolution = v
             self.reduce_resolution(data, resolution, t_range=[ifrom, ito])
-            df.summarize[ifrom+1:ito] = 2
-            df.time_res.iloc[ifrom] = len(df.summarize[ifrom:ito])
-            istart = ito
+            # Mark the rows that need to be killed with False
+            df.to_keep[ifrom+1:ito] = False
+            df.time_res.iloc[ifrom] = resolution
         for k in data.keys():
             # Special case for `_t`, which is the only known_data_type which is always 0-indexed
             if k == '_t' or k == '_dt':
@@ -144,9 +146,9 @@ class TimeSummarizer(object):
             elif k in self.known_data_types.keys():
                 if isinstance(data[k], utils.AttrDict):
                     for kk in data[k].keys():
-                        data[k][kk] = data[k][kk][df.summarize < 2]
+                        data[k][kk] = data[k][kk][df.to_keep]
                 else:
-                    data[k] = data[k][df.summarize < 2]
+                    data[k] = data[k][df.to_keep]
         df = df[df.summarize < 2]
         data['time_res_series'] = df['time_res']
 
