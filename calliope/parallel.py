@@ -16,12 +16,11 @@ from . import utils
 
 
 class Parallelizer(object):
-    """
-    Args:
-        target_dir : path to output directory for parallel runs.
-        config_run : path to YAML file with run settings. If not given,
-                     ``{{ module }}/config/run.yaml`` is used as the
-                     default.
+    """Arguments:
+
+    * ``target_dir``: path to output directory for parallel runs.
+    * ``config_run``: path to YAML file with run settings. If not
+      given, ``{{ module }}/config/run.yaml`` is used as the default.
 
     """
     def __init__(self, target_dir, config_run=None):

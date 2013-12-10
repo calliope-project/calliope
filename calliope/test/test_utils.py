@@ -52,6 +52,10 @@ class TestAttrDict:
         d = utils.AttrDict(regular_dict)
         assert d.a == 1
 
+    def test_init_from_dict_with_nested_keys(self):
+        d = utils.AttrDict({'foo.bar.baz': 1})
+        assert d.foo.bar.baz == 1
+
     def test_from_yaml_fobj(self, yaml_file):
         d = utils.AttrDict.from_yaml(yaml_file)
         assert d.a == 1

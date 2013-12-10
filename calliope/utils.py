@@ -13,15 +13,18 @@ class AttrDict(dict):
         d = AttrDict({'a': 1, 'b': 2})
         d.a == 1  # True
 
+    Includes a range of additional methods to read and write to YAML,
+    and to deal with nested keys.
+
     """
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-    def __init__(self, arg=None):
+    def __init__(self, source_dict=None):
         super(AttrDict, self).__init__()
-        if isinstance(arg, dict):
-            self.init_from_dict(arg)
+        if isinstance(source_dict, dict):
+            self.init_from_dict(source_dict)
 
     def init_from_dict(self, d):
         """Initialize a new AttrDict from the given dict. Handles any
@@ -37,27 +40,27 @@ class AttrDict(dict):
             if isinstance(v, dict):
                 self[k] = AttrDict(v)
             else:
-                self[k] = v
+                self.set_key(k, v)
 
     @classmethod
-    def from_yaml(self, f):
+    def from_yaml(cls, f):
         """Returns an AttrDict initialized from the given path or
         file object ``f``, which must point to a YAML file.
 
         """
         if isinstance(f, str):
             with open(f, 'r') as src:
-                return AttrDict(yaml.load(src))
+                return cls(yaml.load(src))
         else:
-            return AttrDict(yaml.load(f))
+            return cls(yaml.load(f))
 
     @classmethod
-    def from_yaml_string(self, string):
-        """Returns and AttrDict initialized from the given string, which
+    def from_yaml_string(cls, string):
+        """Returns an AttrDict initialized from the given string, which
         must be valid YAML.
 
         """
-        return AttrDict(yaml.load(string))
+        return cls(yaml.load(string))
 
     def set_key(self, key, value):
         """Set the given ``key`` to the given ``value``. Handles nested
