@@ -3,6 +3,7 @@
 #
 
 input:
+    model: '{{ module }}/config/model.yaml'
     techs: '{{ module }}/config/techs.yaml'
     nodes: '{{ module }}/config/nodes.yaml'
     path:  '{{ module }}/example'
