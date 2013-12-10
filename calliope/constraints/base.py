@@ -4,8 +4,8 @@ from __future__ import division
 import coopr.pyomo as cp
 import numpy as np
 
-from . import transmission
-from . import utils
+from .. import transmission
+from .. import utils
 
 
 def node_energy_balance(model):

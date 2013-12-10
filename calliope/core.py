@@ -68,15 +68,18 @@ class Model(object):
             assert isinstance(override, utils.AttrDict)
             for k in override.keys_nested():
                 cr.set_key(k, override.get_key(k))
+        # Get all 'input.' keys
+        input_keys = cr.input.keys()
         # Expand {{ module }} placeholder
-        for p in ['input.techs', 'input.nodes', 'input.path']:
+        for p in ['input.' + k for k in input_keys]:
             cr.set_key(p, utils.replace(cr.get_key(p),
                        placeholder='module',
                        replacement=os.path.dirname(__file__)))
         # Load all model config files and combine them into one AttrDict
         o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                                   'defaults.yaml'))
-        for path in [cr.input.techs, cr.input.nodes]:
+        for path in [cr.get_key('input.' + k) for k in input_keys
+                     if 'path' not in k]:
             o.union(utils.AttrDict.from_yaml(path))
         self.config_model = o
         # Override config_model settings if specified in config_run
@@ -434,20 +437,24 @@ class Model(object):
         # Constraints
         #
         # 1. Required
-        required = [constraints.node_energy_balance,
-                    constraints.node_constraints_build,
-                    constraints.node_constraints_operational,
-                    constraints.node_costs,
-                    constraints.transmission_constraints,
-                    constraints.model_constraints]
+        required = [constraints.base.node_energy_balance,
+                    constraints.base.node_constraints_build,
+                    constraints.base.node_constraints_operational,
+                    constraints.base.node_costs,
+                    constraints.base.transmission_constraints,
+                    constraints.base.model_constraints]
         for c in required:
             self.add_constraint(c)
 
         # 2. Optional
-        # (none yet)
+        if o.get_key('constraints_pre_load', default=False):
+            eval(o.constraints_pre_load)  # TODO potentially disastrous!
+        if o.get_key('constraints', default=False):
+            for c in o.constraints:
+                self.add_constraint(eval(c))  # TODO this works but is unsafe!
 
         # 3. Objective function
-        self.add_constraint(constraints.model_objective)
+        self.add_constraint(constraints.base.model_objective)
 
     def run(self):
         """Instantiate and solve the model"""

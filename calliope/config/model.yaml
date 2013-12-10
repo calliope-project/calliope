@@ -1,0 +1,24 @@
+#
+# ADDITIONAL CONSTRAINTS
+#
+
+# Python statements to evaluate before loading additional_constraints
+# Can be used to import additional constraint modules
+constraints_pre_load:
+
+# List of additional constraints to load
+# e.g. constraints: ['constraints.ramping.ramping_rate']
+constraints:
+
+#
+# GENERAL MODEL SETTINGS
+#
+
+# General parameters
+startup_time: 12  # Length of startup period (during which some constraints are relaxed) [h]
+# TODO change this to 'edge_period' and apply it similarly to end of optimized time series?
+
+# Operation mode settings
+opmode:
+    horizon: 48  # Optimization period length [hours]
+    window: 24  # Operation period length [hours]
