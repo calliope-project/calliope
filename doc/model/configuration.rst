@@ -3,8 +3,9 @@
 Model definition and configuration
 ==================================
 
-A model run consists of the run settings (``run.yaml``) and the associated model definition (also referred to as the model configuration). The model definition consists of three sources:
+A model run consists of the run settings (``run.yaml``) and the associated model definition (also referred to as the model configuration). The model definition consists of four sources:
 
+* ``model.yaml``: defines general model settings
 * ``techs.yaml``: defines all possible technologies, their constraints and costs
 * ``nodes.yaml``: defines all nodes, groups them into regions, and defines possible transmission capacities
 * the path to a folder with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`data`)

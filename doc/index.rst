@@ -48,6 +48,7 @@ Model documentation
 
    model/installation
    model/components
+   model/constraints
    model/configuration
    model/data
    model/running

@@ -9,7 +9,7 @@ Release History
 * Usable built-in example model
 * Improved test coverage
 * Improved TimeSummarizer
-* Different mask generators for TimeSummarizer
+* More flexible mask generators for TimeSummarizer
 * Ability to add additional constraints without editing core source code
 * Other improvements
 
