@@ -2,18 +2,18 @@
 Release History
 ---------------
 
-0.1.0 (dev)
+0.1.0 (2013-12-10)
 ++++++++++++++++++
 
 * Some semblance of documentation
 * Usable built-in example model
 * Improved test coverage
-* Improved TimeSummarizer
-* More flexible mask generators for TimeSummarizer
+* Improved and working TimeSummarizer
+* More flexible masking for TimeSummarizer
 * Ability to add additional constraints without editing core source code
 * Other improvements
 
-0.0.2 (2011-12-01)
+0.0.2 (2013-12-01)
 ++++++++++++++++++
 
 * Some basic test coverage
