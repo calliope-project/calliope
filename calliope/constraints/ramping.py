@@ -9,7 +9,7 @@ def ramping_rate(model):
     m = model.m
 
     # Constraint rules
-    def c_ramping_rule(m, y, x, t):
+    def _ramping_rule(m, y, x, t, direction):
         try:
             # e_ramping: Ramping rate [fraction of installed capacity per hour]
             ramping_rate = model.get_option(y + '.constraints.e_ramping')
@@ -18,11 +18,22 @@ def ramping_rate(model):
             # ramping constraint for it!
             return cp.Constraint.NoConstraint
         # If there was no KeyError, we build and return a constraint
-        if m.t.order_dict[t] > 1:
-            diff = m.e[y, x, t] - m.e[y, x, model.prev(t)]
+        if m.t.order_dict[t] <= 1:
+            return cp.Constraint.NoConstraint
         else:
-            diff = 0
-        return diff <= ramping_rate * m.time_res[t] * m.e_cap[y, x]
+            diff = m.e[y, x, t] - m.e[y, x, model.prev(t)]
+            max_ramping_rate = ramping_rate * m.time_res[t] * m.e_cap[y, x]
+            if direction == 'up':
+                return diff <= max_ramping_rate
+            else:
+                return -1 * max_ramping_rate <= diff
+
+    def c_ramping_up_rule(m, y, x, t):
+        return _ramping_rule(m, y, x, t, direction='up')
+
+    def c_ramping_down_rule(m, y, x, t):
+        return _ramping_rule(m, y, x, t, direction='down')
 
     # Constraints
-    m.c_ramping = cp.Constraint(m.y, m.x, m.t)
+    m.c_ramping_up = cp.Constraint(m.y, m.x, m.t)
+    m.c_ramping_down = cp.Constraint(m.y, m.x, m.t)
