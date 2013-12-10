@@ -45,7 +45,7 @@ Parallel runs are created with the ``calliope_run.py`` command-line tool as foll
 * Create a ``run.yaml`` file with a ``parallel:`` section as needed.
 * On the command line, run ``calliope_run.py path/to/your/run.yaml``.
 * By default, this will create a new subdirectory inside a ``runs`` directory in the current working directory. You can specify the target directory with the ``-d/--dir`` command-line option.
-* The output directory contains script that can either be run directly or submitted to a cluster controller (e.g. ``qsub run.sh`` or ``bsub run.sh``)
+* The output directory contains a script that can either be run directly or submitted to a cluster controller (e.g. ``qsub run.sh`` or ``bsub run.sh``)
 
 .. _builtin_example:
 
