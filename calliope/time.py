@@ -26,17 +26,22 @@ class TimeSummarizer(object):
                                  'r_eff': ('average'),
                                  'e_eff': ('average')}
 
-    def reduce_resolution(self, data, resolution, t_range=None):
+    def reduce_resolution(self, data, resolution):
         """
-        Reduces the resolution of the entire given ``data`` to ``resolution``,
-        which must be an integer and ``>1``.
+        Reduces the resolution of the entire ``data`` to ``resolution``,
+        which must be an integer and greater than 1.
 
-        The data must have a resolution of ``1`` to begin with.
+        The data must have a resolution of 1 to begin with.
 
         Warning: modifies the passed data object in-place.
         Returns None on success.
 
         """
+        self._reduce_resolution(data, resolution)
+
+    def _reduce_resolution(self, data, resolution, t_range=None):
+        """Helper function called by both reduce_resolution and
+        dynamic_timestepper."""
         # Initialize some common data
         self.resolution = resolution
         # Set up time range slice, if given
@@ -134,7 +139,7 @@ class TimeSummarizer(object):
             ifrom = i
             ito = i + v
             resolution = v
-            self.reduce_resolution(data, resolution, t_range=[ifrom, ito])
+            self._reduce_resolution(data, resolution, t_range=[ifrom, ito])
             # Mark the rows that need to be killed with False
             df.to_keep[ifrom+1:ito] = False
             df.time_res.iloc[ifrom] = resolution
@@ -173,7 +178,7 @@ class TimeSummarizer(object):
     def _infinity_test(self, df):
         return (df.sum(axis=0) == np.inf).all()
         # The above approach wouldn't work in a df with mixed inf and non-inf
-        # values, but this sho0.uldn't happy in practice anyway
+        # values, but this shouldn't happy in practice anyway
         # -- if a df contains inf it should be all inf!
 
     def _reduce_average(self, df):

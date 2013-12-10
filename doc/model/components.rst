@@ -19,8 +19,6 @@ Index sets
 * ``x``: locations
 * ``t``: time steps
 
-The default time step length is 1 hour. However, this 1-hourly resolution can be adjusted over parts of the total length of the dataset by using the :class:`~calliope.TimeSummarizer` class (currently, only support for downsampling is implemented).
-
 ------------
 Technologies
 ------------

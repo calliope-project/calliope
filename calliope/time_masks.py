@@ -27,13 +27,18 @@ def mask_where_zero(data, tech, var='r', nodes=None):
         ifrom = istart + df.summarize[istart:].argmax()
         ito = ifrom + df.summarize[ifrom:].argmin()
         if ifrom == ito:  # Reached the end!
-            # TODO this works if the final timesteps are part of a summary step
-            # but need to verify if it also works if final timesteps are NOT
-            # going to be folded into a summary step!
             ito = len(df.summarize)
             end = True
+            # If `summarize` is zero at the very last entry
+            # (`ito - `), we break out of the
+            # loop to prevent it from adding a spurious summarization
+            if df.summarize[ito - 1] == 0:
+                break
         resolution = ito - ifrom
         df.summarize[ifrom] = resolution
         df.summarize[ifrom+1:ito] = -1
+        # Correct edge case where only one timestep would be "summarized"
+        if df.summarize[ifrom] == 1 and resolution == 1:
+            df.summarize[ifrom] = 0
         istart = ito
     return df
