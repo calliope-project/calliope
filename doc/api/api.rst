@@ -12,7 +12,10 @@ Model
 Constraints
 ===========
 
-.. automodule:: calliope.constraints
+.. automodule:: calliope.constraints.base
+    :members:
+
+.. automodule:: calliope.constraints.ramping
     :members:
 
 Utilities

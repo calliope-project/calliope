@@ -7,8 +7,7 @@
 constraints_pre_load:
 
 # List of additional constraints to load
-# e.g. constraints: ['constraints.ramping.ramping_rate']
-constraints:
+constraints: ['constraints.ramping.ramping_rate']
 
 #
 # GENERAL MODEL SETTINGS
