@@ -29,6 +29,9 @@ To run a model once::
    import calliope
    model = calliope.Model(config_run='/path/to/run.yaml')
    model.run()
+
+On successfully finding a solution, the ``Model`` instance makes available its results for further analysis::
+
    # Returns a pandas DataFrame
    system_vars = model.get_system_variables()
    # Plot system-level variables with matplotlib
