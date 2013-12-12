@@ -12,8 +12,8 @@ from common import assert_almost_equal, solver
 class TestModel:
     @pytest.fixture(scope='module')
     def model(self):
-        nodes = """
-            nodes:
+        locations = """
+            locations:
                 1:
                     level: 1
                     within:
@@ -32,17 +32,17 @@ class TestModel:
             mode: plan
             input:
                 techs: {techs}
-                nodes: {nodes}
+                locations: {locations}
                 path: '{path}'
             output:
                 save: false
             subset_t: ['2005-01-01', '2005-01-03']
         """
         with tempfile.NamedTemporaryFile() as f:
-            f.write(nodes)
+            f.write(locations)
             f.read()
             model = common.simple_model(config_run=config_run,
-                                        config_nodes=f.name,
+                                        config_locations=f.name,
                                         override=AttrDict({'solver': solver}))
         model.run()
         return model

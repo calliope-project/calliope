@@ -4,18 +4,18 @@ from __future__ import division
 import pandas as pd
 
 
-def mask_where_zero(data, tech, var='r', nodes=None):
+def mask_where_zero(data, tech, var='r', locations=None):
     """Return a mask to summarize where ``var`` for the technology ``tech``
-    across the given list of ``nodes`` is zero.
+    across the given list of ``locations`` is zero.
 
     ``var`` defaults to ``r``.
 
-    If ``nodes`` not given, uses all available nodes.
+    If ``locations`` not given, uses all available locations.
 
     """
     df = data[var][tech].copy(deep=True)
-    if nodes:
-        df = df.loc[:, nodes]
+    if locations:
+        df = df.loc[:, locations]
     # Summing over all DNIs to find those times where DNI==0 everywhere
     df = pd.DataFrame({'data': df.sum(1)})
     df['summarize'] = 0

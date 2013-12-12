@@ -1,8 +1,8 @@
 #
-# NODES
+# LOCATIONS
 #
 
-nodes:
+locations:
     r1:
         level: 1
         within:

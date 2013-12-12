@@ -6,12 +6,12 @@ import cStringIO as StringIO
 import pandas as pd
 import pytest
 
-from calliope import nodes, utils
+from calliope import locations, utils
 
 
 class TestNodes:
     @pytest.fixture
-    def sample_nodes(self):
+    def sample_locations(self):
         setup = StringIO.StringIO("""
         test:
             level: 1
@@ -34,7 +34,7 @@ class TestNodes:
         return utils.AttrDict.from_yaml(setup)
 
     @pytest.fixture
-    def sample_unexploded_nodes(self):
+    def sample_unexploded_locations(self):
         setup = StringIO.StringIO("""
         1,2,3:
         a,b,c:
@@ -47,7 +47,7 @@ class TestNodes:
         return utils.AttrDict.from_yaml(setup)
 
     @pytest.fixture
-    def sample_nested_nodes(self):
+    def sample_nested_locations(self):
         setup = StringIO.StringIO("""
         1,2,3:
             level: 1
@@ -72,12 +72,12 @@ class TestNodes:
         """)
         return utils.AttrDict.from_yaml(setup)
 
-    def test_generate_node(self, sample_nodes):
-        node = 'test'
-        items = sample_nodes[node]
+    def test_generate_location(self, sample_locations):
+        location = 'test'
+        items = sample_locations[location]
         techs = ['demand', 'unmet_demand', 'ccgt']
-        result = nodes._generate_node(node, items, techs)
-        wanted_cols = ['_level', '_node',
+        result = locations._generate_location(location, items, techs)
+        wanted_cols = ['_level', '_location',
                        '_override.ccgt.constraints.e_cap_max',
                        '_override.demand.constraints.r',
                        '_override.demand.constraints.r_scale_to_peak',
@@ -85,12 +85,12 @@ class TestNodes:
                        '_within', 'ccgt', 'demand', 'unmet_demand']
         assert sorted(result.keys()) == wanted_cols
 
-    def test_generate_node_lacking_techs(self, sample_nodes):
-        node = 'test'
-        items = sample_nodes[node]
+    def test_generate_location_lacking_techs(self, sample_locations):
+        location = 'test'
+        items = sample_locations[location]
         techs = ['unmet_demand', 'ccgt']
-        result = nodes._generate_node(node, items, techs)
-        wanted_cols = ['_level', '_node',
+        result = locations._generate_location(location, items, techs)
+        wanted_cols = ['_level', '_location',
                        '_override.ccgt.constraints.e_cap_max',
                        '_override.demand.constraints.r',
                        '_override.demand.constraints.r_scale_to_peak',
@@ -98,44 +98,45 @@ class TestNodes:
                        '_within', 'ccgt', 'unmet_demand']
         assert sorted(result.keys()) == wanted_cols
 
-    def test_explode_node_single(self):
-        assert nodes.explode_node('a') == ['a']
+    def test_explode_location_single(self):
+        assert locations.explode_locations('a') == ['a']
 
-    def test_explode_node_range(self):
-        assert nodes.explode_node('1--3') == ['1', '2', '3']
+    def test_explode_location_range(self):
+        assert locations.explode_locations('1--3') == ['1', '2', '3']
 
-    def test_explode_node_range_backwards(self):
+    def test_explode_location_range_backwards(self):
         with pytest.raises(KeyError):
-            nodes.explode_node('3--1')
+            locations.explode_locations('3--1')
 
-    def test_explode_node_range_nonnumeric(self):
+    def test_explode_location_range_nonnumeric(self):
         with pytest.raises(ValueError):
-            nodes.explode_node('a--c')
+            locations.explode_locations('a--c')
 
-    def test_explore_node_list(self):
-        assert nodes.explode_node('1,2,3') == ['1', '2', '3']
+    def test_explore_location_list(self):
+        assert locations.explode_locations('1,2,3') == ['1', '2', '3']
 
-    def test_explode_node_mixed(self):
-        assert nodes.explode_node('a,b,1--3,c') == ['a', 'b', '1', '2', '3', 'c']
+    def test_explode_location_mixed(self):
+        assert (locations.explode_locations('a,b,1--3,c')
+                == ['a', 'b', '1', '2', '3', 'c'])
 
-    def test_explode_node_empty(self):
+    def test_explode_location_empty(self):
         with pytest.raises(KeyError):
-            assert nodes.explode_node('')
+            assert locations.explode_locations('')
 
-    def test_explode_node_invalid(self):
+    def test_explode_location_invalid(self):
         with pytest.raises(AssertionError):
-            assert nodes.explode_node(['a', 'b'])
+            assert locations.explode_locations(['a', 'b'])
 
-    def test_get_nodes(self, sample_unexploded_nodes):
-        results = nodes.get_nodes(sample_unexploded_nodes)
+    def test_get_locations(self, sample_unexploded_locations):
+        results = locations.get_locations(sample_unexploded_locations)
         print(sorted(results))
         assert sorted(results) == ['1', '10', '10-20', '11', '12', '13', '14',
                                    '15', '2', '21', '22', '23', '25', '3',
                                    'a', 'b', 'c', 'x', 'y', 'z']
 
-    def test_generate_node_matrix_cols(self, sample_nodes):
+    def test_generate_location_matrix_cols(self, sample_locations):
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp']
-        df = nodes.generate_node_matrix(sample_nodes, techs)
+        df = locations.generate_location_matrix(sample_locations, techs)
         wanted_cols = ['_level',
                        '_override.ccgt.constraints.e_cap_max',
                        '_override.demand.constraints.r',
@@ -144,28 +145,28 @@ class TestNodes:
                        '_within', 'ccgt', 'csp', 'demand', 'unmet_demand']
         assert sorted(df.columns) == wanted_cols
 
-    def test_generate_node_matrix_index(self, sample_nodes):
+    def test_generate_location_matrix_index(self, sample_locations):
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp']
-        df = nodes.generate_node_matrix(sample_nodes, techs)
+        df = locations.generate_location_matrix(sample_locations, techs)
         assert df.index.tolist() == ['test', 'test1']
 
-    def test_generate_node_matrix_values(self, sample_nodes):
+    def test_generate_location_matrix_values(self, sample_locations):
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp']
-        df = nodes.generate_node_matrix(sample_nodes, techs)
+        df = locations.generate_location_matrix(sample_locations, techs)
         assert df.at['test', 'demand'] == 1
         assert df.at['test1', 'demand'] == 0
         assert (df.at['test', '_override.demand.constraints.r']
                 == 'file=demand.csv')
         assert pd.isnull(df.at['test1', '_override.demand.constraints.r'])
 
-    def test_generate_node_matrix_additional_techs(self, sample_nodes):
+    def test_generate_location_matrix_additional_techs(self, sample_locations):
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp', 'foo']
-        df = nodes.generate_node_matrix(sample_nodes, techs)
+        df = locations.generate_location_matrix(sample_locations, techs)
         assert sum(df['foo']) == 0
 
-    def test_generate_node_matrix_missing_techs_cols(self, sample_nodes):
+    def test_generate_location_matrix_missing_techs_cols(self, sample_locations):
         techs = ['ccgt']
-        df = nodes.generate_node_matrix(sample_nodes, techs)
+        df = locations.generate_location_matrix(sample_locations, techs)
         wanted_cols = ['_level',
                        '_override.ccgt.constraints.e_cap_max',
                        '_override.demand.constraints.r',
@@ -174,9 +175,9 @@ class TestNodes:
                        '_within', 'ccgt']
         assert sorted(df.columns) == wanted_cols
 
-    def test_generate_node_matrix_within_only_strings(self,
-                                                      sample_nested_nodes):
+    def test_generate_location_matrix_within_only_strings(self,
+                                                      sample_nested_locations):
         techs = ['foo']
-        df = nodes.generate_node_matrix(sample_nested_nodes, techs)
+        df = locations.generate_location_matrix(sample_nested_locations, techs)
         for i in df['_within'].tolist():
             assert (i is None or isinstance(i, str))
