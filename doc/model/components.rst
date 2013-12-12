@@ -21,6 +21,7 @@ Index sets
 * ``y``: technologies
 * ``x``: locations
 * ``t``: time steps
+* ``k``: cost classes
 
 For example, the output of the technology ``tech`` at location ``loc`` which outputs energy in the form of ``electricity`` at time ``0`` would be ``e(electricity, tech, loc, 0)``.
 
@@ -30,7 +31,7 @@ For example, the output of the technology ``tech`` at location ``loc`` which out
 Node energy balance
 -------------------
 
-Each node has the following energy balance variables:
+Each node, that is, combination of location and technology, has the following energy balance variables:
 
 * ``s(y, x, t)``: storage level
 * ``rs(y, x, t)``: energy resource to storage (+ production, - consumption)
@@ -71,9 +72,19 @@ This makes use of the following additional parameters:
 * ``b(y, x, t)``: available energy (backup primary source) [kWh/hour]
 * ``b_max(y)``: maximum conversion (backup primary source) [kW]
 
------------------------
-Classes of technologies
------------------------
+------------
+Cost classes
+------------
+
+The primary cost class is ``monetary``, which is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one type of ``monetary`` cost.
+
+The ``emissions`` cost class allows emissions accounting.
+
+Other cost classes can easily be added to account for additional positive or negative effects of technologies or e.g. break up emissions into more detailed components.
+
+----------------
+Technology types
+----------------
 
 .. TODO
 

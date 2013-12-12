@@ -15,33 +15,37 @@ opmode:
 # TECH DEFAULTS
 #
 
-techs_defaults:
-    constraints:
-        force_r: false
-        r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
-        r_eff_ref: false  # If false, use r_eff
-        r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
-        r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
-        r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
-        r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
-                                # NB: this only works if r is read as a time series from CSV, otherwise simply set
-                                # r statically to the desired value!
-        s_init: 0  # Initial storage level [kWht]
-        s_cap_max: 0  # Maximum storage size [kWht]
-        s_loss: 0  # Storage heat loss rate [per hour]
-        e_eff: 1.0
-        e_eff_ref: false  # If false, use e_eff
-        e_cap_max: 0  # Maximum turbine size [kWe]
-        e_can_be_negative: false
-    costs:  # All costs should be set to 0 by default
-        s_cap: 0  # Cost of storage [USD/kWht]
-        r_area: 0  # Cost of collector field [USD/m2]
-        r_cap: 0  # Cost of tower and receiver [EUR/kWt]
-        e_cap: 0  # Cost of power block [USD/kWe]
-        om_frac: 0  # Yearly O&M costs [fraction of total investment]
-        om_var: 0  # Variable O&M costs [USD/kWhe]
-        om_fuel: 0  # Fuel costs [USD/kWht]
-    depreciation:  # Capital depreciation settings
-        interest: 0.10  # Interest rate [dimensionless]
-        plant_life: 25  # Lifetime of a plant [years]
-    weight: 1  # Cost weight in objective function (higher: relatively more expensive)
+techs:
+    defaults:
+        constraints:
+            force_r: false
+            r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
+            r_eff_ref: false  # If false, use r_eff
+            r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
+            r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
+            r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
+            r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
+                                    # NB: this only works if r is read as a time series from CSV, otherwise simply set
+                                    # r statically to the desired value!
+            s_init: 0  # Initial storage level [kWht]
+            s_cap_max: 0  # Maximum storage size [kWht]
+            s_loss: 0  # Storage heat loss rate [per hour]
+            e_eff: 1.0
+            e_eff_ref: false  # If false, use e_eff
+            e_cap_max: 0  # Maximum turbine size [kWe]
+            e_can_be_negative: false
+        costs:  # All costs should be set to 0 by default
+            default:  # The default is looked up for any value not defined for a specific cost class
+                s_cap: 0  # Cost of storage [USD/kWht]
+                r_area: 0  # Cost of collector field [USD/m2]
+                r_cap: 0  # Cost of tower and receiver [EUR/kWt]
+                e_cap: 0  # Cost of power block [USD/kWe]
+                om_frac: 0  # Yearly O&M costs [fraction of total investment]
+                om_var: 0  # Variable O&M costs [USD/kWhe]
+                om_fuel: 0  # Fuel costs [USD/kWht]
+        depreciation:  # Capital depreciation settings
+            plant_life: 25  # Lifetime of a plant [years]
+            interest:
+                default: 0  # If interest not set for a class it is zero
+                monetary: 0.10  # Interest rate [dimensionless]
+        weight: 1  # Cost weight in objective function (higher: relatively more expensive)

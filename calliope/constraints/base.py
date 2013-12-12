@@ -285,43 +285,50 @@ def node_costs(model):
     m = model.m
 
     @utils.memoize
-    def _depreciation_rate(y):
-        interest = model.get_option(y + '.depreciation.interest')
+    def _depreciation_rate(y, k):
+        interest = model.get_option(y + '.depreciation.interest.' + k,
+                                    default=y + '.depreciation.interest.default')
         plant_life = model.get_option(y + '.depreciation.plant_life')
-        dep = ((interest * (1 + interest) ** plant_life)
-               / (((1 + interest) ** plant_life) - 1))
+        if interest == 0:
+            dep = 1 / plant_life
+        else:
+            dep = ((interest * (1 + interest) ** plant_life)
+                   / (((1 + interest) ** plant_life) - 1))
         return dep
 
+    @utils.memoize
+    def _cost(cost, y, k):
+        return model.get_option(y + '.costs.' + k + '.' + cost,
+                                default=y + '.costs.default.' + cost)
+
     # Variables
-    m.cost = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.cost_con = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.cost_op = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
+    m.cost = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
+    m.cost_con = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
+    m.cost_op = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
 
     # Constraint rules
-    def c_cost_rule(m, y, x):
-        return m.cost[y, x] == m.cost_con[y, x] + m.cost_op[y, x]
+    def c_cost_rule(m, y, x, k):
+        return m.cost[y, x, k] == m.cost_con[y, x, k] + m.cost_op[y, x, k]
 
-    def c_cost_con_rule(m, y, x):
-        return (m.cost_con[y, x] == _depreciation_rate(y)
+    def c_cost_con_rule(m, y, x, k):
+        return (m.cost_con[y, x, k] == _depreciation_rate(y, k)
                 * (sum(m.time_res[t] for t in m.t) / 8760)
-                * (model.get_option(y + '.costs.s_cap') * m.s_cap[y, x]
-                   + model.get_option(y + '.costs.r_cap') * m.r_cap[y, x]
-                   + model.get_option(y + '.costs.r_area') * m.r_area[y, x]
-                   + model.get_option(y + '.costs.e_cap') * m.e_cap[y, x]))
+                * (_cost('s_cap', y, k) * m.s_cap[y, x]
+                   + _cost('r_cap', y, k) * m.r_cap[y, x]
+                   + _cost('r_area', y, k) * m.r_area[y, x]
+                   + _cost('e_cap', y, k) * m.e_cap[y, x]))
 
-    def c_cost_op_rule(m, y, x):
+    def c_cost_op_rule(m, y, x, k):
         # TODO currently only counting e_prod for op costs, makes sense?
-        return (m.cost_op[y, x] ==
-                model.get_option(y + '.costs.om_frac') * m.cost_con[y, x]
-                + (model.get_option(y + '.costs.om_var')
-                   * sum(m.e_prod[y, x, t] for t in m.t))
-                + (model.get_option(y + '.costs.om_fuel')
-                   * sum(m.rs[y, x, t] for t in m.t)))
+        return (m.cost_op[y, x, k] ==
+                _cost('om_frac', y, k) * m.cost_con[y, x, k]
+                + _cost('om_var', y, k) * sum(m.e_prod[y, x, t] for t in m.t)
+                + _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))
 
     # Constraints
-    m.c_cost = cp.Constraint(m.y, m.x)
-    m.c_cost_con = cp.Constraint(m.y, m.x)
-    m.c_cost_op = cp.Constraint(m.y, m.x)
+    m.c_cost = cp.Constraint(m.y, m.x, m.k)
+    m.c_cost_con = cp.Constraint(m.y, m.x, m.k)
+    m.c_cost_op = cp.Constraint(m.y, m.x, m.k)
 
 
 def model_constraints(model):
@@ -357,9 +364,10 @@ def model_constraints(model):
 def model_objective(model):
     m = model.m
 
+    # Count monetary costs only
     def obj_rule(m):
-        return (sum(model.get_option(y + '.weight') * sum(m.cost[y, x]
-                for x in m.x) for y in m.y))
+        return (sum(model.get_option(y + '.weight')
+                    * sum(m.cost[y, x, 'monetary'] for x in m.x) for y in m.y))
 
     m.obj = cp.Objective(sense=cp.minimize)
     #m.obj.domain = cp.NonNegativeReals
