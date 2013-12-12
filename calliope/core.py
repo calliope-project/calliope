@@ -12,7 +12,7 @@ import pandas as pd
 from pyutilib.services import TempfileManager
 
 from . import constraints
-from . import nodes
+from . import locations
 from . import techs
 from . import transmission
 from . import utils
@@ -145,8 +145,8 @@ class Model(object):
         falling back to the default if the option is not defined for the
         tech.
 
-        If `x` is given, will attempt to use node-specific override
-        from the node matrix first before falling back to model-wide
+        If `x` is given, will attempt to use location-specific override
+        from the location matrix first before falling back to model-wide
         settings.
 
         If the first segment of the option containts ':', it will be
@@ -180,19 +180,19 @@ class Model(object):
                     result = _get_option(parent + '.' + remainder)
             return result
 
-        def _get_node_option(key, node):
+        def _get_location_option(key, location):
             # Raises KeyError if the specific _override column does not exist
-            result = d.nodes.ix[node, '_override.' + key]
+            result = d.locations.ix[location, '_override.' + key]
             # Also raise KeyError if the result is NaN, i.e. if no
-            # node-specific override has been defined
+            # location-specific override has been defined
             if not isinstance(result, str) and np.isnan(result):
                 raise KeyError
             return result
 
         if x:
             try:
-                result = _get_node_option(option, x)
-            # If can't find a node-specific option, fall back to model-wide
+                result = _get_location_option(option, x)
+            # If can't find a location-specific option, fall back to model-wide
             except KeyError:
                 result = _get_option(option)
         else:
@@ -256,7 +256,7 @@ class Model(object):
         # y: Technologies set
         #
         d._y = set()
-        for i in o.nodes.itervalues():
+        for i in o.locations.itervalues():
             assert isinstance(i.techs, list)
             for y in i.techs:
                 d._y.add(y)
@@ -265,39 +265,40 @@ class Model(object):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
 
         #
-        # x: Nodes set
+        # x: Locations set
         #
-        d._x = nodes.get_nodes(o.nodes)
+        d._x = locations.get_locations(o.locations)
         if self.config_run.get_key('subset_x', default=False):
             d._x = [x for x in d._x if x in self.config_run.subset_x]
         #
         # Nodes settings matrix
         #
-        d.nodes = nodes.generate_node_matrix(o.nodes, techs=d._y)
-        # For simplicity, only keep the nodes that are actually in set `x`
-        d.nodes = d.nodes.ix[d._x, :]
+        d.locations = locations.generate_location_matrix(o.locations,
+                                                         techs=d._y)
+        # For simplicity, only keep the locations that are actually in set `x`
+        d.locations = d.locations.ix[d._x, :]
         #
-        # Add transmission technologies to y and nodes matrix
+        # Add transmission technologies to y and locations matrix
         #
         d.transmission_y = transmission.get_transmission_techs(o.links)
         d._y.extend(d.transmission_y)
-        # Add transmission tech columns to nodes matrix
+        # Add transmission tech columns to locations matrix
         for y in d.transmission_y:
-            d.nodes[y] = 0
-        # Create representation of node-tech links
+            d.locations[y] = 0
+        # Create representation of location-tech links
         tree = transmission.explode_transmission_tree(o.links, d._x)
-        # Populate nodes matrix with allowed techs and overrides
+        # Populate locations matrix with allowed techs and overrides
         if tree:
             for x in tree:
                 for y in tree[x]:
                     # Allow the tech
-                    d.nodes.at[x, y] = 1
+                    d.locations.at[x, y] = 1
                     # Add constraints if needed
                     for c in tree[x][y].keys_nested():
                         colname = '_override.' + y + '.' + c
-                        if not colname in d.nodes.columns:
-                            d.nodes[colname] = np.nan
-                        d.nodes.at[x, colname] = tree[x][y].get_key(c)
+                        if not colname in d.locations.columns:
+                            d.locations[colname] = np.nan
+                        d.locations.at[x, colname] = tree[x][y].get_key(c)
 
     def read_data(self):
         """
@@ -636,12 +637,12 @@ class Model(object):
 
     def save_outputs(self):
         """Save model outputs as CSV to ``self.config_run.output.path``"""
-        nodes = self.data.nodes
+        locations = self.data.locations
         system_variables = self.get_system_variables()
         node_parameters = self.get_node_parameters(built_only=False)
         node_variables = self.get_node_variables()
         costs = self.get_costs()
-        output_files = {'nodes.csv': nodes,
+        output_files = {'locations.csv': locations,
                         'system_variables.csv': system_variables,
                         'node_parameters.csv': node_parameters.to_frame(),
                         'costs_lcoe.csv': costs.lcoe,

@@ -67,4 +67,4 @@ For example, the following settings would load two custom constraints from ``my_
    contraints: ['my_custom_module.my_constraint0',
                 'my_custom_module.my_constraint1']
 
-Custom constraints have access to all model configuration (see :doc:`configuration`) and any number of additional configuration directives can be set on a per-technology, per-node or model-wide basis for custom constraints.
+Custom constraints have access to all model configuration (see :doc:`configuration`) and any number of additional configuration directives can be set on a per-technology, per-location or model-wide basis for custom constraints.

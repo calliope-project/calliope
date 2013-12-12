@@ -1,4 +1,4 @@
-nodes:
+locations:
     demand:
         level: 0
         within:

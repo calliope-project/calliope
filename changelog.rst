@@ -2,6 +2,11 @@
 Release History
 ---------------
 
+0.2.0 (dev)
++++++++++++
+
+* Cleared up terminology (nodes vs locations)
+
 0.1.0 (2013-12-10)
 ++++++++++++++++++
 

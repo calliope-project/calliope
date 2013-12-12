@@ -66,7 +66,7 @@ def node_energy_balance(model):
         #
         # Otherwise, set up a context-dependent `rs` constraint
         #
-        elif (d.nodes.ix[x, y] != 1) or (this_r == 0):
+        elif (d.locations.ix[x, y] != 1) or (this_r == 0):
             # `rs` is forced to 0 if technology not allowed at this location,
             # and also if `r` is 0
             return m.rs[y, x, t] == 0
@@ -158,8 +158,8 @@ def node_constraints_build(model):
 
     def c_e_cap_rule(m, y, x):
         e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
-        # First check whether this tech is allowed at this node
-        if not d.nodes.ix[x, y] == 1:
+        # First check whether this tech is allowed at this location
+        if not d.locations.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
         elif model.mode == 'plan' or np.isinf(e_cap_max):
             # We take this constraint even in operate mode, if e_cap_max
@@ -330,13 +330,13 @@ def model_constraints(model):
 
     @utils.memoize
     def get_parents(level):
-        nodes = model.data.nodes
-        return list(nodes[nodes._level == level].index)
+        locations = model.data.locations
+        return list(locations[locations._level == level].index)
 
     @utils.memoize
     def get_children(parent):
-        nodes = model.data.nodes
-        return list(nodes[nodes._within == parent].index)
+        locations = model.data.locations
+        return list(locations[locations._within == parent].index)
 
     # Constraint rules
     def c_system_balance_rule(m, x, t):

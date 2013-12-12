@@ -113,7 +113,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             techs: {techs}
-                            nodes: {nodes}
+                            locations: {locations}
                             path: '{path}'
                         output:
                             save: false
@@ -139,7 +139,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             techs: {techs}
-                            nodes: {nodes}
+                            locations: {locations}
                             path: '{path}'
                         output:
                             save: false
@@ -153,7 +153,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             techs: {techs}
-                            nodes: {nodes}
+                            locations: {locations}
                             path: '{path}'
                         output:
                             save: false
@@ -162,16 +162,16 @@ class TestInitialization:
         model = common.simple_model(config_run=config_run)
         assert sorted(model.data._y) == ['ccgt',  'demand']
 
-    def test_initialize_sets_nodes(self):
+    def test_initialize_sets_locations(self):
         model = common.simple_model()
         assert sorted(model.data._x) == ['1', '2', 'demand']
 
-    def test_initialize_sets_nodes_subset(self):
+    def test_initialize_sets_locations_subset(self):
         config_run = """
                         mode: plan
                         input:
                             techs: {techs}
-                            nodes: {nodes}
+                            locations: {locations}
                             path: '{path}'
                         output:
                             save: false
@@ -180,12 +180,12 @@ class TestInitialization:
         model = common.simple_model(config_run=config_run)
         assert sorted(model.data._x) == ['1', 'demand']
 
-    def test_initialize_sets_nodes_too_large_subset(self):
+    def test_initialize_sets_locations_too_large_subset(self):
         config_run = """
                         mode: plan
                         input:
                             techs: {techs}
-                            nodes: {nodes}
+                            locations: {locations}
                             path: '{path}'
                         output:
                             save: false
@@ -194,17 +194,18 @@ class TestInitialization:
         model = common.simple_model(config_run=config_run)
         assert sorted(model.data._x) == ['1', 'demand']
 
-    def test_initialize_nodes_matrix(self):
+    def test_initialize_locations_matrix(self):
         model = common.simple_model()
         cols = ['_level', '_override.ccgt.constraints.e_cap_max',
                 '_within', 'ccgt', 'csp', 'demand', 'unmet_demand']
-        assert sorted(model.data.nodes.columns) == cols
-        assert sorted(model.data.nodes.index.tolist()) == ['1', '2', 'demand']
+        assert sorted(model.data.locations.columns) == cols
+        assert (sorted(model.data.locations.index.tolist())
+                == ['1', '2', 'demand'])
 
     @pytest.fixture
     def model_transmission(self):
-        nodes = """
-            nodes:
+        locations = """
+            locations:
                 demand:
                     level: 0
                     within:
@@ -220,30 +221,32 @@ class TestInitialization:
                             e_cap_max: 100
         """
         with tempfile.NamedTemporaryFile() as f:
-            f.write(nodes)
+            f.write(locations)
             print(f.read())
-            model = common.simple_model(config_nodes=f.name)
+            model = common.simple_model(config_locations=f.name)
         return model
 
-    def test_initialize_sets_nodes_with_transmission(self, model_transmission):
+    def test_initialize_sets_locations_with_transmission(self,
+                                                         model_transmission):
         model = model_transmission
         assert sorted(model.data._y) == ['ccgt', 'csp', 'demand',
                                          'hvac:1', 'hvac:2']
 
-    def test_initialize_nodes_matrix_with_transmission(self,
-                                                       model_transmission):
+    def test_initialize_locations_matrix_with_transmission(self,
+                                                           model_transmission):
         model = model_transmission
         cols = ['_level',
                 '_override.hvac:1.constraints.e_cap_max',
                 '_override.hvac:2.constraints.e_cap_max',
                 '_within', 'ccgt', 'csp', 'demand',
                 'hvac:1', 'hvac:2']
-        assert sorted(model.data.nodes.columns) == cols
-        assert sorted(model.data.nodes.index.tolist()) == ['1', '2', 'demand']
-        nodes = model.data.nodes
-        assert nodes.at['1', '_override.hvac:2.constraints.e_cap_max'] == 100
-        assert np.isnan(nodes.at['1', '_override.hvac:1.constraints.e_cap_max'])
-        assert nodes.at['2', '_override.hvac:1.constraints.e_cap_max'] == 100
+        assert sorted(model.data.locations.columns) == cols
+        assert (sorted(model.data.locations.index.tolist())
+                == ['1', '2', 'demand'])
+        locations = model.data.locations
+        assert locations.at['1', '_override.hvac:2.constraints.e_cap_max'] == 100
+        assert np.isnan(locations.at['1', '_override.hvac:1.constraints.e_cap_max'])
+        assert locations.at['2', '_override.hvac:1.constraints.e_cap_max'] == 100
 
 
 class TestOptions:
@@ -260,16 +263,16 @@ class TestOptions:
         with pytest.raises(KeyError):
             model.get_option('ccgt.depreciation.foo')
 
-    def test_get_option_node(self):
+    def test_get_option_location(self):
         model = common.simple_model()
         assert model.get_option('ccgt.constraints.e_cap_max', 'demand') == 50
         assert model.get_option('ccgt.constraints.e_cap_max', '1') == 100
 
-    def test_get_option_node_default(self):
+    def test_get_option_location_default(self):
         model = common.simple_model()
         assert model.get_option('ccgt.depreciation.plant_life', '1') == 25
 
-    def test_get_option_node_default_unavailable(self):
+    def test_get_option_location_default_unavailable(self):
         model = common.simple_model()
         with pytest.raises(KeyError):
             model.get_option('ccgt.depreciation.foo', '1')

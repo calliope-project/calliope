@@ -3,13 +3,16 @@
 Model components
 ================
 
--------------
-Nodes concept
--------------
+-----------
+Terminology
+-----------
 
 .. TODO
 
-To be added.
+* **Technology**: a technology that produces, consumes, converts or transports energy
+* **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
+* **Node**: a combination of technology and location resulting in specific energy balance equations (:ref:`see below <node_energy_balance>`)
+* **Resource**: a source or sink of energy that can be used by a technology to introduce or remove energy into the system
 
 ----------
 Index sets
@@ -19,9 +22,13 @@ Index sets
 * ``x``: locations
 * ``t``: time steps
 
-------------
-Technologies
-------------
+For example, the output of the technology ``tech`` at location ``loc`` which outputs energy in the form of ``electricity`` at time ``0`` would be ``e(electricity, tech, loc, 0)``.
+
+.. _node_energy_balance:
+
+-------------------
+Node energy balance
+-------------------
 
 Each node has the following energy balance variables:
 
@@ -41,7 +48,7 @@ and the following capacity variables:
 
 Internally, the variables ``es_prod(y, x, t)`` and ``es_con(y, x, t)`` are also used for flux from storage to electricity (always > 0), and flux from electricity to storage (always < 0) respectively. This is used to allow formulation of certain linear constraints.
 
-Each technology must define the following parameters, some of which may be zero. By default, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies).
+Each technology must define the following parameters, some of which may be zero. By default, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies). Some of these may be overridden on a per-location basis (see :doc:`configuration`).
 
 * ``r(y, x, t)``: available energy (+ resource, - demand) [kWh/m2 * hour]
 * ``s_cap_max(y)``: max storage size [kWh]
@@ -64,3 +71,14 @@ This makes use of the following additional parameters:
 * ``b(y, x, t)``: available energy (backup primary source) [kWh/hour]
 * ``b_max(y)``: maximum conversion (backup primary source) [kW]
 
+-----------------------
+Classes of technologies
+-----------------------
+
+.. TODO
+
+* Supply
+* Demand
+* Conversion
+* Storage
+* Transport
