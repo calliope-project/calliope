@@ -5,8 +5,9 @@ techs:
             r: inf
             e_cap_max: 50
         costs:
-            e_cap: 5
-            om_fuel: 0.1
+            monetary:
+                e_cap: 5
+                om_fuel: 0.1
     csp:
         parent: defaults
         constraints:
@@ -22,18 +23,20 @@ techs:
             e_eff_ref: 0.4
             e_cap_max: 20
         costs:
-            s_cap: 5
-            r_area: 5
-            r_cap: 5
-            e_cap: 10
-            om_var: 0.001
+            monetary:
+                s_cap: 5
+                r_area: 5
+                r_cap: 5
+                e_cap: 10
+                om_var: 0.001
     pv:
         parent: defaults
         constraints:
             r: 0
             e_cap_max: 50
         costs:
-            e_cap: 20
+            monetary:
+                e_cap: 20
     storage:
         parent: defaults
         constraints:
@@ -43,8 +46,9 @@ techs:
             s_cap_max: 100
             s_loss: 0.002
         costs:
-            s_cap: 500
-            e_cap: 10
+            monetary:
+                s_cap: 500
+                e_cap: 10
     demand:
         parent: defaults
         constraints:
@@ -58,7 +62,8 @@ techs:
             r: inf
             e_cap_max: inf
         costs:
-            om_fuel: 1.0e+9
+            monetary:
+                om_fuel: 1.0e+9
     transmission:
         parent: defaults
         constraints:
@@ -66,7 +71,8 @@ techs:
             e_cap_max: inf
             e_can_be_negative: true
         costs:
-            e_cap: 10
+            monetary:
+                e_cap: 10
     hvac:
         parent: transmission
         constraints:

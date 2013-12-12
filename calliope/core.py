@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 import datetime
+import itertools
 import json
 import os
 
@@ -140,14 +141,19 @@ class Model(object):
             raise KeyError('<0')
 
     # @utils.memoize_instancemethod
-    def get_option(self, option, x=None):
+    def get_option(self, option, x=None, default=None):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
         tech.
 
-        If `x` is given, will attempt to use location-specific override
+        If ``x`` is given, will attempt to use location-specific override
         from the location matrix first before falling back to model-wide
         settings.
+
+        If ``default`` is given, it is used as a fallback if no default value
+        can be found in the regular inheritance chain. If ``default`` is None
+        and the regular inheritance chain defines no default, an error
+        is raised.
 
         If the first segment of the option containts ':', it will be
         interpreted as implicit tech subsetting: e.g. asking for
@@ -174,10 +180,13 @@ class Model(object):
                     parent = tech.split(':')[0]
                 else:
                     parent = o.get_key('techs.' + tech + '.parent')  # 'defaults'
-                if parent == 'defaults':
-                    result = o.get_key('techs_defaults.' + remainder)
-                else:
+                try:
                     result = _get_option(parent + '.' + remainder)
+                except KeyError:
+                    if default:
+                        result = _get_option(default)
+                    else:
+                        raise KeyError
             return result
 
         def _get_location_option(key, location):
@@ -300,6 +309,17 @@ class Model(object):
                             d.locations[colname] = np.nan
                         d.locations.at[x, colname] = tree[x][y].get_key(c)
 
+        #
+        # k: Cost classes set
+        #
+        classes = [o.techs[k].costs.keys() for k in o.techs
+                   if k != 'defaults'  # Prevent 'default' from entering set
+                   if 'costs' in o.techs[k]]
+        # Flatten list and make sure 'monetary' is in it
+        classes = ([i for i in itertools.chain.from_iterable(classes)]
+                   + ['monetary'])
+        d._k = list(set(classes))  # Remove any duplicates with a set roundtrip
+
     def read_data(self):
         """
         Read parameter data from CSV files, if needed. Data that may be
@@ -410,6 +430,7 @@ class Model(object):
                          ordered=True)
         m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
         m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
+        m.k = cp.Set(initialize=d._k, ordered=True)  # Cost classes
 
         #
         # Parameters
@@ -524,29 +545,36 @@ class Model(object):
                 return np.nan
 
         var = getattr(self.m, var)
+        dims_strings = dims
         dims = [getattr(self.m, dim) for dim in dims]
         d = self.data
         if len(dims) == 1:
             result = pd.Series([_get_value(var[i])
                                 for i in sorted(dims[0].value)])
             idx = dims[0]
-            if idx.name == 't':
-                result.index = d._dt.loc[idx.first():idx.last()]
-            elif idx.name == 'x':
-                result.index = sorted(idx.value)
-        elif [i.name for i in dims] == ['y', 'x']:
+            result.index = sorted(idx.value)
+        elif dims_strings == ['y', 'x']:
             result = pd.DataFrame(0.0, index=sorted(dims[1].value),
                                   columns=sorted(dims[0].value))
             for i, v in var.iteritems():
                 result.loc[i[1], i[0]] = _get_value(v)
-        elif [i.name for i in dims] == ['y', 'x', 't']:
+        elif len(dims_strings) == 3:
             result = pd.Panel(data=None, items=sorted(dims[0].value),
                               major_axis=sorted(dims[2].value),
                               minor_axis=sorted(dims[1].value))
             for i, v in var.iteritems():
                 result.loc[i[0], i[2], i[1]] = _get_value(v)
-            new_index = d._dt.loc[dims[2].first():dims[2].last()]
-            result.major_axis = new_index.tolist()
+        # Nicify time column
+        if 't' in dims_strings:
+            if len(dims) == 1:
+                    result.index = d._dt.loc[idx.first():idx.last()]
+            # TODO currently no case where dims=2 and 't' in dims, but
+            # that may change in the future!
+            elif len(dims) == 3:
+                t_loc = [i for i, x in enumerate(dims_strings) if x == 't'][0]
+                axis_atrributes = ['item', 'minor_axis', 'major_axis']
+                new_index = d._dt.loc[dims[t_loc].first():dims[t_loc].last()]
+                setattr(result, axis_atrributes[t_loc], new_index.tolist())
         return result
 
     def get_system_variables(self):
@@ -576,7 +604,7 @@ class Model(object):
         """
         # Levelized cost of electricity (LCOE)
         # TODO currently counting only e_prod for costs, makes sense?
-        cost = self.get_var('cost', ['y', 'x'])
+        cost = self.get_var('cost', ['y', 'x', 'k']).loc[:, 'monetary', :]
         # sum over t
         e_prod = self.get_var('e_prod', ['y', 'x', 't']).sum(axis='major')
         lcoe = cost / e_prod

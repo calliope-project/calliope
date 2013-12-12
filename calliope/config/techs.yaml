@@ -11,14 +11,17 @@ techs:
             r: inf
             e_cap_max: 40000  # Maximum installed generation capacity [kWe]
         costs:
-            e_cap: 750
-            om_fuel: 0.12
+            monetary:
+                e_cap: 750
+                om_fuel: 0.12
+            emissions:
+                om_fuel: 0.25  # Assuming new build LNG, http://www.zerocarbonhub.org/resourcefiles/Carbon_Emission_Factors_for_Fuels-methodology_and_values_for_2013_and_2016.pdf
     csp:
         parent: defaults
         constraints:
             # -- Begin CSP-specific constraints --
             use_s_time: true  # Use s_time to calculate s_cap_max?
-            s_time: 15  # Maximum storage time [h]
+            s_time: 15   # Maximum storage time [h]
             # -- End CSP-specific constraints --
             r: 0  # was file
             r_eff: 1.0  # was file
@@ -30,16 +33,15 @@ techs:
             s_loss: 0.002
             e_cap_max: 20000  # Maximum turbine size [kWe]
         costs:
-            s_cap: 30
-            r_area: 200
-            r_cap: 200
-            e_cap: 1350
-            om_var: 0.002
-            # -- Begin CSP-specific costs --
-            rec_per_sf: 0.54  # kWt of receiver needed per m2 of solar field
-            # -- End CSP-specific costs --
+            monetary:
+                s_cap: 30
+                r_area: 200
+                r_cap: 200
+                e_cap: 1350
+                om_var: 0.002
         depreciation:
-            interest: 0.15
+            monetary:
+                interest: 0.15
     demand:
         parent: defaults
         constraints:
@@ -53,7 +55,8 @@ techs:
             r: inf
             e_cap_max: inf
         costs:
-            om_fuel: 1.0e+9
+            monetary:
+                om_fuel: 1.0e+9
     transmission:
         parent: defaults
         constraints:
@@ -61,7 +64,8 @@ techs:
             e_cap_max: inf
             e_can_be_negative: true
         costs:
-            e_cap: 200
+            monetary:
+                e_cap: 200
     hvac:
         parent: transmission
         constraints:

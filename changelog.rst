@@ -5,6 +5,7 @@ Release History
 0.2.0 (dev)
 +++++++++++
 
+* Added cost classes with an associated new index (``k``)
 * Cleared up terminology (nodes vs locations)
 
 0.1.0 (2013-12-10)
