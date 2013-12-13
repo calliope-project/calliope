@@ -47,6 +47,23 @@ class Model(object):
         self.read_data()
         self.mode = self.config_run.mode
 
+    def _load_config(self, path):
+        # Deal with possible import statement in loaded config file
+        # Additional files specified by import will be merged into
+        # the loaded config file in order of appearance
+        loaded_config = utils.AttrDict.from_yaml(path)
+        if 'import' in loaded_config:
+            for k in loaded_config['import']:
+                k = utils.replace(k, placeholder='module',
+                                  replacement=os.path.dirname(__file__))
+                if not os.path.isabs(k):
+                    k = os.path.join(os.path.dirname(path), k)
+                sub_config = self._load_config(k)
+                loaded_config.union(sub_config)
+            # Remove 'import' key from loaded_config, no longer need it
+            loaded_config.pop('import', None)
+        return loaded_config
+
     def initialize_configuration(self, config_run, override):
         # Load run configuration
         config_path = os.path.join(os.path.dirname(__file__), 'config')
@@ -81,7 +98,7 @@ class Model(object):
                                                   'defaults.yaml'))
         for path in [cr.get_key('input.' + k) for k in input_keys
                      if 'path' not in k]:
-            o.union(utils.AttrDict.from_yaml(path))
+            o.union(self._load_config(path))
         self.config_model = o
         # Override config_model settings if specified in config_run
         if ('override' in cr
@@ -280,7 +297,7 @@ class Model(object):
         if self.config_run.get_key('subset_x', default=False):
             d._x = [x for x in d._x if x in self.config_run.subset_x]
         #
-        # Nodes settings matrix
+        # Locations settings matrix
         #
         d.locations = locations.generate_location_matrix(o.locations,
                                                          techs=d._y)

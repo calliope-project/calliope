@@ -20,6 +20,14 @@ class TestInitialization:
         assert hasattr(model, 'config_model')
         assert model.config_run.output.save is False
 
+    def test_model_initialization_follow_import_statements(self):
+        model = calliope.Model()
+        assert 'techs' in model.config_model
+
+    def test_model_initialization_follow_nested_import_statements(self):
+        model = calliope.Model()
+        assert 'links' in model.config_model
+
     def test_model_initialization_override_dict(self):
         override = {'output.save': True}
         with pytest.raises(AssertionError):

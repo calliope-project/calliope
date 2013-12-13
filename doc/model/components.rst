@@ -12,7 +12,7 @@ Terminology
 * **Technology**: a technology that produces, consumes, converts or transports energy
 * **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
 * **Node**: a combination of technology and location resulting in specific energy balance equations (:ref:`see below <node_energy_balance>`)
-* **Resource**: a source or sink of energy that can be used by a technology to introduce or remove energy into the system
+* **Resource**: a source or sink of energy that can (or must) be used by a technology to introduce into or remove energy from the system
 
 ----------
 Index sets
@@ -65,7 +65,7 @@ Each technology must define the following parameters, some of which may be zero.
 Backup primary energy source
 ============================
 
-Basic support is implemented for a backup primary energy source to deliver energy to storage alongside the primary energy source (``r``). Currently this is only used to provide heat to CSP plants during the ``startup_time`` defined in ``model_settings.yaml``.
+Basic support is implemented for a backup primary energy source to deliver energy to storage alongside the primary energy source (``r``). Currently this is only used to provide heat to CSP plants during the ``startup_time`` defined in the model settings.
 
 This makes use of the following additional parameters:
 

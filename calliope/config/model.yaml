@@ -1,4 +1,14 @@
 #
+# IMPORT OTHER FILES
+#
+
+# Can either be a relative path, absolute path, or one that starts with {{ module }} to access the module directory
+
+import:
+    - 'techs.yaml'
+    - 'locations.yaml'
+
+#
 # ADDITIONAL CONSTRAINTS
 #
 

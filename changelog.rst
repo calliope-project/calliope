@@ -5,6 +5,7 @@ Release History
 0.2.0 (dev)
 +++++++++++
 
+* Ability to arbitrarily nest model configuration files with ``import`` statements
 * Added cost classes with an associated new index (``k``)
 * Cleared up terminology (nodes vs locations)
 
