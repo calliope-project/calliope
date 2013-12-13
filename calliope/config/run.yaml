@@ -4,8 +4,6 @@
 
 input:
     model: '{{ module }}/config/model.yaml'
-    techs: '{{ module }}/config/techs.yaml'
-    locations: '{{ module }}/config/locations.yaml'
     path:  '{{ module }}/example'
 
 output:

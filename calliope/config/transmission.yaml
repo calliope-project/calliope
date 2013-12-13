@@ -1,0 +1,9 @@
+#
+# TRANSMISSION CAPACITIES
+#
+
+links:
+    r1,r2:
+        hvac:
+            constraints:
+                e_cap_max: 10000

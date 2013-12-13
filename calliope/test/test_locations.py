@@ -9,7 +9,7 @@ import pytest
 from calliope import locations, utils
 
 
-class TestNodes:
+class TestLocations:
     @pytest.fixture
     def sample_locations(self):
         setup = StringIO.StringIO("""
