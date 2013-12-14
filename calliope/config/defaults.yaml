@@ -49,3 +49,35 @@ techs:
                 default: 0  # If interest not set for a class it is zero
                 monetary: 0.10  # Interest rate [dimensionless]
         weight: 1  # Cost weight in objective function (higher: relatively more expensive)
+    supply:
+        parent: defaults
+    demand:
+        parent: defaults
+        constraints:
+            r: 0
+            force_r: true
+            e_cap_max: inf
+            e_can_be_negative: true
+    unmet_demand:
+        parent: defaults
+        constraints:
+            r: inf
+            e_cap_max: inf
+        costs:
+            monetary:
+                om_fuel: 1.0e+9
+    storage:
+        parent: defaults
+        constraints:
+            r: 0
+            e_can_be_negative: true
+    transmission:
+        parent: defaults
+        constraints:
+            r: inf  # Not used but still must be defined
+            e_cap_max: inf
+            e_can_be_negative: true
+    conversion:
+        parent: defaults
+        constraints:
+            r: inf  # Not used but still must be defined

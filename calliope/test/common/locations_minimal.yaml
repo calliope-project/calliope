@@ -2,7 +2,7 @@ locations:
     demand:
         level: 0
         within:
-        techs: ['demand', 'unmet_demand']
+        techs: ['demand_electricity', 'unmet_demand_electricity']
     1,2:
         level: 0
         within:

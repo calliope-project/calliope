@@ -289,7 +289,15 @@ class Model(object):
         d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
-
+        #
+        # c: Carriers set
+        #
+        d._c = set()
+        for y in d._y:  # Only add carriers for allowed technologies
+            d._c.update([o.techs[y].carrier])
+            if 'secondary_carrier' in o.techs[y]:
+                d._c.update([o.techs[y].secondary_carrier])
+        d._c = list(d._c)
         #
         # x: Locations set
         #
@@ -445,8 +453,10 @@ class Model(object):
             horizon_adj = int(o.opmode.horizon / d.time_res_static)
             m.t = cp.Set(initialize=d._t[t_start:t_start+horizon_adj],
                          ordered=True)
-        m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
+        # The rest
+        m.c = cp.Set(initialize=d._c, ordered=True)  # Carriers
         m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
+        m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
         m.k = cp.Set(initialize=d._k, ordered=True)  # Cost classes
 
         #
@@ -581,28 +591,44 @@ class Model(object):
                               minor_axis=sorted(dims[1].value))
             for i, v in var.iteritems():
                 result.loc[i[0], i[2], i[1]] = _get_value(v)
+        elif len(dims_strings) == 4:
+            result = pd.Panel4D(data=None, labels=sorted(dims[0].value),
+                                items=sorted(dims[1].value),
+                                major_axis=sorted(dims[3].value),
+                                minor_axis=sorted(dims[2].value))
+            for i, v in var.iteritems():
+                result.loc[i[0], i[1], i[3], i[2]] = _get_value(v)
         # Nicify time column
         if 't' in dims_strings:
             if len(dims) == 1:
                     result.index = d._dt.loc[idx.first():idx.last()]
             # TODO currently no case where dims=2 and 't' in dims, but
             # that may change in the future!
-            elif len(dims) == 3:
+            else:
+                if len(dims) == 3:
+                    axis_atrributes = ['item', 'minor_axis', 'major_axis']
+                elif len(dims) == 4:
+                    axis_atrributes = ['labels', 'item', 'minor_axis',
+                                       'major_axis']
                 t_loc = [i for i, x in enumerate(dims_strings) if x == 't'][0]
-                axis_atrributes = ['item', 'minor_axis', 'major_axis']
                 new_index = d._dt.loc[dims[t_loc].first():dims[t_loc].last()]
                 setattr(result, axis_atrributes[t_loc], new_index.tolist())
         return result
 
     def get_system_variables(self):
-        e = self.get_var('e', ['y', 'x', 't'])
-        e = e.sum(axis=2)
+        e = self.get_var('e', ['c', 'y', 'x', 't'])
+        e = e.sum(axis=3).transpose(0, 2, 1)
         return e
 
     def get_node_variables(self):
-        detail = ['s', 'rs', 'bs', 'es_prod', 'es_con', 'os', 'e']
-        return pd.Panel4D({v: self.get_var(v, ['y', 'x', 't'])
-                          for v in detail})
+        detail = ['s', 'rs', 'bs', 'os']
+        p = pd.Panel4D({v: self.get_var(v, ['y', 'x', 't']) for v in detail})
+        detail_carrier = ['es_prod', 'es_con', 'e']
+        for d in detail_carrier:
+            temp = self.get_var(d, ['c', 'y', 'x', 't'])
+            for c in self.data._c:
+                p[d + ':' + c] = temp.loc[c, :, :, :]
+        return p
 
     def get_node_parameters(self, built_only=False):
         """If built_only is True, disregard locations where e_cap==0"""
@@ -616,21 +642,25 @@ class Model(object):
     def get_costs(self):
         """Get costs
 
-        NB: Currently only counts e_prod towards costs!
+        NB: Currently only counts e_prod towards costs, and only reports
+        costs for the carrier ``power``!
 
         """
         # Levelized cost of electricity (LCOE)
         # TODO currently counting only e_prod for costs, makes sense?
         cost = self.get_var('cost', ['y', 'x', 'k']).loc[:, 'monetary', :]
-        # sum over t
-        e_prod = self.get_var('e_prod', ['y', 'x', 't']).sum(axis='major')
+        e_prod = self.get_var('e_prod', ['c', 'y', 'x', 't'])
+        # TODO ugly hack to limit to power
+        e_prod = e_prod.loc['power', :, :, :].sum(axis='major')  # sum over t
         lcoe = cost / e_prod
         lcoe[np.isinf(lcoe)] = 0
         lcoe_total = cost.sum() / e_prod.sum()
         lcoe = lcoe.append(pd.DataFrame(lcoe_total.to_dict(), index=['total']))
         # Capacity factor (CF)
         # NB: using .abs() to sum absolute values of e so cf always positive
-        e = self.get_var('e', ['y', 'x', 't']).abs().sum(axis='major')
+        e = self.get_var('e', ['c', 'y', 'x', 't'])
+        # TODO ugly hack to limit to power
+        e = e.loc['power', :, :, :].abs().sum(axis='major')
         e_cap = self.get_var('e_cap', ['y', 'x'])
         cf = e / (e_cap * sum(self.m.time_res[t] for t in self.m.t))
         cf = cf.fillna(0)

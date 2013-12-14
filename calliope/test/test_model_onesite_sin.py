@@ -17,12 +17,12 @@ class TestModel:
                 1:
                     level: 1
                     within:
-                    techs: ['ccgt', 'demand']
+                    techs: ['ccgt', 'demand_electricity']
                     override:
                         ccgt:
                             constraints:
                                 e_cap_max: 100
-                        demand:
+                        demand_electricity:
                             x_map: 'demand: 1'
                             constraints:
                                 r: file=demand-sin_r.csv
@@ -52,6 +52,8 @@ class TestModel:
 
     def test_model_balanced(self, model):
         df = model.get_system_variables()
-        assert df.ix[0, 'ccgt'] == 7.5
-        assert_almost_equal(df['ccgt'].mean(), 7.62, tolerance=0.01)
-        assert (df['ccgt'] == -1 * df['demand']).all()
+        assert df.ix['power', 0, 'ccgt'] == 7.5
+        assert_almost_equal(df.loc['power', :, 'ccgt'].mean(),
+                            7.62, tolerance=0.01)
+        assert (df.loc['power', :, 'ccgt'] ==
+                -1 * df.loc['power', :, 'demand_electricity']).all()

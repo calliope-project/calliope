@@ -2,11 +2,10 @@
 # TECHNOLOGY DEFINITIONS
 #
 
-# 'parent: defaults' is a special parent representing the 'techs_defaults' defined in defaults.yaml
-# May also set tech-specific parameters that do not exist in defaults but are used by a custom technology class (see CSP example)
 techs:
     ccgt:
-        parent: defaults
+        parent: supply
+        carrier: power
         constraints:
             r: inf
             e_cap_max: 40000  # Maximum installed generation capacity [kWe]
@@ -17,16 +16,17 @@ techs:
             emissions:
                 om_fuel: 0.25  # Assuming new build LNG, http://www.zerocarbonhub.org/resourcefiles/Carbon_Emission_Factors_for_Fuels-methodology_and_values_for_2013_and_2016.pdf
     csp:
-        parent: defaults
+        parent: supply
+        carrier: power
         constraints:
             # -- Begin CSP-specific constraints --
             use_s_time: true  # Use s_time to calculate s_cap_max?
             s_time: 15   # Maximum storage time [h]
             # -- End CSP-specific constraints --
-            r: 0  # was file
-            r_eff: 1.0  # was file
+            r: 0
+            r_eff: 1.0
             r_eff_ref: 1.0
-            e_eff: 0.4  # was file
+            e_eff: 0.4
             e_eff_ref: 0.4
             r_area_max: 318000  # Maximum solar field size [m2]
             s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
@@ -42,35 +42,38 @@ techs:
         depreciation:
             monetary:
                 interest: 0.15
-    demand:
-        parent: defaults
-        constraints:
-            r: 0  # was file
-            force_r: true
-            e_cap_max: inf
-            e_can_be_negative: true
-    unmet_demand:
-        parent: defaults
-        constraints:
-            r: inf
-            e_cap_max: inf
-        costs:
-            monetary:
-                om_fuel: 1.0e+9
-    transmission:
-        parent: defaults
-        constraints:
-            r: inf  # Not used but still must be defined
-            e_cap_max: inf
-            e_can_be_negative: true
+    demand_power:
+        parent: demand
+        carrier: power
+    unmet_demand_power:
+        parent: unmet_demand
+        carrier: power
+    demand_heat:
+        parent: demand
+        carrier: heat
+    unmet_demand_heat:
+        parent: unmet_demand
+        carrier: heat
+    heater:
+        parent: conversion
+        carrier: heat
+        secondary_carrier: power
         costs:
             monetary:
                 e_cap: 200
     hvac:
         parent: transmission
+        carrier: power
         constraints:
             e_eff: 0.85
+        costs:
+            monetary:
+                e_cap: 200
     hvdc:
         parent: transmission
+        carrier: power
         constraints:
             e_eff: 0.95
+        costs:
+            monetary:
+                e_cap: 200

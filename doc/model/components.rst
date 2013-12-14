@@ -13,17 +13,17 @@ Terminology
 * **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
 * **Node**: a combination of technology and location resulting in specific energy balance equations (:ref:`see below <node_energy_balance>`)
 * **Resource**: a source or sink of energy that can (or must) be used by a technology to introduce into or remove energy from the system
+* **Carrier**: an energy carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
 
 ----------
 Index sets
 ----------
 
+* ``c``: carriers
 * ``y``: technologies
 * ``x``: locations
 * ``t``: time steps
 * ``k``: cost classes
-
-For example, the output of the technology ``tech`` at location ``loc`` which outputs energy in the form of ``electricity`` at time ``0`` would be ``e(electricity, tech, loc, 0)``.
 
 .. _node_energy_balance:
 
