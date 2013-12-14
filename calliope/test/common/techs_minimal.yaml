@@ -1,6 +1,7 @@
 techs:
     ccgt:
-        parent: defaults
+        parent: supply
+        carrier: power
         constraints:
             r: inf
             e_cap_max: 50
@@ -9,7 +10,8 @@ techs:
                 e_cap: 5
                 om_fuel: 0.1
     csp:
-        parent: defaults
+        parent: supply
+        carrier: power
         constraints:
             use_s_time: false
             s_time: 10
@@ -30,50 +32,38 @@ techs:
                 e_cap: 10
                 om_var: 0.001
     pv:
-        parent: defaults
+        parent: supply
+        carrier: power
         constraints:
             r: 0
             e_cap_max: 50
         costs:
             monetary:
                 e_cap: 20
-    storage:
-        parent: defaults
+    test_storage:
+        parent: storage
+        carrier: power
         constraints:
-            r: 0
             e_cap_max: 100
-            e_can_be_negative: true
             s_cap_max: 100
             s_loss: 0.002
         costs:
             monetary:
                 s_cap: 500
                 e_cap: 10
-    demand:
-        parent: defaults
+    demand_electricity:
+        parent: demand
+        carrier: power
         constraints:
             r: 100
-            force_r: true
-            e_cap_max: inf
-            e_can_be_negative: true
-    unmet_demand:
-        parent: defaults
+    unmet_demand_electricity:
+        parent: unmet_demand
+        carrier: power
+    hvac:
+        parent: transmission
+        carrier: power
         constraints:
-            r: inf
-            e_cap_max: inf
-        costs:
-            monetary:
-                om_fuel: 1.0e+9
-    transmission:
-        parent: defaults
-        constraints:
-            r: inf
-            e_cap_max: inf
-            e_can_be_negative: true
+            e_eff: 0.90
         costs:
             monetary:
                 e_cap: 10
-    hvac:
-        parent: transmission
-        constraints:
-            e_eff: 0.90

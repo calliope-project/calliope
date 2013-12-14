@@ -43,8 +43,8 @@ class TestInitialization:
 
     def test_initialize_techs(self):
         model = common.simple_model()
-        assert (model.technologies.demand.__repr__()
-                == 'Generic technology (demand)')
+        assert (model.technologies.demand_electricity.__repr__()
+                == 'Generic technology (demand_electricity)')
         assert (model.technologies.csp.__repr__()
                 == 'Concentrating solar power (CSP)')
 
@@ -140,7 +140,8 @@ class TestInitialization:
     def test_initialize_sets_technologies(self):
         model = common.simple_model()
         assert sorted(model.data._y) == ['ccgt', 'csp',
-                                         'demand', 'unmet_demand']
+                                         'demand_electricity',
+                                         'unmet_demand_electricity']
 
     def test_initialize_sets_technologies_subset(self):
         config_run = """
@@ -151,10 +152,10 @@ class TestInitialization:
                             path: '{path}'
                         output:
                             save: false
-                        subset_y: ['ccgt', 'demand']
+                        subset_y: ['ccgt', 'demand_electricity']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt',  'demand']
+        assert sorted(model.data._y) == ['ccgt',  'demand_electricity']
 
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
@@ -165,10 +166,16 @@ class TestInitialization:
                             path: '{path}'
                         output:
                             save: false
-                        subset_y: ['ccgt', 'demand', 'foo', 'bar']
+                        subset_y: ['ccgt', 'demand_electricity', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt',  'demand']
+        assert sorted(model.data._y) == ['ccgt',  'demand_electricity']
+
+    def test_initialize_sets_carriers(self):
+        model = common.simple_model()
+        assert sorted(model.data._c) == ['power']
+
+    # TODO more extensive tests for carriers
 
     def test_initialize_sets_locations(self):
         model = common.simple_model()
@@ -205,7 +212,8 @@ class TestInitialization:
     def test_initialize_locations_matrix(self):
         model = common.simple_model()
         cols = ['_level', '_override.ccgt.constraints.e_cap_max',
-                '_within', 'ccgt', 'csp', 'demand', 'unmet_demand']
+                '_within', 'ccgt', 'csp', 'demand_electricity',
+                'unmet_demand_electricity']
         assert sorted(model.data.locations.columns) == cols
         assert (sorted(model.data.locations.index.tolist())
                 == ['1', '2', 'demand'])
@@ -217,7 +225,7 @@ class TestInitialization:
                 demand:
                     level: 0
                     within:
-                    techs: ['demand']
+                    techs: ['demand_electricity']
                 1,2:
                     level: 0
                     within:
@@ -237,7 +245,7 @@ class TestInitialization:
     def test_initialize_sets_locations_with_transmission(self,
                                                          model_transmission):
         model = model_transmission
-        assert sorted(model.data._y) == ['ccgt', 'csp', 'demand',
+        assert sorted(model.data._y) == ['ccgt', 'csp', 'demand_electricity',
                                          'hvac:1', 'hvac:2']
 
     def test_initialize_locations_matrix_with_transmission(self,
@@ -246,7 +254,7 @@ class TestInitialization:
         cols = ['_level',
                 '_override.hvac:1.constraints.e_cap_max',
                 '_override.hvac:2.constraints.e_cap_max',
-                '_within', 'ccgt', 'csp', 'demand',
+                '_within', 'ccgt', 'csp', 'demand_electricity',
                 'hvac:1', 'hvac:2']
         assert sorted(model.data.locations.columns) == cols
         assert (sorted(model.data.locations.index.tolist())

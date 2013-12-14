@@ -9,9 +9,9 @@ locations:
     r1:
         level: 1
         within:
-        techs: ['demand', 'unmet_demand', 'ccgt']
+        techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
-            demand:
+            demand_power:
                 x_map: 'a: r1'
                 constraints:
                     r: file=demand-r1_r.csv
@@ -22,9 +22,9 @@ locations:
     r2:
         level: 1
         within:
-        techs: ['demand', 'unmet_demand']
+        techs: ['demand_power', 'unmet_demand_power']
         override:
-            demand:
+            demand_power:
                 x_map: 'a: r2'
                 constraints:
                     r: file=demand-r2_r.csv

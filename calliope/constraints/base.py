@@ -32,27 +32,34 @@ def node_energy_balance(model):
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.e = cp.Var(m.y, m.x, m.t, within=cp.Reals)
-    m.e_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.e_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
-    m.es_prod = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.es_con = cp.Var(m.y, m.x, m.t, within=cp.NegativeReals)
+    m.e = cp.Var(m.c, m.y, m.x, m.t, within=cp.Reals)
+    m.e_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.e_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
+    m.es_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.es_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
     m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
-    def c_e_rule(m, y, x, t):
-        return m.e[y, x, t] == m.e_prod[y, x, t] + m.e_con[y, x, t]
+    def c_e_rule(m, c, y, x, t):
+        return m.e[c, y, x, t] == m.e_prod[c, y, x, t] + m.e_con[c, y, x, t]
 
-    def c_e_prod_rule(m, y, x, t):
-        return m.e_prod[y, x, t] == m.es_prod[y, x, t] * m.e_eff[y, x, t]
+    def c_e_prod_rule(m, c, y, x, t):
+        if c == model.get_option(y + '.carrier'):
+            return (m.e_prod[c, y, x, t] ==
+                    m.es_prod[c, y, x, t] * m.e_eff[y, x, t])
+        else:
+            return m.e_prod[c, y, x, t] == 0
 
-    def c_e_con_rule(m, y, x, t):
-        try:
-            return m.e_con[y, x, t] == (m.es_con[y, x, t]
-                                        * (1/m.e_eff[y, x, t]))
-        except ZeroDivisionError:
-            return m.e_con[y, x, t] == 0
+    def c_e_con_rule(m, c, y, x, t):
+        if c == model.get_option(y + '.carrier'):
+            try:
+                return m.e_con[c, y, x, t] == (m.es_con[c, y, x, t]
+                                               * (1/m.e_eff[y, x, t]))
+            except ZeroDivisionError:
+                return m.e_con[c, y, x, t] == 0
+        else:
+            return m.e_con[c, y, x, t] == 0
 
     def c_rs_rule(m, y, x, t):
         this_r = m.r[y, x, t]
@@ -86,8 +93,9 @@ def node_energy_balance(model):
             # Transmission technologies need a different energy balance rule
             y_remote, x_remote = transmission.get_remotes(y, x)
             if y_remote in model.data.transmission_y:
-                return (m.es_prod[y, x, t]
-                        == -1 * m.es_con[y_remote, x_remote, t]
+                carrier = model.get_option(y + '.carrier')
+                return (m.es_prod[carrier, y, x, t]
+                        == -1 * m.es_con[carrier, y_remote, x_remote, t]
                         / m.e_eff[y, x, t])
             else:
                 return cp.Constraint.NoConstraint
@@ -102,12 +110,14 @@ def node_energy_balance(model):
         else:
             s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
-                - m.es_prod[y, x, t] - m.es_con[y, x, t] - m.os[y, x, t])
+                - sum(m.es_prod[c, y, x, t] for c in m.c)
+                - sum(m.es_con[c, y, x, t] for c in m.c)
+                - m.os[y, x, t])
 
     # Constraints
-    m.c_e = cp.Constraint(m.y, m.x, m.t)
-    m.c_e_prod = cp.Constraint(m.y, m.x, m.t)
-    m.c_e_con = cp.Constraint(m.y, m.x, m.t)
+    m.c_e = cp.Constraint(m.c, m.y, m.x, m.t)
+    m.c_e_prod = cp.Constraint(m.c, m.y, m.x, m.t)
+    m.c_e_con = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_rs = cp.Constraint(m.y, m.x, m.t)
     m.c_s_balance = cp.Constraint(m.y, m.x, m.t)
 
@@ -202,24 +212,29 @@ def node_constraints_operational(model):
                                                       / eff_ref('r', y, x))
 
     def c_e_max_rule(m, y, x, t):
-        return m.e_prod[y, x, t] <= m.time_res[t] * m.e_cap[y, x]
+        carrier = model.get_option(y + '.carrier')
+        return m.e_prod[carrier, y, x, t] <= m.time_res[t] * m.e_cap[y, x]
 
     def c_e_min_rule(m, y, x, t):
+        carrier = model.get_option(y + '.carrier')
         if model.get_option(y + '.constraints.e_can_be_negative') is False:
-            return m.e_con[y, x, t] == 0
+            return m.e_con[carrier, y, x, t] == 0
         else:
-            return m.e_con[y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
+            return (m.e_con[carrier, y, x, t] >=
+                    -1 * m.time_res[t] * m.e_cap[y, x])
 
     def c_es_max_rule(m, y, x, t):
-        return m.es_prod[y, x, t] <= m.time_res[t] * (m.e_cap[y, x]
-                                                      / eff_ref('e', y, x))
+        carrier = model.get_option(y + '.carrier')
+        return (m.es_prod[carrier, y, x, t] <=
+                m.time_res[t] * (m.e_cap[y, x] / eff_ref('e', y, x)))
 
     def c_es_min_rule(m, y, x, t):
+        carrier = model.get_option(y + '.carrier')
         if model.get_option(y + '.constraints.e_can_be_negative') is False:
-            return m.es_con[y, x, t] == 0
+            return m.es_con[carrier, y, x, t] == 0
         else:
-            return m.es_con[y, x, t] >= (-1 * m.time_res[t]
-                                         * (m.e_cap[y, x] / eff_ref('e', y, x)))
+            return (m.es_con[carrier, y, x, t] >=
+                    -1 * m.time_res[t] * (m.e_cap[y, x] / eff_ref('e', y, x)))
 
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
@@ -320,9 +335,11 @@ def node_costs(model):
 
     def c_cost_op_rule(m, y, x, k):
         # TODO currently only counting e_prod for op costs, makes sense?
+        carrier = model.get_option(y + '.carrier')
         return (m.cost_op[y, x, k] ==
                 _cost('om_frac', y, k) * m.cost_con[y, x, k]
-                + _cost('om_var', y, k) * sum(m.e_prod[y, x, t] for t in m.t)
+                + _cost('om_var', y, k) * sum(m.e_prod[carrier, y, x, t]
+                                              for t in m.t)
                 + _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))
 
     # Constraints
@@ -346,19 +363,26 @@ def model_constraints(model):
         return list(locations[locations._within == parent].index)
 
     # Constraint rules
-    def c_system_balance_rule(m, x, t):
+    def c_system_balance_rule(m, c, x, t):
         # TODO for now, hardcoding level 1, so can only use levels 0 and 1
         parents = get_parents(1)
         if x not in parents:
             return cp.Constraint.NoConstraint
         else:
             family = get_children(x) + [x]  # list of children + parent
-            return (sum(m.e_prod[y, xs, t] for xs in family for y in m.y)
-                    + sum(m.e_con[y, xs, t] for xs in family for y in m.y)
-                    == 0)
+            if c == 'power':
+                return (sum(m.e_prod[c, y, xs, t] for xs in family for y in m.y)
+                        + sum(m.e_con[c, y, xs, t] for xs in family for y in m.y)
+                        == 0)
+            elif c == 'heat':
+                return (sum(m.e_prod[c, y, xs, t] for xs in family for y in m.y)
+                        + sum(m.e_con[c, y, xs, t] for xs in family for y in m.y)
+                        >= 0)
+            else:
+                return cp.Constraint.NoConstraint
 
     # Constraints
-    m.c_system_balance = cp.Constraint(m.x, m.t)
+    m.c_system_balance = cp.Constraint(m.c, m.x, m.t)
 
 
 def model_objective(model):

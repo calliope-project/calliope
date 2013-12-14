@@ -21,9 +21,9 @@ class TestModel:
                 2:
                     level: 1
                     within:
-                    techs: ['demand']
+                    techs: ['demand_electricity']
                     override:
-                        demand:
+                        demand_electricity:
                             constraints:
                                 r: -90
                 sub1,sub2:
@@ -65,8 +65,9 @@ class TestModel:
 
     def test_model_balanced(self, model):
         df = model.get_system_variables()
-        assert df['ccgt'].mean() == 100
-        assert (df['hvac:1'] == -1 * df['demand']).all()
+        assert df.loc['power', :, 'ccgt'].mean() == 100
+        assert (df.loc['power', :, 'hvac:1'] ==
+                -1 * df.loc['power', :, 'demand_electricity']).all()
 
     def test_model_costs(self, model):
         df = model.get_costs()
