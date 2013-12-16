@@ -5,8 +5,9 @@ Release History
 0.2.0 (dev)
 +++++++++++
 
-* Added cost classes with an new set ``k``
+* Added cost classes with a new set ``k``
 * Added energy carriers with a new set ``c``
+* Added conversion technologies
 * Ability to arbitrarily nest model configuration files with ``import`` statements
 * Cleared up terminology (nodes vs locations)
 

@@ -13,16 +13,15 @@ def node_energy_balance(model):
     Defines variables:
 
     * s: storage level
-    * rs: energy resource <-> storage
-    * bs: backup resource <-> storage
-    * e: storage <-> electricity (positive: to grid, negative: from grid)
-    * e_prod: electricity -> grid (always positive)
-    * e_con: electricity <- grid (always negative)
-    * es_prod: storage -> electricity (always positive)
-    * es_con: storage <- electricity (always negative)
+    * rs: primary resource <-> storage
+    * bs: secondary (backup) resource <-> storage
+    * e: carrier <-> grid (positive: to grid, negative: from grid)
+    * e_prod: carrier -> grid (always positive)
+    * e_con: carrier <- grid (always negative)
+    * es_prod: storage -> carrier (always positive)
+    * es_con: storage <- carrier (always negative)
     * os: storage <-> overflow
-    * e: node <-> grid
-    * r_area: installed collector area
+    * r_area: resource collector area
 
     """
     m = model.m
@@ -45,21 +44,17 @@ def node_energy_balance(model):
         return m.e[c, y, x, t] == m.e_prod[c, y, x, t] + m.e_con[c, y, x, t]
 
     def c_e_prod_rule(m, c, y, x, t):
-        if c == model.get_option(y + '.carrier'):
-            return (m.e_prod[c, y, x, t] ==
-                    m.es_prod[c, y, x, t] * m.e_eff[y, x, t])
-        else:
-            return m.e_prod[c, y, x, t] == 0
+        return m.e_prod[c, y, x, t] == m.es_prod[c, y, x, t] * m.e_eff[y, x, t]
 
     def c_e_con_rule(m, c, y, x, t):
-        if c == model.get_option(y + '.carrier'):
-            try:
-                return m.e_con[c, y, x, t] == (m.es_con[c, y, x, t]
-                                               * (1/m.e_eff[y, x, t]))
-            except ZeroDivisionError:
-                return m.e_con[c, y, x, t] == 0
+        if c == model.get_option(y + '.source_carrier'):
+            eff = 1.0
         else:
-            return m.e_con[c, y, x, t] == 0
+            try:
+                eff = 1 / m.e_eff[y, x, t]
+            except ZeroDivisionError:
+                eff = 0
+        return m.e_con[c, y, x, t] == m.es_con[c, y, x, t] * eff
 
     def c_rs_rule(m, y, x, t):
         this_r = m.r[y, x, t]
@@ -67,8 +62,6 @@ def node_energy_balance(model):
         # If `r` is set to `inf`, it is interpreted as unconstrained `r`/`rs`
         #
         if this_r == float('inf'):
-            # This also applies to transmission technologies which should
-            # always have their `r` set to `inf`
             return cp.Constraint.NoConstraint
         #
         # Otherwise, set up a context-dependent `rs` constraint
@@ -89,25 +82,33 @@ def node_energy_balance(model):
                 return m.rs[y, x, t] >= r_avail
 
     def c_s_balance_rule(m, y, x, t):
+        # A) Special case for transmission technologies
         if y in model.data.transmission_y:
-            # Transmission technologies need a different energy balance rule
             y_remote, x_remote = transmission.get_remotes(y, x)
             if y_remote in model.data.transmission_y:
                 carrier = model.get_option(y + '.carrier')
+                # Divide by efficiency to balance the fact that we
+                # multiply by efficiency twice (at each x)
                 return (m.es_prod[carrier, y, x, t]
                         == -1 * m.es_con[carrier, y_remote, x_remote, t]
                         / m.e_eff[y, x, t])
             else:
                 return cp.Constraint.NoConstraint
-        elif model.get_option(y + '.constraints.s_cap_max') == 0:
+        # B) All other nodes have the same balancing rule
+        # Define s_minus_one differently for cases:
+        #   1. no storage allowed
+        #   2. storage allowed and time step is not the first timestep
+        #   3. storage allowed and initializing an iteration of operation mode
+        #   4. storage allowed and initializing the first timestep
+        elif model.get_option(y + '.constraints.s_cap_max') == 0:  # 1st case
             s_minus_one = 0
-        elif m.t.order_dict[t] > 1:
+        elif m.t.order_dict[t] > 1:  # 2nd case
             s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
                             ** m.time_res[model.prev(t)])
                            * m.s[y, x, model.prev(t)])
-        elif model.mode == 'operate' and 's_init' in model.data:
+        elif model.mode == 'operate' and 's_init' in model.data:  # 3rd case
             s_minus_one = model.data.s_init.at[x, y]
-        else:
+        else:  # 4th case
             s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
                 - sum(m.es_prod[c, y, x, t] for c in m.c)
@@ -211,30 +212,45 @@ def node_constraints_operational(model):
         return m.rs[y, x, t] >= -1 * m.time_res[t] * (m.r_cap[y, x]
                                                       / eff_ref('r', y, x))
 
-    def c_e_max_rule(m, y, x, t):
-        carrier = model.get_option(y + '.carrier')
-        return m.e_prod[carrier, y, x, t] <= m.time_res[t] * m.e_cap[y, x]
+    # def c_e_prod_max_rule(m, c, y, x, t):
+    #     if c == model.get_option(y + '.carrier'):
+    #         return m.e_prod[c, y, x, t] <= m.time_res[t] * m.e_cap[y, x]
+    #     else:
+    #         return m.e_prod[c, y, x, t] == 0
 
-    def c_e_min_rule(m, y, x, t):
-        carrier = model.get_option(y + '.carrier')
-        if model.get_option(y + '.constraints.e_can_be_negative') is False:
-            return m.e_con[carrier, y, x, t] == 0
+    # def c_e_con_max_rule(m, c, y, x, t):
+    #     if c == model.get_option(y + '.carrier'):
+    #         if model.get_option(y + '.constraints.e_can_be_negative') is False:
+    #             return m.e_con[c, y, x, t] == 0
+    #         else:
+    #             return (m.e_con[c, y, x, t] >=
+    #                     -1 * m.time_res[t] * m.e_cap[y, x])
+
+    def c_es_prod_max_rule(m, c, y, x, t):
+        if c == model.get_option(y + '.carrier'):
+            return (m.es_prod[c, y, x, t] <=
+                    m.time_res[t] * (m.e_cap[y, x] / eff_ref('e', y, x)))
         else:
-            return (m.e_con[carrier, y, x, t] >=
-                    -1 * m.time_res[t] * m.e_cap[y, x])
+            return m.es_prod[c, y, x, t] == 0
 
-    def c_es_max_rule(m, y, x, t):
-        carrier = model.get_option(y + '.carrier')
-        return (m.es_prod[carrier, y, x, t] <=
-                m.time_res[t] * (m.e_cap[y, x] / eff_ref('e', y, x)))
-
-    def c_es_min_rule(m, y, x, t):
-        carrier = model.get_option(y + '.carrier')
-        if model.get_option(y + '.constraints.e_can_be_negative') is False:
-            return m.es_con[carrier, y, x, t] == 0
+    def c_es_con_max_rule(m, c, y, x, t):
+        if c == model.get_option(y + '.carrier'):
+            if model.get_option(y + '.constraints.e_can_be_negative') is False:
+                return m.es_con[c, y, x, t] == 0
+            else:
+                return (m.es_con[c, y, x, t] >= -1 * m.time_res[t]
+                        * (m.e_cap[y, x] / eff_ref('e', y, x)))
+        elif c == model.get_option(y + '.source_carrier'):
+            # Special case for conversion technologies,
+            # defining consumption for the source carrier
+            # TODO if implement more generic secondary carriers can move this
+            # into balancing equation together with carrier-specific
+            # efficiencies or conversion rates, which already is
+            # implemented in a basic way in `c_e_con_rule`
+            carrier = model.get_option(y + '.carrier')
+            return (m.es_con[c, y, x, t] == -1 * m.es_prod[carrier, y, x, t])
         else:
-            return (m.es_con[carrier, y, x, t] >=
-                    -1 * m.time_res[t] * (m.e_cap[y, x] / eff_ref('e', y, x)))
+            return m.es_con[c, y, x, t] == 0
 
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
@@ -255,10 +271,10 @@ def node_constraints_operational(model):
     # Constraints
     m.c_rs_max = cp.Constraint(m.y, m.x, m.t)
     m.c_rs_min = cp.Constraint(m.y, m.x, m.t)
-    m.c_e_max = cp.Constraint(m.y, m.x, m.t)
-    m.c_e_min = cp.Constraint(m.y, m.x, m.t)
-    m.c_es_max = cp.Constraint(m.y, m.x, m.t)
-    m.c_es_min = cp.Constraint(m.y, m.x, m.t)
+    # m.c_e_prod_max = cp.Constraint(m.c, m.y, m.x, m.t)
+    # m.c_e_con_max = cp.Constraint(m.c, m.y, m.x, m.t)
+    m.c_es_prod_max = cp.Constraint(m.c, m.y, m.x, m.t)
+    m.c_es_con_max = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
     m.c_bs = cp.Constraint(m.y, m.x, m.t)
 

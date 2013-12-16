@@ -42,6 +42,21 @@ techs:
         depreciation:
             monetary:
                 interest: 0.15
+    heater:
+        parent: conversion
+        carrier: heat
+        source_carrier: power
+        constraints:
+            e_eff: 0.8
+            e_cap_max: 1000
+        costs:
+            monetary:
+                e_cap: 200
+
+#
+# Demands
+#
+
     demand_power:
         parent: demand
         carrier: power
@@ -54,13 +69,11 @@ techs:
     unmet_demand_heat:
         parent: unmet_demand
         carrier: heat
-    heater:
-        parent: conversion
-        carrier: heat
-        secondary_carrier: power
-        costs:
-            monetary:
-                e_cap: 200
+
+#
+# Transmission
+#
+
     hvac:
         parent: transmission
         carrier: power
