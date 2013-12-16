@@ -17,6 +17,7 @@ opmode:
 
 techs:
     defaults:
+        source_carrier:
         constraints:
             force_r: false
             r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
@@ -69,15 +70,16 @@ techs:
     storage:
         parent: defaults
         constraints:
-            r: 0
+            r: 0  # Not used but still must be defined
             e_can_be_negative: true
     transmission:
         parent: defaults
         constraints:
-            r: inf  # Not used but still must be defined
+            r: 0  # Not used but still must be defined
             e_cap_max: inf
             e_can_be_negative: true
     conversion:
         parent: defaults
         constraints:
-            r: inf  # Not used but still must be defined
+            r: 0  # Not used but still must be defined
+            e_can_be_negative: true

@@ -88,8 +88,8 @@ Technology types
 
 .. TODO
 
-* Supply
-* Demand
-* Conversion
-* Storage
-* Transport
+* Supply: Supplies energy from a resource to a carrier; can have storage; can define an additional secondary resource
+* Demand: Acts like supply but with a resource that is negative. Draws energy from a carrier to satisfy a resource; can have storage
+* Conversion: Converts energy from one carrier to another
+* Storage: Can store energy of a specific carrier; has no resource
+* Transport: Transports energy of a specific carrier from one location to another; has no storage

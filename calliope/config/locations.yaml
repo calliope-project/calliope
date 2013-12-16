@@ -22,14 +22,20 @@ locations:
     r2:
         level: 1
         within:
-        techs: ['demand_power', 'unmet_demand_power']
+        techs: ['demand_power', 'unmet_demand_power',
+                'demand_heat', 'unmet_demand_heat',
+                'heater']
         override:
             demand_power:
                 x_map: 'a: r2'
                 constraints:
                     r: file=demand-r2_r.csv
                     r_scale_to_peak: -5000
-
+            demand_heat:
+                x_map: 'a: r2'
+                constraints:
+                    r: file=demand-r1_r.csv
+                    r_scale_to_peak: -100
     tamanrasset,cardak,toledo:
         level: 0
         within: r1

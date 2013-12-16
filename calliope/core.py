@@ -289,6 +289,13 @@ class Model(object):
         d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
+        # Subset of transmission technologies (used below)
+        # (not yet added to d._y here)
+        d.transmission_y = transmission.get_transmission_techs(o.links)
+        # Subset of conversion technologies
+        # (already contained in d._y here but separated out as well)
+        d.conversion_y = [y for y in d._y
+                          if o.techs[y].parent == 'conversion']
         #
         # c: Carriers set
         #
@@ -305,16 +312,13 @@ class Model(object):
         if self.config_run.get_key('subset_x', default=False):
             d._x = [x for x in d._x if x in self.config_run.subset_x]
         #
-        # Locations settings matrix
+        # Locations settings matrix and transmission technologies
         #
         d.locations = locations.generate_location_matrix(o.locations,
                                                          techs=d._y)
         # For simplicity, only keep the locations that are actually in set `x`
         d.locations = d.locations.ix[d._x, :]
-        #
-        # Add transmission technologies to y and locations matrix
-        #
-        d.transmission_y = transmission.get_transmission_techs(o.links)
+        # Add transmission technologies to y
         d._y.extend(d.transmission_y)
         # Add transmission tech columns to locations matrix
         for y in d.transmission_y:
