@@ -13,8 +13,8 @@ def node_energy_balance(model):
     Defines variables:
 
     * s: storage level
-    * rs: primary resource <-> storage
-    * bs: secondary (backup) resource <-> storage
+    * rs: resource <-> storage
+    * rsecs: secondary resource <-> storage
     * e: carrier <-> grid (positive: to grid, negative: from grid)
     * e_prod: carrier -> grid (always positive)
     * e_con: carrier <- grid (always negative)
@@ -30,7 +30,7 @@ def node_energy_balance(model):
     # Variables
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
-    m.bs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.rsecs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e = cp.Var(m.c, m.y, m.x, m.t, within=cp.Reals)
     m.e_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
@@ -47,6 +47,9 @@ def node_energy_balance(model):
         return m.e_prod[c, y, x, t] == m.es_prod[c, y, x, t] * m.e_eff[y, x, t]
 
     def c_e_con_rule(m, c, y, x, t):
+        # Nodes with a source_carrier have an efficiency of 1.0 in consuming it
+        # since emitting their consumed energy via their primary carrier
+        # would otherwise apply efficiency losses twice
         if c == model.get_option(y + '.source_carrier'):
             eff = 1.0
         else:
@@ -111,7 +114,7 @@ def node_energy_balance(model):
             s_minus_one = model.data.s_init.at[x, y]
         else:  # 4th case
             s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
-        return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.bs[y, x, t]
+        return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.rsecs[y, x, t]
                 - sum(m.es_prod[c, y, x, t] for c in m.c)
                 - sum(m.es_con[c, y, x, t] for c in m.c)
                 - m.os[y, x, t])
@@ -246,18 +249,19 @@ def node_constraints_operational(model):
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
 
-    def c_bs_rule(m, y, x, t):
-        # bs (backup resource) is allowed only during
+    def c_rsecs_rule(m, y, x, t):
+        # rsec (secondary resource) is allowed only during
         # the hours within startup_time
-        # TODO this entire thing is a hack right now
-        if y == 'csp' and t < model.data.startup_time_bounds:
+        # and only if the technology allows this
+        if (model.get_option(y + '.constraints.allow_rsec')
+                and t < model.data.startup_time_bounds):
             try:
-                return m.bs[y, x, t] <= (m.time_res[t]
-                                         * m.e_cap[y, x]) / m.e_eff[y, x, t]
+                return m.rsecs[y, x, t] <= (m.time_res[t]
+                                            * m.e_cap[y, x]) / m.e_eff[y, x, t]
             except ZeroDivisionError:
-                return m.bs[y, x, t] == 0
+                return m.rsecs[y, x, t] == 0
         else:
-            return m.bs[y, x, t] == 0
+            return m.rsecs[y, x, t] == 0
 
     # Constraints
     m.c_rs_max = cp.Constraint(m.y, m.x, m.t)
@@ -267,7 +271,7 @@ def node_constraints_operational(model):
     m.c_es_prod_max = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_es_con_max = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
-    m.c_bs = cp.Constraint(m.y, m.x, m.t)
+    m.c_rsecs = cp.Constraint(m.y, m.x, m.t)
 
 
 def transmission_constraints(model):

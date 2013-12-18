@@ -24,6 +24,7 @@ techs:
             s_time: 15   # Maximum storage time [h]
             # -- End CSP-specific constraints --
             r: file
+            allow_rsec: true
             e_eff: file
             e_eff_ref: 0.4
             r_area_max: 318000  # Maximum solar field size [m2]

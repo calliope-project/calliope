@@ -10,6 +10,8 @@ Release History
 * Added conversion technologies
 * Ability to arbitrarily nest model configuration files with ``import`` statements
 * Cleared up terminology (nodes vs locations)
+* Improved documentation
+* Other improvements
 
 0.1.0 (2013-12-10)
 ++++++++++++++++++

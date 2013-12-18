@@ -34,11 +34,11 @@ Node energy balance
 Each node, that is, combination of location and technology, has the following energy balance variables:
 
 * ``s(y, x, t)``: storage level
-* ``rs(y, x, t)``: energy resource to storage (+ production, - consumption)
-* ``bs(y, x, t)``: backup resource to storage (+ production, - consumption)
-* ``es(y, x, t)``: storage to electricity (+ supply, - demand)
+* ``rs(y, x, t)``: resource to storage (+ production, - consumption)
+* ``rss(y, x, t)``: secondary resource to storage (+ production, - consumption)
 * ``os(y, x, t)``: storage to overflow (+ dissipation, - shortfall)
-* ``e(y, x, t)``: electricity to grid (+ supply, - demand)
+* ``es(c, y, x, t)``: storage to carrier (+ supply, - demand)
+* ``e(c, y, x, t)``: carrier to grid (+ supply, - demand)
 
 and the following capacity variables:
 
@@ -57,20 +57,14 @@ Each technology must define the following parameters, some of which may be zero.
 * ``s_init(y)``: initial storage [kWh]
 * ``r_area_max(y)``: maximum collector area [m2]
 * ``r_eff(y)``: conversion efficiency [unitless]
-* ``rs_eff(y)``: conversion efficiency (backup primary source) [unitless]
 * ``r_cap_max(y)``: maximum conversion [kW]
 * ``e_eff(y)``: conversion efficiency [unitless]
 * ``e_cap_max(y)``: maximum installed storage ⟷ electricity conversion capacity [kW]
 
-Backup primary energy source
-============================
+Secondary resource
+==================
 
-Basic support is implemented for a backup primary energy source to deliver energy to storage alongside the primary energy source (``r``). Currently this is only used to provide heat to CSP plants during the ``startup_time`` defined in the model settings.
-
-This makes use of the following additional parameters:
-
-* ``b(y, x, t)``: available energy (backup primary source) [kWh/hour]
-* ``b_max(y)``: maximum conversion (backup primary source) [kW]
+Basic support is implemented for a secondary resource (``rsec``) to deliver energy to storage alongside the primary energy source (``r``). This is only allowed during the ``startup_time`` defined in the model settings, for technologies that set ``constraints.allow_rsec`` to ``true``. The secondary resource is infinite and is constrained by the installed ``e_cap``.
 
 ------------
 Cost classes

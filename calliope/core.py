@@ -637,7 +637,7 @@ class Model(object):
         return e
 
     def get_node_variables(self):
-        detail = ['s', 'rs', 'bs', 'os']
+        detail = ['s', 'rs', 'rsecs', 'os']
         p = pd.Panel4D({v: self.get_var(v, ['y', 'x', 't']) for v in detail})
         detail_carrier = ['es_prod', 'es_con', 'e']
         for d in detail_carrier:
