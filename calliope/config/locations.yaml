@@ -40,9 +40,3 @@ locations:
         level: 0
         within: r1
         techs: ['csp']
-        override:
-            csp:
-                constraints:
-                    r: file
-                    r_eff: file
-                    e_eff: file

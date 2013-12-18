@@ -60,7 +60,7 @@ class CspTechnology(Technology):
         if model.get_option('csp.constraints.use_s_time'):
             s_time = model.get_option('csp.constraints.s_time')
             e_cap_max = model.get_option('csp.constraints.e_cap_max')
-            e_eff_ref = model.get_option('csp.constraints.e_eff_ref')
+            e_eff_ref = model.get_eff_ref('e', 'csp')
             model.set_option('csp.constraints.s_cap_max',
                              s_time * e_cap_max / e_eff_ref)
 

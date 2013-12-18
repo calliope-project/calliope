@@ -235,6 +235,19 @@ class Model(object):
         o = self.config_model
         o.set_key('techs.' + option, value)
 
+    def get_eff_ref(self, var, y, x=None):
+        """Get reference efficiency, falling back to efficiency if no
+        reference efficiency has been set."""
+        base = y + '.constraints.' + var
+        eff_ref = self.get_option(base + '_eff_ref', x=x)
+        if eff_ref is False:
+            eff_ref = self.get_option(base + '_eff', x=x)
+        # NOTE: Will cause errors in the case where (1) eff_ref is not defined
+        # and (2) eff is set to "file". That is ok however because in this edge
+        # case eff_ref should be manually set as there is no straightforward
+        # way to derive it from the time series file.
+        return eff_ref
+
     def scale_to_peak(self, df, peak, scale_time_res=True):
         """Returns the given dataframe scaled to the given peak value.
 
@@ -337,7 +350,6 @@ class Model(object):
                         if not colname in d.locations.columns:
                             d.locations[colname] = np.nan
                         d.locations.at[x, colname] = tree[x][y].get_key(c)
-
         #
         # k: Cost classes set
         #
@@ -381,7 +393,7 @@ class Model(object):
 
         d = self.data
         # Parameters that may defined over (x, t) for a given technology y
-        d.params = ['r', 'r_eff', 'e_eff']
+        d.params = ['r', 'e_eff']
 
         # TODO allow params in d.params to be defined only over
         # x instead of either static or over (x, t) via CSV!
