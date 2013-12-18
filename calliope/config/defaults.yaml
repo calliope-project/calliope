@@ -27,6 +27,7 @@ techs:
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
                                     # NB: this only works if r is read as a time series from CSV, otherwise simply set
                                     # r statically to the desired value!
+            allow_rsec: false  # Allow secondary resource during startup_time?
             s_init: 0  # Initial storage level [kWht]
             s_cap_max: 0  # Maximum storage size [kWht]
             s_loss: 0  # Storage heat loss rate [per hour]

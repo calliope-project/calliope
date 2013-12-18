@@ -1,8 +1,6 @@
 from __future__ import print_function
 from __future__ import division
 
-import math
-
 
 class Technology(object):
     """Base Technology
