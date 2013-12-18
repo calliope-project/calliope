@@ -73,7 +73,8 @@ def node_energy_balance(model):
         else:
             r_avail = (this_r
                        * model.get_option(y + '.constraints.r_scale')
-                       * m.r_area[y, x] * m.r_eff[y, x, t])
+                       * m.r_area[y, x]
+                       * model.get_option(y + '.constraints.r_eff'))
             if model.get_option(y + '.constraints.force_r'):
                 return m.rs[y, x, t] == r_avail
             elif this_r > 0:
@@ -190,27 +191,16 @@ def node_constraints_operational(model):
     """Depends on: node_energy_balance, node_constraints_build"""
     m = model.m
 
-    def eff_ref(var, y, x):
-        """Get reference efficiency, falling back to efficiency if no
-        reference efficiency has been set."""
-        base = y + '.constraints.' + var
-        eff_ref = model.get_option(base + '_eff_ref', x=x)
-        if eff_ref is False:
-            eff_ref = model.get_option(base + '_eff', x=x)
-        # NOTE: Will cause errors in the case where (1) eff_ref is not defined
-        # and (2) eff is set to "file". That is ok however because in this edge
-        # case eff_ref should be manually set as there is no straightforward
-        # way to derive it from the time series file.
-        return eff_ref
-
     # Constraint rules
     def c_rs_max_rule(m, y, x, t):
-        return m.rs[y, x, t] <= m.time_res[t] * (m.r_cap[y, x]
-                                                 / eff_ref('r', y, x))
+        return (m.rs[y, x, t] <=
+                m.time_res[t]
+                * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     def c_rs_min_rule(m, y, x, t):
-        return m.rs[y, x, t] >= -1 * m.time_res[t] * (m.r_cap[y, x]
-                                                      / eff_ref('r', y, x))
+        return (m.rs[y, x, t] >=
+                -1 * m.time_res[t]
+                * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     # def c_e_prod_max_rule(m, c, y, x, t):
     #     if c == model.get_option(y + '.carrier'):
@@ -229,7 +219,8 @@ def node_constraints_operational(model):
     def c_es_prod_max_rule(m, c, y, x, t):
         if c == model.get_option(y + '.carrier'):
             return (m.es_prod[c, y, x, t] <=
-                    m.time_res[t] * (m.e_cap[y, x] / eff_ref('e', y, x)))
+                    m.time_res[t]
+                    * (m.e_cap[y, x] / model.get_eff_ref('e', y, x)))
         else:
             return m.es_prod[c, y, x, t] == 0
 
@@ -239,7 +230,7 @@ def node_constraints_operational(model):
                 return m.es_con[c, y, x, t] == 0
             else:
                 return (m.es_con[c, y, x, t] >= -1 * m.time_res[t]
-                        * (m.e_cap[y, x] / eff_ref('e', y, x)))
+                        * (m.e_cap[y, x] / model.get_eff_ref('e', y, x)))
         elif c == model.get_option(y + '.source_carrier'):
             # Special case for conversion technologies,
             # defining consumption for the source carrier

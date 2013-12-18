@@ -5,6 +5,7 @@ techs:
         constraints:
             r: inf
             e_cap_max: 50
+            e_eff_ref: false
         costs:
             monetary:
                 e_cap: 5
@@ -19,7 +20,6 @@ techs:
             s_loss: 0.002
             r: 20
             r_eff: 0.9
-            r_eff_ref: 1.0
             r_area_max: 100
             e_eff: 0.3
             e_eff_ref: 0.4

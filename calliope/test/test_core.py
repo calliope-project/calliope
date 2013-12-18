@@ -279,6 +279,16 @@ class TestOptions:
         with pytest.raises(KeyError):
             model.get_option('ccgt.depreciation.foo')
 
+    def test_get_option_specify_default_inexistent(self):
+        model = common.simple_model()
+        assert model.get_option('ccgt.depreciation.foo',
+                                default='ccgt.depreciation.plant_life') == 25
+
+    def test_get_option_specify_default_exists_but_false(self):
+        model = common.simple_model()
+        assert model.get_option('ccgt.constraints.e_eff_ref',
+                                default='ccgt.depreciation.plant_life') is False
+
     def test_get_option_location(self):
         model = common.simple_model()
         assert model.get_option('ccgt.constraints.e_cap_max', 'demand') == 50
