@@ -157,24 +157,6 @@ class TimeSummarizer(object):
         df = df[df.summarize < 2]
         data['time_res_series'] = df['time_res']
 
-    def _reduce_weighted_average(self, target, weight):
-        """Custom weighted average using ``weight``.
-
-        NB: Currently non-functional and not used.
-
-        """
-        df = target.reindex(self.new_index)
-        for i in range(len(df)):
-            weighted = 0
-            for j in range(self.resolution):
-                weighted += (weight.iloc[i*self.resolution+j, :]
-                             * target.iloc[i*self.resolution+j, :])
-            weighted = weighted / weight.iloc[i*self.resolution:i*self.resolution+self.resolution, :].sum()
-            weighted[weighted.isnull()] = 0
-            df.iloc[i, :] = weighted
-        target = df
-        return target
-
     def _infinity_test(self, df):
         return (df.sum(axis=0) == np.inf).all()
         # The above approach wouldn't work in a df with mixed inf and non-inf
