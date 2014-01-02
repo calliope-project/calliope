@@ -34,13 +34,15 @@ Node energy balance
 Each node, that is, combination of location and technology, has the following energy balance variables:
 
 * ``s(y, x, t)``: storage level
-* ``rs(y, x, t)``: resource to storage (+ production, - consumption)
-* ``rss(y, x, t)``: secondary resource to storage (+ production, - consumption)
-* ``os(y, x, t)``: storage to overflow (+ dissipation, - shortfall)
-* ``es(c, y, x, t)``: storage to carrier (+ supply, - demand)
-* ``e(c, y, x, t)``: carrier to grid (+ supply, - demand)
+* ``rs(y, x, t)``: resource to/from storage (+ production, - consumption)
+* ``rsecs(y, x, t)``: secondary resource to/from storage (+ production, - consumption)
+* ``os(y, x, t)``: storage to/from overflow (+ dissipation, - shortfall)
+* ``e(c, y, x, t)``: carrier to/from grid (+ supply, - demand)
+* ``es(c, y, x, t)``: storage to/from carrier (+ supply, - demand)
 
-and the following capacity variables:
+Internally, ``e`` and ``es`` are split into two variables, for the positive and negative components.
+
+It also defines the following capacity variables:
 
 * ``s_cap(y, x)``: installed storage capacity
 * ``r_cap(y, x)``: installed resource to storage conversion capacity
