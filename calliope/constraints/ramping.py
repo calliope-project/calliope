@@ -21,24 +21,24 @@ def ramping_rate(model):
 
     # Constraint rules
     def _ramping_rule(m, y, x, t, direction):
-        try:
-            # e_ramping: Ramping rate [fraction of installed capacity per hour]
-            ramping_rate = model.get_option(y + '.constraints.e_ramping')
-        except KeyError:
+        # e_ramping: Ramping rate [fraction of installed capacity per hour]
+        ramping_rate = model.get_option(y + '.constraints.e_ramping',
+                                        default=False)
+        if ramping_rate is False:
             # If the technology defines no `e_ramping`, we don't build a
             # ramping constraint for it!
             return cp.Constraint.NoConstraint
-        # If there was no KeyError, we build and return a constraint
-        if m.t.order_dict[t] <= 1:
-            return cp.Constraint.NoConstraint
         else:
-            carrier = model.get_option(y + '.carrier')
-            diff = m.e[carrier, y, x, t] - m.e[carrier, y, x, model.prev(t)]
-            max_ramping_rate = ramping_rate * m.time_res[t] * m.e_cap[y, x]
-            if direction == 'up':
-                return diff <= max_ramping_rate
+            if m.t.order_dict[t] <= 1:
+                return cp.Constraint.NoConstraint
             else:
-                return -1 * max_ramping_rate <= diff
+                carrier = model.get_option(y + '.carrier')
+                diff = m.e[carrier, y, x, t] - m.e[carrier, y, x, model.prev(t)]
+                max_ramping_rate = ramping_rate * m.time_res[t] * m.e_cap[y, x]
+                if direction == 'up':
+                    return diff <= max_ramping_rate
+                else:
+                    return -1 * max_ramping_rate <= diff
 
     def c_ramping_up_rule(m, y, x, t):
         return _ramping_rule(m, y, x, t, direction='up')

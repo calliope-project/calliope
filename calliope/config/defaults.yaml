@@ -35,6 +35,7 @@ techs:
             e_eff_ref: false  # Currently only used to calculate storage size based on a given storage time. If set to false, e_eff is used for that instead.
             e_cap_max: 0  # Maximum turbine size [kWe]
             e_can_be_negative: false
+            e_ramping:  false # Ramping rate [fraction of installed capacity per hour], set to false to disable
         costs:  # All costs should be set to 0 by default
             default:  # The default is looked up for any value not defined for a specific cost class
                 s_cap: 0  # Cost of storage [USD/kWht]

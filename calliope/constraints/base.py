@@ -24,14 +24,14 @@ def node_energy_balance(model):
     Defines variables:
 
     * s: storage level
-    * rs: resource <-> storage
+    * rs: resource <-> storage (+ production, - consumption)
     * rsecs: secondary resource <-> storage
+    * os: storage <-> overflow (+ dissipation, - shortfall)
     * e: carrier <-> grid (positive: to grid, negative: from grid)
     * e_prod: carrier -> grid (always positive)
     * e_con: carrier <- grid (always negative)
     * es_prod: storage -> carrier (always positive)
     * es_con: storage <- carrier (always negative)
-    * os: storage <-> overflow
     * r_area: resource collector area
 
     """
@@ -42,12 +42,12 @@ def node_energy_balance(model):
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.rsecs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e = cp.Var(m.c, m.y, m.x, m.t, within=cp.Reals)
     m.e_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
     m.es_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.es_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
-    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.r_area = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
@@ -166,9 +166,9 @@ def node_constraints_build(model):
 
     def c_r_cap_rule(m, y, x):
         r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
-        if model.mode == 'plan' or np.isinf(r_cap_max):
-            # We take this constraint even in operate mode, if r_cap_max
-            # is set to infinite!
+        if np.isinf(r_cap_max):
+            return cp.Constraint.NoConstraint
+        if model.mode == 'plan':
             return m.r_cap[y, x] <= r_cap_max
         elif model.mode == 'operate':
             return m.r_cap[y, x] == r_cap_max
@@ -187,7 +187,9 @@ def node_constraints_build(model):
         # First check whether this tech is allowed at this location
         if not d.locations.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
-        elif model.mode == 'plan' or np.isinf(e_cap_max):
+        elif np.isinf(e_cap_max):
+            return cp.Constraint.NoConstraint
+        elif model.mode == 'plan':
             # We take this constraint even in operate mode, if e_cap_max
             # is set to infinite!
             return m.e_cap[y, x] <= e_cap_max
