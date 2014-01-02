@@ -44,7 +44,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Calliope'
-copyright = u'2013, Stefan Pfenninger'
+copyright = u'2013, Stefan Pfenninger (Apache 2.0 licensed)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -248,3 +248,16 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+
+#
+# Remove module docstrings from autodoc
+#
+
+def remove_module_docstring(app, what, name, obj, options, lines):
+    if what == "module":
+        del lines[:]
+
+
+def setup(app):
+    app.connect("autodoc-process-docstring", remove_module_docstring)

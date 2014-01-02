@@ -1,5 +1,12 @@
 """
-Functions to deal with transmission between locations
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+transmission.py
+~~~~~~~~~~~~~~~
+
+Functions to deal with transmission between locations.
+
 """
 
 from __future__ import print_function

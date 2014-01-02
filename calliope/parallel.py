@@ -1,3 +1,15 @@
+"""
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+parallel.py
+~~~~~~~~~~~
+
+Defines the Parallelizer class which manages the creation of arbitrary
+numbers of scripted runs, either locally or to be deployed to a cluster.
+
+"""
+
 from __future__ import print_function
 from __future__ import division
 

@@ -1,3 +1,15 @@
+"""
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+time_masks.py
+~~~~~~~~~~~~~
+
+Defines time masks to be used with TimeSummarizer in time.py.
+
+"""
+
+
 from __future__ import print_function
 from __future__ import division
 

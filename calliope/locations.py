@@ -1,5 +1,12 @@
 """
-Functions to deal with locations and their configuration
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+locations.py
+~~~~~~~~~~~~
+
+Functions to deal with locations and their configuration.
+
 """
 
 from __future__ import print_function

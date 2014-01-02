@@ -11,6 +11,7 @@ Release History
 * Ability to arbitrarily nest model configuration files with ``import`` statements
 * Cleared up terminology (nodes vs locations)
 * Improved documentation
+* Apache 2.0 licensed
 * Other improvements
 
 0.1.0 (2013-12-10)
