@@ -1,3 +1,15 @@
+"""
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+techs.py
+~~~~~~~~
+
+Basic Technology class and additional custom classes for technologies to
+perform custom initialization tasks during model initialization.
+
+"""
+
 from __future__ import print_function
 from __future__ import division
 

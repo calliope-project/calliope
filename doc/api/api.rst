@@ -18,23 +18,23 @@ Constraints
 .. automodule:: calliope.constraints.ramping
     :members:
 
-Utilities
-=========
+AttrDict
+========
 
-.. automodule:: calliope.utils
+.. autoclass:: calliope.utils.AttrDict
     :members:
 
-Parallelization
-===============
+Parallelizer and parallel_tools
+===============================
 
 .. autoclass:: calliope.Parallelizer
     :members:
 
 .. automodule:: calliope.parallel_tools
-    :members:
+    :members: read_dir, reshape_results
 
-Time
-===============
+TimeSummarizer
+==============
 
 .. autoclass:: calliope.TimeSummarizer
     :members:

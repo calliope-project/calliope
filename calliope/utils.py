@@ -1,3 +1,15 @@
+"""
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+utils.py
+~~~~~~~~
+
+Various utility functions, particularly the AttrDict class (a subclass
+of regular dict) used for managing model configuration.
+
+"""
+
 from __future__ import print_function
 from __future__ import division
 

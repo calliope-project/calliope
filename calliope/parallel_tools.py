@@ -1,3 +1,14 @@
+"""
+Copyright (C) 2013 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+parallel_tools.py
+~~~~~~~~~~~~~~~~~
+
+Functions to process results from parallel runs created by parallel.py.
+
+"""
+
 from __future__ import print_function
 from __future__ import division
 
