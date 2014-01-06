@@ -32,3 +32,8 @@ Documentation
 -------------
 
 See the documentation for more information.
+
+License
+-------
+
+Copyright 2013 Stefan Pfenninger and released under an `Apache 2.0 <https://www.apache.org/licenses/LICENSE-2.0>`_ license.

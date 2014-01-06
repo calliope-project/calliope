@@ -123,13 +123,19 @@ The variable :math:`r_{s}(y, x, t)` is constrained to remain within :math:`r_{ca
 
    r_{s}(y, x, t) \geq -1 \times timeres(t) \times (r_{cap}(y, x) / r_{eff}(y))
 
-:math:`e_{s}(c, y, x, t)` is constrained by two equations:
+:math:`e_{s}(c, y, x, t)` is constrained by
 
 .. math::
 
    e_{s,prod}(c, y, x, y) \leq timeres(t) \times (e_{cap}(y, x) / e_{eff,ref}(y, x))
 
 if ``c`` is the ``carrier`` of ``y``, else :math:`e_{s,prod}(c, y, x, y) = 0`.
+
+If ``e_cap_min_use`` is defined, the minimum output is constrained by
+
+.. math::
+
+   e_{s,prod}(c, y, x, y) \geq timeres(t) \times (e_{cap}(y, x) / e_{eff,ref}(y, x)) \times e_{cap,minuse}
 
 Analogous to the above, if ``c`` is the ``carrier`` of ``y``, and if ``e_can_be_negative`` is true, then
 
