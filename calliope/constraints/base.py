@@ -365,6 +365,7 @@ def node_costs(model):
         carrier = model.get_option(y + '.carrier')
         return (m.cost_op[y, x, k] ==
                 _cost('om_frac', y, k) * m.cost_con[y, x, k]
+                + _cost('om_fixed', y, k) * m.e_cap[y, x]
                 + _cost('om_var', y, k) * sum(m.e_prod[carrier, y, x, t]
                                               for t in m.t)
                 + _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))

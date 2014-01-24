@@ -17,7 +17,6 @@ opmode:
 
 techs:
     defaults:
-        source_carrier:
         constraints:
             force_r: false
             r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
@@ -44,6 +43,7 @@ techs:
                 r_cap: 0  # Cost of tower and receiver [EUR/kWt]
                 e_cap: 0  # Cost of power block [USD/kWe]
                 om_frac: 0  # Yearly O&M costs [fraction of total investment]
+                om_fixed: 0  # Yearly O&M costs [USD/kW installed capacity]
                 om_var: 0  # Variable O&M costs [USD/kWhe]
                 om_fuel: 0  # Fuel costs [USD/kWht]
         depreciation:  # Capital depreciation settings
