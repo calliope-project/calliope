@@ -46,7 +46,7 @@ Finally, in all other cases, two stages apply: first, :math:`r_{avail}` is deter
 
 .. math::
 
-   r_{avail} = r(y, x, t) * r_{scale}(y) * r_{area}(y) * r_{eff}(y)
+   r_{avail} = r(y, x, t) \times r_{scale}(y) \times r_{area}(y) \times r_{eff}(y)
 
 Then, one of the following three constraints are applied:
 
@@ -82,7 +82,7 @@ with :math:`s_{minusone}` defined as follows:
 
    .. math::
 
-      s_{minus one} = 1 - s_{loss}(y)^{timeres(t-1)} * s(y, x, t-1)
+      s_{minus one} = 1 - s_{loss}(y)^{timeres(t-1)} \times s(y, x, t-1)
 
    :math:`timeres(t)` returns the time step resolution of the given :math:`t`.
 * Finally, if the current ``t`` is the first ``t``, :math:`s_{minus one}` is initialized with either the value given in ``s_init(y, x)`` or in operation mode, with ``s_init`` carried over from a previous optimization period.
@@ -202,12 +202,13 @@ Costs are split up into construction and operation costs:
    cost(y, x, k) = cost_{con}(y, x, k) + cost_{op}(y, x, k)
 
    cost_{con}(y, x, k) &= d(y, k) \times \frac{\sum_t timeres(t)}{8760} \\
-   & \times (cost_{s\_cap}(y, k) * s_{cap}(y, x) \\
-   & + cost_{r\_cap}(y, k) * r_{cap}(y, x) \\
-   & + cost_{r\_area}(y, k) * r_{area}(y, x) \\
-   & + cost_{e\_cap}(y, k) * e_{cap}(y, x))
+   & \times (cost_{s\_cap}(y, k) \times s_{cap}(y, x) \\
+   & + cost_{r\_cap}(y, k) \times r_{cap}(y, x) \\
+   & + cost_{r\_area}(y, k) \times r_{area}(y, x) \\
+   & + cost_{e\_cap}(y, k) \times e_{cap}(y, x))
 
    cost_{op}(y, x, k) &= cost_{om\_frac}(y, k) \times cost_{con}(y, x, k) \\
+   & + cost_{om\_fixed}(y, k) \times e_{cap}(y, x) \\
    & + cost_{om\_var}(y, k) \times \sum_t e_{prod}(c, y, x, t) \\
    & + cost_{om\_fuel}(y, k) \times \sum_t r_{s}(y, x, t)
 
