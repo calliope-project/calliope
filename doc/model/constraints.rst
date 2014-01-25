@@ -108,7 +108,7 @@ If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) =
 
 In the case of both ``r_cap`` and ``e_cap``, if the respective ``cap_max`` option has been set to infinite, no constraint at all is set up rather than the equations given above.
 
-In operation mode, the :math:`\leq` turns into an equality, so that the first equation reads :math:`s_{cap}(y, x) = s_{cap,max}(y, x)`, and the others are modified analogously.
+In operation mode, the :math:`\leq` turns into an equality, so that the first equation reads :math:`s_{cap}(y, x) = s_{cap,max}(y, x)`, and the others are modified analogously. This also applies to :math:`e_{cap,max}(y, x)` if ``e_cap_max_force`` is set to ``true`` for the given technology and location.
 
 Node operational constraints
 ----------------------------

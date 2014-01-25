@@ -190,9 +190,10 @@ def node_constraints_build(model):
         elif np.isinf(e_cap_max):
             return cp.Constraint.NoConstraint
         elif model.mode == 'plan':
-            # We take this constraint even in operate mode, if e_cap_max
-            # is set to infinite!
-            return m.e_cap[y, x] <= e_cap_max
+            if model.get_option(y + '.constraints.e_cap_max_force', x=x):
+                return m.e_cap[y, x] == e_cap_max
+            else:
+                return m.e_cap[y, x] <= e_cap_max
         elif model.mode == 'operate':
             return m.e_cap[y, x] == e_cap_max
 
