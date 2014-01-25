@@ -30,10 +30,11 @@ techs:
             s_init: 0  # Initial storage level [kWht]
             s_cap_max: 0  # Maximum storage size [kWht]
             s_loss: 0  # Storage heat loss rate [per hour]
+            e_can_be_negative: false
             e_eff: 1.0
             e_eff_ref: false  # Currently only used to calculate storage size based on a given storage time. If set to false, e_eff is used for that instead.
             e_cap_max: 0  # Maximum turbine size [kWe]
-            e_can_be_negative: false
+            e_cap_max_force: false  # If true, force e_cap to equal e_cap_max
             e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum capacity use for production technologies
             e_ramping:  false  # Ramping rate [fraction of installed capacity per hour], set to false to disable
         costs:  # All costs should be set to 0 by default
