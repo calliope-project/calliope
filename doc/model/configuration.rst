@@ -81,7 +81,7 @@ Locations can be given as a single location (e.g., ``location0``), a range of in
    *Only* the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
 
    * x_map
-   * constraints: r, r_eff, e_eff, r_scale_to_peak, s_cap_max, s_init, r_cap_max, r_area_max, e_cap_max
+   * constraints: r, r_eff, e_eff, r_scale_to_peak, s_cap_max, s_init, r_cap_max, r_area_max, e_cap_max, e_cap_max_force
 
 All locations are created equal, but the balancing constraint looks at a location's level to decide which locations to consider in balancing supply and demand. Currently, balancing of supply and demand takes place at level 1 only. In order for a location at level 0 to be included in the system-wide energy balance, it must therefore be assigned to a parent location at level 1. Transmission is *loss-free* within a location, between locations at level 0, and from locations at level 0 to locations at level 1. Transmission is only possible between locations at level 1 if a transmission link has been defined between them. Losses in these transmission links are as defined for the specified transmission technology.
 

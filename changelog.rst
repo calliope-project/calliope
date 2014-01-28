@@ -9,6 +9,8 @@ Release History
 * Added energy carriers with a new set ``c``
 * Added conversion technologies
 * Ability to arbitrarily nest model configuration files with ``import`` statements
+* Added additional constraints: ``om_fixed``, ``e_cap_max``, ``cf_max``
+* Improved configuration handling
 * Cleared up terminology (nodes vs locations)
 * Improved documentation
 * Apache 2.0 licensed
