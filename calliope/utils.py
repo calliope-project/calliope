@@ -16,6 +16,7 @@ from __future__ import division
 from contextlib import contextmanager
 from cStringIO import StringIO
 from functools import partial
+import os
 import yaml
 
 
@@ -55,16 +56,26 @@ class AttrDict(dict):
                 self.set_key(k, v)
 
     @classmethod
-    def from_yaml(cls, f):
+    def from_yaml(cls, f, resolve_imports=True):
         """Returns an AttrDict initialized from the given path or
         file object ``f``, which must point to a YAML file.
+
+        If ``resolve_imports`` is True, ``import:`` statements are
+        resolved recursively, else they are treated like any other key.
 
         """
         if isinstance(f, str):
             with open(f, 'r') as src:
-                return cls(yaml.load(src))
+                loaded = cls(yaml.load(src))
         else:
-            return cls(yaml.load(f))
+            loaded = cls(yaml.load(f))
+        if resolve_imports and 'import' in loaded:
+            for k in loaded['import']:
+                imported = cls.from_yaml(_resolve_path(f, k))
+                loaded.union(imported)
+            # 'import' key no longer needed, so we drop it
+            loaded.pop('import', None)
+        return loaded
 
     @classmethod
     def from_yaml_string(cls, string):
@@ -168,15 +179,20 @@ class AttrDict(dict):
                 keys.append(k)
         return sorted(keys)
 
-    def union(self, other):
+    def union(self, other, allow_override=False):
         """
         Merges the AttrDict in-place with the passed ``other`` dict or
         AttrDict. Keys in ``other`` take precedence, and nested keys
-        are properly handled.
+        are properly handled. If ``allow_override`` is False, a
+        KeyError is raised if other tries to redefine an already
+        defined key.
 
         """
         for k in other.keys_nested():
-            self.set_key(k, other.get_key(k))
+            if not allow_override and k in self.keys_nested():
+                raise KeyError('Key defined twice: {}'.format(k))
+            else:
+                self.set_key(k, other.get_key(k))
 
 
 @contextmanager
@@ -264,3 +280,11 @@ def replace(string, placeholder, replacement):
     for p in placeholders:
         string = string.replace(p, replacement)
     return string
+
+
+def _resolve_path(base_path, path):
+    path = replace(path, placeholder='module',
+                   replacement=os.path.dirname(__file__))
+    if not os.path.isabs(path):
+        path = os.path.join(os.path.dirname(base_path), path)
+    return path

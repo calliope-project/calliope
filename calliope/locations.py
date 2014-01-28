@@ -14,6 +14,8 @@ from __future__ import division
 
 import pandas as pd
 
+from . import utils
+
 
 def _generate_location(location, items, techs):
     """
@@ -60,7 +62,7 @@ def explode_locations(k):
         if '--' in sk:
             begin, end = sk.split('--')
             finalkeys += [str(i).strip()
-                          for i in range(int(begin), int(end)+1)]
+                          for i in range(int(begin), int(end) + 1)]
         else:
             finalkeys += [sk.strip()]
     if finalkeys == [] or finalkeys == ['']:
@@ -68,16 +70,27 @@ def explode_locations(k):
     return finalkeys
 
 
-def get_locations(d):
-    """ Return a list of all locations in the given dictionary, expanding
-    locations in compact representation (such as '1--10') as needed.
+def process_locations(d):
+    """
+    Process locations by taking an AttrDict that may include compat keys
+    such as ``1,2,3``, and returning an AttrDict with exactly one key per
+    location with all of its settings.
 
     """
-    l = []
-    for k in d.keys():
-        k = explode_locations(k)
-        l.extend(k)
-    return l
+    def _set_loc_key(d, k, value):
+        if k in d:
+            d[k].union(value)
+        else:
+            d[k] = value
+    result = utils.AttrDict()
+    for key in d:
+        if '--' in key or ',' in key:
+            key_locs = explode_locations(key)
+            for subkey in key_locs:
+                _set_loc_key(result, subkey, d[key])
+        else:
+            _set_loc_key(result, key, d[key])
+    return result
 
 
 def generate_location_matrix(d, techs):
@@ -91,12 +104,7 @@ def generate_location_matrix(d, techs):
     """
     rows = []
     for k, v in d.iteritems():
-        if '--' in k or ',' in k:
-            alllocations = explode_locations(k)
-            for n in alllocations:
-                rows.append(_generate_location(n, v, techs))
-        else:
-            rows.append(_generate_location(k, v, techs))
+        rows.append(_generate_location(k, v, techs))
     df = pd.DataFrame.from_records(rows)
     df.index = df._location
     df = df.drop(['_location'], axis=1)
