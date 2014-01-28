@@ -17,6 +17,7 @@ opmode:
 
 techs:
     defaults:
+        source_carrier:  # Defaults to empty/none, but allows technologies to define a carrier to consume
         constraints:
             force_r: false
             r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]

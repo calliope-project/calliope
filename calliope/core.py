@@ -272,10 +272,10 @@ class Model(object):
             adjustment = self.get_timeres()
         else:
             adjustment = 1
-        if peak < df.min():
-            scale = df.min()
+        if peak < float(df.min()):
+            scale = float(df.min())
         else:
-            scale = df.max()
+            scale = float(df.max())
         return (df / scale) * peak * adjustment
 
     def initialize_sets(self):
