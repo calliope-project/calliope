@@ -145,7 +145,7 @@ def node_constraints_build(model):
 
     * s_cap: installed storage capacity
     * r_cap: installed resource <-> storage conversion capacity
-    * e_cap: installed storage <-> electricity conversion capacity
+    * e_cap: installed storage <-> grid conversion capacity
 
     """
     m = model.m
@@ -218,14 +218,6 @@ def node_constraints_operational(model):
         return (m.rs[y, x, t] >=
                 -1 * m.time_res[t]
                 * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
-
-    def c_es_prod_max_rule(m, c, y, x, t):
-        if c == model.get_option(y + '.carrier'):
-            return (m.es_prod[c, y, x, t] <=
-                    m.time_res[t]
-                    * (m.e_cap[y, x] / model.get_eff_ref('e', y, x)))
-        else:
-            return m.es_prod[c, y, x, t] == 0
 
     def c_es_prod_max_rule(m, c, y, x, t):
         if c == model.get_option(y + '.carrier'):
@@ -375,6 +367,30 @@ def node_costs(model):
     m.c_cost = cp.Constraint(m.y, m.x, m.k)
     m.c_cost_con = cp.Constraint(m.y, m.x, m.k)
     m.c_cost_op = cp.Constraint(m.y, m.x, m.k)
+
+
+def capacity_factor(model):
+    """Depends on: """
+    m = model.m
+
+    # Variables
+    m.cf_prod = cp.Var(m.c, m.y, m.x, within=cp.NonNegativeReals)
+
+    # Constraint rules
+    def c_cf_prod_definition_rule(m, c, y, x):
+        return m.cf_prod[c, y, x] == (sum(m.e_prod[c, y, x, t] for t in m.t)
+                                      / (m.e_cap[y, x]
+                                         * sum(m.time_res[t] for t in m.t)))
+
+    def c_cf_prod_max_rule(m, c, y, x):
+        if model.get_option(y + '.cf_max'):
+            return m.cf_prod[c, y, x] <= model.get_option(y + '.cf_max')
+        else:
+            return cp.Constraint.NoConstraint
+
+    # Constraints
+    m.cf_prod_definition = cp.Constraint(m.c, m.y, m.x)
+    m.cf_prod_max = cp.Constraint(m.c, m.y, m.x)
 
 
 def model_constraints(model):
