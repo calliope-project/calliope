@@ -165,10 +165,17 @@ class TestAttrDict:
     def test_union(self, attr_dict):
         d = attr_dict
         d_new = utils.AttrDict()
-        d_new.set_key('c.z.II', 'foo')
+        d_new.set_key('c.z.III', 'foo')
         d.union(d_new)
-        assert d.c.z.II == 'foo'
+        assert d.c.z.III == 'foo'
         assert d.c.z.I == 1
+
+    def test_union_duplicate_keys(self, attr_dict):
+        d = attr_dict
+        d_new = utils.AttrDict()
+        d_new.set_key('c.z.II', 'foo')
+        with pytest.raises(KeyError):
+            d.union(d_new)
 
 
 class TestCaptureOutput:

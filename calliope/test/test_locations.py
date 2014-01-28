@@ -72,6 +72,19 @@ class TestLocations:
         """)
         return utils.AttrDict.from_yaml(setup)
 
+    @pytest.fixture
+    def sample_overlapping_locations(self):
+        setup = StringIO.StringIO("""
+        1,2,3:
+            level: 1
+            within:
+            techs: ['foo']
+        1:
+            override:
+                bar: baz
+        """)
+        return utils.AttrDict.from_yaml(setup)
+
     def test_generate_location(self, sample_locations):
         location = 'test'
         items = sample_locations[location]
@@ -127,12 +140,18 @@ class TestLocations:
         with pytest.raises(AssertionError):
             assert locations.explode_locations(['a', 'b'])
 
-    def test_get_locations(self, sample_unexploded_locations):
-        results = locations.get_locations(sample_unexploded_locations)
-        print(sorted(results))
-        assert sorted(results) == ['1', '10', '10-20', '11', '12', '13', '14',
-                                   '15', '2', '21', '22', '23', '25', '3',
-                                   'a', 'b', 'c', 'x', 'y', 'z']
+    def test_process_locations(self, sample_unexploded_locations):
+        fixture = sample_unexploded_locations
+        o = locations.process_locations(fixture)
+        assert '10' in o
+        assert 'x' in o
+        assert len(o.keys()) == 20
+
+    def test_process_locations_overlap(self, sample_overlapping_locations):
+        fixture = sample_overlapping_locations
+        o = locations.process_locations(fixture)
+        assert o['1'].level == 1
+        assert o['1'].override.bar == 'baz'
 
     def test_generate_location_matrix_cols(self, sample_locations):
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp']
