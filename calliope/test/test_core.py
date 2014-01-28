@@ -74,36 +74,36 @@ class TestInitialization:
     def test_scale_to_peak_positive(self, sine_wave):
         model = common.simple_model()
         scaled = model.scale_to_peak(sine_wave, 100)
-        assert_almost_equal(scaled.max(), 100, tolerance=0.01)
-        assert_almost_equal(scaled.min(), 50, tolerance=0.01)
+        assert_almost_equal(float(scaled.max()), 100, tolerance=0.01)
+        assert_almost_equal(float(scaled.min()), 50, tolerance=0.01)
 
     def test_scale_to_peak_negative(self, sine_wave):
         model = common.simple_model()
         df = sine_wave * -1
         scaled = model.scale_to_peak(df, -100)
-        assert_almost_equal(scaled.max(), -50, tolerance=0.01)
-        assert_almost_equal(scaled.min(), -100, tolerance=0.01)
+        assert_almost_equal(float(scaled.max()), -50, tolerance=0.01)
+        assert_almost_equal(float(scaled.min()), -100, tolerance=0.01)
 
     def test_scale_to_peak_scale_time_res_true(self, sine_wave):
         path = common._add_test_path('common/t_6h')
         model = common.simple_model(path=path)
         scaled = model.scale_to_peak(sine_wave, 100)
-        assert_almost_equal(scaled.max(), 600, tolerance=0.1)
-        assert_almost_equal(scaled.min(), 300, tolerance=0.1)
+        assert_almost_equal(float(scaled.max()), 600, tolerance=0.1)
+        assert_almost_equal(float(scaled.min()), 300, tolerance=0.1)
 
     def test_scale_to_peak_scale_time_res_false(self, sine_wave):
         path = common._add_test_path('common/t_6h')
         model = common.simple_model(path=path)
         scaled = model.scale_to_peak(sine_wave, 100, scale_time_res=False)
-        assert_almost_equal(scaled.max(), 100, tolerance=0.1)
-        assert_almost_equal(scaled.min(), 50, tolerance=0.1)
+        assert_almost_equal(float(scaled.max()), 100, tolerance=0.1)
+        assert_almost_equal(float(scaled.min()), 50, tolerance=0.1)
 
     def test_scale_to_peak_positive_and_negative(self, sine_wave):
         model = common.simple_model()
         df = sine_wave - 6
         scaled = model.scale_to_peak(df, 10)
-        assert_almost_equal(scaled.max(), 10, tolerance=0.01)
-        assert_almost_equal(scaled.min(), -2.5, tolerance=0.01)
+        assert_almost_equal(float(scaled.max()), 10, tolerance=0.01)
+        assert_almost_equal(float(scaled.min()), -2.5, tolerance=0.01)
 
     def test_initialize_sets_timesteps(self):
         model = common.simple_model()
