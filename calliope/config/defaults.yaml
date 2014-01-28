@@ -30,6 +30,7 @@ techs:
             s_init: 0  # Initial storage level [kWht]
             s_cap_max: 0  # Maximum storage size [kWht]
             s_loss: 0  # Storage heat loss rate [per hour]
+            cf_max: false  # Maximum capacity factor, set to false to disable
             e_can_be_negative: false
             e_eff: 1.0
             e_eff_ref: false  # Currently only used to calculate storage size based on a given storage time. If set to false, e_eff is used for that instead.
