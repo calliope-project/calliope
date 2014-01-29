@@ -201,7 +201,7 @@ Costs are split up into construction and operation costs:
 
    cost(y, x, k) = cost_{con}(y, x, k) + cost_{op}(y, x, k)
 
-   cost_{con}(y, x, k) &= d(y, k) \times \frac{\sum_t timeres(t)}{8760} \\
+   cost_{con}(y, x, k) &= d(y, k) \times \frac{\sum\limits_t timeres(t)}{8760} \\
    & \times (cost_{s\_cap}(y, k) \times s_{cap}(y, x) \\
    & + cost_{r\_cap}(y, k) \times r_{cap}(y, x) \\
    & + cost_{r\_area}(y, k) \times r_{area}(y, x) \\
@@ -211,7 +211,6 @@ Costs are split up into construction and operation costs:
    & + cost_{om\_fixed}(y, k) \times e_{cap}(y, x) \\
    & + cost_{om\_var}(y, k) \times \sum_t e_{prod}(c, y, x, t) \\
    & + cost_{om\_fuel}(y, k) \times \sum_t r_{s}(y, x, t)
-
 
 Model constraints
 -----------------
@@ -247,7 +246,7 @@ Ramping
 
 Provided by: :func:`calliope.constraints.ramping.ramping_rate`
 
-Constraints the rate at which plants can adjust their output, for technologies that define ``constraints.e_ramping``:
+Constrains the rate at which plants can adjust their output, for technologies that define ``constraints.e_ramping``:
 
 .. math::
 
@@ -258,6 +257,25 @@ Constraints the rate at which plants can adjust their output, for technologies t
    diff \leq maxrate
 
    diff \geq -1 \times max_ramping_rate
+
+Capacity factors
+----------------
+
+Provided by: :func:`calliope.constraints.capacity_factor.capacity_factor`
+
+These constraints allow plants to be forced to comply with a maximum capacity factor as defined by the setting ``cf_max``.
+
+The capacity factor (for energy production) is calculated as
+
+.. math::
+
+   cf_{prod}(c, y, x) = \frac{\sum\limits_t e_{prod}(c, y, x, t)}{e_{cap}(y, x) \times \sum\limits_t timeres(t)}
+
+If a ``cf_max`` setting exists for the given technology, the following constraint is applied to ``cf_prod``:
+
+.. math::
+
+   cf_{prod}(c, y, x) \leq cf_{max}(y)
 
 ----------------------------
 Loading optional constraints
