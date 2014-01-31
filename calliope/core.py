@@ -30,6 +30,18 @@ from . import transmission
 from . import utils
 
 
+def _expand_module_placeholder(s):
+    return utils.replace(s, placeholder='module',
+                         replacement=os.path.dirname(__file__))
+
+
+def _ensure_absolute(path, config_run):
+    if not os.path.isabs(path) and isinstance(config_run, str):
+        return os.path.join(os.path.dirname(config_run), path)
+    else:
+        return path
+
+
 class Model(object):
     """
     Calliope: a multi-scale energy systems (MUSES) modeling framework
@@ -80,23 +92,21 @@ class Model(object):
             assert isinstance(override, utils.AttrDict)
             for k in override.keys_nested():
                 cr.set_key(k, override.get_key(k))
-        # Get all 'input.' keys
-        input_keys = cr.input.keys()
+        # Ensure 'input.model' is a list
+        if not isinstance(cr.input.model, list):
+            cr.input.model = [cr.input.model]
         # Expand {{ module }} placeholder
-        for p in ['input.' + k for k in input_keys]:
-            cr.set_key(p, utils.replace(cr.get_key(p),
-                       placeholder='module',
-                       replacement=os.path.dirname(__file__)))
+        cr.input.model = [_expand_module_placeholder(i)
+                          for i in cr.input.model]
+        cr.input.path = _expand_module_placeholder(cr.input.path)
         # Interpret relative config paths as relative to run.yaml
-        for k in input_keys:
-            path = cr.input[k]
-            if not os.path.isabs(path) and isinstance(config_run, str):
-                cr.input[k] = os.path.join(os.path.dirname(config_run), path)
+        cr.input.model = [_ensure_absolute(i, config_run)
+                          for i in cr.input.model]
+        cr.input.path = _ensure_absolute(cr.input.path, config_run)
         # Load all model config files and combine them into one AttrDict
         o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                                   'defaults.yaml'))
-        for path in [cr.get_key('input.' + k) for k in input_keys
-                     if 'path' not in k]:
+        for path in cr.input.model:
             # The input files are allowed to override defaults
             o.union(utils.AttrDict.from_yaml(path), allow_override=True)
         # Override config_model settings if specified in config_run
@@ -737,7 +747,7 @@ class Model(object):
         if self.config_run.output.save is True:
             self.save_outputs()
 
-    def save_outputs(self):
+    def save_outputs(self, carrier='power'):
         """Save model outputs as CSV to ``self.config_run.output.path``"""
         locations = self.data.locations
         system_variables = self.get_system_variables()
@@ -745,12 +755,12 @@ class Model(object):
         node_variables = self.get_node_variables()
         costs = self.get_costs()
         output_files = {'locations.csv': locations,
-                        'system_variables.csv': system_variables,
+                        'system_variables.csv': system_variables[carrier],
                         'node_parameters.csv': node_parameters.to_frame(),
                         'costs_lcoe.csv': costs.lcoe,
                         'costs_cf.csv': costs.cf}
         for var in node_variables.labels:
-            k = 'node_variables_{}.csv'.format(var)
+            k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
             v = node_variables[var].to_frame()
             output_files[k] = v
         # Create output dir, but ignore if it already exists

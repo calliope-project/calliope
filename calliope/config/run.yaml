@@ -18,7 +18,7 @@ mode: plan  # Choices: plan, operate
 
 parallel:  # Options apply if mode is parallel
     name: example-model  # Name of this run
-    environment: local  # Choices: local, bsub, qsub
+    environment: bsub  # Choices: bsub, qsub
     style: single  # Choices: single, array
     additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
     iterations:  # Give iterations  as `parameter: [values]` entries

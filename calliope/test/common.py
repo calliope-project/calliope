@@ -31,9 +31,7 @@ def simple_model(config_model=None, config_techs=None, config_locations=None,
         config_run = """
         mode: plan
         input:
-            model: '{model}'
-            techs: '{techs}'
-            locations: '{locations}'
+            model: ['{model}', '{techs}', '{locations}']
             path: '{path}'
         output:
             save: false
