@@ -37,12 +37,19 @@ class TestLocations:
     def sample_unexploded_locations(self):
         setup = StringIO.StringIO("""
         1,2,3:
+            foo:
         a,b,c:
+            foo:
         10--15:
+            foo:
         10-20:
+            foo:
         21--23,25,z:
+            foo:
         x:
+            foo:
         y:
+            foo:
         """)
         return utils.AttrDict.from_yaml(setup)
 
