@@ -31,8 +31,7 @@ class TestModel:
         config_run = """
             mode: plan
             input:
-                techs: {techs}
-                locations: {locations}
+                model: [{techs}, {locations}]
                 path: '{path}'
             output:
                 save: false

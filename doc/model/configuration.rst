@@ -6,25 +6,26 @@ Model definition and configuration
 A model run consists of the *run settings* and the associated *model definition* (also referred to as the *model settings*). At its most basic, these two components are specified in just two YAML files:
 
 * ``run.yaml`` which sets up run-specific and environment-specific settings such as which solver to use. It must also, under ``input:``, define at least two directives:
-   1. the ``path:`` directive giving the directory with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`data`)
-   2. another directive with any name, usually ``model:``, giving the path to another YAML file containing the model definition (``model.yaml``).
+   1. the ``input.path:`` directive giving the directory with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`data`)
+   2. the ``input.model:`` directive, giving the path to another YAML file containing the model definition (``model.yaml``).
 * ``model.yaml`` which sets up the model and may import any number of additional files in order to split large models up into manageable units.
 
 Either of these files can have an arbitrary name, but for consistency we will refer to them as ``run.yaml`` (for the run settings) and ``model.yaml`` (for the model definition).
 
 There are two ways to split the model definition into several files:
 
-1. The ``input:`` directive in the run settings may give any number of additional files with any name (the only setting which has a fixed name is ``path:``). These will be loaded in the order in which they are specified. An example of this is:
+1. The ``input.model:`` directive in the run settings may either give a single file or a list of files with any name, which will be combined into on model initialization (so may not define the same setting twice). An example of this is:
 
 .. code-block:: yaml
 
    input:
       path: /path/to/data/directory
-      model: model.yaml  # Define general model settings
-      techs: techs.yaml   # Define technologies, their constraints and costs
-      locations: locations.yaml  # Define locations and transmission capacities
+      model:
+         - model.yaml  # Define general model settings
+         - techs.yaml   # Define technologies, their constraints and costs
+         - locations.yaml  # Define locations and transmission capacities
 
-2. Any of the model configuration files given in the ``input:`` directive may contain an ``import:`` statement, which is a list of paths to additional files to import. These additional files may each again contain an ``import:`` statement, allowing for arbitrarily complex nesting. The ``import:`` statement can either give an absolute path, a path relative to the importing file, or a path starting with ``{{ module }}``, which is a placeholder for the Calliope module's location (and thus useful to load included default configurations).
+2. Any of the model configuration files given in the ``input.model:`` directive may contain an ``import:`` statement, which is a list of paths to additional files to import. These additional files may each again contain an ``import:`` statement, allowing for arbitrarily complex nesting. The ``import:`` statement can either give an absolute path, a path relative to the importing file, or a path starting with ``{{ module }}``, which is a placeholder for the Calliope module's location (and thus useful to load included default configurations).
 
 ------------
 Run settings

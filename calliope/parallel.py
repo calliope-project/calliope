@@ -17,13 +17,12 @@ import argparse
 import copy
 import itertools
 import os
-import shutil
 import sys
 
+import numpy as np
 import pandas as pd
-import yaml
 
-from .core import Model
+from . import core
 from . import utils
 
 
@@ -45,9 +44,11 @@ class Parallelizer(object):
         self.target_dir = target_dir
 
     def generate_iterations(self):
-        iters = self.config.parallel.iterations
-        df = pd.DataFrame(list(itertools.product(*iters.values())),
-                          columns=iters.keys())
+        c = self.config.parallel.iterations
+        iter_keys = c.keys_nested()
+        iter_values = [c.get_key(i) for i in iter_keys]
+        df = pd.DataFrame(list(itertools.product(*iter_values)),
+                          columns=iter_keys)
         return df
 
     def _write_modelcommands(self, f, settings):
@@ -73,6 +74,33 @@ class Parallelizer(object):
         iterations.to_csv(os.path.join(out_dir, 'Output', 'iterations.csv'))
         parallel_f = os.path.join(out_dir, 'Output', 'parallel_settings.yaml')
         c.parallel.to_yaml(parallel_f)
+
+        #
+        # COMBINE ALL CONFIG INTO ONE FILE AND WRITE THAT TO out_dir
+        #
+        # TODO the following exactly mirrors code in core.py, should
+        # be broken out into a separate function (utils.py?)
+        #
+        # Ensure 'input.model' is a list
+        if not isinstance(c.input.model, list):
+            c.input.model = [c.input.model]
+        # Expand {{ module }} placeholder
+        c.input.model = [core._expand_module_placeholder(i)
+                         for i in c.input.model]
+        # Interpret relative config paths as relative to run.yaml
+        c.input.model = [core._ensure_absolute(i, self.config_file)
+                         for i in c.input.model]
+        # Load all model config files and combine them into one AttrDict
+        config_path = os.path.join(os.path.dirname(__file__), 'config')
+        o = utils.AttrDict.from_yaml(os.path.join(config_path,
+                                                  'defaults.yaml'))
+        for path in c.input.model:
+            # The input files are allowed to override defaults
+            o.union(utils.AttrDict.from_yaml(path), allow_override=True)
+        unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
+        o.to_yaml(os.path.join(unified_config_file))
+        c.input.model = 'model.yaml'
+
         #
         # SET UP ADDITIONAL FILES FOR ARRAY RUNS
         #
@@ -112,14 +140,19 @@ class Parallelizer(object):
         # Always make sure we are saving outputs from iterations!
         c.set_key('output.save', True)
         for row in iterations.iterrows():
-            iter_c = copy.copy(c)
+            iter_c = copy.copy(c)  # iter_c is this iteration's config
             # Generate configuration object
             index, item = row
             index_str = '{:0>4d}'.format(index)
             for k, v in item.to_dict().iteritems():
+                # Convert numpy dtypes to python ones, else YAML chokes
+                if isinstance(v, np.generic):
+                    v = np.asscalar(v)
                 iter_c.set_key(k, copy.copy(v))
-            # Set output dir in configuration object (NB: relative path!)
+            # Set output dir in configuration object, this is hardcoded
             iter_c.set_key('output.path', os.path.join('Output', index_str))
+            # Remove parallel key, not needed in individual files
+            del iter_c.parallel
             # Write configuration object to YAML file
             settings = 'settings_{}.yaml'.format(index_str)
             iter_c.to_yaml(os.path.join(out_dir, 'Runs', settings))
@@ -167,7 +200,7 @@ def main():
                              '(default: `runs`).')
     args = parser.parse_args(arguments)
     if args.single:
-        model = Model(config_run=args.settings)
+        model = core.Model(config_run=args.settings)
         model.run()
     else:
         parallelizer = Parallelizer(target_dir=args.dir,

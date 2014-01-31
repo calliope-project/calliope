@@ -120,8 +120,7 @@ class TestInitialization:
         config_run = """
                         mode: plan
                         input:
-                            techs: {techs}
-                            locations: {locations}
+                            model: [{techs}, {locations}]
                             path: '{path}'
                         output:
                             save: false
@@ -147,29 +146,27 @@ class TestInitialization:
         config_run = """
                         mode: plan
                         input:
-                            techs: {techs}
-                            locations: {locations}
+                            model: [{techs}, {locations}]
                             path: '{path}'
                         output:
                             save: false
                         subset_y: ['ccgt', 'demand_electricity']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt',  'demand_electricity']
+        assert sorted(model.data._y) == ['ccgt', 'demand_electricity']
 
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
                         mode: plan
                         input:
-                            techs: {techs}
-                            locations: {locations}
+                            model: [{techs}, {locations}]
                             path: '{path}'
                         output:
                             save: false
                         subset_y: ['ccgt', 'demand_electricity', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt',  'demand_electricity']
+        assert sorted(model.data._y) == ['ccgt', 'demand_electricity']
 
     def test_initialize_sets_carriers(self):
         model = common.simple_model()
@@ -185,8 +182,7 @@ class TestInitialization:
         config_run = """
                         mode: plan
                         input:
-                            techs: {techs}
-                            locations: {locations}
+                            model: [{techs}, {locations}]
                             path: '{path}'
                         output:
                             save: false
@@ -199,8 +195,7 @@ class TestInitialization:
         config_run = """
                         mode: plan
                         input:
-                            techs: {techs}
-                            locations: {locations}
+                            model: [{techs}, {locations}]
                             path: '{path}'
                         output:
                             save: false
