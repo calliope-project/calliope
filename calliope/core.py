@@ -87,6 +87,11 @@ class Model(object):
             cr.set_key(p, utils.replace(cr.get_key(p),
                        placeholder='module',
                        replacement=os.path.dirname(__file__)))
+        # Interpret relative config paths as relative to run.yaml
+        for k in input_keys:
+            path = cr.input[k]
+            if not os.path.isabs(path) and isinstance(config_run, str):
+                cr.input[k] = os.path.join(os.path.dirname(config_run), path)
         # Load all model config files and combine them into one AttrDict
         o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                                   'defaults.yaml'))
@@ -94,12 +99,15 @@ class Model(object):
                      if 'path' not in k]:
             # The input files are allowed to override defaults
             o.union(utils.AttrDict.from_yaml(path), allow_override=True)
-        self.config_model = o
         # Override config_model settings if specified in config_run
         if ('override' in cr
                 and isinstance(cr.override, utils.AttrDict)):
             for k in cr.override.keys_nested():
                 o.set_key(k, cr.override.get_key(k))
+        # Initialize locations
+        o.locations = locations.process_locations(o.locations)
+        # Store initialized configuration on model object
+        self.config_model = o
 
     def initialize_techs(self):
         """Perform any tech-specific setup by instantiating tech classes"""
@@ -197,8 +205,12 @@ class Model(object):
                 except KeyError:
                     if default:
                         result = _get_option(default)
+                    elif tech == 'default':
+                        raise KeyError('Reached top of inheritance chain '
+                                       'and no default defined.')
                     else:
-                        raise KeyError
+                        raise KeyError('Can not get parent for {} '
+                                       'and no default defined.'.format(tech))
             return result
 
         def _get_location_option(key, location):
@@ -297,9 +309,12 @@ class Model(object):
         d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
-        # Subset of transmission technologies (used below)
+        # Subset of transmission technologies, if any defined (used below)
         # (not yet added to d._y here)
-        d.transmission_y = transmission.get_transmission_techs(o.links)
+        if 'links' in o:
+            d.transmission_y = transmission.get_transmission_techs(o.links)
+        else:
+            d.transmission_y = []
         # Subset of conversion technologies
         # (already contained in d._y here but separated out as well)
         d.conversion_y = [y for y in d._y
@@ -309,14 +324,13 @@ class Model(object):
         #
         d._c = set()
         for y in d._y:  # Only add carriers for allowed technologies
-            d._c.update([o.techs[y].carrier])
-            if 'secondary_carrier' in o.techs[y]:
-                d._c.update([o.techs[y].secondary_carrier])
+            d._c.update([self.get_option(y + '.carrier')])
+            if self.get_option(y + '.source_carrier'):
+                d._c.update([self.get_option(y + '.source_carrier')])
         d._c = list(d._c)
         #
         # x: Locations set
         #
-        o.locations = locations.process_locations(o.locations)
         d._x = o.locations.keys()
         if self.config_run.get_key('subset_x', default=False):
             d._x = [x for x in d._x if x in self.config_run.subset_x]
@@ -327,25 +341,26 @@ class Model(object):
                                                          techs=d._y)
         # For simplicity, only keep the locations that are actually in set `x`
         d.locations = d.locations.ix[d._x, :]
-        # Add transmission technologies to y
-        d._y.extend(d.transmission_y)
-        # Add transmission tech columns to locations matrix
-        for y in d.transmission_y:
-            d.locations[y] = 0
-        # Create representation of location-tech links
-        tree = transmission.explode_transmission_tree(o.links, d._x)
-        # Populate locations matrix with allowed techs and overrides
-        if tree:
-            for x in tree:
-                for y in tree[x]:
-                    # Allow the tech
-                    d.locations.at[x, y] = 1
-                    # Add constraints if needed
-                    for c in tree[x][y].keys_nested():
-                        colname = '_override.' + y + '.' + c
-                        if not colname in d.locations.columns:
-                            d.locations[colname] = np.nan
-                        d.locations.at[x, colname] = tree[x][y].get_key(c)
+        # Add transmission technologies to y, if any defined
+        if d.transmission_y:
+            d._y.extend(d.transmission_y)
+            # Add transmission tech columns to locations matrix
+            for y in d.transmission_y:
+                d.locations[y] = 0
+            # Create representation of location-tech links
+            tree = transmission.explode_transmission_tree(o.links, d._x)
+            # Populate locations matrix with allowed techs and overrides
+            if tree:
+                for x in tree:
+                    for y in tree[x]:
+                        # Allow the tech
+                        d.locations.at[x, y] = 1
+                        # Add constraints if needed
+                        for c in tree[x][y].keys_nested():
+                            colname = '_override.' + y + '.' + c
+                            if not colname in d.locations.columns:
+                                d.locations[colname] = np.nan
+                            d.locations.at[x, colname] = tree[x][y].get_key(c)
         #
         # k: Cost classes set
         #

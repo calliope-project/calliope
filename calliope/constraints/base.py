@@ -86,7 +86,7 @@ def node_energy_balance(model):
             return m.rs[y, x, t] == 0
         else:
             r_avail = (this_r
-                       * model.get_option(y + '.constraints.r_scale')
+                       * model.get_option(y + '.constraints.r_scale', x=x)
                        * m.r_area[y, x]
                        * model.get_option(y + '.constraints.r_eff'))
             if model.get_option(y + '.constraints.force_r'):
