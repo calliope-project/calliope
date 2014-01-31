@@ -72,25 +72,29 @@ def explode_locations(k):
 
 def process_locations(d):
     """
-    Process locations by taking an AttrDict that may include compat keys
+    Process locations by taking an AttrDict that may include compact keys
     such as ``1,2,3``, and returning an AttrDict with exactly one key per
     location with all of its settings.
 
     """
     def _set_loc_key(d, k, value):
+        """Set key ``k`` in ``d`` to ``value```."""
         if k in d:
-            d[k].union(value)
+            try:
+                d[k].union(value)
+            except KeyError as e:
+                raise KeyError('Problem at location {}: {}'.format(k, str(e)))
         else:
             d[k] = value
-    result = utils.AttrDict()
+    loc_dict = utils.AttrDict()
     for key in d:
-        if '--' in key or ',' in key:
+        if ('--' in key) or (',' in key):
             key_locs = explode_locations(key)
             for subkey in key_locs:
-                _set_loc_key(result, subkey, d[key])
+                _set_loc_key(loc_dict, subkey, d[key].copy())
         else:
-            _set_loc_key(result, key, d[key])
-    return result
+            _set_loc_key(loc_dict, key, d[key].copy())
+    return loc_dict
 
 
 def generate_location_matrix(d, techs):

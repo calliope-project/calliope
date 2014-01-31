@@ -39,6 +39,10 @@ class AttrDict(dict):
         if isinstance(source_dict, dict):
             self.init_from_dict(source_dict)
 
+    def copy(self):
+        """Override copy method so that it returns an AttrDict"""
+        return AttrDict(dict(self).copy())
+
     def init_from_dict(self, d):
         """Initialize a new AttrDict from the given dict. Handles any
         nested dicts by turning them into AttrDicts too::

@@ -22,8 +22,7 @@ def ramping_rate(model):
     # Constraint rules
     def _ramping_rule(m, y, x, t, direction):
         # e_ramping: Ramping rate [fraction of installed capacity per hour]
-        ramping_rate = model.get_option(y + '.constraints.e_ramping',
-                                        default=False)
+        ramping_rate = model.get_option(y + '.constraints.e_ramping')
         if ramping_rate is False:
             # If the technology defines no `e_ramping`, we don't build a
             # ramping constraint for it!
