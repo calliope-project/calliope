@@ -184,6 +184,8 @@ def node_constraints_build(model):
 
     def c_e_cap_rule(m, y, x):
         e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
+        e_cap_max_scale = model.get_option(y + '.constraints.e_cap_max_scale',
+                                           x=x)
         # First check whether this tech is allowed at this location
         if not d.locations.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
@@ -191,11 +193,11 @@ def node_constraints_build(model):
             return cp.Constraint.NoConstraint
         elif model.mode == 'plan':
             if model.get_option(y + '.constraints.e_cap_max_force', x=x):
-                return m.e_cap[y, x] == e_cap_max
+                return m.e_cap[y, x] == e_cap_max * e_cap_max_scale
             else:
-                return m.e_cap[y, x] <= e_cap_max
+                return m.e_cap[y, x] <= e_cap_max * e_cap_max_scale
         elif model.mode == 'operate':
-            return m.e_cap[y, x] == e_cap_max
+            return m.e_cap[y, x] == e_cap_max * e_cap_max_scale
 
     # Constraints
     m.c_s_cap = cp.Constraint(m.y, m.x)
