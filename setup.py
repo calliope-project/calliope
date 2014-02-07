@@ -17,7 +17,7 @@ setup(
     install_requires=[
         "coopr >= 3.4.7842",
         "numpy >= 1.7.1",
-        "pandas >= 0.12.0",
+        "pandas >= 0.13.0",
         "pyyaml >= 3.10"
     ],
     entry_points={
