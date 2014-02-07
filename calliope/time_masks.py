@@ -36,8 +36,8 @@ def mask_where_zero(data, tech, var='r', locations=None):
     istart = 0
     end = False
     while not end:
-        ifrom = istart + df.summarize[istart:].argmax()
-        ito = ifrom + df.summarize[ifrom:].argmin()
+        ifrom = df.summarize[istart:].argmax()
+        ito = df.summarize[ifrom:].argmin()
         if ifrom == ito:  # Reached the end!
             ito = len(df.summarize)
             end = True

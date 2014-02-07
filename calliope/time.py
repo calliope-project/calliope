@@ -31,12 +31,12 @@ class TimeSummarizer(object):
                         'average': self._reduce_average,
                         'sum': self._reduce_sum,
                         'cut': self._reduce_cut}
-        # Format: {'data item': ('method', 'argument')}
-        self.known_data_types = {'_t': ('cut'),
-                                 '_dt': ('cut'),
-                                 'r': ('sum'),
-                                 'r_eff': ('average'),
-                                 'e_eff': ('average')}
+        # Format: {'data item': 'method'}
+        self.known_data_types = {'_t': 'cut',
+                                 '_dt': 'cut',
+                                 'r': 'sum',
+                                 'r_eff': 'average',
+                                 'e_eff': 'average'}
 
     def reduce_resolution(self, data, resolution):
         """
@@ -84,18 +84,11 @@ class TimeSummarizer(object):
             data['time_res_series'] = pd.Series(resolution, index=data['_t'])
 
     def _apply_method(self, data, how, s, key, subkey=None):
-        if len(how) == 2:
-            method = self.methods[how[0]]
-            if subkey:
-                df = method(data[key][subkey][s], data[how[1]][subkey])
-            else:
-                df = method(data[key][s], data[how[1]])
+        method = self.methods[how]
+        if subkey:
+            df = method(data[key][subkey][s])
         else:
-            method = self.methods[how]
-            if subkey:
-                df = method(data[key][subkey][s])
-            else:
-                df = method(data[key][s])
+            df = method(data[key][s])
         # If no slice, this implies we are working on whole time series,
         # so we replace the existing time series completely
         # to get around indexing problems
