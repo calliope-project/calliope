@@ -27,8 +27,7 @@ class TimeSummarizer(object):
     """
     def __init__(self):
         super(TimeSummarizer, self).__init__()
-        self.methods = {'weighted_average': self._reduce_weighted_average,
-                        'average': self._reduce_average,
+        self.methods = {'average': self._reduce_average,
                         'sum': self._reduce_sum,
                         'cut': self._reduce_cut}
         # Format: {'data item': 'method'}
