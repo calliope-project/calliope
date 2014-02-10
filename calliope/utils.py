@@ -17,6 +17,8 @@ from contextlib import contextmanager
 from cStringIO import StringIO
 from functools import partial
 import os
+
+import matplotlib.pyplot as plt
 import yaml
 
 
@@ -292,3 +294,23 @@ def _resolve_path(base_path, path):
     if not os.path.isabs(path):
         path = os.path.join(os.path.dirname(base_path), path)
     return path
+
+
+def stack_plot(df, stack, figsize=None):
+    if not figsize:
+        figsize = (16, 4)
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+    fills = ax.stackplot(df.index, df[stack].T, label=stack)
+    # Legend via proxy artists
+    # Based on https://github.com/matplotlib/matplotlib/issues/1943
+    proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])
+               for i in fills]
+    ax.legend(reversed(proxies), reversed(stack))
+    # Format x datetime axis
+    # Based on http://stackoverflow.com/a/9627970/397746
+    # TODO check how pandas does its very nice formatting for df.plot()
+    import matplotlib.dates as mdates
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator())
+    return ax
