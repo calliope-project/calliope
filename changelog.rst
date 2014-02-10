@@ -12,6 +12,8 @@ Release History
 * Added additional constraints: ``om_fixed``, ``e_cap_max``, ``cf_max``
 * Improved configuration handling
 * Cleared up terminology (nodes vs locations)
+* Improved TimeSummarizer masking and added new masks
+* Working parallel_tools
 * Improved documentation
 * Apache 2.0 licensed
 * Other improvements
