@@ -228,8 +228,12 @@ class Model(object):
             result = d.locations.ix[location, '_override.' + key]
             # Also raise KeyError if the result is NaN, i.e. if no
             # location-specific override has been defined
-            if not isinstance(result, str) and np.isnan(result):
-                raise KeyError
+            try:
+                if np.isnan(result):
+                    raise KeyError
+            # Have to catch this because np.isnan not implemented for strings
+            except TypeError:
+                pass
             return result
 
         if x:
@@ -252,6 +256,7 @@ class Model(object):
         o = self.config_model
         o.set_key('techs.' + option, value)
 
+    @utils.memoize_instancemethod
     def get_eff_ref(self, var, y, x=None):
         """Get reference efficiency, falling back to efficiency if no
         reference efficiency has been set."""
@@ -302,12 +307,13 @@ class Model(object):
             self.slice = slice(None)
         d._t = pd.Series([int(t) for t in table_t[0].tolist()])
         d._dt = pd.Series(table_t.index, index=d._t.tolist())
-        # First set time_res_static across all data
-        d.time_res_static = self.get_timeres()
-        # From time_res_static, initialize time_res_series
-        d.time_res_series = pd.Series(d.time_res_static, index=d._t.tolist())
+        # First set time_res_data and time_res_static across all data
+        d.time_res_data = self.get_timeres()
+        d.time_res_static = d.time_res_data
+        # From time_res_data, initialize time_res_series
+        d.time_res_series = pd.Series(d.time_res_data, index=d._t.tolist())
         # Last index t for which model may still use startup exceptions
-        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_static)]
+        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_data)]
         #
         # y: Technologies set
         #
@@ -479,6 +485,7 @@ class Model(object):
         o = self.config_model
         d = self.data
         self.m = m
+        self.t_start = t_start
 
         #
         # Sets
@@ -487,8 +494,12 @@ class Model(object):
         if self.mode == 'plan':
             m.t = cp.Set(initialize=d._t, ordered=True)
         elif self.mode == 'operate':
-            horizon_adj = int(o.opmode.horizon / d.time_res_static)
-            m.t = cp.Set(initialize=d._t[t_start:t_start+horizon_adj],
+            t_end = t_start + o.opmode.horizon / d.time_res_data
+            # If t_end is beyond last timestep, cap it to last one
+            # TODO this is a hack and shouldn't be necessary?
+            if t_end > d._t.iat[-1]:
+                t_end = d._t.iat[-1]
+            m.t = cp.Set(initialize=d._t.loc[t_start:t_end],
                          ordered=True)
         # The rest
         m.c = cp.Set(initialize=d._c, ordered=True)  # Carriers
@@ -549,10 +560,7 @@ class Model(object):
             self.solve()
             self.process_outputs()
         elif self.mode == 'operate':
-            # TODO this needs to be improved and get same level of
-            # functionality as mode == 'plan', at least to save results
-            # to disk!
-            self.operate_results = self.solve_iterative()
+            self.solve_iterative()
         else:
             raise UserWarning('Invalid mode')
 
@@ -580,7 +588,11 @@ class Model(object):
             opt.symbolic_solver_labels = True
         if self.config_run.get_key('debug.keepfiles', default=False):
             opt.keepfiles = True
-            logdir = os.path.join('Logs', self.run_id)
+            if self.mode == 'plan':
+                logdir = os.path.join('Logs', self.run_id)
+            elif self.mode == 'operate':
+                logdir = os.path.join('Logs', self.run_id
+                                      + '_' + str(self.t_start))
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr
@@ -677,7 +689,9 @@ class Model(object):
         return result
 
     def get_costs(self):
-        """Get costs
+        """
+
+        Get costs
 
         NB: Currently only counts e_prod towards costs, and only reports
         costs for the carrier ``power``!
@@ -708,31 +722,89 @@ class Model(object):
         df = pd.Panel({'lcoe': lcoe, 'cf': cf})
         return df
 
+    def _costs_iterative(self, cost_vars, cost_weights, node_vars):
+        def get_cf_i(i):
+            return cost_vars[i]['cf'] * cost_weights[i]
+
+        def get_lcoe_i(i):
+            return cost_vars[i]['lcoe'] * node_vars[i]['e:power'].sum(axis=1)
+
+        # Capacity factor (cf)
+        for i in range(len(cost_weights)):
+            if i == 0:
+                cf = get_cf_i(i)
+            else:
+                cf = cf + get_cf_i(i)
+        cf = cf / sum(cost_weights)
+        # LCOE
+        power = {}
+        for i in range(len(cost_weights)):
+            power[i] = node_vars[i]['e:power'].sum(axis=1)
+            if i == 0:
+                lcoe = get_lcoe_i(i)
+            else:
+                lcoe = lcoe + get_lcoe_i(i)
+        power = pd.Panel(power).sum(axis=0)
+        lcoe = lcoe / power
+        return pd.Panel({'lcoe': lcoe, 'cf': cf})
+
     def solve_iterative(self):
+        """
+        Returns None on success, storing results under
+        self.iterative_solution
+
+        """
         o = self.config_model
         d = self.data
-        window_adj = int(o.opmode.window / d.time_res_static)
+        window_adj = int(o.opmode.window / d.time_res_data)
         steps = [t for t in d._t if (t % window_adj) == 0]
+        # Remove the last step - since we look forward at each step,
+        # it would take us beyond actually existing data
+        steps = steps[:-1]
         system_vars = []
         node_vars = []
-        for step in steps:
+        cost_vars = []
+        cost_weights = []
+        for index, step in enumerate(steps):
             self.generate_model(t_start=step)
             self.solve()
-            self.instance.load(self.results)
+            self.load_results()
             # Gather relevant model results over decision interval, so
             # we only grab [0:window/time_res] steps!
-            df = self.get_system_variables()
-            system_vars.append(df.iloc[0:window_adj])
+            panel = self.get_system_variables()
+            if index == (len(steps) - 1):
+                # Final iteration saves data from entire horizon
+                target_index = int(o.opmode.horizon / d.time_res_static)
+            else:
+                # Non-final iterations only save data from window
+                target_index = int(o.opmode.window / d.time_res_static)
+            system_vars.append(panel.iloc[:, 0:target_index, :])
             # Get node variables
             panel4d = self.get_node_variables()
-            node_vars.append(panel4d)
-            # Save stage of storage for carry over to next iteration
+            node_vars.append(panel4d.iloc[:, :, 0:target_index, :])
+            # Get cost
+            cost = self.get_costs()
+            cost_vars.append(cost)
+            cost_weights.append(target_index)
+            # Save state of storage for carry over to next iteration
             s = self.get_var('s', ['y', 'x', 't'])
             # NB: -1 to convert from length --> index
-            storage_state_index = window_adj - 1
+            storage_state_index = target_index - 1
             d.s_init = s.iloc[:, storage_state_index, :]
-        return (pd.concat(system_vars),
-                pd.concat(node_vars, axis=2))
+        # self.operate_results = {'system': system_vars,
+        #                         'node': node_vars,
+        #                         'cost': cost,
+        #                         'cost_vars': cost_vars,
+        #                         'cost_weights': cost_weights}
+        costs = self._costs_iterative(cost_vars, cost_weights, node_vars)
+        self.operate_results = {'system': pd.concat(system_vars, axis=1),
+                                'node': pd.concat(node_vars, axis=2),
+                                'costs': costs}
+
+    def load_results(self):
+        r = self.instance.load(self.results)
+        if r is False:
+            raise UserWarning('Could not load results into model instance.')
 
     def process_outputs(self):
         """Load results into model instance for access via model
@@ -740,9 +812,7 @@ class Model(object):
         save outputs to CSV.
 
         """
-        r = self.instance.load(self.results)
-        if r is False:
-            raise UserWarning('Could not load results into model instance.')
+        self.load_results()
         # Save results to disk if specified in configuration
         if self.config_run.output.save is True:
             self.save_outputs()
@@ -750,10 +820,15 @@ class Model(object):
     def save_outputs(self, carrier='power'):
         """Save model outputs as CSV to ``self.config_run.output.path``"""
         locations = self.data.locations
-        system_variables = self.get_system_variables()
+        if self.mode == 'plan':
+            system_variables = self.get_system_variables()
+            node_variables = self.get_node_variables()
+            costs = self.get_costs()
+        elif self.mode == 'operate':
+            system_variables = self.iterative_solution['system']
+            node_variables = self.iterative_solution['node']
+            costs = self.iterative_solution['costs']
         node_parameters = self.get_node_parameters(built_only=False)
-        node_variables = self.get_node_variables()
-        costs = self.get_costs()
         output_files = {'locations.csv': locations,
                         'system_variables.csv': system_variables[carrier],
                         'node_parameters.csv': node_parameters.to_frame(),
