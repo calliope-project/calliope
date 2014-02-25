@@ -15,7 +15,7 @@ from __future__ import division
 
 from contextlib import contextmanager
 from cStringIO import StringIO
-from functools import partial
+import functools
 import os
 
 import matplotlib.pyplot as plt
@@ -260,7 +260,7 @@ class memoize_instancemethod(object):
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self.func
-        return partial(self, obj)
+        return functools.partial(self, obj)
 
     def __call__(self, *args, **kw):
         obj = args[0]

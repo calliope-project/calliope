@@ -12,6 +12,13 @@ opmode:
     window: 24  # Operation period length [hours]
 
 #
+# MODEL-WIDE DEFAULTS
+#
+
+system_margin:
+    power: 0
+
+#
 # TECH DEFAULTS
 #
 
