@@ -238,6 +238,28 @@ In the final case, no balancing constraint is applied at all.
 .. _optional_constraints:
 
 --------------------
+Planning constraints
+--------------------
+
+These constraints are automatically applied when running in planning mode only.
+
+System margin
+-------------
+
+Provided by: :func:`calliope.constraints.planning.system_margin`
+
+This is a simplified capacity margin constraint, requiring the capacity to supply a given carrier in the time step with the highest demand for that carrier to be above the demand in that timestep by at least the given fraction:
+
+.. math::
+
+   \sum_y \sum_x e_{s,prod}(c, y, x, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_x (e_{cap}(y, x) / e_{eff,ref}(y, x))
+
+where :math:`y_{c}` is the subset of ``y`` that delivers the carrier ``c`` and :math:`m_{c}` is the system margin for that carrier.
+
+
+For each carrier, the model attempts to read ``system_margin.carrier_name``, only applying this constraint for the given carrier if a setting exists.
+
+--------------------
 Optional constraints
 --------------------
 
