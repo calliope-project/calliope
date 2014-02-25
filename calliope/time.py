@@ -42,18 +42,20 @@ class TimeSummarizer(object):
         Reduces the resolution of the entire ``data`` to ``resolution``,
         which must be an integer and greater than 1.
 
-        The data must have a resolution of 1 to begin with.
-
         Warning: modifies the passed data object in-place.
         Returns None on success.
 
         """
         self._reduce_resolution(data, resolution)
+        data.time_res_static = resolution
 
     def _reduce_resolution(self, data, resolution, t_range=None):
         """Helper function called by both reduce_resolution and
         dynamic_timestepper."""
         # Initialize some common data
+        resolution = resolution / data.time_res_data
+        assert resolution.is_integer()
+        resolution = int(resolution)
         self.resolution = resolution
         # Set up time range slice, if given
         if not t_range:

@@ -54,8 +54,6 @@ techs:
     demand_electricity:
         parent: demand
         carrier: power
-        constraints:
-            r: 100
     unmet_demand_electricity:
         parent: unmet_demand
         carrier: power

@@ -30,27 +30,55 @@ class TestMaskWhereZero:
         d.set_key('e_eff.tech1', df1 / 100.0)
         return d
 
-    def test_mask_where_zero_no_zeros(self, testdata):
+    def test_mask_zero_no_zeros(self, testdata):
         data = testdata
-        mask = calliope.time_masks.mask_where_zero(data, 'tech1')
-        assert mask.summarize.tolist() == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        mask = calliope.time_masks.mask_zero(data, 'tech1')
+        assert mask.tolist() == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    def test_mask_where_zero_start_and_end_zero(self, testdata):
+    def test_mask_zero_start_and_end_zero(self, testdata):
         data = testdata
-        mask = calliope.time_masks.mask_where_zero(data, 'tech2')
-        assert mask.summarize.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 2, -1]
+        mask = calliope.time_masks.mask_zero(data, 'tech2')
+        assert mask.tolist() == [1, 1, 1, 0, 0, 0, 0, 0, 1, 1]
+        res = calliope.time_masks.masks_to_resolution_series([mask])
+        assert res.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 2, -1]
 
-    def test_mask_where_zero_one_zero(self, testdata):
+    def test_mask_zero_one_zero(self, testdata):
         data = testdata
-        mask = calliope.time_masks.mask_where_zero(data, 'tech3')
-        assert mask.summarize.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 0, 0]
+        mask = calliope.time_masks.mask_zero(data, 'tech3')
+        assert mask.tolist() == [1, 1, 1, 0, 0, 0, 0, 0, 0, 1]
+        res = calliope.time_masks.masks_to_resolution_series([mask])
+        assert res.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 0, 0]
 
-    def test_mask_where_zero_start_zero(self, testdata):
+    def test_mask_zero_start_zero(self, testdata):
         data = testdata
-        mask = calliope.time_masks.mask_where_zero(data, 'tech4')
-        assert mask.summarize.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 0, 0]
+        mask = calliope.time_masks.mask_zero(data, 'tech4')
+        assert mask.tolist() == [1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+        res = calliope.time_masks.masks_to_resolution_series([mask])
+        assert res.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 0, 0]
 
-    def test_mask_where_zero_end_zero(self, testdata):
+    def test_mask_zero_end_zero(self, testdata):
         data = testdata
-        mask = calliope.time_masks.mask_where_zero(data, 'tech5')
-        assert mask.summarize.tolist() == [0, 0, 0, 0, 0, 0, 0, 3, -1, -1]
+        mask = calliope.time_masks.mask_zero(data, 'tech5')
+        assert mask.tolist() == [0, 0, 0, 0, 0, 0, 0, 1, 1, 1]
+        res = calliope.time_masks.masks_to_resolution_series([mask])
+        assert res.tolist() == [0, 0, 0, 0, 0, 0, 0, 3, -1, -1]
+
+
+# class TestDownsampling:
+#     def test_infinity_test_no_inf(self):
+#         pass
+
+#     def test_infinity_test_all_inf(self):
+#         pass
+
+#     def test_infinity_test_mixed_inf(self):
+#         pass
+
+#     def test_reduce_average(self, df):
+#         pass
+
+#     def test_reduce_sum(self, df):
+#         pass
+
+#     def test_reduce_cut(self, df):
+#         pass
