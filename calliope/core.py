@@ -465,6 +465,20 @@ class Model(object):
                         scaled = self.scale_to_peak(d[param][y][x], scale)
                         d[param][y][x] = scaled
 
+    def _get_t_max_demand(self):
+        t_max_demands = utils.AttrDict()
+        for c in self.data._c:
+            ys = [y for y in self.data._y
+                  if self.get_option(y + '.carrier') == c]
+            r_carrier = pd.Panel(self.data.r).loc[ys].sum(axis=2)
+            t_max_demand = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
+            # Adjust for reduced resolution, only if t_max_demand not 0 anyway
+            if t_max_demand != 0:
+                t_max_demand = max([t for t in self.data._t
+                                    if t < t_max_demand])
+            t_max_demands[c] = t_max_demand
+        return t_max_demands
+
     def add_constraint(self, constraint, *args, **kwargs):
         constraint(self, *args, **kwargs)
 
@@ -486,6 +500,7 @@ class Model(object):
         d = self.data
         self.m = m
         self.t_start = t_start
+        self.t_max_demand = self._get_t_max_demand()
 
         #
         # Sets
@@ -542,6 +557,9 @@ class Model(object):
                     constraints.base.model_constraints]
         for c in required:
             self.add_constraint(c)
+
+        if self.mode == 'plan':
+            self.add_constraint(constraints.planning.system_margin)
 
         # 2. Optional
         if o.get_key('constraints_pre_load', default=False):
