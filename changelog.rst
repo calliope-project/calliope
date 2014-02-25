@@ -9,10 +9,12 @@ Release History
 * Added energy carriers with a new set ``c``
 * Added conversion technologies
 * Ability to arbitrarily nest model configuration files with ``import`` statements
-* Added additional constraints: ``om_fixed``, ``e_cap_max``, ``cf_max``
+* Added additional constraints
 * Improved configuration handling
 * Cleared up terminology (nodes vs locations)
 * Improved TimeSummarizer masking and added new masks
+* Removed technology classes
+* Improved operational mode with results output matching planning mode
 * Working parallel_tools
 * Improved documentation
 * Apache 2.0 licensed
