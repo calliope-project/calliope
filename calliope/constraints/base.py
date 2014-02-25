@@ -158,7 +158,13 @@ def node_constraints_build(model):
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
-        s_cap_max = model.get_option(y + '.constraints.s_cap_max', x=x)
+        if model.get_option(y + '.constraints.use_s_time', x=x):
+            s_time_max = model.get_option(y + '.constraints.s_time_max', x=x)
+            e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
+            e_eff_ref = model.get_eff_ref('e', y)
+            s_cap_max = s_time_max * e_cap_max / e_eff_ref
+        else:
+            s_cap_max = model.get_option(y + '.constraints.s_cap_max', x=x)
         if model.mode == 'plan':
             return m.s_cap[y, x] <= s_cap_max
         elif model.mode == 'operate':
@@ -174,13 +180,18 @@ def node_constraints_build(model):
             return m.r_cap[y, x] == r_cap_max
 
     def c_r_area_rule(m, y, x):
-        r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
-        if r_area_max is False:
-            return m.r_area[y, x] == 1.0
-        elif model.mode == 'plan':
-            return m.r_area[y, x] <= r_area_max
-        elif model.mode == 'operate':
-            return m.r_area[y, x] == r_area_max
+        area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap')
+        if area_per_cap:
+            eff_ref = model.get_eff_ref('e', y, x)
+            return m.r_area[y, x] == m.e_cap[y, x] * (area_per_cap / eff_ref)
+        else:
+            r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
+            if r_area_max is False:
+                return m.r_area[y, x] == 1.0
+            elif model.mode == 'plan':
+                return m.r_area[y, x] <= r_area_max
+            elif model.mode == 'operate':
+                return m.r_area[y, x] == r_area_max
 
     def c_e_cap_rule(m, y, x):
         e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
@@ -359,6 +370,7 @@ def node_costs(model):
         # TODO currently only counting e_prod for op costs, makes sense?
         carrier = model.get_option(y + '.carrier')
         return (m.cost_op[y, x, k] ==
+                # FIXME TODO this is incorrect in cases where sum(t) is < 8760
                 _cost('om_frac', y, k) * m.cost_con[y, x, k]
                 + _cost('om_fixed', y, k) * m.e_cap[y, x]
                 + _cost('om_var', y, k) * sum(m.e_prod[carrier, y, x, t]

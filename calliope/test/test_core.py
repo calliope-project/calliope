@@ -41,13 +41,6 @@ class TestInitialization:
     def test_model_initialization_simple_model(self):
         common.simple_model()
 
-    def test_initialize_techs(self):
-        model = common.simple_model()
-        assert (model.technologies.demand_electricity.__repr__()
-                == 'Generic technology (demand_electricity)')
-        assert (model.technologies.csp.__repr__()
-                == 'Concentrating solar power (CSP)')
-
     def test_gettimeres_1hourly(self):
         model = common.simple_model()
         assert model.get_timeres() == 1

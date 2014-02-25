@@ -29,6 +29,7 @@ techs:
             force_r: false
             r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
             r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
+            r_area_per_e_cap: false  # If set, forces r_area to follow e_cap with the given ratio
             r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
             r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
@@ -37,6 +38,8 @@ techs:
             allow_rsec: false  # Allow secondary resource during startup_time?
             s_init: 0  # Initial storage level [kWht]
             s_cap_max: 0  # Maximum storage size [kWht]
+            use_s_time: False  # Use full load hours for storage sizing?
+            s_time_max: 0  # Max storage time [full load hours]
             s_loss: 0  # Storage heat loss rate [per hour]
             cf_max: false  # Maximum capacity factor, set to false to disable
             e_can_be_negative: false

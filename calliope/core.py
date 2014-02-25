@@ -66,7 +66,6 @@ class Model(object):
         # Other initialization tasks
         self.data = utils.AttrDict()
         self.initialize_sets()
-        self.initialize_techs()
         self.read_data()
         self.mode = self.config_run.mode
 
@@ -118,16 +117,6 @@ class Model(object):
         o.locations = locations.process_locations(o.locations)
         # Store initialized configuration on model object
         self.config_model = o
-
-    def initialize_techs(self):
-        """Perform any tech-specific setup by instantiating tech classes"""
-        self.technologies = utils.AttrDict()
-        for t in self.data._y:
-            try:
-                techname = t.capitalize() + 'Technology'
-                self.technologies[t] = getattr(techs, techname)(model=self)
-            except AttributeError:
-                self.technologies[t] = techs.Technology(model=self, name=t)
 
     def get_timeres(self, verify=False):
         """Returns resolution of data in hours. Needs a properly
