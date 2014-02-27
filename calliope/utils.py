@@ -296,12 +296,14 @@ def _resolve_path(base_path, path):
     return path
 
 
-def stack_plot(df, stack, figsize=None):
+def stack_plot(df, stack, figsize=None, colormap='jet', **kwargs):
     if not figsize:
         figsize = (16, 4)
+    colors = plt.get_cmap(colormap)(np.linspace(0, 1.0, len(stack)))
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111)
-    fills = ax.stackplot(df.index, df[stack].T, label=stack)
+    fills = ax.stackplot(df.index, df[stack].T, label=stack, colors=colors,
+                         **kwargs)
     # Legend via proxy artists
     # Based on https://github.com/matplotlib/matplotlib/issues/1943
     proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])
