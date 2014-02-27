@@ -127,8 +127,8 @@ def node_energy_balance(model):
             s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.rsecs[y, x, t]
                 - sum(m.es_prod[c, y, x, t] for c in m.c)
-                - sum(m.es_con[c, y, x, t] for c in m.c)
-                - m.os[y, x, t])
+                - sum(m.es_con[c, y, x, t] for c in m.c))
+                # - m.os[y, x, t])  # FIXME
 
     # Constraints
     m.c_e = cp.Constraint(m.c, m.y, m.x, m.t)
