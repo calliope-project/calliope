@@ -16,6 +16,7 @@ import datetime
 import itertools
 import json
 import os
+import shutil
 
 import coopr.opt as co
 import coopr.pyomo as cp
@@ -66,6 +67,7 @@ class Model(object):
         # Other initialization tasks
         self.data = utils.AttrDict()
         self.initialize_sets()
+        self.initialize_parents()
         self.read_data()
         self.mode = self.config_run.mode
 
@@ -245,6 +247,31 @@ class Model(object):
         o = self.config_model
         o.set_key('techs.' + option, value)
 
+    def get_group_members(self, group, in_model=True):
+        """
+        Return the member technologies of a group. If in_model is True,
+        only members defined in the current model are returned.
+
+        """
+        def _get(self, group, memberset):
+            members = [i for i in self.parents if self.parents[i] == group]
+            if members:
+                for i, member in enumerate(members):
+                    members[i] = _get(self, member, memberset)
+                return members
+            else:
+                memberset.add(group)
+        if not group in self.parents:
+            return None
+        memberset = set()
+        _get(self, group, memberset)
+        member_techs = list(memberset)
+        if in_model:
+            member_techs = [y for y in member_techs
+                            if (y in self.data._y
+                                or y in self.data._y_transmission)]
+        return member_techs
+
     @utils.memoize_instancemethod
     def get_eff_ref(self, var, y, x=None):
         """Get reference efficiency, falling back to efficiency if no
@@ -277,6 +304,11 @@ class Model(object):
         else:
             scale = float(df.max())
         return (df / scale) * peak * adjustment
+
+    def initialize_parents(self):
+        o = self.config_model
+        self.parents = {i: o.techs[i].parent for i in o.techs.keys()
+                        if i != 'defaults'}
 
     def initialize_sets(self):
         o = self.config_model
@@ -316,10 +348,13 @@ class Model(object):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
         # Subset of transmission technologies, if any defined (used below)
         # (not yet added to d._y here)
-        if 'links' in o:
+        if ('links' in o) and (o.links is not None):
             d.transmission_y = transmission.get_transmission_techs(o.links)
+            d._y_transmission = list(set([v.keys()[0]
+                                     for k, v in o.links.iteritems()]))
         else:
             d.transmission_y = []
+            d._y_transmission = []
         # Subset of conversion technologies
         # (already contained in d._y here but separated out as well)
         d.conversion_y = [y for y in d._y
@@ -600,6 +635,9 @@ class Model(object):
             elif self.mode == 'operate':
                 logdir = os.path.join('Logs', self.run_id
                                       + '_' + str(self.t_start))
+            if self.config_run.get_key('debug.delete_old_logs',
+                                       default=False):
+                shutil.rmtree(logdir)
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr

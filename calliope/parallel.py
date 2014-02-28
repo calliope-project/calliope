@@ -45,10 +45,13 @@ class Parallelizer(object):
 
     def generate_iterations(self):
         c = self.config.parallel.iterations
-        iter_keys = c.keys_nested()
-        iter_values = [c.get_key(i) for i in iter_keys]
-        df = pd.DataFrame(list(itertools.product(*iter_values)),
-                          columns=iter_keys)
+        if isinstance(c, list):
+            df = pd.DataFrame(c)
+        elif isinstance(c, dict):
+            iter_keys = c.keys_nested()
+            iter_values = [c.get_key(i) for i in iter_keys]
+            df = pd.DataFrame(list(itertools.product(*iter_values)),
+                              columns=iter_keys)
         return df
 
     def _write_modelcommands(self, f, settings):
