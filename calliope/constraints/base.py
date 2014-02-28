@@ -166,7 +166,10 @@ def node_constraints_build(model):
         else:
             s_cap_max = model.get_option(y + '.constraints.s_cap_max', x=x)
         if model.mode == 'plan':
-            return m.s_cap[y, x] <= s_cap_max
+            if model.get_option(y + '.constraints.s_cap_max_force', x=x):
+                return m.s_cap[y, x] == s_cap_max
+            else:
+                return m.s_cap[y, x] <= s_cap_max
         elif model.mode == 'operate':
             return m.s_cap[y, x] == s_cap_max
 
@@ -408,12 +411,10 @@ def model_constraints(model):
                 return (sum(m.e_prod[c, y, xs, t] for xs in family for y in m.y)
                         + sum(m.e_con[c, y, xs, t] for xs in family for y in m.y)
                         == 0)
-            elif c == 'heat':
+            else:  # e.g. for heat
                 return (sum(m.e_prod[c, y, xs, t] for xs in family for y in m.y)
                         + sum(m.e_con[c, y, xs, t] for xs in family for y in m.y)
                         >= 0)
-            else:
-                return cp.Constraint.NoConstraint
 
     # Constraints
     m.c_system_balance = cp.Constraint(m.c, m.x, m.t)
