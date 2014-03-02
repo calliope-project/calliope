@@ -26,7 +26,6 @@ from pyutilib.services import TempfileManager
 
 from . import constraints
 from . import locations
-from . import techs
 from . import transmission
 from . import utils
 

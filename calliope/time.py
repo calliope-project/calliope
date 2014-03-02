@@ -114,16 +114,14 @@ class TimeSummarizer(object):
                     data[key].loc[i] = r
 
     def dynamic_timestepper(self, data, mask):
-        """``mask`` must be a df with the same index as the other dfs in
-        data, and a ``summarize`` column that gives information on how to
-        adjust timesteps.
+        """``mask`` must be a series with the same index as the given data.
 
-        For each timestep, the ``summarize`` can either be 0 (no
+        For each timestep, the ``mask`` can either be 0 (no
         adjustment), >0 (marks the first timestep to be compressed, with
         the integer value giving the number of timesteps to compress) or
         -1 (marks timesteps following a >0 timestep that will be compressed).
 
-        For example, the summarize column could contain::
+        For example, ``mask`` could contain::
 
             [0, 0, 0, 3, -1, -1, 0, 0, 2, -1, 2, -1]
 
@@ -136,8 +134,8 @@ class TimeSummarizer(object):
 
         """
         # Set up the mask
-        df = mask
-        df['time_res'] = 1
+        df = pd.DataFrame({'summarize': mask})
+        df['time_res'] = data.time_res_static
         df['to_keep'] = True
         # Get all time steps that need summarizing
         entry_points = df.summarize[df.summarize > 0]
@@ -150,18 +148,17 @@ class TimeSummarizer(object):
             df.to_keep[ifrom+1:ito] = False
             df.time_res.iloc[ifrom] = resolution
         for k in data.keys():
-            # Special case for `_t`, which is the only known_data_type which is always 0-indexed
-            if k == '_t' or k == '_dt':
-                # To get around non-matching index, we simply turn the boolean mask df into a list
-                data[k] = data[k][(df.summarize < 2).tolist()]
-            elif k in self.known_data_types.keys():
+            # # Special case for `_t`, which is the only known_data_type which is always 0-indexed
+            # if k == '_t' or k == '_dt':
+            #     # To get around non-matching index, we simply turn the boolean mask df into a list
+            #     data[k] = data[k][(df.summarize < 2).tolist()]
+            if k in self.known_data_types.keys():
                 if isinstance(data[k], utils.AttrDict):
                     for kk in data[k].keys():
                         data[k][kk] = data[k][kk][df.to_keep]
                 else:
                     data[k] = data[k][df.to_keep]
-        df = df[df.summarize < 2]
-        data['time_res_series'] = df['time_res']
+        data['time_res_series'] = df.time_res[df.to_keep]
 
     def _infinity_test(self, df):
         return (df.sum(axis=0) == np.inf).all()
