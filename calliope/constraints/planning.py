@@ -26,7 +26,8 @@ def system_margin(model):
 
     # Constraint rules
     def c_system_margin_rule(m, c):
-        margin = model.config_model.system_margin.get_key(c, default=None)
+        # If no margin defined for a carrier, use 0 (i.e. no margin)
+        margin = model.config_model.system_margin.get_key(c, default=0)
         if margin:
             t = model.t_max_demand[c]
             return (sum(m.e_prod[c, y, x, t] for y in m.y for x in m.x)
