@@ -134,7 +134,8 @@ class TimeSummarizer(object):
 
         """
         # Set up the mask
-        df = pd.DataFrame({'summarize': mask})
+        df = pd.DataFrame(mask, index=mask.index)
+        df.columns = ['summarize']  # rename the single column
         df['time_res'] = data.time_res_static
         df['to_keep'] = True
         # Get all time steps that need summarizing

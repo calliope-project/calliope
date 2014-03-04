@@ -19,6 +19,7 @@ import functools
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import yaml
 
 
@@ -294,6 +295,13 @@ def _resolve_path(base_path, path):
     if not os.path.isabs(path):
         path = os.path.join(os.path.dirname(base_path), path)
     return path
+
+
+def ensure_absolute(path, base_path):
+    if not os.path.isabs(path) and isinstance(base_path, str):
+        return os.path.join(os.path.dirname(base_path), path)
+    else:
+        return path
 
 
 def stack_plot(df, stack, figsize=None, colormap='jet', **kwargs):

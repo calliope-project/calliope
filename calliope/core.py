@@ -27,19 +27,14 @@ from pyutilib.services import TempfileManager
 from . import constraints
 from . import locations
 from . import transmission
+from . import time
+from . import time_masks
 from . import utils
 
 
 def _expand_module_placeholder(s):
     return utils.replace(s, placeholder='module',
                          replacement=os.path.dirname(__file__))
-
-
-def _ensure_absolute(path, config_run):
-    if not os.path.isabs(path) and isinstance(config_run, str):
-        return os.path.join(os.path.dirname(config_run), path)
-    else:
-        return path
 
 
 class Model(object):
@@ -69,12 +64,14 @@ class Model(object):
         self.initialize_parents()
         self.read_data()
         self.mode = self.config_run.mode
+        self.initialize_time()
 
     def initialize_configuration(self, config_run, override):
         # Load run configuration
         config_path = os.path.join(os.path.dirname(__file__), 'config')
         if not config_run:
             config_run = os.path.join(config_path, 'run.yaml')
+        self.config_run_path = config_run
         if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)
@@ -100,9 +97,10 @@ class Model(object):
                           for i in cr.input.model]
         cr.input.path = _expand_module_placeholder(cr.input.path)
         # Interpret relative config paths as relative to run.yaml
-        cr.input.model = [_ensure_absolute(i, config_run)
+        cr.input.model = [utils.ensure_absolute(i, self.config_run_path)
                           for i in cr.input.model]
-        cr.input.path = _ensure_absolute(cr.input.path, config_run)
+        cr.input.path = utils.ensure_absolute(cr.input.path,
+                                              self.config_run_path)
         # Load all model config files and combine them into one AttrDict
         o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                                   'defaults.yaml'))
@@ -138,6 +136,30 @@ class Model(object):
                         == seconds)
         hours = abs(seconds) / 3600
         return hours
+
+    def initialize_time(self):
+        """
+        Performs time resolution reduction, if set up in configuration
+        """
+        cr = self.config_run
+        t = cr.get_key('time.summarize', default=False)
+        s = time.TimeSummarizer()
+        if t == 'mask':
+            if (cr.get_key('time.mask_function', default=False) and
+                    cr.get_key('time.mask_file', default=False)):
+                raise KeyError('Define either mask_function or mask_file.')
+            elif cr.get_key('time.mask_function', default=False):
+                eval('mask_src = time_masks.'
+                     + cr.time.mask_function + '(m.data)')
+                mask = time_masks.masks_to_resolution_series([mask_src])
+            elif cr.get_key('time.mask_file', default=False):
+                mask = pd.read_csv(utils.ensure_absolute(cr.time.mask_file,
+                                                         self.config_run_path),
+                                   index_col=0, header=None)[1]
+                mask = mask.astype(int)
+            s.dynamic_timestepper(self.data, mask)
+        elif t == 'uniform':
+            s.reduce_resolution(self.data, cr.time.resolution)
 
     def prev(self, t):
         """Using the timesteps set of this model instance, return `t-1`,
