@@ -20,31 +20,53 @@ def group_fraction(model):
     Depends on:
     """
     m = model.m
-    o = model.config_model
 
-    def fraction(group):
-        return model.config_model.group_fraction.get_key(group)
+    def sign_fraction(group, group_type):
+        o = model.config_model
+        sign, fraction = o.group_fraction[group_type].get_key(group)
+        return sign, fraction
+
+    def group_set(group_type):
+        try:
+            group = model.config_model.group_fraction[group_type].keys()
+        except KeyError:
+            group = []
+        return cp.Set(initialize=group)
+
+    def equalizer(lhs, rhs, sign):
+        if sign == '<=':
+            return lhs <= rhs
+        elif sign == '>=':
+            return lhs >= rhs
+        elif sign == '==':
+            return lhs == rhs
 
     supply_techs = (model.get_group_members('supply') +
                     model.get_group_members('conversion'))
 
     # Sets
-    m.group = cp.Set(initialize=model.config_model.group_fraction.keys())
+    m.output_group = group_set('output')
+    m.capacity_group = group_set('capacity')
 
     # Constraint rules
-    def c_group_fraction_rule(m, c, group):
-        rhs = (fraction(group)
+    def c_group_fraction_output_rule(m, c, output_group):
+        sign, fraction = sign_fraction(output_group, 'output')
+        rhs = (fraction
                * sum(m.e_prod[c, y, x, t] for y in supply_techs
                      for x in m.x for t in m.t))
         lhs = sum(m.e_prod[c, y, x, t]
-                  for y in model.get_group_members(group) for x in m.x
+                  for y in model.get_group_members(output_group) for x in m.x
                   for t in m.t)
-        if o.group_fraction_mode == 'lesser_or_equal':
-            return lhs <= rhs
-        elif o.group_fraction_mode == 'greater_or_equal':
-            return lhs >= rhs
-        elif o.group_fraction_mode == 'equal':
-            return lhs == rhs
+        return equalizer(lhs, rhs, sign)
+
+    def c_group_fraction_capacity_rule(m, c, capacity_group):
+        sign, fraction = sign_fraction(capacity_group, 'capacity')
+        rhs = (fraction
+               * sum(m.e_cap[y, x] for y in supply_techs for x in m.x))
+        lhs = sum(m.e_cap[y, x] for y in model.get_group_members(capacity_group)
+                  for x in m.x)
+        return equalizer(lhs, rhs, sign)
 
     # Constraints
-    m.c_group_fraction = cp.Constraint(m.c, m.group)
+    m.c_group_fraction_output = cp.Constraint(m.c, m.output_group)
+    m.c_group_fraction_capacity = cp.Constraint(m.c, m.capacity_group)
