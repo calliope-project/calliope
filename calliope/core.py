@@ -685,75 +685,64 @@ class Model(object):
         self.results = results
         self.pyomo_output = out
 
-    def get_var(self, var, dims):
+    def get_var(self, var, dims=None):
         """Return output for variable `var` as a series, dataframe or panel
 
         Args:
             var : variable name as string, e.g. 'e'
-            dims : list of indices as strings, e.g. ('y', 'x', 't')
+            dims : list of indices as strings, e.g. ('y', 'x', 't');
+                   if not given, they are auto-detected
         """
-        def _get_value(value):
-            try:
-                return cp.value(value)
-            except ValueError:
-                # Catch this for uninitialized values
-                return np.nan
-
+        # TODO currently assumes fixed position of 't' (always last)
         var = getattr(self.m, var)
-        dims_strings = dims
-        dims = [getattr(self.m, dim) for dim in dims]
-        d = self.data
+        # Get set
+        s = var._pprint()[0][1][1].set_tuple
+        # Get dims
+        dims = [i.name for i in s]
+        result = pd.DataFrame.from_dict(var.extract_values(), orient='index')
+        result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
+        result = result[0]
+        # Unstack and sort by time axis
         if len(dims) == 1:
-            result = pd.Series([_get_value(var[i])
-                                for i in sorted(dims[0].value)])
-            idx = dims[0]
-            result.index = sorted(idx.value)
-        elif dims_strings == ['y', 'x']:
-            result = pd.DataFrame(0.0, index=sorted(dims[1].value),
-                                  columns=sorted(dims[0].value))
-            for i, v in var.iteritems():
-                result.loc[i[1], i[0]] = _get_value(v)
-        elif len(dims_strings) == 3:
-            result = pd.Panel(data=None, items=sorted(dims[0].value),
-                              major_axis=sorted(dims[2].value),
-                              minor_axis=sorted(dims[1].value))
-            for i, v in var.iteritems():
-                result.loc[i[0], i[2], i[1]] = _get_value(v)
-        elif len(dims_strings) == 4:
-            result = pd.Panel4D(data=None, labels=sorted(dims[0].value),
-                                items=sorted(dims[1].value),
-                                major_axis=sorted(dims[3].value),
-                                minor_axis=sorted(dims[2].value))
-            for i, v in var.iteritems():
-                result.loc[i[0], i[1], i[3], i[2]] = _get_value(v)
-        # Nicify time column
-        if 't' in dims_strings:
-            if len(dims) == 1:
-                    result.index = d._dt.loc[idx.first():idx.last()]
-            # TODO currently no case where dims=2 and 't' in dims, but
-            # that may change in the future!
+            result = result.sort_index()
+        else:
+            # if len(dims) is 2, we already have a well-formed panel
+            result = result.unstack(level=0)
+            if len(dims) == 2:
+                result = result.sort_index()
+            if len(dims) == 3:
+                result = result.to_panel()
+                result = result.transpose(0, 2, 1)  # Flip time into major_axis
+                result = result.sort_index(1)
+            if len(dims) == 4:
+                # Panel4D needs manual treatment until pandas supports to_panel
+                # for anything else but the regular 3d panel
+                p = {}
+                for i in result.columns:
+                    p[i] = result[i].unstack(0).to_panel().transpose(0, 2, 1)
+                result = pd.Panel4D(p)
+                result = result.sort_index(1)
+        # Nicify time axis
+        if 't' in dims:
+            t = getattr(self.m, 't')
+            new_index = self.data._dt.loc[t.first():t.last()].tolist()
+            if len(dims) <= 2:
+                result.index = new_index
             else:
-                if len(dims) == 3:
-                    axis_atrributes = ['item', 'minor_axis', 'major_axis']
-                elif len(dims) == 4:
-                    axis_atrributes = ['labels', 'item', 'minor_axis',
-                                       'major_axis']
-                t_loc = [i for i, x in enumerate(dims_strings) if x == 't'][0]
-                new_index = d._dt.loc[dims[t_loc].first():dims[t_loc].last()]
-                setattr(result, axis_atrributes[t_loc], new_index.tolist())
+                result.major_axis = new_index
         return result
 
     def get_system_variables(self):
-        e = self.get_var('e', ['c', 'y', 'x', 't'])
+        e = self.get_var('e')
         e = e.sum(axis=3).transpose(0, 2, 1)
         return e
 
     def get_node_variables(self):
         detail = ['s', 'rs', 'rsecs', 'os']
-        p = pd.Panel4D({v: self.get_var(v, ['y', 'x', 't']) for v in detail})
+        p = pd.Panel4D({v: self.get_var(v) for v in detail})
         detail_carrier = ['es_prod', 'es_con', 'e']
         for d in detail_carrier:
-            temp = self.get_var(d, ['c', 'y', 'x', 't'])
+            temp = self.get_var(d)
             for c in self.data._c:
                 p[d + ':' + c] = temp.loc[c, :, :, :]
         return p
@@ -761,7 +750,7 @@ class Model(object):
     def get_node_parameters(self, built_only=False):
         """If built_only is True, disregard locations where e_cap==0"""
         detail = ['s_cap', 'r_cap', 'r_area', 'e_cap']
-        result = pd.Panel({v: self.get_var(v, ['y', 'x']) for v in detail})
+        result = pd.Panel({v: self.get_var(v) for v in detail})
         if built_only:
             result = result.to_frame()
             result = result[result.e_cap > 0].dropna(axis=1)
@@ -778,8 +767,8 @@ class Model(object):
         """
         # Levelized cost of electricity (LCOE)
         # TODO currently counting only e_prod for costs, makes sense?
-        cost = self.get_var('cost', ['y', 'x', 'k']).loc[:, 'monetary', :]
-        e_prod = self.get_var('e_prod', ['c', 'y', 'x', 't'])
+        cost = self.get_var('cost').loc[:, 'monetary', :]
+        e_prod = self.get_var('e_prod')
         # TODO ugly hack to limit to power
         e_prod = e_prod.loc['power', :, :, :].sum(axis='major')  # sum over t
         lcoe = cost / e_prod
@@ -791,10 +780,10 @@ class Model(object):
         lcoe.at['total', 'total'] = cost.sum().sum() / e_prod.sum().sum()
         # Capacity factor (CF)
         # NB: using .abs() to sum absolute values of e so cf always positive
-        e = self.get_var('e', ['c', 'y', 'x', 't'])
+        e = self.get_var('e')
         # TODO ugly hack to limit to power
         e = e.loc['power', :, :, :].abs().sum(axis='major')
-        e_cap = self.get_var('e_cap', ['y', 'x'])
+        e_cap = self.get_var('e_cap')
         cf = e / (e_cap * sum(self.m.time_res[t] for t in self.m.t))
         cf = cf.fillna(0)
         time = sum(self.m.time_res[t] for t in self.m.t)
@@ -872,7 +861,7 @@ class Model(object):
             cost_vars.append(cost)
             cost_weights.append(target_index)
             # Save state of storage for carry over to next iteration
-            s = self.get_var('s', ['y', 'x', 't'])
+            s = self.get_var('s')
             # NB: -1 to convert from length --> index
             storage_state_index = target_index - 1
             d.s_init = s.iloc[:, storage_state_index, :]
