@@ -91,7 +91,7 @@ class Parallelizer(object):
         c.input.model = [core._expand_module_placeholder(i)
                          for i in c.input.model]
         # Interpret relative config paths as relative to run.yaml
-        c.input.model = [core._ensure_absolute(i, self.config_file)
+        c.input.model = [utils.ensure_absolute(i, self.config_file)
                          for i in c.input.model]
         # Load all model config files and combine them into one AttrDict
         config_path = os.path.join(os.path.dirname(__file__), 'config')
