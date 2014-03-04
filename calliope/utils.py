@@ -132,8 +132,12 @@ class AttrDict(dict):
             key, remainder = key.split('.', 1)
             if default is not None:
                 try:
-                    value = self[key].get_key(remainder)
+                    value = self[key].get_key(remainder, default)
                 except KeyError:
+                    # subdict exists, but doesn't contain key
+                    return default
+                except AttributeError:
+                    # key points to non-dict thing, so no get_key attribute
                     return default
             else:
                 value = self[key].get_key(remainder)

@@ -67,6 +67,7 @@ class Model(object):
         self.initialize_time()
 
     def initialize_configuration(self, config_run, override):
+        self.flush_option_cache()
         # Load run configuration
         config_path = os.path.join(os.path.dirname(__file__), 'config')
         if not config_run:
@@ -116,6 +117,7 @@ class Model(object):
         o.locations = locations.process_locations(o.locations)
         # Store initialized configuration on model object
         self.config_model = o
+        self.flush_option_cache()
 
     def get_timeres(self, verify=False):
         """Returns resolution of data in hours. Needs a properly
@@ -182,8 +184,15 @@ class Model(object):
         else:
             raise KeyError('<0')
 
-    # @utils.memoize_instancemethod
     def get_option(self, option, x=None, default=None):
+        key = (option, x, default)
+        try:
+            result = self.option_cache[key]
+        except KeyError:
+            result = self.option_cache[key] = self._get_option(*key)
+        return result
+
+    def _get_option(self, option, x=None, default=None):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
         tech.
@@ -267,6 +276,10 @@ class Model(object):
         # TODO add support for changing defaults?
         o = self.config_model
         o.set_key('techs.' + option, value)
+        self.flush_option_cache()
+
+    def flush_option_cache(self):
+        self.option_cache = {}
 
     def get_group_members(self, group, in_model=True):
         """
@@ -771,8 +784,11 @@ class Model(object):
         e_prod = e_prod.loc['power', :, :, :].sum(axis='major')  # sum over t
         lcoe = cost / e_prod
         lcoe[np.isinf(lcoe)] = 0
-        lcoe_total = cost.sum() / e_prod.sum()
-        lcoe = lcoe.append(pd.DataFrame(lcoe_total.to_dict(), index=['total']))
+        lcoe_total_zones = cost.sum(0) / e_prod.sum(0)
+        lcoe = lcoe.append(pd.DataFrame(lcoe_total_zones.to_dict(), index=['total']))
+        lcoe_total_techs = cost.sum(1) / e_prod.sum(1)
+        lcoe['total'] = lcoe_total_techs
+        lcoe.at['total', 'total'] = cost.sum().sum() / e_prod.sum().sum()
         # Capacity factor (CF)
         # NB: using .abs() to sum absolute values of e so cf always positive
         e = self.get_var('e', ['c', 'y', 'x', 't'])
@@ -781,9 +797,12 @@ class Model(object):
         e_cap = self.get_var('e_cap', ['y', 'x'])
         cf = e / (e_cap * sum(self.m.time_res[t] for t in self.m.t))
         cf = cf.fillna(0)
-        cf_total = e.sum() / (e_cap.sum() * sum(self.m.time_res[t]
-                                                for t in self.m.t))
-        cf = cf.append(pd.DataFrame(cf_total.to_dict(), index=['total']))
+        time = sum(self.m.time_res[t] for t in self.m.t)
+        cf_total_zones = e.sum(0) / (e_cap.sum(0) * time)
+        cf_total_techs = e.sum(1) / (e_cap.sum(1) * time)
+        cf = cf.append(pd.DataFrame(cf_total_zones.to_dict(), index=['total']))
+        cf['total'] = cf_total_techs
+        cf.at['total', 'total'] = e.sum().sum() / (e_cap.sum().sum() * time)
         # Combine everything
         df = pd.Panel({'lcoe': lcoe, 'cf': cf})
         return df
