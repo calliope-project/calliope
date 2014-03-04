@@ -634,7 +634,9 @@ class Model(object):
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
-            self.process_outputs()
+            self.load_results()
+            if self.config_run.output.save is True:
+                self.save_outputs()
         elif self.mode == 'operate':
             self.solve_iterative()
         else:
@@ -738,7 +740,7 @@ class Model(object):
         return e
 
     def get_node_variables(self):
-        detail = ['s', 'rs', 'rsecs', 'os']
+        detail = ['s', 'rs']  # TODO removed 'rsecs', 'os'
         p = pd.Panel4D({v: self.get_var(v) for v in detail})
         detail_carrier = ['es_prod', 'es_con', 'e']
         for d in detail_carrier:
@@ -876,20 +878,10 @@ class Model(object):
                                 'costs': costs}
 
     def load_results(self):
+        """Load results into model instance for access via model variables."""
         r = self.instance.load(self.results)
         if r is False:
             raise UserWarning('Could not load results into model instance.')
-
-    def process_outputs(self):
-        """Load results into model instance for access via model
-        variables, and if ``self.config_run.output.save`` is ``True``,
-        save outputs to CSV.
-
-        """
-        self.load_results()
-        # Save results to disk if specified in configuration
-        if self.config_run.output.save is True:
-            self.save_outputs()
 
     def save_outputs(self, carrier='power'):
         """Save model outputs as CSV to ``self.config_run.output.path``"""

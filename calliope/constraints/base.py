@@ -41,8 +41,8 @@ def node_energy_balance(model):
     # Variables
     m.s = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
-    m.rsecs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    # m.rsecs = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    # m.os = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e = cp.Var(m.c, m.y, m.x, m.t, within=cp.Reals)
     m.e_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.e_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
@@ -125,7 +125,7 @@ def node_energy_balance(model):
             s_minus_one = model.data.s_init.at[x, y]
         else:  # 4th case
             s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
-        return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t] + m.rsecs[y, x, t]
+        return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]  # + m.rsecs[y, x, t]
                 - sum(m.es_prod[c, y, x, t] for c in m.c)
                 - sum(m.es_con[c, y, x, t] for c in m.c))
                 # - m.os[y, x, t])  # FIXME
@@ -275,19 +275,19 @@ def node_constraints_operational(model):
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
 
-    def c_rsecs_rule(m, y, x, t):
-        # rsec (secondary resource) is allowed only during
-        # the hours within startup_time
-        # and only if the technology allows this
-        if (model.get_option(y + '.constraints.allow_rsec')
-                and t < model.data.startup_time_bounds):
-            try:
-                return m.rsecs[y, x, t] <= (m.time_res[t]
-                                            * m.e_cap[y, x]) / m.e_eff[y, x, t]
-            except ZeroDivisionError:
-                return m.rsecs[y, x, t] == 0
-        else:
-            return m.rsecs[y, x, t] == 0
+    # def c_rsecs_rule(m, y, x, t):
+    #     # rsec (secondary resource) is allowed only during
+    #     # the hours within startup_time
+    #     # and only if the technology allows this
+    #     if (model.get_option(y + '.constraints.allow_rsec')
+    #             and t < model.data.startup_time_bounds):
+    #         try:
+    #             return m.rsecs[y, x, t] <= (m.time_res[t]
+    #                                         * m.e_cap[y, x]) / m.e_eff[y, x, t]
+    #         except ZeroDivisionError:
+    #             return m.rsecs[y, x, t] == 0
+    #     else:
+    #         return m.rsecs[y, x, t] == 0
 
     # Constraints
     m.c_rs_max_upper = cp.Constraint(m.y, m.x, m.t)
@@ -296,7 +296,7 @@ def node_constraints_operational(model):
     m.c_es_prod_min = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_es_con_max = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y, m.x, m.t)
-    m.c_rsecs = cp.Constraint(m.y, m.x, m.t)
+    # m.c_rsecs = cp.Constraint(m.y, m.x, m.t)
 
 
 def transmission_constraints(model):
