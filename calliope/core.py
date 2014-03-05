@@ -147,10 +147,7 @@ class Model(object):
         t = cr.get_key('time.summarize', default=False)
         s = time.TimeSummarizer()
         if t == 'mask':
-            if (cr.get_key('time.mask_function', default=False) and
-                    cr.get_key('time.mask_file', default=False)):
-                raise KeyError('Define either mask_function or mask_file.')
-            elif cr.get_key('time.mask_function', default=False):
+            if cr.get_key('time.mask_function', default=False):
                 eval('mask_src = time_masks.'
                      + cr.time.mask_function + '(m.data)')
                 mask = time_masks.masks_to_resolution_series([mask_src])
@@ -159,6 +156,8 @@ class Model(object):
                                                          self.config_run_path),
                                    index_col=0, header=None)[1]
                 mask = mask.astype(int)
+            else:
+                raise KeyError('Define either mask_function or mask_file.')
             s.dynamic_timestepper(self.data, mask)
         elif t == 'uniform':
             s.reduce_resolution(self.data, cr.time.resolution)

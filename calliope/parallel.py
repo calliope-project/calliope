@@ -117,6 +117,10 @@ class Parallelizer(object):
                     f.write('#$ -t 1-{}\n'.format(len(iterations)))
                     f.write('#$ -N {}\n'.format(c.parallel.name))
                     f.write('#$ -j y -o Logs/array_$JOB_ID.log\n')
+                    t = 'parallel.resources.memory'
+                    if c.get_key(t, default=False):
+                        mem_gb = c.get_key(t) / 1000.0
+                        f.write('#$ -l mem_total={:.1f}G\n'.format(mem_gb))
                     f.write('#$ -cwd\n')
                     f.write('\n./{} '.format(array_run) + '${SGE_TASK_ID}\n\n')
                 elif c.parallel.environment == 'bsub':
