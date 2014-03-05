@@ -45,7 +45,7 @@ techs:
             cf_max: false  # Maximum capacity factor, set to false to disable
             e_can_be_negative: false
             e_eff: 1.0
-            e_eff_ref: false  # Currently only used to calculate storage size based on a given storage time. If set to false, e_eff is used for that instead.
+            e_eff_ref: false  # Reference efficiency. If set to false, e_eff is used instead.
             e_cap_max: 0  # Maximum e_cap [kW]
             e_cap_max_force: false  # If true, force e_cap to equal e_cap_max
             e_cap_max_scale: 1.0  # Scale e_cap_max by this value, default is 1.0

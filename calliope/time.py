@@ -142,7 +142,7 @@ class TimeSummarizer(object):
         entry_points = df.summarize[df.summarize > 0]
         for i, v in entry_points.iteritems():
             ifrom = i
-            ito = i + v
+            ito = i + int(v / data.time_res_static)
             resolution = v
             self._reduce_resolution(data, resolution, t_range=[ifrom, ito])
             # Mark the rows that need to be killed with False
