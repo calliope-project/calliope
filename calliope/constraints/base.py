@@ -158,6 +158,8 @@ def node_constraints_build(model):
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
+        max_force = model.get_option(y + '.constraints.s_cap_max_force', x=x)
+        # Get s_cap_max
         if model.get_option(y + '.constraints.use_s_time', x=x):
             s_time_max = model.get_option(y + '.constraints.s_time_max', x=x)
             e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
@@ -165,13 +167,11 @@ def node_constraints_build(model):
             s_cap_max = s_time_max * e_cap_max / e_eff_ref
         else:
             s_cap_max = model.get_option(y + '.constraints.s_cap_max', x=x)
-        if model.mode == 'plan':
-            if model.get_option(y + '.constraints.s_cap_max_force', x=x):
-                return m.s_cap[y, x] == s_cap_max
-            else:
-                return m.s_cap[y, x] <= s_cap_max
-        elif model.mode == 'operate':
+        # Apply constraint
+        if max_force or model.mode == 'operate':
             return m.s_cap[y, x] == s_cap_max
+        elif model.mode == 'plan':
+            return m.s_cap[y, x] <= s_cap_max
 
     def c_r_cap_rule(m, y, x):
         r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
@@ -200,18 +200,17 @@ def node_constraints_build(model):
         e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
         e_cap_max_scale = model.get_option(y + '.constraints.e_cap_max_scale',
                                            x=x)
+        e_cap_max_force = model.get_option(y + '.constraints.e_cap_max_force',
+                                           x=x)
         # First check whether this tech is allowed at this location
         if not d.locations.ix[x, y] == 1:
             return m.e_cap[y, x] == 0
         elif np.isinf(e_cap_max):
             return cp.Constraint.NoConstraint
-        elif model.mode == 'plan':
-            if model.get_option(y + '.constraints.e_cap_max_force', x=x):
-                return m.e_cap[y, x] == e_cap_max * e_cap_max_scale
-            else:
-                return m.e_cap[y, x] <= e_cap_max * e_cap_max_scale
-        elif model.mode == 'operate':
+        elif e_cap_max_force or model.mode == 'operate':
             return m.e_cap[y, x] == e_cap_max * e_cap_max_scale
+        elif model.mode == 'plan':
+            return m.e_cap[y, x] <= e_cap_max * e_cap_max_scale
 
     # Constraints
     m.c_s_cap = cp.Constraint(m.y, m.x)
