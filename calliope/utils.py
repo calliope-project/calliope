@@ -164,6 +164,13 @@ class AttrDict(dict):
 
     def to_yaml(self, path):
         """Saves the AttrDict to the given path as YAML file"""
+        for k in self.keys_nested():
+            # Convert numpy numbers to regular python ones
+            v = self.get_key(k)
+            if isinstance(v, np.float):
+                self.set_key(k, float(v))
+            elif isinstance(v, np.int):
+                self.set_key(k, int(v))
         with open(path, 'w') as f:
             yaml.dump(self.as_dict(), f)
 
