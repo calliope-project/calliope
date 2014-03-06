@@ -484,7 +484,7 @@ class Model(object):
         for param in d.params:
             d[param] = utils.AttrDict()
             for y in d._y:
-                d[param][y] = pd.DataFrame(0, index=d._t[self.slice],
+                d[param][y] = pd.DataFrame(0, index=d._t,
                                            columns=d._x)
                 for x in d._x:
                     option = self.get_option(y + '.constraints.' + param, x=x)
@@ -512,15 +512,15 @@ class Model(object):
                             df = df[x_map.keys()]  # Keep only keys in x_map
                             # Then remap column names
                             df.columns = [x_map[c] for c in df.columns]
-                        d[param][y][x] = df[x]
+                        d[param][y].loc[:, x] = df[x]
                     else:
-                        d[param][y][x] = option
+                        d[param][y].loc[:, x] = option
                     # Scale r to a given maximum if necessary
                     scale = self.get_option(y + '.constraints.r_scale_to_peak',
                                             x=x)
                     if param == 'r' and scale:
                         scaled = self.scale_to_peak(d[param][y][x], scale)
-                        d[param][y][x] = scaled
+                        d[param][y].loc[:, x] = scaled
 
     def _get_t_max_demand(self):
         t_max_demands = utils.AttrDict()
