@@ -670,8 +670,7 @@ class Model(object):
             elif self.mode == 'operate':
                 logdir = os.path.join('Logs', self.run_id
                                       + '_' + str(self.t_start))
-            if self.config_run.get_key('debug.delete_old_logs',
-                                       default=False):
+            if (self.config_run.get_key('debug.delete_old_logs', default=False)and os.path.exists(logdir)):
                 shutil.rmtree(logdir)
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir

@@ -20,7 +20,8 @@ from . import utils
 
 
 def read_dir(directory, files_to_read=['costs_cf', 'costs_lcoe',
-                                       'system_variables', 'node_parameters']):
+                                       'system_variables', 'node_parameters',
+                                       'node_variables_e_power']):
     """Combines output files from `directory` and return an AttrDict
     containing them all.
 
@@ -34,7 +35,11 @@ def read_dir(directory, files_to_read=['costs_cf', 'costs_lcoe',
         for i in results.iterations.index:
             iteration_dir = '{:0>4d}'.format(i)
             src = os.path.join(directory, iteration_dir, f + '.csv')
-            df = pd.read_csv(src, index_col=0, parse_dates=True)
+            try:
+                df = pd.read_csv(src, index_col=0, parse_dates=True)
+            except IOError:
+                results.iterations.at[i, 'IOError'] = 1
+                continue
             # If 'minor' is in columns, we have a flattened panel!
             if 'minor' in df.columns:
                 df['major'] = df.index
