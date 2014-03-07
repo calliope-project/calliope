@@ -316,7 +316,55 @@ def ensure_absolute(path, base_path):
         return path
 
 
-def stack_plot(df, stack, figsize=None, colormap='jet', **kwargs):
+def legend_on_right(ax, style='default', artists=None, labels=None):
+    """Draw a legend on outside on the right of the figure given by 'ax'"""
+    box = ax.get_position()
+    # originally box.width * 0.8 but 1.0 solves some problems
+    # it just means that the box becomes wider, which is ok though!
+    ax.set_position([box.x0, box.y0, box.width * 1.0, box.height])
+    if style == 'square':
+        artists, labels = get_square_legend(ax.legend())
+        l = ax.legend(artists, labels, loc='center left',
+                      bbox_to_anchor=(1, 0.5))
+    elif style == 'custom':
+        l = ax.legend(artists, labels, loc='center left',
+                      bbox_to_anchor=(1, 0.5))
+    else:
+        l = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    return l
+
+
+def legend_below(ax, style='default', columns=5, artists=None, labels=None):
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1,
+                     box.width, box.height * 0.9])
+    if style == 'square':
+        artists, labels = get_square_legend(ax.legend())
+        l = ax.legend(artists, labels, loc='upper center',
+                      bbox_to_anchor=(0.5, -0.05), ncol=columns)
+    elif style == 'custom':
+        l = ax.legend(artists, labels, loc='upper center',
+                      bbox_to_anchor=(0.5, -0.05), ncol=columns)
+    else:
+        l = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+                      ncol=columns)
+    return l
+
+
+def get_square_legend(lgd):
+    rects = [plt.Rectangle((0, 0), 1, 1,
+             fc=l.get_color()) for l in lgd.get_lines()]
+    labels = [l.get_label() for l in lgd.get_lines()]
+    return (rects, labels)
+
+
+def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
+               ticks='daily', **kwargs):
+    """
+    legend can be 'default' or 'right'
+    ticks can be 'hourly', 'daily', 'monthly'
+
+    """
     if not figsize:
         figsize = (16, 4)
     colors = plt.get_cmap(colormap)(np.linspace(0, 1.0, len(stack)))
@@ -328,11 +376,24 @@ def stack_plot(df, stack, figsize=None, colormap='jet', **kwargs):
     # Based on https://github.com/matplotlib/matplotlib/issues/1943
     proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])
                for i in fills]
-    ax.legend(reversed(proxies), reversed(stack))
+    if legend == 'default':
+        ax.legend(reversed(proxies), reversed(stack))
+    elif legend == 'right':
+        legend_on_right(ax, artists=reversed(proxies), labels=reversed(stack),
+                        style='custom')
     # Format x datetime axis
     # Based on http://stackoverflow.com/a/9627970/397746
     # TODO check how pandas does its very nice formatting for df.plot()
     import matplotlib.dates as mdates
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator())
+    if ticks == 'monthly':
+        formatter = mdates.DateFormatter('%b %Y')
+        locator = mdates.MonthLocator()
+    if ticks == 'daily':
+        formatter = mdates.DateFormatter('%d-%m-%Y')
+        locator = mdates.DayLocator()
+    if ticks == 'hourly':
+        formatter = mdates.DateFormatter('%h:%m %d-%m-%Y')
+        locator = mdates.HourLocator()
+    plt.gca().xaxis.set_major_formatter(formatter)
+    plt.gca().xaxis.set_major_locator(locator)
     return ax
