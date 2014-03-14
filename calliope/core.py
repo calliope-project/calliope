@@ -656,8 +656,8 @@ class Model(object):
         opt = co.SolverFactory(self.config_run.solver)  # could set solver_io='python'
         # Set solver options from run_settings file, if it exists
         try:
-            for k, v in self.config_run.solver_options.iteritems():
-                opt.options[k] = v
+            for k in self.config_run.solver_options.keys_nested():
+                opt.options[k] = self.config_run.solver_options.get_key(k)
         except KeyError:
             pass
         if self.config_run.get_key('debug.symbolic_solver_labels',
