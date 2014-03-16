@@ -392,6 +392,11 @@ class Model(object):
         # (already contained in d._y here but separated out as well)
         d.conversion_y = [y for y in d._y
                           if o.techs[y].parent == 'conversion']
+        # Subset of production/consumption technologies (i.e. all techs
+        # that are neither transmission nor conversion)
+        d.pc_y = [y for y in d._y
+                  if (o.techs[y].parent != 'conversion'
+                      or o.techs[y].parent != 'transmission')]
         #
         # c: Carriers set
         #
@@ -478,7 +483,8 @@ class Model(object):
         d = self.data
         # Parameters that may defined over (x, t) for a given technology y
         d.params = ['r', 'e_eff']
-
+        d._y_def_r = set()
+        d._y_def_e_eff = set()
         # TODO allow params in d.params to be defined only over
         # x instead of either static or over (x, t) via CSV!
         for param in d.params:
@@ -488,8 +494,11 @@ class Model(object):
                                            columns=d._x)
                 for x in d._x:
                     option = self.get_option(y + '.constraints.' + param, x=x)
-
                     if isinstance(option, str) and option.startswith('file'):
+                        if param == 'r':
+                            d._y_def_r.add(y)
+                        elif param == 'e_eff':
+                            d._y_def_e_eff.add(y)
                         try:
                             # Parse 'file=filename' option
                             f = option.split('=')[1]
@@ -515,6 +524,9 @@ class Model(object):
                         d[param][y].loc[:, x] = df[x]
                     else:
                         d[param][y].loc[:, x] = option
+                        if (param == 'r' and option != float('inf') and
+                                option != 0):
+                            d._y_def_r.add(y)
                     # Scale r to a given maximum if necessary
                     scale = self.get_option(y + '.constraints.r_scale_to_peak',
                                             x=x)
@@ -576,6 +588,14 @@ class Model(object):
         # The rest
         m.c = cp.Set(initialize=d._c, ordered=True)  # Carriers
         m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
+        m.y_pc = cp.Set(initialize=d.pc_y, within=m.y,
+                        ordered=True)  # Production/consumption technologies
+        m.y_trans = cp.Set(initialize=d.transmission_y, within=m.y,
+                           ordered=True)  # Transmission technologies
+        m.y_conv = cp.Set(initialize=d.conversion_y, within=m.y,
+                           ordered=True)  # Conversion technologies
+        m.y_def_r = cp.Set(initialize=d._y_def_r, within=m.y)
+        m.y_def_e_eff = cp.Set(initialize=d._y_def_e_eff, within=m.y)
         m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
         m.k = cp.Set(initialize=d._k, ordered=True)  # Cost classes
 
@@ -595,9 +615,13 @@ class Model(object):
                     return float(src[y])
             return getter
 
+        param_sets = {'r': m.y_def_r,
+                      'e_eff': m.y_def_e_eff}
+
         for param in d.params:
             initializer = param_populator(d[param])
-            setattr(m, param, cp.Param(m.y, m.x, m.t, initialize=initializer))
+            y = param_sets[param]
+            setattr(m, param, cp.Param(y, m.x, m.t, initialize=initializer))
 
         m.time_res = (cp.Param(m.t,
                       initialize=lambda m, t: float(d.time_res_series.loc[t])))
@@ -653,7 +677,11 @@ class Model(object):
         m = self.m
         instance = m.create()
         instance.preprocess()
-        opt = co.SolverFactory(self.config_run.solver)  # could set solver_io='python'
+        solver_io = self.config_run.get_key('solver_io', default=False)
+        if solver_io:
+            opt = co.SolverFactory(self.config_run.solver, solver_io=solver_io)
+        else:
+            opt = co.SolverFactory(self.config_run.solver)
         # Set solver options from run_settings file, if it exists
         try:
             for k in self.config_run.solver_options.keys_nested():
@@ -676,7 +704,7 @@ class Model(object):
             TempfileManager.tempdir = logdir
         # Silencing output by redirecting stdout and stderr
         with utils.capture_output() as out:
-            results = opt.solve(instance)
+            results = opt.solve(instance, tee=True)
         if save_json:
             with open(save_json, 'w') as f:
                 json.dump(results.json_repn(), f, indent=4)
@@ -689,7 +717,7 @@ class Model(object):
         """Return output for variable `var` as a series, dataframe or panel
 
         Args:
-            var : variable name as string, e.g. 'e'
+            var : variable name as string, e.g. 'es_prod'
             dims : list of indices as strings, e.g. ('y', 'x', 't');
                    if not given, they are auto-detected
         """
@@ -732,19 +760,31 @@ class Model(object):
                 result.major_axis = new_index
         return result
 
+    def get_e(self):
+        es_prod = self.get_var('es_prod')
+        es_con = self.get_var('es_con')
+        e = {}
+        for i in es_prod.labels:
+            e[i] = (es_prod[i].to_frame() + es_con[i].to_frame()).to_panel()
+        e = pd.Panel4D(e)
+        return e
+
     def get_system_variables(self):
-        e = self.get_var('e')
+        e = self.get_e()
         e = e.sum(axis=3).transpose(0, 2, 1)
         return e
 
     def get_node_variables(self):
-        detail = ['s', 'rs']  # TODO removed 'rsecs', 'os'
-        p = pd.Panel4D({v: self.get_var(v) for v in detail})
-        detail_carrier = ['es_prod', 'es_con', 'e']
-        for d in detail_carrier:
-            temp = self.get_var(d)
-            for c in self.data._c:
-                p[d + ':' + c] = temp.loc[c, :, :, :]
+        try:
+            detail = ['s', 'rs']
+            p = pd.Panel4D({v: self.get_var(v) for v in detail})
+        except KeyError:
+            detail = ['s', 'rs', 'rs_']
+            p = pd.Panel4D({v: self.get_var(v) for v in detail})
+        # Add 'e:c' items for each c in carrier
+        temp = self.get_e()
+        for c in self.data._c:
+            p['e' + ':' + c] = temp.loc[c, :, :, :]
         return p
 
     def get_node_parameters(self, built_only=False):
@@ -761,14 +801,14 @@ class Model(object):
 
         Get costs
 
-        NB: Currently only counts e_prod towards costs, and only reports
+        NB: Currently only counts es_prod towards costs, and only reports
         costs for the carrier ``power``!
 
         """
         # Levelized cost of electricity (LCOE)
-        # TODO currently counting only e_prod for costs, makes sense?
+        # TODO currently counting only es_prod for costs, makes sense?
         cost = self.get_var('cost').loc[:, 'monetary', :]
-        e_prod = self.get_var('e_prod')
+        e_prod = self.get_var('es_prod')
         # TODO ugly hack to limit to power
         e_prod = e_prod.loc['power', :, :, :].sum(axis='major')  # sum over t
         lcoe = cost / e_prod
@@ -780,7 +820,7 @@ class Model(object):
         lcoe.at['total', 'total'] = cost.sum().sum() / e_prod.sum().sum()
         # Capacity factor (CF)
         # NB: using .abs() to sum absolute values of e so cf always positive
-        e = self.get_var('e')
+        e = self.get_e()
         # TODO ugly hack to limit to power
         e = e.loc['power', :, :, :].abs().sum(axis='major')
         e_cap = self.get_var('e_cap')

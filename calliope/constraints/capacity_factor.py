@@ -24,7 +24,7 @@ def capacity_factor(model):
 
     # Constraint rules
     def c_cf_prod_rule(m, c, y, x):
-        return m.cf_prod[c, y, x] == (sum(m.e_prod[c, y, x, t] for t in m.t)
+        return m.cf_prod[c, y, x] == (sum(m.es_prod[c, y, x, t] for t in m.t)
                                       / (m.e_cap[y, x]
                                          * sum(m.time_res[t] for t in m.t)))
 
