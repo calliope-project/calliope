@@ -52,9 +52,9 @@ def group_fraction(model):
     def c_group_fraction_output_rule(m, c, output_group):
         sign, fraction = sign_fraction(output_group, 'output')
         rhs = (fraction
-               * sum(m.e_prod[c, y, x, t] for y in supply_techs
+               * sum(m.es_prod[c, y, x, t] for y in supply_techs
                      for x in m.x for t in m.t))
-        lhs = sum(m.e_prod[c, y, x, t]
+        lhs = sum(m.es_prod[c, y, x, t]
                   for y in model.get_group_members(output_group) for x in m.x
                   for t in m.t)
         return equalizer(lhs, rhs, sign)
