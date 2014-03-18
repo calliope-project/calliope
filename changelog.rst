@@ -2,23 +2,25 @@
 Release History
 ---------------
 
-0.2.0 (dev)
-+++++++++++
+0.2.0 (2014-03-18)
+++++++++++++++++++
 
 * Added cost classes with a new set ``k``
 * Added energy carriers with a new set ``c``
 * Added conversion technologies
+* Speed improvements and simplifications
 * Ability to arbitrarily nest model configuration files with ``import`` statements
 * Added additional constraints
 * Improved configuration handling
+* Ability to define timestep options in run configuration
 * Cleared up terminology (nodes vs locations)
 * Improved TimeSummarizer masking and added new masks
 * Removed technology classes
-* Improved operational mode with results output matching planning mode
+* Improved operational mode with results output matching planning mode and dynamic updating of parameters in model instance
 * Working parallel_tools
 * Improved documentation
 * Apache 2.0 licensed
-* Other improvements
+* Other improvements and fixes
 
 0.1.0 (2013-12-10)
 ++++++++++++++++++
