@@ -87,16 +87,16 @@ techs:
     storage:
         parent: defaults
         constraints:
-            r: 0  # Not used but still must be defined
+            r: 0  # Not used but still must be defined as 0
             e_can_be_negative: true
     transmission:
         parent: defaults
         constraints:
-            r: 0  # Not used but still must be defined
+            r: inf  # Not used but still must be defined as inf
             e_cap_max: inf
             e_can_be_negative: true
     conversion:
         parent: defaults
         constraints:
-            r: 0  # Not used but still must be defined
+            r: inf  # Not used but still must be defined as inf
             e_can_be_negative: true

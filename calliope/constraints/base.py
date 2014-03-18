@@ -35,24 +35,23 @@ def node_resource(model):
 
     # Constraint rules
     def c_rs_rule(m, y, x, t):
-        if y not in m.y_def_r:
-            return cp.Constraint.NoConstraint
-        else:
-            r_avail = (m.r[y, x, t]
-                       * model.get_option(y + '.constraints.r_scale', x=x)
-                       * m.r_area[y, x]
-                       * model.get_option(y + '.constraints.r_eff'))
-            if model.get_option(y + '.constraints.force_r'):
-                return m.rs[y, x, t] == r_avail
-            # had to remove the following formulation because it is not
-            # re-evaluated on model re-construction -- we now check for
-            # demand/supply tech instead, which means that `r` can only
-            # be ALL negative or ALL positive for a given tech!
-            # elif cp.value(m.r[y, x, t]) > 0:
-            elif y in model.get_group_members('supply'):
-                return m.rs[y, x, t] <= r_avail
-            elif y in model.get_group_members('demand'):
-                return m.rs[y, x, t] >= r_avail
+        r_avail = (m.r[y, x, t]
+                   * model.get_option(y + '.constraints.r_scale', x=x)
+                   * m.r_area[y, x]
+                   * model.get_option(y + '.constraints.r_eff'))
+        if model.get_option(y + '.constraints.force_r'):
+            return m.rs[y, x, t] == r_avail
+        # had to remove the following formulation because it is not
+        # re-evaluated on model re-construction -- we now check for
+        # demand/supply tech instead, which means that `r` can only
+        # be ALL negative or ALL positive for a given tech!
+        # elif cp.value(m.r[y, x, t]) > 0:
+        elif y in model.get_group_members('supply'):
+            return m.rs[y, x, t] <= r_avail
+        elif y in model.get_group_members('demand'):
+            return m.rs[y, x, t] >= r_avail
+        elif y in model.get_group_members('storage'):
+            return m.rs[y, x, t] == 0
 
     # Constraints
     m.c_rs = cp.Constraint(m.y_def_r, m.x, m.t)
@@ -86,7 +85,7 @@ def node_energy_balance(model):
     # Constraint rules
     def c_s_balance_transmission_rule(m, y, x, t):
         y_remote, x_remote = transmission.get_remotes(y, x)
-        if y_remote in model.data.transmission_y:
+        if y_remote in m.y_trans:
             c = model.get_option(y + '.carrier')
             return (m.es_prod[c, y, x, t]
                     == -1 * m.es_con[c, y_remote, x_remote, t]
@@ -116,16 +115,20 @@ def node_energy_balance(model):
                     * get_e_eff(m, y, x, t))
 
         # B) Case where storage is allowed
-        if m.t.order_dict[t] == 1:  # order_dict starts at 1
-            s_minus_one = m.s_init[y, x]
         else:
-            s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
-                            ** m.time_res[model.prev(t)])
-                           * m.s[y, x, model.prev(t)])
-        return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]  # + m.rs_[y, x, t]
-                - es_prod
-                - sum(m.es_con[c, y, x, t] for c in m.c)
-                * get_e_eff(m, y, x, t))
+            # set up s_minus_one
+            if m.t.order_dict[t] == 1:  # order_dict starts at 1
+                s_minus_one = m.s_init[y, x]
+            else:
+                s_loss = model.get_option(y + '.constraints.s_loss')
+                s_minus_one = (((1 - s_loss)
+                                ** m.time_res[model.prev(t)])
+                               * m.s[y, x, model.prev(t)])
+            return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
+                    # + m.rs_[y, x, t]
+                    - es_prod
+                    - sum(m.es_con[c, y, x, t] for c in m.c)
+                    * get_e_eff(m, y, x, t))
 
     # Constraints
     m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)

@@ -531,8 +531,7 @@ class Model(object):
                         d[param][y].loc[:, x] = df[x]
                     else:
                         d[param][y].loc[:, x] = option
-                        if (param == 'r' and option != float('inf') and
-                                option != 0):
+                        if (param == 'r' and option != float('inf')):
                             d._y_def_r.add(y)
                     # Scale r to a given maximum if necessary
                     scale = self.get_option(y + '.constraints.r_scale_to_peak',
