@@ -17,6 +17,7 @@ import itertools
 import json
 import os
 import shutil
+import time
 
 import coopr.opt as co
 import coopr.pyomo as cp
@@ -27,7 +28,7 @@ from pyutilib.services import TempfileManager
 from . import constraints
 from . import locations
 from . import transmission
-from . import time
+from . import time_tools
 from . import time_masks
 from . import utils
 
@@ -145,12 +146,12 @@ class Model(object):
         """
         cr = self.config_run
         t = cr.get_key('time.summarize', default=False)
-        s = time.TimeSummarizer()
+        s = time_tools.TimeSummarizer()
         if t == 'mask':
             if cr.get_key('time.mask_function', default=False):
                 eval('mask_src = time_masks.'
-                     + cr.time.mask_function + '(m.data)')
-                mask = time_masks.masks_to_resolution_series([mask_src])
+                     + cr.time_tools.mask_function + '(m.data)')
+                mask = time.masks_to_resolution_series([mask_src])
             elif cr.get_key('time.mask_file', default=False):
                 mask = pd.read_csv(utils.ensure_absolute(cr.time.mask_file,
                                                          self.config_run_path),
@@ -302,7 +303,7 @@ class Model(object):
         if in_model:
             member_techs = [y for y in member_techs
                             if (y in self.data._y
-                                or y in self.data._y_transmission)]
+                                or y in self.data.transmission_y)]
         return member_techs
 
     @utils.memoize_instancemethod
@@ -382,21 +383,21 @@ class Model(object):
         # Subset of transmission technologies, if any defined (used below)
         # (not yet added to d._y here)
         if ('links' in o) and (o.links is not None):
-            d.transmission_y = transmission.get_transmission_techs(o.links)
-            d._y_transmission = list(set([v.keys()[0]
-                                     for k, v in o.links.iteritems()]))
+            d._y_transmission = transmission.get_transmission_techs(o.links)
+            d.transmission_y = list(set([v.keys()[0]
+                                    for k, v in o.links.iteritems()]))
         else:
-            d.transmission_y = []
             d._y_transmission = []
+            d.transmission_y = []
         # Subset of conversion technologies
         # (already contained in d._y here but separated out as well)
-        d.conversion_y = [y for y in d._y
-                          if o.techs[y].parent == 'conversion']
+        d._y_conversion = [y for y in d._y
+                           if o.techs[y].parent == 'conversion']
         # Subset of production/consumption technologies (i.e. all techs
         # that are neither transmission nor conversion)
-        d.pc_y = [y for y in d._y
-                  if (o.techs[y].parent != 'conversion'
-                      or o.techs[y].parent != 'transmission')]
+        d._y_pc = [y for y in d._y
+                   if (o.techs[y].parent != 'conversion'
+                       or o.techs[y].parent != 'transmission')]
         #
         # c: Carriers set
         #
@@ -420,10 +421,10 @@ class Model(object):
         # For simplicity, only keep the locations that are actually in set `x`
         d.locations = d.locations.ix[d._x, :]
         # Add transmission technologies to y, if any defined
-        if d.transmission_y:
-            d._y.extend(d.transmission_y)
+        if d._y_transmission:
+            d._y.extend(d._y_transmission)
             # Add transmission tech columns to locations matrix
-            for y in d.transmission_y:
+            for y in d._y_transmission:
                 d.locations[y] = 0
             # Create representation of location-tech links
             tree = transmission.explode_transmission_tree(o.links, d._x)
@@ -481,6 +482,12 @@ class Model(object):
             return df
 
         d = self.data
+        # Data for storage initialization parameter
+        d.s_init = pd.DataFrame(index=d._x, columns=d._y_pc)
+        for y in d.s_init.columns:
+            for x in d.s_init.index:
+                d.s_init.at[x, y] = self.get_option(y + '.constraints.s_init',
+                                                    x=x)
         # Parameters that may defined over (x, t) for a given technology y
         d.params = ['r', 'e_eff']
         d._y_def_r = set()
@@ -551,6 +558,41 @@ class Model(object):
     def add_constraint(self, constraint, *args, **kwargs):
         constraint(self, *args, **kwargs)
 
+    def _param_populator(self, src, t_start=None):
+        """Returns a `getter` function that returns either
+        (x, t)-specific values for parameters that define such, or
+        always the same static value if only a static value is given.
+
+        """
+        def getter(m, y, x, t):
+            if isinstance(src[y], pd.core.frame.DataFrame):
+                if t_start:
+                    return float(src[y].loc[t_start + t, x])
+                else:
+                    return float(src[y].loc[t, x])
+            else:
+                return float(src[y])
+        return getter
+
+    def update_parameters(self):
+        mi = self.instance
+        d = self.data
+        t_start = self.t_start
+
+        for param in d.params:
+            initializer = self._param_populator(d[param], t_start)
+            y_set = self.param_sets[param]
+            param_object = getattr(mi, param)
+            for y in y_set:
+                for x in mi.x:
+                    for t in mi.t:
+                        param_object[y, x, t] = initializer(mi, y, x, t)
+
+        s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
+        for y in mi.y_pc:
+            for x in mi.x:
+                mi.s_init[y, x] = s_init_initializer(mi, y, x)
+
     def generate_model(self, t_start=None):
         """
         Generate the model and store it under the property `m`.
@@ -578,22 +620,23 @@ class Model(object):
         if self.mode == 'plan':
             m.t = cp.Set(initialize=d._t, ordered=True)
         elif self.mode == 'operate':
-            t_end = t_start + o.opmode.horizon / d.time_res_data
+            t_end = (t_start + o.opmode.horizon / d.time_res_data) - 1
+            self.t_end = int(t_end)
             # If t_end is beyond last timestep, cap it to last one
             # TODO this is a hack and shouldn't be necessary?
             if t_end > d._t.iat[-1]:
                 t_end = d._t.iat[-1]
-            m.t = cp.Set(initialize=d._t.loc[t_start:t_end],
+            m.t = cp.Set(initialize=d._t.loc[self.t_start:self.t_end],
                          ordered=True)
         # The rest
         m.c = cp.Set(initialize=d._c, ordered=True)  # Carriers
         m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
-        m.y_pc = cp.Set(initialize=d.pc_y, within=m.y,
+        m.y_pc = cp.Set(initialize=d._y_pc, within=m.y,
                         ordered=True)  # Production/consumption technologies
-        m.y_trans = cp.Set(initialize=d.transmission_y, within=m.y,
+        m.y_trans = cp.Set(initialize=d._y_transmission, within=m.y,
                            ordered=True)  # Transmission technologies
-        m.y_conv = cp.Set(initialize=d.conversion_y, within=m.y,
-                           ordered=True)  # Conversion technologies
+        m.y_conv = cp.Set(initialize=d._y_conversion, within=m.y,
+                          ordered=True)  # Conversion technologies
         m.y_def_r = cp.Set(initialize=d._y_def_r, within=m.y)
         m.y_def_e_eff = cp.Set(initialize=d._y_def_e_eff, within=m.y)
         m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
@@ -602,35 +645,30 @@ class Model(object):
         #
         # Parameters
         #
-        def param_populator(src):
-            """Returns a `getter` function that returns either
-            (x, t)-specific values for parameters that define such, or
-            always the same static value if only a static value is given.
 
-            """
-            def getter(m, y, x, t):
-                if isinstance(src[y], pd.core.frame.DataFrame):
-                    return float(src[y].loc[t, x])
-                else:
-                    return float(src[y])
-            return getter
-
-        param_sets = {'r': m.y_def_r,
-                      'e_eff': m.y_def_e_eff}
-
+        self.param_sets = {'r': m.y_def_r,
+                           'e_eff': m.y_def_e_eff}
         for param in d.params:
-            initializer = param_populator(d[param])
-            y = param_sets[param]
-            setattr(m, param, cp.Param(y, m.x, m.t, initialize=initializer))
+            initializer = self._param_populator(d[param], t_start)
+            y = self.param_sets[param]
+            setattr(m, param, cp.Param(y, m.x, m.t, initialize=initializer,
+                                       mutable=True))
 
-        m.time_res = (cp.Param(m.t,
-                      initialize=lambda m, t: float(d.time_res_series.loc[t])))
+        # time_res is NOT mutable, since if iterating in operational mode,
+        # each horizon period must have the same time resolutions
+        time_res_initializer = lambda m, t: float(d.time_res_series.loc[t])
+        m.time_res = (cp.Param(m.t, initialize=time_res_initializer))
+
+        s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
+        m.s_init = cp.Param(m.y_pc, m.x, initialize=s_init_initializer,
+                            mutable=True)
 
         #
-        # Constraints
+        # Variables and constraints
         #
         # 1. Required
-        required = [constraints.base.node_energy_balance,
+        required = [constraints.base.node_resource,
+                    constraints.base.node_energy_balance,
                     constraints.base.node_constraints_build,
                     constraints.base.node_constraints_operational,
                     constraints.base.node_costs,
@@ -654,6 +692,7 @@ class Model(object):
 
     def run(self):
         """Instantiate and solve the model"""
+        start_time = time.time()
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
@@ -664,10 +703,13 @@ class Model(object):
             self.solve_iterative()
         else:
             raise UserWarning('Invalid mode')
+        self.runtime = int(time.time() - start_time)
 
-    def solve(self, save_json=False):
+    def solve(self, warmstart=False, save_json=False):
         """
         Args:
+            warmstart : (default False) re-solve an updated model
+                        instance
             save_json : (default False) Save optimization results to
                         the given file as JSON.
 
@@ -675,41 +717,45 @@ class Model(object):
 
         """
         m = self.m
-        instance = m.create()
-        instance.preprocess()
-        solver_io = self.config_run.get_key('solver_io', default=False)
-        if solver_io:
-            opt = co.SolverFactory(self.config_run.solver, solver_io=solver_io)
-        else:
-            opt = co.SolverFactory(self.config_run.solver)
-        # Set solver options from run_settings file, if it exists
-        try:
-            for k in self.config_run.solver_options.keys_nested():
-                opt.options[k] = self.config_run.solver_options.get_key(k)
-        except KeyError:
-            pass
-        if self.config_run.get_key('debug.symbolic_solver_labels',
-                                   default=False):
-            opt.symbolic_solver_labels = True
-        if self.config_run.get_key('debug.keepfiles', default=False):
-            opt.keepfiles = True
+        cr = self.config_run
+        if not warmstart:
+            self.instance = m.create()
+            solver_io = cr.get_key('solver_io', default=False)
+            if solver_io:
+                self.opt = co.SolverFactory(cr.solver, solver_io=solver_io)
+            else:
+                self.opt = co.SolverFactory(cr.solver)
+            # Set solver options from run_settings file, if it exists
+            try:
+                for k in cr.solver_options.keys_nested():
+                    self.opt.options[k] = cr.solver_options.get_key(k)
+            except KeyError:
+                pass
+            if cr.get_key('debug.symbolic_solver_labels', default=False):
+                self.opt.symbolic_solver_labels = True
+        if cr.get_key('debug.keepfiles', default=False):
+            self.opt.keepfiles = True
             if self.mode == 'plan':
                 logdir = os.path.join('Logs', self.run_id)
             elif self.mode == 'operate':
                 logdir = os.path.join('Logs', self.run_id
                                       + '_' + str(self.t_start))
-            if (self.config_run.get_key('debug.delete_old_logs', default=False)and os.path.exists(logdir)):
+            if (cr.get_key('debug.delete_old_logs', default=False)and os.path.exists(logdir)):
                 shutil.rmtree(logdir)
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
+        # Always preprocess instance, for both cold start and warm start
+        self.instance.preprocess()
         # Silencing output by redirecting stdout and stderr
         with utils.capture_output() as out:
-            results = opt.solve(instance, tee=True)
+            if warmstart:
+                results = self.opt.solve(self.instance, warmstart=True,
+                                         tee=True)
+            else:
+                results = self.opt.solve(self.instance, tee=True)
         if save_json:
             with open(save_json, 'w') as f:
                 json.dump(results.json_repn(), f, indent=4)
-        self.instance = instance
-        self.opt = opt
         self.results = results
         self.pyomo_output = out
 
@@ -722,7 +768,8 @@ class Model(object):
                    if not given, they are auto-detected
         """
         # TODO currently assumes fixed position of 't' (always last)
-        var = getattr(self.m, var)
+        m = self.m
+        var = getattr(m, var)
         # Get set
         s = var._pprint()[0][1][1].set_tuple
         # Get dims
@@ -752,8 +799,11 @@ class Model(object):
                 result = result.sort_index(1)
         # Nicify time axis
         if 't' in dims:
-            t = getattr(self.m, 't')
-            new_index = self.data._dt.loc[t.first():t.last()].tolist()
+            t = getattr(m, 't')
+            if self.t_start == 0 or self.t_start == None:
+                new_index = self.data._dt.loc[t.first():t.last()].tolist()
+            else:
+                new_index = self.data._dt.loc[self.t_start:self.t_end].tolist()
             if len(dims) <= 2:
                 result.index = new_index
             else:
@@ -805,6 +855,7 @@ class Model(object):
         costs for the carrier ``power``!
 
         """
+        m = self.m
         # Levelized cost of electricity (LCOE)
         # TODO currently counting only es_prod for costs, makes sense?
         cost = self.get_var('cost').loc[:, 'monetary', :]
@@ -824,9 +875,9 @@ class Model(object):
         # TODO ugly hack to limit to power
         e = e.loc['power', :, :, :].abs().sum(axis='major')
         e_cap = self.get_var('e_cap')
-        cf = e / (e_cap * sum(self.m.time_res[t] for t in self.m.t))
+        cf = e / (e_cap * sum(m.time_res[t] for t in m.t))
         cf = cf.fillna(0)
-        time = sum(self.m.time_res[t] for t in self.m.t)
+        time = sum(m.time_res[t] for t in m.t)
         cf_total_zones = e.sum(0) / (e_cap.sum(0) * time)
         cf_total_techs = e.sum(1) / (e_cap.sum(1) * time)
         cf = cf.append(pd.DataFrame(cf_total_zones.to_dict(), index=['total']))
@@ -864,6 +915,65 @@ class Model(object):
 
     def solve_iterative(self):
         """
+        Solve iterative by updating model parameters.
+
+        Returns None on success, storing results under
+        self.iterative_solution
+
+        """
+        o = self.config_model
+        d = self.data
+        window_adj = int(o.opmode.window / d.time_res_data)
+        steps = [t for t in d._t if (t % window_adj) == 0]
+        # Remove the last step - since we look forward at each step,
+        # it would take us beyond actually existing data
+        steps = steps[:-1]
+        system_vars = []
+        node_vars = []
+        cost_vars = []
+        cost_weights = []
+        self.generate_model(t_start=steps[0])
+        for index, step in enumerate(steps):
+            if index == 0:
+                self.solve(warmstart=False)
+            else:
+                self.t_start = step
+                t_end = (step + o.opmode.horizon / d.time_res_data) - 1
+                self.t_end = int(t_end)
+                self.update_parameters()
+                self.solve(warmstart=True)
+            self.load_results()
+            # Gather relevant model results over decision interval, so
+            # we only grab [0:window/time_res] steps!
+            panel = self.get_system_variables()
+            if index == (len(steps) - 1):
+                # Final iteration saves data from entire horizon
+                target_index = int(o.opmode.horizon / d.time_res_static)
+            else:
+                # Non-final iterations only save data from window
+                target_index = int(o.opmode.window / d.time_res_static)
+            system_vars.append(panel.iloc[:, 0:target_index, :])
+            # Get node variables
+            panel4d = self.get_node_variables()
+            node_vars.append(panel4d.iloc[:, :, 0:target_index, :])
+            # Get cost
+            cost = self.get_costs()
+            cost_vars.append(cost)
+            cost_weights.append(target_index)
+            # Save state of storage for carry over to next iteration
+            s = self.get_var('s')
+            # NB: -1 to convert from length --> index
+            storage_state_index = target_index - 1
+            d.s_init = s.iloc[:, storage_state_index, :]
+        costs = self._costs_iterative(cost_vars, cost_weights, node_vars)
+        self.operate_results = {'system': pd.concat(system_vars, axis=1),
+                                'node': pd.concat(node_vars, axis=2),
+                                'costs': costs}
+
+    def solve_iterative_rebuild(self):
+        """
+        Solve iterative by rebuilding the model each time.
+
         Returns None on success, storing results under
         self.iterative_solution
 

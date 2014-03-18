@@ -2,8 +2,8 @@
 Copyright (C) 2013 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-time.py
-~~~~~~~
+time_tools.py
+~~~~~~~~~~~~~
 
 Provides the TimeSummarizer class which can dynamically adjust the time
 step resolution of the data in a model instance.

@@ -19,14 +19,51 @@ from .. import transmission
 from .. import utils
 
 
+def node_resource(model):
+    """
+    Defines variables:
+
+    * rs: resource <-> storage (+ production, - consumption)
+    * r_area: resource collector area
+
+    """
+    m = model.m
+
+    # Variables
+    m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
+    m.r_area = cp.Var(m.y_def_r, m.x, within=cp.NonNegativeReals)
+
+    # Constraint rules
+    def c_rs_rule(m, y, x, t):
+        if y not in m.y_def_r:
+            return cp.Constraint.NoConstraint
+        else:
+            r_avail = (m.r[y, x, t]
+                       * model.get_option(y + '.constraints.r_scale', x=x)
+                       * m.r_area[y, x]
+                       * model.get_option(y + '.constraints.r_eff'))
+            if model.get_option(y + '.constraints.force_r'):
+                return m.rs[y, x, t] == r_avail
+            # had to remove the following formulation because it is not
+            # re-evaluated on model re-construction -- we now check for
+            # demand/supply tech instead, which means that `r` can only
+            # be ALL negative or ALL positive for a given tech!
+            # elif cp.value(m.r[y, x, t]) > 0:
+            elif y in model.get_group_members('supply'):
+                return m.rs[y, x, t] <= r_avail
+            elif y in model.get_group_members('demand'):
+                return m.rs[y, x, t] >= r_avail
+
+    # Constraints
+    m.c_rs = cp.Constraint(m.y_def_r, m.x, m.t)
+
+
 def node_energy_balance(model):
     """
     Defines variables:
 
     * s: storage level
-    * rs: resource <-> storage (+ production, - consumption)
     * rs_: secondary resource -> storage (+ production)
-    * r_area: resource collector area
     * es_prod: storage -> carrier (+ production)
     * es_con: storage <- carrier (- consumption)
 
@@ -42,29 +79,11 @@ def node_energy_balance(model):
 
     # Variables
     m.s = cp.Var(m.y_pc, m.x, m.t, within=cp.NonNegativeReals)
-    m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     #m.rs_ = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.r_area = cp.Var(m.y_def_r, m.x, within=cp.NonNegativeReals)
     m.es_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.es_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
 
     # Constraint rules
-    def c_rs_rule(m, y, x, t):
-        if y not in m.y_def_r:
-            return cp.Constraint.NoConstraint
-        else:
-            this_r = m.r[y, x, t]
-            r_avail = (this_r
-                       * model.get_option(y + '.constraints.r_scale', x=x)
-                       * m.r_area[y, x]
-                       * model.get_option(y + '.constraints.r_eff'))
-            if model.get_option(y + '.constraints.force_r'):
-                return m.rs[y, x, t] == r_avail
-            elif this_r > 0:
-                return m.rs[y, x, t] <= r_avail
-            else:
-                return m.rs[y, x, t] >= r_avail
-
     def c_s_balance_transmission_rule(m, y, x, t):
         y_remote, x_remote = transmission.get_remotes(y, x)
         if y_remote in model.data.transmission_y:
@@ -83,11 +102,11 @@ def node_energy_balance(model):
 
     def c_s_balance_pc_rule(m, y, x, t):
         # es_prod
-        try:
-            es_prod = (sum(m.es_prod[c, y, x, t] for c in m.c)
-                       / get_e_eff(m, y, x, t))
-        except ZeroDivisionError:
+        e_eff = get_e_eff(m, y, x, t)
+        if cp.value(e_eff) == 0:  # FIXME this doesn't update on param update!
             es_prod = 0
+        else:
+            es_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
 
         # A) Case where no storage allowed
         if model.get_option(y + '.constraints.s_cap_max') == 0:
@@ -97,34 +116,25 @@ def node_energy_balance(model):
                     * get_e_eff(m, y, x, t))
 
         # B) Case where storage is allowed
-        # Define s_minus_one differently for cases:
-        #   1. storage allowed and time step is not the first timestep
-        #   2. storage allowed and initializing an iteration of operation mode
-        #   3. storage allowed and initializing the first timestep
-        if m.t.order_dict[t] > 1:
+        if m.t.order_dict[t] == 1:  # order_dict starts at 1
+            s_minus_one = m.s_init[y, x]
+        else:
             s_minus_one = (((1 - model.get_option(y + '.constraints.s_loss'))
                             ** m.time_res[model.prev(t)])
                            * m.s[y, x, model.prev(t)])
-        elif model.mode == 'operate' and 's_init' in model.data:
-            # TODO make s_init a proper pyomo parameter to allow solver warm start
-            s_minus_one = model.data.s_init.at[x, y]
-        else:
-            s_minus_one = model.get_option(y + '.constraints.s_init', x=x)
         return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]  # + m.rs_[y, x, t]
                 - es_prod
                 - sum(m.es_con[c, y, x, t] for c in m.c)
                 * get_e_eff(m, y, x, t))
 
     # Constraints
-    m.c_rs = cp.Constraint(m.y_def_r, m.x, m.t)
     m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)
     m.c_s_balance_conversion = cp.Constraint(m.y_conv, m.x, m.t)
     m.c_s_balance_pc = cp.Constraint(m.y_pc, m.x, m.t)
 
 
 def node_constraints_build(model):
-    """Depends on: node_energy_balance
-
+    """
     Defines variables:
 
     * s_cap: installed storage capacity
@@ -204,7 +214,6 @@ def node_constraints_build(model):
 
 
 def node_constraints_operational(model):
-    """Depends on: node_energy_balance, node_constraints_build"""
     m = model.m
 
     # Constraint rules
@@ -267,8 +276,7 @@ def node_constraints_operational(model):
 
 
 def transmission_constraints(model):
-    """Depends on: node_constraints_build
-
+    """
     Constrains e_cap symmetrically for transmission nodes.
 
     """
@@ -288,8 +296,6 @@ def transmission_constraints(model):
 
 def node_costs(model):
     """
-    Depends on: node_energy_balance, node_constraints_build
-
     Defines variables:
 
     * cost: total costs
@@ -359,7 +365,6 @@ def node_costs(model):
 
 
 def model_constraints(model):
-    """Depends on: node_energy_balance"""
     m = model.m
 
     @utils.memoize
