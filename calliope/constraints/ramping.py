@@ -18,6 +18,7 @@ import coopr.pyomo as cp
 def ramping_rate(model):
     """Depends on: node_energy_balance, node_constraints_build"""
     m = model.m
+    time_res = model.data.time_res_series
 
     # Constraint rules
     def _ramping_rule(m, y, x, t, direction):
@@ -32,10 +33,12 @@ def ramping_rate(model):
                 return cp.Constraint.NoConstraint
             else:
                 carrier = model.get_option(y + '.carrier')
-                diff = (m.es_prod[carrier, y, x, t] + m.es_con[carrier, y, x, t]
-                        - m.es_prod[carrier, y, x, model.prev(t)]
-                        + m.es_con[carrier, y, x, model.prev(t)])
-                max_ramping_rate = ramping_rate * m.time_res[t] * m.e_cap[y, x]
+                diff = ((m.es_prod[carrier, y, x, t]
+                         + m.es_con[carrier, y, x, t]) / time_res.at[t]
+                        - (m.es_prod[carrier, y, x, model.prev(t)]
+                           + m.es_con[carrier, y, x, model.prev(t)])
+                        / time_res.at[model.prev(t)])
+                max_ramping_rate = ramping_rate * m.e_cap[y, x]
                 if direction == 'up':
                     return diff <= max_ramping_rate
                 else:

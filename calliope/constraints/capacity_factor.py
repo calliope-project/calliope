@@ -18,6 +18,7 @@ import coopr.pyomo as cp
 def capacity_factor(model):
     """Depends on: node_energy_balance, node_constraints_build"""
     m = model.m
+    time_res = model.data.time_res_series
 
     # Variables
     m.cf_prod = cp.Var(m.c, m.y, m.x, within=cp.NonNegativeReals)
@@ -26,7 +27,7 @@ def capacity_factor(model):
     def c_cf_prod_rule(m, c, y, x):
         return m.cf_prod[c, y, x] == (sum(m.es_prod[c, y, x, t] for t in m.t)
                                       / (m.e_cap[y, x]
-                                         * sum(m.time_res[t] for t in m.t)))
+                                         * sum(time_res.at[t] for t in m.t)))
 
     def c_cf_prod_max_rule(m, c, y, x):
         if model.get_option(y + '.constraints.cf_max'):

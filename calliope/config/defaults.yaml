@@ -35,7 +35,7 @@ techs:
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
                                     # NB: this only works if r is read as a time series from CSV, otherwise simply set
                                     # r statically to the desired value!
-            allow_rsec: false  # Allow secondary resource during startup_time?
+            allow_rs_: false  # Allow secondary resource during startup_time?
             s_init: 0  # Initial storage level [kWh]
             s_cap_max: 0  # Maximum storage size [kWh]
             s_cap_max_force: false  # If true, force s_cap to equal s_cap_max
@@ -83,7 +83,7 @@ techs:
             e_cap_max: inf
         costs:
             monetary:
-                om_fuel: 1.0e+9
+                om_var: 1.0e+9
     storage:
         parent: defaults
         constraints:

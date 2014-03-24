@@ -41,6 +41,7 @@ def node_resource(model):
                    * model.get_option(y + '.constraints.r_eff'))
         if model.get_option(y + '.constraints.force_r'):
             return m.rs[y, x, t] == r_avail
+        # TODO reformulate conditionally once Pyomo supports that:
         # had to remove the following formulation because it is not
         # re-evaluated on model re-construction -- we now check for
         # demand/supply tech instead, which means that `r` can only
@@ -74,7 +75,7 @@ def node_energy_balance(model):
         if y in m.y_def_e_eff:
             return m.e_eff[y, x, t]
         else:
-            return d.e_eff[y][x][0]  # Just get 0-th entry in DataFrame
+            return d.e_eff[y][x].iat[0]  # Just get 0-th entry in DataFrame
 
     # Variables
     m.s = cp.Var(m.y_pc, m.x, m.t, within=cp.NonNegativeReals)
@@ -108,11 +109,11 @@ def node_energy_balance(model):
             es_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
 
         # A) Case where no storage allowed
-        if model.get_option(y + '.constraints.s_cap_max') == 0:
+        if model.get_option(y + '.constraints.s_cap_max', x=x) == 0:
             return (0 == m.rs[y, x, t]  # + m.rs_[y, x, t]
                     - es_prod
                     - sum(m.es_con[c, y, x, t] for c in m.c)
-                    * get_e_eff(m, y, x, t))
+                    * e_eff)
 
         # B) Case where storage is allowed
         else:
@@ -122,13 +123,13 @@ def node_energy_balance(model):
             else:
                 s_loss = model.get_option(y + '.constraints.s_loss')
                 s_minus_one = (((1 - s_loss)
-                                ** m.time_res[model.prev(t)])
+                                ** model.data.time_res_series.at[model.prev(t)])
                                * m.s[y, x, model.prev(t)])
             return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
                     # + m.rs_[y, x, t]
                     - es_prod
                     - sum(m.es_con[c, y, x, t] for c in m.c)
-                    * get_e_eff(m, y, x, t))
+                    * e_eff)
 
     # Constraints
     m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)
@@ -174,7 +175,7 @@ def node_constraints_build(model):
         r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
         if np.isinf(r_cap_max):
             return cp.Constraint.NoConstraint
-        if model.mode == 'plan':
+        elif model.mode == 'plan':
             return m.r_cap[y, x] <= r_cap_max
         elif model.mode == 'operate':
             return m.r_cap[y, x] == r_cap_max
@@ -218,21 +219,22 @@ def node_constraints_build(model):
 
 def node_constraints_operational(model):
     m = model.m
+    time_res = model.data.time_res_series
 
     # Constraint rules
     def c_rs_max_upper_rule(m, y, x, t):
         return (m.rs[y, x, t] <=
-                m.time_res[t]
+                time_res.at[t]
                 * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     def c_rs_max_lower_rule(m, y, x, t):
         return (m.rs[y, x, t] >=
-                -1 * m.time_res[t]
+                -1 * time_res.at[t]
                 * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     def c_es_prod_max_rule(m, c, y, x, t):
         if c == model.get_option(y + '.carrier'):
-            return m.es_prod[c, y, x, t] <= m.time_res[t] * m.e_cap[y, x]
+            return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x]
         else:
             return m.es_prod[c, y, x, t] == 0
 
@@ -240,14 +242,14 @@ def node_constraints_operational(model):
         min_use = model.get_option(y + '.constraints.e_cap_min_use')
         if (min_use and c == model.get_option(y + '.carrier')):
             return (m.es_prod[c, y, x, t]
-                    >= m.time_res[t] * m.e_cap[y, x] * min_use)
+                    >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:
             return cp.Constraint.NoConstraint
 
     def c_es_con_max_rule(m, c, y, x, t):
         if (model.get_option(y + '.constraints.e_can_be_negative') is True and
                 c == model.get_option(y + '.carrier')):
-            return m.es_con[c, y, x, t] >= -1 * m.time_res[t] * m.e_cap[y, x]
+            return m.es_con[c, y, x, t] >= -1 * time_res.at[t] * m.e_cap[y, x]
         else:
             return m.es_con[c, y, x, t] == 0
 
@@ -261,7 +263,7 @@ def node_constraints_operational(model):
     #     if (model.get_option(y + '.constraints.allow_rs_')
     #             and t < model.data.startup_time_bounds):
     #         try:
-    #             return m.rsecs[y, x, t] <= (m.time_res[t]
+    #             return m.rsecs[y, x, t] <= (model.data.time_res_series.at[t]
     #                                         * m.e_cap[y, x]) / m.e_eff[y, x, t]
     #         except ZeroDivisionError:
     #             return m.rs_[y, x, t] == 0
@@ -288,7 +290,7 @@ def transmission_constraints(model):
     # Constraint rules
     def c_transmission_capacity_rule(m, y, x):
         y_remote, x_remote = transmission.get_remotes(y, x)
-        if y_remote in model.data.transmission_y:
+        if y_remote in m.y_trans:
             return m.e_cap[y, x] == m.e_cap[y_remote, x_remote]
         else:
             return cp.Constraint.NoConstraint
@@ -346,7 +348,7 @@ def node_costs(model):
             cost_r_cap = 0
             cost_r_area = 0
         return (m.cost_con[y, x, k] == _depreciation_rate(y, k)
-                * (sum(m.time_res[t] for t in m.t) / 8760)
+                * (sum(model.data.time_res_series.at[t] for t in m.t) / 8760)
                 * (cost_s_cap + cost_r_cap + cost_r_area
                    + _cost('e_cap', y, k) * m.e_cap[y, x]))
 

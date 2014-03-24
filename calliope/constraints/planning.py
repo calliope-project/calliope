@@ -20,6 +20,7 @@ def system_margin(model):
     Depends on:
     """
     m = model.m
+    time_res = model.data.time_res_series
 
     def carrier(y):
         return model.get_option(y + '.carrier')
@@ -32,7 +33,7 @@ def system_margin(model):
             t = model.t_max_demand[c]
             return (sum(m.es_prod[c, y, x, t] for y in m.y for x in m.x)
                     * (1 + margin)
-                    <= m.time_res[t]
+                    <= time_res.at[t]
                     * sum((m.e_cap[y, x] / model.get_eff_ref('e', y, x))
                           for y in m.y if carrier(y) == c
                           for x in m.x))

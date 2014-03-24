@@ -653,11 +653,6 @@ class Model(object):
             setattr(m, param, cp.Param(y, m.x, m.t, initialize=initializer,
                                        mutable=True))
 
-        # time_res is NOT mutable, since if iterating in operational mode,
-        # each horizon period must have the same time resolutions
-        time_res_initializer = lambda m, t: float(d.time_res_series.loc[t])
-        m.time_res = (cp.Param(m.t, initialize=time_res_initializer))
-
         s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
         m.s_init = cp.Param(m.y_pc, m.x, initialize=s_init_initializer,
                             mutable=True)
@@ -855,6 +850,7 @@ class Model(object):
 
         """
         m = self.m
+        time_res = self.data.time_res_series
         # Levelized cost of electricity (LCOE)
         # TODO currently counting only es_prod for costs, makes sense?
         cost = self.get_var('cost').loc[:, 'monetary', :]
@@ -874,9 +870,9 @@ class Model(object):
         # TODO ugly hack to limit to power
         e = e.loc['power', :, :, :].abs().sum(axis='major')
         e_cap = self.get_var('e_cap')
-        cf = e / (e_cap * sum(m.time_res[t] for t in m.t))
+        cf = e / (e_cap * sum(time_res.at[t] for t in m.t))
         cf = cf.fillna(0)
-        time = sum(m.time_res[t] for t in m.t)
+        time = sum(time_res.at[t] for t in m.t)
         cf_total_zones = e.sum(0) / (e_cap.sum(0) * time)
         cf_total_techs = e.sum(1) / (e_cap.sum(1) * time)
         cf = cf.append(pd.DataFrame(cf_total_zones.to_dict(), index=['total']))
