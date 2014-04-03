@@ -61,8 +61,8 @@ class Model(object):
         self.initialize_configuration(config_run, override)
         # Other initialization tasks
         self.data = utils.AttrDict()
-        self.initialize_sets()
         self.initialize_parents()
+        self.initialize_sets()
         self.read_data()
         self.mode = self.config_run.mode
         self.initialize_time()
@@ -344,6 +344,17 @@ class Model(object):
         self.parents = {i: o.techs[i].parent for i in o.techs.keys()
                         if i != 'defaults'}
 
+    @utils.memoize_instancemethod
+    def ischild(self, y, of):
+        """Returns True if ``y`` is a child of ``of``, else False"""
+        result = False
+        while (result is False) and (y != 'defaults'):
+            parent = self.parents[y]
+            if parent == of:
+                result = True
+            y = parent
+        return result
+
     def initialize_sets(self):
         o = self.config_model
         d = self.data
@@ -390,14 +401,16 @@ class Model(object):
             d._y_transmission = []
             d.transmission_y = []
         # Subset of conversion technologies
-        # (already contained in d._y here but separated out as well)
-        d._y_conversion = [y for y in d._y
-                           if o.techs[y].parent == 'conversion']
-        # Subset of production/consumption technologies (i.e. all techs
-        # that are neither transmission nor conversion)
+        d._y_conversion = [y for y in d._y if self.ischild(y, of='conversion')]
+        # Subset of supply, demand, storage technologies
         d._y_pc = [y for y in d._y
-                   if (o.techs[y].parent != 'conversion'
-                       or o.techs[y].parent != 'transmission')]
+                   if not self.ischild(y, of='conversion')
+                   or self.ischild(y, of='transmission')]
+        # Subset of technologies that define es_prod/es_con
+        d._y_prod = ([y for y in d._y if not self.ischild(y, of='demand')]
+                     + d._y_transmission)
+        d._y_con = ([y for y in d._y if not self.ischild(y, of='supply')]
+                    + d._y_transmission)
         #
         # c: Carriers set
         #
@@ -630,6 +643,10 @@ class Model(object):
         # The rest
         m.c = cp.Set(initialize=d._c, ordered=True)  # Carriers
         m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
+        m.y_prod = cp.Set(initialize=d._y_prod, within=m.y,
+                          ordered=True)  # Production technologies
+        m.y_con = cp.Set(initialize=d._y_con, within=m.y,
+                         ordered=True)  # Production technologies
         m.y_pc = cp.Set(initialize=d._y_pc, within=m.y,
                         ordered=True)  # Production/consumption technologies
         m.y_trans = cp.Set(initialize=d._y_transmission, within=m.y,
@@ -809,7 +826,8 @@ class Model(object):
         es_con = self.get_var('es_con')
         e = {}
         for i in es_prod.labels:
-            e[i] = (es_prod[i].to_frame() + es_con[i].to_frame()).to_panel()
+            e[i] = (es_prod[i].to_frame().add(es_con[i].to_frame(),
+                                              fill_value=0)).to_panel()
         e = pd.Panel4D(e)
         return e
 
@@ -840,36 +858,43 @@ class Model(object):
             result = result[result.e_cap > 0].dropna(axis=1)
         return result
 
-    def get_costs(self):
+    def get_costs(self, carrier='power', exclude=['unmet_demand_power']):
         """
+        Get costs for ``carrier``, excluding technologies given in the
+        list ``exclude`` (default: ``['unmet_demand_power']``).
 
-        Get costs
-
-        NB: Currently only counts es_prod towards costs, and only reports
-        costs for the carrier ``power``!
+        NB: Only production, not consumption, is counted towards costs.
 
         """
         m = self.m
+        y_subset = [y for y in self.m.y]
+        y_prod_subset = [y for y in self.m.y_prod]
+        for y in (y_subset, y_prod_subset):
+            for e in exclude:
+                try:
+                    y.remove(e)
+                except ValueError:  # TODO should log this?
+                    pass
         time_res = self.data.time_res_series
         # Levelized cost of electricity (LCOE)
         # TODO currently counting only es_prod for costs, makes sense?
-        cost = self.get_var('cost').loc[:, 'monetary', :]
+        cost = self.get_var('cost').loc[y_subset, 'monetary', :]
         e_prod = self.get_var('es_prod')
-        # TODO ugly hack to limit to power
-        e_prod = e_prod.loc['power', :, :, :].sum(axis='major')  # sum over t
+        # sum e_prod over t
+        e_prod = e_prod.loc[carrier, y_prod_subset, :, :].sum(axis='major')
         lcoe = cost / e_prod
         lcoe[np.isinf(lcoe)] = 0
         lcoe_total_zones = cost.sum(0) / e_prod.sum(0)
-        lcoe = lcoe.append(pd.DataFrame(lcoe_total_zones.to_dict(), index=['total']))
+        lcoe = lcoe.append(pd.DataFrame(lcoe_total_zones.to_dict(),
+                                        index=['total']))
         lcoe_total_techs = cost.sum(1) / e_prod.sum(1)
         lcoe['total'] = lcoe_total_techs
         lcoe.at['total', 'total'] = cost.sum().sum() / e_prod.sum().sum()
         # Capacity factor (CF)
         # NB: using .abs() to sum absolute values of e so cf always positive
         e = self.get_e()
-        # TODO ugly hack to limit to power
-        e = e.loc['power', :, :, :].abs().sum(axis='major')
-        e_cap = self.get_var('e_cap')
+        e = e.loc[carrier, y_subset, :, :].abs().sum(axis='major')
+        e_cap = self.get_var('e_cap').loc[:, y_subset]
         cf = e / (e_cap * sum(time_res.at[t] for t in m.t))
         cf = cf.fillna(0)
         time = sum(time_res.at[t] for t in m.t)
