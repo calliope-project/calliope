@@ -91,6 +91,9 @@ class Model(object):
             assert isinstance(override, utils.AttrDict)
             for k in override.keys_nested():
                 cr.set_key(k, override.get_key(k))
+        # If manually specify a run_id in debug, overwrite the generated one
+        if 'debug.run_id' in cr.keys_nested():
+            self.run_id = cr.debug.run_id
         # Ensure 'input.model' is a list
         if not isinstance(cr.input.model, list):
             cr.input.model = [cr.input.model]
@@ -311,7 +314,10 @@ class Model(object):
         """Get reference efficiency, falling back to efficiency if no
         reference efficiency has been set."""
         base = y + '.constraints.' + var
-        eff_ref = self.get_option(base + '_eff_ref', x=x)
+        try:
+            eff_ref = self.get_option(base + '_eff_ref', x=x)
+        except KeyError:
+            eff_ref = False
         if eff_ref is False:
             eff_ref = self.get_option(base + '_eff', x=x)
         # NOTE: Will cause errors in the case where (1) eff_ref is not defined
@@ -546,6 +552,13 @@ class Model(object):
                         d[param][y].loc[:, x] = option
                         if (param == 'r' and option != float('inf')):
                             d._y_def_r.add(y)
+                    # Conver power to energy for r, if necessary
+                    if param == 'r':
+                        r_unit = self.get_option(y + '.constraints.r_unit')
+                        if r_unit == 'power':
+                            r_scale = d.time_res_data
+                            d[param][y].loc[:, x] = (d[param][y].loc[:, x]
+                                                     * r_scale)
                     # Scale r to a given maximum if necessary
                     scale = self.get_option(y + '.constraints.r_scale_to_peak',
                                             x=x)

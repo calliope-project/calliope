@@ -47,7 +47,9 @@ class TimeSummarizer(object):
 
         """
         self._reduce_resolution(data, resolution)
+        # Set new time_res for entire dataset
         data.time_res_static = resolution
+        data.time_res_series = pd.Series(resolution, index=data['_t'])
 
     def _reduce_resolution(self, data, resolution, t_range=None):
         """Helper function called by both reduce_resolution and
@@ -78,11 +80,7 @@ class TimeSummarizer(object):
                         self._apply_method(data, how, s, key=k, subkey=kk)
                 else:
                     self._apply_method(data, how, s, key=k)
-        # If not t_range (implies working on entire time series), also add
-        # time_res to dataset (if t_range set, this happens inside
-        # dynamic_timestepper)
-        if not t_range:
-            data['time_res_series'] = pd.Series(resolution, index=data['_t'])
+
 
     def _apply_method(self, data, how, s, key, subkey=None):
         method = self.methods[how]

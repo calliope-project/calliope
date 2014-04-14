@@ -27,14 +27,13 @@ techs:
         source_carrier: false # Defaults to false, allows technologies to define a carrier to consume
         constraints:
             force_r: false
+            r_unit: power  # Power or energy.
             r_eff: 1.0  # Resource <> storage conversion efficiency [dimensionless]
             r_area_max: false  # Installed collector area [m2], set this to `false` to force to 1.0
             r_area_per_e_cap: false  # If set, forces r_area to follow e_cap with the given ratio
             r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
             r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
-            r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable
-                                    # NB: this only works if r is read as a time series from CSV, otherwise simply set
-                                    # r statically to the desired value!
+            r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable. Only works if r: file.
             allow_rs_: false  # Allow secondary resource during startup_time?
             s_init: 0  # Initial storage level [kWh]
             s_cap_max: 0  # Maximum storage size [kWh]
@@ -77,12 +76,13 @@ techs:
             e_cap_max: inf
             e_can_be_negative: true
     unmet_demand:
-        parent: defaults
+        parent: supply
         constraints:
             r: inf
             e_cap_max: inf
         costs:
             monetary:
+                e_cap: 1.0e+9
                 om_var: 1.0e+9
     storage:
         parent: defaults
