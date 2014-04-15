@@ -33,7 +33,8 @@ def masks_to_resolution_series(masks, how='or', min_resolution=None):
     masked area).
 
     """
-    assert isinstance(masks, list)
+    if not isinstance(masks, list) or isinstance(masks, tuple):
+        masks = [masks]
     # combine all masks into one
     df = pd.DataFrame({i: x for i, x in enumerate(masks)})
     if how == 'or':
@@ -63,6 +64,21 @@ def masks_to_resolution_series(masks, how='or', min_resolution=None):
             combined_mask[ifrom] = 0
         istart = ito
     return combined_mask
+
+
+def resolution_series_uniform(data, resolution):
+    """
+    Resolution series to reduce resolution uniformly.
+
+    """
+    res_length = resolution / data.time_res_static
+    df = data.r[data.r.keys()[0]]  # Grab length of data from any table
+    summarize = pd.Series(-1, index=range(len(df)))
+    # Set to 0 (keep timestep) for the given resolution
+    for index, item in summarize.iteritems():
+        if index % res_length == 0:
+            summarize.at[index] = resolution
+    return summarize
 
 
 def mask_zero(data, tech, var='r', locations=None):

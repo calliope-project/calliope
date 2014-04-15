@@ -101,19 +101,18 @@ def node_energy_balance(model):
                 == -1 * m.es_con[c_source, y, x, t] * get_e_eff(m, y, x, t))
 
     def c_s_balance_pc_rule(m, y, x, t):
-        # es_prod
         e_eff = get_e_eff(m, y, x, t)
-        if cp.value(e_eff) == 0:  # FIXME this doesn't update on param update!
+        # FIXME this doesn't update on param update!
+        if cp.value(e_eff) == 0:
             es_prod = 0
         else:
             es_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
+        es_con = sum(m.es_con[c, y, x, t] for c in m.c) * e_eff
 
         # A) Case where no storage allowed
         if model.get_option(y + '.constraints.s_cap_max', x=x) == 0:
             return (0 == m.rs[y, x, t]  # + m.rs_[y, x, t]
-                    - es_prod
-                    - sum(m.es_con[c, y, x, t] for c in m.c)
-                    * e_eff)
+                    - es_prod - es_con)
 
         # B) Case where storage is allowed
         else:
@@ -127,9 +126,7 @@ def node_energy_balance(model):
                                * m.s[y, x, model.prev(t)])
             return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
                     # + m.rs_[y, x, t]
-                    - es_prod
-                    - sum(m.es_con[c, y, x, t] for c in m.c)
-                    * e_eff)
+                    - es_prod - es_con)
 
     # Constraints
     m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)
@@ -183,8 +180,8 @@ def node_constraints_build(model):
     def c_r_area_rule(m, y, x):
         area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap')
         if area_per_cap:
-            eff_ref = model.get_eff_ref('e', y, x)
-            return m.r_area[y, x] == m.e_cap[y, x] * (area_per_cap / eff_ref)
+            r_eff = model.get_eff_ref('r', y, x)
+            return m.r_area[y, x] == m.e_cap[y, x] * (area_per_cap / r_eff)
         else:
             r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
             if r_area_max is False:
@@ -233,8 +230,13 @@ def node_constraints_operational(model):
                 * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     def c_es_prod_max_rule(m, c, y, x, t):
+        if y in model.data._y_def_r:
+            availability = m.a[y, x, t]
+        else:
+            availability = 1.0
         if c == model.get_option(y + '.carrier'):
-            return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x]
+            return (m.es_prod[c, y, x, t] <= time_res.at[t] *
+                    availability * m.e_cap[y, x])
         else:
             return m.es_prod[c, y, x, t] == 0
 
@@ -348,20 +350,24 @@ def node_costs(model):
             cost_r_cap = 0
             cost_r_area = 0
         return (m.cost_con[y, x, k] == _depreciation_rate(y, k)
-                * (sum(model.data.time_res_series.at[t] for t in m.t) / 8760)
+                * (sum(model.data.time_res_series) / 8760)
                 * (cost_s_cap + cost_r_cap + cost_r_area
                    + _cost('e_cap', y, k) * m.e_cap[y, x]))
 
     def c_cost_op_rule(m, y, x, k):
         # TODO currently only counting es_prod for op costs, makes sense?
-        carrier = model.get_option(y + '.carrier')
-        return (m.cost_op[y, x, k] ==
-                # FIXME TODO this is incorrect in cases where sum(t) is < 8760
-                _cost('om_frac', y, k) * m.cost_con[y, x, k]
-                + _cost('om_fixed', y, k) * m.e_cap[y, x]
-                + _cost('om_var', y, k) * sum(m.es_prod[carrier, y, x, t]
-                                              for t in m.t)
-                + _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))
+        if y in m.y:
+            carrier = model.get_option(y + '.carrier')
+            return (m.cost_op[y, x, k] ==
+                    # FIXME this is incorrect in cases where sum(t) is < 8760
+                    _cost('om_frac', y, k) * m.cost_con[y, x, k]
+                    + (_cost('om_fixed', y, k) * m.e_cap[y, x] *
+                       (sum(model.data.time_res_series) / 8760))
+                    + _cost('om_var', y, k) * sum(m.es_prod[carrier, y, x, t]
+                                                  for t in m.t)
+                    + _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))
+        else:
+            return m.cost_op[y, x, k] == 0
 
     # Constraints
     m.c_cost = cp.Constraint(m.y, m.x, m.k)
@@ -391,12 +397,16 @@ def model_constraints(model):
         else:
             fam = get_children(x) + [x]  # list of children + parent
             if c == 'power':
-                return (sum(m.es_prod[c, y, xs, t] for xs in fam for y in m.y)
-                        + sum(m.es_con[c, y, xs, t] for xs in fam for y in m.y)
+                return (sum(m.es_prod[c, y, xs, t]
+                            for xs in fam for y in m.y)
+                        + sum(m.es_con[c, y, xs, t]
+                              for xs in fam for y in m.y)
                         == 0)
             else:  # e.g. for heat
-                return (sum(m.es_prod[c, y, xs, t] for xs in fam for y in m.y)
-                        + sum(m.es_con[c, y, xs, t] for xs in fam for y in m.y)
+                return (sum(m.es_prod[c, y, xs, t]
+                            for xs in fam for y in m.y)
+                        + sum(m.es_con[c, y, xs, t]
+                              for xs in fam for y in m.y)
                         >= 0)
 
     # Constraints

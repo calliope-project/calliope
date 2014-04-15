@@ -5,8 +5,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 time_tools.py
 ~~~~~~~~~~~~~
 
-Provides the TimeSummarizer class which can dynamically adjust the time
-step resolution of the data in a model instance.
+Provides the TimeSummarizer class to dynamically adjust time resolution.
 
 """
 
@@ -16,58 +15,38 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 
+from . import time_masks
 from . import utils
 
 
 class TimeSummarizer(object):
-    """Provides methods to reduce time resolution for a given set of model
-    data. On initialization, it defines ``self.methods`` and
-    ``self.known_data_types`` which may be inspected and overriden before use.
+    """
+    Provides methods to reduce time resolution for the given model data.
 
     """
     def __init__(self):
         super(TimeSummarizer, self).__init__()
-        self.methods = {'average': self._reduce_average,
-                        'sum': self._reduce_sum,
-                        'cut': self._reduce_cut}
         # Format: {'data item': 'method'}
-        self.known_data_types = {'_t': 'cut',
-                                 '_dt': 'cut',
-                                 'r': 'sum',
-                                 'r_eff': 'average',
-                                 'e_eff': 'average'}
+        self.known_data_types = {'_t': self._reduce_cut,
+                                 '_dt': self._reduce_cut,
+                                 'a': self._reduce_r_to_a,
+                                 'r': self._reduce_sum,
+                                 'r_eff': self._reduce_average,
+                                 'e_eff': self._reduce_average}
 
-    def reduce_resolution(self, data, resolution):
-        """
-        Reduces the resolution of the entire ``data`` to ``resolution``,
-        which must be an integer and greater than 1.
-
-        Warning: modifies the passed data object in-place.
-        Returns None on success.
-
-        """
-        self._reduce_resolution(data, resolution)
-        # Set new time_res for entire dataset
-        data.time_res_static = resolution
-        data.time_res_series = pd.Series(resolution, index=data['_t'])
-
-    def _reduce_resolution(self, data, resolution, t_range=None):
-        """Helper function called by both reduce_resolution and
-        dynamic_timestepper."""
+    def _reduce_resolution(self, data, resolution, t_range):
+        """Helper function called by dynamic_timestepper."""
         # Initialize some common data
         resolution = resolution / data.time_res_data
         assert resolution.is_integer()
         resolution = int(resolution)
         self.resolution = resolution
-        # Set up time range slice, if given
-        if not t_range:
-            s = slice(None)
-            data_len = len(data['_t'])
-            start_idx = data['_t'][0]
-        else:
-            s = slice(*t_range)
-            data_len = len(data['_t'][s])
-            start_idx = data['_t'][s.start]
+        # Set up time range slice
+        s = slice(*t_range)
+        data_len = len(data['_t'][s])
+        start_idx = data['_t'][s.start]
+        # TODO all of these are not necessary any more now that only using
+        # dynamic_timestepper, could vastly simplify all of this
         self.new_index = range(start_idx, start_idx + data_len, resolution)
         self.rolling_new_index = range(start_idx + resolution - 1,
                                        start_idx + data_len, resolution)
@@ -81,35 +60,24 @@ class TimeSummarizer(object):
                 else:
                     self._apply_method(data, how, s, key=k)
 
-
-    def _apply_method(self, data, how, s, key, subkey=None):
-        method = self.methods[how]
+    def _apply_method(self, data, method, s, key, subkey=None):
         if subkey:
             df = method(data[key][subkey][s])
         else:
             df = method(data[key][s])
-        # If no slice, this implies we are working on whole time series,
-        # so we replace the existing time series completely
-        # to get around indexing problems
-        if s == slice(None):
-            if subkey:
-                data[key][subkey] = df
-            else:
-                data[key] = df
+        # Choose different iterator method for series and dataframe
+        if isinstance(df, pd.Series):
+            iterator = df.iteritems
         else:
-            # Choose different iterator method for series and dataframe
-            if isinstance(df, pd.Series):
-                iterator = df.iteritems
-            else:
-                iterator = df.iterrows
-            # Now iterate over each item in the reduced-resolution df,
-            # updating the dataset item by item
-            if subkey:
-                for i, r in iterator():
-                    data[key][subkey].loc[i] = r
-            else:
-                for i, r in iterator():
-                    data[key].loc[i] = r
+            iterator = df.iterrows
+        # Now iterate over each item in the reduced-resolution df,
+        # updating the dataset item by item
+        if subkey:
+            for i, r in iterator():
+                data[key][subkey].loc[i] = r
+        else:
+            for i, r in iterator():
+                data[key].loc[i] = r
 
     def dynamic_timestepper(self, data, mask):
         """``mask`` must be a series with the same index as the given data.
@@ -131,6 +99,9 @@ class TimeSummarizer(object):
         Returns None on success.
 
         """
+        # Prepare the availability data based on resource
+        for k in data.r.keys():
+            data.a[k] = data.r[k].copy()
         # Set up the mask
         df = pd.DataFrame(mask, index=mask.index)
         df.columns = ['summarize']  # rename the single column
@@ -157,7 +128,20 @@ class TimeSummarizer(object):
                         data[k][kk] = data[k][kk][df.to_keep]
                 else:
                     data[k] = data[k][df.to_keep]
-        data['time_res_series'] = df.time_res[df.to_keep]
+        data.time_res_series = df.time_res[df.to_keep]
+        # NB data.time_res_static is not adjusted here, but this should be ok
+
+    def reduce_resolution(self, data, resolution):
+        """
+        Reduces the resolution of the entire ``data`` to ``resolution``,
+        which must be an integer and greater than the initial resolution.
+
+        Modifies the passed data object in-place and returns None.
+
+        """
+        mask = time_masks.resolution_series_uniform(data, resolution)
+        self.dynamic_timestepper(data, mask)
+        data.time_res_static = resolution
 
     def _infinity_test(self, df):
         return (df.sum(axis=0) == np.inf).all()
@@ -187,4 +171,17 @@ class TimeSummarizer(object):
             df = pd.Series(df.iloc[0], index=self.new_index)
         else:
             df = df.reindex(self.new_index)
+        return df
+
+    def _reduce_r_to_a(self, df):
+        """Using resource data as a basis, generates availability data"""
+        # TODO NB this only works with the 'new' way of using only
+        # dynamic_timestepper where we can assume that every call to a
+        # _reduce method results in only one row being returned
+        # and self.new_index being of length 1 only
+        df = df.sum() / (df.max() * len(df))
+        df = df.fillna(0)
+        df = pd.DataFrame(df).T  # transpose the series to a frame
+        # Next step is superfluous but kept for consistency
+        df.index = self.new_index
         return df

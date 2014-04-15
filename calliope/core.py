@@ -65,6 +65,7 @@ class Model(object):
         self.initialize_sets()
         self.read_data()
         self.mode = self.config_run.mode
+        self.initialize_availability()
         self.initialize_time()
 
     def initialize_configuration(self, config_run, override):
@@ -142,6 +143,18 @@ class Model(object):
                         == seconds)
         hours = abs(seconds) / 3600
         return hours
+
+    def initialize_availability(self):
+        # Availability in time/space is only used if dynamic timestep
+        # adjustment is invoked
+        d = self.data
+        d['a'] = utils.AttrDict()
+        # Append 'a' to d.params, so that it is included in parameter updates!
+        d.params.append('a')
+        # Fill in default values for a, so that something is there even in
+        # case no dynamic timestepper is called
+        for y in d._y_def_r:
+            d.a[y] = self.get_option(y + '.constraints.availability')
 
     def initialize_time(self):
         """
@@ -507,7 +520,7 @@ class Model(object):
             for x in d.s_init.index:
                 d.s_init.at[x, y] = self.get_option(y + '.constraints.s_init',
                                                     x=x)
-        # Parameters that may defined over (x, t) for a given technology y
+        # Parameters that may be defined over (x, t) for a given technology y
         d.params = ['r', 'e_eff']
         d._y_def_r = set()
         d._y_def_e_eff = set()
@@ -552,7 +565,7 @@ class Model(object):
                         d[param][y].loc[:, x] = option
                         if (param == 'r' and option != float('inf')):
                             d._y_def_r.add(y)
-                    # Conver power to energy for r, if necessary
+                    # Convert power to energy for r, if necessary
                     if param == 'r':
                         r_unit = self.get_option(y + '.constraints.r_unit')
                         if r_unit == 'power':
@@ -676,6 +689,7 @@ class Model(object):
         #
 
         self.param_sets = {'r': m.y_def_r,
+                           'a': m.y_def_r,
                            'e_eff': m.y_def_e_eff}
         for param in d.params:
             initializer = self._param_populator(d[param], t_start)
