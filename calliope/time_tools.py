@@ -179,7 +179,12 @@ class TimeSummarizer(object):
         # dynamic_timestepper where we can assume that every call to a
         # _reduce method results in only one row being returned
         # and self.new_index being of length 1 only
-        df = df.sum() / (df.max() * len(df))
+        if self._infinity_test(df):
+            df = pd.DataFrame(1, index=[0], columns=df.columns).T
+        elif df.max().max() == 0:
+            df = pd.DataFrame(0, index=[0], columns=df.columns).T
+        else:
+            df = df.sum() / (df.max() * len(df))
         df = df.fillna(0)
         df = pd.DataFrame(df).T  # transpose the series to a frame
         # Next step is superfluous but kept for consistency

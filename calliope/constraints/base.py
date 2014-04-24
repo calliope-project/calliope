@@ -29,6 +29,13 @@ def node_resource(model):
     """
     m = model.m
 
+    def availability(y, x, t):
+        if model.config_model.availability and y in model.data._y_def_r:
+            availability = m.a[y, x, t]
+        else:
+            availability = 1.0
+        return availability
+
     # Variables
     m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
     m.r_area = cp.Var(m.y_def_r, m.x, within=cp.NonNegativeReals)
@@ -48,7 +55,8 @@ def node_resource(model):
         # be ALL negative or ALL positive for a given tech!
         # elif cp.value(m.r[y, x, t]) > 0:
         elif y in model.get_group_members('supply'):
-            return m.rs[y, x, t] <= r_avail
+            # Supply technologies make use of availability
+            return m.rs[y, x, t] <= r_avail * availability(y, x, t)
         elif y in model.get_group_members('demand'):
             return m.rs[y, x, t] >= r_avail
         elif y in model.get_group_members('storage'):
@@ -104,15 +112,14 @@ def node_energy_balance(model):
         e_eff = get_e_eff(m, y, x, t)
         # FIXME this doesn't update on param update!
         if cp.value(e_eff) == 0:
-            es_prod = 0
+            e_prod = 0
         else:
-            es_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
-        es_con = sum(m.es_con[c, y, x, t] for c in m.c) * e_eff
+            e_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
+        e_con = sum(m.es_con[c, y, x, t] for c in m.c) * e_eff
 
         # A) Case where no storage allowed
         if model.get_option(y + '.constraints.s_cap_max', x=x) == 0:
-            return (0 == m.rs[y, x, t]  # + m.rs_[y, x, t]
-                    - es_prod - es_con)
+            return m.rs[y, x, t] == e_prod + e_con  # - m.rs_[y, x, t]
 
         # B) Case where storage is allowed
         else:
@@ -126,7 +133,7 @@ def node_energy_balance(model):
                                * m.s[y, x, model.prev(t)])
             return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
                     # + m.rs_[y, x, t]
-                    - es_prod - es_con)
+                    - e_prod - e_con)
 
     # Constraints
     m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)
@@ -180,8 +187,7 @@ def node_constraints_build(model):
     def c_r_area_rule(m, y, x):
         area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap')
         if area_per_cap:
-            r_eff = model.get_eff_ref('r', y, x)
-            return m.r_area[y, x] == m.e_cap[y, x] * (area_per_cap / r_eff)
+            return m.r_area[y, x] == m.e_cap[y, x] * area_per_cap
         else:
             r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
             if r_area_max is False:
@@ -230,13 +236,8 @@ def node_constraints_operational(model):
                 * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     def c_es_prod_max_rule(m, c, y, x, t):
-        if y in model.data._y_def_r:
-            availability = m.a[y, x, t]
-        else:
-            availability = 1.0
         if c == model.get_option(y + '.carrier'):
-            return (m.es_prod[c, y, x, t] <= time_res.at[t] *
-                    availability * m.e_cap[y, x])
+            return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x]
         else:
             return m.es_prod[c, y, x, t] == 0
 

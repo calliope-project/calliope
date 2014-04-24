@@ -18,6 +18,8 @@ opmode:
 system_margin:
     power: 0
 
+availability: false  # Disable availability constraint by default
+
 #
 # TECH DEFAULTS
 #
