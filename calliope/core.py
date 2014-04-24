@@ -976,7 +976,7 @@ class Model(object):
         e_cap = sol.parameters['e_cap']
         try:  # Try loading time_res_sum from operational mode
             time_res_sum = self.data.time_res_sum
-        except AttributeError:
+        except KeyError:
             time_res_sum = sum(time_res.at[t] for t in m.t)
         cf = sol.costs.e_prod / (e_cap * time_res_sum)
         cf.loc['total', :] = (sol.costs.e_prod.loc['total', :]
@@ -1009,18 +1009,6 @@ class Model(object):
         get_src_c = lambda y: self.get_source_carrier(y)
         df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
         return df.sort(columns='capacity (GW)', ascending=False)
-
-    def get_delivered_cost(self, carrier='power'):
-        summary = self.solution.summary
-        carrier_subset = summary[summary.carrier == carrier].index.tolist()
-        cost = self.solution.costs.cost.loc['total', carrier_subset].sum()
-        delivered = summary.at['demand_' + carrier, 'consumption (GWh)'] * 1e6
-        try:
-            unmet = summary.at['unmet_demand_' + carrier,
-                               'consumption (GWh)'] * 1e6
-        except KeyError:
-            unmet = 0
-        return cost / (delivered - unmet) * -1
 
     def load_solution_iterative(self, system_vars, node_vars, cost_vars):
         costs = sum([cost_vars[i].fillna(0).to_frame()
