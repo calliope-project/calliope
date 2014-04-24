@@ -359,7 +359,7 @@ def get_square_legend(lgd):
 
 
 def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
-               ticks='daily', **kwargs):
+               ticks='daily', names=None, **kwargs):
     """
     legend can be 'default' or 'right'
     ticks can be 'hourly', 'daily', 'monthly'
@@ -372,6 +372,9 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
     ax = fig.add_subplot(111)
     fills = ax.stackplot(df.index, df[stack].T, label=stack, colors=colors,
                          **kwargs)
+    # Rename the tech stack with friendly names, if given, for legend plotting
+    if names:
+        stack = names
     # Legend via proxy artists
     # Based on https://github.com/matplotlib/matplotlib/issues/1943
     proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])

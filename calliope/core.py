@@ -12,6 +12,7 @@ Core model functionality via the Model class.
 from __future__ import print_function
 from __future__ import division
 
+import collections
 import datetime
 import itertools
 import json
@@ -297,7 +298,36 @@ class Model(object):
     def flush_option_cache(self):
         self.option_cache = {}
 
-    def get_group_members(self, group, in_model=True):
+    def get_name(self, y):
+        try:
+            return self.get_option(y + '.name')
+        except KeyError:
+            return y
+
+    def get_carrier(self, y):
+        carrier = self.get_option(y + '.carrier')
+        return carrier
+
+    def get_source_carrier(self, y):
+        source_carrier = self.get_option(y + '.source_carrier')
+        if source_carrier:
+            return source_carrier
+        else:
+            return None
+
+    def get_parent(self, y):
+        if y in self.data._y_transmission:
+            return 'transmission'
+        else:
+            while True:
+                parent = self.get_option(y + '.parent')
+                if parent == 'defaults':
+                    break
+                y = parent
+            return y
+
+    def get_group_members(self, group, in_model=True, head_nodes_only=False,
+                          expand_transmission=True):
         """
         Return the member technologies of a group. If in_model is True,
         only members defined in the current model are returned.
@@ -307,6 +337,8 @@ class Model(object):
             members = [i for i in self.parents if self.parents[i] == group]
             if members:
                 for i, member in enumerate(members):
+                    if not head_nodes_only:
+                        memberset.add(member)
                     members[i] = _get(self, member, memberset)
                 return members
             else:
@@ -314,13 +346,20 @@ class Model(object):
         if not group in self.parents:
             return None
         memberset = set()
-        _get(self, group, memberset)
-        member_techs = list(memberset)
+        _get(self, group, memberset)  # Fills memberset
         if in_model:
-            member_techs = [y for y in member_techs
-                            if (y in self.data._y
-                                or y in self.data.transmission_y)]
-        return member_techs
+            memberset = set([y for y in memberset
+                             if (y in self.data._y
+                                 or y in self.data.transmission_y)])
+            # Expand transmission techs
+            if expand_transmission:
+                for y in list(memberset):
+                    if y in self.data.transmission_y:
+                        memberset.remove(y)
+                        memberset.update([yt
+                                          for yt in self.data._y_transmission
+                                          if yt.startswith(y + ':')])
+        return list(memberset)
 
     @utils.memoize_instancemethod
     def get_eff_ref(self, var, y, x=None):
@@ -734,14 +773,13 @@ class Model(object):
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
-            self.load_results()
-            if self.config_run.output.save is True:
-                self.save_outputs()
         elif self.mode == 'operate':
             self.solve_iterative()
         else:
             raise UserWarning('Invalid mode')
         self.runtime = int(time.time() - start_time)
+        if self.config_run.output.save is True:
+            self.save_outputs()
 
     def solve(self, warmstart=False, save_json=False):
         """
@@ -796,6 +834,22 @@ class Model(object):
                 json.dump(results.json_repn(), f, indent=4)
         self.results = results
         self.pyomo_output = out
+        self.load_results()
+        self.load_solution()
+
+    def process_solution(self):
+        # Add LCOE and CF to self.solution.costs
+        self.calculate_lcoe_and_cf()
+        # Add summary
+        self.solution['summary'] = self.get_summary()
+
+    def load_solution(self):
+        sol = {'system': self.get_system_variables(),
+               'node': self.get_node_variables(),
+               'costs': self.get_costs(),
+               'parameters': self.get_node_parameters()}
+        self.solution = utils.AttrDict(sol)
+        self.process_solution()
 
     def get_var(self, var, dims=None):
         """Return output for variable `var` as a series, dataframe or panel
@@ -885,91 +939,109 @@ class Model(object):
             result = result[result.e_cap > 0].dropna(axis=1)
         return result
 
-    def get_costs(self, carrier='power', exclude=['unmet_demand_power']):
+    def get_costs(self, carrier='power'):
         """
-        Get costs for ``carrier``, excluding technologies given in the
-        list ``exclude`` (default: ``['unmet_demand_power']``).
-
-        NB: Only production, not consumption, is counted towards costs.
-
+        Get costs and production/consumption for ``carrier``.
         """
-        m = self.m
-        y_subset = [y for y in self.m.y]
-        y_prod_subset = [y for y in self.m.y_prod]
-        for y in (y_subset, y_prod_subset):
-            for e in exclude:
-                try:
-                    y.remove(e)
-                except ValueError:  # TODO should log this?
-                    pass
-        time_res = self.data.time_res_series
-        # Levelized cost of electricity (LCOE)
-        # TODO currently counting only es_prod for costs, makes sense?
-        cost = self.get_var('cost').loc[y_subset, 'monetary', :]
+        y_subset_prod = [y for y in self.m.y_prod]
+        y_subset_con = [y for y in self.m.y_con]
+        cost = self.get_var('cost').loc[:, 'monetary', :]
+        cost.loc['total', :] = cost.sum(0)
         e_prod = self.get_var('es_prod')
-        # sum e_prod over t
-        e_prod = e_prod.loc[carrier, y_prod_subset, :, :].sum(axis='major')
-        lcoe = cost / e_prod
-        lcoe[np.isinf(lcoe)] = 0
-        lcoe_total_zones = cost.sum(0) / e_prod.sum(0)
-        lcoe = lcoe.append(pd.DataFrame(lcoe_total_zones.to_dict(),
-                                        index=['total']))
-        lcoe_total_techs = cost.sum(1) / e_prod.sum(1)
-        lcoe['total'] = lcoe_total_techs
-        lcoe.at['total', 'total'] = cost.sum().sum() / e_prod.sum().sum()
-        # Capacity factor (CF)
-        # NB: using .abs() to sum absolute values of e so cf always positive
-        e = self.get_e()
-        e = e.loc[carrier, y_subset, :, :].abs().sum(axis='major')
-        e_cap = self.get_var('e_cap').loc[:, y_subset]
-        cf = e / (e_cap * sum(time_res.at[t] for t in m.t))
-        cf = cf.fillna(0)
-        time = sum(time_res.at[t] for t in m.t)
-        cf_total_zones = e.sum(0) / (e_cap.sum(0) * time)
-        cf_total_techs = e.sum(1) / (e_cap.sum(1) * time)
-        cf = cf.append(pd.DataFrame(cf_total_zones.to_dict(), index=['total']))
-        cf['total'] = cf_total_techs
-        cf.at['total', 'total'] = e.sum().sum() / (e_cap.sum().sum() * time)
-        # Combine everything
-        df = pd.Panel({'lcoe': lcoe, 'cf': cf})
+        e_prod = e_prod.loc[carrier, y_subset_prod, :, :].sum(axis='major')
+        e_prod.loc['total', :] = e_prod.sum(0)
+        e_con = self.get_var('es_con')
+        e_con = e_con.loc[carrier, y_subset_con, :, :].sum(axis='major')
+        e_con.loc['total', :] = e_con.sum(0)
+        df = pd.Panel({'cost': cost, 'e_prod': e_prod, 'e_con': e_con})
         return df
 
-    def _costs_iterative(self, cost_vars, cost_weights, node_vars):
-        def get_cf_i(i):
-            return cost_vars[i]['cf'] * cost_weights[i]
+    def calculate_lcoe_and_cf(self, carrier='power'):
+        """
+        Calculate LCOE and capacity factors for ``carrier``, adding
+        the result to ``self.solution.costs``, returning None.
 
-        def get_lcoe_i(i):
-            return cost_vars[i]['lcoe'] * node_vars[i]['e:power'].sum(axis=1)
+        NB: Only production, not consumption, is used in calculations.
 
-        # Capacity factor (cf)
-        for i in range(len(cost_weights)):
-            if i == 0:
-                cf = get_cf_i(i)
-            else:
-                cf = cf + get_cf_i(i)
-        cf = cf / sum(cost_weights)
-        # LCOE
-        power = {}
-        for i in range(len(cost_weights)):
-            power[i] = node_vars[i]['e:power'].sum(axis=1)
-            if i == 0:
-                lcoe = get_lcoe_i(i)
-            else:
-                lcoe = lcoe + get_lcoe_i(i)
-        power = pd.Panel(power).sum(axis=0)
-        lcoe = lcoe / power
-        return pd.Panel({'lcoe': lcoe, 'cf': cf})
+        """
+        # TODO a better way to include consumption (e_con) as well
+        m = self.m
+        sol = self.solution
+        time_res = self.data.time_res_series
+        # Levelized cost of electricity (LCOE)
+        lcoe = sol.costs.cost / sol.costs.e_prod
+        lcoe[np.isinf(lcoe)] = 0
+        #lcoe.loc['total', :] = sol.costs.cost.sum(0) / sol.costs.e_prod.sum(0)
+        # Capacity factor (CF)
+        e_cap = sol.parameters['e_cap']
+        try:  # Try loading time_res_sum from operational mode
+            time_res_sum = self.data.time_res_sum
+        except AttributeError:
+            time_res_sum = sum(time_res.at[t] for t in m.t)
+        cf = sol.costs.e_prod / (e_cap * time_res_sum)
+        cf.loc['total', :] = (sol.costs.e_prod.loc['total', :]
+                              / (e_cap.sum(0) * time_res_sum))
+        cf = cf.fillna(0)
+        sol.costs['lcoe'] = lcoe
+        sol.costs['cf'] = cf
+
+    def get_summary(self, techs=None):
+        sol = self.solution
+        d = collections.OrderedDict
+        df = pd.DataFrame(d([('cost (GBP/kWh)',
+                             sol.costs.lcoe.loc['total', :]),
+                            ('cf',
+                             sol.costs.cf.loc['total', :]),
+                            ('production (GWh)',
+                             sol.costs.e_prod.loc['total', :] / 1e6),
+                            ('consumption (GWh)',
+                             sol.costs.e_con.loc['total', :] / 1e6,),
+                            ('capacity (GW)',
+                             sol.parameters['e_cap'].sum() / 1e6),
+                            ('area (1e6 m2)',
+                             sol.parameters['r_area'].sum() / 1e6)
+                           ]))
+        if techs:
+            df = df.loc[techs, :]
+        df.loc[:, 'type'] = df.index.map(lambda y: self.get_parent(y))
+        df.loc[:, 'name'] = df.index.map(lambda y: self.get_name(y))
+        df.loc[:, 'carrier'] = df.index.map(lambda y: self.get_carrier(y))
+        get_src_c = lambda y: self.get_source_carrier(y)
+        df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
+        return df.sort(columns='capacity (GW)', ascending=False)
+
+    def get_delivered_cost(self, carrier='power'):
+        summary = self.solution.summary
+        carrier_subset = summary[summary.carrier == carrier].index.tolist()
+        cost = self.solution.costs.cost.loc['total', carrier_subset].sum()
+        delivered = summary.at['demand_' + carrier, 'consumption (GWh)'] * 1e6
+        try:
+            unmet = summary.at['unmet_demand_' + carrier,
+                               'consumption (GWh)'] * 1e6
+        except KeyError:
+            unmet = 0
+        return cost / (delivered - unmet) * -1
+
+    def load_solution_iterative(self, system_vars, node_vars, cost_vars):
+        costs = sum([cost_vars[i].fillna(0).to_frame()
+                     for i in range(len(cost_vars))]).to_panel()
+        sol = {'system': pd.concat(system_vars, axis=1),
+               'node': pd.concat(node_vars, axis=2),
+               'costs': costs,
+               'parameters': self.get_node_parameters()}
+        self.solution = utils.AttrDict(sol)
+        self.process_solution()
 
     def solve_iterative(self):
         """
         Solve iterative by updating model parameters.
 
-        Returns None on success, storing results under
-        self.iterative_solution
+        Returns None on success, storing results under self.solution
 
         """
         o = self.config_model
         d = self.data
+        time_res = d.time_res_series
         window_adj = int(o.opmode.window / d.time_res_data)
         steps = [t for t in d._t if (t % window_adj) == 0]
         # Remove the last step - since we look forward at each step,
@@ -978,7 +1050,7 @@ class Model(object):
         system_vars = []
         node_vars = []
         cost_vars = []
-        cost_weights = []
+        d.time_res_sum = 0
         self.generate_model(t_start=steps[0])
         for index, step in enumerate(steps):
             if index == 0:
@@ -1006,23 +1078,20 @@ class Model(object):
             # Get cost
             cost = self.get_costs()
             cost_vars.append(cost)
-            cost_weights.append(target_index)
+            timesteps = [time_res.at[t] for t in self.m.t][0:target_index]
+            d.time_res_sum += sum(timesteps)
             # Save state of storage for carry over to next iteration
             s = self.get_var('s')
             # NB: -1 to convert from length --> index
             storage_state_index = target_index - 1
             d.s_init = s.iloc[:, storage_state_index, :]
-        costs = self._costs_iterative(cost_vars, cost_weights, node_vars)
-        self.operate_results = {'system': pd.concat(system_vars, axis=1),
-                                'node': pd.concat(node_vars, axis=2),
-                                'costs': costs}
+        self.load_solution_iterative(system_vars, node_vars, cost_vars)
 
     def solve_iterative_rebuild(self):
         """
         Solve iterative by rebuilding the model each time.
 
-        Returns None on success, storing results under
-        self.iterative_solution
+        Returns None on success, storing results under self.solution
 
         """
         o = self.config_model
@@ -1062,15 +1131,8 @@ class Model(object):
             # NB: -1 to convert from length --> index
             storage_state_index = target_index - 1
             d.s_init = s.iloc[:, storage_state_index, :]
-        # self.operate_results = {'system': system_vars,
-        #                         'node': node_vars,
-        #                         'cost': cost,
-        #                         'cost_vars': cost_vars,
-        #                         'cost_weights': cost_weights}
         costs = self._costs_iterative(cost_vars, cost_weights, node_vars)
-        self.operate_results = {'system': pd.concat(system_vars, axis=1),
-                                'node': pd.concat(node_vars, axis=2),
-                                'costs': costs}
+        self.load_solution_iterative(system_vars, node_vars, costs)
 
     def load_results(self):
         """Load results into model instance for access via model variables."""
@@ -1080,24 +1142,16 @@ class Model(object):
 
     def save_outputs(self, carrier='power'):
         """Save model outputs as CSV to ``self.config_run.output.path``"""
-        locations = self.data.locations
-        if self.mode == 'plan':
-            system_variables = self.get_system_variables()
-            node_variables = self.get_node_variables()
-            costs = self.get_costs()
-        elif self.mode == 'operate':
-            system_variables = self.iterative_solution['system']
-            node_variables = self.iterative_solution['node']
-            costs = self.iterative_solution['costs']
-        node_parameters = self.get_node_parameters(built_only=False)
-        output_files = {'locations.csv': locations,
-                        'system_variables.csv': system_variables[carrier],
-                        'node_parameters.csv': node_parameters.to_frame(),
-                        'costs_lcoe.csv': costs.lcoe,
-                        'costs_cf.csv': costs.cf}
-        for var in node_variables.labels:
+        d = self.data
+        sol = self.solution
+        output_files = {'locations.csv': d.locations,
+                        'system_variables.csv': sol.system[carrier],
+                        'node_parameters.csv': sol.parameters.to_frame(),
+                        'costs.csv': sol.costs.to_frame(),
+                        'summary.csv': self.get_summary()}
+        for var in sol.node.labels:
             k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
-            v = node_variables[var].to_frame()
+            v = sol.node[var].to_frame()
             output_files[k] = v
         # Create output dir, but ignore if it already exists
         try:
