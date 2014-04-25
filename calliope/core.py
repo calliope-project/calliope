@@ -14,6 +14,7 @@ from __future__ import division
 
 import collections
 import datetime
+import inspect
 import itertools
 import json
 import os
@@ -401,8 +402,19 @@ class Model(object):
 
     def initialize_parents(self):
         o = self.config_model
-        self.parents = {i: o.techs[i].parent for i in o.techs.keys()
-                        if i != 'defaults'}
+        try:
+            self.parents = {i: o.techs[i].parent for i in o.techs.keys()
+                            if i != 'defaults'}
+        except KeyError:
+            tech = inspect.trace()[-1][0].f_locals['i']
+            print(o.techs[tech].keys())
+            if 'parent' in o.techs[tech].keys():
+                raise KeyError('Technology `' + tech + '` defines no parent!')
+        # Verify that all parents are themselves actually defined
+        for k, v in self.parents.iteritems():
+            if v not in o.techs.keys():
+                raise KeyError('Parent `' + v + '` of technology `' +
+                               k + '` is not defined.')
 
     @utils.memoize_instancemethod
     def ischild(self, y, of):
