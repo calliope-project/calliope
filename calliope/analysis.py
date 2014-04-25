@@ -86,7 +86,6 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
                         style='custom')
     # Format x datetime axis
     # Based on http://stackoverflow.com/a/9627970/397746
-    # TODO check how pandas does its very nice formatting for df.plot()
     import matplotlib.dates as mdates
     if ticks == 'monthly':
         formatter = mdates.DateFormatter('%b %Y')
@@ -95,10 +94,45 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
         formatter = mdates.DateFormatter('%d-%m-%Y')
         locator = mdates.DayLocator()
     if ticks == 'hourly':
-        formatter = mdates.DateFormatter('%h:%m %d-%m-%Y')
-        locator = mdates.HourLocator()
+        formatter = mdates.DateFormatter('%H:%M\n%d-%m-%Y')
+        locator = mdates.HourLocator(byhour=[0])
+        minor_formatter = mdates.DateFormatter('%H:%M')
+        minor_locator = mdates.HourLocator(byhour=range(1, 24))
+        plt.gca().xaxis.set_minor_formatter(minor_formatter)
+        plt.gca().xaxis.set_minor_locator(minor_locator)
     plt.gca().xaxis.set_major_formatter(formatter)
     plt.gca().xaxis.set_major_locator(locator)
+    return ax
+
+
+def plot_solution(solution, data, demand='demand_power',
+                  colormap='jet', ticks=None):
+    # Determine ticks
+    if not ticks:
+        timespan = (data.index[-1] - data.index[0]).days
+        if timespan <= 2:
+            ticks = 'hourly'
+        elif timespan < 14:
+            ticks = 'daily'
+        else:
+            ticks = 'monthly'
+    # Set up time series to plot, dividing it by time_res_series
+    time_res = solution.time_res
+    plot_df = data.divide(time_res, axis='index')
+    # Get tech stack and names
+    df = solution.summary
+    stacked_techs = df[(df['type'] == 'supply')
+                       | (df['type'] == 'storage')].index.tolist()
+    # Put stack in order according to stack_weights
+    weighted = solution.summary.weight.order(ascending=False).index.tolist()
+    stacked_techs = [y for y in weighted if y in stacked_techs]
+    names = [df.at[y, 'name'] for y in stacked_techs]
+    # Plot!
+    ax = stack_plot(plot_df, stacked_techs, colormap=colormap,
+                    alpha=0.9, ticks=ticks, legend='right', names=names)
+    ax.plot(plot_df[demand].index,
+            plot_df[demand] * -1,
+            color='black', lw=1, ls='-')
     return ax
 
 

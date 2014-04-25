@@ -26,6 +26,7 @@ availability: false  # Disable availability constraint by default
 
 techs:
     defaults:
+        stack_weight: 100
         source_carrier: false # Defaults to false, allows technologies to define a carrier to consume
         constraints:
             force_r: false
@@ -79,6 +80,7 @@ techs:
             e_cap_max: inf
             e_can_be_negative: true
     unmet_demand:
+        stack_weight: 0
         parent: supply
         constraints:
             r: inf

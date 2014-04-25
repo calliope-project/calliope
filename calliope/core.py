@@ -305,8 +305,10 @@ class Model(object):
             return y
 
     def get_carrier(self, y):
-        carrier = self.get_option(y + '.carrier')
-        return carrier
+        return self.get_option(y + '.carrier')
+
+    def get_weight(self, y):
+        return self.get_option(y + '.stack_weight')
 
     def get_source_carrier(self, y):
         source_carrier = self.get_option(y + '.source_carrier')
@@ -842,6 +844,10 @@ class Model(object):
         self.calculate_lcoe_and_cf()
         # Add summary
         self.solution['summary'] = self.get_summary()
+        # Add time resolution, and give it a nicer index
+        time_res = self.data.time_res_series
+        time_res.index = self.solution.system.major_axis
+        self.solution['time_res'] = time_res
 
     def load_solution(self):
         sol = {'system': self.get_system_variables(),
@@ -1000,7 +1006,7 @@ class Model(object):
                              sol.parameters['e_cap'].sum() / 1e6),
                             ('area (1e6 m2)',
                              sol.parameters['r_area'].sum() / 1e6)
-                           ]))
+                             ]))
         if techs:
             df = df.loc[techs, :]
         df.loc[:, 'type'] = df.index.map(lambda y: self.get_parent(y))
@@ -1008,6 +1014,7 @@ class Model(object):
         df.loc[:, 'carrier'] = df.index.map(lambda y: self.get_carrier(y))
         get_src_c = lambda y: self.get_source_carrier(y)
         df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
+        df.loc[:, 'weight'] = df.index.map(lambda y: self.get_weight(y))
         return df.sort(columns='capacity (GW)', ascending=False)
 
     def load_solution_iterative(self, system_vars, node_vars, cost_vars):
@@ -1136,7 +1143,8 @@ class Model(object):
                         'system_variables.csv': sol.system[carrier],
                         'node_parameters.csv': sol.parameters.to_frame(),
                         'costs.csv': sol.costs.to_frame(),
-                        'summary.csv': self.get_summary()}
+                        'summary.csv': sol.summary,
+                        'time_res.csv': sol.time_res}
         for var in sol.node.labels:
             k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
             v = sol.node[var].to_frame()
