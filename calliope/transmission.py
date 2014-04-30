@@ -59,9 +59,10 @@ def explode_transmission_tree(links, possible_x):
         pairs.append(list(reversed(pairs[0])))
         for x, remote_x in pairs:
             if x not in possible_x:
-                raise KeyError('Link to inexistent location.')
+                raise KeyError('Link to inexistent location: ' + x + '.')
             if x == remote_x:
-                raise KeyError('Link must be between different locations.')
+                raise KeyError('Link must be between different locations: '
+                               + x + '.')
             if x not in tree:
                 tree[x] = utils.AttrDict()
             for y in links[k]:

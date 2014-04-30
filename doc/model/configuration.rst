@@ -6,7 +6,7 @@ Model definition and configuration
 A model run consists of the *run settings* and the associated *model definition* (also referred to as the *model settings*). At its most basic, these two components are specified in just two YAML files:
 
 * ``run.yaml`` which sets up run-specific and environment-specific settings such as which solver to use. It must also, under ``input:``, define at least two directives:
-   1. the ``input.path:`` directive giving the directory with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`data`)
+   1. the ``input.data_path:`` directive giving the directory with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`data`)
    2. the ``input.model:`` directive, giving the path to another YAML file containing the model definition (``model.yaml``).
 * ``model.yaml`` which sets up the model and may import any number of additional files in order to split large models up into manageable units.
 

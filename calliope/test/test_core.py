@@ -114,7 +114,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             model: [{techs}, {locations}]
-                            path: '{path}'
+                            data_path: '{path}'
                         output:
                             save: false
                         subset_t: ['2005-01-02', '2005-01-03']
@@ -140,7 +140,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             model: [{techs}, {locations}]
-                            path: '{path}'
+                            data_path: '{path}'
                         output:
                             save: false
                         subset_y: ['ccgt', 'demand_electricity']
@@ -153,7 +153,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             model: [{techs}, {locations}]
-                            path: '{path}'
+                            data_path: '{path}'
                         output:
                             save: false
                         subset_y: ['ccgt', 'demand_electricity', 'foo', 'bar']
@@ -176,7 +176,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             model: [{techs}, {locations}]
-                            path: '{path}'
+                            data_path: '{path}'
                         output:
                             save: false
                         subset_x: ['1', 'demand']
@@ -189,7 +189,7 @@ class TestInitialization:
                         mode: plan
                         input:
                             model: [{techs}, {locations}]
-                            path: '{path}'
+                            data_path: '{path}'
                         output:
                             save: false
                         subset_x: ['1', 'demand', 'foo', 'bar']

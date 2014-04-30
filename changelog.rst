@@ -5,7 +5,12 @@ Release History
 0.3.0 (dev)
 +++++++++++
 
-* Bugfixes
+* Experimental availability parameter, ``a``
+* ``r`` can be specified as power or energy
+* Improved model solution management
+* Improved output plotting
+* Better sanity checking and error messages for common mistakes
+* Other improvements and fixes
 
 0.2.0 (2014-03-18)
 ++++++++++++++++++

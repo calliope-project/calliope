@@ -4,7 +4,7 @@
 
 input:
     model: '{{ module }}/config/model.yaml'
-    path:  '{{ module }}/example'
+    data_path:  '{{ module }}/example'
 
 output:
     save: false

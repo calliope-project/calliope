@@ -32,7 +32,7 @@ class TestModel:
             mode: plan
             input:
                 model: [{techs}, {locations}]
-                path: '{path}'
+                data_path: '{path}'
             output:
                 save: false
             subset_t: ['2005-01-01', '2005-01-03']
@@ -50,7 +50,7 @@ class TestModel:
         assert str(model.results.Solution.Status) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.get_system_variables()
+        df = model.solution.system
         assert df.ix['power', 0, 'ccgt'] == 7.5
         assert_almost_equal(df.loc['power', :, 'ccgt'].mean(),
                             7.62, tolerance=0.01)

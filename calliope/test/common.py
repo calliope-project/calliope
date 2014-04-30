@@ -32,7 +32,7 @@ def simple_model(config_model=None, config_techs=None, config_locations=None,
         mode: plan
         input:
             model: ['{model}', '{techs}', '{locations}']
-            path: '{path}'
+            data_path: '{path}'
         output:
             save: false
         """

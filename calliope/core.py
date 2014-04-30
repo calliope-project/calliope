@@ -54,12 +54,13 @@ class Model(object):
                          default.
             override : provide any additional options or override options
                        from ``config_run`` by passing an AttrDict
-                       of the form ``{'input.path': 'foo', ...}``.
+                       of the form ``{'model_settings': 'foo.yaml'}``.
                        Any option possible in ``run.yaml`` can be specified
                        in the dict, inluding ``override.`` options.
 
         """
         super(Model, self).__init__()
+        self.debug = utils.AttrDict()
         self.initialize_configuration(config_run, override)
         # Other initialization tasks
         self.data = utils.AttrDict()
@@ -103,11 +104,11 @@ class Model(object):
         # Expand {{ module }} placeholder
         cr.input.model = [_expand_module_placeholder(i)
                           for i in cr.input.model]
-        cr.input.path = _expand_module_placeholder(cr.input.path)
+        cr.input.data_path = _expand_module_placeholder(cr.input.data_path)
         # Interpret relative config paths as relative to run.yaml
         cr.input.model = [utils.ensure_absolute(i, self.config_run_path)
                           for i in cr.input.model]
-        cr.input.path = utils.ensure_absolute(cr.input.path,
+        cr.input.data_path = utils.ensure_absolute(cr.input.data_path,
                                               self.config_run_path)
         # Load all model config files and combine them into one AttrDict
         o = utils.AttrDict.from_yaml(os.path.join(config_path,
@@ -135,7 +136,7 @@ class Model(object):
         after Model initialization to verify this.
 
         """
-        path = self.config_run.input.path
+        path = self.config_run.input.data_path
         df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
                          header=None, parse_dates=[1])
         seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
@@ -155,6 +156,7 @@ class Model(object):
         d.params.append('a')
         # Fill in default values for a, so that something is there even in
         # case no dynamic timestepper is called
+        # TODO this should really be removed and replaced with 1s?
         for y in d._y_def_r:
             d.a[y] = self.get_option(y + '.constraints.availability')
 
@@ -430,7 +432,7 @@ class Model(object):
     def initialize_sets(self):
         o = self.config_model
         d = self.data
-        path = self.config_run.input.path
+        path = self.config_run.input.data_path
         #
         # t: Timesteps set
         #
@@ -456,10 +458,14 @@ class Model(object):
         # y: Technologies set
         #
         d._y = set()
-        for i in o.locations.itervalues():
-            assert isinstance(i.techs, list)
-            for y in i.techs:
-                d._y.add(y)
+        try:
+            for k, v in o.locations.iteritems():
+                for y in v.techs:
+                    d._y.add(y)
+        except KeyError:
+            raise UserWarning('The region `' + k + '` does not allow '
+                              'any technologies via `techs`. Must give '
+                              'at least one technology per region.')
         d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
@@ -555,18 +561,19 @@ class Model(object):
         @utils.memoize
         def _get_option_from_csv(filename):
             """Read CSV time series"""
-            d_path = os.path.join(self.config_run.input.path, filename)
+            d_path = os.path.join(self.config_run.input.data_path, filename)
             # [self.slice] to do time subset if needed
             # Results in e.g. d.r_eff['csp'] being a dataframe
             # of efficiencies for each time step t at location x
             df = pd.read_csv(d_path, index_col=0)[self.slice]
-            # Fill columns that weren't defined with zeros
-            missing_cols = list(set(self.data._x) - set(df.columns))
-            for c in missing_cols:
-                df[c] = 0
+            # Fill columns that weren't defined with NaN
+            # missing_cols = list(set(self.data._x) - set(df.columns))
+            # for c in missing_cols:
+            #     df[c] = np.nan
             return df
 
         d = self.data
+        self.debug.data_sources = utils.AttrDict()
         # Data for storage initialization parameter
         d.s_init = pd.DataFrame(index=d._x, columns=d._y_pc)
         for y in d.s_init.columns:
@@ -582,10 +589,16 @@ class Model(object):
         for param in d.params:
             d[param] = utils.AttrDict()
             for y in d._y:
-                d[param][y] = pd.DataFrame(0, index=d._t,
+                d[param][y] = pd.DataFrame(np.nan, index=d._t,
                                            columns=d._x)
+                # TODO this whole process could be refactored for efficiency
+                # to read files only once,
+                # create a dict of files: {'f1.csv': ['x1', 'x2'],
+                #                          'f2.csv': ['x3'],
+                #                          'model_config': ['x4, x5']}
                 for x in d._x:
                     option = self.get_option(y + '.constraints.' + param, x=x)
+                    k = param + '.' + y + '.' + x
                     if isinstance(option, str) and option.startswith('file'):
                         if param == 'r':
                             d._y_def_r.add(y)
@@ -613,9 +626,23 @@ class Model(object):
                             df = df[x_map.keys()]  # Keep only keys in x_map
                             # Then remap column names
                             df.columns = [x_map[c] for c in df.columns]
-                        d[param][y].loc[:, x] = df[x]
+                        try:
+                            d[param][y].loc[:, x] = df[x]
+                            self.debug.data_sources.set_key(k, 'file:' + f)
+                        except KeyError:
+                            # If could not be read from file, set it to zero
+                            d[param][y].loc[:, x] = 0
+                            # Depending on whether or not the tech is allowed
+                            # at this location, set _FILE_NOT_FOUND_ or _NA_
+                            # for the data source
+                            if self.data.locations.at[x, y] == 0:
+                                self.debug.data_sources.set_key(k, '_NA_')
+                            else:
+                                v = 'file:_NOT_FOUND_'
+                                self.debug.data_sources.set_key(k, v)
                     else:
                         d[param][y].loc[:, x] = option
+                        self.debug.data_sources.set_key(k, 'model_config')
                         if (param == 'r' and option != float('inf')):
                             d._y_def_r.add(y)
                     # Convert power to energy for r, if necessary
@@ -631,6 +658,14 @@ class Model(object):
                     if param == 'r' and scale:
                         scaled = self.scale_to_peak(d[param][y][x], scale)
                         d[param][y].loc[:, x] = scaled
+        ds = self.debug.data_sources
+        missing_data = [k for k in ds.keys_nested()
+                        if ds.get_key(k) == 'file:_NOT_FOUND_']
+        if len(missing_data) > 0:
+            message = ('The following parameter values could not be read '
+                       'from file. They were automatically set to `0`: '
+                       + ', '.join(missing_data))
+            raise UserWarning(message)
 
     def _get_t_max_demand(self):
         t_max_demands = utils.AttrDict()
@@ -1145,6 +1180,8 @@ class Model(object):
         """Load results into model instance for access via model variables."""
         r = self.instance.load(self.results)
         if r is False:
+            print(self.results.Problem)
+            print(self.results.Solver)
             raise UserWarning('Could not load results into model instance.')
 
     def save_outputs(self, carrier='power'):

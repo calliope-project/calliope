@@ -45,7 +45,7 @@ class TestModel:
             mode: plan
             input:
                 model: [{techs}, {locations}]
-                path: '{path}'
+                data_path: '{path}'
             output:
                 save: false
             subset_t: ['2005-01-01', '2005-01-02']
@@ -63,11 +63,11 @@ class TestModel:
         assert str(model.results.Solution.Status) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.get_system_variables()
+        df = model.solution.system
         assert df.loc['power', :, 'ccgt'].mean() == 100
         assert (df.loc['power', :, 'hvac:1'] ==
                 -1 * df.loc['power', :, 'demand_electricity']).all()
 
     def test_model_costs(self, model):
-        df = model.get_costs()
+        df = model.solution.costs
         assert_almost_equal(df.at['lcoe', 'total', 'ccgt'], 0.1)

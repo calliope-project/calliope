@@ -60,6 +60,14 @@ class Parallelizer(object):
         f.write('model = calliope.Model(config_run=\'{}\')\n'.format(pth))
         f.write('model.run()"\n')
 
+    def _write_additional_lines(self, f):
+        c = self.config
+        lines = c.parallel.additional_lines
+        if isinstance(lines, list):
+            f.writelines([i + '\n' for i in lines])
+        else:
+            f.write(lines + '\n')
+
     def generate_runs(self):
         c = self.config
         # Create output directory
@@ -169,7 +177,7 @@ class Parallelizer(object):
                 with open(os.path.join(out_dir, run), 'w') as f:
                     f.write('#!/bin/sh\n')
                     if c.parallel.additional_lines:
-                        f.write(c.parallel.additional_lines + '\n')
+                        self._write_additional_lines(f)
                     # Set job name
                     if c.parallel.environment == 'bsub':
                         f.write('#BSUB -J {}{}\n'.format(c.parallel.name,
@@ -182,7 +190,7 @@ class Parallelizer(object):
                     # Write index + 1 because the array jobs are 1-indexed
                     f.write('{}) '.format(index + 1))
                     if c.parallel.additional_lines:
-                        f.write(c.parallel.additional_lines + '\n')
+                        self._write_additional_lines(f)
                     self._write_modelcommands(f, settings)
                     f.write(';;\n\n')
         # Final tasks after going through all iterations
