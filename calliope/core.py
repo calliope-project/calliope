@@ -155,9 +155,9 @@ class Model(object):
         d.params.append('a')
         # Fill in default values for a, so that something is there even in
         # case no dynamic timestepper is called
-        # TODO this should really be removed and replaced with 1s?
         for y in d._y_def_r:
-            d.a[y] = self.get_option(y + '.constraints.availability')
+            avail = self.get_option(y + '.constraints.availability')
+            d.a[y] = pd.DataFrame(avail, index=d._t, columns=d._x)
 
     def initialize_time(self):
         """

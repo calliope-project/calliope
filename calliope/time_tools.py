@@ -33,13 +33,17 @@ class TimeSummarizer(object):
                                  'r': self._reduce_sum,
                                  'r_eff': self._reduce_average,
                                  'e_eff': self._reduce_average}
+        self.source_parameters = {'a': 'r'}
 
-    def _apply_method(self, data, method, s, key, subkey=None):
+    def _apply_method(self, data, method, s, param, src_param=None,
+                      subkey=None):
         i = data['_t'].iat[s.start]
+        if not src_param:
+            src_param = param
         if subkey:
-            data[key][subkey].loc[i] = method(data[key][subkey][s])
+            data[param][subkey].loc[i] = method(data[src_param][subkey][s])
         else:
-            data[key].at[i] = method(data[key][s])
+            data[param].at[i] = method(data[src_param][s])
 
     def _reduce_resolution(self, data, resolution, t_range):
         """Helper function called by dynamic_timestepper."""
@@ -54,11 +58,17 @@ class TimeSummarizer(object):
         for k in data.keys():
             if k in self.known_data_types.keys():
                 how = self.known_data_types[k]
+                if k in self.source_parameters:
+                    src = self.source_parameters[k]
+                else:
+                    src = None
                 if isinstance(data[k], utils.AttrDict):
                     for kk in data[k].keys():
-                        self._apply_method(data, how, s, key=k, subkey=kk)
+                        self._apply_method(data, how, s, param=k,
+                                           src_param=src, subkey=kk)
                 else:
-                    self._apply_method(data, how, s, key=k)
+                    self._apply_method(data, how, s, param=k,
+                                       src_param=src)
 
     def dynamic_timestepper(self, data, mask):
         """``mask`` must be a series with the same index as the given data.
@@ -80,10 +90,6 @@ class TimeSummarizer(object):
         Returns None on success.
 
         """
-        # Prepare the availability data based on resource
-        for k in data.r.keys():
-            data.a[k] = data.r[k].copy()
-        # Set up the mask
         df = pd.DataFrame(mask, index=mask.index)
         df.columns = ['summarize']  # rename the single column
         df['time_res'] = data.time_res_static
@@ -139,7 +145,10 @@ class TimeSummarizer(object):
         return df.iloc[0]
 
     def _reduce_r_to_a(self, df):
-        """Using resource data as a basis, generates availability data"""
+        """
+        Based on resource data given in ``df``, generate availability data
+
+        """
         if (df.sum(axis=0) == np.inf).all():
             # If the df is all infinite, availability is 1
             result = 1
@@ -148,4 +157,5 @@ class TimeSummarizer(object):
             result = 0
         else:
             result = df.sum() / (df.max() * len(df))
+            result = result.fillna(0)  # Fill NaNs from division by zero
         return result
