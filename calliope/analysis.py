@@ -147,3 +147,17 @@ def get_delivered_cost(solution, carrier='power'):
     except KeyError:
         unmet = 0
     return cost / (delivered - unmet) * -1
+
+
+def get_group_share(solution, techs, group_type='supply',
+                    var='production (GWh)'):
+    """
+    From ``solution.summary``, get the share of the given list of ``techs``
+    from the total for the given ``group_type``, for the given ``var``.
+
+    """
+    summary = solution.summary
+    supply_total = summary.query('type == "'
+                                 + group_type + '"')[var].sum()
+    supply_group = summary.loc[techs, var].sum()
+    return supply_group / supply_total

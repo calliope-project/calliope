@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 from pyutilib.services import TempfileManager
 
+from . import analysis
 from . import constraints
 from . import locations
 from . import transmission
@@ -330,11 +331,29 @@ class Model(object):
                 y = parent
             return y
 
-    def get_group_members(self, group, in_model=True, head_nodes_only=False,
+    def get_group_members(self, group, in_model=True, head_nodes_only=True,
                           expand_transmission=True):
         """
-        Return the member technologies of a group. If in_model is True,
+        Return the member technologies of a group. If ``in_model`` is True,
         only members defined in the current model are returned.
+
+        Returns:
+            * A list of group members if there are any.
+            * If a group has no members (is only member of other
+              groups, i.e. a head node), a list with a single item
+              containing only the group/technology itself.
+            * An empty list if the group is defined but not allowed
+              in the current model.
+            * None if the group doesn't exist.
+
+        Other arguments:
+
+            ``head_nodes_only`` : if True, don't return intermediate
+                                  groups.
+
+            ``expand_transmission`` : if True, return in-model
+                                      transmission technologies in the
+                                      form ``tech:zone``.
 
         """
         def _get(self, group, memberset):
@@ -342,6 +361,8 @@ class Model(object):
             if members:
                 for i, member in enumerate(members):
                     if not head_nodes_only:
+                        # FIXME this doesn't actually work, need to fix
+                        # on the other hand, is it needed for anything?
                         memberset.add(member)
                     members[i] = _get(self, member, memberset)
                 return members
@@ -890,6 +911,8 @@ class Model(object):
         self.calculate_lcoe_and_cf()
         # Add summary
         self.solution['summary'] = self.get_summary()
+        # Add shares
+        self.solution['shares'] = self.get_shares()
         # Add time resolution, and give it a nicer index
         time_res = self.data.time_res_series
         time_res.index = self.solution.system.major_axis
@@ -1063,6 +1086,25 @@ class Model(object):
         df.loc[:, 'weight'] = df.index.map(lambda y: self.get_weight(y))
         return df.sort(columns='capacity (GW)', ascending=False)
 
+    def get_shares(self):
+        ggm = self.get_group_members
+        s = pd.Series({k: '|'.join(ggm(k, head_nodes_only=True))
+                      for k in self.config_model.techs
+                      if ggm(k, head_nodes_only=True) != []
+                      and ggm(k, head_nodes_only=True) is not None})
+
+        df = pd.DataFrame(s, columns=['members'])
+        df['type'] = df.index.map(self.get_parent)
+
+        for var in ['production (GWh)', 'consumption (GWh)', 'capacity (GW)']:
+            for index, row in df.iterrows():
+                group_members = row['members'].split('|')
+                group_type = row['type']
+                share = analysis.get_group_share(self.solution, group_members,
+                                                 group_type, var=var)
+                df.at[index, 'share ' + var] = share
+        return df
+
     def load_solution_iterative(self, system_vars, node_vars, cost_vars):
         costs = sum([cost_vars[i].fillna(0).to_frame()
                      for i in range(len(cost_vars))]).to_panel()
@@ -1192,6 +1234,7 @@ class Model(object):
                         'node_parameters.csv': sol.parameters.to_frame(),
                         'costs.csv': sol.costs.to_frame(),
                         'summary.csv': sol.summary,
+                        'shares.csv': sol.shares,
                         'time_res.csv': sol.time_res}
         for var in sol.node.labels:
             k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
