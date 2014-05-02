@@ -161,3 +161,28 @@ def get_group_share(solution, techs, group_type='supply',
                                  + group_type + '"')[var].sum()
     supply_group = summary.loc[techs, var].sum()
     return supply_group / supply_total
+
+
+def _get_ranges(dates):
+    # Modified from http://stackoverflow.com/a/6934267/397746
+    while dates:
+        end = 1
+        timedelta = dates[end] - dates[end - 1]
+        try:
+            while dates[end] - dates[end - 1] == timedelta:
+                end += 1
+        except IndexError:
+            pass
+
+        yield (dates[0], dates[end - 1])
+        dates = dates[end:]
+
+
+def areas_below_resolution(solution, resolution):
+    """
+    Returns a list of (start, end) tuples for areas in the solution
+    below the given timestep resolution.
+
+    """
+    selected = solution.time_res[solution.time_res < resolution]
+    return list(_get_ranges(selected.index.tolist()))
