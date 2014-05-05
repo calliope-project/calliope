@@ -55,7 +55,7 @@ class TestModel:
         assert str(model.results.Solution.Status) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.solution.system
-        assert df.ix['power', 0, 'ccgt'] == 8.0
-        assert_almost_equal(df.loc['power', :, 'ccgt'].mean(),
+        df = model.solution.node
+        assert df.loc['e:power', 'ccgt', :, :].ix[0].sum() == 8.0
+        assert_almost_equal(df.loc['e:power', 'ccgt', :, :].sum(1).mean(),
                             7.62, tolerance=0.01)

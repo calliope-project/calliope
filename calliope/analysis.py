@@ -120,11 +120,11 @@ def plot_solution(solution, data, demand='demand_power',
     time_res = solution.time_res
     plot_df = data.divide(time_res, axis='index')
     # Get tech stack and names
-    df = solution.summary
+    df = solution.metadata
     stacked_techs = df[(df['type'] == 'supply')
                        | (df['type'] == 'storage')].index.tolist()
     # Put stack in order according to stack_weights
-    weighted = solution.summary.weight.order(ascending=False).index.tolist()
+    weighted = df.weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]
     names = [df.at[y, 'name'] for y in stacked_techs]
     # Plot!
@@ -136,29 +136,30 @@ def plot_solution(solution, data, demand='demand_power',
     return ax
 
 
-def get_delivered_cost(solution, carrier='power'):
+def get_delivered_cost(solution, cost_class='monetary', carrier='power'):
     summary = solution.summary
-    carrier_subset = summary[summary.carrier == carrier].index.tolist()
-    cost = solution.costs.cost.loc['total', carrier_subset].sum()
-    delivered = summary.at['demand_' + carrier, 'consumption (GWh)'] * 1e6
+    meta = solution.metadata
+    carrier_subset = meta[meta.carrier == carrier].index.tolist()
+    cost = solution.costs.loc[cost_class, 'total', carrier_subset].sum()
+    delivered = summary.at['demand_' + carrier, 'consumption'] * 1e6
     try:
-        unmet = summary.at['unmet_demand_' + carrier,
-                           'consumption (GWh)'] * 1e6
+        unmet = summary.at['unmet_demand_' + carrier, 'consumption'] * 1e6
     except KeyError:
         unmet = 0
     return cost / (delivered - unmet) * -1
 
 
 def get_group_share(solution, techs, group_type='supply',
-                    var='production (GWh)'):
+                    var='production'):
     """
     From ``solution.summary``, get the share of the given list of ``techs``
     from the total for the given ``group_type``, for the given ``var``.
 
     """
     summary = solution.summary
-    supply_total = summary.query('type == "'
-                                 + group_type + '"')[var].sum()
+    meta = solution.metadata
+    group = meta.query('type == "' + group_type + '"').index.tolist()
+    supply_total = summary.loc[group, var].sum()
     supply_group = summary.loc[techs, var].sum()
     return supply_group / supply_total
 

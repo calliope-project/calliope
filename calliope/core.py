@@ -12,7 +12,6 @@ Core model functionality via the Model class.
 from __future__ import print_function
 from __future__ import division
 
-import collections
 import datetime
 import inspect
 import itertools
@@ -353,7 +352,7 @@ class Model(object):
 
             ``expand_transmission`` : if True, return in-model
                                       transmission technologies in the
-                                      form ``tech:zone``.
+                                      form ``tech:location``.
 
         """
         def _get(self, group, memberset):
@@ -907,20 +906,24 @@ class Model(object):
         self.load_solution()
 
     def process_solution(self):
-        # Add LCOE and CF to self.solution.costs
-        self.calculate_lcoe_and_cf()
+        # Add levelized cost
+        self.solution['levelized_cost'] = self.get_levelized_cost()
+        # Add capacity factor
+        self.calculate_capacity_factor()
+        # Add metadata
+        self.solution['metadata'] = self.get_metadata()
         # Add summary
         self.solution['summary'] = self.get_summary()
         # Add shares
         self.solution['shares'] = self.get_shares()
         # Add time resolution, and give it a nicer index
         time_res = self.data.time_res_series
-        time_res.index = self.solution.system.major_axis
+        time_res.index = self.solution.node.major_axis
         self.solution['time_res'] = time_res
 
     def load_solution(self):
-        sol = {'system': self.get_system_variables(),
-               'node': self.get_node_variables(),
+        sol = {'node': self.get_node_variables(),
+               'totals': self.get_totals(),
                'costs': self.get_costs(),
                'parameters': self.get_node_parameters()}
         self.solution = utils.AttrDict(sol)
@@ -987,17 +990,17 @@ class Model(object):
         e = pd.Panel4D(e)
         return e
 
-    def get_system_variables(self):
-        e = self.get_e()
-        e = e.sum(axis=3).transpose(0, 2, 1)
-        return e
+    # def get_system_variables(self):
+    #     e = self.get_e()
+    #     e = e.sum(axis=3).transpose(0, 2, 1)
+    #     return e
 
     def get_node_variables(self):
         try:
-            detail = ['s', 'rs']
-            p = pd.Panel4D({v: self.get_var(v) for v in detail})
-        except KeyError:
             detail = ['s', 'rs', 'rs_']
+            p = pd.Panel4D({v: self.get_var(v) for v in detail})
+        except AttributeError:
+            detail = ['s', 'rs']
             p = pd.Panel4D({v: self.get_var(v) for v in detail})
         # Add 'e:c' items for each c in carrier
         temp = self.get_e()
@@ -1014,77 +1017,97 @@ class Model(object):
             result = result[result.e_cap > 0].dropna(axis=1)
         return result
 
-    def get_costs(self, carrier='power'):
-        """
-        Get costs and production/consumption for ``carrier``.
-        """
-        y_subset_prod = [y for y in self.m.y_prod]
-        y_subset_con = [y for y in self.m.y_con]
-        cost = self.get_var('cost').loc[:, 'monetary', :]
-        cost.loc['total', :] = cost.sum(0)
-        e_prod = self.get_var('es_prod')
-        e_prod = e_prod.loc[carrier, y_subset_prod, :, :].sum(axis='major')
-        e_prod.loc['total', :] = e_prod.sum(0)
-        e_con = self.get_var('es_con')
-        e_con = e_con.loc[carrier, y_subset_con, :, :].sum(axis='major')
-        e_con.loc['total', :] = e_con.sum(0)
-        df = pd.Panel({'cost': cost, 'e_prod': e_prod, 'e_con': e_con})
-        return df
+    def get_costs(self, t_subset=None):
+        """Get costs."""
+        # FIXME need to implement t_subset here, e.g. by calculating
+        # costs ex-post based on all the relevant tech parameters
+        cost = self.get_var('cost').transpose('major_axis', 'minor_axis',
+                                              'items')
+        cost.loc[:, 'total', :] = cost.sum(1)
+        return cost
 
-    def calculate_lcoe_and_cf(self, carrier='power'):
+    def get_totals(self, t_subset=None):
+        """Get total produced and consumed per technology and location."""
+        if t_subset is None:
+            t_subset = slice(None)
+        p = pd.Panel4D({e: self.get_var(e)
+                        .iloc[:, :, t_subset, :]
+                        .sum(axis='major')
+                        for e in ['es_prod', 'es_con']})
+        p = p.transpose('items', 'labels', 'minor_axis', 'major_axis')
+        for l in p.labels:
+            p.loc[l, :, 'total', :] = p[l].sum(1)
+        return p
+
+    def get_levelized_cost(self):
         """
-        Calculate LCOE and capacity factors for ``carrier``, adding
-        the result to ``self.solution.costs``, returning None.
+        Get levelized costs.
 
         NB: Only production, not consumption, is used in calculations.
 
         """
-        # TODO a better way to include consumption (e_con) as well
+        # TODO a better way to include consumption as well
+        sol = self.solution
+        p4d = {}
+        for cost in self.data._k:
+            p = {}
+            for carrier in self.data._c:
+                # Levelized cost of electricity (LCOE)
+                lc = sol.costs[cost] / sol.totals[carrier].es_prod
+                lc[np.isinf(lc)] = 0
+                #lcoe.loc['total', :] = sol.costs.cost.sum(0) / sol.costs.e_prod.sum(0)
+                p[carrier] = lc
+            p4d[cost] = pd.Panel(p)
+        return pd.Panel4D(p4d)
+
+    def calculate_capacity_factor(self):
+        """
+        Calculates capacity factor and adds it to ``solultion.totals``
+
+        NB: Only production, not consumption, is used in calculations.
+
+        """
         m = self.m
         sol = self.solution
         time_res = self.data.time_res_series
-        # Levelized cost of electricity (LCOE)
-        lcoe = sol.costs.cost / sol.costs.e_prod
-        lcoe[np.isinf(lcoe)] = 0
-        #lcoe.loc['total', :] = sol.costs.cost.sum(0) / sol.costs.e_prod.sum(0)
-        # Capacity factor (CF)
         e_cap = sol.parameters['e_cap']
-        try:  # Try loading time_res_sum from operational mode
-            time_res_sum = self.data.time_res_sum
-        except KeyError:
-            time_res_sum = sum(time_res.at[t] for t in m.t)
-        cf = sol.costs.e_prod / (e_cap * time_res_sum)
-        cf.loc['total', :] = (sol.costs.e_prod.loc['total', :]
-                              / (e_cap.sum(0) * time_res_sum))
-        cf = cf.fillna(0)
-        sol.costs['lcoe'] = lcoe
-        sol.costs['cf'] = cf
+        for carrier in sol.totals.labels:
+            try:  # Try loading time_res_sum from operational mode
+                time_res_sum = self.data.time_res_sum
+            except KeyError:
+                time_res_sum = sum(time_res.at[t] for t in m.t)
+            cf = sol.totals[carrier].es_prod / (e_cap * time_res_sum)
+            cf.loc['total', :] = (sol.totals[carrier].es_prod.loc['total', :]
+                                  / (e_cap.sum(0) * time_res_sum))
+            cf = cf.fillna(0)
+            sol.totals.loc[carrier, 'cf', :, :] = cf.T  # .T needed, but why?
 
-    def get_summary(self, techs=None):
-        sol = self.solution
-        d = collections.OrderedDict
-        df = pd.DataFrame(d([('cost (GBP/kWh)',
-                             sol.costs.lcoe.loc['total', :]),
-                            ('cf',
-                             sol.costs.cf.loc['total', :]),
-                            ('production (GWh)',
-                             sol.costs.e_prod.loc['total', :] / 1e6),
-                            ('consumption (GWh)',
-                             sol.costs.e_con.loc['total', :] / 1e6,),
-                            ('capacity (GW)',
-                             sol.parameters['e_cap'].sum() / 1e6),
-                            ('area (1e6 m2)',
-                             sol.parameters['r_area'].sum() / 1e6)
-                             ]))
-        if techs:
-            df = df.loc[techs, :]
+    def get_metadata(self):
+        df = pd.DataFrame(index=self.data._y)
         df.loc[:, 'type'] = df.index.map(lambda y: self.get_parent(y))
         df.loc[:, 'name'] = df.index.map(lambda y: self.get_name(y))
         df.loc[:, 'carrier'] = df.index.map(lambda y: self.get_carrier(y))
         get_src_c = lambda y: self.get_source_carrier(y)
         df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
         df.loc[:, 'weight'] = df.index.map(lambda y: self.get_weight(y))
-        return df.sort(columns='capacity (GW)', ascending=False)
+        return df
+
+    def get_summary(self, sort_by='capacity', carrier='power'):
+        sol = self.solution
+        # Capacity factor summed across carriers, this only works
+        # if a tech doesn't produce more than one carrier
+        df = pd.DataFrame({'cf': sol.totals.loc[carrier, 'cf', 'total', :]})
+        # Add different costs, summing up over all carriers
+        for k in sorted(sol.levelized_cost.labels):
+            # .loc[cost_class, carrier, location, tech]
+            df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
+        # Add totals per carrier
+        df['production'] = sol.totals.loc[carrier, 'es_prod', 'total', :] / 1e6
+        df['consumption'] = sol.totals.loc[carrier, 'es_con', 'total', :] / 1e6
+        # Add other carrier-independent stuff
+        df['capacity'] = sol.parameters['e_cap'].sum() / 1e6
+        df['area'] = sol.parameters['r_area'].sum() / 1e6
+        return df.sort(columns=sort_by, ascending=False)
 
     def get_shares(self):
         ggm = self.get_group_members
@@ -1096,7 +1119,7 @@ class Model(object):
         df = pd.DataFrame(s, columns=['members'])
         df['type'] = df.index.map(self.get_parent)
 
-        for var in ['production (GWh)', 'consumption (GWh)', 'capacity (GW)']:
+        for var in ['production', 'consumption', 'capacity']:
             for index, row in df.iterrows():
                 group_members = row['members'].split('|')
                 group_type = row['type']
@@ -1105,11 +1128,14 @@ class Model(object):
                 df.at[index, 'share ' + var] = share
         return df
 
-    def load_solution_iterative(self, system_vars, node_vars, cost_vars):
-        costs = sum([cost_vars[i].fillna(0).to_frame()
-                     for i in range(len(cost_vars))]).to_panel()
-        sol = {'system': pd.concat(system_vars, axis=1),
-               'node': pd.concat(node_vars, axis=2),
+    def load_solution_iterative(self, node_vars, total_vars, cost_vars):
+        def _totaler(var):
+            return sum([var[i].fillna(0).to_frame()
+                       for i in range(len(var))]).to_panel()
+        totals = _totaler(total_vars)
+        costs = _totaler(cost_vars)
+        sol = {'node': pd.concat(node_vars, axis=2),
+               'totals': totals,
                'costs': costs,
                'parameters': self.get_node_parameters()}
         self.solution = utils.AttrDict(sol)
@@ -1130,8 +1156,8 @@ class Model(object):
         # Remove the last step - since we look forward at each step,
         # it would take us beyond actually existing data
         steps = steps[:-1]
-        system_vars = []
         node_vars = []
+        total_vars = []
         cost_vars = []
         d.time_res_sum = 0
         self.generate_model(t_start=steps[0])
@@ -1147,19 +1173,22 @@ class Model(object):
             self.load_results()
             # Gather relevant model results over decision interval, so
             # we only grab [0:window/time_res] steps!
-            panel = self.get_system_variables()
+            # panel = self.get_system_variables()
+            # system_vars.append(panel.iloc[:, 0:target_index, :])
             if index == (len(steps) - 1):
                 # Final iteration saves data from entire horizon
                 target_index = int(o.opmode.horizon / d.time_res_static)
             else:
                 # Non-final iterations only save data from window
                 target_index = int(o.opmode.window / d.time_res_static)
-            system_vars.append(panel.iloc[:, 0:target_index, :])
             # Get node variables
             panel4d = self.get_node_variables()
             node_vars.append(panel4d.iloc[:, :, 0:target_index, :])
-            # Get cost
-            cost = self.get_costs()
+            # Get totals
+            totals = self.get_totals(t_subset=slice(0, target_index))
+            total_vars.append(totals)
+            # Get costs
+            cost = self.get_costs(t_subset=slice(0, target_index))
             cost_vars.append(cost)
             timesteps = [time_res.at[t] for t in self.m.t][0:target_index]
             d.time_res_sum += sum(timesteps)
@@ -1168,54 +1197,7 @@ class Model(object):
             # NB: -1 to convert from length --> index
             storage_state_index = target_index - 1
             d.s_init = s.iloc[:, storage_state_index, :]
-        self.load_solution_iterative(system_vars, node_vars, cost_vars)
-
-    def solve_iterative_rebuild(self):
-        """
-        Solve iterative by rebuilding the model each time.
-
-        Returns None on success, storing results under self.solution
-
-        """
-        o = self.config_model
-        d = self.data
-        window_adj = int(o.opmode.window / d.time_res_data)
-        steps = [t for t in d._t if (t % window_adj) == 0]
-        # Remove the last step - since we look forward at each step,
-        # it would take us beyond actually existing data
-        steps = steps[:-1]
-        system_vars = []
-        node_vars = []
-        cost_vars = []
-        cost_weights = []
-        for index, step in enumerate(steps):
-            self.generate_model(t_start=step)
-            self.solve()
-            self.load_results()
-            # Gather relevant model results over decision interval, so
-            # we only grab [0:window/time_res] steps!
-            panel = self.get_system_variables()
-            if index == (len(steps) - 1):
-                # Final iteration saves data from entire horizon
-                target_index = int(o.opmode.horizon / d.time_res_static)
-            else:
-                # Non-final iterations only save data from window
-                target_index = int(o.opmode.window / d.time_res_static)
-            system_vars.append(panel.iloc[:, 0:target_index, :])
-            # Get node variables
-            panel4d = self.get_node_variables()
-            node_vars.append(panel4d.iloc[:, :, 0:target_index, :])
-            # Get cost
-            cost = self.get_costs()
-            cost_vars.append(cost)
-            cost_weights.append(target_index)
-            # Save state of storage for carry over to next iteration
-            s = self.get_var('s')
-            # NB: -1 to convert from length --> index
-            storage_state_index = target_index - 1
-            d.s_init = s.iloc[:, storage_state_index, :]
-        costs = self._costs_iterative(cost_vars, cost_weights, node_vars)
-        self.load_solution_iterative(system_vars, node_vars, costs)
+        self.load_solution_iterative(node_vars, total_vars, cost_vars)
 
     def load_results(self):
         """Load results into model instance for access via model variables."""
@@ -1225,14 +1207,14 @@ class Model(object):
             print(self.results.Solver)
             raise UserWarning('Could not load results into model instance.')
 
-    def save_outputs(self, carrier='power'):
+    def save_outputs(self):
         """Save model outputs as CSV to ``self.config_run.output.path``"""
         d = self.data
         sol = self.solution
         output_files = {'locations.csv': d.locations,
-                        'system_variables.csv': sol.system[carrier],
                         'node_parameters.csv': sol.parameters.to_frame(),
                         'costs.csv': sol.costs.to_frame(),
+                        'metadata.csv': sol.metadata,
                         'summary.csv': sol.summary,
                         'shares.csv': sol.shares,
                         'time_res.csv': sol.time_res}
@@ -1240,6 +1222,12 @@ class Model(object):
             k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
             v = sol.node[var].to_frame()
             output_files[k] = v
+        for c in self.data._c:
+            k = 'totals_{}.csv'.format(c)
+            output_files[k] = sol.totals[c].to_frame()
+        for cost_class in self.data._k:
+            k = 'levelized_cost_{}.csv'.format(cost_class)
+            output_files[k] = sol.levelized_cost[cost_class].to_frame()
         # Create output dir, but ignore if it already exists
         try:
             os.makedirs(self.config_run.output.path)

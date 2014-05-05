@@ -66,12 +66,14 @@ class TestModel:
         assert str(model.results.Solution.Status) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.solution.system
-        assert_almost_equal(df.ix['power', 0, 'pv'], 7.5, tolerance=0.01)
-        assert (df.loc['power', :, 'pv'] + df.loc['power', :, 'ccgt'] ==
-                -1 * df.loc['power', :, 'demand_electricity']).all()
+        df = model.solution.node
+        assert_almost_equal(df.loc['e:power', 'pv', :, :].ix[0].sum(), 7.5,
+                            tolerance=0.01)
+        assert (df.loc['e:power', 'pv', :, :].sum(1) +
+                df.loc['e:power', 'ccgt', :, :].sum(1) ==
+                -1 * df.loc['e:power', 'demand_electricity', :, :].sum(1)).all()
 
     def test_model_costs(self, model):
-        df = model.solution.costs
-        assert_almost_equal(df.at['lcoe', 'total', 'ccgt'], 0.1,
+        df = model.solution.levelized_cost
+        assert_almost_equal(df.at['monetary', 'power', 'total', 'ccgt'], 0.1,
                             tolerance=0.001)

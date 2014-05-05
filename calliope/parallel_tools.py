@@ -19,9 +19,14 @@ import pandas as pd
 from . import utils
 
 
-def read_dir(directory, files_to_read=['costs', 'system_variables',
+def read_dir(directory, files_to_read=['costs_monetary',
                                        'node_parameters',
-                                       'node_variables_e_power']):
+                                       'node_variables_e_power',
+                                       'totals_power'
+                                       'metadata',
+                                       'summary',
+                                       'shares',
+                                       'time_res']):
     """Combines output files from `directory` and return an AttrDict
     containing them all.
 
