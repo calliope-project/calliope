@@ -847,7 +847,7 @@ class Model(object):
             raise UserWarning('Invalid mode')
         self.runtime = int(time.time() - start_time)
         if self.config_run.output.save is True:
-            self.save_outputs()
+            self.save_solution()
 
     def solve(self, warmstart=False, save_json=False):
         """
@@ -1207,8 +1207,42 @@ class Model(object):
             print(self.results.Solver)
             raise UserWarning('Could not load results into model instance.')
 
-    def save_outputs(self):
-        """Save model outputs as CSV to ``self.config_run.output.path``"""
+    def save_solution(self, how='hdf'):
+        """Save model solution. ``how`` can be ``'hdf'`` or ``'csv'``"""
+        # Create output dir, but ignore if it already exists
+        try:
+            os.makedirs(self.config_run.output.path)
+        except OSError:  # Hoping this isn't raised for more serious stuff
+            pass
+        if how == 'hdf':
+            self._save_hdf()
+        elif how == 'csv':
+            self._save_csv()
+        else:
+            raise ValueError('Unsupported value for how: {}'.format(how))
+
+    def _save_hdf(self):
+        """
+        Save solution as HDF5 to the file ``solution.hdf`` in
+        ``self.config_run.output.path``
+
+        """
+        sol = self.solution
+        store_file = os.path.join(self.config_run.output.path, 'solution.hdf')
+        # Raise error if file exists already, to make sure it's always clean
+        # before we start saving to it
+        if os.path.exists(store_file):
+            raise IOError('File `{}` exists, aborting.'.format(store_file))
+        # Set compression to highest level (9), using blosc, which is fast
+        store = pd.HDFStore(store_file, complevel=9, complib='blosc')
+        store.put('locations', self.data.locations)
+        for key in sol:
+            # Use .append instead of .add for Panel4D compatibility
+            store.append(key, sol[key])
+        store.close()
+
+    def _save_csv(self):
+        """Save solution as CSV files to ``self.config_run.output.path``"""
         d = self.data
         sol = self.solution
         output_files = {'locations.csv': d.locations,
@@ -1228,11 +1262,6 @@ class Model(object):
         for cost_class in self.data._k:
             k = 'levelized_cost_{}.csv'.format(cost_class)
             output_files[k] = sol.levelized_cost[cost_class].to_frame()
-        # Create output dir, but ignore if it already exists
-        try:
-            os.makedirs(self.config_run.output.path)
-        except OSError:  # Hoping this isn't raised for more serious stuff
-            pass
         # Write all files to output dir
         for k, v in output_files.iteritems():
             v.to_csv(os.path.join(self.config_run.output.path, k))
