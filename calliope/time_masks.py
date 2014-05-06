@@ -81,6 +81,36 @@ def resolution_series_uniform(data, resolution):
     return summarize
 
 
+def resolution_series_min_week(data, tech='wind_offshore', var='r'):
+    """
+    Resolution series to keep the week where ``var`` of ``tech``
+    is minimal across the most locations, and reduce everything else
+    to daily resolution.
+
+    """
+    df = data[var][tech]
+    # Get length of a day in timesteps
+    day_len = int(24 / data.time_res_data)
+    # Get day-wise sums
+    dff = pd.rolling_sum(df, window=day_len).reindex(range(0, len(df), day_len))
+    dff[dff.max(1) < 3]
+    # Get timestep where var/tech is minimal in the largest number of locations
+    selected = int(dff[dff > 0].idxmin().mode()[0])
+    d = data._dt.ix[selected]
+    # Determine the range for the calendar week
+    # (7 days) to keep at full resolution
+    week_start = selected - day_len * d.dayofweek
+    week_end = selected + day_len * (7 - d.dayofweek)
+    # Mask where everything is -1 (summarize) by default
+    mask = pd.DataFrame({'mask': -1}, index=range(len(df)))
+    # Add summarization info, 24-hour resolution, at 00:00 each day
+    for i in dff.index:
+        mask.at[i, 'mask'] = 24
+    # For the desired week, change the mask to native resolution (0)
+    mask.loc[week_start:week_end - 1, 'mask'] = 0
+    return mask['mask']  # Return only a series (why did I create a df anyway?)
+
+
 def mask_zero(data, tech, var='r', locations=None):
     """
     Mask where ``var`` for the technology ``tech``
