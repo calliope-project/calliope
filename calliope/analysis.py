@@ -165,6 +165,17 @@ def get_group_share(solution, techs, group_type='supply',
     return supply_group / supply_total
 
 
+def get_unmet_load_hours(solution, carrier='power', details=False):
+    unmet = solution.node['e:' + carrier]['unmet_demand_' + carrier].sum(1)
+    timesteps = len(unmet[unmet > 0])
+    hours = solution.time_res[unmet > 0].sum()
+    if details:
+        return {'hours': hours, 'timesteps': timesteps,
+                'dates': unmet[unmet > 0].index}
+    else:
+        return hours
+
+
 def _get_ranges(dates):
     # Modified from http://stackoverflow.com/a/6934267/397746
     while dates:
