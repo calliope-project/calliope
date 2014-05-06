@@ -122,7 +122,8 @@ def plot_solution(solution, data, demand='demand_power',
     # Get tech stack and names
     df = solution.metadata
     stacked_techs = df[(df['type'] == 'supply')
-                       | (df['type'] == 'storage')].index.tolist()
+                       | (df['type'] == 'storage')
+                       | (df['type'] == 'unmet_demand')].index.tolist()
     # Put stack in order according to stack_weights
     weighted = df.weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]

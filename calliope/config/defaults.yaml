@@ -81,13 +81,12 @@ techs:
             e_can_be_negative: true
     unmet_demand:
         stack_weight: 0
-        parent: supply
+        parent: defaults
         constraints:
             r: inf
             e_cap_max: inf
         costs:
             monetary:
-                e_cap: 1.0e+9
                 om_var: 1.0e+9
     storage:
         parent: defaults

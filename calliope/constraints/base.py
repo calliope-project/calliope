@@ -54,7 +54,8 @@ def node_resource(model):
         # demand/supply tech instead, which means that `r` can only
         # be ALL negative or ALL positive for a given tech!
         # elif cp.value(m.r[y, x, t]) > 0:
-        elif y in model.get_group_members('supply'):
+        elif (y in model.get_group_members('supply') or
+              y in model.get_group_members('unmet_demand')):
             # Supply technologies make use of availability
             return m.rs[y, x, t] <= r_avail * availability(y, x, t)
         elif y in model.get_group_members('demand'):
