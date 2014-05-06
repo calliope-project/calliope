@@ -29,7 +29,7 @@ def group_fraction(model):
     def group_set(group_type):
         try:
             group = model.config_model.group_fraction[group_type].keys()
-        except KeyError:
+        except (TypeError, KeyError):
             group = []
         return cp.Set(initialize=group)
 

@@ -66,6 +66,7 @@ def read_dir(directory, tables_to_read=None, verbose=False):
     results = utils.AttrDict()
     results.iterations = pd.read_csv(os.path.join(directory, 'iterations.csv'),
                                      index_col=0)
+    results.solutions = utils.AttrDict()
     for i in results.iterations.index.tolist():
         iteration_dir = os.path.join(directory, '{:0>4d}'.format(i))
         fmt = _detect_format(iteration_dir)
@@ -76,11 +77,11 @@ def read_dir(directory, tables_to_read=None, verbose=False):
                 hdf_file = os.path.join(iteration_dir, 'solution.hdf')
                 if verbose:
                     print('Reading: {}'.format(hdf_file))
-                results[i] = read_hdf(hdf_file, tables_to_read)
+                results.solutions[i] = read_hdf(hdf_file, tables_to_read)
             else:
                 if verbose:
                     print('Reading: {}'.format(iteration_dir))
-                results[i] = read_csv(iteration_dir, tables_to_read)
+                results.solutions[i] = read_csv(iteration_dir, tables_to_read)
         except IOError:
             if verbose:
                 print('I/O error at iteration: {}'.format(i))
