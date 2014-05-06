@@ -22,7 +22,7 @@ from . import utils
 
 def read_hdf(hdf_file, tables_to_read=None):
     """Read model solution from HDF file"""
-    store = pd.HDFStore(hdf_file)
+    store = pd.HDFStore(hdf_file, mode='r')
     solution = utils.AttrDict()
     if not tables_to_read:
         # Make sure leading/trailing '/' are removed from keys
@@ -58,7 +58,7 @@ def _detect_format(directory):
         return 'csv'
 
 
-def read_dir(directory, tables_to_read=None):
+def read_dir(directory, tables_to_read=None, verbose=False):
     """Combines output files from `directory` and return an AttrDict
     containing them all.
 
@@ -67,17 +67,25 @@ def read_dir(directory, tables_to_read=None):
     results.iterations = pd.read_csv(os.path.join(directory, 'iterations.csv'),
                                      index_col=0)
     for i in results.iterations.index.tolist():
-        iteration_dir = '{:0>4d}'.format(i)
-        fmt = _detect_format()
-        for i in results.iterations.index:
-            try:
-                if fmt == 'hdf':
-                    results[i] = read_hdf(iteration_dir, tables_to_read)
-                else:
-                    results[i] = read_csv(iteration_dir, tables_to_read)
-            except IOError:
-                results.iterations.at[i, 'IOError'] = 1
-                continue
+        iteration_dir = os.path.join(directory, '{:0>4d}'.format(i))
+        fmt = _detect_format(iteration_dir)
+        if verbose:
+            print('Iteration: {}, Format detected: {}'.format(i, fmt))
+        try:
+            if fmt == 'hdf':
+                hdf_file = os.path.join(iteration_dir, 'solution.hdf')
+                if verbose:
+                    print('Reading: {}'.format(hdf_file))
+                results[i] = read_hdf(hdf_file, tables_to_read)
+            else:
+                if verbose:
+                    print('Reading: {}'.format(iteration_dir))
+                results[i] = read_csv(iteration_dir, tables_to_read)
+        except IOError:
+            if verbose:
+                print('I/O error at iteration: {}'.format(i))
+            results.iterations.at[i, 'IOError'] = 1
+            continue
     return results
 
 

@@ -1229,12 +1229,14 @@ class Model(object):
         """
         sol = self.solution
         store_file = os.path.join(self.config_run.output.path, 'solution.hdf')
-        # Raise error if file exists already, to make sure it's always clean
-        # before we start saving to it
+        # Raise error if file exists already, to make sure we don't destroy
+        # existing data
         if os.path.exists(store_file):
             raise IOError('File `{}` exists, aborting.'.format(store_file))
         # Set compression to highest level (9), using blosc, which is fast
-        store = pd.HDFStore(store_file, complevel=9, complib='blosc')
+        # Also set mode to 'w' so existing file will be overwritten
+        store = pd.HDFStore(store_file, mode='w',
+                            complevel=9, complib='blosc')
         store.put('locations', self.data.locations)
         for key in sol:
             # Use .append instead of .add for Panel4D compatibility
