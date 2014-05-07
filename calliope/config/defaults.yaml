@@ -28,6 +28,7 @@ techs:
     defaults:
         stack_weight: 100
         source_carrier: false # Defaults to false, allows technologies to define a carrier to consume
+        group: false
         constraints:
             force_r: false
             r_unit: power  # Power or energy.

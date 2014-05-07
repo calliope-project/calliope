@@ -165,6 +165,21 @@ def get_group_share(solution, techs, group_type='supply',
     return supply_group / supply_total
 
 
+def get_supply_groups(solution):
+    """
+    Get individual supply technologies and those groups that define
+    group == True, for purposes of calculating diversity of supply
+
+    """
+    # group is True and '|' in members
+    grp_1 = solution.shares.query('group == True & type == "supply"')
+    idx_1 = grp_1[grp_1.members != grp_1.index].index.tolist()
+    # group is False and no '|' in members
+    grp_2 = solution.shares.query('group == False & type == "supply"')
+    idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
+    return idx_1 + idx_2
+
+
 def get_unmet_load_hours(solution, carrier='power', details=False):
     unmet = solution.node['e:' + carrier]['unmet_demand_' + carrier].sum(1)
     timesteps = len(unmet[unmet > 0])
@@ -199,3 +214,45 @@ def areas_below_resolution(solution, resolution):
     """
     selected = solution.time_res[solution.time_res < resolution]
     return list(_get_ranges(selected.index.tolist()))
+
+
+def get_swi(solution, shares_var='capacity'):
+    """
+    Returns the Shannon-Wiener diversity index.
+
+    :math:`SWI = -1 \times \sum_{i=1}^{I} p_{i} \times \ln(p_{i})`
+
+    where where I is the number of categories and :math:`p_{i}`
+    is each category's share of the total (between 0 and 1).
+
+    :math:`SWI` is zero when there is perfect concentration.
+
+    """
+    techs = get_supply_groups(solution)
+    swi = -1 * sum((p * np.log(p))
+                   for p in [solution.shares.at[y, shares_var] for y in techs])
+    return swi
+
+
+def get_hhi(solution, shares_var='capacity'):
+    """
+    Returns the Herfindahl-Hirschmann diversity index.
+
+    :math:`HHI = \sum_{i=1}^{I} p_{i}^2`
+
+    where :math:`p_{i}` is the percentage share of each technology i (0-100).
+
+    :math:`HHI` ranges between 0 and 10,000. A value above 1800 is
+    considered a sign of a concentrated market.
+
+    """
+    techs = get_supply_groups(solution)
+    hhi = sum((solution.shares.at[y, shares_var] * 100.) ** 2 for y in techs)
+    return hhi
+
+
+def get_domestic_supply_index(solution):
+    idx = solution.metadata.query('type == "supply"').index.tolist()
+    dom = (solution.costs.domestic.loc['total', idx].sum() /
+           solution.totals.power.es_prod.loc['total', idx].sum())
+    return dom

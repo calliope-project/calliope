@@ -1117,6 +1117,7 @@ class Model(object):
                       and ggm(k, head_nodes_only=True) is not None})
 
         df = pd.DataFrame(s, columns=['members'])
+        df['group'] = df.index.map(lambda y: self.get_option(y + '.group'))
         df['type'] = df.index.map(self.get_parent)
 
         for var in ['production', 'consumption', 'capacity']:
@@ -1125,7 +1126,7 @@ class Model(object):
                 group_type = row['type']
                 share = analysis.get_group_share(self.solution, group_members,
                                                  group_type, var=var)
-                df.at[index, 'share ' + var] = share
+                df.at[index, var] = share
         return df
 
     def load_solution_iterative(self, node_vars, total_vars, cost_vars):
