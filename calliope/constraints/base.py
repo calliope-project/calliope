@@ -270,6 +270,7 @@ def node_constraints_operational(model):
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
 
+    # FIXME either remove this or uncomment it
     # def c_rs__rule(m, y, x, t):
     #     # rs_ (secondary resource) is allowed only during
     #     # the hours within startup_time
@@ -319,7 +320,8 @@ def node_costs(model):
 
     * cost: total costs
     * cost_con: construction costs
-    * cost_op: operation costs
+    * cost_op_fixed: fixed operation costs
+    * cost_op_var: variable operation costs
 
     """
     m = model.m
@@ -355,11 +357,15 @@ def node_costs(model):
     # Variables
     m.cost = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
     m.cost_con = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
-    m.cost_op = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
+    m.cost_op_fixed = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
+    m.cost_op_var = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
+    m.cost_op_fuel = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
-        return m.cost[y, x, k] == m.cost_con[y, x, k] + m.cost_op[y, x, k]
+        return (m.cost[y, x, k] == m.cost_con[y, x, k]
+                + m.cost_op_fixed[y, x, k] + m.cost_op_var[y, x, k]
+                + m.cost_op_fuel[y, x, k])
 
     def c_cost_con_rule(m, y, x, k):
         if y in m.y_pc:
@@ -385,25 +391,39 @@ def node_costs(model):
                 * (cost_s_cap + cost_r_cap + cost_r_area
                    + cost_e_cap * m.e_cap[y, x]))
 
-    def c_cost_op_rule(m, y, x, k):
-        # TODO currently only counting es_prod for op costs, makes sense?
+    def c_cost_op_fixed_rule(m, y, x, k):
         if y in m.y:
-            carrier = model.get_option(y + '.carrier')
-            return (m.cost_op[y, x, k] ==
-                    # FIXME this is incorrect in cases where sum(t) is < 8760
+            return (m.cost_op_fixed[y, x, k] ==
                     _cost('om_frac', y, k) * m.cost_con[y, x, k]
                     + (_cost('om_fixed', y, k) * m.e_cap[y, x] *
-                       (sum(model.data.time_res_series) / 8760))
-                    + _cost('om_var', y, k) * sum(m.es_prod[carrier, y, x, t]
-                                                  for t in m.t)
-                    + _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))
+                       (sum(model.data.time_res_series) / 8760)))
         else:
-            return m.cost_op[y, x, k] == 0
+            return m.cost_op_fixed[y, x, k] == 0
+
+    def c_cost_op_var_rule(m, y, x, k):
+        # Note: only counting es_prod for operational costs.
+        # This should generally be a reasonable assumption to make.
+        if y in m.y:
+            carrier = model.get_option(y + '.carrier')
+            return (m.cost_op_var[y, x, k] ==
+                    _cost('om_var', y, k) * sum(m.es_prod[carrier, y, x, t]
+                                                for t in m.t))
+        else:
+            return m.cost_op_var[y, x, k] == 0
+
+    def c_cost_op_fuel_rule(m, y, x, k):
+        if y in m.y:
+            return (m.cost_op_fuel[y, x, k] ==
+                    _cost('om_fuel', y, k) * sum(m.rs[y, x, t] for t in m.t))
+        else:
+            return m.cost_op_fuel[y, x, k] == 0
 
     # Constraints
     m.c_cost = cp.Constraint(m.y, m.x, m.k)
     m.c_cost_con = cp.Constraint(m.y, m.x, m.k)
-    m.c_cost_op = cp.Constraint(m.y, m.x, m.k)
+    m.c_cost_op_fixed = cp.Constraint(m.y, m.x, m.k)
+    m.c_cost_op_var = cp.Constraint(m.y, m.x, m.k)
+    m.c_cost_op_fuel = cp.Constraint(m.y, m.x, m.k)
 
 
 def model_constraints(model):

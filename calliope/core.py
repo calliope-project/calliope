@@ -341,6 +341,9 @@ class Model(object):
                 y = parent
             return y
 
+    def get_date_index(self, date):
+        return self.data._dt[self.data._dt == date].index[0]
+
     def get_group_members(self, group, in_model=True, head_nodes_only=True,
                           expand_transmission=True):
         """
@@ -861,7 +864,9 @@ class Model(object):
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
+            self.load_solution()
         elif self.mode == 'operate':
+            # solve_iterative() generates, solves, and loads the solution
             self.solve_iterative()
         else:
             raise UserWarning('Invalid mode')
@@ -923,7 +928,6 @@ class Model(object):
         self.results = results
         self.pyomo_output = out
         self.load_results()
-        self.load_solution()
 
     def process_solution(self):
         # Add levelized cost
@@ -1039,10 +1043,37 @@ class Model(object):
 
     def get_costs(self, t_subset=None):
         """Get costs."""
-        # FIXME need to implement t_subset here, e.g. by calculating
-        # costs ex-post based on all the relevant tech parameters
-        cost = self.get_var('cost').transpose('major_axis', 'minor_axis',
-                                              'items')
+        def _factor(var, t_subset):
+            """Return the fraction of var within t_subset, used to
+               calculate the correct fraction of operational costs."""
+            if var.ndim == 4:  # Make Panel4D into Panel by summing carriers
+                var = var.sum(0)
+            return (var.iloc[:, t_subset, :].sum(1)
+                    / var.sum(1)).fillna(0)
+
+        T = lambda x: pd.Panel.transpose(x, 'major_axis',
+                                         'minor_axis', 'items')
+
+        len_adjust = (len(self.data.time_res_series.iloc[t_subset])
+                      / len(self.m.t))
+
+        cost = T(self.get_var('cost_con').add(self.get_var('cost_op_fixed')))
+        # Adjust for the fact that fixed costs accrue over a smaller length
+        # of time as per len_adjust
+        cost = cost * len_adjust
+        cost_var = T(self.get_var('cost_op_var'))
+        cost_fuel = T(self.get_var('cost_op_fuel'))
+        # Adjust for the fact that var and fuel costs are only accrued over
+        # the t_subset period
+        if t_subset:
+            es_prod = self.get_var('es_prod')
+            # Broadcast multiplication along items (i.e. cost classes)
+            cost_var = cost_var.multiply(_factor(es_prod, t_subset),
+                                         axis='items')
+            rs = self.get_var('rs')
+            cost_fuel = cost_fuel.multiply(_factor(rs, t_subset),
+                                           axis='items')
+        cost = cost.add(cost_var).add(cost_fuel)
         cost.loc[:, 'total', :] = cost.sum(1)
         return cost
 
@@ -1151,11 +1182,14 @@ class Model(object):
         return df
 
     def load_solution_iterative(self, node_vars, total_vars, cost_vars):
-        def _totaler(var):
-            return sum([var[i].fillna(0).to_frame()
-                       for i in range(len(var))]).to_panel()
-        totals = _totaler(total_vars)
-        costs = _totaler(cost_vars)
+        def _panel_sum(panels):
+            # Sums a list of 3d or 4d panels
+            result = panels[0]  # Take first item
+            for i in range(1, len(panels)):  # Start at 1 as we dealt with 0
+                result = result.add(panels[i])
+            return result
+        totals = _panel_sum(total_vars)
+        costs = _panel_sum(cost_vars)
         sol = {'node': pd.concat(node_vars, axis=2),
                'totals': totals,
                'costs': costs,
@@ -1225,6 +1259,7 @@ class Model(object):
         """Load results into model instance for access via model variables."""
         r = self.instance.load(self.results)
         if r is False:
+            # FIXME must use logging here
             print(self.results.Problem)
             print(self.results.Solver)
             raise UserWarning('Could not load results into model instance.')
@@ -1254,7 +1289,16 @@ class Model(object):
         # Raise error if file exists already, to make sure we don't destroy
         # existing data
         if os.path.exists(store_file):
-            raise IOError('File `{}` exists, aborting.'.format(store_file))
+            i = 0
+            alt_file = os.path.join(self.config_run.output.path,
+                                    'solution_{}.hdf')
+            while os.path.exists(alt_file.format(i)):
+                i += 1
+            alt_file = alt_file.format(i)  # Now "pick" the first free filename
+            # FIXME should be logging
+            print('File `{}` exists, using `{}` instead.'.format(store_file,
+                                                                 alt_file))
+            store_file = alt_file
         # Set compression to highest level (9), using blosc, which is fast
         # Also set mode to 'w' so existing file will be overwritten
         store = pd.HDFStore(store_file, mode='w',
