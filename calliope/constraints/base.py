@@ -86,6 +86,15 @@ def node_energy_balance(model):
         else:
             return d.e_eff[y][x].iat[0]  # Just get 0-th entry in DataFrame
 
+    def get_e_eff_per_distance(model, y, x):
+        try:
+            e_loss = model.get_option(y + '.constraints_per_distance.e_loss')
+            per_distance = model.get_option(y + '.per_distance')
+            distance = model.get_option(y + '.distance', x=x)
+            return 1 - (e_loss * (distance / per_distance))
+        except KeyError:
+            return 1.0
+
     # Variables
     m.s = cp.Var(m.y_pc, m.x, m.t, within=cp.NonNegativeReals)
     #m.rs_ = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
@@ -99,7 +108,8 @@ def node_energy_balance(model):
             c = model.get_option(y + '.carrier')
             return (m.es_prod[c, y, x, t]
                     == -1 * m.es_con[c, y_remote, x_remote, t]
-                    * get_e_eff(m, y, x, t))
+                    * get_e_eff(m, y, x, t)
+                    * get_e_eff_per_distance(model, y, x))
         else:
             return cp.Constraint.NoConstraint
 
@@ -331,6 +341,17 @@ def node_costs(model):
         return model.get_option(y + '.costs.' + k + '.' + cost,
                                 default=y + '.costs.default.' + cost)
 
+    @utils.memoize
+    def _cost_per_distance(cost, y, k, x):
+        try:
+            cost = model.get_option(y + '.costs_per_distanc.e' + k + '.' + cost)
+            per_distance = model.get_option(y + '.per_distance')
+            distance = model.get_option(y + '.distance', x=x)
+            distance_cost = cost * (distance / per_distance)
+        except KeyError:
+            distance_cost = 0
+        return distance_cost
+
     # Variables
     m.cost = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
     m.cost_con = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
@@ -345,16 +366,24 @@ def node_costs(model):
             cost_s_cap = _cost('s_cap', y, k) * m.s_cap[y, x]
         else:
             cost_s_cap = 0
+
         if y in m.y_def_r:
             cost_r_cap = _cost('r_cap', y, k) * m.r_cap[y, x]
             cost_r_area = _cost('r_area', y, k) * m.r_area[y, x]
         else:
             cost_r_cap = 0
             cost_r_area = 0
+
+        if y in m.y_trans:
+            cost_e_cap = (_cost('e_cap', y, k)
+                          + _cost_per_distance('e_cap', y, k, x))
+        else:
+            cost_e_cap = _cost('e_cap', y, k)
+
         return (m.cost_con[y, x, k] == _depreciation_rate(y, k)
                 * (sum(model.data.time_res_series) / 8760)
                 * (cost_s_cap + cost_r_cap + cost_r_area
-                   + _cost('e_cap', y, k) * m.e_cap[y, x]))
+                   + cost_e_cap * m.e_cap[y, x]))
 
     def c_cost_op_rule(m, y, x, k):
         # TODO currently only counting es_prod for op costs, makes sense?

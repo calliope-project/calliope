@@ -46,7 +46,7 @@ def get_transmission_techs(links):
 def explode_transmission_tree(links, possible_x):
     """Return an AttrDict with configuration for all possible transmission
     technologies defined by ``links``, checking if they have been defined
-    to a location within ``possible_x`` (which can be a list or othe iterable).
+    to a location within ``possible_x`` (which can be a list or other iterable).
 
     Returns None if ``links`` empty.
 

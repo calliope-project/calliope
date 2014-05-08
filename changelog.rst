@@ -10,6 +10,7 @@ Release History
 * Improved model solution management
 * Improved output plotting
 * Better sanity checking and error messages for common mistakes
+* Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
 * Other improvements and fixes
 
 0.2.0 (2014-03-18)

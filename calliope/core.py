@@ -459,6 +459,30 @@ class Model(object):
             y = parent
         return result
 
+    def _initialize_transmission(self):
+        o = self.config_model
+        d = self.data
+        # Add transmission technologies to y, if any defined
+        if d._y_transmission:
+            d._y.extend(d._y_transmission)
+            # Add transmission tech columns to locations matrix
+            for y in d._y_transmission:
+                d.locations[y] = 0
+            # Create representation of location-tech links
+            tree = transmission.explode_transmission_tree(o.links, d._x)
+            # Populate locations matrix with allowed techs and overrides
+            if tree:
+                for x in tree:
+                    for y in tree[x]:
+                        # Allow the tech
+                        d.locations.at[x, y] = 1
+                        # Add constraints if needed
+                        for c in tree[x][y].keys_nested():
+                            colname = '_override.' + y + '.' + c
+                            if not colname in d.locations.columns:
+                                d.locations[colname] = np.nan
+                            d.locations.at[x, colname] = tree[x][y].get_key(c)
+
     def initialize_sets(self):
         o = self.config_model
         d = self.data
@@ -499,7 +523,8 @@ class Model(object):
         d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
-        # Subset of transmission technologies, if any defined (used below)
+        # Subset of transmission technologies, if any defined
+        # Used to initialized transmission techs further below
         # (not yet added to d._y here)
         if ('links' in o) and (o.links is not None):
             d._y_transmission = transmission.get_transmission_techs(o.links)
@@ -541,26 +566,10 @@ class Model(object):
                                                          techs=d._y)
         # For simplicity, only keep the locations that are actually in set `x`
         d.locations = d.locations.ix[d._x, :]
-        # Add transmission technologies to y, if any defined
-        if d._y_transmission:
-            d._y.extend(d._y_transmission)
-            # Add transmission tech columns to locations matrix
-            for y in d._y_transmission:
-                d.locations[y] = 0
-            # Create representation of location-tech links
-            tree = transmission.explode_transmission_tree(o.links, d._x)
-            # Populate locations matrix with allowed techs and overrides
-            if tree:
-                for x in tree:
-                    for y in tree[x]:
-                        # Allow the tech
-                        d.locations.at[x, y] = 1
-                        # Add constraints if needed
-                        for c in tree[x][y].keys_nested():
-                            colname = '_override.' + y + '.' + c
-                            if not colname in d.locations.columns:
-                                d.locations[colname] = np.nan
-                            d.locations.at[x, colname] = tree[x][y].get_key(c)
+        #
+        # Initialize transmission technologies
+        #
+        self._initialize_transmission()
         #
         # k: Cost classes set
         #
