@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import division
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import numpy as np
 
 
@@ -106,7 +107,7 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
 
 
 def plot_solution(solution, data, demand='demand_power',
-                  colormap='jet', ticks=None):
+                  colormap=None, ticks=None):
     # Determine ticks
     if not ticks:
         timespan = (data.index[-1] - data.index[0]).days
@@ -128,6 +129,10 @@ def plot_solution(solution, data, demand='demand_power',
     weighted = df.weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]
     names = [df.at[y, 'name'] for y in stacked_techs]
+    # If no colormap given, derive one from colors given in metadata
+    if not colormap:
+        colors = [solution.metadata.at[i, 'color'] for i in stacked_techs]
+        colormap = ListedColormap(colors)
     # Plot!
     ax = stack_plot(plot_df, stacked_techs, colormap=colormap,
                     alpha=0.9, ticks=ticks, legend='right', names=names)
@@ -142,9 +147,9 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power'):
     meta = solution.metadata
     carrier_subset = meta[meta.carrier == carrier].index.tolist()
     cost = solution.costs.loc[cost_class, 'total', carrier_subset].sum()
-    delivered = summary.at['demand_' + carrier, 'consumption'] * 1e6
+    delivered = summary.at['demand_' + carrier, 'consumption']
     try:
-        unmet = summary.at['unmet_demand_' + carrier, 'consumption'] * 1e6
+        unmet = summary.at['unmet_demand_' + carrier, 'consumption']
     except KeyError:
         unmet = 0
     return cost / (delivered - unmet) * -1

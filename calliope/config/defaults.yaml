@@ -27,6 +27,7 @@ availability: false  # Disable availability constraint by default
 techs:
     defaults:
         stack_weight: 100
+        color: false  # If no color is defined, a random one will be chosen
         source_carrier: false # Defaults to false, allows technologies to define a carrier to consume
         group: false
         constraints:
@@ -82,6 +83,7 @@ techs:
             e_can_be_negative: true
     unmet_demand:
         stack_weight: 0
+        color: '#666666'
         parent: defaults
         constraints:
             r: inf

@@ -17,6 +17,7 @@ import inspect
 import itertools
 import json
 import os
+import random
 import shutil
 import time
 
@@ -311,6 +312,16 @@ class Model(object):
 
     def get_weight(self, y):
         return self.get_option(y + '.stack_weight')
+
+    def get_color(self, y):
+        color = self.get_option(y + '.color')
+        if color is False:
+            # If no color defined, choose one by seeding random generator
+            # with the tech name to get pseudo-random one
+            random.seed(y)
+            r = lambda: random.randint(0, 255)
+            color = '#{:0>2x}{:0>2x}{:0>2x}'.format(r(), r(), r())
+        return color
 
     def get_source_carrier(self, y):
         source_carrier = self.get_option(y + '.source_carrier')
@@ -1090,6 +1101,7 @@ class Model(object):
         get_src_c = lambda y: self.get_source_carrier(y)
         df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
         df.loc[:, 'weight'] = df.index.map(lambda y: self.get_weight(y))
+        df.loc[:, 'color'] = df.index.map(lambda y: self.get_color(y))
         return df
 
     def get_summary(self, sort_by='capacity', carrier='power'):
@@ -1102,11 +1114,11 @@ class Model(object):
             # .loc[cost_class, carrier, location, tech]
             df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
         # Add totals per carrier
-        df['production'] = sol.totals.loc[carrier, 'es_prod', 'total', :] / 1e6
-        df['consumption'] = sol.totals.loc[carrier, 'es_con', 'total', :] / 1e6
+        df['production'] = sol.totals.loc[carrier, 'es_prod', 'total', :]
+        df['consumption'] = sol.totals.loc[carrier, 'es_con', 'total', :]
         # Add other carrier-independent stuff
-        df['capacity'] = sol.parameters['e_cap'].sum() / 1e6
-        df['area'] = sol.parameters['r_area'].sum() / 1e6
+        df['capacity'] = sol.parameters['e_cap'].sum()
+        df['area'] = sol.parameters['r_area'].sum()
         return df.sort(columns=sort_by, ascending=False)
 
     def get_shares(self):
