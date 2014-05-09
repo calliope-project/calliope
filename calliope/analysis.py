@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import numpy as np
 
+from . import utils
+
 
 def legend_on_right(ax, style='default', artists=None, labels=None):
     """Draw a legend on outside on the right of the figure given by 'ax'"""
@@ -261,3 +263,51 @@ def get_domestic_supply_index(solution):
     dom = (solution.costs.domestic.loc['total', idx].sum() /
            solution.totals.power.es_prod.loc['total', idx].sum())
     return dom
+
+
+def solution_to_constraints(solution, fillna=None):
+    """
+    Returns an AttrDict with ``links`` and ``locations`` based on the
+    solution's parameters.
+
+    If ``fillna`` set to something other than None, NA values will be
+    replaced with the given value.
+
+    Save it to disk with its ``.to_yaml(path)`` method.
+
+
+    """
+    def _setkey(d, key, value, fillna):
+        if fillna is not None and np.isnan(value):
+            value = fillna
+        d.set_key(key, value)
+
+    d = utils.AttrDict()
+
+    # Non-transmission techs
+    techs = [i for i in solution.parameters.minor_axis if ':' not in i]
+    key_string = 'locations.{0}.override.{1}.constraints.{2}_max'
+
+    for x in solution.parameters.major_axis:
+        for y in techs:
+            for var in solution.parameters.items:
+                _setkey(d, key_string.format(x, y, var),
+                        solution.parameters.at[var, x, y], fillna)
+
+    # Transmission techs
+    transmission_techs = [i for i in solution.parameters.minor_axis
+                          if ':' in i]
+
+    d.links = utils.AttrDict()
+    t_key_string = 'links.{0}.{1}.constraints.e_cap_max'
+    for x in solution.parameters.major_axis:
+        for y in transmission_techs:
+            t_cap = solution.parameters.at['e_cap', x, y]
+            y_bare, x_remote = y.split(':')
+            exists = d.links.get_key(x_remote + ',' + x + '.' + y_bare,
+                                     default=False)
+            if (t_cap > 0) and (not exists):
+                _setkey(d, t_key_string.format(x + ',' + x_remote, y_bare),
+                        solution.parameters.at['e_cap', x, y], fillna)
+
+    return d
