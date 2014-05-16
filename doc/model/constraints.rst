@@ -137,7 +137,7 @@ If ``e_cap_min_use`` is defined, the minimum output is constrained by
 
    e_{s,prod}(c, y, x, y) \geq timeres(t) \times (e_{cap}(y, x) / e_{eff,ref}(y, x)) \times e_{cap,minuse}
 
-Analogous to the above, if ``c`` is the ``carrier`` of ``y``, and if ``e_can_be_negative`` is true, then
+Analogous to the above, if ``c`` is the ``carrier`` of ``y``, and if ``e_con`` is true, then
 
 .. math::
 

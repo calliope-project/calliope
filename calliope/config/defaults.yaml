@@ -47,7 +47,8 @@ techs:
             s_time_max: 0  # Max storage time [full load hours]
             s_loss: 0  # Storage loss rate [per hour]
             cf_max: false  # Maximum capacity factor, set to false to disable
-            e_can_be_negative: false
+            e_prod: true
+            e_con: false
             e_eff: 1.0
             e_eff_ref: false  # Reference efficiency. If set to false, e_eff is used instead.
             e_cap_max: 0  # Maximum e_cap [kW]
@@ -80,7 +81,8 @@ techs:
             r: 0
             force_r: true
             e_cap_max: inf
-            e_can_be_negative: true
+            e_prod: false
+            e_con: true
     unmet_demand:
         stack_weight: 0
         color: '#666666'
@@ -95,15 +97,15 @@ techs:
         parent: defaults
         constraints:
             r: 0  # Not used but still must be defined as 0
-            e_can_be_negative: true
+            e_con: true
     transmission:
         parent: defaults
         constraints:
             r: inf  # Not used but still must be defined as inf
             e_cap_max: inf
-            e_can_be_negative: true
+            e_con: true
     conversion:
         parent: defaults
         constraints:
             r: inf  # Not used but still must be defined as inf
-            e_can_be_negative: true
+            e_con: true

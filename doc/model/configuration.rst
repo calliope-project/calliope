@@ -108,7 +108,7 @@ Transmission links are defined in the model settings as follows:
          another-tranmisssion-tech:
             ...
 
-``transmission-tech`` can be any technology, but a useful transmission technology must define ``r: inf, e_can_be_negative: true`` and specify an ``e_cap_max`` (see the definition for ``transmission`` in the example model's ``techs.yaml``). It is possible to specify any amount of possible tranmission technologies (for example with different costs or efficiencies) between two locations by simply listing them all with their constraints.
+``transmission-tech`` can be any technology, but a useful transmission technology must define ``r: inf, e_con: true`` and specify an ``e_cap_max`` (see the definition for ``transmission`` in the example model's ``techs.yaml``). It is possible to specify any amount of possible tranmission technologies (for example with different costs or efficiencies) between two locations by simply listing them all with their constraints.
 
 -----------
 Inheritance

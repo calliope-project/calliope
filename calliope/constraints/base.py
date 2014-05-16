@@ -247,7 +247,8 @@ def node_constraints_operational(model):
                 * (m.r_cap[y, x] / model.get_option(y + '.constraints.r_eff')))
 
     def c_es_prod_max_rule(m, c, y, x, t):
-        if c == model.get_option(y + '.carrier'):
+        if (model.get_option(y + '.constraints.e_prod') is True and
+            c == model.get_option(y + '.carrier')):
             return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x]
         else:
             return m.es_prod[c, y, x, t] == 0
@@ -261,7 +262,7 @@ def node_constraints_operational(model):
             return cp.Constraint.NoConstraint
 
     def c_es_con_max_rule(m, c, y, x, t):
-        if (model.get_option(y + '.constraints.e_can_be_negative') is True and
+        if (model.get_option(y + '.constraints.e_con') is True and
                 c == model.get_option(y + '.carrier')):
             return m.es_con[c, y, x, t] >= -1 * time_res.at[t] * m.e_cap[y, x]
         else:

@@ -1051,6 +1051,9 @@ class Model(object):
             return (var.iloc[:, t_subset, :].sum(1)
                     / var.sum(1)).fillna(0)
 
+        if t_subset is None:
+            t_subset = slice(None)
+
         T = lambda x: pd.Panel.transpose(x, 'major_axis',
                                          'minor_axis', 'items')
 
