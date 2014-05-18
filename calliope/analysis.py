@@ -144,17 +144,26 @@ def plot_solution(solution, data, demand='demand_power',
     return ax
 
 
-def get_delivered_cost(solution, cost_class='monetary', carrier='power'):
+def get_delivered_cost(solution, cost_class='monetary', carrier='power',
+                       count_unmet_demand=False):
     summary = solution.summary
     meta = solution.metadata
     carrier_subset = meta[meta.carrier == carrier].index.tolist()
+    if count_unmet_demand is False:
+        carrier_subset.remove('unmet_demand_' + carrier)
     cost = solution.costs.loc[cost_class, 'total', carrier_subset].sum()
-    delivered = summary.at['demand_' + carrier, 'consumption']
+    # Actually, met_demand also includes demand "met" by unmet_demand
+    met_demand = summary.at['demand_' + carrier, 'consumption']
     try:
-        unmet = summary.at['unmet_demand_' + carrier, 'consumption']
+        unmet_demand = summary.at['unmet_demand_' + carrier, 'consumption']
     except KeyError:
-        unmet = 0
-    return cost / (delivered - unmet) * -1
+        unmet_demand = 0
+    if count_unmet_demand is False:
+        demand = met_demand + unmet_demand  # unmet_demand is positive, add it
+    else:
+        demand = met_demand
+
+    return cost / demand * -1
 
 
 def get_group_share(solution, techs, group_type='supply',
