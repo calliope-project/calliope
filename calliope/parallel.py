@@ -220,6 +220,9 @@ def main():
     else:
         parallelizer = Parallelizer(target_dir=args.dir,
                                     config_run=args.settings)
+        if not 'name' in parallelizer.config.parallel:
+            raise UserWarning('`' + args.settings + '`'
+                              ' does not specify a `parallel.name`.')
         parallelizer.generate_runs()
 
 
