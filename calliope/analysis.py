@@ -151,7 +151,7 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     carrier_subset = meta[meta.carrier == carrier].index.tolist()
     if count_unmet_demand is False:
         carrier_subset.remove('unmet_demand_' + carrier)
-    cost = solution.costs.loc[cost_class, 'total', carrier_subset].sum()
+    cost = solution.costs.loc[cost_class, :, carrier_subset].sum().sum()
     # Actually, met_demand also includes demand "met" by unmet_demand
     met_demand = summary.at['demand_' + carrier, 'consumption']
     try:
@@ -231,7 +231,6 @@ def areas_below_resolution(solution, resolution):
     selected = solution.time_res[solution.time_res < resolution]
     return list(_get_ranges(selected.index.tolist()))
 
-
 def get_swi(solution, shares_var='capacity'):
     """
     Returns the Shannon-Wiener diversity index.
@@ -269,8 +268,8 @@ def get_hhi(solution, shares_var='capacity'):
 
 def get_domestic_supply_index(solution):
     idx = solution.metadata.query('type == "supply"').index.tolist()
-    dom = (solution.costs.domestic.loc['total', idx].sum() /
-           solution.totals.power.es_prod.loc['total', idx].sum())
+    dom = (solution.costs.domestic.loc[:, idx].sum().sum() /
+           solution.totals.loc['power', 'es_prod', :, :].sum().sum())
     return dom
 
 

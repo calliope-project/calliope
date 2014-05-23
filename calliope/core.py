@@ -976,7 +976,7 @@ class Model(object):
         # Add levelized cost
         self.solution['levelized_cost'] = self.get_levelized_cost()
         # Add capacity factor
-        self.calculate_capacity_factor()
+        self.solution['capacity_factor'] = self.get_capacity_factor()
         # Add metadata
         self.solution['metadata'] = self.get_metadata()
         # Add summary
@@ -1120,7 +1120,6 @@ class Model(object):
             cost_fuel = cost_fuel.multiply(_factor(rs, t_subset),
                                            axis='items')
         cost = cost.add(cost_var).add(cost_fuel)
-        cost.loc[:, 'total', :] = cost.sum(1)
         return cost
 
     def get_totals(self, t_subset=None):
@@ -1132,8 +1131,6 @@ class Model(object):
                         .sum(axis='major')
                         for e in ['es_prod', 'es_con']})
         p = p.transpose('items', 'labels', 'minor_axis', 'major_axis')
-        for l in p.labels:
-            p.loc[l, :, 'total', :] = p[l].sum(1)
         return p
 
     def get_levelized_cost(self):
@@ -1152,14 +1149,15 @@ class Model(object):
                 # Levelized cost of electricity (LCOE)
                 lc = sol.costs[cost] / sol.totals[carrier].es_prod
                 lc[np.isinf(lc)] = 0
-                #lcoe.loc['total', :] = sol.costs.cost.sum(0) / sol.costs.e_prod.sum(0)
+                lc.loc['total', :] = (sol.costs[cost].sum(0)
+                                      / sol.totals[carrier].es_prod.sum(0))
                 p[carrier] = lc
             p4d[cost] = pd.Panel(p)
         return pd.Panel4D(p4d)
 
-    def calculate_capacity_factor(self):
+    def get_capacity_factor(self):
         """
-        Calculates capacity factor and adds it to ``solultion.totals``
+        Get capacity factor.
 
         NB: Only production, not consumption, is used in calculations.
 
@@ -1168,16 +1166,18 @@ class Model(object):
         sol = self.solution
         time_res = self.data.time_res_series
         e_cap = sol.parameters['e_cap']
+        cfs = {}
         for carrier in sol.totals.labels:
             try:  # Try loading time_res_sum from operational mode
                 time_res_sum = self.data.time_res_sum
             except KeyError:
                 time_res_sum = sum(time_res.at[t] for t in m.t)
             cf = sol.totals[carrier].es_prod / (e_cap * time_res_sum)
-            cf.loc['total', :] = (sol.totals[carrier].es_prod.loc['total', :]
+            cf.loc['total', :] = (sol.totals[carrier].es_prod.sum(0)
                                   / (e_cap.sum(0) * time_res_sum))
             cf = cf.fillna(0)
-            sol.totals.loc[carrier, 'cf', :, :] = cf.T  # .T needed, but why?
+            cfs[carrier] = cf
+        return pd.Panel(cfs)
 
     def get_metadata(self):
         df = pd.DataFrame(index=self.data._y)
@@ -1192,16 +1192,15 @@ class Model(object):
 
     def get_summary(self, sort_by='capacity', carrier='power'):
         sol = self.solution
-        # Capacity factor summed across carriers, this only works
-        # if a tech doesn't produce more than one carrier
-        df = pd.DataFrame({'cf': sol.totals.loc[carrier, 'cf', 'total', :]})
-        # Add different costs, summing up over all carriers
+        # Capacity factor per carrier
+        df = pd.DataFrame({'cf': sol.capacity_factor.loc[carrier, 'total', :]})
+        # Costs per carrier
         for k in sorted(sol.levelized_cost.labels):
             # .loc[cost_class, carrier, location, tech]
             df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
         # Add totals per carrier
-        df['production'] = sol.totals.loc[carrier, 'es_prod', 'total', :]
-        df['consumption'] = sol.totals.loc[carrier, 'es_con', 'total', :]
+        df['production'] = sol.totals.loc[carrier, 'es_prod', :, :].sum(0)
+        df['consumption'] = sol.totals.loc[carrier, 'es_con', :, :].sum(0)
         # Add other carrier-independent stuff
         df['capacity'] = sol.parameters['e_cap'].sum()
         df['area'] = sol.parameters['r_area'].sum()
@@ -1362,6 +1361,7 @@ class Model(object):
         output_files = {'locations.csv': d.locations,
                         'node_parameters.csv': sol.parameters.to_frame(),
                         'costs.csv': sol.costs.to_frame(),
+                        'capacity_factor.csv': sol.capacity_factor.to_frame(),
                         'metadata.csv': sol.metadata,
                         'summary.csv': sol.summary,
                         'shares.csv': sol.shares,
