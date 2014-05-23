@@ -114,7 +114,7 @@ class AttrDict(dict):
                 # Else there is probably something there, and we don't just
                 # want to overwrite so stop and warn the user
                 else:
-                    raise UserWarning('Cannot set nested key on non-dict key.')
+                    raise KeyError('Cannot set nested key on non-dict key.')
         else:
             self[key] = value
 

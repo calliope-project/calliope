@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from . import core
+from . import exceptions
 from . import utils
 
 
@@ -221,8 +222,8 @@ def main():
         parallelizer = Parallelizer(target_dir=args.dir,
                                     config_run=args.settings)
         if not 'name' in parallelizer.config.parallel:
-            raise UserWarning('`' + args.settings + '`'
-                              ' does not specify a `parallel.name`.')
+            raise exceptions.ModelError('`' + args.settings + '`'
+                                        ' does not specify a `parallel.name`.')
         parallelizer.generate_runs()
 
 

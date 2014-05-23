@@ -264,7 +264,7 @@ class TestOptions:
 
     def test_get_option_default_unavailable(self):
         model = common.simple_model()
-        with pytest.raises(KeyError):
+        with pytest.raises(calliope.exceptions.OptionNotSetError):
             model.get_option('ccgt.depreciation.foo')
 
     def test_get_option_specify_default_inexistent(self):
@@ -288,7 +288,7 @@ class TestOptions:
 
     def test_get_option_location_default_unavailable(self):
         model = common.simple_model()
-        with pytest.raises(KeyError):
+        with pytest.raises(calliope.exceptions.OptionNotSetError):
             model.get_option('ccgt.depreciation.foo', '1')
 
     def test_set_option(self):

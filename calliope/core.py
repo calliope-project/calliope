@@ -28,6 +28,7 @@ import pandas as pd
 from pyutilib.services import TempfileManager
 
 from . import analysis
+from . import exceptions
 from . import constraints
 from . import locations
 from . import transmission
@@ -178,7 +179,10 @@ class Model(object):
                                    index_col=0, header=None)[1]
                 mask = mask.astype(int)
             else:
-                raise KeyError('Define either mask_function or mask_file.')
+                e = exceptions.ModelError
+                raise e('If setting `time.summarize` to `mask`, '
+                        'either `mask_function` or `mask_file` '
+                        'must be set.')
             s.dynamic_timestepper(self.data, mask)
         elif t == 'uniform':
             s.reduce_resolution(self.data, cr.time.resolution)
@@ -202,7 +206,8 @@ class Model(object):
         if loc >= 0:
             return self.data._t.iat[loc]
         else:
-            raise KeyError('<0')
+            e = exceptions.ModelError
+            raise e('Attempting to access a timestep < 0.')
 
     def get_option(self, option, x=None, default=None):
         key = (option, x, default)
@@ -257,14 +262,19 @@ class Model(object):
                     if default:
                         result = _get_option(default)
                     elif tech == 'default':
-                        raise KeyError('Reached top of inheritance chain '
-                                       'and no default defined.')
+                        e = exceptions.OptionNotSetError
+                        raise e('Reached top of inheritance chain '
+                                'and no default defined for: '
+                                '`{}`'.format(option))
                     else:
-                        raise KeyError('Can not get parent for {} '
-                                       'and no default defined.'.format(tech))
+                        e = exceptions.OptionNotSetError
+                        raise e('Can not get parent for `{}` '
+                                'and no default defined.'.format(tech))
             return result
 
         def _get_location_option(key, location):
+            # NB: KeyErrors raised here are always caught within _get_option
+            # so need no further information or handling
             # Raises KeyError if the specific _override column does not exist
             result = d.locations.ix[location, '_override.' + key]
             # Also raise KeyError if the result is NaN, i.e. if no
@@ -304,7 +314,7 @@ class Model(object):
     def get_name(self, y):
         try:
             return self.get_option(y + '.name')
-        except KeyError:
+        except exceptions.OptionNotSetError:
             return y
 
     def get_carrier(self, y):
@@ -362,7 +372,8 @@ class Model(object):
         Other arguments:
 
             ``head_nodes_only`` : if True, don't return intermediate
-                                  groups.
+                                  groups, i.e. technology definitions
+                                  that are inherited from.
 
             ``expand_transmission`` : if True, return in-model
                                       transmission technologies in the
@@ -406,7 +417,7 @@ class Model(object):
         base = y + '.constraints.' + var
         try:
             eff_ref = self.get_option(base + '_eff_ref', x=x)
-        except KeyError:
+        except exceptions.OptionNotSetError:
             eff_ref = False
         if eff_ref is False:
             eff_ref = self.get_option(base + '_eff', x=x)
@@ -444,12 +455,14 @@ class Model(object):
             tech = inspect.trace()[-1][0].f_locals['i']
             print(o.techs[tech].keys())
             if 'parent' in o.techs[tech].keys():
-                raise KeyError('Technology `' + tech + '` defines no parent!')
+                e = exceptions.ModelError
+                raise e('Technology `' + tech + '` defines no parent!')
         # Verify that all parents are themselves actually defined
         for k, v in self.parents.iteritems():
             if v not in o.techs.keys():
-                raise KeyError('Parent `' + v + '` of technology `' +
-                               k + '` is not defined.')
+                e = exceptions.ModelError
+                raise e('Parent `' + v + '` of technology `' +
+                        k + '` is not defined.')
 
     @utils.memoize_instancemethod
     def ischild(self, y, of):
@@ -520,9 +533,10 @@ class Model(object):
                 for y in v.techs:
                     d._y.add(y)
         except KeyError:
-            raise UserWarning('The region `' + k + '` does not allow '
-                              'any technologies via `techs`. Must give '
-                              'at least one technology per region.')
+            e = exceptions.ModelError
+            raise e('The region `' + k + '` does not allow '
+                    'any technologies via `techs`. Must give '
+                    'at least one technology per region.')
         d._y = list(d._y)
         if self.config_run.get_key('subset_y', default=False):
             d._y = [y for y in d._y if y in self.config_run.subset_y]
@@ -657,7 +671,7 @@ class Model(object):
                         # Set x_map if that option has been set
                         try:
                             x_map = self.get_option(y + '.x_map', x=x)
-                        except KeyError:
+                        except exceptions.OptionNotSetError:
                             x_map = None
                         # Now, if x_map is available, remap cols accordingly
                         if x_map:
@@ -707,7 +721,7 @@ class Model(object):
             message = ('The following parameter values could not be read '
                        'from file. They were automatically set to `0`: '
                        + ', '.join(missing_data))
-            raise UserWarning(message)
+            raise exceptions.ModelWarning(message)
 
     def _get_t_max_demand(self):
         t_max_demands = utils.AttrDict()
@@ -869,7 +883,8 @@ class Model(object):
             # solve_iterative() generates, solves, and loads the solution
             self.solve_iterative()
         else:
-            raise UserWarning('Invalid mode')
+            e = exceptions.ModelError
+            raise e('Invalid model mode: `{}`'.format(self.mode))
         self.runtime = int(time.time() - start_time)
         if self.config_run.output.save is True:
             self.save_solution()
@@ -1262,10 +1277,11 @@ class Model(object):
         """Load results into model instance for access via model variables."""
         r = self.instance.load(self.results)
         if r is False:
-            # FIXME must use logging here
+            # FIXME-LOGGING must use logging here
             print(self.results.Problem)
             print(self.results.Solver)
-            raise UserWarning('Could not load results into model instance.')
+            e = exceptions.ModelWarning
+            raise e('Could not load results into model instance.')
 
     def save_solution(self, how='hdf'):
         """Save model solution. ``how`` can be ``'hdf'`` or ``'csv'``"""
@@ -1279,7 +1295,7 @@ class Model(object):
         elif how == 'csv':
             self._save_csv()
         else:
-            raise ValueError('Unsupported value for how: {}'.format(how))
+            raise ValueError('Unsupported value for `how`: {}'.format(how))
 
     def _save_hdf(self):
         """
@@ -1298,7 +1314,7 @@ class Model(object):
             while os.path.exists(alt_file.format(i)):
                 i += 1
             alt_file = alt_file.format(i)  # Now "pick" the first free filename
-            # FIXME should be logging
+            # FIXME-LOGGING should be logging
             print('File `{}` exists, using `{}` instead.'.format(store_file,
                                                                  alt_file))
             store_file = alt_file

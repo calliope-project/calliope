@@ -15,6 +15,7 @@ from __future__ import division
 import coopr.pyomo as cp
 import numpy as np
 
+from .. import exceptions
 from .. import transmission
 from .. import utils
 
@@ -92,7 +93,7 @@ def node_energy_balance(model):
             per_distance = model.get_option(y + '.per_distance')
             distance = model.get_option(y + '.distance', x=x)
             return 1 - (e_loss * (distance / per_distance))
-        except KeyError:
+        except exceptions.OptionNotSetError:
             return 1.0
 
     # Variables
@@ -351,7 +352,7 @@ def node_costs(model):
             per_distance = model.get_option(y + '.per_distance')
             distance = model.get_option(y + '.distance', x=x)
             distance_cost = cost * (distance / per_distance)
-        except KeyError:
+        except exceptions.OptionNotSetError:
             distance_cost = 0
         return distance_cost
 

@@ -98,7 +98,7 @@ class TestAttrDict:
 
     def test_set_key_nested_on_string(self, attr_dict):
         d = attr_dict
-        with pytest.raises(UserWarning):
+        with pytest.raises(KeyError):
             d.set_key('a.foo', 'bar')
 
     def test_set_key_nested_on_none(self, attr_dict):
