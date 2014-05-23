@@ -588,6 +588,16 @@ class Model(object):
         #
         self._initialize_transmission()
         #
+        # self.data._y is now complete, ensure that all techs conform to the
+        # rule that only "head" techs can be used in the model
+        #
+        for y in self.data._y:
+            if self.get_option(y + '.parent') in self.data._y:
+                e = exceptions.ModelError
+                raise e('Only technologies without children can be used '
+                        'in the model definition '
+                        '({}, {}).'.format(y, self.get_option(y + '.parent')))
+        #
         # k: Cost classes set
         #
         classes = [o.techs[k].costs.keys() for k in o.techs
