@@ -16,6 +16,7 @@ import datetime
 import inspect
 import itertools
 import json
+import logging
 import os
 import random
 import shutil
@@ -453,7 +454,6 @@ class Model(object):
                             if i != 'defaults'}
         except KeyError:
             tech = inspect.trace()[-1][0].f_locals['i']
-            print(o.techs[tech].keys())
             if 'parent' in o.techs[tech].keys():
                 e = exceptions.ModelError
                 raise e('Technology `' + tech + '` defines no parent!')
@@ -872,22 +872,40 @@ class Model(object):
         # 3. Objective function
         self.add_constraint(constraints.base.model_objective)
 
-    def run(self):
-        """Instantiate and solve the model"""
-        start_time = time.time()
-        if self.mode == 'plan':
-            self.generate_model()  # Generated model goes to self.m
-            self.solve()
-            self.load_solution()
-        elif self.mode == 'operate':
-            # solve_iterative() generates, solves, and loads the solution
-            self.solve_iterative()
-        else:
-            e = exceptions.ModelError
-            raise e('Invalid model mode: `{}`'.format(self.mode))
-        self.runtime = int(time.time() - start_time)
-        if self.config_run.output.save is True:
-            self.save_solution()
+    def _log_time(self):
+        self.runtime = int(time.time() - self.start_time)
+        logging.info('Runtime: ' + str(self.runtime) + ' secs')
+
+    def run(self, catch_model_warnings=True):
+        """
+        Instantiate and solve the model
+
+        If ``catch_model_warnings`` is True, ModelWarning exceptions are
+        caught, allowing the method to gracefully exit so that the
+        problematic model instance can be examined.
+
+        """
+        try:
+            self.start_time = time.time()
+            if self.mode == 'plan':
+                self.generate_model()  # Generated model goes to self.m
+                self.solve()
+                self.load_solution()
+            elif self.mode == 'operate':
+                # solve_iterative() generates, solves, and loads the solution
+                self.solve_iterative()
+            else:
+                e = exceptions.ModelError
+                raise e('Invalid model mode: `{}`'.format(self.mode))
+            self._log_time()
+            if self.config_run.output.save is True:
+                self.save_solution()
+        except exceptions.ModelWarning as e:
+            self._log_time()
+            if catch_model_warnings:
+                logging.warning(str(e))
+            else:
+                raise
 
     def solve(self, warmstart=False, save_json=False):
         """
@@ -1277,9 +1295,8 @@ class Model(object):
         """Load results into model instance for access via model variables."""
         r = self.instance.load(self.results)
         if r is False:
-            # FIXME-LOGGING must use logging here
-            print(self.results.Problem)
-            print(self.results.Solver)
+            logging.critical(self.results.Problem)
+            logging.critical(self.results.Solver)
             e = exceptions.ModelWarning
             raise e('Could not load results into model instance.')
 
@@ -1314,9 +1331,9 @@ class Model(object):
             while os.path.exists(alt_file.format(i)):
                 i += 1
             alt_file = alt_file.format(i)  # Now "pick" the first free filename
-            # FIXME-LOGGING should be logging
-            print('File `{}` exists, using `{}` instead.'.format(store_file,
-                                                                 alt_file))
+            message = ('File `{}` exists, '
+                       'using `{}` instead.'.format(store_file, alt_file))
+            logging.warning(message)
             store_file = alt_file
         # Set compression to highest level (9), using blosc, which is fast
         # Also set mode to 'w' so existing file will be overwritten

@@ -25,8 +25,8 @@ class OptionNotSetError(ModelError):
 
 class ModelWarning(Warning):
     """
-    ModelWarnings should be raised when model excecution can continue,
-    but the user should be informed of an issue.
+    ModelWarnings should be raised for errors where execution could still
+    continue, i.e. they may be caught and suppressed in some contexts.
 
     """
     pass
