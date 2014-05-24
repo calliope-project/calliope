@@ -67,7 +67,7 @@ class TestModel:
 
     def test_model_balanced(self, model):
         df = model.solution.node
-        assert_almost_equal(df.loc['e:power', 'pv', :, :].ix[0].sum(), 7.5,
+        assert_almost_equal(df.loc['e:power', 'pv', :, :].iloc[0, :].sum(), 7.5,
                             tolerance=0.01)
         assert (df.loc['e:power', 'pv', :, :].sum(1) +
                 df.loc['e:power', 'ccgt', :, :].sum(1) ==

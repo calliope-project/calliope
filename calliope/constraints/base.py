@@ -222,7 +222,7 @@ def node_constraints_build(model):
         e_cap_max_force = model.get_option(y + '.constraints.e_cap_max_force',
                                            x=x)
         # First check whether this tech is allowed at this location
-        if not d.locations.ix[x, y] == 1:
+        if not d.locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
         elif np.isinf(e_cap_max):
             return cp.Constraint.NoConstraint

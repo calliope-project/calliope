@@ -302,7 +302,7 @@ class Model(object):
             # NB: KeyErrors raised here are always caught within _get_option
             # so need no further information or handling
             # Raises KeyError if the specific _override column does not exist
-            result = d.locations.ix[location, '_override.' + key]
+            result = d.locations.at[location, '_override.' + key]
             # Also raise KeyError if the result is NaN, i.e. if no
             # location-specific override has been defined
             try:
@@ -621,7 +621,7 @@ class Model(object):
         d.locations = locations.generate_location_matrix(o.locations,
                                                          techs=d._y)
         # For simplicity, only keep the locations that are actually in set `x`
-        d.locations = d.locations.ix[d._x, :]
+        d.locations = d.locations.loc[d._x, :]
         #
         # Initialize transmission technologies
         #

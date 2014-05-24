@@ -96,7 +96,7 @@ def resolution_series_min_week(data, tech='wind_offshore', var='r'):
     dff[dff.max(1) < 3]
     # Get timestep where var/tech is minimal in the largest number of locations
     selected = int(dff[dff > 0].idxmin().mode()[0])
-    d = data._dt.ix[selected]
+    d = data._dt.at[selected]
     # Determine the range for the calendar week
     # (7 days) to keep at full resolution
     week_start = selected - day_len * d.dayofweek
