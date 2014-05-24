@@ -42,6 +42,36 @@ def _expand_module_placeholder(s):
                          replacement=os.path.dirname(__file__))
 
 
+def get_model_config(cr, config_run_path, adjust_data_path=True):
+    """
+    cr is the run configuration AttrDict,
+    config_run_path the path to the run configuration file
+
+    """
+    # Ensure 'input.model' is a list
+    if not isinstance(cr.input.model, list):
+        cr.input.model = [cr.input.model]
+    # Expand {{ module }} placeholder
+    cr.input.model = [_expand_module_placeholder(i)
+                      for i in cr.input.model]
+    if adjust_data_path:
+        cr.input.data_path = _expand_module_placeholder(cr.input.data_path)
+    # Interpret relative config paths as relative to run.yaml
+    cr.input.model = [utils.ensure_absolute(i, config_run_path)
+                      for i in cr.input.model]
+    if adjust_data_path:
+        cr.input.data_path = utils.ensure_absolute(cr.input.data_path,
+                                                   config_run_path)
+    # Load all model config files and combine them into one AttrDict
+    config_path = os.path.join(os.path.dirname(__file__), 'config')
+    o = utils.AttrDict.from_yaml(os.path.join(config_path,
+                                              'defaults.yaml'))
+    for path in cr.input.model:
+        # The input files are allowed to override defaults
+        o.union(utils.AttrDict.from_yaml(path), allow_override=True)
+    return o
+
+
 class Model(object):
     """
     Calliope: a multi-scale energy systems (MUSES) modeling framework
@@ -100,24 +130,7 @@ class Model(object):
         # If manually specify a run_id in debug, overwrite the generated one
         if 'debug.run_id' in cr.keys_nested():
             self.run_id = cr.debug.run_id
-        # Ensure 'input.model' is a list
-        if not isinstance(cr.input.model, list):
-            cr.input.model = [cr.input.model]
-        # Expand {{ module }} placeholder
-        cr.input.model = [_expand_module_placeholder(i)
-                          for i in cr.input.model]
-        cr.input.data_path = _expand_module_placeholder(cr.input.data_path)
-        # Interpret relative config paths as relative to run.yaml
-        cr.input.model = [utils.ensure_absolute(i, self.config_run_path)
-                          for i in cr.input.model]
-        cr.input.data_path = utils.ensure_absolute(cr.input.data_path,
-                                              self.config_run_path)
-        # Load all model config files and combine them into one AttrDict
-        o = utils.AttrDict.from_yaml(os.path.join(config_path,
-                                                  'defaults.yaml'))
-        for path in cr.input.model:
-            # The input files are allowed to override defaults
-            o.union(utils.AttrDict.from_yaml(path), allow_override=True)
+        o = get_model_config(cr, self.config_run_path)
         # Override config_model settings if specified in config_run
         if ('override' in cr
                 and isinstance(cr.override, utils.AttrDict)):
@@ -313,12 +326,20 @@ class Model(object):
             result = float('inf')
         return result
 
-    def set_option(self, option, value):
-        """Set ``option`` to ``value``. Returns None on success."""
-        # TODO add support for setting option at a specific x
-        # TODO add support for changing defaults?
+    def set_option(self, option, value, x=None):
+        """
+        Set ``option`` to ``value``. Returns None on success.
+
+        A default can be set by passing an option like
+        ``defaults.constraints.e_eff``.
+
+        """
         o = self.config_model
-        o.set_key('techs.' + option, value)
+        d = self.data
+        if x is None:
+            o.set_key('techs.' + option, value)
+        else:  # Setting a specific x
+            d.locations.at[x, '_override.' + option] = value
         self.flush_option_cache()
 
     def flush_option_cache(self):
@@ -662,7 +683,7 @@ class Model(object):
         d.params = ['r', 'e_eff']
         d._y_def_r = set()
         d._y_def_e_eff = set()
-        # TODO allow params in d.params to be defined only over
+        # TODO could allow params in d.params to be defined only over
         # x instead of either static or over (x, t) via CSV!
         for param in d.params:
             d[param] = utils.AttrDict()
@@ -820,35 +841,48 @@ class Model(object):
         #
         # Sets
         #
+
         # Time steps
         if self.mode == 'plan':
             m.t = cp.Set(initialize=d._t, ordered=True)
         elif self.mode == 'operate':
             t_end = (t_start + o.opmode.horizon / d.time_res_data) - 1
             self.t_end = int(t_end)
-            # If t_end is beyond last timestep, cap it to last one
-            # TODO this is a hack and shouldn't be necessary?
-            if t_end > d._t.iat[-1]:
-                t_end = d._t.iat[-1]
+            # If t_end is beyond last timestep, cap it to last one, and
+            # log the occurance
+            t_bound = d._t.iat[-1]
+            if t_end > t_bound:
+                logging.warning('Capping t_end from {} to {}'.format(t_end,
+                                                                     t_bound))
+                t_end = t_bound
             m.t = cp.Set(initialize=d._t.loc[self.t_start:self.t_end],
                          ordered=True)
-        # The rest
-        m.c = cp.Set(initialize=d._c, ordered=True)  # Carriers
-        m.y = cp.Set(initialize=d._y, ordered=True)  # Technologies
-        m.y_prod = cp.Set(initialize=d._y_prod, within=m.y,
-                          ordered=True)  # Production technologies
-        m.y_con = cp.Set(initialize=d._y_con, within=m.y,
-                         ordered=True)  # Production technologies
-        m.y_pc = cp.Set(initialize=d._y_pc, within=m.y,
-                        ordered=True)  # Production/consumption technologies
+        # Carriers
+        m.c = cp.Set(initialize=d._c, ordered=True)
+        # Locations
+        m.x = cp.Set(initialize=d._x, ordered=True)
+        # Cost classes
+        m.k = cp.Set(initialize=d._k, ordered=True)
+        #
+        # Technologies and various subsets of technologies
+        #
+        m.y = cp.Set(initialize=d._y, ordered=True)
+        # Production technologies
+        m.y_prod = cp.Set(initialize=d._y_prod, within=m.y, ordered=True)
+        # Production technologies
+        m.y_con = cp.Set(initialize=d._y_con, within=m.y, ordered=True)
+        # Production/consumption technologies
+        m.y_pc = cp.Set(initialize=d._y_pc, within=m.y, ordered=True)
+        # Transmission technologies
         m.y_trans = cp.Set(initialize=d._y_transmission, within=m.y,
-                           ordered=True)  # Transmission technologies
+                           ordered=True)
+        # Conversion technologies
         m.y_conv = cp.Set(initialize=d._y_conversion, within=m.y,
-                          ordered=True)  # Conversion technologies
+                          ordered=True)
+        # Technologies with specified `r`
         m.y_def_r = cp.Set(initialize=d._y_def_r, within=m.y)
+        # Technologies with specified `e_eff`
         m.y_def_e_eff = cp.Set(initialize=d._y_def_e_eff, within=m.y)
-        m.x = cp.Set(initialize=d._x, ordered=True)  # Nodes
-        m.k = cp.Set(initialize=d._k, ordered=True)  # Cost classes
 
         #
         # Parameters
@@ -885,11 +919,14 @@ class Model(object):
             self.add_constraint(constraints.planning.system_margin)
 
         # 2. Optional
+        # README NB: Using `eval` to load additional constraints,
+        # which would need specific attention if this code gets deployed
+        # in a potentially unsafe environment
         if o.get_key('constraints_pre_load', default=False):
-            eval(o.constraints_pre_load)  # TODO potentially disastrous!
+            eval(o.constraints_pre_load)
         if o.get_key('constraints', default=False):
             for c in o.constraints:
-                self.add_constraint(eval(c))  # TODO this works but is unsafe!
+                self.add_constraint(eval(c))
 
         # 3. Objective function
         self.add_constraint(constraints.base.model_objective)
@@ -964,7 +1001,8 @@ class Model(object):
             elif self.mode == 'operate':
                 logdir = os.path.join('Logs', self.run_id
                                       + '_' + str(self.t_start))
-            if (cr.get_key('debug.delete_old_logs', default=False)and os.path.exists(logdir)):
+            if (cr.get_key('debug.delete_old_logs', default=False)
+                    and os.path.exists(logdir)):
                 shutil.rmtree(logdir)
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
@@ -1016,7 +1054,10 @@ class Model(object):
             dims : list of indices as strings, e.g. ('y', 'x', 't');
                    if not given, they are auto-detected
         """
-        # TODO currently assumes fixed position of 't' (always last)
+        # WARNING: even if `dims` were given where `t` is not in the last
+        # position, the code below assumes that `t` is in the last position,
+        # and won't work otherwise. All model variables are formulated
+        # so that `t` is always last, so this should not be a problem.
         m = self.m
         var = getattr(m, var)
         # Get set
@@ -1049,7 +1090,7 @@ class Model(object):
         # Nicify time axis
         if 't' in dims:
             t = getattr(m, 't')
-            if self.t_start == 0 or self.t_start == None:
+            if self.t_start == 0 or self.t_start is None:
                 new_index = self.data._dt.loc[t.first():t.last()].tolist()
             else:
                 new_index = self.data._dt.loc[self.t_start:self.t_end].tolist()
@@ -1152,7 +1193,6 @@ class Model(object):
         NB: Only production, not consumption, is used in calculations.
 
         """
-        # TODO a better way to include consumption as well
         sol = self.solution
         p4d = {}
         for cost in self.data._k:

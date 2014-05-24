@@ -5,8 +5,9 @@ import os
 
 import calliope
 
-
-solver = 'cplex'  # TODO this needs to be done differently
+# README: Hardcoding CPLEX here, this means that tests will fail if
+# CPLEX is not installed.
+solver = 'cplex'  # this gets imported by individual test_model_* files
 
 
 def assert_almost_equal(x, y, tolerance=0.0001):

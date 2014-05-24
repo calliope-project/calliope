@@ -14,6 +14,7 @@ from __future__ import division
 
 import pandas as pd
 
+from . import exceptions
 from . import utils
 
 
@@ -27,6 +28,10 @@ def _generate_location(location, items, techs):
         items : (AttrDict) location settings
         techs : (list) list of available technologies
     """
+    # Sanity check level: it can only currently be either 0 or 1
+    if items.level not in [0, 1]:
+        msg = '`level` must be 0 or 1 at location `{}`'.format(location)
+        raise exceptions.ModelError(msg)
     # Mandatory basics
     d = {'_location': location, '_level': items.level,
          '_within': str(items.within)}

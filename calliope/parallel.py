@@ -88,27 +88,9 @@ class Parallelizer(object):
         c.parallel.to_yaml(parallel_f)
 
         #
-        # COMBINE ALL CONFIG INTO ONE FILE AND WRITE THAT TO out_dir
+        # COMBINE ALL MODEL CONFIG INTO ONE FILE AND WRITE IT TO out_dir
         #
-        # TODO the following exactly mirrors code in core.py, should
-        # be broken out into a separate function (utils.py?)
-        #
-        # Ensure 'input.model' is a list
-        if not isinstance(c.input.model, list):
-            c.input.model = [c.input.model]
-        # Expand {{ module }} placeholder
-        c.input.model = [core._expand_module_placeholder(i)
-                         for i in c.input.model]
-        # Interpret relative config paths as relative to run.yaml
-        c.input.model = [utils.ensure_absolute(i, self.config_file)
-                         for i in c.input.model]
-        # Load all model config files and combine them into one AttrDict
-        config_path = os.path.join(os.path.dirname(__file__), 'config')
-        o = utils.AttrDict.from_yaml(os.path.join(config_path,
-                                                  'defaults.yaml'))
-        for path in c.input.model:
-            # The input files are allowed to override defaults
-            o.union(utils.AttrDict.from_yaml(path), allow_override=True)
+        o = core.get_model_config(c, self.config_file, adjust_data_path=False)
         unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
         o.to_yaml(os.path.join(unified_config_file))
         c.input.model = 'model.yaml'

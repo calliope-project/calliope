@@ -12,6 +12,8 @@ Provides the TimeSummarizer class to dynamically adjust time resolution.
 from __future__ import print_function
 from __future__ import division
 
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -69,6 +71,9 @@ class TimeSummarizer(object):
                 else:
                     self._apply_method(data, how, s, param=k,
                                        src_param=src)
+            else:  # k is not in known_data_types.keys()
+                msg = 'Encountered unknown data type, skipping: {}'.format(k)
+                logging.warning(msg)
 
     def dynamic_timestepper(self, data, mask):
         """``mask`` must be a series with the same index as the given data.
@@ -119,7 +124,8 @@ class TimeSummarizer(object):
                         data[k][kk] = data[k][kk][df.to_keep]
                 else:
                     data[k] = data[k][df.to_keep]
-            # TODO else: log that there was a data item of unknown type
+            # NB unknown data types are checked for and logged earlier, inside
+            # _reduce_resolution()
         data.time_res_series = df.time_res[df.to_keep]
         # NB data.time_res_static is not adjusted here, but this should be ok
 

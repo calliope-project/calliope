@@ -122,7 +122,8 @@ def node_energy_balance(model):
 
     def c_s_balance_pc_rule(m, y, x, t):
         e_eff = get_e_eff(m, y, x, t)
-        # FIXME this doesn't update on param update!
+        # TODO once Pyomo supports it,
+        # let this update conditionally on param update!
         if cp.value(e_eff) == 0:
             e_prod = 0
         else:
@@ -348,7 +349,8 @@ def node_costs(model):
     @utils.memoize
     def _cost_per_distance(cost, y, k, x):
         try:
-            cost = model.get_option(y + '.costs_per_distanc.e' + k + '.' + cost)
+            cost_option = y + '.costs_per_distance.' + k + '.' + cost
+            cost = model.get_option(cost_option)
             per_distance = model.get_option(y + '.per_distance')
             distance = model.get_option(y + '.distance', x=x)
             distance_cost = cost * (distance / per_distance)
@@ -443,7 +445,7 @@ def model_constraints(model):
 
     # Constraint rules
     def c_system_balance_rule(m, c, x, t):
-        # TODO for now, hardcoding level 1, so can only use levels 0 and 1
+        # Hardcoded: balancing takes place between locations on level 1 only
         parents = get_parents(1)
         if x not in parents:
             return cp.Constraint.NoConstraint
@@ -472,7 +474,8 @@ def model_objective(model):
     # Count monetary costs only
     def obj_rule(m):
         return (sum(model.get_option(y + '.weight')
-                    * sum(m.cost[y, x, 'monetary'] for x in m.x) for y in m.y))
+                    * sum(m.cost[y, x, 'monetary'] for x in m.x)
+                    for y in m.y))
 
     m.obj = cp.Objective(sense=cp.minimize)
     #m.obj.domain = cp.NonNegativeReals

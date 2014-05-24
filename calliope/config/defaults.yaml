@@ -3,8 +3,7 @@
 #
 
 # General parameters
-startup_time: 12  # Length of startup period (during which some constraints are relaxed) [h]
-# TODO change this to 'edge_period' and apply it similarly to end of optimized time series?
+startup_time: 12  # Length of startup period (during which some constraints may be relaxed) [h]
 
 # Operation mode settings
 opmode:

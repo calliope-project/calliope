@@ -55,6 +55,6 @@ The built-in example model
 
 If creating a ``Model()`` without any additional arguments, the built-in example model configuration is used.
 
-TODO more detail
+..TODO more detail
 
 For more detail on configuring a model either based on the example or entirely from scratch, refer to :doc:`configuration` and :doc:`data`.
