@@ -73,7 +73,7 @@ class TimeSummarizer(object):
                                        src_param=src)
             else:  # k is not in known_data_types.keys()
                 msg = 'Encountered unknown data type, skipping: {}'.format(k)
-                logging.warning(msg)
+                logging.debug(msg)
 
     def dynamic_timestepper(self, data, mask):
         """``mask`` must be a series with the same index as the given data.
