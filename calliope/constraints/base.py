@@ -98,7 +98,7 @@ def node_energy_balance(model):
 
     # Variables
     m.s = cp.Var(m.y_pc, m.x, m.t, within=cp.NonNegativeReals)
-    #m.rs_ = cp.Var(m.y, m.x, m.t, within=cp.NonNegativeReals)
+    m.rs_s = cp.Var(m.y_rs_s, m.x, m.t, within=cp.NonNegativeReals)
     m.es_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
     m.es_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
 
@@ -130,9 +130,15 @@ def node_energy_balance(model):
             e_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
         e_con = sum(m.es_con[c, y, x, t] for c in m.c) * e_eff
 
+        # If this tech is in the set of techs allowign rs_s, included it
+        if y in m.y_rs_s:
+            rs_s = m.rs_s[y, x, t]
+        else:
+            rs_s = 0
+
         # A) Case where no storage allowed
         if model.get_option(y + '.constraints.s_cap_max', x=x) == 0:
-            return m.rs[y, x, t] == e_prod + e_con  # - m.rs_[y, x, t]
+            return m.rs[y, x, t] == e_prod + e_con - rs_s
 
         # B) Case where storage is allowed
         else:
@@ -145,8 +151,7 @@ def node_energy_balance(model):
                                 ** model.data.time_res_series.at[model.prev(t)])
                                * m.s[y, x, model.prev(t)])
             return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
-                    # + m.rs_[y, x, t]
-                    - e_prod - e_con)
+                    + rs_s - e_prod - e_con)
 
     # Constraints
     m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)
@@ -273,20 +278,19 @@ def node_constraints_operational(model):
     def c_s_max_rule(m, y, x, t):
         return m.s[y, x, t] <= m.s_cap[y, x]
 
-    # FIXME either remove this or uncomment it
-    # def c_rs__rule(m, y, x, t):
-    #     # rs_ (secondary resource) is allowed only during
-    #     # the hours within startup_time
-    #     # and only if the technology allows this
-    #     if (model.get_option(y + '.constraints.allow_rs_')
-    #             and t < model.data.startup_time_bounds):
-    #         try:
-    #             return m.rsecs[y, x, t] <= (model.data.time_res_series.at[t]
-    #                                         * m.e_cap[y, x]) / m.e_eff[y, x, t]
-    #         except ZeroDivisionError:
-    #             return m.rs_[y, x, t] == 0
-    #     else:
-    #         return m.rs_[y, x, t] == 0
+    def c_rs_s_rule(m, y, x, t):
+        # rs_s (secondary resource) is allowed only during
+        # the hours within startup_time
+        # and only if the technology allows this
+        if (model.get_option(y + '.constraints.allow_rs_s')
+                and t < model.data.startup_time_bounds):
+            try:
+                return m.rs_s[y, x, t] <= (model.data.time_res_series.at[t]
+                                           * m.e_cap[y, x]) / m.e_eff[y, x, t]
+            except ZeroDivisionError:
+                return m.rs_s[y, x, t] == 0
+        else:
+            return m.rs_s[y, x, t] == 0
 
     # Constraints
     m.c_rs_max_upper = cp.Constraint(m.y_def_r, m.x, m.t)
@@ -295,7 +299,7 @@ def node_constraints_operational(model):
     m.c_es_prod_min = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_es_con_max = cp.Constraint(m.c, m.y, m.x, m.t)
     m.c_s_max = cp.Constraint(m.y_pc, m.x, m.t)
-    # m.c_rs_ = cp.Constraint(m.y, m.x, m.t)
+    m.c_rs_s = cp.Constraint(m.y_rs_s, m.x, m.t)
 
 
 def transmission_constraints(model):

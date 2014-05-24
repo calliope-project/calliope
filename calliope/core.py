@@ -391,8 +391,9 @@ class Model(object):
     def get_group_members(self, group, in_model=True, head_nodes_only=True,
                           expand_transmission=True):
         """
-        Return the member technologies of a group. If ``in_model`` is True,
-        only members defined in the current model are returned.
+        Return the member technologies of a group. If ``in_model`` is
+        True, only technologies (head nodes) in use in the current model
+        are returned.
 
         Returns:
             * A list of group members if there are any.
@@ -407,7 +408,11 @@ class Model(object):
 
             ``head_nodes_only`` : if True, don't return intermediate
                                   groups, i.e. technology definitions
-                                  that are inherited from.
+                                  that are inherited from. Setting this
+                                  to False only makes sense if in_model
+                                  is also False, because in_model=True
+                                  implies that only head nodes are
+                                  returned.
 
             ``expand_transmission`` : if True, return in-model
                                       transmission technologies in the
@@ -419,8 +424,6 @@ class Model(object):
             if members:
                 for i, member in enumerate(members):
                     if not head_nodes_only:
-                        # FIXME this doesn't actually work, need to fix
-                        # on the other hand, is it needed for anything?
                         memberset.add(member)
                     members[i] = _get(self, member, memberset)
                 return members
@@ -594,6 +597,9 @@ class Model(object):
                      + d._y_transmission)
         d._y_con = ([y for y in d._y if not self.ischild(y, of='supply')]
                     + d._y_transmission)
+        # Subset of technologies that allow rs_s
+        d._y_rs_s = [y for y in d._y
+                     if self.get_option(y + '.constraints.allow_rs_s') is True]
         #
         # c: Carriers set
         #
@@ -883,6 +889,8 @@ class Model(object):
         m.y_def_r = cp.Set(initialize=d._y_def_r, within=m.y)
         # Technologies with specified `e_eff`
         m.y_def_e_eff = cp.Set(initialize=d._y_def_e_eff, within=m.y)
+        # Technologies that allow `rs_s`
+        m.y_rs_s = cp.Set(initialize=d._y_rs_s, within=m.y)
 
         #
         # Parameters

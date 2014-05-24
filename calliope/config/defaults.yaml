@@ -38,7 +38,7 @@ techs:
             r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
             r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable. Only works if r: file.
-            allow_rs_: false  # Allow secondary resource during startup_time?
+            allow_rs_s: false  # Allow secondary resource during startup_time?
             s_init: 0  # Initial storage level [kWh]
             s_cap_max: 0  # Maximum storage size [kWh]
             s_cap_max_force: false  # If true, force s_cap to equal s_cap_max
