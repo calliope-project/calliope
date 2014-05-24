@@ -189,7 +189,8 @@ def get_supply_groups(solution):
     """
     # group is True and '|' in members
     grp_1 = solution.shares.query('group == True & type == "supply"')
-    idx_1 = grp_1[grp_1.members != grp_1.index].index.tolist()
+    idx_1 = grp_1[(grp_1.members != grp_1.index)
+                  & (grp_1.members.str.contains('\|'))].index.tolist()
     # group is False and no '|' in members
     grp_2 = solution.shares.query('group == False & type == "supply"')
     idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
@@ -245,7 +246,8 @@ def get_swi(solution, shares_var='capacity'):
     """
     techs = get_supply_groups(solution)
     swi = -1 * sum((p * np.log(p))
-                   for p in [solution.shares.at[y, shares_var] for y in techs])
+                   for p in [solution.shares.at[y, shares_var] for y in techs]
+                   if p > 0)
     return swi
 
 

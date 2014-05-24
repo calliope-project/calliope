@@ -210,15 +210,8 @@ class Model(object):
             e = exceptions.ModelError
             raise e('Attempting to access a timestep < 0.')
 
-    def get_option(self, option, x=None, default=None):
-        key = (option, x, default)
-        try:
-            result = self.option_cache[key]
-        except KeyError:
-            result = self.option_cache[key] = self._get_option(*key)
-        return result
-
-    def _get_option(self, option, x=None, default=None):
+    def get_option(self, option, x=None, default=None,
+                   ignore_inheritance=False):
         """Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
         tech.
@@ -232,6 +225,10 @@ class Model(object):
         and the regular inheritance chain defines no default, an error
         is raised.
 
+        If ``ignore_inheritance`` is True, the default is immediately used
+        instead of a search through the inheritance chain if the option
+        has not been set for the given tech.
+
         If the first segment of the option containts ':', it will be
         interpreted as implicit tech subsetting: e.g. asking for
         'hvac:r1' implicitly uses 'hvac:r1' with the parent 'hvac', even
@@ -241,8 +238,19 @@ class Model(object):
         Examples: model.get_option('ccgt.costs.om_var') or
                   model.get_option('csp.weight') or
                   model.get_option('csp.r', x='33') or
+                  model.get_option('ccgt.costs.om_var',
+                                    default='defaults.costs.om_var')
 
         """
+        key = (option, x, default, ignore_inheritance)
+        try:
+            result = self.option_cache[key]
+        except KeyError:
+            result = self.option_cache[key] = self._get_option(*key)
+        return result
+
+    def _get_option(self, option, x=None, default=None,
+                    ignore_inheritance=False):
         o = self.config_model
         d = self.data
 
@@ -250,13 +258,17 @@ class Model(object):
             try:
                 result = o.get_key('techs.' + option)
             except KeyError:
+                if ignore_inheritance:
+                    return _get_option(default)
                 # Example: 'ccgt.costs.om_var'
                 tech = option.split('.')[0]  # 'ccgt'
-                remainder = '.'.join(option.split('.')[1:])  # 'costs.om_var'
+                # 'costs.om_var'
+                remainder = '.'.join(option.split('.')[1:])
                 if ':' in tech:
                     parent = tech.split(':')[0]
                 else:
-                    parent = o.get_key('techs.' + tech + '.parent')  # 'defaults'
+                    # 'defaults'
+                    parent = o.get_key('techs.' + tech + '.parent')
                 try:
                     result = _get_option(parent + '.' + remainder)
                 except KeyError:
@@ -1214,7 +1226,10 @@ class Model(object):
                       and ggm(k, head_nodes_only=True) is not None})
 
         df = pd.DataFrame(s, columns=['members'])
-        df['group'] = df.index.map(lambda y: self.get_option(y + '.group'))
+        gg = lambda y: self.get_option(y + '.group',
+                                       default='defaults.group',
+                                       ignore_inheritance=True)
+        df['group'] = df.index.map(gg)
         df['type'] = df.index.map(self.get_parent)
 
         for var in ['production', 'consumption', 'capacity']:
