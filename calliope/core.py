@@ -1045,6 +1045,9 @@ class Model(object):
         time_res = self.data.time_res_series
         time_res.index = self.solution.node.major_axis
         self.solution['time_res'] = time_res
+        # Add metadata from model configuration
+        if 'metadata' in self.config_model:
+            self.solution['model_metadata'] = self.config_model.metadata
 
     def load_solution(self):
         sol = {'node': self.get_node_variables(),

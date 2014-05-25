@@ -15,6 +15,7 @@ from __future__ import division
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import numpy as np
+import pandas as pd
 
 from . import utils
 
@@ -108,7 +109,7 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
     return ax
 
 
-def plot_solution(solution, data, demand='demand_power',
+def plot_solution(solution, data, carrier='power', demand='demand_power',
                   colormap=None, ticks=None):
     # Determine ticks
     if not ticks:
@@ -123,7 +124,7 @@ def plot_solution(solution, data, demand='demand_power',
     time_res = solution.time_res
     plot_df = data.divide(time_res, axis='index')
     # Get tech stack and names
-    df = solution.metadata
+    df = solution.metadata[solution.metadata.carrier == carrier]
     stacked_techs = df[(df['type'] == 'supply')
                        | (df['type'] == 'storage')
                        | (df['type'] == 'unmet_demand')].index.tolist()
@@ -141,6 +142,146 @@ def plot_solution(solution, data, demand='demand_power',
     ax.plot(plot_df[demand].index,
             plot_df[demand] * -1,
             color='black', lw=1, ls='-')
+    return ax
+
+
+def plot_installed_capacities(solution, **kwargs):
+    supply_cap = solution.metadata.query('type == "supply" | '
+                                         'type == "conversion" | '
+                                         'type == "storage"').index.tolist()
+
+    df = solution.parameters.e_cap.loc[:, supply_cap]
+
+    weighted = solution.metadata.weight.order(ascending=False).index.tolist()
+    stacked_techs = [y for y in weighted if y in df.columns]
+
+    df = df.loc[:, stacked_techs] / 1e6
+
+    # Order the locations nicely
+    if 'location_ordering' in solution.model_metadata:
+        df = df.loc[solution.model_metadata.location_ordering, :]
+
+    names = [solution.metadata.at[y, 'name'] for y in df.columns]
+    colors = [solution.metadata.at[i, 'color'] for i in df.columns]
+    colormap = ListedColormap(colors)
+    proxies = [plt.Rectangle((0, 0), 1, 1, fc=i)
+               for i in colors]
+
+    ax = df.plot(kind='barh', stacked=True, legend=False, colormap=colormap,
+                 **kwargs)
+    leg = legend_on_right(ax, style='custom', artists=proxies, labels=names)
+
+    ylab = ax.set_ylabel('')
+    xlab = ax.set_xlabel('Installed capacity [GW]')
+
+    return ax
+
+
+def plot_transmission(solution, tech='hvac', carrier='power',
+                      labels='utilization',
+                      figsize=(15, 15), fontsize=9):
+    """
+    Plots transmission links on a map.
+
+    `labels` determines how transmission links are labeled,
+    can be `transmission` or `utilization`.
+
+    NB: Requires Basemap and NetworkX to be installed.
+
+    """
+    from mpl_toolkits.basemap import Basemap
+    import networkx as nx
+    from calliope.lib import nx_pylab
+
+    # Determine maximum that could have been transmitted across a link
+    def get_edge_capacity(solution, a, b):
+        hrs = solution.time_res.sum()
+        cap = solution.parameters.at['e_cap', a, '{}:'.format(tech) + b] * hrs
+        return cap
+
+    # Get annual power transmission between zones
+    zones = sorted(solution.node.minor_axis.tolist())
+    trans_tech = lambda x: '{}:{}'.format(tech, x)
+    df = pd.DataFrame({zone: solution.node.loc['e:{}'.format(carrier),
+                                               trans_tech(zone), :, :].sum()
+                      for zone in zones})
+
+    # Set smaller than zero to zero --
+    # we only want to know about 'production' from
+    # transmission, not their consumptions
+    df[df < 0] = 0
+
+    # Create directed graph
+    G = nx.from_numpy_matrix(df.as_matrix().T, create_using=nx.DiGraph())
+    G = nx.relabel_nodes(G, dict(zip(range(len(zones)), zones)))
+
+    # Transmission
+    edge_transmission = {edge: int(round(df.at[edge[1], edge[0]] / 1e6))
+                         for edge in G.edges()}
+
+    # Utilization ratio
+    edge_use = {(a, b): (df.at[a, b] + df.at[b, a])
+                / get_edge_capacity(solution, a, b)
+                for (a, b) in G.edges()}
+
+    # Set edge labels
+    if labels == 'utilization':
+        edge_labels = {k: '{:.2f}'.format(v)
+                       for k, v in edge_use.iteritems()}
+    elif labels == 'transmission':
+        edge_labels = edge_transmission
+
+    # Set edge colors
+    edge_colors = [edge_use[i] for i in G.edges()]
+
+    # Set up basemap
+    bounds = solution.model_metadata.map_boundary
+    bounds_width = bounds[2] - bounds[0]  # lon --> width
+    bounds_height = bounds[3] - bounds[1]  # lat --> height
+    m = Basemap(projection='merc', ellps='WGS84',
+                llcrnrlon=bounds[0], llcrnrlat=bounds[1],
+                urcrnrlon=bounds[2], urcrnrlat=bounds[3],
+                lat_ts=bounds[1] + bounds_width / 2,
+                resolution='i',
+                suppress_ticks=True)
+
+    # Node positions
+    pos = solution.model_metadata.location_coordinates
+    pos = {i: m(pos[i][1], pos[i][0]) for i in pos}  # Flip lat, lon to x, y!
+
+    # Create plot
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, axisbg='w', frame_on=False)
+    m.drawmapboundary(fill_color=None, linewidth=0)
+    m.drawcoastlines(linewidth=0.2, color='#626262')
+
+    # Draw the graph
+
+    # Using nx_pylab to be able to set zorder below the edges
+    nx_pylab.draw_networkx_nodes(G, pos, node_color='#CCCCCC',
+                                 node_size=300, zorder=0)
+
+    # Using nx_pylab from lib to get arrow_style option
+    nx_pylab.draw_networkx_edges(G, pos, width=3,
+                                 edge_color=edge_colors,
+                                 # This works for edge_use
+                                 edge_vmin=0.0, edge_vmax=1.0,
+                                 edge_cmap=plt.get_cmap('seismic'),
+                                 arrows=True, arrow_style='->')
+
+    labels = nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
+                                          rotate=False, font_size=fontsize)
+
+    # Add a map scale
+    scale = m.drawmapscale(
+        bounds[0] + bounds_width * 0.05, bounds[1] + bounds_height * 0.05,
+        bounds[0], bounds[1],
+        100,
+        barstyle='simple', labelstyle='simple',
+        fillcolor1='w', fillcolor2='#555555',
+        fontcolor='#555555', fontsize=fontsize
+    )
+
     return ax
 
 
