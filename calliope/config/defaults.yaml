@@ -82,10 +82,20 @@ techs:
             e_cap_max: inf
             e_prod: false
             e_con: true
-    unmet_demand:
+    unmet_demand:  # Unmet demand that is not child of 'supply' so doesn't get grouped with it
         stack_weight: 0
         color: '#666666'
         parent: defaults
+        constraints:
+            r: inf
+            e_cap_max: inf
+        costs:
+            monetary:
+                om_var: 1.0e+9
+    unmet_demand_as_supply_tech:  # Unmet demand that IS a child of 'supply' so gets treated like a regular supply technology for grouping purposes
+        stack_weight: 0
+        color: '#666666'
+        parent: supply
         constraints:
             r: inf
             e_cap_max: inf

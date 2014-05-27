@@ -158,8 +158,8 @@ def plot_installed_capacities(solution, **kwargs):
     df = df.loc[:, stacked_techs] / 1e6
 
     # Order the locations nicely
-    if 'location_ordering' in solution.model_metadata:
-        df = df.loc[solution.model_metadata.location_ordering, :]
+    if 'location_ordering' in solution.config_model.metadata:
+        df = df.loc[solution.config_model.metadata.location_ordering, :]
 
     names = [solution.metadata.at[y, 'name'] for y in df.columns]
     colors = [solution.metadata.at[i, 'color'] for i in df.columns]
@@ -235,7 +235,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     edge_colors = [edge_use[i] for i in G.edges()]
 
     # Set up basemap
-    bounds = solution.model_metadata.map_boundary
+    bounds = solution.config_model.metadata.map_boundary
     bounds_width = bounds[2] - bounds[0]  # lon --> width
     bounds_height = bounds[3] - bounds[1]  # lat --> height
     m = Basemap(projection='merc', ellps='WGS84',
@@ -246,7 +246,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
                 suppress_ticks=True)
 
     # Node positions
-    pos = solution.model_metadata.location_coordinates
+    pos = solution.config_model.metadata.location_coordinates
     pos = {i: m(pos[i][1], pos[i][0]) for i in pos}  # Flip lat, lon to x, y!
 
     # Create plot
@@ -372,6 +372,7 @@ def areas_below_resolution(solution, resolution):
     """
     selected = solution.time_res[solution.time_res < resolution]
     return list(_get_ranges(selected.index.tolist()))
+
 
 def get_swi(solution, shares_var='capacity'):
     """

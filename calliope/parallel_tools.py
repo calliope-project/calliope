@@ -30,6 +30,11 @@ def read_hdf(hdf_file, tables_to_read=None):
     for k in tables_to_read:
         solution[k] = store.get(k)
     store.close()
+    # Also add model and run config to the solution object
+    solution['config_run'] = utils.AttrDict.from_yaml(hdf_file
+                                                      + '.config_run.yaml')
+    solution['config_model'] = utils.AttrDict.from_yaml(hdf_file
+                                                        + '.config_model.yaml')
     return solution
 
 

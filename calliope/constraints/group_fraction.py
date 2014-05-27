@@ -33,6 +33,15 @@ def group_fraction(model):
             group = []
         return cp.Set(initialize=group)
 
+    def techs_to_consider(supply_techs, group_type):
+        # Remove ignored techs if any defined
+        gfc = model.config_model.group_fraction
+        if 'ignored_techs' in gfc and group_type in gfc.ignored_techs:
+            return [i for i in supply_techs
+                    if i not in gfc.ignored_techs[group_type]]
+        else:
+            return supply_techs
+
     def equalizer(lhs, rhs, sign):
         if sign == '<=':
             return lhs <= rhs
@@ -51,8 +60,9 @@ def group_fraction(model):
     # Constraint rules
     def c_group_fraction_output_rule(m, c, output_group):
         sign, fraction = sign_fraction(output_group, 'output')
+        techs = techs_to_consider(supply_techs, 'output')
         rhs = (fraction
-               * sum(m.es_prod[c, y, x, t] for y in supply_techs
+               * sum(m.es_prod[c, y, x, t] for y in techs
                      for x in m.x for t in m.t))
         lhs = sum(m.es_prod[c, y, x, t]
                   for y in model.get_group_members(output_group) for x in m.x
@@ -61,8 +71,9 @@ def group_fraction(model):
 
     def c_group_fraction_capacity_rule(m, c, capacity_group):
         sign, fraction = sign_fraction(capacity_group, 'capacity')
+        techs = techs_to_consider(supply_techs, 'capacity')
         rhs = (fraction
-               * sum(m.e_cap[y, x] for y in supply_techs for x in m.x))
+               * sum(m.e_cap[y, x] for y in techs for x in m.x))
         lhs = sum(m.e_cap[y, x] for y in model.get_group_members(capacity_group)
                   for x in m.x)
         return equalizer(lhs, rhs, sign)

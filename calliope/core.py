@@ -1045,9 +1045,9 @@ class Model(object):
         time_res = self.data.time_res_series
         time_res.index = self.solution.node.major_axis
         self.solution['time_res'] = time_res
-        # Add metadata from model configuration
-        if 'metadata' in self.config_model:
-            self.solution['model_metadata'] = self.config_model.metadata
+        # Add model and run config
+        self.solution['config_run'] = self.config_run
+        self.solution['config_model'] = self.config_model
 
     def load_solution(self):
         sol = {'node': self.get_node_variables(),
@@ -1383,7 +1383,10 @@ class Model(object):
         except OSError:  # Hoping this isn't raised for more serious stuff
             pass
         if how == 'hdf':
-            self._save_hdf()
+            store_file = self._save_hdf()
+            # Also save model and run configuration
+            self.config_run.to_yaml(store_file + '.config_run.yaml')
+            self.config_model.to_yaml(store_file + '.config_model.yaml')
         elif how == 'csv':
             self._save_csv()
         else:
@@ -1415,10 +1418,15 @@ class Model(object):
         store = pd.HDFStore(store_file, mode='w',
                             complevel=9, complib='blosc')
         store.put('locations', self.data.locations)
-        for key in sol:
+        # Make sure config_model and config_run are not saved to HDF,
+        # as they are AttrDicts rather than pandas objects and are
+        # saved separately!
+        for key in [k for k in sol if k not in ['config_model', 'config_run']]:
             # Use .append instead of .add for Panel4D compatibility
             store.append(key, sol[key])
         store.close()
+        # Return the path we used
+        return store_file
 
     def _save_csv(self):
         """Save solution as CSV files to ``self.config_run.output.path``"""
