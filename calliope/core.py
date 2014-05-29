@@ -974,13 +974,11 @@ class Model(object):
             else:
                 raise
 
-    def solve(self, warmstart=False, save_json=False):
+    def solve(self, warmstart=False):
         """
         Args:
             warmstart : (default False) re-solve an updated model
                         instance
-            save_json : (default False) Save optimization results to
-                        the given file as JSON.
 
         Returns: None
 
@@ -1016,18 +1014,21 @@ class Model(object):
             TempfileManager.tempdir = logdir
         # Always preprocess instance, for both cold start and warm start
         self.instance.preprocess()
-        # Silencing output by redirecting stdout and stderr
-        with utils.capture_output() as out:
+
+        def _solve(warmstart):
             if warmstart:
                 results = self.opt.solve(self.instance, warmstart=True,
                                          tee=True)
             else:
                 results = self.opt.solve(self.instance, tee=True)
-        if save_json:
-            with open(save_json, 'w') as f:
-                json.dump(results.json_repn(), f, indent=4)
-        self.results = results
-        self.pyomo_output = out
+            return results
+
+        if cr.get_key('debug.echo_solver_log', default=False):
+            self.results = _solve(warmstart)
+        else:
+            # Silencing output by redirecting stdout and stderr
+            with utils.capture_output() as self.pyomo_output:
+                self.results = _solve(warmstart)
         self.load_results()
 
     def process_solution(self):
