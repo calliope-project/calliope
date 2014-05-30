@@ -143,7 +143,8 @@ def node_energy_balance(model):
         # B) Case where storage is allowed
         else:
             # set up s_minus_one
-            if m.t.order_dict[t] == 1:  # order_dict starts at 1
+            # NB: From Pyomo 3.5 to 3.6, order_dict became zero-indexed
+            if m.t.order_dict[t] == 0:
                 s_minus_one = m.s_init[y, x]
             else:
                 s_loss = model.get_option(y + '.constraints.s_loss')

@@ -15,7 +15,7 @@ setup(
     description='A multi-scale energy systems (MUSES) modeling framework',
     packages=['calliope'],
     install_requires=[
-        "coopr >= 3.4.7842",
+        "coopr >= 3.5.8669",
         "numpy >= 1.7.1",
         "pandas >= 0.13.0",
         "pyyaml >= 3.10"

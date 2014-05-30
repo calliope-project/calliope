@@ -29,7 +29,9 @@ def ramping_rate(model):
             # ramping constraint for it!
             return cp.Constraint.NoConstraint
         else:
-            if m.t.order_dict[t] <= 1:
+            # No constraint for first timestep
+            # NB: From Pyomo 3.5 to 3.6, order_dict became zero-indexed
+            if m.t.order_dict[t] == 0:
                 return cp.Constraint.NoConstraint
             else:
                 carrier = model.get_option(y + '.carrier')

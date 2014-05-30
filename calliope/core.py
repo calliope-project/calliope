@@ -15,7 +15,6 @@ from __future__ import division
 import datetime
 import inspect
 import itertools
-import json
 import logging
 import os
 import random
@@ -24,6 +23,7 @@ import time
 
 import coopr.opt as co
 import coopr.pyomo as cp
+import coopr.environ
 import numpy as np
 import pandas as pd
 from pyutilib.services import TempfileManager
@@ -221,7 +221,7 @@ class Model(object):
             return self.data._t.iat[loc]
         else:
             e = exceptions.ModelError
-            raise e('Attempting to access a timestep < 0.')
+            raise e('Attempted to get a timestep earlier than the first one.')
 
     def get_option(self, option, x=None, default=None,
                    ignore_inheritance=False):
@@ -782,7 +782,7 @@ class Model(object):
             # Adjust for reduced resolution, only if t_max_demand not 0 anyway
             if t_max_demand != 0:
                 t_max_demand = max([t for t in self.data._t
-                                    if t < t_max_demand])
+                                    if t <= t_max_demand])
             t_max_demands[c] = t_max_demand
         return t_max_demands
 
@@ -1072,11 +1072,9 @@ class Model(object):
         # so that `t` is always last, so this should not be a problem.
         m = self.m
         var = getattr(m, var)
-        # Get set
-        s = var._pprint()[0][1][1].set_tuple
         # Get dims
-        dims = [i.name for i in s]
-        result = pd.DataFrame.from_dict(var.extract_values(), orient='index')
+        dims = [i.name for i in var.index_set().set_tuple]
+        result = pd.DataFrame.from_dict(var.get_values(), orient='index')
         result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
         result = result[0]
         # Unstack and sort by time axis
@@ -1100,7 +1098,13 @@ class Model(object):
                 result = pd.Panel4D(p)
                 result = result.sort_index(1)
         # Nicify time axis
-        if 't' in dims:
+        # FIXME workaround for Coopr 3.5.8669 returning _unknown_ for set names
+        # if 't' in dims:
+        t_found = False
+        for i in var.index_set().set_tuple:
+            if sorted(list(i.data())) == sorted(self.data._t):
+                t_found = True
+        if t_found:
             t = getattr(m, 't')
             if self.t_start == 0 or self.t_start is None:
                 new_index = self.data._dt.loc[t.first():t.last()].tolist()
