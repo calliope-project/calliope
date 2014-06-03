@@ -157,9 +157,12 @@ def plot_installed_capacities(solution, **kwargs):
 
     df = df.loc[:, stacked_techs] / 1e6
 
-    # Order the locations nicely
+    # Order the locations nicely, but only take those locations that actually
+    # exists in the current solution
     if 'location_ordering' in solution.config_model.metadata:
-        df = df.loc[solution.config_model.metadata.location_ordering, :]
+        locations = [i for i in solution.config_model.metadata.location_ordering
+                     if i in df.index]
+        df = df.loc[locations, :]
 
     names = [solution.metadata.at[y, 'name'] for y in df.columns]
     colors = [solution.metadata.at[i, 'color'] for i in df.columns]
