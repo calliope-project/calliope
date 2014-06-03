@@ -23,7 +23,7 @@ import time
 
 import coopr.opt as co
 import coopr.pyomo as cp
-import coopr.environ
+import coopr.environ  # Necessary for solver plugins etc.
 import numpy as np
 import pandas as pd
 from pyutilib.services import TempfileManager
@@ -154,10 +154,12 @@ class Model(object):
         path = self.config_run.input.data_path
         df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
                          header=None, parse_dates=[1])
-        seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
+        # Divide timedelta64 objects by one_second to get seconds
+        one_second = np.timedelta64(1, 's')
+        seconds = (df.iat[0, 0] - df.iat[1, 0]) / one_second
         if verify:
             for i in range(len(df) - 1):
-                assert ((df.iat[i, 0] - df.iat[i+1, 0]).total_seconds()
+                assert ((df.iat[i, 0] - df.iat[i+1, 0]) / one_second
                         == seconds)
         hours = abs(seconds) / 3600
         return hours
@@ -295,7 +297,8 @@ class Model(object):
                     else:
                         e = exceptions.OptionNotSetError
                         raise e('Can not get parent for `{}` '
-                                'and no default defined.'.format(tech))
+                                'and no default defined '
+                                '({}).'.format(tech, option))
             return result
 
         def _get_location_option(key, location):
@@ -542,16 +545,16 @@ class Model(object):
         #
         # t: Timesteps set
         #
-        table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None)
-        table_t.index = [datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-                         for dt in table_t[1]]
+        table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None,
+                              index_col=1, parse_dates=[1])
+        table_t.columns = ['t_int']
         if self.config_run.get_key('subset_t', default=False):
             table_t = table_t.loc[self.config_run.subset_t[0]:
                                   self.config_run.subset_t[1]]
-            self.slice = slice(table_t[0][0], table_t[0][-1] + 1)
+            self.slice = slice(table_t.iat[0, 0], table_t.iat[-1, 0] + 1)
         else:
             self.slice = slice(None)
-        d._t = pd.Series([int(t) for t in table_t[0].tolist()])
+        d._t = pd.Series([int(t) for t in table_t['t_int'].tolist()])
         d._dt = pd.Series(table_t.index, index=d._t.tolist())
         # First set time_res_data and time_res_static across all data
         d.time_res_data = self.get_timeres()
@@ -1043,7 +1046,7 @@ class Model(object):
         # Add shares
         self.solution['shares'] = self.get_shares()
         # Add time resolution, and give it a nicer index
-        time_res = self.data.time_res_series
+        time_res = self.data.time_res_series.copy()
         time_res.index = self.solution.node.major_axis
         self.solution['time_res'] = time_res
         # Add model and run config

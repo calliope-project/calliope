@@ -121,10 +121,12 @@ class TestInitialization:
                     """
         model = common.simple_model(config_run=config_run)
         assert model.data._t.tolist() == range(24, 72)
-        assert model.data._dt.iat[0].minute == 0
-        assert model.data._dt.iat[0].hour == 0
-        assert model.data._dt.iat[0].day == 2
-        assert model.data._dt.iat[0].month == 1
+        # NB: using iloc instead of iat to get around the underlying
+        # numpy object and have pandas do the minute/hour/.. checking
+        assert model.data._dt.iloc[0].minute == 0
+        assert model.data._dt.iloc[0].hour == 0
+        assert model.data._dt.iloc[0].day == 2
+        assert model.data._dt.iloc[0].month == 1
         assert model.data.time_res_static == 1
         assert model.data.time_res_series.tolist() == [1] * 48
         assert model.data.startup_time_bounds == 24 + 12
