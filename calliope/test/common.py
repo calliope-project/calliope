@@ -5,9 +5,9 @@ import os
 
 import calliope
 
-# README: Hardcoding CPLEX here, this means that tests will fail if
-# CPLEX is not installed.
-solver = 'cplex'  # this gets imported by individual test_model_* files
+# README: Hardcoding GLPK here which needs to be installed for tests to pass
+# Should also work with other solvers, e.g. 'cplex' or 'gurobi'
+solver = 'gplk'  # this gets imported by individual test_model_* files
 
 
 def assert_almost_equal(x, y, tolerance=0.0001):

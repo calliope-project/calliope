@@ -52,7 +52,7 @@ class TestModel:
         return model
 
     def test_model_solves(self, model):
-        assert str(model.results.Solution.Status) == 'optimal'
+         assert str(model.results.solver.termination_condition) == 'optimal'
 
     def test_model_balanced(self, model):
         df = model.solution.node
