@@ -157,18 +157,21 @@ def plot_installed_capacities(solution, **kwargs):
 
     df = df.loc[:, stacked_techs] / 1e6
 
-    # Order the locations nicely, but only take those locations that actually
-    # exists in the current solution
-    if 'location_ordering' in solution.config_model.metadata:
-        locations = [i for i in solution.config_model.metadata.location_ordering
-                     if i in df.index]
-        df = df.loc[locations, :]
-
     names = [solution.metadata.at[y, 'name'] for y in df.columns]
     colors = [solution.metadata.at[i, 'color'] for i in df.columns]
     colormap = ListedColormap(colors)
     proxies = [plt.Rectangle((0, 0), 1, 1, fc=i)
                for i in colors]
+
+    # Order the locations nicely, but only take those locations that actually
+    # exists in the current solution
+    meta_config = solution.config_model.metadata
+    if 'location_ordering' in meta_config:
+        for index, item in enumerate(meta_config.location_ordering):
+            if item in df.index:
+                df.at[item, 'ordering'] = index
+        df = df.sort('ordering', ascending=False)
+        df = df.drop('ordering', axis=1)
 
     ax = df.plot(kind='barh', stacked=True, legend=False, colormap=colormap,
                  **kwargs)
