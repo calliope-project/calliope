@@ -280,25 +280,6 @@ Constrains the rate at which plants can adjust their output, for technologies th
 
    diff \geq -1 \times max_ramping_rate
 
-Capacity factors
-----------------
-
-Provided by: :func:`calliope.constraints.capacity_factor.capacity_factor`
-
-These constraints allow plants to be forced to comply with a maximum capacity factor as defined by the setting ``cf_max``.
-
-The capacity factor (for energy production) is calculated as
-
-.. math::
-
-   cf_{prod}(c, y, x) = \frac{\sum\limits_t e_{prod}(c, y, x, t)}{e_{cap}(y, x) \times \sum\limits_t timeres(t)}
-
-If a ``cf_max`` setting exists for the given technology, the following constraint is applied to ``cf_prod``:
-
-.. math::
-
-   cf_{prod}(c, y, x) \leq cf_{max}(y)
-
 ----------------------------
 Loading optional constraints
 ----------------------------

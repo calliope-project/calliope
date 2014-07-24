@@ -8,6 +8,8 @@ v\ |version| (:doc:`Release history <history>`)
 
 Calliope is a framework to develop energy systems models using a modern and open source Python-based toolchain.
 
+.. warning:: Calliope and its documentation are still undergoing active development and functionality may change without prior warning. If you are interested in using Calliope at this stage you are encouraged to `get in touch <mailto:stefan.pfenninger@imperial.ac.uk>`_.
+
 Main features:
 
 * Generic technology definition allows modeling any mix of production, storage and consumption
@@ -18,6 +20,8 @@ Main features:
 * Easily extensible
 * Uses a state-of-the-art Python toolchain based on `IPython <http://ipython.org/>`_, `Pandas <http://pandas.pydata.org/>`_ and `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_
 * `Freely available <https://github.com/sjpfenninger/calliope>`_ under the Apache 2.0 license
+
+Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London, and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
 
 -----------
 Quick start
