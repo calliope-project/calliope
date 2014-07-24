@@ -1,7 +1,8 @@
 __title__ = 'Calliope'
-__version__ = '0.3.0-dev'
 __author__ = 'Stefan Pfenninger'
 __copyright__ = 'Copyright 2013 Stefan Pfenninger'
+
+from ._version import __version__
 
 from .core import Model
 from .parallel import Parallelizer

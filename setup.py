@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import calliope
+# Sets the __version__ variable
+exec(open('calliope/_version.py').read())
 
 try:
     from setuptools import setup
@@ -9,7 +10,7 @@ except ImportError:
 
 setup(
     name='calliope',
-    version=calliope.__version__,
+    version=__version__,
     author='Stefan Pfenninger',
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
