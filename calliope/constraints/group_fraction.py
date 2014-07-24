@@ -56,6 +56,7 @@ def group_fraction(model):
     # Sets
     m.output_group = group_set('output')
     m.capacity_group = group_set('capacity')
+    m.demand_power_peak_group = group_set('demand_power_peak')
 
     # Constraint rules
     def c_group_fraction_output_rule(m, c, output_group):
@@ -78,6 +79,25 @@ def group_fraction(model):
                   for x in m.x)
         return equalizer(lhs, rhs, sign)
 
+    def c_group_fraction_demand_power_peak_rule(m, c, demand_power_peak_group):
+        sign, fraction = sign_fraction(demand_power_peak_group,
+                                       'demand_power_peak')
+        margin = model.config_model.system_margin.get_key(c, default=0)
+        peak_timestep = model.t_max_demand.power
+        y = 'demand_power'
+        # Calculate demand peak taking into account both r_scale and time_res
+        peak = (float(sum(model.m.r[y, x, peak_timestep]
+                      * model.get_option(y + '.constraints.r_scale', x=x)
+                      for x in model.m.x))
+                / model.data.time_res_series.at[peak_timestep])
+        rhs = fraction * (-1 - margin) * peak
+        lhs = sum(m.e_cap[y, x]
+                  for y in model.get_group_members(demand_power_peak_group)
+                  for x in m.x)
+        return equalizer(lhs, rhs, sign)
+
     # Constraints
     m.c_group_fraction_output = cp.Constraint(m.c, m.output_group)
     m.c_group_fraction_capacity = cp.Constraint(m.c, m.capacity_group)
+    grp = m.demand_power_peak_group
+    m.c_group_fraction_demand_power_peak = cp.Constraint(m.c, grp)
