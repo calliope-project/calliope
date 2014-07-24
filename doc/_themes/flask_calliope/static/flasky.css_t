@@ -104,10 +104,11 @@ div.sphinxsidebar h3,
 div.sphinxsidebar h4 {
     font-family: 'EB Garamond', 'Garamond', 'Georgia', serif;
     color: #444;
-    font-size: 24px;
-    font-weight: normal;
+    font-size: 20px;
+    /* font-weight: normal; */
     margin: 0 0 5px 0;
     padding: 0;
+    padding-top: 15px;
 }
 
 div.sphinxsidebar h4 {
@@ -116,6 +117,7 @@ div.sphinxsidebar h4 {
 
 div.sphinxsidebar h3 a {
     color: #444;
+    text-decoration: none;
 }
 
 div.sphinxsidebar p.logo a,

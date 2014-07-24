@@ -3,12 +3,6 @@
 Introduction
 ============
 
----------------
-Acknowledgments
----------------
-
-Development is funded by the `Grantham Institute for Climate Change <http://www3.imperial.ac.uk/climatechange/>`_ at Imperial College London and the European Institute of Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
-
 .. _license:
 
 -------
