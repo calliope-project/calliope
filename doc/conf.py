@@ -16,11 +16,43 @@ import sys, os
 # Sets the __version__ variable
 exec(open('../calliope/_version.py').read())
 
+##
+# Mock modules for Read The Docs autodoc generation
+##
+
+class Mock(object):
+    __all__ = []
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return Mock()
+
+    @classmethod
+    def __getattr__(cls, name):
+        if name in ('__file__', '__path__'):
+            return '/dev/null'
+        elif name[0] == name[0].upper():
+            mockType = type(name, (), {})
+            mockType.__module__ = __name__
+            return mockType
+        else:
+            return Mock()
+
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot',
+                'matplotlib.colors', 'matplotlib.colors.ListedColormap',
+                'coopr', 'coopr.opt', 'coopr.pyomo', 'coopr.environ',
+                'pyutilib', 'pyutilib.services',
+                'pyutilib.services.TempfileManager', 'yaml', 'pandas']
+
+for m in MOCK_MODULES:
+  sys.modules[m] = Mock()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration -----------------------------------------------------
 
