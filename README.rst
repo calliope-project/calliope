@@ -3,7 +3,7 @@ Calliope
 
 *A multi-scale energy systems (MUSES) modeling framework*
 
-Work in progress (see `develop` branch).
+Work in progress (see ``develop`` branch).
 
 
 Documentation
