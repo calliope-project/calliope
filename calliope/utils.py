@@ -69,6 +69,9 @@ class AttrDict(dict):
         If ``resolve_imports`` is True, ``import:`` statements are
         resolved recursively, else they are treated like any other key.
 
+        When resolving import statements, anything defined locally
+        overrides definitions in the imported file.
+
         """
         if isinstance(f, str):
             with open(f, 'r') as src:
@@ -78,7 +81,9 @@ class AttrDict(dict):
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
                 imported = cls.from_yaml(_resolve_path(f, k))
-                loaded.union(imported)
+                # loaded is added to imported (i.e. it takes precedence)
+                imported.union(loaded)
+                loaded = imported
             # 'import' key no longer needed, so we drop it
             loaded.pop('import', None)
         return loaded
