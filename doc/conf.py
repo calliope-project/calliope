@@ -40,7 +40,7 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot',
+MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot',
                 'matplotlib.colors', 'matplotlib.colors.ListedColormap',
                 'coopr', 'coopr.opt', 'coopr.pyomo', 'coopr.environ',
                 'pyutilib', 'pyutilib.services',

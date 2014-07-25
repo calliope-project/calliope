@@ -1,3 +1,8 @@
+
+.. image:: https://travis-ci.org/sjpfenninger/calliope.svg?branch=develop
+    :target: https://travis-ci.org/sjpfenninger/calliope
+
+
 Calliope
 ========
 
