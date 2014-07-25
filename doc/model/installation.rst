@@ -14,6 +14,7 @@ The following Python modules are required:
 * Coopr (Pyomo)
 * NumPy
 * Pandas
+* numexpr
 * PyYAML
 
 Optional modules:
