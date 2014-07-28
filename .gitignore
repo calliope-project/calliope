@@ -1,4 +1,4 @@
-calliope.egg-info/
 *.pyc
-.venv
+calliope.egg-info/
 doc/_build/
+.coverage
