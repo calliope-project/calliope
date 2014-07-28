@@ -19,17 +19,14 @@ techs:
         parent: supply
         carrier: power
         constraints:
-            # -- Begin CSP-specific constraints --
             use_s_time: true  # Use s_time to calculate s_cap_max?
-            s_time: 15   # Maximum storage time [h]
-            # -- End CSP-specific constraints --
-            r: file
-            allow_rsec: true
-            e_eff: file
-            e_eff_ref: 0.4
-            r_area_max: 318000  # Maximum solar field size [m2]
-            s_cap_max: 745321  # Overriden by s_time if use_s_time = 1
+            s_time_max: 15   # Maximum storage time [h]
+            s_cap_max: 745321  # Overriden by s_time_max if use_s_time = 1
             s_loss: 0.002
+            # allow_rs_s: true
+            r: file
+            e_eff: 0.4
+            r_area_max: 318000  # Maximum solar field size [m2]
             e_cap_max: 20000  # Maximum turbine size [kWe]
         costs:
             monetary:
@@ -47,7 +44,7 @@ techs:
         source_carrier: power
         constraints:
             e_eff: 0.8
-            e_cap_max: 1000
+            e_cap_max: 5000
         costs:
             monetary:
                 e_cap: 200
@@ -81,6 +78,7 @@ techs:
         costs:
             monetary:
                 e_cap: 200
+                om_var: 0.002
     hvdc:
         parent: transmission
         carrier: power
@@ -88,4 +86,5 @@ techs:
             e_eff: 0.95
         costs:
             monetary:
-                e_cap: 200
+                e_cap: 400
+                om_var: 0.002

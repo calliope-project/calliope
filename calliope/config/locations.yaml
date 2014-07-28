@@ -35,7 +35,7 @@ locations:
                 x_map: 'a: r2'
                 constraints:
                     r: file=demand-r1_r.csv
-                    r_scale_to_peak: -100
+                    r_scale_to_peak: -1000
     tamanrasset,cardak,toledo:
         level: 0
         within: r1

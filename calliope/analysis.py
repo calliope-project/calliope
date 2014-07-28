@@ -109,8 +109,17 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
     return ax
 
 
+def _get_query_string(types, additional_types=None):
+    query_string = ''
+    if additional_types:
+        types = types + additional_types
+    formatted_types = ['type == "{}"'.format(t) for t in types]
+    query_string = ' | '.join(formatted_types)
+    return query_string
+
+
 def plot_solution(solution, data, carrier='power', demand='demand_power',
-                  colormap=None, ticks=None):
+                  additional_types=None, colormap=None, ticks=None):
     # Determine ticks
     if not ticks:
         timespan = (data.index[-1] - data.index[0]).days
@@ -125,9 +134,9 @@ def plot_solution(solution, data, carrier='power', demand='demand_power',
     plot_df = data.divide(time_res, axis='index')
     # Get tech stack and names
     df = solution.metadata[solution.metadata.carrier == carrier]
-    stacked_techs = df[(df['type'] == 'supply')
-                       | (df['type'] == 'storage')
-                       | (df['type'] == 'unmet_demand')].index.tolist()
+    query_string = _get_query_string(['supply', 'conversion', 'storage',
+                                      'unmet_demand'], additional_types)
+    stacked_techs = df.query(query_string).index.tolist()
     # Put stack in order according to stack_weights
     weighted = df.weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]
@@ -145,10 +154,19 @@ def plot_solution(solution, data, carrier='power', demand='demand_power',
     return ax
 
 
-def plot_installed_capacities(solution, **kwargs):
-    supply_cap = solution.metadata.query('type == "supply" | '
-                                         'type == "conversion" | '
-                                         'type == "storage"').index.tolist()
+def plot_installed_capacities(solution, additional_types=None, **kwargs):
+    """
+    Arguments:
+
+    additional_types: list of additional technology types to include,
+    default is 'supply', 'conversion', 'storage'
+
+    Additional kwargs are passed to pandas.DataFrame.plot()
+
+    """
+    query_string = _get_query_string(['supply', 'conversion', 'storage'],
+                                     additional_types)
+    supply_cap = solution.metadata.query(query_string).index.tolist()
 
     df = solution.parameters.e_cap.loc[:, supply_cap]
 
@@ -165,8 +183,9 @@ def plot_installed_capacities(solution, **kwargs):
 
     # Order the locations nicely, but only take those locations that actually
     # exists in the current solution
-    meta_config = solution.config_model.metadata
-    if 'location_ordering' in meta_config:
+    if ('metadata' in solution.config_model and
+            'location_ordering' in solution.config_model.metadata):
+        meta_config = solution.config_model.metadata
         for index, item in enumerate(meta_config.location_ordering):
             if item in df.index:
                 df.at[item, 'ordering'] = index

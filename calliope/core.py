@@ -480,7 +480,7 @@ class Model(object):
             adjustment = self.get_timeres()
         else:
             adjustment = 1
-        if peak < float(df.min()):
+        if peak < 0:
             scale = float(df.min())
         else:
             scale = float(df.max())

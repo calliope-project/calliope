@@ -270,8 +270,12 @@ def node_constraints_operational(model):
             return cp.Constraint.NoConstraint
 
     def c_es_con_max_rule(m, c, y, x, t):
+        if y in m.y_conv:
+            carrier = '.source_carrier'
+        else:
+            carrier = '.carrier'
         if (model.get_option(y + '.constraints.e_con') is True and
-                c == model.get_option(y + '.carrier')):
+                c == model.get_option(y + carrier)):
             return m.es_con[c, y, x, t] >= -1 * time_res.at[t] * m.e_cap[y, x]
         else:
             return m.es_con[c, y, x, t] == 0

@@ -17,4 +17,10 @@ import:
 constraints_pre_load:
 
 # List of additional constraints to load
-constraints: ['constraints.ramping.ramping_rate']
+constraints:
+    - constraints.ramping.ramping_rate
+
+# Other model-wide settings
+system_margin:
+    power: 0
+    heat: 0

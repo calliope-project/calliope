@@ -112,6 +112,9 @@ class Parallelizer(object):
                     if c.get_key(t, default=False):
                         mem_gb = c.get_key(t) / 1000.0
                         f.write('#$ -l mem_total={:.1f}G\n'.format(mem_gb))
+                    t = 'parallel.resources.threads'
+                    if c.get_key(t, default=False):
+                        f.write('#$ -pe smp {}\n'.format(c.get_key(t)))
                     f.write('#$ -cwd\n')
                     f.write('\n./{} '.format(array_run) + '${SGE_TASK_ID}\n\n')
                 elif c.parallel.environment == 'bsub':
