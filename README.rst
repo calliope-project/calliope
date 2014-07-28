@@ -5,7 +5,7 @@
 .. image:: https://img.shields.io/coveralls/sjpfenninger/calliope.svg
    :target: https://coveralls.io/r/sjpfenninger/calliope
 
-.. image:: https://img.shields.io/badge/license-MIT-blue.svg
+.. image:: https://img.shields.io/badge/license-Apache-blue.svg
    :target: https://calliope.readthedocs.org/en/latest/model/introduction.html
 
 
