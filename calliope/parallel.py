@@ -107,7 +107,7 @@ class Parallelizer(object):
                 if c.parallel.environment == 'qsub':
                     f.write('#$ -t 1-{}\n'.format(len(iterations)))
                     f.write('#$ -N {}\n'.format(c.parallel.name))
-                    f.write('#$ -j y -o Logs/array_$JOB_ID.log\n')
+                    f.write('#$ -j y -o Logs/run_$TASK_ID.log\n')
                     t = 'parallel.resources.memory'
                     if c.get_key(t, default=False):
                         mem_gb = c.get_key(t) / 1000.0
@@ -134,7 +134,7 @@ class Parallelizer(object):
                     t = 'parallel.resources.wall_time'
                     if c.get_key(t, default=False):
                         f.write('#BSUB -W {}\n'.format(c.get_key(t)))
-                    f.write('#BSUB -o Logs/lsf_%I.log\n')
+                    f.write('#BSUB -o Logs/run_%I.log\n')
                     f.write('\n./{} '.format(array_run) + '${LSB_JOBINDEX}\n\n')
             # Set up array run script
             with open(os.path.join(out_dir, array_run), 'w') as f:
@@ -149,6 +149,7 @@ class Parallelizer(object):
             iter_c = copy.copy(c)  # iter_c is this iteration's config
             # Generate configuration object
             index, item = row
+            index = index + 1  # 1-indexed to match array job format
             index_str = '{:0>4d}'.format(index)
             for k, v in item.to_dict().iteritems():
                 # Convert numpy dtypes to python ones, else YAML chokes
@@ -178,8 +179,7 @@ class Parallelizer(object):
                 os.chmod(os.path.join(out_dir, run), 0755)
             elif c.parallel.style == 'array':
                 with open(os.path.join(out_dir, array_run), 'a') as f:
-                    # Write index + 1 because the array jobs are 1-indexed
-                    f.write('{}) '.format(index + 1))
+                    f.write('{}) '.format(index))
                     if c.parallel.additional_lines:
                         self._write_additional_lines(f)
                     self._write_modelcommands(f, settings)
