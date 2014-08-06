@@ -17,7 +17,7 @@ setup(
     packages=['calliope'],
     install_requires=[
         "coopr >= 3.5.8669",
-        "numpy >= 1.7.1",
+        "numpy >= 1.8.1",
         "numexpr >= 2.4",
         "pandas >= 0.14.0",
         "pyyaml >= 3.10",
