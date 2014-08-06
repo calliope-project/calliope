@@ -15,15 +15,16 @@ The following Python modules are required:
 * NumPy
 * Pandas
 * numexpr
+* pytables
 * PyYAML
 
-Optional modules:
+Optional (but recommended) modules:
 
 * matplotlib (to display results)
 
-In addition, Pyomo requires a solver. Calliope has been tested with both `GLPK <https://www.gnu.org/software/glpk/>`_ and `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_.
+In addition, Pyomo requires a solver. Any solver compatible with Pyomo should work. Calliope has been tested with `GLPK <https://www.gnu.org/software/glpk/>`_, `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_, and `Gurobi <http://www.gurobi.com/>`_.
 
-The recommended way to obtain all required and optional Python modules with the exception of Coopr is to use the `Anaconda distribution <https://store.continuum.io/cshop/anaconda/>`_. Once that is set up and configured as the active Python interpreter, install Coopr with ``pip install coopr``.
+By far the easiest (and recommended) way to obtain all required Python modules with the exception of Coopr is to use the `Anaconda distribution <https://store.continuum.io/cshop/anaconda/>`_. Once that is set up and configured as the active Python interpreter, install Coopr with ``pip install coopr``.
 
 Installation
 ============

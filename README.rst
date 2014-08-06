@@ -14,7 +14,7 @@ Calliope
 
 *A multi-scale energy systems (MUSES) modeling framework*
 
-Work in progress (see ``develop`` branch).
+Work in progress.
 
 
 Documentation
@@ -26,11 +26,7 @@ Documentation is available at `calliope.readthedocs.org <https://calliope.readth
 Installation
 ------------
 
-To install the latest development version::
-
-   pip install -e git+https://github.com/sjpfenninger/calliope.git@develop#egg=calliope
-
-See the `documentation <https://calliope.readthedocs.org/en/latest/model/installation.html>`_ for more details including requirements, and for installing a stable version.
+See the `documentation <https://calliope.readthedocs.org/en/latest/model/installation.html>`_ for installation requirements and instructions.
 
 
 License

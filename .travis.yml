@@ -4,10 +4,12 @@ python:
 before_install:
   - "sudo apt-get update -qq"
   - "sudo apt-get install -y glpk-utils"
+  - "sudo apt-get install -y libhdf5-dev"  # required to compile pytables
 install:
   - "pip install pytest-cov"
   - "pip install coveralls"
   - "pip install matplotlib"
+  - "pip install cython"  # required to compile pytables
   - "pip install ."
 script: "py.test --cov calliope --cov-report term-missing"
 after_success: "coveralls"

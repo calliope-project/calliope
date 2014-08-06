@@ -114,7 +114,12 @@ class Parallelizer(object):
                         f.write('#$ -l mem_total={:.1f}G\n'.format(mem_gb))
                     t = 'parallel.resources.threads'
                     if c.get_key(t, default=False):
-                        f.write('#$ -pe smp {}\n'.format(c.get_key(t)))
+                        try:
+                            penv = c.get_key('parallel.parallel_env')
+                        except:
+                            raise KeyError('Must specify parallel_env for'
+                                           'threads >1 and qsub.')
+                        f.write('#$ -pe {} {}\n'.format(penv, c.get_key(t)))
                     f.write('#$ -cwd\n')
                     f.write('\n./{} '.format(array_run) + '${SGE_TASK_ID}\n\n')
                 elif c.parallel.environment == 'bsub':

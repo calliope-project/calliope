@@ -20,7 +20,8 @@ setup(
         "numpy >= 1.7.1",
         "numexpr >= 2.4",
         "pandas >= 0.14.0",
-        "pyyaml >= 3.10"
+        "pyyaml >= 3.10",
+        "tables >= 3.1.0"  # Requires cython to build
     ],
     entry_points={
         'console_scripts': [

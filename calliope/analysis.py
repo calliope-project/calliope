@@ -12,8 +12,13 @@ Functionality to analyze model results.
 from __future__ import print_function
 from __future__ import division
 
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+import itertools
+
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import ListedColormap
+except ImportError:
+    print('matplotlib could not be imported, no plotting will be available.')
 import numpy as np
 import pandas as pd
 
@@ -353,13 +358,19 @@ def get_supply_groups(solution):
     group == True, for purposes of calculating diversity of supply
 
     """
-    # group is True and '|' in members
+    # idx_1: group is True and '|' in members
     grp_1 = solution.shares.query('group == True & type == "supply"')
     idx_1 = grp_1[(grp_1.members != grp_1.index)
                   & (grp_1.members.str.contains('\|'))].index.tolist()
-    # group is False and no '|' in members
+    # idx_2: group is False and no '|' in members
     grp_2 = solution.shares.query('group == False & type == "supply"')
     idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
+    # Also drop entries from idx_2 that are already covered by
+    # groups in idx_1
+    covered = [i.split('|')
+               for i in solution.shares.loc[idx_1, 'members'].tolist()]
+    covered_flat = [i for i in itertools.chain.from_iterable(covered)]
+    idx_2 = [i for i in idx_2 if i not in covered_flat]
     return idx_1 + idx_2
 
 
@@ -399,7 +410,7 @@ def areas_below_resolution(solution, resolution):
     return list(_get_ranges(selected.index.tolist()))
 
 
-def get_swi(solution, shares_var='capacity'):
+def get_swi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
     """
     Returns the Shannon-Wiener diversity index.
 
@@ -412,13 +423,15 @@ def get_swi(solution, shares_var='capacity'):
 
     """
     techs = get_supply_groups(solution)
+    for pattern in exclude_patterns:
+        techs = [t for t in techs if pattern not in t]
     swi = -1 * sum((p * np.log(p))
                    for p in [solution.shares.at[y, shares_var] for y in techs]
                    if p > 0)
     return swi
 
 
-def get_hhi(solution, shares_var='capacity'):
+def get_hhi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
     """
     Returns the Herfindahl-Hirschmann diversity index.
 
@@ -431,6 +444,8 @@ def get_hhi(solution, shares_var='capacity'):
 
     """
     techs = get_supply_groups(solution)
+    for pattern in exclude_patterns:
+        techs = [t for t in techs if pattern not in t]
     hhi = sum((solution.shares.at[y, shares_var] * 100.) ** 2 for y in techs)
     return hhi
 
