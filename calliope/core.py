@@ -705,6 +705,18 @@ class Model(object):
                 #                          'f2.csv': ['x3'],
                 #                          'model_config': ['x4, x5']}
                 for x in d._x:
+                    # If this y is actually not defined at this x,
+                    # and is also not a transmission tech,
+                    # continue (but set the param to 0 first)
+                    # TODO this is a bit of a hack -- e.g. the extra check
+                    # for transmission tech is necessary because we set
+                    # e_eff to 0 for all transmission (as transmission techs
+                    # don't show up in the config_model.locations[x].techs)
+                    # Keep an eye out in case this causes other problems
+                    if (y not in self.config_model.locations[x].techs
+                            and y not in d._y_transmission):
+                        d[param][y].loc[:, x] = 0
+                        continue
                     option = self.get_option(y + '.constraints.' + param, x=x)
                     k = param + '.' + y + '.' + x
                     if isinstance(option, str) and option.startswith('file'):
