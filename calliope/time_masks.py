@@ -93,12 +93,15 @@ def resolution_series_uniform(data, resolution):
     return summarize
 
 
-def resolution_series_min_week(data, tech, var='r', resolution=24):
+def resolution_series_min_week(data, tech, var='r', resolution=24,
+                               how='sum'):
     """
     Resolution series to keep the week where containing the day where
-    ``var`` of ``tech`` is minimal across the most locations,
-    and reduce everything else to the given resolution
-    (in hours, daily by default).
+    ``var`` of ``tech`` is minimal across the sum of or the mode (most)
+    of locations, depending on ``how``, and reduce everything else to
+    the given resolution (in hours, daily by default).
+
+    ``how`` can be 'sum' or 'mode'
 
     """
     df = data[var][tech]
@@ -106,8 +109,12 @@ def resolution_series_min_week(data, tech, var='r', resolution=24):
     day_len = int(24 / data.time_res_data)
     # Get day-wise sums
     dff = pd.rolling_sum(df, window=day_len).reindex(range(0, len(df), day_len))
-    # Get timestep where var/tech is minimal in the largest number of locations
-    selected = int(dff[dff > 0].idxmin().mode()[0])
+    if how == 'mode':
+        # Get timestep where var/tech is minimal in the largest
+        # number of locations
+        selected = int(dff[dff > 0].idxmin().mode()[0])
+    elif how == 'sum':
+        selected = dff[dff > 0].sum(axis=1).idxmin()
     d = data._dt.at[selected]
     # Determine the range for the calendar week
     # (7 days) to keep at full resolution
