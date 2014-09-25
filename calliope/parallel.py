@@ -53,6 +53,7 @@ class Parallelizer(object):
             iter_values = [c.get_key(i) for i in iter_keys]
             df = pd.DataFrame(list(itertools.product(*iter_values)),
                               columns=iter_keys)
+        df.index = range(1, len(df) + 1)  # 1 instead of 0-indexing
         return df
 
     def _write_modelcommands(self, f, settings):
@@ -149,7 +150,6 @@ class Parallelizer(object):
             iter_c = copy.copy(c)  # iter_c is this iteration's config
             # Generate configuration object
             index, item = row
-            index = index + 1  # 1-indexed to match array job format
             index_str = '{:0>4d}'.format(index)
             for k, v in item.to_dict().iteritems():
                 # Convert numpy dtypes to python ones, else YAML chokes
