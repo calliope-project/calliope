@@ -33,6 +33,7 @@ from . import exceptions
 from . import constraints
 from . import locations
 from . import transmission
+from . import time_masks
 from . import time_tools
 from . import utils
 
@@ -186,9 +187,19 @@ class Model(object):
         s = time_tools.TimeSummarizer()
         if t == 'mask':
             if cr.get_key('time.mask_function', default=False):
-                eval('mask_src = time_masks.'
-                     + cr.time_tools.mask_function + '(m.data)')
-                mask = time.masks_to_resolution_series([mask_src])
+                options = cr.get_key('time.mask_options',
+                                     default=False)
+                eval_string = ('time_masks.'
+                               + cr.time.mask_function + '(self.data')
+                if options:
+                    eval_string += ', ' + options + ')'
+                else:
+                    eval_string += ')'
+                mask_src = eval(eval_string)
+                if mask_src.name == 'mask':
+                    mask = time_masks.masks_to_resolution_series([mask_src])
+                else:
+                    mask = mask_src
             elif cr.get_key('time.mask_file', default=False):
                 mask = pd.read_csv(utils.ensure_absolute(cr.time.mask_file,
                                                          self.config_run_path),

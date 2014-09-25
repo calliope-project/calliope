@@ -5,11 +5,21 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 time_masks.py
 ~~~~~~~~~~~~~
 
-Defines time masks to be used with TimeSummarizer in time.py.
+Defines time masks and resolution series to be used with
+TimeSummarizer in time.py.
 
 A mask function returns a series with the same index as the input data
 that is 0 where the original resolution should be retained and 1 where
 it should be reduced.
+
+A resolution series function returns a a series with the same index
+as the input data, where each time step is either a positive integer
+(signifying how many timesteps to summarize), -1 (following a positive
+integer and signifying the timesteps that are summarized), or 0 (no
+adjustment to this timestep).
+
+The name of a returned series must always be either 'mask' or
+'resolution_series'.
 
 """
 
@@ -63,6 +73,7 @@ def masks_to_resolution_series(masks, how='or', min_resolution=None):
         if combined_mask[ifrom] >= 1 and resolution == 1:
             combined_mask[ifrom] = 0
         istart = ito
+    combined_mask.name = 'resolution_series'
     return combined_mask
 
 
@@ -78,14 +89,16 @@ def resolution_series_uniform(data, resolution):
     for index, item in summarize.iteritems():
         if index % res_length == 0:
             summarize.at[index] = resolution
+    summarize.name = 'resolution_series'
     return summarize
 
 
-def resolution_series_min_week(data, tech='wind_offshore', var='r'):
+def resolution_series_min_week(data, tech, var='r', resolution=24):
     """
-    Resolution series to keep the week where ``var`` of ``tech``
-    is minimal across the most locations, and reduce everything else
-    to daily resolution.
+    Resolution series to keep the week where containing the day where
+    ``var`` of ``tech`` is minimal across the most locations,
+    and reduce everything else to the given resolution
+    (in hours, daily by default).
 
     """
     df = data[var][tech]
@@ -93,7 +106,6 @@ def resolution_series_min_week(data, tech='wind_offshore', var='r'):
     day_len = int(24 / data.time_res_data)
     # Get day-wise sums
     dff = pd.rolling_sum(df, window=day_len).reindex(range(0, len(df), day_len))
-    dff[dff.max(1) < 3]
     # Get timestep where var/tech is minimal in the largest number of locations
     selected = int(dff[dff > 0].idxmin().mode()[0])
     d = data._dt.at[selected]
@@ -103,12 +115,16 @@ def resolution_series_min_week(data, tech='wind_offshore', var='r'):
     week_end = selected + day_len * (7 - d.dayofweek)
     # Mask where everything is -1 (summarize) by default
     mask = pd.DataFrame({'mask': -1}, index=range(len(df)))
-    # Add summarization info, 24-hour resolution, at 00:00 each day
-    for i in dff.index:
-        mask.at[i, 'mask'] = 24
+    # Mark timesteps for summarization at given resolution
+    summary_timestep_len = int(resolution / data.time_res_data)
+    summary_index = range(0, len(df), summary_timestep_len)
+    mask.loc[summary_index, 'mask'] = resolution
     # For the desired week, change the mask to native resolution (0)
     mask.loc[week_start:week_end - 1, 'mask'] = 0
-    return mask['mask']  # Return only a series (why did I create a df anyway?)
+    # Return only a series (why did I create a df anyway?)
+    series = mask['mask']
+    series.name = 'resolution_series'
+    return series
 
 
 def mask_zero(data, tech, var='r', locations=None):
@@ -127,6 +143,7 @@ def mask_zero(data, tech, var='r', locations=None):
     summarize = pd.Series(0, index=range(len(df)))
     # Summing over all DNIs to find those times where DNI==0 everywhere
     summarize[df.sum(1) <= 0] = 1
+    summarize.name = 'mask'
     return summarize
 
 
@@ -169,4 +186,5 @@ def mask_extreme(data, tech, var='r', how='max',
         if ito > len(df):
             ito = len(df)
     summarize.loc[ifrom:ito] = 0
+    summarize.name = 'mask'
     return summarize
