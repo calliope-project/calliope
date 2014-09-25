@@ -743,20 +743,25 @@ class Model(object):
                             # param, e.g. 'csp_r_eff.csv'
                             f = y + '_' + param + '.csv'
                         df = _get_option_from_csv(f)
-                        # Set x_map if that option has been set
+                        # Set up x_map if that option has been set
                         try:
                             x_map = self.get_option(y + '.x_map', x=x)
                         except exceptions.OptionNotSetError:
                             x_map = None
-                        # Now, if x_map is available, remap cols accordingly
+                        # If x_map is available, remap the current col
                         if x_map:
-                            # Unpack dict from string
-                            x_map = {x.split(':')[0].strip():
-                                     x.split(':')[1].strip()
-                                     for x in x_map.split(',')}
-                            df = df[x_map.keys()]  # Keep only keys in x_map
-                            # Then remap column names
-                            df.columns = [x_map[c] for c in df.columns]
+                            # TODO this is a hack and will take up a lot
+                            # of memory due to data duplication in case
+                            # of a lot of mappings pointing to the same
+                            # column in the data
+                            # Format is <name in model config>:<name in data>
+                            x_map = {i.split(':')[0].strip():
+                                     i.split(':')[1].strip()
+                                     for i in x_map.split(',')}
+                            # Get the mapping for this x from x_map
+                            # NB not removing old columns in case
+                            # those are also used somewhere!
+                            df[x] = df[x_map[x]]
                         try:
                             d[param][y].loc[:, x] = df[x]
                             self.debug.data_sources.set_key(k, 'file:' + f)
