@@ -338,34 +338,21 @@ def node_costs(model):
     """
     m = model.m
 
+    cost_getter = utils.cost_getter(model.get_option)
+    depreciation_getter = utils.depreciation_getter(model.get_option)
+    cost_per_distance_getter = utils.cost_per_distance_getter(model.get_option)
+
     @utils.memoize
     def _depreciation_rate(y, k):
-        interest = model.get_option(y + '.depreciation.interest.' + k,
-                                    default=y + '.depreciation.interest.default')
-        plant_life = model.get_option(y + '.depreciation.plant_life')
-        if interest == 0:
-            dep = 1 / plant_life
-        else:
-            dep = ((interest * (1 + interest) ** plant_life)
-                   / (((1 + interest) ** plant_life) - 1))
-        return dep
+        return depreciation_getter(y, k)
 
     @utils.memoize
     def _cost(cost, y, k):
-        return model.get_option(y + '.costs.' + k + '.' + cost,
-                                default=y + '.costs.default.' + cost)
+        return cost_getter(cost, y, k)
 
     @utils.memoize
     def _cost_per_distance(cost, y, k, x):
-        try:
-            cost_option = y + '.costs_per_distance.' + k + '.' + cost
-            cost = model.get_option(cost_option)
-            per_distance = model.get_option(y + '.per_distance')
-            distance = model.get_option(y + '.distance', x=x)
-            distance_cost = cost * (distance / per_distance)
-        except exceptions.OptionNotSetError:
-            distance_cost = 0
-        return distance_cost
+        return cost_per_distance_getter(cost, y, k, x)
 
     # Variables
     m.cost = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)

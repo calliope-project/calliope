@@ -21,6 +21,8 @@ import os
 import numpy as np
 import yaml
 
+from . import exceptions
+
 
 class AttrDict(dict):
     """A subclass of ``dict`` with key access by attributes::
@@ -318,3 +320,108 @@ def ensure_absolute(path, base_path):
         return os.path.join(os.path.dirname(base_path), path)
     else:
         return path
+
+
+def option_getter(config_model, data):
+    """Returns a get_option() function using the given config_model and data"""
+    o = config_model
+    d = data
+
+    def get_option(option, x=None, default=None, ignore_inheritance=False):
+
+        def _get_option(option):
+            try:
+                result = o.get_key('techs.' + option)
+            except KeyError:
+                if ignore_inheritance:
+                    return _get_option(default)
+                # Example: 'ccgt.costs.om_var'
+                tech = option.split('.')[0]  # 'ccgt'
+                # 'costs.om_var'
+                remainder = '.'.join(option.split('.')[1:])
+                if ':' in tech:
+                    parent = tech.split(':')[0]
+                else:
+                    # parent = e.g. 'defaults'
+                    parent = o.get_key('techs.' + tech + '.parent')
+                try:
+                    result = _get_option(parent + '.' + remainder)
+                except KeyError:
+                    if default:
+                        result = _get_option(default)
+                    elif tech == 'defaults':
+                        e = exceptions.OptionNotSetError
+                        raise e('Reached top of inheritance chain '
+                                'and no default defined for: '
+                                '`{}`'.format(option))
+                    else:
+                        e = exceptions.OptionNotSetError
+                        raise e('Can not get parent for `{}` '
+                                'and no default defined '
+                                '({}).'.format(tech, option))
+            return result
+
+        def _get_location_option(key, location):
+            # NB: KeyErrors raised here are always caught within _get_option
+            # so need no further information or handling
+            # Raises KeyError if the specific _override column does not exist
+            result = d.locations.at[location, '_override.' + key]
+            # Also raise KeyError if the result is NaN, i.e. if no
+            # location-specific override has been defined
+            try:
+                if np.isnan(result):
+                    raise KeyError
+            # Have to catch this because np.isnan not implemented for strings
+            except TypeError:
+                pass
+            return result
+
+        if x:
+            try:
+                result = _get_location_option(option, x)
+            # If can't find a location-specific option, fall back to model-wide
+            except KeyError:
+                result = _get_option(option)
+        else:
+            result = _get_option(option)
+        # Deal with 'inf' settings
+        if result == 'inf':
+            result = float('inf')
+        return result
+
+    return get_option
+
+
+def cost_getter(option_getter):
+    def get_cost(cost, y, k):
+        return option_getter(y + '.costs.' + k + '.' + cost,
+                             default=y + '.costs.default.' + cost)
+    return get_cost
+
+
+def cost_per_distance_getter(option_getter):
+    def get_cost_per_distance(cost, y, k, x):
+        try:
+            cost_option = y + '.costs_per_distance.' + k + '.' + cost
+            cost = option_getter(cost_option)
+            per_distance = option_getter(y + '.per_distance')
+            distance = option_getter(y + '.distance', x=x)
+            distance_cost = cost * (distance / per_distance)
+        except exceptions.OptionNotSetError:
+            distance_cost = 0
+        return distance_cost
+    return get_cost_per_distance
+
+
+def depreciation_getter(option_getter):
+    def get_depreciation_rate(y, k):
+        interest = option_getter(y + '.depreciation.interest.' + k,
+                                 default=y + '.depreciation.interest.default')
+        plant_life = option_getter(y + '.depreciation.plant_life')
+        if interest == 0:
+            dep = 1 / plant_life
+        else:
+            dep = ((interest * (1 + interest) ** plant_life)
+                   / (((1 + interest) ** plant_life) - 1))
+        return dep
+    return get_depreciation_rate

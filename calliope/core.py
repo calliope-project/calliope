@@ -97,6 +97,8 @@ class Model(object):
         self.initialize_configuration(config_run, override)
         # Other initialization tasks
         self.data = utils.AttrDict()
+        # Initialize the option getter
+        self._get_option = utils.option_getter(self.config_model, self.data)
         self.initialize_parents()
         self.initialize_sets()
         self.read_data()
@@ -255,7 +257,7 @@ class Model(object):
         instead of a search through the inheritance chain if the option
         has not been set for the given tech.
 
-        If the first segment of the option containts ':', it will be
+        If the first segment of the option contains ':', it will be
         interpreted as implicit tech subsetting: e.g. asking for
         'hvac:r1' implicitly uses 'hvac:r1' with the parent 'hvac', even
         if that has not been defined, to search the option inheritance
@@ -272,72 +274,8 @@ class Model(object):
         try:
             result = self.option_cache[key]
         except KeyError:
+            # self._get_option is defined inside __init__
             result = self.option_cache[key] = self._get_option(*key)
-        return result
-
-    def _get_option(self, option, x=None, default=None,
-                    ignore_inheritance=False):
-        o = self.config_model
-        d = self.data
-
-        def _get_option(option):
-            try:
-                result = o.get_key('techs.' + option)
-            except KeyError:
-                if ignore_inheritance:
-                    return _get_option(default)
-                # Example: 'ccgt.costs.om_var'
-                tech = option.split('.')[0]  # 'ccgt'
-                # 'costs.om_var'
-                remainder = '.'.join(option.split('.')[1:])
-                if ':' in tech:
-                    parent = tech.split(':')[0]
-                else:
-                    # 'defaults'
-                    parent = o.get_key('techs.' + tech + '.parent')
-                try:
-                    result = _get_option(parent + '.' + remainder)
-                except KeyError:
-                    if default:
-                        result = _get_option(default)
-                    elif tech == 'default':
-                        e = exceptions.OptionNotSetError
-                        raise e('Reached top of inheritance chain '
-                                'and no default defined for: '
-                                '`{}`'.format(option))
-                    else:
-                        e = exceptions.OptionNotSetError
-                        raise e('Can not get parent for `{}` '
-                                'and no default defined '
-                                '({}).'.format(tech, option))
-            return result
-
-        def _get_location_option(key, location):
-            # NB: KeyErrors raised here are always caught within _get_option
-            # so need no further information or handling
-            # Raises KeyError if the specific _override column does not exist
-            result = d.locations.at[location, '_override.' + key]
-            # Also raise KeyError if the result is NaN, i.e. if no
-            # location-specific override has been defined
-            try:
-                if np.isnan(result):
-                    raise KeyError
-            # Have to catch this because np.isnan not implemented for strings
-            except TypeError:
-                pass
-            return result
-
-        if x:
-            try:
-                result = _get_location_option(option, x)
-            # If can't find a location-specific option, fall back to model-wide
-            except KeyError:
-                result = _get_option(option)
-        else:
-            result = _get_option(option)
-        # Deal with 'inf' settings
-        if result == 'inf':
-            result = float('inf')
         return result
 
     def set_option(self, option, value, x=None):
