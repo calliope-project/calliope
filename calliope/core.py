@@ -33,7 +33,7 @@ from . import exceptions
 from . import constraints
 from . import locations
 from . import transmission
-from . import time_masks
+from . import time_functions
 from . import time_tools
 from . import utils
 
@@ -183,36 +183,36 @@ class Model(object):
         Performs time resolution reduction, if set up in configuration
         """
         cr = self.config_run
-        t = cr.get_key('time.summarize', default=False)
         s = time_tools.TimeSummarizer()
-        if t == 'mask':
-            if cr.get_key('time.mask_function', default=False):
-                options = cr.get_key('time.mask_options',
+        time = cr.get_key('time', default=False)
+        if time:
+            if 'function' in time and 'file' in time:
+                e = exceptions.ModelError
+                raise e('`time.function` and `time.file` cannot be'
+                        'given at the same time.')
+            if cr.get_key('time.function', default=False):
+                options = cr.get_key('time.function_options',
                                      default=False)
-                eval_string = ('time_masks.'
-                               + cr.time.mask_function + '(self.data')
+                eval_string = ('time_functions.'
+                               + cr.time.function + '(self.data')
                 if options:
                     eval_string += ', ' + options + ')'
                 else:
                     eval_string += ')'
                 mask_src = eval(eval_string)
                 if mask_src.name == 'mask':
-                    mask = time_masks.masks_to_resolution_series([mask_src])
+                    getter = time_functions.masks_to_resolution_series
+                    res_series = getter([mask_src])
                 else:
-                    mask = mask_src
-            elif cr.get_key('time.mask_file', default=False):
-                mask = pd.read_csv(utils.ensure_absolute(cr.time.mask_file,
-                                                         self.config_run_path),
-                                   index_col=0, header=None)[1]
-                mask = mask.astype(int)
-            else:
-                e = exceptions.ModelError
-                raise e('If setting `time.summarize` to `mask`, '
-                        'either `mask_function` or `mask_file` '
-                        'must be set.')
-            s.dynamic_timestepper(self.data, mask)
-        elif t == 'uniform':
-            s.reduce_resolution(self.data, cr.time.resolution)
+                    # mask_src.name is 'resolution_series', no further
+                    # processing needed
+                    res_series = mask_src
+            elif cr.get_key('time.file', default=False):
+                res_file = utils.ensure_absolute(cr.time.file,
+                                                 self.config_run_path)
+                res_series = pd.read_csv(res_file, index_col=0, header=None)[1]
+                res_series = res_series.astype(int)
+            s.dynamic_timestepper(self.data, res_series)
 
     def prev(self, t):
         """Using the timesteps set of this model instance, return `t-1`,

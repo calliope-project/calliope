@@ -2,8 +2,8 @@
 Copyright (C) 2013 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-time_masks.py
-~~~~~~~~~~~~~
+time_functions.py
+~~~~~~~~~~~~~~~~~
 
 Defines time masks and resolution series to be used with
 TimeSummarizer in time.py.

@@ -17,7 +17,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from . import time_masks
+from . import time_functions
 from . import utils
 
 
@@ -127,7 +127,8 @@ class TimeSummarizer(object):
             # NB unknown data types are checked for and logged earlier, inside
             # _reduce_resolution()
         data.time_res_series = df.time_res[df.to_keep]
-        # NB data.time_res_static is not adjusted here, but this should be ok
+        # FIXME update data.time_res_static if the resultion reduction was uniform!
+        # data.time_res_static = resolution
 
     def reduce_resolution(self, data, resolution):
         """
@@ -137,9 +138,9 @@ class TimeSummarizer(object):
         Modifies the passed data object in-place and returns None.
 
         """
-        mask = time_masks.resolution_series_uniform(data, resolution)
+        mask = time_functions.resolution_series_uniform(data, resolution)
         self.dynamic_timestepper(data, mask)
-        data.time_res_static = resolution
+
 
     def _reduce_average(self, df):
         return df.mean(0)

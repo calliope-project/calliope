@@ -71,12 +71,14 @@ A mask is a pandas DataFrame with the same index as the data it applies to, and 
 
 The above example means "compress the 4th-6th and 7th-9th timesteps into two new timesteps with a resolution of 3".
 
-Functions to generate masks are in ``calliope.time_masks``.
+Functions to generate masks and resolution series are in ``calliope.time_functions``.
+
+.. FIXME this needs updating
 
 A fully-functioning example of using a mask to collapse periods where solar irradiance is zero (i.e., the night) into single timesteps::
 
    model = calliope.Model()
    s = calliope.TimeSummarizer()
-   mask = calliope.time_masks.mask_where_zero(model.data, tech='csp', var='r')
+   mask = calliope.time_functions.mask_where_zero(model.data, tech='csp', var='r')
    s.dynamic_timestepper(model.data, mask)  # Modifies data in place
    model.run()
