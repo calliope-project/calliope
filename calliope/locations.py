@@ -38,7 +38,13 @@ def _generate_location(location, items, techs):
     # Override
     if 'override' in items:
         for k in items.override.keys_nested():
-            d['_override.' + k] = items.override.get_key(k)
+            target_key = '_override.' + k
+            try:
+                d[target_key] = items.override.get_key(k)
+            except KeyError:
+                # Allow locations to not define 'within'
+                if k == 'within':
+                    d[target_key] = None
     # Permitted echnologies
     for y in techs:
         if y in items.techs:
