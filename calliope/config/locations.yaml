@@ -12,7 +12,7 @@ locations:
         techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
             demand_power:
-                x_map: 'a: r1'
+                x_map: 'r1: a'
                 constraints:
                     r: file=demand-r1_r.csv
                     r_scale_to_peak: -50000
@@ -27,12 +27,12 @@ locations:
                 'heater']
         override:
             demand_power:
-                x_map: 'a: r2'
+                x_map: 'r2: a'
                 constraints:
                     r: file=demand-r2_r.csv
                     r_scale_to_peak: -5000
             demand_heat:
-                x_map: 'a: r2'
+                x_map: 'r2: a'
                 constraints:
                     r: file=demand-r1_r.csv
                     r_scale_to_peak: -1000

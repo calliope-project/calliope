@@ -36,7 +36,7 @@ class TestModel:
                     techs: ['pv']
                     override:
                         pv:
-                            x_map: 'demand: sub2'
+                            x_map: 'sub2: demand'
                             constraints:
                                 e_cap_max: 9
                                 r: file=demand-sin_r.csv

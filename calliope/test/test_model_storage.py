@@ -28,7 +28,7 @@ class TestModel:
                             constraints:
                                 e_cap_max: 9.5
                         demand_electricity:
-                            x_map: 'demand: 1'
+                            x_map: '1: demand'
                             constraints:
                                 r: file=demand-sin_r.csv
             links:
