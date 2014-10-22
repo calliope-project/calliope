@@ -904,7 +904,9 @@ class Model(object):
                 self.add_constraint(eval(c))
 
         # 3. Objective function
-        self.add_constraint(constraints.base.model_objective)
+        default_obj = 'constraints.objective.objective_cost_minimization'
+        objective = o.get_key('objective', default=default_obj)
+        self.add_constraint(eval(objective))
 
     def _log_time(self):
         self.runtime = int(time.time() - self.start_time)

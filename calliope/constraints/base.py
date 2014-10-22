@@ -462,16 +462,3 @@ def model_constraints(model):
 
     # Constraints
     m.c_system_balance = cp.Constraint(m.c, m.x, m.t)
-
-
-def model_objective(model):
-    m = model.m
-
-    # Count monetary costs only
-    def obj_rule(m):
-        return (sum(model.get_option(y + '.weight')
-                    * sum(m.cost[y, x, 'monetary'] for x in m.x)
-                    for y in m.y))
-
-    m.obj = cp.Objective(sense=cp.minimize)
-    #m.obj.domain = cp.NonNegativeReals
