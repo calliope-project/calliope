@@ -63,7 +63,7 @@ class TestAttrDict:
 
     def test_from_yaml_path(self):
         this_path = os.path.dirname(__file__)
-        yaml_path = os.path.join(this_path, 'test_utils', 'yaml_file.yaml')
+        yaml_path = os.path.join(this_path, 'common', 'yaml_file.yaml')
         d = utils.AttrDict.from_yaml(yaml_path)
         assert d.a == 1
         assert d.c.z.II == 2
