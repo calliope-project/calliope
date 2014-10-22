@@ -157,12 +157,10 @@ class Model(object):
         path = self.config_run.input.data_path
         df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
                          header=None, parse_dates=[1])
-        # Divide timedelta64 objects by one_second to get seconds
-        one_second = np.timedelta64(1, 's')
-        seconds = (df.iat[0, 0] - df.iat[1, 0]) / one_second
+        seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
         if verify:
             for i in range(len(df) - 1):
-                assert ((df.iat[i, 0] - df.iat[i+1, 0]) / one_second
+                assert ((df.iat[i, 0] - df.iat[i+1, 0]).total_seconds()
                         == seconds)
         hours = abs(seconds) / 3600
         return hours
