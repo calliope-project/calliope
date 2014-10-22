@@ -63,6 +63,11 @@ A consumption technology should define:
       constraints:
          r: ...
 
+
+.. admonition:: Note
+
+   A number of default technologies are defined to inherit from, these names are reserved and attempting to use them for a user-defined technology will result in an error: ``defaults``, ``supply``, ``demand``, ``unmet_demand``, ``unmet_demand_as_supply_tech``, ``storage``, ``transmission``, ``conversion``
+
 ------------------
 Defining locations
 ------------------

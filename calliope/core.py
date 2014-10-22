@@ -67,9 +67,20 @@ def get_model_config(cr, config_run_path, adjust_data_path=True):
     config_path = os.path.join(os.path.dirname(__file__), 'config')
     o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                               'defaults.yaml'))
+    # Get list of techs pre-defined in defaults.yaml
+    default_techs = o.techs.keys()
+
+    # Load all additional files, continuously checking consistency
     for path in cr.input.model:
+        new_o = utils.AttrDict.from_yaml(path)
+        if 'techs' in new_o.keys():
+            overlap = set(default_techs) & set(new_o.techs.keys())
+            if overlap:
+                e = exceptions.ModelError
+                raise e('Trying to re-define a default technology in '
+                        '{}: {}'.format(path, list(overlap)))
         # The input files are allowed to override defaults
-        o.union(utils.AttrDict.from_yaml(path), allow_override=True)
+        o.union(new_o, allow_override=True)
     return o
 
 
