@@ -636,6 +636,17 @@ class Model(object):
             # missing_cols = list(set(self.data._x) - set(df.columns))
             # for c in missing_cols:
             #     df[c] = np.nan
+
+            # Ensure that the freshly-read file has the same index as d._t
+            # NB this comparison happens after slicing, but will still catch
+            # problematic index mismatches
+            mismatch = df.index.difference(d._t.index)
+            if len(mismatch) > 0:
+                e = exceptions.ModelError
+                entries = mismatch.tolist()
+                raise e('File has invalid index. Ensure that it has the same '
+                        'date range and resolution as set_t.csv: {}.\n\n'
+                        'Problematic entries: {}'.format(filename, entries))
             return df
 
         d = self.data
