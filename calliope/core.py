@@ -120,9 +120,9 @@ class Model(object):
     def initialize_configuration(self, config_run, override):
         self.flush_option_cache()
         # Load run configuration
-        config_path = os.path.join(os.path.dirname(__file__), 'config')
         if not config_run:
-            config_run = os.path.join(config_path, 'run.yaml')
+            example = os.path.join(os.path.dirname(__file__), 'example_model')
+            config_run = os.path.join(example, 'run.yaml')
         self.config_run_path = config_run
         if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
@@ -771,8 +771,8 @@ class Model(object):
                         scaled = self.scale_to_peak(d[param][y][x], scale)
                         d[param][y].loc[:, x] = scaled
         ds = self.debug.data_sources
-        missing_data = [k for k in ds.keys_nested()
-                        if ds.get_key(k) == 'file:_NOT_FOUND_']
+        missing_data = [kk for kk in ds.keys_nested()
+                        if ds.get_key(kk) == 'file:_NOT_FOUND_']
         if len(missing_data) > 0:
             message = ('The following parameter values could not be read '
                        'from file. They were automatically set to `0`: '

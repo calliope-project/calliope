@@ -12,7 +12,8 @@ import:
 # OBJECTIVE FUNCTION
 ##
 
-objective: constraints.objective.objective_cost_minimization
+# If this is not defined, 'constraints.objective.objective_cost_minimization' is used by default
+# objective:
 
 ##
 # ADDITIONAL CONSTRAINTS

@@ -3,8 +3,8 @@
 #
 
 input:
-    model: '{{ module }}/config/model.yaml'
-    data_path:  '{{ module }}/example'
+    model: 'model_config/model.yaml'
+    data_path: 'model_config/data'
 
 output:
     save: false

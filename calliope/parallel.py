@@ -13,17 +13,14 @@ numbers of scripted runs, either locally or to be deployed to a cluster.
 from __future__ import print_function
 from __future__ import division
 
-import argparse
 import copy
 import itertools
 import os
-import sys
 
 import numpy as np
 import pandas as pd
 
 from . import core
-from . import exceptions
 from . import utils
 
 
@@ -190,32 +187,3 @@ class Parallelizer(object):
                 f.write('esac\n')
             os.chmod(os.path.join(out_dir, array_submission), 0755)
             os.chmod(os.path.join(out_dir, array_run), 0755)
-
-
-def main():
-    arguments = sys.argv[1:]
-    parser = argparse.ArgumentParser(description='Run the Calliope model.')
-    parser.add_argument('settings', metavar='settings', type=str, default='',
-                        help='Run settings file to use.')
-    parser.add_argument('-s', '--single', dest='single', action='store_const',
-                        const=True, default=False,
-                        help='Ignore `parallal` section in run settings, '
-                             'and only do a single run.')
-    parser.add_argument('-d', '--dir', type=str, default='runs',
-                        help='Target directory for parallel runs '
-                             '(default: `runs`).')
-    args = parser.parse_args(arguments)
-    if args.single:
-        model = core.Model(config_run=args.settings)
-        model.run()
-    else:
-        parallelizer = Parallelizer(target_dir=args.dir,
-                                    config_run=args.settings)
-        if not 'name' in parallelizer.config.parallel:
-            raise exceptions.ModelError('`' + args.settings + '`'
-                                        ' does not specify a `parallel.name`.')
-        parallelizer.generate_runs()
-
-
-if __name__ == '__main__':
-    main()
