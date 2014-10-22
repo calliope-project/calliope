@@ -713,13 +713,27 @@ class Model(object):
                             # of a lot of mappings pointing to the same
                             # column in the data
                             # Format is <name in model config>:<name in data>
-                            x_map = {i.split(':')[0].strip():
-                                     i.split(':')[1].strip()
-                                     for i in x_map.split(',')}
+                            x_map_dict = {i.split(':')[0].strip():
+                                          i.split(':')[1].strip()
+                                          for i in x_map.split(',')}
+                            x_map_str = 'x_map: \'{}\''.format(x_map)
                             # Get the mapping for this x from x_map
                             # NB not removing old columns in case
                             # those are also used somewhere!
-                            df[x] = df[x_map[x]]
+                            try:
+                                x_m = x_map_dict[x]
+                            except KeyError:
+                                e = exceptions.ModelError
+                                raise e('x_map defined but does not map '
+                                        'location defined in model config: '
+                                        '{}, with {}'.format(x, x_map_str))
+                            if x_m not in df.columns:
+                                e = exceptions.ModelError
+                                raise e('Trying to map to to a column not '
+                                        'contained in data: {}, for region '
+                                        '{}, with {}'
+                                        .format(x_m, x, x_map_str))
+                            df[x] = df[x_m]
                         try:
                             d[param][y].loc[:, x] = df[x]
                             self.debug.data_sources.set_key(k, 'file:' + f)
@@ -727,13 +741,17 @@ class Model(object):
                             # If could not be read from file, set it to zero
                             d[param][y].loc[:, x] = 0
                             # Depending on whether or not the tech is allowed
-                            # at this location, set _FILE_NOT_FOUND_ or _NA_
-                            # for the data source
+                            # at this location, set _NA_ for the data source,
+                            # or raise an error
                             if self.data.locations.at[x, y] == 0:
                                 self.debug.data_sources.set_key(k, '_NA_')
                             else:
-                                v = 'file:_NOT_FOUND_'
-                                self.debug.data_sources.set_key(k, v)
+                                e = exceptions.ModelError
+                                raise e('Could not load data for {}, '
+                                        'with given option: '
+                                        '{}'.format(k, option))
+                                # v = 'file:_NOT_FOUND_'
+                                # self.debug.data_sources.set_key(k, v)
                     else:
                         d[param][y].loc[:, x] = option
                         self.debug.data_sources.set_key(k, 'model_config')
