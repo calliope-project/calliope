@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import division
 
 import datetime
+import importlib
 import inspect
 import itertools
 import logging
@@ -41,6 +42,21 @@ from . import utils
 def _expand_module_placeholder(s):
     return utils.replace(s, placeholder='module',
                          replacement=os.path.dirname(__file__))
+
+
+def _load_function(source):
+    """
+    Returns a function from a module, given a source string of the form:
+
+        'module.submodule.subsubmodule.function_name'
+
+    """
+    module_string, function_string = source.rsplit('.', 1)
+    try:
+        module = importlib.import_module(module_string)
+    except ImportError:
+        module = importlib.import_module('calliope.' + module_string)
+    return getattr(module, function_string)
 
 
 def get_model_config(cr, config_run_path, adjust_data_path=True):
@@ -204,13 +220,12 @@ class Model(object):
             if cr.get_key('time.function', default=False):
                 options = cr.get_key('time.function_options',
                                      default=False)
-                eval_string = ('time_functions.'
-                               + cr.time.function + '(self.data')
+                func_string = 'time_functions.' + cr.time.function
+                mask_func = _load_function(func_string)
                 if options:
-                    eval_string += ', ' + options + ')'
+                    mask_src = mask_func(self.data, **options)
                 else:
-                    eval_string += ')'
-                mask_src = eval(eval_string)
+                    mask_src = mask_func(self.data)
                 if mask_src.name == 'mask':
                     getter = time_functions.masks_to_resolution_series
                     res_series = getter([mask_src])
@@ -934,19 +949,14 @@ class Model(object):
             self.add_constraint(constraints.planning.system_margin)
 
         # 2. Optional
-        # README NB: Using `eval` to load additional constraints,
-        # which would need specific attention if this code gets deployed
-        # in a potentially unsafe environment
-        if o.get_key('constraints_pre_load', default=False):
-            eval(o.constraints_pre_load)
         if o.get_key('constraints', default=False):
             for c in o.constraints:
-                self.add_constraint(eval(c))
+                self.add_constraint(_load_function(c))
 
         # 3. Objective function
         default_obj = 'constraints.objective.objective_cost_minimization'
         objective = o.get_key('objective', default=default_obj)
-        self.add_constraint(eval(objective))
+        self.add_constraint(_load_function(objective))
 
     def _log_time(self):
         self.runtime = int(time.time() - self.start_time)

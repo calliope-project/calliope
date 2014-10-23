@@ -32,6 +32,16 @@ parallel:  # Options apply if mode is parallel
         memory:  # Set to request a non-default amount of memory in MB
 
 #
+# TIME RESOLUTION ADJUSTMENT
+#
+
+time:
+    function: resolution_series_min_week
+    function_options:  # Look for week where CSP output is minimal, reduce rest of data to 6-hourly timesteps
+        tech: 'csp'
+        resolution: 6
+
+#
 # SUBSETS
 #
 # Leave any of these empty to disable subsetting
@@ -53,8 +63,8 @@ override:
 solver: cplex
 
 # solver_options:
-    # emphasis.memory: 1  # Set to 1 to conserve memory where possible
-    # workmem: 1000  # Allow CPLEX use to 1000 MB of memory, default: 128
+    # emphasis_memory: 'yes'  # Set to 'yes' to conserve memory where possible
+    # workmem: 1000  # Allow CPLEX use to 1000 MB of memory
     # threads: 1
     # lpmethod: 4  # Use barrier method
 
