@@ -51,14 +51,15 @@ def run(run_config):
 
 @cli.command(short_help='generate parallel runs')
 @click.argument('run_config')
-@click.argument('path')
+@click.argument('path', default='runs')
 @click.option('--silent', is_flag=True, default=False,
               help='Be less verbose.')
 def generate(run_config, path, silent):
     """
     Generate parallel runs based on the given RUN_CONFIG configuration
     file, saving them in the given PATH, which is a path to a
-    directory that must not yet exist.
+    directory that must not yet exist (PATH defaults to 'runs'
+    if not specified).
     """
     parallelizer = Parallelizer(target_dir=path, config_run=run_config)
     if not silent and 'name' not in parallelizer.config.parallel:
