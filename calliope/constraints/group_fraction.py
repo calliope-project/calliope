@@ -49,6 +49,8 @@ def group_fraction(model):
             return lhs >= rhs
         elif sign == '==':
             return lhs == rhs
+        else:
+            raise ValueError('Invalid sign: {}'.format(sign))
 
     supply_techs = (model.get_group_members('supply') +
                     model.get_group_members('conversion'))
