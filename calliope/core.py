@@ -20,6 +20,7 @@ import logging
 import os
 import random
 import shutil
+import sys
 import time
 
 import coopr.opt as co
@@ -52,10 +53,18 @@ def _load_function(source):
 
     """
     module_string, function_string = source.rsplit('.', 1)
-    try:
-        module = importlib.import_module(module_string)
-    except ImportError:
-        module = importlib.import_module('calliope.' + module_string)
+    modules = [i for i in sys.modules.keys() if 'calliope' in i]
+    # Check if module already loaded, if so, don't re-import it
+    if (module_string in modules):
+        module = sys.modules[module_string]
+    elif ('calliope.' + module_string) in modules:
+        module = sys.modules['calliope.' + module_string]
+    # Else load the module
+    else:
+        try:
+            module = importlib.import_module(module_string)
+        except ImportError:
+            module = importlib.import_module('calliope.' + module_string)
     return getattr(module, function_string)
 
 
@@ -137,8 +146,8 @@ class Model(object):
         self.flush_option_cache()
         # Load run configuration
         if not config_run:
-            example = os.path.join(os.path.dirname(__file__), 'example_model')
-            config_run = os.path.join(example, 'run.yaml')
+            config_run = os.path.join(os.path.dirname(__file__),
+                                      'example_model', 'run.yaml')
         self.config_run_path = config_run
         if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
@@ -809,7 +818,20 @@ class Model(object):
         return t_max_demands
 
     def add_constraint(self, constraint, *args, **kwargs):
-        constraint(self, *args, **kwargs)
+        try:
+            constraint(self, *args, **kwargs)
+        # If there is an error in a constraint, make sure to also get
+        # the index where the error happened and pass that along
+        except ValueError as e:
+            index = inspect.trace()[-1][0].f_locals['index']
+            index_string = ', at index: {}'.format(index)
+            if not e.args:
+                e.args = ('',)
+            e.args = (e.args[0] + index_string,) + e.args[1:]
+            # Also log it because that is what Pyomo does, and want to ensure
+            # that the log entry contains the info we added
+            logging.error('Error generating constraint' + index_string)
+            raise
 
     def _param_populator(self, src, t_start=None):
         """Returns a `getter` function that returns either
