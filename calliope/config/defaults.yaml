@@ -48,6 +48,7 @@ techs:
             cf_max: false  # Maximum capacity factor, set to false to disable
             e_prod: true
             e_con: false
+            c_eff: 1.0  # Carrier efficiency (additional losses as energy gets transferred to carrier, e.g. due to plant parasitic consumption)
             e_eff: 1.0
             e_eff_ref: false  # Reference efficiency. If set to false, e_eff is used instead.
             e_cap_max: 0  # Maximum e_cap [kW]

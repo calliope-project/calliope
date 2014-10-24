@@ -448,15 +448,19 @@ def model_constraints(model):
         else:
             fam = get_children(x) + [x]  # list of children + parent
             if c == 'power':
-                return (sum(m.es_prod[c, y, xs, t]
+                return (sum(m.es_prod[c, y, xs, t] *
+                            model.get_option(y + '.constraints.c_eff', x=xs)
                             for xs in fam for y in m.y)
-                        + sum(m.es_con[c, y, xs, t]
+                        + sum(m.es_con[c, y, xs, t] /
+                              model.get_option(y + '.constraints.c_eff', x=xs)
                               for xs in fam for y in m.y)
                         == 0)
             else:  # e.g. for heat
-                return (sum(m.es_prod[c, y, xs, t]
+                return (sum(m.es_prod[c, y, xs, t] *
+                            model.get_option(y + '.constraints.c_eff', x=xs)
                             for xs in fam for y in m.y)
-                        + sum(m.es_con[c, y, xs, t]
+                        + sum(m.es_con[c, y, xs, t] /
+                              model.get_option(y + '.constraints.c_eff', x=xs)
                               for xs in fam for y in m.y)
                         >= 0)
 
