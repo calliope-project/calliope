@@ -98,21 +98,21 @@ class TimeSummarizer(object):
         df = pd.DataFrame(mask, index=mask.index)
         df.columns = ['summarize']  # rename the single column
         df['time_res'] = data.time_res_static
-        df['to_keep'] = True
+        df['to_keep'] = 1
         # Get all time steps that need summarizing
         entry_points = df.summarize[df.summarize > 0]
         # 1. Summarize by calling _reduce_resolution for the desired ranges
         # This step still keeps the summarized data but marks it by setting
-        # `to_keep` to False
+        # `to_keep` 0
         for i, v in entry_points.iteritems():
             ifrom = i
             ito = i + int(v / data.time_res_static)
             resolution = v
             self._reduce_resolution(data, resolution, t_range=[ifrom, ito])
-            # Mark the rows that need to be killed with False
-            df.to_keep.iloc[ifrom+1:ito] = False
-            df.time_res.iloc[ifrom] = resolution
-        # 2. Replace all data with its subset where to_keep is True
+            # Mark the rows that need to be killed with 0
+            df.ix[ifrom+1:ito, 'to_keep'] = 0
+            df.ix[ifrom, 'time_res'] = resolution
+        # 2. Replace all data with its subset where to_keep is 1
         for k in data.keys():
             # # Special case for `_t`, which is the only known_data_type which is always 0-indexed
             # if k == '_t' or k == '_dt':
@@ -121,12 +121,12 @@ class TimeSummarizer(object):
             if k in self.known_data_types.keys():
                 if isinstance(data[k], utils.AttrDict):
                     for kk in data[k].keys():
-                        data[k][kk] = data[k][kk][df.to_keep]
+                        data[k][kk] = data[k][kk][df.to_keep == 1]
                 else:
-                    data[k] = data[k][df.to_keep]
+                    data[k] = data[k][df.to_keep == 1]
             # NB unknown data types are checked for and logged earlier, inside
             # _reduce_resolution()
-        data.time_res_series = df.time_res[df.to_keep]
+        data.time_res_series = df.time_res[df.to_keep == 1]
         # FIXME update data.time_res_static if the resultion reduction was uniform!
         # data.time_res_static = resolution
 
