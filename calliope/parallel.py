@@ -88,7 +88,8 @@ class Parallelizer(object):
         #
         # COMBINE ALL MODEL CONFIG INTO ONE FILE AND WRITE IT TO out_dir
         #
-        o = core.get_model_config(c, self.config_file, adjust_data_path=False)
+        o = core.get_model_config(c, self.config_file, adjust_data_path=False,
+                                  insert_defaults=False)
         unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
         o.to_yaml(os.path.join(unified_config_file))
         c.input.model = 'model.yaml'

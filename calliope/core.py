@@ -68,10 +68,15 @@ def _load_function(source):
     return getattr(module, function_string)
 
 
-def get_model_config(cr, config_run_path, adjust_data_path=True):
+def get_model_config(cr, config_run_path, adjust_data_path=True,
+                     insert_defaults=True):
     """
     cr is the run configuration AttrDict,
     config_run_path the path to the run configuration file
+
+    If ``insert_defaults`` is set to False, the default settings from
+    defaults.yaml will not be included, which is necessary when
+    generating model settings file for parallel runs.
 
     """
     # Ensure 'input.model' is a list
@@ -88,12 +93,19 @@ def get_model_config(cr, config_run_path, adjust_data_path=True):
     if adjust_data_path:
         cr.input.data_path = utils.ensure_absolute(cr.input.data_path,
                                                    config_run_path)
-    # Load all model config files and combine them into one AttrDict
+
     config_path = os.path.join(os.path.dirname(__file__), 'config')
     o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                               'defaults.yaml'))
     # Get list of techs pre-defined in defaults.yaml
     default_techs = o.techs.keys()
+
+    # If defaults should not be inserted, replace the loaded AttrDict
+    # with an empty one (a bit of a hack, but we also want the
+    # default_techs list so we need to load the AttrDict anyway)
+    if not insert_defaults:
+        o = utils.AttrDict()
+        o.techs = utils.AttrDict()
 
     # Load all additional files, continuously checking consistency
     for path in cr.input.model:
