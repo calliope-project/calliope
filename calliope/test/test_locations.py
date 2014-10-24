@@ -206,4 +206,4 @@ class TestLocations:
         techs = ['foo']
         df = locations.generate_location_matrix(sample_nested_locations, techs)
         for i in df['_within'].tolist():
-            assert (i is None or isinstance(i, str))
+            assert (i is None or isinstance(i, basestring))

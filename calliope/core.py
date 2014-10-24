@@ -149,7 +149,7 @@ class Model(object):
             config_run = os.path.join(os.path.dirname(__file__),
                                       'example_model', 'run.yaml')
         self.config_run_path = config_run
-        if isinstance(config_run, str):
+        if isinstance(config_run, basestring):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)
             # self.run_id is used to set an output folder for logs, if
@@ -712,7 +712,8 @@ class Model(object):
                         continue
                     option = self.get_option(y + '.constraints.' + param, x=x)
                     k = param + '.' + y + '.' + x
-                    if isinstance(option, str) and option.startswith('file'):
+                    if (isinstance(option, basestring)
+                            and option.startswith('file')):
                         if param == 'r':
                             d._y_def_r.add(y)
                         elif param == 'e_eff':

@@ -75,7 +75,7 @@ class AttrDict(dict):
         overrides definitions in the imported file.
 
         """
-        if isinstance(f, str):
+        if isinstance(f, basestring):
             with open(f, 'r') as src:
                 loaded = cls(yaml.load(src))
         else:
@@ -316,7 +316,7 @@ def _resolve_path(base_path, path):
 
 
 def ensure_absolute(path, base_path):
-    if not os.path.isabs(path) and isinstance(base_path, str):
+    if not os.path.isabs(path) and isinstance(base_path, basestring):
         return os.path.join(os.path.dirname(base_path), path)
     else:
         return path

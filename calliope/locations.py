@@ -66,7 +66,8 @@ def explode_locations(k):
     i.e. ``explode_locations('1')`` returns ``['1']``.
 
     """
-    assert isinstance(k, str)  # Ensure sure we don't pass in other things
+    # Ensure sure we don't pass in other things
+    assert isinstance(k, basestring)
     finalkeys = []
     subkeys = k.split(',')
     for sk in subkeys:
