@@ -110,8 +110,9 @@ class TimeSummarizer(object):
             resolution = v
             self._reduce_resolution(data, resolution, t_range=[ifrom, ito])
             # Mark the rows that need to be killed with 0
-            df.ix[ifrom+1:ito, 'to_keep'] = 0
-            df.ix[ifrom, 'time_res'] = resolution
+            # Need ifrom+1 and ito-1 because .loc includes start and end slice
+            df.loc[ifrom + 1:ito - 1, 'to_keep'] = 0
+            df.at[ifrom, 'time_res'] = resolution
         # 2. Replace all data with its subset where to_keep is 1
         for k in data.keys():
             # # Special case for `_t`, which is the only known_data_type which is always 0-indexed
@@ -140,7 +141,6 @@ class TimeSummarizer(object):
         """
         mask = time_functions.resolution_series_uniform(data, resolution)
         self.dynamic_timestepper(data, mask)
-
 
     def _reduce_average(self, df):
         return df.mean(0)
