@@ -226,7 +226,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     # Determine maximum that could have been transmitted across a link
     def get_edge_capacity(solution, a, b):
         hrs = solution.time_res.sum()
-        cap = solution.parameters.at['e_cap', a, '{}:'.format(tech) + b] * hrs
+        cap = solution.parameters.at['e_cap_net', a, '{}:'.format(tech) + b] * hrs
         return cap
 
     # Get annual power transmission between zones

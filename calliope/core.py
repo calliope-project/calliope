@@ -1200,7 +1200,7 @@ class Model(object):
 
     def get_node_parameters(self, built_only=False):
         """If built_only is True, disregard locations where e_cap==0"""
-        detail = ['s_cap', 'r_cap', 'r_area', 'e_cap']
+        detail = ['s_cap', 'r_cap', 'r_area', 'e_cap', 'e_cap_net']
         result = pd.Panel({v: self.get_var(v) for v in detail})
         if built_only:
             result = result.to_frame()
@@ -1287,7 +1287,7 @@ class Model(object):
         m = self.m
         sol = self.solution
         time_res = self.data.time_res_series
-        e_cap = sol.parameters['e_cap']
+        e_cap = sol.parameters['e_cap_net']
         cfs = {}
         for carrier in sol.totals.labels:
             try:  # Try loading time_res_sum from operational mode

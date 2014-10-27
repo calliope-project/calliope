@@ -83,9 +83,13 @@ def node_energy_balance(model):
 
     def get_e_eff(m, y, x, t):
         if y in m.y_def_e_eff:
-            return m.e_eff[y, x, t]
+            e_eff = m.e_eff[y, x, t]
         else:
-            return d.e_eff[y][x].iat[0]  # Just get 0-th entry in DataFrame
+            e_eff = d.e_eff[y][x].iat[0]  # Just get 0-th entry in DataFrame
+        # Include c_eff, so really, get_e_eff returns the conversion
+        # efficiency combined with plant-internal losses of the
+        # final energy carrier
+        return e_eff * model.get_option(y + '.constraints.c_eff', x=x)
 
     def get_e_eff_per_distance(model, y, x):
         try:
@@ -166,7 +170,8 @@ def node_constraints_build(model):
 
     * s_cap: installed storage capacity
     * r_cap: installed resource <-> storage conversion capacity
-    * e_cap: installed storage <-> grid conversion capacity
+    * e_cap: installed storage <-> grid conversion capacity (gross)
+    * e_cap_net: installed storage <-> grid conversion capacity (net)
 
     """
     m = model.m
@@ -176,6 +181,7 @@ def node_constraints_build(model):
     m.s_cap = cp.Var(m.y_pc, m.x, within=cp.NonNegativeReals)
     m.r_cap = cp.Var(m.y_def_r, m.x, within=cp.NonNegativeReals)
     m.e_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
+    m.e_cap_net = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
@@ -232,11 +238,16 @@ def node_constraints_build(model):
         elif model.mode == 'plan':
             return m.e_cap[y, x] <= e_cap_max * e_cap_max_scale
 
+    def c_e_cap_gross_net_rule(m, y, x):
+        c_eff = model.get_option(y + '.constraints.c_eff', x=x)
+        return m.e_cap[y, x] * c_eff == m.e_cap_net[y, x]
+
     # Constraints
     m.c_s_cap = cp.Constraint(m.y_pc, m.x)
     m.c_r_cap = cp.Constraint(m.y_def_r, m.x)
     m.c_r_area = cp.Constraint(m.y_def_r, m.x)
     m.c_e_cap = cp.Constraint(m.y, m.x)
+    m.c_e_cap_gross_net = cp.Constraint(m.y, m.x)
 
 
 def node_constraints_operational(model):
@@ -257,7 +268,7 @@ def node_constraints_operational(model):
     def c_es_prod_max_rule(m, c, y, x, t):
         if (model.get_option(y + '.constraints.e_prod') is True and
             c == model.get_option(y + '.carrier')):
-            return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x]
+            return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap_net[y, x]
         else:
             return m.es_prod[c, y, x, t] == 0
 
@@ -265,7 +276,7 @@ def node_constraints_operational(model):
         min_use = model.get_option(y + '.constraints.e_cap_min_use')
         if (min_use and c == model.get_option(y + '.carrier')):
             return (m.es_prod[c, y, x, t]
-                    >= time_res.at[t] * m.e_cap[y, x] * min_use)
+                    >= time_res.at[t] * m.e_cap_net[y, x] * min_use)
         else:
             return cp.Constraint.NoConstraint
 
@@ -276,7 +287,8 @@ def node_constraints_operational(model):
             carrier = '.carrier'
         if (model.get_option(y + '.constraints.e_con') is True and
                 c == model.get_option(y + carrier)):
-            return m.es_con[c, y, x, t] >= -1 * time_res.at[t] * m.e_cap[y, x]
+            return m.es_con[c, y, x, t] >= (-1 * time_res.at[t]
+                                            * m.e_cap_net[y, x])
         else:
             return m.es_con[c, y, x, t] == 0
 
@@ -448,19 +460,15 @@ def model_constraints(model):
         else:
             fam = get_children(x) + [x]  # list of children + parent
             if c == 'power':
-                return (sum(m.es_prod[c, y, xs, t] *
-                            model.get_option(y + '.constraints.c_eff', x=xs)
+                return (sum(m.es_prod[c, y, xs, t]
                             for xs in fam for y in m.y)
-                        + sum(m.es_con[c, y, xs, t] /
-                              model.get_option(y + '.constraints.c_eff', x=xs)
+                        + sum(m.es_con[c, y, xs, t]
                               for xs in fam for y in m.y)
                         == 0)
             else:  # e.g. for heat
-                return (sum(m.es_prod[c, y, xs, t] *
-                            model.get_option(y + '.constraints.c_eff', x=xs)
+                return (sum(m.es_prod[c, y, xs, t]
                             for xs in fam for y in m.y)
-                        + sum(m.es_con[c, y, xs, t] /
-                              model.get_option(y + '.constraints.c_eff', x=xs)
+                        + sum(m.es_con[c, y, xs, t]
                               for xs in fam for y in m.y)
                         >= 0)
 
