@@ -7,26 +7,21 @@ input:
     data_path: 'model_config/data'
 
 output:
-    save: false
-    path: 'Output'
+    save: false  # In parallel runs, this is always set to true
+    path: 'Output'  # In parallel runs, this is overriden by the run name
 
 mode: plan  # Choices: plan, operate
 
-# NB: Parallel settings are ignored except if the model is run in parallel mode.
-# If mode is parallel, output.save is always set to true and output.path is
-# overridden by the run name
-
-parallel:  # Options apply if mode is parallel
+parallel:  # Ignored unless this settings file is used to generate parallel runs
     name: example-model  # Name of this run
     environment: bsub  # Choices: bsub, qsub
-    style: single  # Choices: single, array
     additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
     iterations:  # Give iterations  as `parameter: [values]` entries
         override.locations.r1.techs: [['demand', 'unmet_demand', 'ccgt'],
                                   ['demand', 'unmet_demand',]]
         subset_t: [['2005-01-01', '2005-01-31'],
                    ['2005-02-01', '2005-02-31']]
-    resources:  # Currently only compatible with `bsub` environment
+    resources:
         threads:  # Set to request a non-default number of threads
         wall_time:   # Set to request a non-default run time in minutes
         memory:  # Set to request a non-default amount of memory in MB
