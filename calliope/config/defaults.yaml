@@ -38,11 +38,16 @@ techs:
             r_cap_max: inf  # Maximum installed resource <> storage conversion capacity [kW]
             r_scale: 1.0  # Scale resource by this value, default should always be 1.0 [dimensionless]
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, `false` to disable. Only works if r: file.
-            allow_rs_s: false  # Allow secondary resource during startup_time?
+            allow_rb: false  # Allow secondary resource
+            rb_startup_only: false  # Secondary resource during startup_time only
+            rb_eff: 1.0  # Secondary resource <> storage conversion efficiency [dimensionless]
+            rb_cap_max: inf  # Maximum installed secondary resource <> storage conversion capacity [kW]
+            rb_cap_max_force: false  # If true, force rb_cap to equal rb_cap_max or the chosen rb_cap_follows value
+            rb_cap_follows:  false  # Can be set to 'e_cap' or 'r_cap' to force rb_cap_max to the respective value and ignore the rb_cap_max given here, else must be false
             s_init: 0  # Initial storage level [kWh]
             s_cap_max: 0  # Maximum storage size [kWh]
             s_cap_max_force: false  # If true, force s_cap to equal s_cap_max
-            use_s_time: False  # Use full load hours for storage sizing?
+            use_s_time: false  # Use full load hours for storage sizing?
             s_time_max: 0  # Max storage time [full load hours]
             s_loss: 0  # Storage loss rate [per hour]
             cf_max: false  # Maximum capacity factor, set to false to disable
@@ -62,11 +67,13 @@ techs:
                 s_cap: 0  # Cost of storage [cost/kWh]
                 r_area: 0  # Cost of collector area [cost/m2]
                 r_cap: 0  # Cost of resource conversion capacity [cost/kW]
+                rb_cap: 0  # Cost of secondary resource conversion capacity [cost/kW]
                 e_cap: 0  # Cost of carrier conversion capacity [USD/kWe]
                 om_frac: 0  # Yearly O&M costs [fraction of total investment]
-                om_fixed: 0  # Yearly O&M costs [cost/kW installed capacity]
-                om_var: 0  # Variable O&M costs [cost/kWh]
-                om_fuel: 0  # Fuel costs [cost/kWh]
+                om_fixed: 0  # Yearly O&M costs [cost/kW of e_cap]
+                om_var: 0  # Variable O&M costs [cost/kWh of es_prod]
+                om_fuel: 0  # Fuel costs [cost/kWh of r used]
+                om_rb: 0  # Fuel costs for secondary resource [cost/kWh of rb used]
         depreciation:  # Capital depreciation settings
             plant_life: 25  # Lifetime of a plant [years]
             interest:

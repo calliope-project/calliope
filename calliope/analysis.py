@@ -68,17 +68,18 @@ def get_square_legend(lgd):
 
 
 def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
-               ticks='daily', names=None, **kwargs):
+               ticks='daily', names=None, ax=None, **kwargs):
     """
     legend can be 'default' or 'right'
     ticks can be 'hourly', 'daily', 'monthly'
 
     """
-    if not figsize:
-        figsize = (16, 4)
+    if not ax:
+        if not figsize:
+            figsize = (16, 4)
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111)
     colors = plt.get_cmap(colormap)(np.linspace(0, 1.0, len(stack)))
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111)
     fills = ax.stackplot(df.index, df[stack].T, label=stack, colors=colors,
                          **kwargs)
     # Rename the tech stack with friendly names, if given, for legend plotting
@@ -453,7 +454,7 @@ def get_hhi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
 def get_domestic_supply_index(solution):
     idx = solution.metadata.query('type == "supply"').index.tolist()
     dom = (solution.costs.domestic.loc[:, idx].sum().sum() /
-           solution.totals.loc['power', 'es_prod', :, :].sum().sum())
+           solution.totals.loc['power', 'ec_prod', :, :].sum().sum())
     return dom
 
 

@@ -1,0 +1,2 @@
+[run]
+omit = calliope/test/*, calliope/lib/*

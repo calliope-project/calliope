@@ -594,9 +594,12 @@ class Model(object):
                      + d._y_transmission)
         d._y_con = ([y for y in d._y if not self.ischild(y, of='supply')]
                     + d._y_transmission)
-        # Subset of technologies that allow rs_s
-        d._y_rs_s = [y for y in d._y
-                     if self.get_option(y + '.constraints.allow_rs_s') is True]
+        # Subset of technologies that allow rb
+        d._y_rb = [y for y in d._y
+                   if self.get_option(y + '.constraints.allow_rb') is True]
+        # Subset of technologies with parasitics (carrier efficiency != 1.0)
+        d._y_p = [y for y in d._y
+                  if self.get_option(y + '.constraints.c_eff') != 1.0]
         #
         # c: Carriers set
         #
@@ -946,8 +949,12 @@ class Model(object):
         m.y_def_r = cp.Set(initialize=d._y_def_r, within=m.y)
         # Technologies with specified `e_eff`
         m.y_def_e_eff = cp.Set(initialize=d._y_def_e_eff, within=m.y)
-        # Technologies that allow `rs_s`
-        m.y_rs_s = cp.Set(initialize=d._y_rs_s, within=m.y)
+        # Technologies that allow `rb`
+        m.y_rb = cp.Set(initialize=d._y_rb, within=m.y)
+        # Technologies with parasitics
+        m.y_p = cp.Set(initialize=d._y_p, within=m.y)
+        # Technologies without parasitics
+        m.y_np = cp.Set(initialize=set(d._y) - set(d._y_p), within=m.y)
 
         #
         # Parameters
@@ -974,8 +981,9 @@ class Model(object):
                     constraints.base.node_energy_balance,
                     constraints.base.node_constraints_build,
                     constraints.base.node_constraints_operational,
+                    constraints.base.node_constraints_transmission,
+                    constraints.base.node_parasitics,
                     constraints.base.node_costs,
-                    constraints.base.transmission_constraints,
                     constraints.base.model_constraints]
         for c in required:
             self.add_constraint(c)
@@ -1119,18 +1127,28 @@ class Model(object):
             var : variable name as string, e.g. 'es_prod'
             dims : list of indices as strings, e.g. ('y', 'x', 't');
                    if not given, they are auto-detected
+
         """
-        # WARNING: even if `dims` were given where `t` is not in the last
+        # FIXME: even if `dims` were given where `t` is not in the last
         # position, the code below assumes that `t` is in the last position,
         # and won't work otherwise. All model variables are formulated
         # so that `t` is always last, so this should not be a problem.
         m = self.m
-        var = getattr(m, var)
+        try:
+            var = getattr(m, var)
+        except AttributeError:
+            raise exceptions.ModelError('Variable {} inexistent.'.format(var))
         # Get dims
-        dims = [i.name for i in var.index_set().set_tuple]
+        if not dims:
+            # FIXME Coopr 3.5.8669 returns _unknown_ for set names
+            # if 't' is in dims so can't autodetect, but can still use
+            # length of dims
+            dims = [i.name for i in var.index_set().set_tuple]
         result = pd.DataFrame.from_dict(var.get_values(), orient='index')
+        if result.empty:
+            raise exceptions.ModelError('Variable {} has no data.'.format(var))
         result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
-        result = result[0]
+        result = result[0]  # Get the only column in the dataframe
         # Unstack and sort by time axis
         if len(dims) == 1:
             result = result.sort_index()
@@ -1170,30 +1188,39 @@ class Model(object):
                 result.major_axis = new_index
         return result
 
-    def get_e(self):
-        es_prod = self.get_var('es_prod')
-        es_con = self.get_var('es_con')
-        e = {}
-        for i in es_prod.labels:
-            e[i] = (es_prod[i].to_frame().add(es_con[i].to_frame(),
-                                              fill_value=0)).to_panel()
-        e = pd.Panel4D(e)
-        return e
+    def get_ec(self, what='prod'):
+        es = self.get_var('es_' + what)
+        try:
+            ec = self.get_var('ec_' + what)
+        except exceptions.ModelError:  # ec has no data
+            # Skip all the rest and return es straight away
+            return es
+        # For those techs that have an `ec`, replace their `es` with `ec`,
+        # for the others, `ec` is `es`, so no change needed
+        for carrier in ec.labels:
+            for tech in ec.items:
+                es[carrier][tech] = ec[carrier][tech]
+        return es  # the variable is called es, but the thing is now ec
 
-    # def get_system_variables(self):
-    #     e = self.get_e()
-    #     e = e.sum(axis=3).transpose(0, 2, 1)
-    #     return e
+    def get_ec_sum(self):
+        prod = self.get_ec('prod')
+        con = self.get_ec('con')
+        ec = {}
+        for i in prod.labels:
+            ec[i] = (prod[i].to_frame().add(con[i].to_frame(),
+                                            fill_value=0)).to_panel()
+        return pd.Panel4D(ec)
 
     def get_node_variables(self):
+        detail = ['s', 'rs']
+        p = pd.Panel4D({v: self.get_var(v) for v in detail})
         try:
-            detail = ['s', 'rs', 'rs_']
-            p = pd.Panel4D({v: self.get_var(v) for v in detail})
-        except AttributeError:
-            detail = ['s', 'rs']
-            p = pd.Panel4D({v: self.get_var(v) for v in detail})
+            p['rbs'] = self.get_var('rbs')
+        except exceptions.ModelError:
+            # `rbs` doesn't exist in the model or exists without data
+            pass
         # Add 'e:c' items for each c in carrier
-        temp = self.get_e()
+        temp = self.get_ec_sum()
         for c in self.data._c:
             p['e' + ':' + c] = temp.loc[c, :, :, :]
         return p
@@ -1202,9 +1229,13 @@ class Model(object):
         """If built_only is True, disregard locations where e_cap==0"""
         detail = ['s_cap', 'r_cap', 'r_area', 'e_cap', 'e_cap_net']
         result = pd.Panel({v: self.get_var(v) for v in detail})
+        try:
+            result['rb_cap'] = self.get_var('rb_cap')
+        except exceptions.ModelError:
+            pass
         if built_only:
             result = result.to_frame()
-            result = result[result.e_cap > 0].dropna(axis=1)
+            result = result[result.e_cap > 0].dropna(axis=1).to_panel()
         return result
 
     def get_costs(self, t_subset=None):
@@ -1232,6 +1263,7 @@ class Model(object):
         cost = cost * len_adjust
         cost_var = T(self.get_var('cost_op_var'))
         cost_fuel = T(self.get_var('cost_op_fuel'))
+        cost_rb = T(self.get_var('cost_op_rb'))
         # Adjust for the fact that var and fuel costs are only accrued over
         # the t_subset period
         if t_subset:
@@ -1242,17 +1274,26 @@ class Model(object):
             rs = self.get_var('rs')
             cost_fuel = cost_fuel.multiply(_factor(rs, t_subset),
                                            axis='items')
-        cost = cost.add(cost_var).add(cost_fuel)
+            try:
+                rbs = self.get_var('rbs')
+                cost_rb = cost_rb.multiply(_factor(rbs, t_subset),
+                                           axis='items')
+            except exceptions.ModelError:
+                pass  # If rbs doesn't exist in the data, ModelError is raised,
+                # and we simply move on...
+        cost = cost.add(cost_var).add(cost_fuel).add(cost_rb)
         return cost
 
     def get_totals(self, t_subset=None):
         """Get total produced and consumed per technology and location."""
         if t_subset is None:
             t_subset = slice(None)
-        p = pd.Panel4D({e: self.get_var(e)
+        p = pd.Panel4D({'ec_' + i: self.get_ec(i)
                         .iloc[:, :, t_subset, :]
                         .sum(axis='major')
-                        for e in ['es_prod', 'es_con']})
+                        for i in ['prod', 'con']})
+        for i in ['es_prod', 'es_con']:
+            p[i] = self.get_var(i).iloc[:, :, t_subset, :].sum(axis='major')
         p = p.transpose('items', 'labels', 'minor_axis', 'major_axis')
         return p
 
@@ -1269,10 +1310,10 @@ class Model(object):
             p = {}
             for carrier in self.data._c:
                 # Levelized cost of electricity (LCOE)
-                lc = sol.costs[cost] / sol.totals[carrier].es_prod
+                lc = sol.costs[cost] / sol.totals[carrier].ec_prod
                 lc[np.isinf(lc)] = 0
                 lc.loc['total', :] = (sol.costs[cost].sum(0)
-                                      / sol.totals[carrier].es_prod.sum(0))
+                                      / sol.totals[carrier].ec_prod.sum(0))
                 p[carrier] = lc
             p4d[cost] = pd.Panel(p)
         return pd.Panel4D(p4d)
@@ -1294,8 +1335,8 @@ class Model(object):
                 time_res_sum = self.data.time_res_sum
             except KeyError:
                 time_res_sum = sum(time_res.at[t] for t in m.t)
-            cf = sol.totals[carrier].es_prod / (e_cap * time_res_sum)
-            cf.loc['total', :] = (sol.totals[carrier].es_prod.sum(0)
+            cf = sol.totals[carrier].ec_prod / (e_cap * time_res_sum)
+            cf.loc['total', :] = (sol.totals[carrier].ec_prod.sum(0)
                                   / (e_cap.sum(0) * time_res_sum))
             cf = cf.fillna(0)
             cfs[carrier] = cf
@@ -1321,8 +1362,8 @@ class Model(object):
             # .loc[cost_class, carrier, location, tech]
             df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
         # Add totals per carrier
-        df['production'] = sol.totals.loc[carrier, 'es_prod', :, :].sum(0)
-        df['consumption'] = sol.totals.loc[carrier, 'es_con', :, :].sum(0)
+        df['production'] = sol.totals.loc[carrier, 'ec_prod', :, :].sum(0)
+        df['consumption'] = sol.totals.loc[carrier, 'ec_con', :, :].sum(0)
         # Add other carrier-independent stuff
         df['capacity'] = sol.parameters['e_cap'].sum()
         df['area'] = sol.parameters['r_area'].sum()
