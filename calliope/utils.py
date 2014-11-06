@@ -134,7 +134,7 @@ class AttrDict(dict):
 
         """
         if '.' in key:
-        # Nested key of form "foo.bar"
+            # Nested key of form "foo.bar"
             key, remainder = key.split('.', 1)
             if default is not None:
                 try:
@@ -148,7 +148,7 @@ class AttrDict(dict):
             else:
                 value = self[key].get_key(remainder)
         else:
-        # Single, non-nested key of form "foo"
+            # Single, non-nested key of form "foo"
             if default is not None:
                 return self.get(key, default)
             else:
@@ -329,33 +329,34 @@ def option_getter(config_model, data):
 
     def get_option(option, x=None, default=None, ignore_inheritance=False):
 
-        def _get_option(option):
+        def _get_option(opt, fail=False):
             try:
-                result = o.get_key('techs.' + option)
+                result = o.get_key('techs.' + opt)
             except KeyError:
                 if ignore_inheritance:
-                    return _get_option(default)
-                # Example: 'ccgt.costs.om_var'
-                tech = option.split('.')[0]  # 'ccgt'
-                # 'costs.om_var'
-                remainder = '.'.join(option.split('.')[1:])
+                    return _get_option(default, fail)
+                # 'ccgt.constraints.s_time' -> 'ccgt', 'constraints.s_time'
+                tech, remainder = opt.split('.', 1)
                 if ':' in tech:
                     parent = tech.split(':')[0]
                 else:
                     # parent = e.g. 'defaults'
                     parent = o.get_key('techs.' + tech + '.parent')
                 try:
-                    result = _get_option(parent + '.' + remainder)
+                    result = _get_option(parent + '.' + remainder, fail)
                 except KeyError:
-                    if default:
-                        result = _get_option(default)
+                    e = exceptions.OptionNotSetError
+                    if fail:
+                        raise e('Failed to read option `{}` '
+                                'with given default '
+                                '`{}`'.format(option, default))
+                    elif default:
+                        result = _get_option(default, fail=True)
                     elif tech == 'defaults':
-                        e = exceptions.OptionNotSetError
                         raise e('Reached top of inheritance chain '
                                 'and no default defined for: '
                                 '`{}`'.format(option))
                     else:
-                        e = exceptions.OptionNotSetError
                         raise e('Can not get parent for `{}` '
                                 'and no default defined '
                                 '({}).'.format(tech, option))
