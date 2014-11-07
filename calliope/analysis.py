@@ -25,7 +25,7 @@ import pandas as pd
 from . import utils
 
 
-def legend_on_right(ax, style='default', artists=None, labels=None):
+def legend_on_right(ax, style='default', artists=None, labels=None, **kwargs):
     """Draw a legend on outside on the right of the figure given by 'ax'"""
     box = ax.get_position()
     # originally box.width * 0.8 but 1.0 solves some problems
@@ -34,29 +34,30 @@ def legend_on_right(ax, style='default', artists=None, labels=None):
     if style == 'square':
         artists, labels = get_square_legend(ax.legend())
         l = ax.legend(artists, labels, loc='center left',
-                      bbox_to_anchor=(1, 0.5))
+                      bbox_to_anchor=(1, 0.5), **kwargs)
     elif style == 'custom':
         l = ax.legend(artists, labels, loc='center left',
-                      bbox_to_anchor=(1, 0.5))
+                      bbox_to_anchor=(1, 0.5), **kwargs)
     else:
-        l = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        l = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), **kwargs)
     return l
 
 
-def legend_below(ax, style='default', columns=5, artists=None, labels=None):
+def legend_below(ax, style='default', columns=5, artists=None, labels=None,
+                 **kwargs):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0 + box.height * 0.1,
                      box.width, box.height * 0.9])
     if style == 'square':
         artists, labels = get_square_legend(ax.legend())
         l = ax.legend(artists, labels, loc='upper center',
-                      bbox_to_anchor=(0.5, -0.05), ncol=columns)
+                      bbox_to_anchor=(0.5, -0.05), ncol=columns, **kwargs)
     elif style == 'custom':
         l = ax.legend(artists, labels, loc='upper center',
-                      bbox_to_anchor=(0.5, -0.05), ncol=columns)
+                      bbox_to_anchor=(0.5, -0.05), ncol=columns, **kwargs)
     else:
         l = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-                      ncol=columns)
+                      ncol=columns, **kwargs)
     return l
 
 
@@ -68,10 +69,13 @@ def get_square_legend(lgd):
 
 
 def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
-               ticks='daily', names=None, ax=None, **kwargs):
+               ticks='daily', names=None, ax=None, leg_title=None,
+               leg_fontsize=None, **kwargs):
     """
-    legend can be 'default' or 'right'
+    legend can be 'default' or 'right', can set legend title with `leg_title`
     ticks can be 'hourly', 'daily', 'monthly'
+
+    kwargs get passed to ax.stackplot()
 
     """
     if not ax:
@@ -90,10 +94,13 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
     proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])
                for i in fills]
     if legend == 'default':
-        ax.legend(reversed(proxies), reversed(stack))
+        l = ax.legend(reversed(proxies), reversed(stack), title=leg_title)
     elif legend == 'right':
-        legend_on_right(ax, artists=reversed(proxies), labels=reversed(stack),
-                        style='custom')
+        l = legend_on_right(ax, artists=reversed(proxies),
+                            labels=reversed(stack),
+                            style='custom', title=leg_title)
+    if leg_title and leg_fontsize:
+        plt.setp(l.get_title(), fontsize=leg_fontsize)
     # Format x datetime axis
     # Based on http://stackoverflow.com/a/9627970/397746
     import matplotlib.dates as mdates
