@@ -112,3 +112,17 @@ def reshape_results(results, table, iterations, column, row):
     than a panel
     """
     return results['table'].loc[iterations, column, row]
+
+
+def aggregate_parameters(solution, iterations=None, how='max'):
+    """
+    Get aggregated plant sizes across all planning runs.
+    Used for operational runs.
+
+    """
+    if not iterations:
+        iterations = solution.iterations.index.tolist()
+    solution_panel = pd.Panel4D({i: solution.solutions[i].parameters
+                                 for i in iterations})
+    aggregator = getattr(solution_panel, how)
+    return aggregator(axis=0)

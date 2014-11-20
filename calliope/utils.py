@@ -25,7 +25,8 @@ from . import exceptions
 
 
 class AttrDict(dict):
-    """A subclass of ``dict`` with key access by attributes::
+    """
+    A subclass of ``dict`` with key access by attributes::
 
         d = AttrDict({'a': 1, 'b': 2})
         d.a == 1  # True
@@ -48,7 +49,8 @@ class AttrDict(dict):
         return AttrDict(dict(self).copy())
 
     def init_from_dict(self, d):
-        """Initialize a new AttrDict from the given dict. Handles any
+        """
+        Initialize a new AttrDict from the given dict. Handles any
         nested dicts by turning them into AttrDicts too::
 
             d = AttrDict({'a': 1, 'b': {'x': 1, 'y': 2}})
@@ -65,7 +67,8 @@ class AttrDict(dict):
 
     @classmethod
     def from_yaml(cls, f, resolve_imports=True):
-        """Returns an AttrDict initialized from the given path or
+        """
+        Returns an AttrDict initialized from the given path or
         file object ``f``, which must point to a YAML file.
 
         If ``resolve_imports`` is True, ``import:`` statements are
@@ -92,14 +95,16 @@ class AttrDict(dict):
 
     @classmethod
     def from_yaml_string(cls, string):
-        """Returns an AttrDict initialized from the given string, which
+        """
+        Returns an AttrDict initialized from the given string, which
         must be valid YAML.
 
         """
         return cls(yaml.load(string))
 
     def set_key(self, key, value):
-        """Set the given ``key`` to the given ``value``. Handles nested
+        """
+        Set the given ``key`` to the given ``value``. Handles nested
         keys, e.g.::
 
             d = AttrDict()
@@ -126,7 +131,8 @@ class AttrDict(dict):
             self[key] = value
 
     def get_key(self, key, default=None):
-        """Looks up the given ``key``. Like set_key(), deals with nested
+        """
+        Looks up the given ``key``. Like set_key(), deals with nested
         keys.
 
         If default is given and not None (it may be, for example, False),
@@ -155,8 +161,20 @@ class AttrDict(dict):
                 return self[key]
         return value
 
+    def del_key(self, key):
+        """Delete the given key. Properly deals with nested keys."""
+        if '.' in key:
+            key, remainder = key.split('.', 1)
+            try:
+                del self[key][remainder]
+            except KeyError:
+                self[key].del_key(remainder)
+        else:
+            del self[key]
+
     def as_dict(self):
-        """Return the AttrDict as a pure dict (with nested dicts if
+        """
+        Return the AttrDict as a pure dict (with nested dicts if
         necessary).
 
         """
@@ -168,21 +186,41 @@ class AttrDict(dict):
                 d[k] = v
         return d
 
-    def to_yaml(self, path, convert_objects=False):
-        """Saves the AttrDict to the given path as YAML file"""
-        for k in self.keys_nested():
-            if convert_objects:
+    def to_yaml(self, path=None, convert_objects=True, **kwargs):
+        """
+        Saves the AttrDict to the given path as a YAML file.
+
+        If ``path`` is None, returns the YAML string instead.
+
+        Any additional keyword arguments are passed to the YAML writer,
+        so can use e.g. ``indent=4`` to override the default of 2.
+
+        ``convert_objects`` (defaults to True) controls whether Numpy
+        objects should be converted to regular Python objects, so that
+        they are properly displayed in the resulting YAML output.
+
+        """
+        if convert_objects:
+            result = self.copy()
+            for k in result.keys_nested():
                 # Convert numpy numbers to regular python ones
-                v = self.get_key(k)
+                v = result.get_key(k)
                 if isinstance(v, np.float):
-                    self.set_key(k, float(v))
+                    result.set_key(k, float(v))
                 elif isinstance(v, np.int):
-                    self.set_key(k, int(v))
-        with open(path, 'w') as f:
-            yaml.dump(self.as_dict(), f)
+                    result.set_key(k, int(v))
+            result = result.as_dict()
+        else:
+            result = self.as_dict()
+        if path is not None:
+            with open(path, 'w') as f:
+                yaml.dump(result, f, **kwargs)
+        else:
+            return yaml.dump(result, **kwargs)
 
     def keys_nested(self, subkeys_as='list'):
-        """Returns all keys in the AttrDict, including the keys of
+        """
+        Returns all keys in the AttrDict, including the keys of
         nested subdicts (which may be either regular dicts or AttrDicts).
 
         If ``subkeys_as='list'`` (default), then a (sorted) list of
@@ -194,7 +232,7 @@ class AttrDict(dict):
 
         """
         keys = []
-        for k, v in self.iteritems():
+        for k, v in self.iteritems():  # FIXME change to sorted(self.iteritems()) to always  give alphabetic sorting of resulting keys list, even if subkeys_as='dict'?
             if isinstance(v, AttrDict) or isinstance(v, dict):
                 if subkeys_as == 'list':
                     keys.extend([k + '.' + kk for kk in v.keys_nested()])
@@ -206,7 +244,7 @@ class AttrDict(dict):
 
     def union(self, other, allow_override=False):
         """
-        Merges the AttrDict in-place with the passed ``other`` dict or
+        Merges the AttrDict in-place with the passed ``other``
         AttrDict. Keys in ``other`` take precedence, and nested keys
         are properly handled. If ``allow_override`` is False, a
         KeyError is raised if other tries to redefine an already
@@ -222,7 +260,8 @@ class AttrDict(dict):
 
 @contextmanager
 def capture_output():
-    """Capture stdout and stderr output of a wrapped function::
+    """
+    Capture stdout and stderr output of a wrapped function::
 
         with capture_output() as out:
             # do things that create stdout or stderr output
@@ -243,7 +282,8 @@ def capture_output():
 
 
 def memoize(f):
-    """ Memoization decorator for a function taking one or more
+    """
+    Memoization decorator for a function taking one or more
     arguments.
 
     """
@@ -259,7 +299,8 @@ def memoize(f):
 
 
 class memoize_instancemethod(object):
-    """Cache the return value of a method
+    """
+    Cache the return value of a method
 
     Source: http://code.activestate.com/recipes/577452/
 
@@ -296,7 +337,8 @@ class memoize_instancemethod(object):
 
 
 def replace(string, placeholder, replacement):
-    """Replace all occurences of ``{{placeholder}}`` or
+    """
+    Replace all occurences of ``{{placeholder}}`` or
     ``{{ placeholder }}`` in ``string`` with ``replacement``.
 
     """
