@@ -23,7 +23,8 @@ from . import utils
 
 REQUIRED_KEYS = ['capacity_factor', 'costs', 'levelized_cost',
                  'locations', 'metadata', 'node', 'parameters',
-                 'shares', 'summary', 'time_res', 'totals']
+                 'shares', 'summary', 'time_res', 'totals', 'config_model',
+                 'config_run']
 
 
 def read_hdf(hdf_file, tables_to_read=None):
@@ -33,17 +34,19 @@ def read_hdf(hdf_file, tables_to_read=None):
     if not tables_to_read:
         # Make sure leading/trailing '/' are removed from keys
         tables_to_read = [k.strip('/') for k in store.keys()]
+        # And don't read the 'config' key (yet)
+        tables_to_read.remove('config')
     for k in tables_to_read:
         solution[k] = store.get(k)
+    # Also add model and run config to the solution object, which are stored
+    # as strings in a Series in the 'config' key
+    for k in ['config_model', 'config_run']:
+        solution[k] = utils.AttrDict.from_yaml_string(store.get('config')[k])
+    # Check if any keys are missing
     missing_keys = set(REQUIRED_KEYS) - set(solution.keys())
     if len(missing_keys) > 0:
         raise IOError('HDF file missing keys: {}'.format(missing_keys))
     store.close()
-    # Also add model and run config to the solution object
-    solution['config_run'] = utils.AttrDict.from_yaml(hdf_file
-                                                      + '.config_run.yaml')
-    solution['config_model'] = utils.AttrDict.from_yaml(hdf_file
-                                                        + '.config_model.yaml')
     return solution
 
 

@@ -1476,17 +1476,19 @@ class Model(object):
             raise e('Could not load results into model instance.')
 
     def save_solution(self, how='hdf'):
-        """Save model solution. ``how`` can be ``'hdf'`` or ``'csv'``"""
+        """Save model solution. ``how`` can be 'hdf' or 'csv'
+
+        CSV is supported for legacy purposes but usually, the
+        default HDF option should be used.
+
+        """
         # Create output dir, but ignore if it already exists
         try:
             os.makedirs(self.config_run.output.path)
         except OSError:  # Hoping this isn't raised for more serious stuff
             pass
         if how == 'hdf':
-            store_file = self._save_hdf()
-            # Also save model and run configuration
-            self.config_run.to_yaml(store_file + '.config_run.yaml')
-            self.config_model.to_yaml(store_file + '.config_model.yaml')
+            self._save_hdf()
         elif how == 'csv':
             self._save_csv()
         else:
@@ -1524,6 +1526,9 @@ class Model(object):
         for key in [k for k in sol if k not in ['config_model', 'config_run']]:
             # Use .append instead of .add for Panel4D compatibility
             store.append(key, sol[key])
+        # Now, save config_model and config_run as YAML strings
+        config = pd.Series({key: sol[key].to_yaml() for key in ['config_model', 'config_run']})
+        store.append('config', config)
         store.close()
         # Return the path we used
         return store_file
@@ -1553,3 +1558,8 @@ class Model(object):
         # Write all files to output dir
         for k, v in output_files.iteritems():
             v.to_csv(os.path.join(self.config_run.output.path, k))
+        # Also save model and run configuration
+        self.config_run.to_yaml(os.path.join(self.config_run.output.path,
+                                             'config_run.yaml'))
+        self.config_model.to_yaml(os.path.join(self.config_run.output.path,
+                                               'config_model.yaml'))
