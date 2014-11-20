@@ -5,6 +5,9 @@ import pytest
 import tempfile
 
 from calliope.utils import AttrDict
+
+from calliope import analysis
+
 import common
 from common import assert_almost_equal, solver
 
@@ -45,15 +48,11 @@ class TestModel:
         model.run()
         return model
 
-    def test_model_solves(self, model):
-        assert str(model.results.solver.termination_condition) == 'optimal'
-
-    def test_model_balanced(self, model):
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum(1).mean() == 50
-        assert (df.loc['e:power', 'ccgt', :, :].sum(1) ==
-                -1 * df.loc['e:power', 'demand_electricity', :, :].sum(1)).all()
-
-    def test_model_costs(self, model):
+    def test_recompute_levelized_costs(self, model):
+        # Cost in solution
         df = model.solution.levelized_cost
         assert_almost_equal(df.at['monetary', 'power', 'total', 'ccgt'], 0.1)
+        # Recomputed cost must be the same
+        dm = analysis.DummyModel(model.solution)
+        recomputed = dm.recompute_levelized_costs('ccgt')
+        assert_almost_equal(recomputed['total'], 0.1)

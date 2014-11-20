@@ -1218,7 +1218,7 @@ class Model(object):
             p['rbs'] = self.get_var('rbs')
         except exceptions.ModelError:
             # `rbs` doesn't exist in the model or exists without data
-            pass
+            p['rbs'] = 0
         # Add 'e:c' items for each c in carrier
         temp = self.get_ec_sum()
         for c in self.data._c:
@@ -1232,7 +1232,7 @@ class Model(object):
         try:
             result['rb_cap'] = self.get_var('rb_cap')
         except exceptions.ModelError:
-            pass
+            result['rb_cap'] = 0
         if built_only:
             result = result.to_frame()
             result = result[result.e_cap > 0].dropna(axis=1).to_panel()

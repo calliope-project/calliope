@@ -511,3 +511,126 @@ def solution_to_constraints(solution, fillna=None):
                         solution.parameters.at['e_cap', x, y], fillna)
 
     return d
+
+
+class DummyModel(object):
+    def __init__(self, solution):
+        """
+        Create a dummy model object from a model solution,
+        which gives direct access to the ``config_model`` AttrDict and
+        the ``get_option``, ``get_cost``, and ``get_depreciation``
+        methods.
+
+        Furthermore, it provides several ``recompute_`` methods
+        to recalculate costs for a given technology after modifying the
+        underlying data.
+
+        """
+        self.config_model = solution.config_model
+        self.solution = solution
+
+        # Add getters
+        self._get_option = utils.option_getter(self.config_model, solution)
+        self._get_cost = utils.cost_getter(self._get_option)
+        self._get_dep = utils.depreciation_getter(self._get_option)
+
+    def get_option(self, *args, **kwargs):
+        return self._get_option(*args, **kwargs)
+
+    def get_cost(self, *args, **kwargs):
+        return self._get_cost(*args, **kwargs)
+
+    def get_depreciation(self, *args, **kwargs):
+        return self._get_dep(*args, **kwargs)
+
+    def recompute_investment_costs(self, y, k='monetary',
+                                   cost_adjustment=1.0):
+        """
+        Recompute investment costs for the given technology ``y``.
+
+        ``cost_adjustment`` allows linear scaling of the costs by the
+        given amount.
+
+        """
+        get_cost = self.get_cost
+        solution = self.solution
+        cost_con = pd.DataFrame()
+        cost_con['e_cap'] = (get_cost('e_cap', y, k)
+                             * solution.parameters['e_cap'][y])
+        cost_con['r_cap'] = (get_cost('r_cap', y, k)
+                             * solution.parameters['r_cap'][y])
+        cost_con['r_area'] = (get_cost('r_area', y, k)
+                              * solution.parameters['r_area'][y])
+        cost_con['rb_cap'] = (get_cost('rb_cap', y, k)
+                              * solution.parameters['rb_cap'][y])
+        cost_con['s_cap'] = (get_cost('s_cap', y, k)
+                             * solution.parameters['s_cap'][y])
+        cost_con['total'] = cost_con.sum(axis=1)
+        cost_con['total_per_kW'] = (cost_con['total']
+                                    / solution.parameters['e_cap'][y])
+        cost_con.at['total', 'total'] = cost_con['total'].sum()
+        total_per_kW = (cost_con.at['total', 'total']
+                        / solution.parameters['e_cap'][y].sum())
+        cost_con.at['total', 'total_per_kW'] = total_per_kW
+        return cost_con * cost_adjustment
+
+    def recompute_operational_costs(self, y, k='monetary', carrier='power',
+                                    cost_adjustment=1.0):
+        """
+        Recompute operational costs for the given technology ``y``.
+
+        ``cost_adjustment`` lineary scales the construction costs used
+        internally, but is not applied to the rest of the operational
+        costs.
+
+        """
+        get_cost = self.get_cost
+        get_depreciation = self.get_depreciation
+        solution = self.solution
+        # Here we want gross production
+        production = solution.totals[carrier].es_prod[y]
+        fuel = (solution.node.loc['rs', y, :, :].sum()
+                / self.get_option(y + '.constraints.r_eff'))
+        fuel_rb = (solution.node.loc['rbs', y, :, :].sum()
+                   / self.get_option(y + '.constraints.rb_eff'))
+        icf = self.recompute_investment_costs
+        cost_con = icf(y, k=k, cost_adjustment=cost_adjustment)['total'].sum()
+        cost_op = pd.DataFrame()
+        cost_op['om_frac'] = (get_cost('om_frac', y, k) * cost_con
+                              * get_depreciation(y, k)
+                              * (solution.time_res.sum() / 8760))
+        cost_op['om_fixed'] = (get_cost('om_fixed', y, k)
+                               * solution.parameters['e_cap'][y]
+                               * (sum(solution.time_res) / 8760))
+        cost_op['om_var'] = get_cost('om_var', y, k) * production
+        cost_op['om_fuel'] = get_cost('om_fuel', y, k) * fuel
+        cost_op['om_rb'] = get_cost('om_rb', y, k) * fuel_rb
+        cost_op['total'] = cost_op.sum(axis=1)
+        return cost_op
+
+    def recompute_levelized_costs(self, y, k='monetary', carrier='power',
+                                  cost_adjustment=1.0):
+        """
+        Recompute levelized costs for the given technology ``y``.
+
+        ``cost_adjustment`` lineary scales the construction costs used
+        internally to compute levelized costs.
+
+        """
+        get_depreciation = self.get_depreciation
+        solution = self.solution
+        icf = self.recompute_investment_costs
+        cost_con = icf(y, k=k, cost_adjustment=cost_adjustment)['total']
+        ocf = self.recompute_operational_costs
+        cost_op = ocf(y, k=k, carrier=carrier,
+                      cost_adjustment=cost_adjustment)['total']
+        # Here we want net production
+        production = solution.totals[carrier].ec_prod[y]
+        lc = (get_depreciation(y, k) * (solution.time_res.sum() / 8760)
+              * cost_con + cost_op) / production
+        lc.at['total'] = (get_depreciation(y, k)
+                          * (solution.time_res.sum() / 8760)
+                          * cost_con.total
+                          # * cost_con.drop(['total'], axis=0).sum()
+                          + cost_op.sum()) / production.sum()
+        return lc
