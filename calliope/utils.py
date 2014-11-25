@@ -10,11 +10,8 @@ of regular dict) used for managing model configuration.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 from contextlib import contextmanager
-from cStringIO import StringIO
+from io import StringIO
 import functools
 import os
 
@@ -57,7 +54,7 @@ class AttrDict(dict):
             d.b.x == 1  # True
 
         """
-        for k, v in d.iteritems():
+        for k, v in d.items():
             if isinstance(k, int):
                 k = str(k)  # Keys must be strings, not ints
             if isinstance(v, dict):
@@ -78,7 +75,7 @@ class AttrDict(dict):
         overrides definitions in the imported file.
 
         """
-        if isinstance(f, basestring):
+        if isinstance(f, str):
             with open(f, 'r') as src:
                 loaded = cls(yaml.load(src))
         else:
@@ -179,7 +176,7 @@ class AttrDict(dict):
 
         """
         d = {}
-        for k, v in self.iteritems():
+        for k, v in self.items():
             if isinstance(v, AttrDict):
                 d[k] = v.as_dict()
             else:
@@ -220,19 +217,18 @@ class AttrDict(dict):
 
     def keys_nested(self, subkeys_as='list'):
         """
-        Returns all keys in the AttrDict, including the keys of
+        Returns all keys in the AttrDict, sorted, including the keys of
         nested subdicts (which may be either regular dicts or AttrDicts).
 
-        If ``subkeys_as='list'`` (default), then a (sorted) list of
-        all keys is returned, in the form ``['a', 'b.b1']``.
+        If ``subkeys_as='list'`` (default), then a list of
+        all keys is returned, in the form ``['a', 'b.b1', 'b.b2']``.
 
         If ``subkeys_as='dict'``, a list containing keys and dicts of
-        subkeys is returned, in the form ``['a', {'b': [b1]}]``. The list
-        is sorted (subdicts first, then string keys).
+        subkeys is returned, in the form ``['a', {'b': ['b1', 'b2']}]``.
 
         """
         keys = []
-        for k, v in self.iteritems():  # FIXME change to sorted(self.iteritems()) to always  give alphabetic sorting of resulting keys list, even if subkeys_as='dict'?
+        for k, v in sorted(self.items()):
             if isinstance(v, AttrDict) or isinstance(v, dict):
                 if subkeys_as == 'list':
                     keys.extend([k + '.' + kk for kk in v.keys_nested()])
@@ -240,7 +236,7 @@ class AttrDict(dict):
                     keys.append({k: v.keys_nested(subkeys_as=subkeys_as)})
             else:
                 keys.append(k)
-        return sorted(keys)
+        return keys
 
     def union(self, other, allow_override=False):
         """
@@ -328,7 +324,7 @@ class memoize_instancemethod(object):
             cache = obj.__cache
         except AttributeError:
             cache = obj.__cache = {}
-        key = (self.func, args[1:], frozenset(kw.items()))
+        key = (self.func, args[1:], frozenset(list(kw.items())))
         try:
             res = cache[key]
         except KeyError:
@@ -358,7 +354,7 @@ def _resolve_path(base_path, path):
 
 
 def ensure_absolute(path, base_path):
-    if not os.path.isabs(path) and isinstance(base_path, basestring):
+    if not os.path.isabs(path) and isinstance(base_path, str):
         return os.path.join(os.path.dirname(base_path), path)
     else:
         return path

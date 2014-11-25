@@ -1,12 +1,9 @@
-from __future__ import print_function
-from __future__ import division
-
 import pytest
 import tempfile
 
 from calliope.utils import AttrDict
-import common
-from common import assert_almost_equal, solver
+from . import common
+from .common import assert_almost_equal, solver
 
 
 class TestModel:
@@ -43,7 +40,7 @@ class TestModel:
             subset_t: ['2005-01-01', '2005-01-03']
         """
         with tempfile.NamedTemporaryFile() as f:
-            f.write(locations)
+            f.write(locations.encode('utf-8'))
             f.read()
             model = common.simple_model(config_run=config_run,
                                         config_locations=f.name,

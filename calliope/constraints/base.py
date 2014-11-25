@@ -9,10 +9,7 @@ Basic model constraints.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
-import coopr.pyomo as cp
+import pyomo.core as po
 import numpy as np
 
 from .. import exceptions
@@ -39,9 +36,9 @@ def node_resource(model):
         return availability
 
     # Variables
-    m.rs = cp.Var(m.y, m.x, m.t, within=cp.Reals)
-    m.r_area = cp.Var(m.y_def_r, m.x, within=cp.NonNegativeReals)
-    m.rbs = cp.Var(m.y_rb, m.x, m.t, within=cp.NonNegativeReals)
+    m.rs = po.Var(m.y, m.x, m.t, within=po.Reals)
+    m.r_area = po.Var(m.y_def_r, m.x, within=po.NonNegativeReals)
+    m.rbs = po.Var(m.y_rb, m.x, m.t, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_rs_rule(m, y, x, t):
@@ -56,7 +53,7 @@ def node_resource(model):
         # re-evaluated on model re-construction -- we now check for
         # demand/supply tech instead, which means that `r` can only
         # be ALL negative or ALL positive for a given tech!
-        # elif cp.value(m.r[y, x, t]) > 0:
+        # elif po.value(m.r[y, x, t]) > 0:
         elif (y in model.get_group_members('supply') or
               y in model.get_group_members('unmet_demand')):
             # Supply technologies make use of availability
@@ -67,7 +64,7 @@ def node_resource(model):
             return m.rs[y, x, t] == 0
 
     # Constraints
-    m.c_rs = cp.Constraint(m.y_def_r, m.x, m.t)
+    m.c_rs = po.Constraint(m.y_def_r, m.x, m.t, rule=c_rs_rule)
 
 
 def node_energy_balance(model):
@@ -99,9 +96,9 @@ def node_energy_balance(model):
             return 1.0
 
     # Variables
-    m.s = cp.Var(m.y_pc, m.x, m.t, within=cp.NonNegativeReals)
-    m.es_prod = cp.Var(m.c, m.y, m.x, m.t, within=cp.NonNegativeReals)
-    m.es_con = cp.Var(m.c, m.y, m.x, m.t, within=cp.NegativeReals)
+    m.s = po.Var(m.y_pc, m.x, m.t, within=po.NonNegativeReals)
+    m.es_prod = po.Var(m.c, m.y, m.x, m.t, within=po.NonNegativeReals)
+    m.es_con = po.Var(m.c, m.y, m.x, m.t, within=po.NegativeReals)
 
     # Constraint rules
     def c_s_balance_transmission_rule(m, y, x, t):
@@ -113,7 +110,7 @@ def node_energy_balance(model):
                     * get_e_eff(m, y, x, t)
                     * get_e_eff_per_distance(model, y, x))
         else:
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
 
     def c_s_balance_conversion_rule(m, y, x, t):
         c_prod = model.get_option(y + '.carrier')
@@ -125,7 +122,7 @@ def node_energy_balance(model):
         e_eff = get_e_eff(m, y, x, t)
         # TODO once Pyomo supports it,
         # let this update conditionally on param update!
-        if cp.value(e_eff) == 0:
+        if po.value(e_eff) == 0:
             e_prod = 0
         else:
             e_prod = sum(m.es_prod[c, y, x, t] for c in m.c) / e_eff
@@ -156,9 +153,11 @@ def node_energy_balance(model):
                     + rbs - e_prod - e_con)
 
     # Constraints
-    m.c_s_balance_transmission = cp.Constraint(m.y_trans, m.x, m.t)
-    m.c_s_balance_conversion = cp.Constraint(m.y_conv, m.x, m.t)
-    m.c_s_balance_pc = cp.Constraint(m.y_pc, m.x, m.t)
+    m.c_s_balance_transmission = \
+        po.Constraint(m.y_trans, m.x, m.t, rule=c_s_balance_transmission_rule)
+    m.c_s_balance_conversion = \
+        po.Constraint(m.y_conv, m.x, m.t, rule=c_s_balance_conversion_rule)
+    m.c_s_balance_pc = po.Constraint(m.y_pc, m.x, m.t, rule=c_s_balance_pc_rule)
 
 
 def node_constraints_build(model):
@@ -176,11 +175,11 @@ def node_constraints_build(model):
     d = model.data
 
     # Variables
-    m.s_cap = cp.Var(m.y_pc, m.x, within=cp.NonNegativeReals)
-    m.r_cap = cp.Var(m.y_def_r, m.x, within=cp.NonNegativeReals)
-    m.e_cap = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.e_cap_net = cp.Var(m.y, m.x, within=cp.NonNegativeReals)
-    m.rb_cap = cp.Var(m.y_rb, m.x, within=cp.NonNegativeReals)
+    m.s_cap = po.Var(m.y_pc, m.x, within=po.NonNegativeReals)
+    m.r_cap = po.Var(m.y_def_r, m.x, within=po.NonNegativeReals)
+    m.e_cap = po.Var(m.y, m.x, within=po.NonNegativeReals)
+    m.e_cap_net = po.Var(m.y, m.x, within=po.NonNegativeReals)
+    m.rb_cap = po.Var(m.y_rb, m.x, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
@@ -202,7 +201,7 @@ def node_constraints_build(model):
     def c_r_cap_rule(m, y, x):
         r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
         if np.isinf(r_cap_max):
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
         elif model.mode == 'plan':
             return m.r_cap[y, x] <= r_cap_max
         elif model.mode == 'operate':
@@ -231,7 +230,7 @@ def node_constraints_build(model):
         if not d.locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
         elif np.isinf(e_cap_max):
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
         elif e_cap_max_force or model.mode == 'operate':
             return m.e_cap[y, x] == e_cap_max * e_cap_max_scale
         elif model.mode == 'plan':
@@ -260,19 +259,19 @@ def node_constraints_build(model):
             rb_cap_max = model.get_option(y + '.constraints.rb_cap_max', x=x)
         # Then return the appropriate constraint
         if np.isinf(rb_cap_max):
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
         elif force or model.mode == 'operate':
             return m.rb_cap[y, x] == rb_cap_max
         elif model.mode == 'plan':
             return m.rb_cap[y, x] <= rb_cap_max
 
     # Constraints
-    m.c_s_cap = cp.Constraint(m.y_pc, m.x)
-    m.c_r_cap = cp.Constraint(m.y_def_r, m.x)
-    m.c_r_area = cp.Constraint(m.y_def_r, m.x)
-    m.c_e_cap = cp.Constraint(m.y, m.x)
-    m.c_e_cap_gross_net = cp.Constraint(m.y, m.x)
-    m.c_rb_cap = cp.Constraint(m.y_rb, m.x)
+    m.c_s_cap = po.Constraint(m.y_pc, m.x, rule=c_s_cap_rule)
+    m.c_r_cap = po.Constraint(m.y_def_r, m.x, rule=c_r_cap_rule)
+    m.c_r_area = po.Constraint(m.y_def_r, m.x, rule=c_r_area_rule)
+    m.c_e_cap = po.Constraint(m.y, m.x, rule=c_e_cap_rule)
+    m.c_e_cap_gross_net = po.Constraint(m.y, m.x, rule=c_e_cap_gross_net_rule)
+    m.c_rb_cap = po.Constraint(m.y_rb, m.x, rule=c_rb_cap_rule)
 
 
 def node_constraints_operational(model):
@@ -299,7 +298,7 @@ def node_constraints_operational(model):
             return (m.es_prod[c, y, x, t]
                     >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
 
     def c_es_con_max_rule(m, c, y, x, t):
         if y in m.y_conv:
@@ -328,13 +327,15 @@ def node_constraints_operational(model):
                 return m.rbs[y, x, t] == 0
 
     # Constraints
-    m.c_rs_max_upper = cp.Constraint(m.y_def_r, m.x, m.t)
-    m.c_rs_max_lower = cp.Constraint(m.y_def_r, m.x, m.t)
-    m.c_es_prod_max = cp.Constraint(m.c, m.y, m.x, m.t)
-    m.c_es_prod_min = cp.Constraint(m.c, m.y, m.x, m.t)
-    m.c_es_con_max = cp.Constraint(m.c, m.y, m.x, m.t)
-    m.c_s_max = cp.Constraint(m.y_pc, m.x, m.t)
-    m.c_rbs_max = cp.Constraint(m.y_rb, m.x, m.t)
+    m.c_rs_max_upper = \
+        po.Constraint(m.y_def_r, m.x, m.t, rule=c_rs_max_upper_rule)
+    m.c_rs_max_lower = \
+        po.Constraint(m.y_def_r, m.x, m.t, rule=c_rs_max_lower_rule)
+    m.c_es_prod_max = po.Constraint(m.c, m.y, m.x, m.t, rule=c_es_prod_max_rule)
+    m.c_es_prod_min = po.Constraint(m.c, m.y, m.x, m.t, rule=c_es_prod_min_rule)
+    m.c_es_con_max = po.Constraint(m.c, m.y, m.x, m.t, rule=c_es_con_max_rule)
+    m.c_s_max = po.Constraint(m.y_pc, m.x, m.t, rule=c_s_max_rule)
+    m.c_rbs_max = po.Constraint(m.y_rb, m.x, m.t, rule=c_rbs_max_rule)
 
 
 def node_constraints_transmission(model):
@@ -350,10 +351,10 @@ def node_constraints_transmission(model):
         if y_remote in m.y_trans:
             return m.e_cap[y, x] == m.e_cap[y_remote, x_remote]
         else:
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
 
     # Constraints
-    m.c_transmission_capacity = cp.Constraint(m.y_trans, m.x)
+    m.c_transmission_capacity = po.Constraint(m.y_trans, m.x, rule=c_transmission_capacity_rule)
 
 
 def node_parasitics(model):
@@ -369,19 +370,23 @@ def node_parasitics(model):
     m = model.m
 
     # Variables
-    m.ec_prod = cp.Var(m.c, m.y_p, m.x, m.t, within=cp.NonNegativeReals)
-    m.ec_con = cp.Var(m.c, m.y_p, m.x, m.t, within=cp.NegativeReals)
+    m.ec_prod = po.Var(m.c, m.y_p, m.x, m.t, within=po.NonNegativeReals)
+    m.ec_con = po.Var(m.c, m.y_p, m.x, m.t, within=po.NegativeReals)
 
     # Constraint rules
     def c_ec_prod_rule(m, c, y, x, t):
-        return m.ec_prod[c, y, x, t] == m.es_prod[c, y, x, t] * model.get_option(y + '.constraints.c_eff', x=x)
+        return (m.ec_prod[c, y, x, t]
+                == m.es_prod[c, y, x, t]
+                * model.get_option(y + '.constraints.c_eff', x=x))
 
     def c_ec_con_rule(m, c, y, x, t):
-        return m.ec_con[c, y, x, t] == m.es_con[c, y, x, t] / model.get_option(y + '.constraints.c_eff', x=x)
+        return (m.ec_con[c, y, x, t]
+                == m.es_con[c, y, x, t]
+                / model.get_option(y + '.constraints.c_eff', x=x))
 
     # Constraints
-    m.c_ec_prod = cp.Constraint(m.c, m.y_p, m.x, m.t)
-    m.c_ec_con = cp.Constraint(m.c, m.y_p, m.x, m.t)
+    m.c_ec_prod = po.Constraint(m.c, m.y_p, m.x, m.t, rule=c_ec_prod_rule)
+    m.c_ec_con = po.Constraint(m.c, m.y_p, m.x, m.t, rule=c_ec_con_rule)
 
 
 def node_costs(model):
@@ -413,12 +418,12 @@ def node_costs(model):
         return cost_per_distance_getter(cost, y, k, x)
 
     # Variables
-    m.cost = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
-    m.cost_con = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
-    m.cost_op_fixed = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
-    m.cost_op_var = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
-    m.cost_op_fuel = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
-    m.cost_op_rb = cp.Var(m.y, m.x, m.k, within=cp.NonNegativeReals)
+    m.cost = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_con = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_op_fixed = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_op_var = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_op_fuel = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_op_rb = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
@@ -496,12 +501,12 @@ def node_costs(model):
             return m.cost_op_rb[y, x, k] == 0
 
     # Constraints
-    m.c_cost = cp.Constraint(m.y, m.x, m.k)
-    m.c_cost_con = cp.Constraint(m.y, m.x, m.k)
-    m.c_cost_op_fixed = cp.Constraint(m.y, m.x, m.k)
-    m.c_cost_op_var = cp.Constraint(m.y, m.x, m.k)
-    m.c_cost_op_fuel = cp.Constraint(m.y, m.x, m.k)
-    m.c_cost_op_rb = cp.Constraint(m.y, m.x, m.k)
+    m.c_cost = po.Constraint(m.y, m.x, m.k, rule=c_cost_rule)
+    m.c_cost_con = po.Constraint(m.y, m.x, m.k, rule=c_cost_con_rule)
+    m.c_cost_op_fixed = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_fixed_rule)
+    m.c_cost_op_var = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_var_rule)
+    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_fuel_rule)
+    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_rb_rule)
 
 
 def model_constraints(model):
@@ -522,7 +527,7 @@ def model_constraints(model):
         # Hardcoded: balancing takes place between locations on level 1 only
         parents = get_parents(1)
         if x not in parents:
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
         else:
             fam = get_children(x) + [x]  # list of children + parent
             balance = (sum(m.es_prod[c, y, xs, t]
@@ -539,4 +544,5 @@ def model_constraints(model):
                 return balance >= 0
 
     # Constraints
-    m.c_system_balance = cp.Constraint(m.c, m.x, m.t)
+    m.c_system_balance = po.Constraint(m.c, m.x, m.t,
+                                       rule=c_system_balance_rule)

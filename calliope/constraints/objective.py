@@ -9,10 +9,7 @@ Objective functions.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
-import coopr.pyomo as cp
+import pyomo.core as po
 
 
 def objective_cost_minimization(model):
@@ -28,5 +25,5 @@ def objective_cost_minimization(model):
                     * sum(m.cost[y, x, 'monetary'] for x in m.x)
                     for y in m.y))
 
-    m.obj = cp.Objective(sense=cp.minimize)
-    # m.obj.domain = cp.NonNegativeReals
+    m.obj = po.Objective(sense=po.minimize, rule=obj_rule)
+    # m.obj.domain = po.NonNegativeReals

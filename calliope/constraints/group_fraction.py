@@ -9,10 +9,7 @@ Constrain groups of technologies to reach given fractions of e_prod.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
-import coopr.pyomo as cp
+import pyomo.core as po
 
 
 def group_fraction(model):
@@ -31,7 +28,7 @@ def group_fraction(model):
             group = model.config_model.group_fraction[group_type].keys()
         except (TypeError, KeyError):
             group = []
-        return cp.Set(initialize=group)
+        return po.Set(initialize=group)
 
     def techs_to_consider(supply_techs, group_type):
         # Remove ignored techs if any defined
@@ -99,7 +96,10 @@ def group_fraction(model):
         return equalizer(lhs, rhs, sign)
 
     # Constraints
-    m.c_group_fraction_output = cp.Constraint(m.c, m.output_group)
-    m.c_group_fraction_capacity = cp.Constraint(m.c, m.capacity_group)
+    m.c_group_fraction_output = \
+        po.Constraint(m.c, m.output_group, rule=c_group_fraction_output_rule)
+    m.c_group_fraction_capacity = \
+        po.Constraint(m.c, m.capacity_group, rule=c_group_fraction_capacity_rule)
     grp = m.demand_power_peak_group
-    m.c_group_fraction_demand_power_peak = cp.Constraint(m.c, grp)
+    m.c_group_fraction_demand_power_peak = \
+        po.Constraint(m.c, grp, rule=c_group_fraction_demand_power_peak_rule)

@@ -9,10 +9,7 @@ Planning constraints.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
-import coopr.pyomo as cp
+import pyomo.core as po
 
 
 def system_margin(model):
@@ -38,7 +35,7 @@ def system_margin(model):
                           for y in m.y if carrier(y) == c
                           for x in m.x))
         else:
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
 
     # Constraints
-    m.c_system_margin = cp.Constraint(m.c)
+    m.c_system_margin = po.Constraint(m.c, rule=c_system_margin_rule)

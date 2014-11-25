@@ -9,9 +9,6 @@ Functions to process results from parallel runs created by parallel.py.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 import glob
 import logging
 import os

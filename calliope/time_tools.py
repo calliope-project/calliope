@@ -9,9 +9,6 @@ Provides the TimeSummarizer class to dynamically adjust time resolution.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 import logging
 
 import numpy as np
@@ -57,15 +54,15 @@ class TimeSummarizer(object):
         # Set up time range slice
         s = slice(*t_range)
         # Go through each item in data and apply the appropriate method to it
-        for k in data.keys():
-            if k in self.known_data_types.keys():
+        for k in list(data.keys()):
+            if k in list(self.known_data_types.keys()):
                 how = self.known_data_types[k]
                 if k in self.source_parameters:
                     src = self.source_parameters[k]
                 else:
                     src = None
                 if isinstance(data[k], utils.AttrDict):
-                    for kk in data[k].keys():
+                    for kk in list(data[k].keys()):
                         self._apply_method(data, how, s, param=k,
                                            src_param=src, subkey=kk)
                 else:
@@ -104,7 +101,7 @@ class TimeSummarizer(object):
         # 1. Summarize by calling _reduce_resolution for the desired ranges
         # This step still keeps the summarized data but marks it by setting
         # `to_keep` 0
-        for i, v in entry_points.iteritems():
+        for i, v in entry_points.items():
             ifrom = i
             ito = i + int(v / data.time_res_static)
             resolution = v
@@ -114,21 +111,22 @@ class TimeSummarizer(object):
             df.loc[ifrom + 1:ito - 1, 'to_keep'] = 0
             df.at[ifrom, 'time_res'] = resolution
         # 2. Replace all data with its subset where to_keep is 1
-        for k in data.keys():
+        for k in list(data.keys()):
             # # Special case for `_t`, which is the only known_data_type which is always 0-indexed
             # if k == '_t' or k == '_dt':
             #     # To get around non-matching index, we simply turn the boolean mask df into a list
             #     data[k] = data[k][(df.summarize < 2).tolist()]
-            if k in self.known_data_types.keys():
+            if k in list(self.known_data_types.keys()):
                 if isinstance(data[k], utils.AttrDict):
-                    for kk in data[k].keys():
+                    for kk in list(data[k].keys()):
                         data[k][kk] = data[k][kk][df.to_keep == 1]
                 else:
                     data[k] = data[k][df.to_keep == 1]
             # NB unknown data types are checked for and logged earlier, inside
             # _reduce_resolution()
         data.time_res_series = df.time_res[df.to_keep == 1]
-        # FIXME update data.time_res_static if the resultion reduction was uniform!
+        # FIXME update data.time_res_static if the resultion
+        # reduction was uniform!
         # data.time_res_static = resolution
 
     def reduce_resolution(self, data, resolution):

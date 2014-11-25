@@ -23,10 +23,6 @@ The name of a returned series must always be either 'mask' or
 
 """
 
-
-from __future__ import print_function
-from __future__ import division
-
 import pandas as pd
 
 
@@ -83,10 +79,10 @@ def resolution_series_uniform(data, resolution):
 
     """
     res_length = resolution / data.time_res_static
-    df = data.r[data.r.keys()[0]]  # Grab length of data from any table
-    summarize = pd.Series(-1, index=range(len(df)))
+    df = data.r[list(data.r.keys())[0]]  # Grab length of data from any table
+    summarize = pd.Series(-1, index=list(range(len(df))))
     # Set to 0 (keep timestep) for the given resolution
-    for index, item in summarize.iteritems():
+    for index, item in summarize.items():
         if index % res_length == 0:
             summarize.at[index] = resolution
     summarize.name = 'resolution_series'
@@ -108,7 +104,8 @@ def resolution_series_min_week(data, tech, var='r', resolution=24,
     # Get length of a day in timesteps
     day_len = int(24 / data.time_res_data)
     # Get day-wise sums
-    dff = pd.rolling_sum(df, window=day_len).reindex(range(0, len(df), day_len))
+    dff_index = list(range(0, len(df), day_len))
+    dff = pd.rolling_sum(df, window=day_len).reindex(dff_index)
     if how == 'mode':
         # Get timestep where var/tech is minimal in the largest
         # number of locations
@@ -121,10 +118,10 @@ def resolution_series_min_week(data, tech, var='r', resolution=24,
     week_start = selected - day_len * d.dayofweek
     week_end = selected + day_len * (7 - d.dayofweek)
     # Mask where everything is -1 (summarize) by default
-    mask = pd.DataFrame({'mask': -1}, index=range(len(df)))
+    mask = pd.DataFrame({'mask': -1}, index=list(range(len(df))))
     # Mark timesteps for summarization at given resolution
     summary_timestep_len = int(resolution / data.time_res_data)
-    summary_index = range(0, len(df), summary_timestep_len)
+    summary_index = list(range(0, len(df), summary_timestep_len))
     mask.loc[summary_index, 'mask'] = resolution
     # For the desired week, change the mask to native resolution (0)
     mask.loc[week_start:week_end - 1, 'mask'] = 0
@@ -147,7 +144,7 @@ def mask_zero(data, tech, var='r', locations=None):
     df = data[var][tech]
     if locations:
         df = df.loc[:, locations]
-    summarize = pd.Series(0, index=range(len(df)))
+    summarize = pd.Series(0, index=list(range(len(df))))
     # Summing over all DNIs to find those times where DNI==0 everywhere
     summarize[df.sum(1) <= 0] = 1
     summarize.name = 'mask'
@@ -175,13 +172,13 @@ def mask_extreme(data, tech, var='r', how='max',
     df = df.sum(axis=1)
     totals = []
     for i in range(0, len(df), length):
-        totals.append(df[i:(i+1)*length].sum(axis=0))
+        totals.append(df[i:(i + 1) * length].sum(axis=0))
     totals = pd.Series(totals)
     if how == 'max':
         total_i = totals.argmax()
     elif how == 'min':
         total_i = totals.argmin()
-    summarize = pd.Series(1, index=range(len(df)))
+    summarize = pd.Series(1, index=list(range(len(df))))
     ifrom = total_i * length
     ito = (total_i + 1) * length - 1
     if padding:

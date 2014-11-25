@@ -1,7 +1,4 @@
-from __future__ import print_function
-from __future__ import division
-
-import cStringIO as StringIO
+from io import StringIO
 import os
 import pytest
 import sys
@@ -37,7 +34,7 @@ class TestAttrDict:
 
     @pytest.fixture
     def yaml_file(self):
-        return StringIO.StringIO(self.setup_string)
+        return StringIO(self.setup_string)
 
     @pytest.fixture
     def yaml_string(self):
@@ -159,8 +156,7 @@ class TestAttrDict:
     def test_keys_nested_as_dict(self, attr_dict):
         d = attr_dict
         dd = d.keys_nested(subkeys_as='dict')
-        # The sort order is: dicts first, then string keys
-        assert dd == [{'c': [{'z': ['I', 'II']}, 'x', 'y']}, 'a', 'b', 'd']
+        assert dd == ['a', 'b', {'c': ['x', 'y', {'z': ['I', 'II']}]}, 'd']
 
     def test_union(self, attr_dict):
         d = attr_dict

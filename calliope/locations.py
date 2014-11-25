@@ -9,9 +9,6 @@ Functions to deal with locations and their configuration.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 import pandas as pd
 
 from . import exceptions
@@ -67,7 +64,7 @@ def explode_locations(k):
 
     """
     # Ensure sure we don't pass in other things
-    assert isinstance(k, basestring)
+    assert isinstance(k, str)
     finalkeys = []
     subkeys = k.split(',')
     for sk in subkeys:
@@ -119,7 +116,7 @@ def generate_location_matrix(d, techs):
 
     """
     rows = []
-    for k, v in d.iteritems():
+    for k, v in sorted(d.items()):
         rows.append(_generate_location(k, v, techs))
     df = pd.DataFrame.from_records(rows)
     df.index = df._location

@@ -1,7 +1,4 @@
-from __future__ import print_function
-from __future__ import division
-
-import cStringIO as StringIO
+from io import StringIO
 import pytest
 
 from calliope import transmission, utils
@@ -10,7 +7,7 @@ from calliope import transmission, utils
 class TestTransmission:
     @pytest.fixture
     def transmission_network(self):
-        setup = StringIO.StringIO("""
+        setup = StringIO("""
         links:
             1,2:
                 hvac:
@@ -25,7 +22,7 @@ class TestTransmission:
 
     @pytest.fixture
     def transmission_network_erroneous(self):
-        setup = StringIO.StringIO("""
+        setup = StringIO("""
         links:
             1,2:
                 hvac:

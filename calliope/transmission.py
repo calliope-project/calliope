@@ -9,9 +9,6 @@ Functions to deal with transmission between locations.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 from . import locations
 from . import utils
 

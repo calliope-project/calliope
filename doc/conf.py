@@ -42,7 +42,7 @@ class Mock(object):
 
 MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot',
                 'matplotlib.colors', 'matplotlib.colors.ListedColormap',
-                'coopr', 'coopr.opt', 'coopr.pyomo', 'coopr.environ',
+                'pyomo', 'pyomo.core', 'pyomo.opt', 'pyomo.environ',
                 'pyutilib', 'pyutilib.services',
                 'pyutilib.services.TempfileManager', 'yaml', 'pandas']
 

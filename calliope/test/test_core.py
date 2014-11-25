@@ -1,5 +1,5 @@
-from __future__ import print_function
-from __future__ import division
+
+
 
 import numpy as np
 import pandas as pd
@@ -8,8 +8,8 @@ import tempfile
 
 import calliope
 
-import common
-from common import assert_almost_equal
+from . import common
+from .common import assert_almost_equal
 
 
 class TestInitialization:
@@ -100,7 +100,7 @@ class TestInitialization:
 
     def test_initialize_sets_timesteps(self):
         model = common.simple_model()
-        assert model.data._t.tolist() == range(0, 1416)
+        assert model.data._t.tolist() == list(range(0, 1416))
         assert model.data._dt[0].minute == 0
         assert model.data._dt[0].hour == 0
         assert model.data._dt[0].day == 1
@@ -120,7 +120,7 @@ class TestInitialization:
                         subset_t: ['2005-01-02', '2005-01-03']
                     """
         model = common.simple_model(config_run=config_run)
-        assert model.data._t.tolist() == range(24, 72)
+        assert model.data._t.tolist() == list(range(24, 72))
         # NB: using iloc instead of iat to get around the underlying
         # numpy object and have pandas do the minute/hour/.. checking
         assert model.data._dt.iloc[0].minute == 0
@@ -227,7 +227,7 @@ class TestInitialization:
                             e_cap_max: 100
         """
         with tempfile.NamedTemporaryFile() as f:
-            f.write(locations)
+            f.write(locations.encode('utf-8'))
             print(f.read())
             model = common.simple_model(config_locations=f.name)
         return model

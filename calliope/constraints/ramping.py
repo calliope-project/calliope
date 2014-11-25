@@ -9,10 +9,7 @@ Ramping constraints.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
-import coopr.pyomo as cp
+import pyomo.core as po
 
 
 def ramping_rate(model):
@@ -27,12 +24,12 @@ def ramping_rate(model):
         if ramping_rate is False:
             # If the technology defines no `e_ramping`, we don't build a
             # ramping constraint for it!
-            return cp.Constraint.NoConstraint
+            return po.Constraint.NoConstraint
         else:
             # No constraint for first timestep
             # NB: From Pyomo 3.5 to 3.6, order_dict became zero-indexed
             if m.t.order_dict[t] == 0:
-                return cp.Constraint.NoConstraint
+                return po.Constraint.NoConstraint
             else:
                 carrier = model.get_option(y + '.carrier')
                 diff = ((m.es_prod[carrier, y, x, t]
@@ -53,5 +50,5 @@ def ramping_rate(model):
         return _ramping_rule(m, y, x, t, direction='down')
 
     # Constraints
-    m.c_ramping_up = cp.Constraint(m.y, m.x, m.t)
-    m.c_ramping_down = cp.Constraint(m.y, m.x, m.t)
+    m.c_ramping_up = po.Constraint(m.y, m.x, m.t, rule=c_ramping_up_rule)
+    m.c_ramping_down = po.Constraint(m.y, m.x, m.t, rule=c_ramping_down_rule)

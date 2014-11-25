@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import division
-
 import pytest
 
 import pandas as pd
@@ -12,8 +9,8 @@ class TestMaskWhereZero:
     @pytest.fixture(scope='module')
     def testdata(self):
         d = calliope.utils.AttrDict()
-        df1 = pd.DataFrame({'a': range(1, 11),
-                            'b': range(20, 30)})
+        df1 = pd.DataFrame({'a': list(range(1, 11)),
+                            'b': list(range(20, 30))})
         df2 = pd.DataFrame({'a': [0, 0, 0, 0, 1, 2, 3, 4, 0, 0],
                             'b': [0, 0, 0, 1, 2, 1, 1, 2, 0, 0]})
         df3 = pd.DataFrame({'a': [0, 0, 0, 0, 1, 2, 3, 4, 1, 0],

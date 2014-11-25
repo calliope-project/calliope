@@ -9,9 +9,6 @@ Functionality to analyze model results.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 import itertools
 
 try:
@@ -114,7 +111,7 @@ def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
         formatter = mdates.DateFormatter('%H:%M\n%d-%m-%Y')
         locator = mdates.HourLocator(byhour=[0])
         minor_formatter = mdates.DateFormatter('%H:%M')
-        minor_locator = mdates.HourLocator(byhour=range(1, 24))
+        minor_locator = mdates.HourLocator(byhour=list(range(1, 24)))
         plt.gca().xaxis.set_minor_formatter(minor_formatter)
         plt.gca().xaxis.set_minor_locator(minor_locator)
     plt.gca().xaxis.set_major_formatter(formatter)
@@ -251,7 +248,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
 
     # Create directed graph
     G = nx.from_numpy_matrix(df.as_matrix().T, create_using=nx.DiGraph())
-    G = nx.relabel_nodes(G, dict(zip(range(len(zones)), zones)))
+    G = nx.relabel_nodes(G, dict(list(zip(list(range(len(zones))), zones))))
 
     # Transmission
     edge_transmission = {edge: int(round(df.at[edge[1], edge[0]] / 1e6))
@@ -264,8 +261,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
 
     # Set edge labels
     if labels == 'utilization':
-        edge_labels = {k: '{:.2f}'.format(v)
-                       for k, v in edge_use.iteritems()}
+        edge_labels = {k: '{:.2f}'.format(v) for k, v in edge_use.items()}
     elif labels == 'transmission':
         edge_labels = edge_transmission
 
@@ -494,7 +490,7 @@ def generate_constraints(solution, output_path=None, techs=None,
     # Get a list of default constraints, so that we know which constraints
     # exist in a '_max' form
     o = solution.config_model
-    default_constraints = o.techs.defaults.constraints.keys()
+    default_constraints = list(o.techs.defaults.constraints.keys())
 
     # Set up the list of locations, techs, constraints
     locations = solution.parameters.major_axis

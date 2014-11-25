@@ -1,7 +1,4 @@
-from __future__ import print_function
-from __future__ import division
-
-import cStringIO as StringIO
+from io import StringIO
 
 import pandas as pd
 import pytest
@@ -12,7 +9,7 @@ from calliope import locations, utils
 class TestLocations:
     @pytest.fixture
     def sample_locations(self):
-        setup = StringIO.StringIO("""
+        setup = StringIO("""
         test:
             level: 1
             within:
@@ -35,7 +32,7 @@ class TestLocations:
 
     @pytest.fixture
     def sample_unexploded_locations(self):
-        setup = StringIO.StringIO("""
+        setup = StringIO("""
         1,2,3:
             foo:
         a,b,c:
@@ -55,7 +52,7 @@ class TestLocations:
 
     @pytest.fixture
     def sample_nested_locations(self):
-        setup = StringIO.StringIO("""
+        setup = StringIO("""
         1,2,3:
             level: 1
             within:
@@ -81,7 +78,7 @@ class TestLocations:
 
     @pytest.fixture
     def sample_overlapping_locations(self):
-        setup = StringIO.StringIO("""
+        setup = StringIO("""
         1,2,3:
             level: 1
             within:
@@ -152,7 +149,7 @@ class TestLocations:
         o = locations.process_locations(fixture)
         assert '10' in o
         assert 'x' in o
-        assert len(o.keys()) == 20
+        assert len(list(o.keys())) == 20
 
     def test_process_locations_overlap(self, sample_overlapping_locations):
         fixture = sample_overlapping_locations
@@ -206,4 +203,4 @@ class TestLocations:
         techs = ['foo']
         df = locations.generate_location_matrix(sample_nested_locations, techs)
         for i in df['_within'].tolist():
-            assert (i is None or isinstance(i, basestring))
+            assert (i is None or isinstance(i, str))

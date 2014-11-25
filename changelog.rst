@@ -5,7 +5,8 @@ Release History
 0.3.0 (dev)
 +++++++++++
 
-* Improved model solution management, by saving to HDF5 instead of CSV
+* Python 3 and Pyomo 4 are now minimum requirements
+* Improved model solution management by saving to HDF5 instead of CSV
 * Calculate shares of technologies, including the ability to define groups for the purpose of computing shares
 * Improved operational mode
 * Simplified time_tools
@@ -15,7 +16,6 @@ Release History
 * Better error messages and basic logging
 * Better sanity checking and error messages for common mistakes
 * Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
-* Experimental availability parameter, ``a``
 * Other improvements and fixes
 
 0.2.0 (2014-03-18)

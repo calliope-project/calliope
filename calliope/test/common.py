@@ -1,6 +1,5 @@
 """Common functions used in tests"""
 
-
 import os
 
 import calliope
@@ -11,7 +10,7 @@ solver = 'glpk'  # this gets imported by individual test_model_* files
 
 
 def assert_almost_equal(x, y, tolerance=0.0001):
-    assert abs(x-y) < tolerance
+    assert abs(x - y) < tolerance
 
 
 def _add_test_path(path):

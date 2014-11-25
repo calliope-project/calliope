@@ -10,9 +10,6 @@ numbers of scripted runs, either locally or to be deployed to a cluster.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 import copy
 import itertools
 import os
@@ -52,7 +49,7 @@ class Parallelizer(object):
             iter_values = [c.get_key(i) for i in iter_keys]
             df = pd.DataFrame(list(itertools.product(*iter_values)),
                               columns=iter_keys)
-        df.index = range(1, len(df) + 1)  # 1 instead of 0-indexing
+        df.index = list(range(1, len(df) + 1))  # 1 instead of 0-indexing
         return df
 
     def _write_modelcommands(self, f, settings):
@@ -145,7 +142,7 @@ class Parallelizer(object):
     def _get_iteration_config(self, config, index_str, iter_row):
         iter_c = copy.copy(config)  # iter_c is this iteration's config
         # `iteration_override` is a pandas series (dataframe row)
-        for k, v in iter_row.to_dict().iteritems():
+        for k, v in iter_row.to_dict().items():
             # NaN values can show in this row if some but not all iterations
             # specify a value, so we simply skip them
             if pd.isnull(v):
@@ -203,7 +200,7 @@ class Parallelizer(object):
             submit_file = os.path.join(out_dir, self.f_submit.format('array'))
             with open(submit_file, 'w') as f:
                 self._write_submit(f, n_iter=len(iterations))
-            os.chmod(submit_file, 0755)
+            os.chmod(submit_file, 0o755)
 
         #
         # SET UP RUN SCRIPT AND SUBMISSION SCRIPTS FOR SINGLE RUNS
@@ -232,7 +229,7 @@ class Parallelizer(object):
                                            self.f_submit.format(index_str))
                 with open(submit_file, 'w') as f:
                     self._write_submit(f, n_iter=iter_id, config=iter_c)
-                os.chmod(submit_file, 0755)
+                os.chmod(submit_file, 0o755)
 
             # Write configuration object to YAML file
             del iter_c.parallel  # parallel settings not needed in each file
@@ -241,4 +238,4 @@ class Parallelizer(object):
         # Final tasks after going through all iterations
         with open(run_file, 'a') as f:
             f.write('esac\n')
-        os.chmod(run_file, 0755)
+        os.chmod(run_file, 0o755)

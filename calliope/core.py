@@ -9,9 +9,6 @@ Core model functionality via the Model class.
 
 """
 
-from __future__ import print_function
-from __future__ import division
-
 import datetime
 import importlib
 import inspect
@@ -23,9 +20,9 @@ import shutil
 import sys
 import time
 
-import coopr.opt as co
-import coopr.pyomo as cp
-import coopr.environ  # Necessary for solver plugins etc.
+import pyomo.opt as popt
+import pyomo.core as po
+import pyomo.environ  # Necessary for solver plugins etc.
 import numpy as np
 import pandas as pd
 from pyutilib.services import TempfileManager
@@ -98,7 +95,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=True,
     o = utils.AttrDict.from_yaml(os.path.join(config_path,
                                               'defaults.yaml'))
     # Get list of techs pre-defined in defaults.yaml
-    default_techs = o.techs.keys()
+    default_techs = list(o.techs.keys())
 
     # If defaults should not be inserted, replace the loaded AttrDict
     # with an empty one (a bit of a hack, but we also want the
@@ -110,7 +107,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=True,
     # Load all additional files, continuously checking consistency
     for path in cr.input.model:
         new_o = utils.AttrDict.from_yaml(path)
-        if 'techs' in new_o.keys():
+        if 'techs' in list(new_o.keys()):
             overlap = set(default_techs) & set(new_o.techs.keys())
             if overlap:
                 e = exceptions.ModelError
@@ -161,7 +158,7 @@ class Model(object):
             config_run = os.path.join(os.path.dirname(__file__),
                                       'example_model', 'run.yaml')
         self.config_run_path = config_run
-        if isinstance(config_run, basestring):
+        if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)
             # self.run_id is used to set an output folder for logs, if
@@ -285,7 +282,8 @@ class Model(object):
 
     def get_option(self, option, x=None, default=None,
                    ignore_inheritance=False):
-        """Retrieves options from model settings for the given tech,
+        """
+        Retrieves options from model settings for the given tech,
         falling back to the default if the option is not defined for the
         tech.
 
@@ -308,11 +306,13 @@ class Model(object):
         if that has not been defined, to search the option inheritance
         chain.
 
-        Examples: model.get_option('ccgt.costs.om_var') or
-                  model.get_option('csp.weight') or
-                  model.get_option('csp.r', x='33') or
-                  model.get_option('ccgt.costs.om_var',
-                                    default='defaults.costs.om_var')
+        Examples:
+
+        * ``model.get_option('ccgt.costs.om_var')``
+        * ``model.get_option('csp.weight')``
+        * ``model.get_option('csp.r', x='33')``
+        * ``model.get_option('ccgt.costs.om_var',\
+          default='defaults.costs.om_var')``
 
         """
         key = (option, x, default, ignore_inheritance)
@@ -487,12 +487,12 @@ class Model(object):
                             if i != 'defaults'}
         except KeyError:
             tech = inspect.trace()[-1][0].f_locals['i']
-            if 'parent' in o.techs[tech].keys():
+            if 'parent' in list(o.techs[tech].keys()):
                 e = exceptions.ModelError
                 raise e('Technology `' + tech + '` defines no parent!')
         # Verify that all parents are themselves actually defined
-        for k, v in self.parents.iteritems():
-            if v not in o.techs.keys():
+        for k, v in self.parents.items():
+            if v not in list(o.techs.keys()):
                 e = exceptions.ModelError
                 raise e('Parent `' + v + '` of technology `' +
                         k + '` is not defined.')
@@ -562,7 +562,7 @@ class Model(object):
         #
         d._y = set()
         try:
-            for k, v in o.locations.iteritems():
+            for k, v in o.locations.items():
                 for y in v.techs:
                     d._y.add(y)
         except KeyError:
@@ -578,8 +578,8 @@ class Model(object):
         # (not yet added to d._y here)
         if ('links' in o) and (o.links is not None):
             d._y_transmission = transmission.get_transmission_techs(o.links)
-            d.transmission_y = list(set([v.keys()[0]
-                                    for k, v in o.links.iteritems()]))
+            d.transmission_y = list(set([list(v.keys())[0]
+                                    for k, v in o.links.items()]))
         else:
             d._y_transmission = []
             d.transmission_y = []
@@ -612,7 +612,7 @@ class Model(object):
         #
         # x: Locations set
         #
-        d._x = o.locations.keys()
+        d._x = list(o.locations.keys())
         if self.config_run.get_key('subset_x', default=False):
             d._x = [x for x in d._x if x in self.config_run.subset_x]
         #
@@ -639,7 +639,7 @@ class Model(object):
         #
         # k: Cost classes set
         #
-        classes = [o.techs[k].costs.keys() for k in o.techs
+        classes = [list(o.techs[k].costs.keys()) for k in o.techs
                    if k != 'defaults'  # Prevent 'default' from entering set
                    if 'costs' in o.techs[k]]
         # Flatten list and make sure 'monetary' is in it
@@ -727,7 +727,7 @@ class Model(object):
                         continue
                     option = self.get_option(y + '.constraints.' + param, x=x)
                     k = param + '.' + y + '.' + x
-                    if (isinstance(option, basestring)
+                    if (isinstance(option, str)
                             and option.startswith('file')):
                         if param == 'r':
                             d._y_def_r.add(y)
@@ -824,7 +824,7 @@ class Model(object):
         for c in self.data._c:
             ys = [y for y in self.data._y
                   if self.get_option(y + '.carrier') == c]
-            r_carrier = pd.Panel(self.data.r).loc[ys].sum(axis=2)
+            r_carrier = pd.Panel(self.data.r.as_dict()).loc[ys].sum(axis=2)
             t_max_demand = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
             # Adjust for reduced resolution, only if t_max_demand not 0 anyway
             if t_max_demand != 0:
@@ -897,7 +897,7 @@ class Model(object):
         #
         # Setup
         #
-        m = cp.ConcreteModel()
+        m = po.ConcreteModel()
         o = self.config_model
         d = self.data
         self.m = m
@@ -910,7 +910,7 @@ class Model(object):
 
         # Time steps
         if self.mode == 'plan':
-            m.t = cp.Set(initialize=d._t, ordered=True)
+            m.t = po.Set(initialize=d._t, ordered=True)
         elif self.mode == 'operate':
             t_end = (t_start + o.opmode.horizon / d.time_res_data) - 1
             self.t_end = int(t_end)
@@ -921,40 +921,40 @@ class Model(object):
                 logging.warning('Capping t_end from {} to {}'.format(t_end,
                                                                      t_bound))
                 t_end = t_bound
-            m.t = cp.Set(initialize=d._t.loc[self.t_start:self.t_end],
+            m.t = po.Set(initialize=d._t.loc[self.t_start:self.t_end],
                          ordered=True)
         # Carriers
-        m.c = cp.Set(initialize=d._c, ordered=True)
+        m.c = po.Set(initialize=d._c, ordered=True)
         # Locations
-        m.x = cp.Set(initialize=d._x, ordered=True)
+        m.x = po.Set(initialize=d._x, ordered=True)
         # Cost classes
-        m.k = cp.Set(initialize=d._k, ordered=True)
+        m.k = po.Set(initialize=d._k, ordered=True)
         #
         # Technologies and various subsets of technologies
         #
-        m.y = cp.Set(initialize=d._y, ordered=True)
+        m.y = po.Set(initialize=d._y, ordered=True)
         # Production technologies
-        m.y_prod = cp.Set(initialize=d._y_prod, within=m.y, ordered=True)
+        m.y_prod = po.Set(initialize=d._y_prod, within=m.y, ordered=True)
         # Production technologies
-        m.y_con = cp.Set(initialize=d._y_con, within=m.y, ordered=True)
+        m.y_con = po.Set(initialize=d._y_con, within=m.y, ordered=True)
         # Production/consumption technologies
-        m.y_pc = cp.Set(initialize=d._y_pc, within=m.y, ordered=True)
+        m.y_pc = po.Set(initialize=d._y_pc, within=m.y, ordered=True)
         # Transmission technologies
-        m.y_trans = cp.Set(initialize=d._y_transmission, within=m.y,
+        m.y_trans = po.Set(initialize=d._y_transmission, within=m.y,
                            ordered=True)
         # Conversion technologies
-        m.y_conv = cp.Set(initialize=d._y_conversion, within=m.y,
+        m.y_conv = po.Set(initialize=d._y_conversion, within=m.y,
                           ordered=True)
         # Technologies with specified `r`
-        m.y_def_r = cp.Set(initialize=d._y_def_r, within=m.y)
+        m.y_def_r = po.Set(initialize=d._y_def_r, within=m.y)
         # Technologies with specified `e_eff`
-        m.y_def_e_eff = cp.Set(initialize=d._y_def_e_eff, within=m.y)
+        m.y_def_e_eff = po.Set(initialize=d._y_def_e_eff, within=m.y)
         # Technologies that allow `rb`
-        m.y_rb = cp.Set(initialize=d._y_rb, within=m.y)
+        m.y_rb = po.Set(initialize=d._y_rb, within=m.y)
         # Technologies with parasitics
-        m.y_p = cp.Set(initialize=d._y_p, within=m.y)
+        m.y_p = po.Set(initialize=d._y_p, within=m.y)
         # Technologies without parasitics
-        m.y_np = cp.Set(initialize=set(d._y) - set(d._y_p), within=m.y)
+        m.y_np = po.Set(initialize=set(d._y) - set(d._y_p), within=m.y)
 
         #
         # Parameters
@@ -966,11 +966,11 @@ class Model(object):
         for param in d.params:
             initializer = self._param_populator(d[param], t_start)
             y = self.param_sets[param]
-            setattr(m, param, cp.Param(y, m.x, m.t, initialize=initializer,
+            setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer,
                                        mutable=True))
 
         s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
-        m.s_init = cp.Param(m.y_pc, m.x, initialize=s_init_initializer,
+        m.s_init = po.Param(m.y_pc, m.x, initialize=s_init_initializer,
                             mutable=True)
 
         #
@@ -1051,9 +1051,9 @@ class Model(object):
             self.instance = m.create()
             solver_io = cr.get_key('solver_io', default=False)
             if solver_io:
-                self.opt = co.SolverFactory(cr.solver, solver_io=solver_io)
+                self.opt = popt.SolverFactory(cr.solver, solver_io=solver_io)
             else:
-                self.opt = co.SolverFactory(cr.solver)
+                self.opt = popt.SolverFactory(cr.solver)
             # Set solver options from run_settings file, if it exists
             try:
                 for k in cr.solver_options.keys_nested():
@@ -1121,12 +1121,14 @@ class Model(object):
         self.process_solution()
 
     def get_var(self, var, dims=None):
-        """Return output for variable `var` as a series, dataframe or panel
+        """
+        Return output for variable `var` as a series, dataframe or panel
 
         Args:
             var : variable name as string, e.g. 'es_prod'
+
             dims : list of indices as strings, e.g. ('y', 'x', 't');
-                   if not given, they are auto-detected
+            if not given, they are auto-detected
 
         """
         # FIXME: even if `dims` were given where `t` is not in the last
@@ -1140,9 +1142,6 @@ class Model(object):
             raise exceptions.ModelError('Variable {} inexistent.'.format(var))
         # Get dims
         if not dims:
-            # FIXME Coopr 3.5.8669 returns _unknown_ for set names
-            # if 't' is in dims so can't autodetect, but can still use
-            # length of dims
             dims = [i.name for i in var.index_set().set_tuple]
         result = pd.DataFrame.from_dict(var.get_values(), orient='index')
         if result.empty:
@@ -1170,13 +1169,7 @@ class Model(object):
                 result = pd.Panel4D(p)
                 result = result.sort_index(1)
         # Nicify time axis
-        # FIXME workaround for Coopr 3.5.8669 returning _unknown_ for set names
-        # if 't' in dims:
-        t_found = False
-        for i in var.index_set().set_tuple:
-            if sorted(list(i.data())) == sorted(self.data._t):
-                t_found = True
-        if t_found:
+        if 't' in dims:
             t = getattr(m, 't')
             if self.t_start == 0 or self.t_start is None:
                 new_index = self.data._dt.loc[t.first():t.last()].tolist()
@@ -1556,7 +1549,7 @@ class Model(object):
             k = 'levelized_cost_{}.csv'.format(cost_class)
             output_files[k] = sol.levelized_cost[cost_class].to_frame()
         # Write all files to output dir
-        for k, v in output_files.iteritems():
+        for k, v in output_files.items():
             v.to_csv(os.path.join(self.config_run.output.path, k))
         # Also save model and run configuration
         self.config_run.to_yaml(os.path.join(self.config_run.output.path,
