@@ -1512,10 +1512,10 @@ class Model(object):
         # Also set mode to 'w' so existing file will be overwritten
         store = pd.HDFStore(store_file, mode='w',
                             complevel=9, complib='blosc')
-        store.put('locations', self.data.locations)
-        # Make sure config_model and config_run are not saved to HDF,
-        # as they are AttrDicts rather than pandas objects and are
-        # saved separately!
+        # Save locations
+        store.append('locations', self.data.locations)
+        # Now save solution -- except for config_model and config_run, since
+        # they are AttrDicts so are saved separately below
         for key in [k for k in sol if k not in ['config_model', 'config_run']]:
             # Use .append instead of .add for Panel4D compatibility
             store.append(key, sol[key])

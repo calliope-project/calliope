@@ -1,5 +1,6 @@
 pytest-cov==1.8.0
 python-coveralls==2.4.3
+# Cython is here because it's needed to build pytables
 Cython==0.21.1
 numexpr==2.3.1
 numpy==1.9.0
