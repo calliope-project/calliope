@@ -6,15 +6,13 @@
    :target: https://coveralls.io/r/sjpfenninger/calliope
 
 .. image:: https://img.shields.io/badge/license-Apache-blue.svg
-   :target: https://calliope.readthedocs.org/en/latest/model/introduction.html
+   :target: https://calliope.readthedocs.org/en/latest/model/introduction.html#license
 
 
 Calliope
 ========
 
 *A multi-scale energy systems (MUSES) modeling framework*
-
-Work in progress.
 
 
 Documentation

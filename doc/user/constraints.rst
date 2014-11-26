@@ -39,7 +39,7 @@ where :math:`eff = 1` if ``c`` is the ``source_carrier``, and otherwise, either 
 
 ``rs`` is constrained depending on the context:
 
-* If :math:`r(y, x, t)` is was set to infinity, no constraint is applied to ``r``.
+* If :math:`r(y, x, t)` is set to infinity, no constraint is applied to ``r``.
 * If a technology ``y`` is not allowed at a location ``x``, or if :math:`r(y, x, t) = 0`, then :math:`r_{s}(y, x, y) = 0`.
 
 Finally, in all other cases, two stages apply: first, :math:`r_{avail}` is determined as follows:

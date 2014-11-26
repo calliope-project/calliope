@@ -8,7 +8,7 @@ v\ |version| (:doc:`Release history <history>`)
 
 Calliope is a framework to develop energy systems models using a modern and open source Python-based toolchain.
 
-.. warning:: Calliope and its documentation are still undergoing active development and functionality may change without prior warning. If you are interested in using Calliope at this stage you are encouraged to `get in touch <mailto:stefan.pfenninger@imperial.ac.uk>`_.
+.. Note:: Calliope is under active development. Functionality and/or data formats may change in future versions. See the :doc:`contact page <contact>` to keep up-to-date with changes.
 
 Main features:
 
@@ -27,43 +27,47 @@ Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/gran
 Quick start
 -----------
 
-Models are defined with a mixture of YAML files and CSV files. See the included example model for details, and read the :doc:`configuration section <model/configuration>` and the :doc:`data section <model/data>`.
+Models are defined with a mixture of YAML files and CSV files. See the included example model for details, and read the :doc:`configuration section <user/configuration>` and the :doc:`data section <user/data>`.
 
 To run a model once::
 
    import calliope
-   model = calliope.Model(config_run='/path/to/run.yaml')
+   model = calliope.Model(config_run='/path/to/run_configuration.yaml')
    model.run()
 
 On successfully finding a solution, the ``Model`` instance makes available its results for further analysis::
 
-   # Returns a pandas DataFrame
+   # Get a pandas DataFrame
    system_vars = model.get_system_variables()
-   # Plot system-level variables with matplotlib
+   # Plot system-wide energy production
    system_vars.plot()
 
-To set up parallel runs, see :ref:`parallel_runs`.
+.. TODO To set up parallel runs, see :ref:`parallel_runs`.
 
--------------------
-Model documentation
--------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   model/introduction
-   model/installation
-   model/components
-   model/constraints
-   model/configuration
-   model/data
-   model/running
-
------------------
-API Documentation
------------------
+----------
+User guide
+----------
 
 .. toctree::
+   :maxdepth: 1
+
+   user/introduction
+   user/installation
+   user/components
+   user/constraints
+   user/configuration
+   user/data
+   user/running
+   user/develop
+
+-----------------
+API documentation
+-----------------
+
+Documents functions, methods and classes:
+
+.. toctree::
+   :maxdepth: 1
 
    api/api
 

@@ -87,7 +87,9 @@ Locations can be given as a single location (e.g., ``location0``), a range of in
    *Only* the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
 
    * x_map
-   * constraints: r, r_eff, e_eff, r_scale, r_scale_to_peak, s_cap_max, s_init, r_cap_max, r_area_max, e_cap_max, e_cap_max_force
+   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap_max, s_cap_max_force, s_init, s_time, s_time_max, use_s_time, r_cap_max, r_area_max, e_cap_max, e_cap_max_scale, e_cap_max_force, rb_eff, rb_cap_max, rb_cap_max_force, rb_cap_follows,
+
+.. Note to self: this "only" is implemented simply by calling get_option with an x=x argument
 
 All locations are created equal, but the balancing constraint looks at a location's level to decide which locations to consider in balancing supply and demand. Currently, balancing of supply and demand takes place at level 1 only. In order for a location at level 0 to be included in the system-wide energy balance, it must therefore be assigned to a parent location at level 1. Transmission is *loss-free* within a location, between locations at level 0, and from locations at level 0 to locations at level 1. Transmission is only possible between locations at level 1 if a transmission link has been defined between them. Losses in these transmission links are as defined for the specified transmission technology.
 
@@ -114,6 +116,25 @@ Transmission links are defined in the model settings as follows:
             ...
 
 ``transmission-tech`` can be any technology, but a useful transmission technology must define ``r: inf, e_con: true`` and specify an ``e_cap_max`` (see the definition for ``transmission`` in the example model's ``techs.yaml``). It is possible to specify any amount of possible tranmission technologies (for example with different costs or efficiencies) between two locations by simply listing them all with their constraints.
+
+Transmission links can also specify a distance, which transmission technologies can use to compute distance-dependent costs or efficiencies. Currently, an ``e_loss`` can be specified under ``constraints_per_distance`` and any costs and cost classes can be specified under ``costs_per_distance`` (see example below).
+
+.. code-block:: yaml
+
+   links:
+      location0,location1:
+         transmission-tech:
+            distance: 500
+
+   techs:
+      transmission-tech:
+         # per_distance constraints specified per 100 units of distance
+         per_distance: 100
+         constraints_per_distance:
+            e_loss: 0.01  # loss per 100 units of distance
+         costs_per_distance:
+            monetary:
+               e_cap: 10  # cost per 100 units of distance
 
 -----------
 Inheritance
