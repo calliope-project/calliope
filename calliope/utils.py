@@ -277,26 +277,15 @@ def capture_output():
         out[1] = out[1].getvalue()
 
 
-def memoize(f):
-    """
-    Memoization decorator for a function taking one or more
-    arguments.
-
-    """
-    class MemoDict(dict):
-        def __getitem__(self, *key):
-            return dict.__getitem__(self, key)
-
-        def __missing__(self, key):
-            ret = self[key] = f(*key)
-            return ret
-
-    return MemoDict().__getitem__
+# This used to be a custom function, but as of Python 3.2 we can use
+# the built-in lru_cache for simplicity
+memoize = functools.lru_cache(maxsize=512)
 
 
 class memoize_instancemethod(object):
     """
-    Cache the return value of a method
+    Cache the return value of a method on a per-instance basis
+    (as opposed to a per-class basis like functools.lru_cache does)
 
     Source: http://code.activestate.com/recipes/577452/
 
