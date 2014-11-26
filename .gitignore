@@ -2,3 +2,5 @@
 calliope.egg-info/
 doc/_build/
 .coverage
+*.ipynb
+
