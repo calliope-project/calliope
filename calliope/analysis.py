@@ -10,12 +10,14 @@ Functionality to analyze model results.
 """
 
 import itertools
+import logging
 
 try:
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
 except ImportError:
-    print('matplotlib could not be imported, no plotting will be available.')
+    logging.debug('Matplotlib could not be imported, '
+                  'no plotting will be available.')
 import numpy as np
 import pandas as pd
 
