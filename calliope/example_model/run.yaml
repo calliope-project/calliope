@@ -2,13 +2,11 @@
 # RUN SETTINGS
 #
 
-input:
-    model: 'model_config/model.yaml'
-    data_path: 'model_config/data'
+model: 'model_config/model.yaml'
 
-output:
-    save: false  # In parallel runs, this is always set to true
-    path: 'Output'  # In parallel runs, this is overriden by the run name
+output:  # Output settings are only used if the model is run via the 'calliope run' command-line tool
+    format: hdf  # Can be either csv or hdf
+    path: 'Output'  # Path to an output directory, will be created if it doesn't exist
 
 mode: plan  # Choices: plan, operate
 
@@ -16,14 +14,14 @@ parallel:  # Ignored unless this settings file is used to generate parallel runs
     name: example-model  # Name of this run
     environment: bsub  # Choices: bsub, qsub
     additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
-    iterations:  # Give iterations  as `parameter: [values]` entries
-        override.locations.r1.techs: [['demand', 'unmet_demand', 'ccgt'],
-                                  ['demand', 'unmet_demand',]]
-        subset_t: [['2005-01-01', '2005-01-31'],
-                   ['2005-02-01', '2005-02-31']]
+    iterations:
+        - subset_t: ['2005-01-01', '2005-01-31']
+          override.locations.r1.techs: ['demand', 'unmet_demand', 'ccgt']
+        - subset_t: ['2005-02-01', '2005-02-31']
+          override.locations.r1.techs: ['demand', 'unmet_demand']
     resources:
         threads:  # Set to request a non-default number of threads
-        wall_time:   # Set to request a non-default run time in minutes
+        wall_time:  # Set to request a non-default run time in minutes
         memory:  # Set to request a non-default amount of memory in MB
 
 #

@@ -82,7 +82,7 @@ class AttrDict(dict):
             loaded = cls(yaml.load(f))
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
-                imported = cls.from_yaml(_resolve_path(f, k))
+                imported = cls.from_yaml(ensure_absolute(k, f))
                 # loaded is added to imported (i.e. it takes precedence)
                 imported.union(loaded)
                 loaded = imported
@@ -321,32 +321,10 @@ class memoize_instancemethod(object):
         return res
 
 
-def replace(string, placeholder, replacement):
-    """
-    Replace all occurences of ``{{placeholder}}`` or
-    ``{{ placeholder }}`` in ``string`` with ``replacement``.
-
-    """
-    placeholders = ['{{ ' + placeholder + ' }}',
-                    '{{' + placeholder + '}}']
-    for p in placeholders:
-        string = string.replace(p, replacement)
-    return string
-
-
-def _resolve_path(base_path, path):
-    path = replace(path, placeholder='module',
-                   replacement=os.path.dirname(__file__))
-    if not os.path.isabs(path):
-        path = os.path.join(os.path.dirname(base_path), path)
-    return path
-
-
 def ensure_absolute(path, base_path):
     if not os.path.isabs(path) and isinstance(base_path, str):
-        return os.path.join(os.path.dirname(base_path), path)
-    else:
-        return path
+        path = os.path.join(os.path.dirname(base_path), path)
+    return path
 
 
 def option_getter(config_model, data):

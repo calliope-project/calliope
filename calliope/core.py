@@ -37,11 +37,6 @@ from . import time_tools
 from . import utils
 
 
-def _expand_module_placeholder(s):
-    return utils.replace(s, placeholder='module',
-                         replacement=os.path.dirname(__file__))
-
-
 def _load_function(source):
     """
     Returns a function from a module, given a source string of the form:
@@ -65,35 +60,27 @@ def _load_function(source):
     return getattr(module, function_string)
 
 
-def get_model_config(cr, config_run_path, adjust_data_path=True,
-                     insert_defaults=True):
+def get_model_config(cr, config_run_path, insert_defaults=True):
     """
     cr is the run configuration AttrDict,
     config_run_path the path to the run configuration file
 
-    If ``insert_defaults`` is set to False, the default settings from
+    If ``insert_defaults`` is False, the default settings from
     defaults.yaml will not be included, which is necessary when
     generating model settings file for parallel runs.
 
     """
-    # Ensure 'input.model' is a list
-    if not isinstance(cr.input.model, list):
-        cr.input.model = [cr.input.model]
-    # Expand {{ module }} placeholder
-    cr.input.model = [_expand_module_placeholder(i)
-                      for i in cr.input.model]
-    if adjust_data_path:
-        cr.input.data_path = _expand_module_placeholder(cr.input.data_path)
-    # Interpret relative config paths as relative to run.yaml
-    cr.input.model = [utils.ensure_absolute(i, config_run_path)
-                      for i in cr.input.model]
-    if adjust_data_path:
-        cr.input.data_path = utils.ensure_absolute(cr.input.data_path,
-                                                   config_run_path)
+    # Ensure 'model' key is a list
+    if not isinstance(cr.model, list):
+        cr.model = [cr.model]
 
-    config_path = os.path.join(os.path.dirname(__file__), 'config')
-    o = utils.AttrDict.from_yaml(os.path.join(config_path,
-                                              'defaults.yaml'))
+    # Interpret relative config paths as relative to run.yaml
+    cr.model = [utils.ensure_absolute(i, config_run_path) for i in cr.model]
+
+    # Load defaults from module path
+    module_conf = os.path.join(os.path.dirname(__file__), 'config')
+    o = utils.AttrDict.from_yaml(os.path.join(module_conf, 'defaults.yaml'))
+
     # Get list of techs pre-defined in defaults.yaml
     default_techs = list(o.techs.keys())
 
@@ -105,7 +92,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=True,
         o.techs = utils.AttrDict()
 
     # Load all additional files, continuously checking consistency
-    for path in cr.input.model:
+    for path in cr.model:
         new_o = utils.AttrDict.from_yaml(path)
         if 'techs' in list(new_o.keys()):
             overlap = set(default_techs) & set(new_o.techs.keys())
@@ -113,8 +100,15 @@ def get_model_config(cr, config_run_path, adjust_data_path=True,
                 e = exceptions.ModelError
                 raise e('Trying to re-define a default technology in '
                         '{}: {}'.format(path, list(overlap)))
+        # Make model data path an absolute path -- relative paths are
+        # interpreted as relative to the file in which they are defined
+        if 'data_path' in new_o:
+            config_model_path = utils.ensure_absolute(os.path.dirname(path),
+                                                      config_run_path)
+            new_o.data_path = os.path.join(config_model_path, new_o.data_path)
         # The input files are allowed to override defaults
         o.union(new_o, allow_override=True)
+
     return o
 
 
@@ -127,9 +121,8 @@ class Model(object):
         """
         Args:
             config_run : path to YAML file with run settings OR and AttrDict
-                         containing settings. If not given, the path
-                         ``{{ module }}/config/run.yaml`` is used as the
-                         default.
+                         containing settings. If not given, the included
+                         default run and model settings are used.
             override : provide any additional options or override options
                        from ``config_run`` by passing an AttrDict
                        of the form ``{'model_settings': 'foo.yaml'}``.
@@ -184,6 +177,10 @@ class Model(object):
                 and isinstance(cr.override, utils.AttrDict)):
             for k in cr.override.keys_nested():
                 o.set_key(k, cr.override.get_key(k))
+                # Make model data path an absolute path
+                if k == 'data_path':
+                    o[k] = utils.ensure_absolute(o.data_path,
+                                                 self.config_run_path)
         # Initialize locations
         o.locations = locations.process_locations(o.locations)
         # Store initialized configuration on model object
@@ -199,7 +196,7 @@ class Model(object):
         after Model initialization to verify this.
 
         """
-        path = self.config_run.input.data_path
+        path = self.config_model.data_path
         df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
                          header=None, parse_dates=[1])
         seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
@@ -535,7 +532,7 @@ class Model(object):
     def initialize_sets(self):
         o = self.config_model
         d = self.data
-        path = self.config_run.input.data_path
+        path = o.data_path
         #
         # t: Timesteps set
         #
@@ -666,7 +663,7 @@ class Model(object):
         @utils.memoize
         def _get_option_from_csv(filename):
             """Read CSV time series"""
-            d_path = os.path.join(self.config_run.input.data_path, filename)
+            d_path = os.path.join(self.config_model.data_path, filename)
             # [self.slice] to do time subset if needed
             # Results in e.g. d.r_eff['csp'] being a dataframe
             # of efficiencies for each time step t at location x
@@ -1027,8 +1024,10 @@ class Model(object):
                 e = exceptions.ModelError
                 raise e('Invalid model mode: `{}`'.format(self.mode))
             self._log_time()
-            if self.config_run.output.save is True:
-                self.save_solution()
+            if self.config_run.get_key('output.save', default=False) is True:
+                output_format = self.config_run.get_key('output.format',
+                                                        default='hdf')
+                self.save_solution(output_format)
         except exceptions.ModelWarning as e:
             self._log_time()
             if catch_model_warnings:
@@ -1468,11 +1467,11 @@ class Model(object):
             e = exceptions.ModelWarning
             raise e('Could not load results into model instance.')
 
-    def save_solution(self, how='hdf'):
+    def save_solution(self, how):
         """Save model solution. ``how`` can be 'hdf' or 'csv'
 
         CSV is supported for legacy purposes but usually, the
-        default HDF option should be used.
+        HDF option should be used.
 
         """
         # Create output dir, but ignore if it already exists

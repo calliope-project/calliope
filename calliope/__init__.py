@@ -8,6 +8,6 @@ from .core import Model
 from .parallel import Parallelizer
 from .time_tools import TimeSummarizer
 from . import utils
-from . import parallel_tools
+from . import read
 from . import time_functions
 from . import analysis

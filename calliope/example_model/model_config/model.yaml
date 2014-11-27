@@ -2,11 +2,19 @@
 # IMPORT OTHER FILES
 ##
 
-# Can either be a relative path, absolute path, or one that starts with {{ module }} to access the module directory
+# Can either be a path relative to this file, or an absolute path
 
 import:
     - 'techs.yaml'
     - 'locations.yaml'
+
+##
+# DATA PATH
+##
+
+# Can either be a path relative to this file, or an absolute path
+
+data_path: 'data'
 
 ##
 # OBJECTIVE FUNCTION

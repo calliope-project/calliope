@@ -26,14 +26,14 @@ class Parallelizer(object):
 
     * ``target_dir``: path to output directory for parallel runs.
     * ``config_run``: path to YAML file with run settings. If not
-      given, ``{{ module }}/config/run.yaml`` is used as the default.
+      given, the included example run.yaml is used.
 
     """
     def __init__(self, target_dir, config_run=None):
         super(Parallelizer, self).__init__()
-        config_path = os.path.join(os.path.dirname(__file__), 'config')
         if not config_run:
-            config_run = os.path.join(config_path, 'run.yaml')
+            config_run = os.path.join(os.path.dirname(__file__),
+                                      'example_model', 'run.yaml')
         self.config_file = config_run
         self.config = utils.AttrDict.from_yaml(config_run)
         self.target_dir = target_dir
@@ -184,8 +184,7 @@ class Parallelizer(object):
         #
         # COMBINE ALL MODEL CONFIG INTO ONE FILE AND WRITE IT TO `out_dir`
         #
-        o = core.get_model_config(c, self.config_file, adjust_data_path=False,
-                                  insert_defaults=False)
+        o = core.get_model_config(c, self.config_file, insert_defaults=False)
         unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
         o.to_yaml(os.path.join(unified_config_file))
         c.input.model = 'model.yaml'

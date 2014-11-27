@@ -18,7 +18,7 @@ class TestInitialization:
         assert hasattr(model, 'data')
         assert hasattr(model, 'config_run')
         assert hasattr(model, 'config_model')
-        assert model.config_run.output.save is False
+        assert model.config_run.mode == 'plan'
 
     def test_model_initialization_follow_import_statements(self):
         model = calliope.Model()
@@ -112,11 +112,7 @@ class TestInitialization:
     def test_initialize_sets_timesteps_subset(self):
         config_run = """
                         mode: plan
-                        input:
-                            model: [{techs}, {locations}]
-                            data_path: '{path}'
-                        output:
-                            save: false
+                        model: [{techs}, {locations}]
                         subset_t: ['2005-01-02', '2005-01-03']
                     """
         model = common.simple_model(config_run=config_run)
@@ -140,11 +136,7 @@ class TestInitialization:
     def test_initialize_sets_technologies_subset(self):
         config_run = """
                         mode: plan
-                        input:
-                            model: [{techs}, {locations}]
-                            data_path: '{path}'
-                        output:
-                            save: false
+                        model: [{techs}, {locations}]
                         subset_y: ['ccgt', 'demand_electricity']
                     """
         model = common.simple_model(config_run=config_run)
@@ -153,11 +145,7 @@ class TestInitialization:
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
                         mode: plan
-                        input:
-                            model: [{techs}, {locations}]
-                            data_path: '{path}'
-                        output:
-                            save: false
+                        model: [{techs}, {locations}]
                         subset_y: ['ccgt', 'demand_electricity', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
@@ -176,11 +164,7 @@ class TestInitialization:
     def test_initialize_sets_locations_subset(self):
         config_run = """
                         mode: plan
-                        input:
-                            model: [{techs}, {locations}]
-                            data_path: '{path}'
-                        output:
-                            save: false
+                        model: [{techs}, {locations}]
                         subset_x: ['1', 'demand']
                     """
         model = common.simple_model(config_run=config_run)
@@ -189,11 +173,7 @@ class TestInitialization:
     def test_initialize_sets_locations_too_large_subset(self):
         config_run = """
                         mode: plan
-                        input:
-                            model: [{techs}, {locations}]
-                            data_path: '{path}'
-                        output:
-                            save: false
+                        model: [{techs}, {locations}]
                         subset_x: ['1', 'demand', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)

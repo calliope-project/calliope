@@ -43,6 +43,7 @@ def new(path):
 def run(run_config):
     """Execute the given RUN_CONFIG run configuration file."""
     model = core.Model(config_run=run_config)
+    model.config_run.set_key('output.save', True)  # Always save output
     model.run()
 
 

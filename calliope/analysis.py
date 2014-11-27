@@ -551,6 +551,20 @@ def generate_constraints(solution, output_path=None, techs=None,
         return d
 
 
+def aggregate_parameters(solution, iterations=None, how='max'):
+    """
+    Get aggregated plant sizes across all planning runs.
+    Used for operational runs.
+
+    """
+    if not iterations:
+        iterations = solution.iterations.index.tolist()
+    solution_panel = pd.Panel4D({i: solution.solutions[i].parameters
+                                 for i in iterations})
+    aggregator = getattr(solution_panel, how)
+    return aggregator(axis=0)
+
+
 class DummyModel(object):
     def __init__(self, solution):
         """

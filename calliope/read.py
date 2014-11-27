@@ -2,10 +2,10 @@
 Copyright (C) 2013 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-parallel_tools.py
-~~~~~~~~~~~~~~~~~
+read.py
+~~~~~~~
 
-Functions to process results from parallel runs created by parallel.py.
+Functions to read saved model results.
 
 """
 
@@ -102,27 +102,3 @@ def read_dir(directory, tables_to_read=None):
             results.solutions[i] = utils.AttrDict()  # add an empty entry
             continue
     return results
-
-
-def reshape_results(results, table, iterations, column, row):
-    """
-    Reshape results
-
-    NB: does not work for node_parameters table, as it is a Panel4D rather
-    than a panel
-    """
-    return results['table'].loc[iterations, column, row]
-
-
-def aggregate_parameters(solution, iterations=None, how='max'):
-    """
-    Get aggregated plant sizes across all planning runs.
-    Used for operational runs.
-
-    """
-    if not iterations:
-        iterations = solution.iterations.index.tolist()
-    solution_panel = pd.Panel4D({i: solution.solutions[i].parameters
-                                 for i in iterations})
-    aggregator = getattr(solution_panel, how)
-    return aggregator(axis=0)

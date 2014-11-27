@@ -27,18 +27,18 @@ def simple_model(config_model=None, config_techs=None, config_locations=None,
         config_locations = _add_test_path('common/locations_minimal.yaml')
     if not path:
         path = _add_test_path('common/t_1h')
+    if not override:
+        override = calliope.utils.AttrDict({'override.data_path': path})
+    else:
+        override.set_key('override.data_path', path)
     if not config_run:
         config_run = """
+        model: ['{model}', '{techs}', '{locations}']
         mode: plan
-        input:
-            model: ['{model}', '{techs}', '{locations}']
-            data_path: '{path}'
-        output:
-            save: false
         """
     # Fill in `techs` and `locations`
     config_run = config_run.format(model=config_model, techs=config_techs,
-                                   locations=config_locations, path=path)
+                                   locations=config_locations)
     # Make it an AttrDict
     config_run = calliope.utils.AttrDict.from_yaml_string(config_run)
     return calliope.Model(config_run, override)
