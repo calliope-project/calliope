@@ -27,7 +27,6 @@ import numpy as np
 import pandas as pd
 from pyutilib.services import TempfileManager
 
-from . import analysis
 from . import exceptions
 from . import constraints
 from . import locations
@@ -1370,6 +1369,7 @@ class Model(object):
         return df.sort(columns=sort_by, ascending=False)
 
     def get_shares(self):
+        from . import analysis
         ggm = self.get_group_members
         s = pd.Series({k: '|'.join(ggm(k, head_nodes_only=True))
                       for k in self.config_model.techs
