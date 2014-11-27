@@ -78,7 +78,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
         cr.model = [cr.model]
 
     # Interpret relative config paths as relative to run.yaml
-    cr.model = [utils.ensure_absolute(i, config_run_path) for i in cr.model]
+    cr.model = [utils.relative_path(i, config_run_path) for i in cr.model]
 
     # Load defaults from module path
     module_conf = os.path.join(os.path.dirname(__file__), 'config')
@@ -103,16 +103,14 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
                 e = exceptions.ModelError
                 raise e('Trying to re-define a default technology in '
                         '{}: {}'.format(path, list(overlap)))
-        # Make model data path an absolute path -- relative paths are
-        # interpreted as relative to the file in which they are defined
+        # Interpret data_path as relative to `path`  (i.e the currently
+        # open model config file), unless `adjust_data_path` is given
         if 'data_path' in new_o:
             if adjust_data_path:
                 new_o.data_path = os.path.join(adjust_data_path,
                                                new_o.data_path)
             else:
-                model_conf_pth = utils.ensure_absolute(os.path.dirname(path),
-                                                       config_run_path)
-                new_o.data_path = os.path.join(model_conf_pth, new_o.data_path)
+                new_o.data_path = utils.relative_path(new_o.data_path, path)
         # The input files are allowed to override defaults
         o.union(new_o, allow_override=True)
 
@@ -184,10 +182,11 @@ class Model(object):
                 and isinstance(cr.override, utils.AttrDict)):
             for k in cr.override.keys_nested():
                 o.set_key(k, cr.override.get_key(k))
-                # Make model data path an absolute path
+                # If run_config overrides data_path, interpret it as
+                # relative to the run_config file's path
                 if k == 'data_path':
-                    o[k] = utils.ensure_absolute(o.data_path,
-                                                 self.config_run_path)
+                    o[k] = utils.relative_path(o.data_path,
+                                               self.config_run_path)
         # Initialize locations
         o.locations = locations.process_locations(o.locations)
         # Store initialized configuration on model object
@@ -256,8 +255,8 @@ class Model(object):
                     # processing needed
                     res_series = mask_src
             elif cr.get_key('time.file', default=False):
-                res_file = utils.ensure_absolute(cr.time.file,
-                                                 self.config_run_path)
+                res_file = utils.relative_path(cr.time.file,
+                                               self.config_run_path)
                 res_series = pd.read_csv(res_file, index_col=0, header=None)[1]
                 res_series = res_series.astype(int)
             s.dynamic_timestepper(self.data, res_series)

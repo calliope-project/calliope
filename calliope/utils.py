@@ -82,7 +82,7 @@ class AttrDict(dict):
             loaded = cls(yaml.load(f))
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
-                imported = cls.from_yaml(ensure_absolute(k, f))
+                imported = cls.from_yaml(relative_path(k, f))
                 # loaded is added to imported (i.e. it takes precedence)
                 imported.union(loaded)
                 loaded = imported
@@ -321,9 +321,15 @@ class memoize_instancemethod(object):
         return res
 
 
-def ensure_absolute(path, base_path):
-    if not os.path.isabs(path) and isinstance(base_path, str):
-        path = os.path.join(os.path.dirname(base_path), path)
+def relative_path(path, base_path_file):
+    """
+    If ``path`` is not absolute, it is interpreted as relative to the
+    path of the given ``base_path_file``.
+
+    """
+    # Check if base_path_file is a string because it might be an AttrDict
+    if not os.path.isabs(path) and isinstance(base_path_file, str):
+        path = os.path.join(os.path.dirname(base_path_file), path)
     return path
 
 
