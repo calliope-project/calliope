@@ -60,10 +60,14 @@ def _load_function(source):
     return getattr(module, function_string)
 
 
-def get_model_config(cr, config_run_path, insert_defaults=True):
+def get_model_config(cr, config_run_path, adjust_data_path=None,
+                     insert_defaults=True):
     """
     cr is the run configuration AttrDict,
     config_run_path the path to the run configuration file
+
+    If ``adjust_data_path`` is given, the data_path setting is adjusted
+    using the given path, else, it is forced to an absolute path.
 
     If ``insert_defaults`` is False, the default settings from
     defaults.yaml will not be included, which is necessary when
@@ -103,9 +107,13 @@ def get_model_config(cr, config_run_path, insert_defaults=True):
         # Make model data path an absolute path -- relative paths are
         # interpreted as relative to the file in which they are defined
         if 'data_path' in new_o:
-            config_model_path = utils.ensure_absolute(os.path.dirname(path),
-                                                      config_run_path)
-            new_o.data_path = os.path.join(config_model_path, new_o.data_path)
+            if adjust_data_path:
+                new_o.data_path = os.path.join(adjust_data_path,
+                                               new_o.data_path)
+            else:
+                model_conf_pth = utils.ensure_absolute(os.path.dirname(path),
+                                                       config_run_path)
+                new_o.data_path = os.path.join(model_conf_pth, new_o.data_path)
         # The input files are allowed to override defaults
         o.union(new_o, allow_override=True)
 

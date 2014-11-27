@@ -140,12 +140,16 @@ class Parallelizer(object):
             f.write(lines + '\n')
 
     def _get_iteration_config(self, config, index_str, iter_row):
-        iter_c = copy.copy(config)  # iter_c is this iteration's config
+        iter_c = config.copy()  # iter_c is this iteration's config
         # `iteration_override` is a pandas series (dataframe row)
         for k, v in iter_row.to_dict().items():
             # NaN values can show in this row if some but not all iterations
             # specify a value, so we simply skip them
-            if pd.isnull(v):
+            if not isinstance(v, list) and pd.isnull(v):
+                # NB the isinstance and pd.isnull checks should cover all cases
+                # i.e. both not a list (which is definitely not null) or a
+                # single value that could be null. But this could blow up in
+                # unexpected edge cases...
                 continue
             # Convert numpy dtypes to python ones, else YAML chokes
             if isinstance(v, np.generic):
@@ -176,18 +180,24 @@ class Parallelizer(object):
         # Decide whether to generate a single or multiple submission files
         # If different iterations ask for different resources, multiple
         # files are necessary
-        if 'parallel' in c and 'resources' in c['parallel']:
-            c.set_key('parallel.style', 'single')
-        else:
-            c.set_key('parallel.style', 'array')
+        c.set_key('parallel.style', 'array')  # Try setting 'array' as default
+        # Flatten iterations and check if parallel.resources are defined
+        # anywhere in the flattened list, if so, replace 'array' with 'single'
+        for i in itertools.chain.from_iterable(c['parallel']['iterations']):
+            if 'parallel.resources' in i:
+                c.set_key('parallel.style', 'single')
+                break
 
         #
         # COMBINE ALL MODEL CONFIG INTO ONE FILE AND WRITE IT TO `out_dir`
         #
-        o = core.get_model_config(c, self.config_file, insert_defaults=False)
+        data_path_adj = c.get_key('parallel.data_path_adjustment', None)
+        o = core.get_model_config(c, self.config_file,
+                                  adjust_data_path=data_path_adj,
+                                  insert_defaults=False)
         unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
         o.to_yaml(os.path.join(unified_config_file))
-        c.input.model = 'model.yaml'
+        c.model = 'model.yaml'
         # Always make sure we are saving outputs from iterations!
         c.set_key('output.save', True)
 
