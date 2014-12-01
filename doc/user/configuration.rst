@@ -25,7 +25,7 @@ There are two ways to split the model definition into several files:
          - techs.yaml   # Define technologies, their constraints and costs
          - locations.yaml  # Define locations and transmission capacities
 
-2. Any of the model configuration files given in the ``input.model:`` directive may contain an ``import:`` statement, which is a list of paths to additional files to import. These additional files may each again contain an ``import:`` statement, allowing for arbitrarily complex nesting. The ``import:`` statement can either give an absolute path, a path relative to the importing file, or a path starting with ``{{ module }}``, which is a placeholder for the Calliope module's location (and thus useful to load included default configurations).
+2. Any of the model configuration files given in the ``input.model:`` directive may contain an ``import:`` statement, which is a list of paths to additional files to import. These additional files may each again contain an ``import:`` statement, allowing for arbitrarily complex nesting. The ``import:`` statement can either give an absolute path or a path relative to the importing file.
 
 ------------
 Run settings

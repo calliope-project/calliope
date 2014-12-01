@@ -53,6 +53,7 @@ The following Python modules and their dependencies are required:
 * `Numexpr <https://github.com/pydata/numexpr>`_
 * `Pytables <https://pytables.github.io/>`_ (which requires `Cython <http://cython.org/>`_ to build from source)
 * `PyYAML <http://pyyaml.org/>`_
+* `Click <http://click.pocoo.org/>`_
 
 These modules are optional but necessary to display result graphs:
 

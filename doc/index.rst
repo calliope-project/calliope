@@ -18,31 +18,10 @@ Main features:
 * Model specification in an easy-to-read YAML format
 * Able to run on computing clusters
 * Easily extensible
-* Uses a state-of-the-art Python toolchain based on `IPython <http://ipython.org/>`_, `Pandas <http://pandas.pydata.org/>`_ and `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_
+* Uses a state-of-the-art Python toolchain based on `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_ and `Pandas <http://pandas.pydata.org/>`_
 * `Freely available <https://github.com/sjpfenninger/calliope>`_ under the Apache 2.0 license
 
 Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London, and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
-
------------
-Quick start
------------
-
-Models are defined with a mixture of YAML files and CSV files. See the included example model for details, and read the :doc:`configuration section <user/configuration>` and the :doc:`data section <user/data>`.
-
-To run a model once::
-
-   import calliope
-   model = calliope.Model(config_run='/path/to/run_configuration.yaml')
-   model.run()
-
-On successfully finding a solution, the ``Model`` instance makes available its results for further analysis::
-
-   # Get a pandas DataFrame
-   system_vars = model.get_system_variables()
-   # Plot system-wide energy production
-   system_vars.plot()
-
-.. TODO To set up parallel runs, see :ref:`parallel_runs`.
 
 ----------
 User guide
@@ -54,10 +33,12 @@ User guide
    user/introduction
    user/installation
    user/components
+   user/tutorial
    user/constraints
    user/configuration
-   user/data
+   user/timeseries
    user/running
+   user/analysis
    user/develop
 
 -----------------

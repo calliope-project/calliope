@@ -24,17 +24,20 @@ AttrDict
 .. autoclass:: calliope.utils.AttrDict
     :members:
 
-Parallelizer and parallel_tools
-===============================
+Parallelizer
+============
 
 .. autoclass:: calliope.Parallelizer
     :members:
-
-.. automodule:: calliope.parallel_tools
-    :members: read_dir, reshape_results
 
 TimeSummarizer
 ==============
 
 .. autoclass:: calliope.TimeSummarizer
+    :members:
+
+Read
+====
+
+.. automodule:: calliope.read
     :members:

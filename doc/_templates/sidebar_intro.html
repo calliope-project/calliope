@@ -8,9 +8,12 @@
   Calliope is a framework to develop energy systems models using a modern and open source Python-based toolchain.
 </p>
 
+<!-- Only show downloads if they are defined, i.e. on ReadTheDocs -->
+{% if downloads is defined %}
 <h3>Download The Docs</h3>
 <ul>
 {% for type, url in downloads %}
   <li><a href="{{ url }}">{{ type }}</a></li>
 {% endfor %}
 </ul>
+{% endif %}

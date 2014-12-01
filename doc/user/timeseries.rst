@@ -1,15 +1,19 @@
 
-========
-Datasets
-========
+================
+Time series data
+================
 
 Calliope uses a simple data format to specify those parameters that are explicit in space and time, i.e. those parameters that cannot simply be specified in the model's YAML configuration files.
 
----------
-Structure
----------
+.. TODO define a dataset
+
+--------
+Datasets
+--------
 
 A dataset is simply a folder with CSV files laid out as follows:
+
+.. TODO usually this folder will be stored alongside the model configuration files (model.yaml)
 
 .. code-block:: text
 
