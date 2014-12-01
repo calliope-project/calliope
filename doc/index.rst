@@ -32,9 +32,9 @@ User guide
 
    user/introduction
    user/installation
-   user/components
    user/tutorial
-   user/constraints
+   user/components
+   user/formulation
    user/configuration
    user/timeseries
    user/running

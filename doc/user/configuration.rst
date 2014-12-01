@@ -6,7 +6,7 @@ Model definition and configuration
 A model run consists of the *run settings* and the associated *model definition* (also referred to as the *model settings*). At its most basic, these two components are specified in just two YAML files:
 
 * ``run.yaml`` which sets up run-specific and environment-specific settings such as which solver to use. It must also, under ``input:``, define at least two directives:
-   1. the ``input.data_path:`` directive giving the directory with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`data`)
+   1. the ``input.data_path:`` directive giving the directory with data files defining parameters explicitly in space and time, which must contain at the very minimum a file ``set_t.csv`` (see :doc:`timeseries`)
    2. the ``input.model:`` directive, giving the path to another YAML file containing the model definition (``model.yaml``).
 * ``model.yaml`` which sets up the model and may import any number of additional files in order to split large models up into manageable units.
 
@@ -177,7 +177,7 @@ The steps taken for each of these parameters ``param``, for technology ``y``, ar
 Specifying a CSV file
 ---------------------
 
-Instead of letting Calliope look for CSV data files according to the default naming scheme (:doc:`data`), it is possible to manually specify a CSV file for a specific technology.
+Instead of letting Calliope look for CSV data files according to the default naming scheme (:doc:`timeseries`), it is possible to manually specify a CSV file for a specific technology.
 
 There are two ways to do this, with the first one usually being the preferred way:
 
@@ -197,6 +197,26 @@ There are two ways to do this, with the first one usually being the preferred wa
    demand-eu:
       r: file  # If `demand` does not already specify this
       parent: 'demand'
+
+.. _loading_optional_constraints:
+
+----------------------------
+Loading optional constraints
+----------------------------
+
+Additional constraints can be loaded by specifying two options in ``model.yaml``:
+
+* ``constraints_pre_load:`` Will be evaluated just before loading constraints. Any Python code can be given here, for example ``import`` statements to import custom constraints.
+* ``constraints:`` A list of constraints to load in addition to the default constraints, e.g. ``['constraints.ramping.ramping_rate']``
+
+For example, the following settings would load two custom constraints from ``my_custom_module``::
+
+   constraints_pre_load: 'import my_custom_module'
+   contraints: ['my_custom_module.my_constraint0',
+                'my_custom_module.my_constraint1']
+
+Custom constraints have access to all model configuration (see :doc:`configuration`) and any number of additional configuration directives can be set on a per-technology, per-location or model-wide basis for custom constraints.
+
 
 --------------------------
 Settings for parallel runs

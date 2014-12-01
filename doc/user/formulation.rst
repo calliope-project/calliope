@@ -1,7 +1,9 @@
 
-===========
-Constraints
-===========
+=================
+Model formulation
+=================
+
+This section details the mathematical model of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
 
 -----------------
 Basic constraints
@@ -12,13 +14,15 @@ Objective function
 
 Provided by: :func:`calliope.constraints.base.model_objective`
 
-The objective function minimizes cost:
+The default objective function minimizes cost:
 
 .. math::
 
    min: z = \sum_y (weight(y) \times \sum_x cost(y, x, k))
 
 where :math:`k=monetary`.
+
+Alternative objective functions can be used by setting the ``objective:`` directive in the model configuration.
 
 Node energy balance
 -------------------
@@ -263,6 +267,8 @@ For each carrier, the model attempts to read ``system_margin.carrier_name``, onl
 Optional constraints
 --------------------
 
+Optional constraints are included with Calliope but not loaded by default (see the :ref:`configuration section <loading_optional_constraints>` for instructions on how to load them in a model).
+
 Ramping
 -------
 
@@ -279,20 +285,3 @@ Constrains the rate at which plants can adjust their output, for technologies th
    diff \leq maxrate
 
    diff \geq -1 \times max_ramping_rate
-
-----------------------------
-Loading optional constraints
-----------------------------
-
-Additional constraints can be loaded by specifying two options in ``model.yaml``:
-
-* ``constraints_pre_load:`` Will be evaluated just before loading constraints. Any Python code can be given here, for example ``import`` statements to import custom constraints.
-* ``constraints:`` A list of constraints to load in addition to the default constraints, e.g. ``['constraints.ramping.ramping_rate']``
-
-For example, the following settings would load two custom constraints from ``my_custom_module``::
-
-   constraints_pre_load: 'import my_custom_module'
-   contraints: ['my_custom_module.my_constraint0',
-                'my_custom_module.my_constraint1']
-
-Custom constraints have access to all model configuration (see :doc:`configuration`) and any number of additional configuration directives can be set on a per-technology, per-location or model-wide basis for custom constraints.

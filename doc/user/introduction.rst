@@ -11,7 +11,9 @@ Rationale
 
 .. TODO
 
-Text will be here.
+Separation between model and code.
+
+[insert figure 03_Calliope_ConfigurationModel here]
 
 .. _license:
 
