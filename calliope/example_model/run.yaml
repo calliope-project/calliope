@@ -5,12 +5,17 @@
 model: 'model_config/model.yaml'
 
 output:  # Output settings are only used if the model is run via the 'calliope run' command-line tool
-    format: hdf  # Can be either csv or hdf
+    format: hdf  # Can be either hdf (default) or csv
     path: 'Output'  # Path to an output directory, will be created if it doesn't exist
 
 mode: plan  # Choices: plan, operate
 
-parallel:  # Ignored unless this settings file is used to generate parallel runs
+#
+# PARALLEL RUN SETTINGS
+#
+# Ignored unless this settings file is used to generate parallel runs
+
+parallel:
     name: example-model  # Name of this run
     environment: bsub  # Choices: bsub, qsub
     additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
@@ -19,7 +24,7 @@ parallel:  # Ignored unless this settings file is used to generate parallel runs
           override.locations.r1.techs: ['demand', 'unmet_demand', 'ccgt']
         - subset_t: ['2005-02-01', '2005-02-31']
           override.locations.r1.techs: ['demand', 'unmet_demand']
-    resources:
+    resources:  # Request resources on a computing cluster
         threads:  # Set to request a non-default number of threads
         wall_time:  # Set to request a non-default run time in minutes
         memory:  # Set to request a non-default amount of memory in MB
@@ -30,22 +35,23 @@ parallel:  # Ignored unless this settings file is used to generate parallel runs
 
 time:
     function: resolution_series_min_week
-    function_options:  # Look for week where CSP output is minimal, reduce rest of data to 6-hourly timesteps
-        tech: csp
-        resolution: 6
+    function_options:
+        tech: csp  # Look for week where CSP output is minimal
+        resolution: 6  # Reduce rest of data to 6-hourly timesteps
 
 #
 # SUBSETS
 #
 # Leave any of these empty to disable subsetting
 
-subset_y: []
-subset_x: []
-subset_t: ['2005-01-01', '2005-01-31']
+subset_y: []  # Specify a subset of technologies
+subset_x: []  # Specify a subset of locations
+subset_t: ['2005-01-01', '2005-01-31']  # Specify a subset of time
 
 #
 # MODEL SETTINGS OVERRIDE
 #
+# This can be used to override any setting given in the model configuration (specified by model:)
 
 override:
 
@@ -53,7 +59,7 @@ override:
 # SOLVER AND DEBUG OPTIONS
 #
 
-solver: cplex
+solver: gurobi  # Calliope has been tested with cplex, gurobi, glpk
 
 # solver_options:
     # emphasis_memory: 'yes'  # Set to 'yes' to conserve memory where possible
@@ -62,5 +68,5 @@ solver: cplex
     # lpmethod: 4  # Use barrier method
 
 debug:
-    keepfiles: false
-    symbolic_solver_labels: false
+    keepfiles: false  # Keep temporary files, useful to examine models for problems
+    symbolic_solver_labels: false  # If false, Pyomo does not generate human-readable expressions, so to successfully debug a model, this should be set to true (which is slower, thus off by default)

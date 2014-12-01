@@ -8,7 +8,6 @@ import:
 locations:
     r1:
         level: 1
-        within:
         techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
             demand_power:
@@ -19,9 +18,9 @@ locations:
             ccgt:
                 constraints:
                     e_cap_max: 40000
+
     r2:
         level: 1
-        within:
         techs: ['demand_power', 'unmet_demand_power',
                 'demand_heat', 'unmet_demand_heat',
                 'heater']
@@ -36,6 +35,7 @@ locations:
                 constraints:
                     r: file=demand-r1_r.csv
                     r_scale_to_peak: -1000
+
     tamanrasset,cardak,toledo:
         level: 0
         within: r1

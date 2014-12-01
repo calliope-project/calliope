@@ -2,14 +2,14 @@
 # IMPORT OTHER FILES
 ##
 
-# Can either be a path relative to this file, or an absolute path
+# Can either be paths relative to this file, or absolute paths
 
 import:
     - 'techs.yaml'
     - 'locations.yaml'
 
 ##
-# DATA PATH
+# DATASET PATH
 ##
 
 # Can either be a path relative to this file, or an absolute path
@@ -31,7 +31,11 @@ data_path: 'data'
 constraints:
     - constraints.ramping.ramping_rate
 
-# Other model-wide settings
+##
+# OTHER MODEL-WIDE OPTIONS
+##
+
+# System reserve margins
 system_margin:
     power: 0
     heat: 0
