@@ -25,8 +25,10 @@ Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/gran
 User guide
 ----------
 
+.. Use :numbered: to get section numbering
+
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    user/introduction
    user/installation
@@ -57,9 +59,12 @@ Release history
 ---------------
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
 
    history
+
+:doc:`Release history <history>`
 
 -------
 License

@@ -6,7 +6,7 @@ The built-in example model
 Model settings
 --------------
 
-The layout of the model directory is as follows:
+The layout of the model directory is as follows (``+`` denotes directories, ``-`` files):
 
 .. code-block:: text
 

@@ -62,7 +62,7 @@ def get_section(f, outside_indentation):
             comment = ''
         line_tuple = (setting.strip(), default.strip(), comment.strip())
         # Skip things marked as 'UNCODUMENTED'
-        if not line_tuple[2] == 'UNDOCUMENTED':
+        if not line_tuple[2].startswith('UNDOCUMENTED'):
             collector.append(line_tuple)
 
     return collector, line
