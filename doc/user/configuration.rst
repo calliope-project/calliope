@@ -3,6 +3,8 @@
 Model definition and configuration
 ==================================
 
+.. Note:: See :doc:`configuration_reference` for a complete listing of all available configuration options.
+
 A model run consists of the *run settings* and the associated *model definition* (also referred to as the *model settings*). At its most basic, these two components are specified in just two YAML files:
 
 * ``run.yaml`` which sets up run-specific and environment-specific settings such as which solver to use. It must also, under ``input:``, define at least two directives:

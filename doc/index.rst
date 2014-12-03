@@ -35,8 +35,10 @@ User guide
    user/formulation
    user/configuration
    user/timeseries
+   user/configuration_reference
    user/running
    user/analysis
+   user/example_model
    user/develop
 
 -----------------

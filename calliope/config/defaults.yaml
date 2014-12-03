@@ -1,19 +1,22 @@
 #
+# NB Parts of this file are automatically parsed and extracted for the configuration reference documentation.
+# See `doc/user/configuration_reference.rst` and `doc/generate_tables.py`, which populates
+# the `doc/user/includes` directory
+#
+
+#
 # GENERAL MODEL SETTINGS
 #
 
 # General parameters
-startup_time: 12  # Length of startup period (during which some constraints may be relaxed) [h]
+startup_time: 12  # Length of startup period (hours)
 
 # Operation mode settings
 opmode:
-    horizon: 48  # Optimization period length [hours]
-    window: 24  # Operation period length [hours]
+    horizon: 48  # Optimization period length (hours)
+    window: 24  # Operation period length (hours)
 
-#
-# MODEL-WIDE DEFAULTS
-#
-
+# Per-carrier system margins
 system_margin:
     power: 0
 
@@ -51,35 +54,35 @@ techs:
             s_time_max: 0  # Max storage time [full load hours]
             s_loss: 0  # Storage loss rate [per hour]
             cf_max: false  # Maximum capacity factor, set to false to disable
-            e_prod: true
-            e_con: false
+            e_prod: true  # TODO
+            e_con: false  # TODO
             c_eff: 1.0  # Carrier efficiency (additional losses as energy gets transferred to carrier, e.g. due to plant parasitic consumption)
-            e_eff: 1.0
+            e_eff: 1.0  # TODO
             e_eff_ref: false  # Reference efficiency. If set to false, e_eff is used instead.
             e_cap_max: 0  # Maximum e_cap [kW]
             e_cap_max_force: false  # If true, force e_cap to equal e_cap_max
             e_cap_max_scale: 1.0  # Scale e_cap_max by this value, default is 1.0
             e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum capacity use for production technologies
             e_ramping:  false  # Ramping rate [fraction of installed capacity per hour], set to false to disable
-            availability: 1.0
-        costs:  # All costs should be set to 0 by default
-            default:  # The default is looked up for any value not defined for a specific cost class
-                s_cap: 0  # Cost of storage [cost/kWh]
-                r_area: 0  # Cost of collector area [cost/m2]
-                r_cap: 0  # Cost of resource conversion capacity [cost/kW]
-                rb_cap: 0  # Cost of secondary resource conversion capacity [cost/kW]
-                e_cap: 0  # Cost of carrier conversion capacity [USD/kWe]
-                om_frac: 0  # Yearly O&M costs [fraction of total investment]
-                om_fixed: 0  # Yearly O&M costs [cost/kW of e_cap]
-                om_var: 0  # Variable O&M costs [cost/kWh of es_prod]
-                om_fuel: 0  # Fuel costs [cost/kWh of r used]
-                om_rb: 0  # Fuel costs for secondary resource [cost/kWh of rb used]
-        depreciation:  # Capital depreciation settings
-            plant_life: 25  # Lifetime of a plant [years]
+            availability: 1.0  # UNDOCUMENTED
+        costs:
+            default:  # These default are looked up for any value not defined for a specific cost class
+                s_cap: 0  # Cost of storage capacity (per kWh)
+                r_area: 0  # Cost of resource collector area (per m2)
+                r_cap: 0  # Cost of resource conversion capacity (per kW]
+                rb_cap: 0  # Cost of secondary resource conversion capacity (per kW)
+                e_cap: 0  # Cost of carrier conversion capacity (per kW gross)
+                om_frac: 0  # Yearly O&M costs (fraction of total investment)
+                om_fixed: 0  # Yearly O&M costs (per kW of e_cap)
+                om_var: 0  # Variable O&M costs (per kWh of es_prod)
+                om_fuel: 0  # Fuel costs (per kWh of r used)
+                om_rb: 0  # Fuel costs for secondary resource (per kWh of rb used)
+        depreciation:
+            plant_life: 25  # Lifetime of a plant (years)
             interest:
-                default: 0  # If interest not set for a class it is zero
-                monetary: 0.10  # Interest rate [dimensionless]
-        weight: 1  # Cost weight in objective function (higher: relatively more expensive)
+                default: 0  # Default interest rate if not specified for a cost class ``k``
+                monetary: 0.10  # Interest rate for the ``monetary`` cost class
+        weight: 1.0  # Cost weight in objective function (higher: relatively more expensive)
     supply:
         parent: defaults
     demand:

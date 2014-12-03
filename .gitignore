@@ -1,6 +1,7 @@
+Makefile
+.coverage
 *.pyc
 calliope.egg-info/
 doc/_build/
-.coverage
+doc/user/includes/
 *.ipynb
-

@@ -11,10 +11,14 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
+import sys
+import os
 
 # Sets the __version__ variable
 exec(open('../calliope/_version.py').read())
+
+# Generates the tables and source code files
+exec(open('generate_tables.py').read())
 
 ##
 # Mock modules for Read The Docs autodoc generation
