@@ -8,8 +8,6 @@ v\ |version| (:doc:`Release history <history>`)
 
 Calliope is a framework to develop energy systems models using a modern and open source Python-based toolchain.
 
-.. Note:: Calliope is under active development. Functionality and/or data formats may change in future versions. See the :doc:`contact page <contact>` to keep up-to-date with changes.
-
 Main features:
 
 * Generic technology definition allows modeling any mix of production, storage and consumption

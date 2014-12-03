@@ -30,8 +30,12 @@ def _generate_location(location, items, techs):
         msg = '`level` must be 0 or 1 at location `{}`'.format(location)
         raise exceptions.ModelError(msg)
     # Mandatory basics
+    try:
+        within = items.within
+    except KeyError:
+        within = None
     d = {'_location': location, '_level': items.level,
-         '_within': str(items.within)}
+         '_within': str(within)}
     # Override
     if 'override' in items:
         for k in items.override.keys_nested():

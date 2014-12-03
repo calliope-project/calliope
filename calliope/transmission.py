@@ -14,9 +14,14 @@ from . import utils
 
 
 def get_remotes(y, x):
-    """For a given pair of ``y`` (tech) and ``x`` (location), return
+    """
+    For a given pair of ``y`` (tech) and ``x`` (location), return
     ``(y_remote, x_remote)``, a tuple giving the corresponding indices
     of the remote location a transmission technology is connected to.
+
+    Example: for ``(y, x) = ('hvdc:region_2', 'region_1')``,
+    returns ``('hvdc:region_1', 'region_2')``
+
     """
     y_remote = y.split(':')[0] + ':' + x
     x_remote = y.split(':')[1]

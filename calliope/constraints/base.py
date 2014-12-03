@@ -101,7 +101,7 @@ def node_energy_balance(model):
     m.es_con = po.Var(m.c, m.y, m.x, m.t, within=po.NegativeReals)
 
     # Constraint rules
-    def c_s_balance_transmission_rule(m, y, x, t):
+    def transmission_rule(m, y, x, t):
         y_remote, x_remote = transmission.get_remotes(y, x)
         if y_remote in m.y_trans:
             c = model.get_option(y + '.carrier')
@@ -112,13 +112,13 @@ def node_energy_balance(model):
         else:
             return po.Constraint.NoConstraint
 
-    def c_s_balance_conversion_rule(m, y, x, t):
+    def conversion_rule(m, y, x, t):
         c_prod = model.get_option(y + '.carrier')
         c_source = model.get_option(y + '.source_carrier')
         return (m.es_prod[c_prod, y, x, t]
                 == -1 * m.es_con[c_source, y, x, t] * get_e_eff(m, y, x, t))
 
-    def c_s_balance_pc_rule(m, y, x, t):
+    def pc_rule(m, y, x, t):
         e_eff = get_e_eff(m, y, x, t)
         # TODO once Pyomo supports it,
         # let this update conditionally on param update!
@@ -153,11 +153,11 @@ def node_energy_balance(model):
                     + rbs - e_prod - e_con)
 
     # Constraints
-    m.c_s_balance_transmission = \
-        po.Constraint(m.y_trans, m.x, m.t, rule=c_s_balance_transmission_rule)
-    m.c_s_balance_conversion = \
-        po.Constraint(m.y_conv, m.x, m.t, rule=c_s_balance_conversion_rule)
-    m.c_s_balance_pc = po.Constraint(m.y_pc, m.x, m.t, rule=c_s_balance_pc_rule)
+    m.c_s_balance_transmission = po.Constraint(m.y_trans, m.x, m.t,
+                                               rule=transmission_rule)
+    m.c_s_balance_conversion = po.Constraint(m.y_conv, m.x, m.t,
+                                             rule=conversion_rule)
+    m.c_s_balance_pc = po.Constraint(m.y_pc, m.x, m.t, rule=pc_rule)
 
 
 def node_constraints_build(model):
@@ -320,22 +320,24 @@ def node_constraints_operational(model):
                 and t >= model.data.startup_time_bounds):
             return m.rbs[y, x, t] == 0
         else:
-            try:
-                return m.rbs[y, x, t] <= (model.data.time_res_series.at[t]
-                                          * m.rb_cap[y, x])
-            except ZeroDivisionError:
-                return m.rbs[y, x, t] == 0
+            return m.rbs[y, x, t] <= (model.data.time_res_series.at[t]
+                                      * m.rb_cap[y, x])
 
     # Constraints
-    m.c_rs_max_upper = \
-        po.Constraint(m.y_def_r, m.x, m.t, rule=c_rs_max_upper_rule)
-    m.c_rs_max_lower = \
-        po.Constraint(m.y_def_r, m.x, m.t, rule=c_rs_max_lower_rule)
-    m.c_es_prod_max = po.Constraint(m.c, m.y, m.x, m.t, rule=c_es_prod_max_rule)
-    m.c_es_prod_min = po.Constraint(m.c, m.y, m.x, m.t, rule=c_es_prod_min_rule)
-    m.c_es_con_max = po.Constraint(m.c, m.y, m.x, m.t, rule=c_es_con_max_rule)
-    m.c_s_max = po.Constraint(m.y_pc, m.x, m.t, rule=c_s_max_rule)
-    m.c_rbs_max = po.Constraint(m.y_rb, m.x, m.t, rule=c_rbs_max_rule)
+    m.c_rs_max_upper = po.Constraint(m.y_def_r, m.x, m.t,
+                                     rule=c_rs_max_upper_rule)
+    m.c_rs_max_lower = po.Constraint(m.y_def_r, m.x, m.t,
+                                     rule=c_rs_max_lower_rule)
+    m.c_es_prod_max = po.Constraint(m.c, m.y, m.x, m.t,
+                                    rule=c_es_prod_max_rule)
+    m.c_es_prod_min = po.Constraint(m.c, m.y, m.x, m.t,
+                                    rule=c_es_prod_min_rule)
+    m.c_es_con_max = po.Constraint(m.c, m.y, m.x, m.t,
+                                   rule=c_es_con_max_rule)
+    m.c_s_max = po.Constraint(m.y_pc, m.x, m.t,
+                              rule=c_s_max_rule)
+    m.c_rbs_max = po.Constraint(m.y_rb, m.x, m.t,
+                                rule=c_rbs_max_rule)
 
 
 def node_constraints_transmission(model):
@@ -397,6 +399,8 @@ def node_costs(model):
     * cost_con: construction costs
     * cost_op_fixed: fixed operation costs
     * cost_op_var: variable operation costs
+    * cost_op_fuel: primary resource fuel costs
+    * cost_op_rb: secondary resource fuel costs
 
     """
     m = model.m

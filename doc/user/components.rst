@@ -88,7 +88,7 @@ Each node has the following energy balance variables:
 
 * ``s(y, x, t)``: storage level at time ``t``
 * ``rs(y, x, t)``: resource to/from storage (+ production, - consumption) at time ``t``
-* ``rbs(y, x, t)``: secondary resource to/from storage (+ production, - consumption) at time ``t``
+* ``rbs(y, x, t)``: secondary resource to storage (+ production) at time ``t``
 * ``es(c, y, x, t)``: storage to/from carrier in default case (+ supply, - demand) at time ``t``
 * ``ec(c, y, x, t)``: conversion to/from carrier in case with parasitics (+ supply, - demand) at time ``t``
 
@@ -98,7 +98,7 @@ For most technologies, ``ec`` is not actually defined, and ``es`` directly conve
 
 Internally, ``e``, ``es`` and ``ec`` are split into separate variables, for the positive and negative components, i.e. ``e_prod`` and ``e_con`` (analogously for ``es`` and ``ec``). This simplifies the formulation of some constraints. In the documentation, unless necessary in a specific context, the combined (e.g. ``e``) notation is used for simplicity.
 
-The secondary resource can deliver energy to storage via ``rbs`` alongside the primary energy source (via ``rs``), but only if the necessary setting (``constraints.allow_rsec``) is enabled for a technology. Optionally, this can be allowed only during the ``startup_time`` (defined in the model-wide settings), e.g. to allow storage to be filled up initially.
+The secondary resource can deliver energy to storage via ``rbs`` alongside the primary energy source (via ``rs``), but only if the necessary setting (``constraints.allow_rsec:``) is enabled for a technology. Optionally, this can be allowed only during the ``startup_time:`` (defined in the model-wide settings), e.g. to allow storage to be filled up initially.
 
 Each node also has the following capacity variables:
 
@@ -108,7 +108,7 @@ Each node also has the following capacity variables:
 * ``e_cap(y, x)``: installed storage to carrier conversion capacity
 * ``rb_cap(y, x)``: installed secondary resource to storage conversion capacity
 
-For nodes that have an internal (parasitic) energy consumption, ``e_cap_net(y, x)`` specifies the net storage capacity while ``e_cap(y, x)`` is gross capacity. If no internal energy consumption is specified, ``e_cap(y, x)`` is the net (and gross) capacity.
+For nodes that have an internal (parasitic) energy consumption, ``e_cap_net(y, x)`` specifies the net storage capacity while ``e_cap(y, x)`` is gross capacity. If no internal energy consumption is specified, ``e_cap(y, x)`` is the net (and gross) capacity. ``e_cap_net`` is always calculated by the model and cannot be set or constrained manually.
 
 When defining a technology, it must be given at least some constraints, that is, options that describe the functioning of the technology. If not specified, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies). Some examples of such options are:
 

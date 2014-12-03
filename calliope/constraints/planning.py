@@ -14,7 +14,7 @@ import pyomo.core as po
 
 def system_margin(model):
     """
-    Depends on:
+
     """
     m = model.m
     time_res = model.data.time_res_series

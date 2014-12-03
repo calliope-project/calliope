@@ -14,7 +14,7 @@ import pyomo.core as po
 
 def group_fraction(model):
     """
-    Depends on:
+
     """
     m = model.m
 
