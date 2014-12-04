@@ -3,6 +3,8 @@
 The built-in example model
 ==========================
 
+This section gives a listing of all the YAML configuration files included in the built-in example model. Refer to the :doc:`tutorial section <tutorial>` for a brief overview of how these parts together provide a simple working model.
+
 Model settings
 --------------
 

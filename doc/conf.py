@@ -20,6 +20,7 @@ exec(open('../calliope/_version.py').read())
 # Generates the tables and source code files
 exec(open('generate_tables.py').read())
 
+
 ##
 # Mock modules for Read The Docs autodoc generation
 ##
@@ -81,7 +82,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Calliope'
-copyright = u'2013, Stefan Pfenninger (Apache 2.0 licensed)'
+copyright = u'2013–2014, Stefan Pfenninger (Apache 2.0 licensed)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

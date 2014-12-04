@@ -3,8 +3,8 @@
 API Documentation
 =================
 
-Model
-=====
+Model class
+===========
 
 .. autoclass:: calliope.Model
     :members:
@@ -27,26 +27,31 @@ Constraints
 .. automodule:: calliope.constraints.ramping
     :members:
 
-AttrDict
-========
+Utility classes: AttrDict, TimeSummarizer, Parallelizer, Exceptions
+============
 
 .. autoclass:: calliope.utils.AttrDict
     :members:
 
-Parallelizer
-============
+.. autoclass:: calliope.TimeSummarizer
+    :members:
 
 .. autoclass:: calliope.Parallelizer
     :members:
 
-TimeSummarizer
-==============
-
-.. autoclass:: calliope.TimeSummarizer
+.. automodule:: calliope.exceptions
     :members:
 
-Read
-====
+Reading results
+===============
 
 .. automodule:: calliope.read
+    :members:
+
+.. _api_analysis:
+
+Analyzing results
+=================
+
+.. automodule:: calliope.analysis
     :members:

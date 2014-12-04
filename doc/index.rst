@@ -36,7 +36,7 @@ User guide
    user/components
    user/formulation
    user/configuration
-   user/timeseries
+   user/run_configuration
    user/configuration_reference
    user/running
    user/analysis

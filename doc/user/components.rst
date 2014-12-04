@@ -42,7 +42,7 @@ In some cases, these index sets may have only a single member. For example, if o
 Technology types
 ----------------
 
-Each technology (that is, each member of the set ``y``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of five abstract base technologies (see the :doc:`model configuration section <configuration>` for more details on this inheritance model):
+Each technology (that is, each member of the set ``y``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of five abstract base technologies (see :ref:`configuration_techs` in the model configuration section for more details on this inheritance model):
 
 * Supply: Supplies energy from a resource to a carrier (a source). Can have storage. Can define an additional secondary resource (base technology: ``supply``)
 * Demand: Acts like supply but with a resource that is negative (a sink). Draws energy from a carrier to satisfy a resource demand. Can also have storage (base technology: ``demand``)

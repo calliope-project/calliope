@@ -10,6 +10,8 @@ TODO
 
 Discuss ``import:`` directive
 
+Using '' or "" to mark strings is optional, but can help with readability.
+
 Model-wide settings
 -------------------
 
@@ -61,6 +63,8 @@ Optional model-wide settings that have defaults set by Calliope (default values 
    system_margin:  # Per-carrier system margins
        power: 0
 
+.. _config_reference_techs:
+
 Technology
 ----------
 
@@ -90,6 +94,21 @@ Each technology **must** define a ``parent``, which can either be an abstract ba
 ``stack_weight`` and ``color`` determine how the technology is shown in model outputs. The higher the ``stack_weight``, the lower a technology will be shown in stackplots.
 
 The ``depreciation`` definition is optional and only necessary if defaults need to be overridden. However, at least one constraint (such as ``e_cap_max``) and one cost should usually be defined.
+
+Transmission technologies can additionally specify per-distance constraints and per-distance costs (see :ref:`transmission_links`). Currently, only ``e_loss`` constraints and ``e_cap`` costs are supported:
+
+.. code-block:: yaml
+
+  transmission_tech:
+     # per_distance constraints specified per 100 units of distance
+     per_distance: 100
+     constraints_per_distance:
+        e_loss: 0.01  # loss per 100 units of distance
+     costs_per_distance:
+        monetary:
+           e_cap: 10  # cost per 100 units of distance
+
+.. _config_reference_constraints:
 
 Technology constraints
 ----------------------
