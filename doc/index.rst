@@ -32,14 +32,14 @@ User guide
 
    user/introduction
    user/installation
-   user/tutorial
    user/components
+   user/tutorial
    user/formulation
    user/configuration
    user/run_configuration
-   user/configuration_reference
    user/running
    user/analysis
+   user/configuration_reference
    user/example_model
    user/develop
 

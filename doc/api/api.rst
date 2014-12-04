@@ -27,19 +27,25 @@ Constraints
 .. automodule:: calliope.constraints.ramping
     :members:
 
-Utility classes: AttrDict, TimeSummarizer, Parallelizer, Exceptions
-============
+Utility classes: AttrDict, Parallelizer, Exceptions
+===================================================
 
 .. autoclass:: calliope.utils.AttrDict
-    :members:
-
-.. autoclass:: calliope.TimeSummarizer
     :members:
 
 .. autoclass:: calliope.Parallelizer
     :members:
 
 .. automodule:: calliope.exceptions
+    :members:
+
+Time resolution
+===============
+
+.. autoclass:: calliope.TimeSummarizer
+    :members:
+
+.. automodule:: calliope.time_functions
     :members:
 
 Reading results

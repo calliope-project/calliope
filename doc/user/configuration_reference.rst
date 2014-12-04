@@ -3,14 +3,42 @@
 Configuration reference
 =======================
 
-General YAML configuration file format
---------------------------------------
+YAML configuration file format
+------------------------------
 
-TODO
+All configuration files (with the exception of time series data files) are in the YAML format, "a human friendly data serialization standard for all programming languages".
 
-Discuss ``import:`` directive
+Configuration for Calliope is usually specified as ``option: value`` entries, where ``value`` might be a number, a text string, or a list (e.g. a list of further settings).
 
-Using '' or "" to mark strings is optional, but can help with readability.
+Calliope allows an abbreviated form for long, nested settings:
+
+.. code-block:: yaml
+
+   one:
+      two:
+         three: x
+
+can be written as:
+
+.. code-block:: yaml
+
+   one.two.three: x
+
+Calliope also allows a special ``import:`` directive in any YAML file. This can specify one or several YAML files to import. If both the imported file and the current file define the same option, the definition in the current file takes precedence.
+
+Using quotation marks (``'`` or ``"``) to enclose strings is optional, but can help with readability. The three ways of setting ``option`` to ``text`` below are equivalent:
+
+.. code-block:: yaml
+
+   option: "text"
+   option: 'text'
+   option: text
+
+Sometimes, a setting can be either enabled or disabled, in this case, the values ``true`` or ``false`` (boolean) are used.
+
+Comments can be inserted anywhere in YAML files with the ``#`` symbol. The remainder of a line after ``#`` is interpreted as a comment.
+
+See the `YAML website <http://www.yaml.org/>`_ for more general information about YAML.
 
 Model-wide settings
 -------------------
@@ -191,9 +219,38 @@ Storage, transmission and conversion
 .. literalinclude:: includes/basetech_conversion.yaml
    :language: yaml
 
+.. _config_reference_run:
+
 Run settings
 ------------
 
-.. TODO
+These settings will usually be in a central ``run.yaml`` file, which may import from other files if desired.
 
-TODO
+Mandatory settings:
+
+* ``model``: Path to the model configuration which is to be used for this run
+* ``mode``:  ``plan`` or ``operate``, whether to run the model in planning or operational mode
+* ``solver``: Name of the solver to use
+
+Optional settings:
+
+* Output options -- these are only used when the model is run via the ``calliope run`` command-line tool:
+   * ``output.path``: Path to an output directory to save results (will be created if it doesn't exist already)
+   * ``output.format``:  Format to save results in, either ``hdf`` or ``csv``
+* ``parallel``: Settings used to generate parallel runs, see :ref:`run_config_parallel_runs`
+* ``time``: Settings to adjust time resolution, see :ref:`run_time_res`
+* ``override``: Override arbitrary settings from the model configuration. E.g., this could specify ``techs.nuclear.costs.monetary.e_cap = 1000`` to set the ``e_cap`` costs of ``nuclear``, overriding whatever was set in the model configuration
+* ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
+
+Optional debug settings:
+
+* ``subset_y``, ``subset_x``, ``subset_t``: specify if only a subset of technologies (y), locations (x), or timesteps (t) should be used for this run. This can be useful for debugging purposes. The timestep subset can be specified as ``[startdate, enddate]``, e.g. ``['2005-01-01', '2005-01-31']``
+* ``debug.keepfiles``: Whether to keep temporary files (default ``false``), useful to debug model problems
+* ``debug.symbolic_solver_labels``: By default, Pyomo does not generate components with human-readable names, which is faster. To debug models (particularly when using ``debug.keepfiles: true``), this setting should also be set to ``true`` so that the generated model becomes human-readable
+
+Solver options
+^^^^^^^^^^^^^^
+
+Gurobi: Refer to the `Gurobi manual <http://www.gurobi.com/resources/documentation>`_, which contains a list of parameters. Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value).
+
+CPLEX: Refer to the `CPLEX documentation <http://www.ibm.com/support/docview.wss?uid=swg21503602>`_, which contains a list of parameters. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory").

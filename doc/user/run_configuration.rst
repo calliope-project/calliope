@@ -3,13 +3,21 @@
 Run configuration
 =================
 
-The run settings take care of setting up and running the model with a given model configuration. It can be operated in two modes:
+.. Note::
 
-1. Directly instantiate an instance of :class:`~calliope.Model` and run it by calling its ``run()`` method. This ignores any settings in the ``parallel`` block in the run settings.
-2. Set up a series of parallel runs via the ``calliope_run.py`` command-line tool (:ref:`explained here <parallel_runs>`). This will result in a set of scripts to perform the desired model runs either locally or on a remote cluster.
+   See :ref:`config_reference_run` in the configuration reference for a complete listing of all available configuration options.
 
-In case (1), the run settings file can be specified by setting ``config_run`` when instantiating the Model, e.g. ``calliope.Model(config_run='/path/to/run.yaml')``. In case (2), the run settings file is a required argument to ``calliope_run.py``.
+At a minimum, the run configuration must provide three settings, as shown in this example:
 
+.. code-block:: yaml
+
+   model: 'model_config/model.yaml'
+   mode: 'plan'
+   solver: 'glpk'
+
+``model`` specifies the path to the model configuration file for the model to be run. ``mode`` specifies whether the model should be run in planning (``plan``) or operational (``operate``) mode (see :doc:`running`). Finally, ``solver`` specifies the solver to be used. Calliope has been tested with GLPK, Gurobi and CPLEX. Any of the solvers that Pyomo is compatible with should work.
+
+Additional (optional) settings, including debug settings, can be specified in the run configuration. Settings to adjust the timestep resolution and settings for parallel runs are discussed below. For a complete list of the other available settings, see :ref:`config_reference_run` in the configuration reference.
 
 .. _run_time_res:
 
@@ -17,40 +25,104 @@ In case (1), the run settings file can be specified by setting ``config_run`` wh
 Time resolution adjustment
 --------------------------
 
-The default time step length is 1 hour. However, this 1-hourly resolution can be adjusted over parts of the dataset by using the :class:`~calliope.TimeSummarizer` class (currently, only support for downsampling is implemented).
+Models must have a default timestep length (defined implicitly by the timesteps defined in ``set_t.csv``), and all time series files used in a given model must conform to that timestep lenght requirement.
 
-There are two ways to adjust resolution:
+However, this default resolution can be adjusted over parts of the dataset via ``time:`` in the run settings (only support for downsampling is available).
 
-1. The :meth:`calliope.TimeSummarizer.reduce_resolution` method: reduces resolution over the entire range of data to the given resolution.
-2. The :meth:`calliope.TimeSummarizer.dynamic_timestepper` method: reduces resolution dynamically according to a given mask, allowing to keep high resolution in areas of interest while reducing computational complexity elsewhere.
+There are two ways to adjust resolution (they may not both be used at the same time):
 
-Dynamic timesteps and masks
----------------------------
+1. A CSV file that contains a time resolution series, via ``time.file:``.
 
-In order to use ``dynamic_timestepper``, a mask needs to be generated first.
+2. One of the resolution series functions defined in :mod:`calliope.time_functions`, via ``time.function:``. Currently, there are only two of them: :func:`~calliope.~time_functions.resolution_series_uniform` and :func:`~calliope.~time_functions.resolution_series_min_week`. Options can be passed to this function by ``time.unction_options:``.
 
-A mask is a pandas DataFrame with the same index as the data it applies to, and a column called ``summarize`` (in addition to any number of additional columns, which are ignored). The ``summarize`` column containts ``0`` for timesteps that aren't touched, and blocks starting with an integer >1 and followed by the integer's value number of ``-1``, for timesteps that are to be summarized. For example::
+The following example demonstrates the second way:
 
-   [0, 0, 0, 3, -1, -1, 3, -1, -1, 0, 0, 0]
+.. code-block:: yaml
 
-The above example means "compress the 4th-6th and 7th-9th timesteps into two new timesteps with a resolution of 3".
+   time:
+       function: resolution_series_min_week
+       function_options:
+           tech: wind_offshore
+           resolution: 24
 
-Functions to generate masks and resolution series are in ``calliope.time_functions``.
+This passes the options, ``tech="wind_offshore", resolution=24`` to the specified function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, keeps that week at the original resolution, and resamples the rest of the data to 24-hourly timesteps.
 
-.. FIXME this needs updating
+An alternative example is to specify ``time.function: resolution_series_uniform``, and ``time.function_options.resolution: 12`` to resample the entire dataset to 12-hourly timesteps.
 
-A fully-functioning example of using a mask to collapse periods where solar irradiance is zero (i.e., the night) into single timesteps::
+If specifying a file (the path is relative to the run configuration file), it must contain two columns. The first is integer indices for the timesteps. The second contains either:
 
-   model = calliope.Model()
-   s = calliope.TimeSummarizer()
-   mask = calliope.time_functions.mask_where_zero(model.data, tech='csp', var='r')
-   s.dynamic_timestepper(model.data, mask)  # Modifies data in place
-   model.run()
+* a positive integer (signifying that this and following timesteps should be summarized with the new, given resolution)
+* :math:`-1` (following a positive integer and marking the timesteps that are summarized)
+* or :math:`0` (no adjustment made to this timestep).
+
+The following example file illustrates this:
+
+.. code-block:: text
+
+   0,3
+   1,-1
+   2,-1
+   3,3
+   4,-1
+   5,-1
+   6,0
+   7,0
+   8,0
+
+Here, the first three timesteps will be summarized into one (0,1,2), as will the next three timesteps (3,4,5), and the final three timesteps are not touched (6,7,8).
+
+.. TODO Document the more complex approach of generating masks, then combining the masks into time resolution series and applying those. Also, it's actually possible to give a mask function to time.function, and it will then be turned into a resolution series... so should document the mask functions too, and the difference between masks and resolution series.
+
+.. _run_config_parallel_runs:
 
 --------------------------
 Settings for parallel runs
 --------------------------
 
-The run settings can (but do not have to) define a ``parallel:`` section. This section is parsed when using the ``calliope_run.py`` command-line tool to generate a set of runs to be run in parallel (:ref:`explained here <parallel_runs>`).
+The run settings can also include a ``parallel:`` section.
 
-The available options are detailed in the example model's run settings (``run.yaml``).
+This section is parsed when using the ``calliope generate`` command-line tool to generate a set of runs to be executed in parallel (see :ref:`parallel_runs`). A run settings file defining ``parallel:`` can be used normally to run a single model run, in which case the ``parallel:`` section is simply ignored.
+
+The concept behind parallel runs is to specify a base model (via the run configuration's ``model:`` directive), and then define a set of model runs using this base model, but overriding one or a small number of settings in each run. For example, one could explore a range of costs of a specific technology and how this affects the result.
+
+Specifying the iterations is not (yet) automated, they must be manually entered under ``parallel.iterations:`` section. However, Calliope provides functionality to gather and process the results from a set of parallel runs (see :doc:`analysis`).
+
+At a minimum, the ``parallel:`` block must define:
+
+* a ``name`` for the run
+* the ``environment`` of the cluster (if it is to be run on a cluster), currently supported is ``bsub`` and ``qsub``. In either case, the generated scripts can also be run manually
+* ``iterations``: a list of model runs, with each entry giving the settings that should be overridden for that run. The settings are *run settings*, so, for example, ``time.function`` can be overridden. Because the run settings can themselves override model settings, via ``override``, model settings can be specified here, e.g. ``override.techs.nuclear.costs.monetary.e_cap``.
+
+The following example parallel settings show the available options. In this case, two iterations are defined, and each of them overrides the nuclear ``e_cap`` costs (``override.techs.nuclear.costs.monetary.e_cap``):
+
+.. code-block:: yaml
+
+   parallel:
+       name: example-model  # Name of this run
+       environment: bsub  # Cluster environment, choices: bsub, qsub
+       # Execute additional commands in the run script before starting the model
+       additional_lines: ['export PATH=$HOME/bin:$PATH', 'source activate pyomo']
+       iterations:
+           - override.techs.nuclear.costs.monetary.e_cap: 1000
+           - override.techs.nuclear.costs.monetary.e_cap: 2000
+       resources:
+           threads: 1  # Set to request a non-default number of threads
+           wall_time: 30  # Set to request a non-default run time in minutes
+           memory: 1000  # Set to request a non-default amount of memory in MB
+
+This also shows the optional settings available:
+
+* ``additional_lines``: one or multiple lines that will be executed in the run script before starting the model. If running on a computing cluster, this is likely to include a line or two setting up any environment variables and activating the necessary Python environment.
+* ``resources``: specifying these will include resource requests to the cluster controller into the generated run scripts. ``threads``, ``wall_time``, and ``memory`` are available. Whether and how these actually get processed or honored depends on the setup of the cluster environment.
+
+For an iteration to override more than one setting at a time, the notation is as follows:
+
+.. code-block:: yaml
+
+   iterations:
+       - first_option: 500
+         second_option: 10
+       - first_option: 600
+         second_option: 20
+
+See :ref:`parallel_runs` in the section on running models for details on how to use the parallel settings to generate and execute parallel runs.
