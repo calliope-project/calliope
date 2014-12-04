@@ -25,7 +25,7 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
 
 ::
 
-   Copyright 2013 Stefan Pfenninger
+   Copyright 2013-2014 Stefan Pfenninger
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

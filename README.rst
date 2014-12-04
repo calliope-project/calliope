@@ -1,5 +1,5 @@
 
-.. image:: https://travis-ci.org/sjpfenninger/calliope.svg?branch=develop
+.. image:: https://travis-ci.org/sjpfenninger/calliope.svg
    :target: https://travis-ci.org/sjpfenninger/calliope
 
 .. image:: https://img.shields.io/coveralls/sjpfenninger/calliope.svg
@@ -30,7 +30,7 @@ See the `documentation <https://calliope.readthedocs.org/en/latest/model/install
 License
 -------
 
-Copyright 2013 Stefan Pfenninger
+Copyright 2013--2014 Stefan Pfenninger
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013 Stefan Pfenninger.
+Copyright (C) 2013-2014 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 group_fraction.py
