@@ -420,7 +420,7 @@ def get_swi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
     """
     Returns the Shannon-Wiener diversity index.
 
-    :math:`SWI = -1 \times \sum_{i=1}^{I} p_{i} \times \ln(p_{i})`
+    :math:`SWI = -1 \\times \sum_{i=1}^{I} p_{i} \\times \ln(p_{i})`
 
     where where I is the number of categories and :math:`p_{i}`
     is each category's share of the total (between 0 and 1).

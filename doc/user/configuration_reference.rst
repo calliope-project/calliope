@@ -40,6 +40,8 @@ Comments can be inserted anywhere in YAML files with the ``#`` symbol. The remai
 
 See the `YAML website <http://www.yaml.org/>`_ for more general information about YAML.
 
+.. _config_reference_model_wide:
+
 Model-wide settings
 -------------------
 

@@ -121,20 +121,18 @@ class Model(object):
     """
     Calliope: a multi-scale energy systems (MUSES) modeling framework
 
+    Args:
+        config_run : path to YAML file with run settings OR an AttrDict
+                     containing settings. If not given, the included
+                     default run and model settings are used.
+        override : provide any additional options or override options
+                   from ``config_run`` by passing an AttrDict
+                   of the form ``{'model_settings': 'foo.yaml'}``.
+                   Any option possible in ``run.yaml`` can be specified
+                   in the dict, inluding ``override.`` options.
+
     """
     def __init__(self, config_run=None, override=None):
-        """
-        Args:
-            config_run : path to YAML file with run settings OR and AttrDict
-                         containing settings. If not given, the included
-                         default run and model settings are used.
-            override : provide any additional options or override options
-                       from ``config_run`` by passing an AttrDict
-                       of the form ``{'model_settings': 'foo.yaml'}``.
-                       Any option possible in ``run.yaml`` can be specified
-                       in the dict, inluding ``override.`` options.
-
-        """
         super(Model, self).__init__()
         self.debug = utils.AttrDict()
         self.initialize_configuration(config_run, override)

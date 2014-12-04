@@ -29,6 +29,14 @@ There are two ways to split the model definition can be split into several files
        - techs.yaml   # Define technologies, their constraints and costs
        - locations.yaml  # Define locations and transmission capacities
 
+.. Note::
+
+   Calliope includes a command-line tool, ``calliope new``, which will create a new model based on the built-in example model at the given path, e.g.::
+
+      calliope new models/my_new_model
+
+   This makes it easier to quickly create a new model based on an existing skeletion.
+
 .. _configuration_techs:
 
 ------------
