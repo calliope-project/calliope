@@ -8,6 +8,8 @@ before_install:
 install:
   - "pip install -r requirements.txt"
   - "pip install tables==3.1.0"  # Fails if in requirements.txt
+  - "pip install -e svn+https://software.sandia.gov/svn/public/pyutilib/pyutilib/trunk#egg=pyutilib"
+  - "pip install -e svn+https://software.sandia.gov/svn/public/pyomo/pyomo/trunk#egg=pyomo"
   - "pip install ."
 script: "py.test --cov calliope --cov-report term-missing"
 after_success: "coveralls"
