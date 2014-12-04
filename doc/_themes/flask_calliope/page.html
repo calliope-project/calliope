@@ -3,11 +3,11 @@
   {{ body }}
     <p style="margin-top: 60px;">
     {%- if prev %}
-      Previous: <a href="{{ prev.link|e }}" title="{{ _('previous chapter')
+      Previous: <a class="reference" href="{{ prev.link|e }}" title="{{ _('previous chapter')
         }}">{{ prev.title }}</a> |
     {%- endif %}
     {%- if next %}
-    Next: <a href="{{ next.link|e }}" title="{{ _('next chapter')
+    Next: <a class="reference" href="{{ next.link|e }}" title="{{ _('next chapter')
         }}">{{ next.title }}</a>
     {%- endif %}
     </p>

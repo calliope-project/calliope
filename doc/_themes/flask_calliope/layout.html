@@ -18,16 +18,15 @@
 {%- block footer %}
   <div class="footer">
     &copy; Copyright {{ copyright }}.
-    <br><br>Free document hosting provided by <a href="http://www.readthedocs.org">Read the Docs</a>.
-    <!-- Docs created using <a href="http://sphinx-doc.org/">Sphinx</a>. -->
+    <br><br>Documentation created with <a href="http://sphinx-doc.org/">Sphinx</a>, hosted by <a href="http://www.readthedocs.org">Read the Docs</a>.
   </div>
   {% if pagename == 'index' %}
   </div>
   {% endif %}
   <script>
     var stickySidebartoc = function() {
-      if ( $(window).height() >= $("#sidebartoc").height() + 30 ) {
-        $("#sidebartoc").sticky({topSpacing:20});
+      if ( $(window).height() >= $("#sidebartoc").height() + 10 ) {
+        $("#sidebartoc").sticky({topSpacing:0});
       } else {
         $("#sidebartoc").unstick();
       }

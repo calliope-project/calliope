@@ -8,6 +8,7 @@
 
 {% set page_width = '940px' %}
 {% set sidebar_width = '220px' %}
+{% set sidebar_width_withoutpadding = '200px' %}
 
 @import url("basic.css");
 
@@ -38,6 +39,10 @@ div.bodywrapper {
 
 div.sphinxsidebar {
     width: {{ sidebar_width }};
+}
+
+div#sidebartoc{
+    width: {{ sidebar_width_withoutpadding }};
 }
 
 hr {
@@ -71,18 +76,22 @@ div.related {
     display: none;
 }
 
-/*div.sphinxsidebar a {
-    color: #444;
+div.sphinxsidebar a {
     text-decoration: none;
-    border-bottom: 1px dotted #999;
-}*/
+    border-bottom: 1px solid transparent;
+}
 
-/*div.sphinxsidebar a:hover {
-    border-bottom: 1px solid #999;
-}*/
+div.sphinxsidebar a:hover, div.sphinxsidebar a.current:hover {
+    border-bottom: 1px solid transparent;
+    background-color: #F3F3F3;
+}
+
+div.sphinxsidebar .logo a:hover {
+    background-color: transparent;
+}
 
 div.sphinxsidebar a.current {
-    background-color: #FDFCCE;
+    background-color: #D6E1F6;
 }
 
 div.sphinxsidebar {
@@ -147,12 +156,14 @@ div.sphinxsidebar input {
 /* -- body styles ----------------------------------------------------------- */
 
 a {
-    color: #004B6B;
+    // color: #004B6B;
+    // color: #0A4EB2;
+    color: #0A2C7E;
     text-decoration: underline;
 }
 
 a:hover {
-    color: #6D4100;
+    // color: #6D4100;
     text-decoration: underline;
 }
 
