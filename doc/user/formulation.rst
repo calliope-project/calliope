@@ -19,11 +19,9 @@ The default objective function minimizes cost:
 
 where :math:`k=monetary`.
 
-Alternative objective functions can be used by setting the ``objective:`` directive in the model configuration.
+Alternative objective functions can be used by setting the ``objective:`` directive in the model configuration (see :ref:`config_reference_model_wide`).
 
-`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting the ``weight:`` directive on any technology.
-
-.. TODO link to more detail on `objective:` and `weight` in the configuration section
+`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting the ``weight:`` directive on any technology (see :ref:`config_reference_techs`).
 
 -----------------
 Basic constraints
@@ -165,8 +163,6 @@ Defines the following variables:
 Built capacity is managed by six constraints.
 
 ``c_s_cap`` constrains the built storage capacity by :math:`s_{cap}(y, x) \leq s_{cap,max}(y, xi)`. If ``y.constraints.use_s_time:`` is true at location ``x``, then ``y.constraints.s_time_max:`` and ``y.constraints.e_cap_max`` are used to to compute ``s_cap_max`` at reference efficiency. If ``y.constraints.s_cap_max_force:`` is true at location ``x`` or the model is running operational mode, the inequality in the equation above is turned into an equality constraint.
-
-.. TODO document reference efficiency
 
 ``c_r_cap`` constrains the built resource conversion capacity by :math:`r_{cap}(y, x) \leq r_{cap,max}(y, x)`. If the model is running operational mode, the inequality in the equation above is turned into an equality constraint.
 
@@ -409,9 +405,7 @@ Group fractions
 
 Provided by: :func:`calliope.constraints.group_fraction.group_fraction`
 
-This component provides the ability to constrain groups of technologies to provide a certain fraction of total output, a certain fraction of total capacity, or a certain fraction of peak power demand. See the configuration section for further details on how to set up groups of technologies.
-
-.. TODO point to configuration section subsection on groups
+This component provides the ability to constrain groups of technologies to provide a certain fraction of total output, a certain fraction of total capacity, or a certain fraction of peak power demand. See :ref:`config_parents_and_groups` in the configuration section for further details on how to set up groups of technologies.
 
 The settings for the group fraction constraints are read from the model-wide configuration, in a ``group_fraction:`` directive, as follows:
 

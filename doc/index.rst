@@ -47,7 +47,7 @@ User guide
 API documentation
 -----------------
 
-Documents functions, methods and classes:
+Documents functions, classes and methods:
 
 .. toctree::
    :maxdepth: 1

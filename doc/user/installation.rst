@@ -20,8 +20,6 @@ Installing a solver
 
 Refer to the documentation of your solver on how to install it. You need at least one of the solvers supported by Pyomo installed.
 
-.. TODO add a link to Pyomo docs listing supported solvers
-
 `GLPK <https://www.gnu.org/software/glpk/>`_ is an open-source solver that works very well for smaller models, but can take too much time and/or too much memory on larger problems, for which it can be worth using `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_ or `Gurobi <http://www.gurobi.com/>`_. Both Gurobi and CPLEX have free academic licensing schemes.
 
 

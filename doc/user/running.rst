@@ -52,6 +52,8 @@ The ``run.sh`` script can simply be called with an integer argument from the seq
 
 To submit the resulting runs on a cluster with bsub, use ``bsub < submit.sh``, and on a cluster with qsub, ``qsub submit.sh``.
 
+.. Note:: In parallel mode, model outputs are automatically saved as HDF files inside the parallel run's ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
+
 See :ref:`run_config_parallel_runs` for details on configuring parallel runs.
 
 .. _builtin_example:

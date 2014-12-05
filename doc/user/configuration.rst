@@ -9,7 +9,7 @@ Model configuration
 
 To run a model, two things are needed: a *model definition* (also referred to as the *model settings*) that define such things as technologies, locations, costs and constraints, and *run settings*, which specify how the given model should be run. At its most basic, these two components can be specified in just two YAML files:
 
-* ``model.yaml`` which sets up the model and may import any number of additional files in order to split large models up into manageable units. It mus also specify, via the ``data_path:`` directive, the directory with data files for those technologies that have data explicit in space and time. The data directory must contain, at a minimum, a file called ``set_t.csv`` which defines the model's timesteps. See :ref:`configuration_timeseries` below for more information on this.
+* ``model.yaml`` which sets up the model and may import any number of additional files in order to split large models up into manageable units. It must also specify, via the ``data_path:`` directive, the directory with data files for those technologies that have data explicit in space and time. The data directory must contain, at a minimum, a file called ``set_t.csv`` which defines the model's timesteps. See :ref:`configuration_timeseries` below for more information on this.
 * ``run.yaml`` which sets up run-specific and environment-specific settings such as which solver to use. It must also, with the ``model:`` directive, specify which model should be run by pointing to that model's primary model configuration file (e.g., ``model.yaml``).
 
 Either of these files can have an arbitrary name, but for consistency we will refer to them as ``run.yaml`` (for the run settings) and ``model.yaml`` (for the model definition).
@@ -35,7 +35,7 @@ There are two ways to split the model definition can be split into several files
 
       calliope new models/my_new_model
 
-   This makes it easier to quickly create a new model based on an existing skeletion.
+   This makes it easier to quickly create a new model based on an existing skeleton.
 
 .. _configuration_techs:
 

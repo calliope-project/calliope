@@ -40,6 +40,8 @@ Comments can be inserted anywhere in YAML files with the ``#`` symbol. The remai
 
 See the `YAML website <http://www.yaml.org/>`_ for more general information about YAML.
 
+Calliope internally represents the configuration as :class:`~calliope.utils.AttrDict`\ s, which are a subclass of the built-in Python dictionary data type (``dict``) with added functionality such as YAML reading/writing and attribute access to keys.
+
 .. _config_reference_model_wide:
 
 Model-wide settings
@@ -83,6 +85,10 @@ Optional model-wide settings with no default values (example settings are shown 
 Optional model-wide settings that have defaults set by Calliope (default values are shown here):
 
 .. code-block:: yaml
+
+   # Chooses the objective function
+   # If not set, defaults to the included cost minimization objective
+   objective:  'constraints.objective.objective_cost_minimization'
 
    startup_time: 12  # Length of startup period (hours)
 
@@ -239,14 +245,14 @@ Optional settings:
 * Output options -- these are only used when the model is run via the ``calliope run`` command-line tool:
    * ``output.path``: Path to an output directory to save results (will be created if it doesn't exist already)
    * ``output.format``:  Format to save results in, either ``hdf`` or ``csv``
-* ``parallel``: Settings used to generate parallel runs, see :ref:`run_config_parallel_runs`
-* ``time``: Settings to adjust time resolution, see :ref:`run_time_res`
+* ``parallel``: Settings used to generate parallel runs, see :ref:`run_config_parallel_runs` for the available options
+* ``time``: Settings to adjust time resolution, see :ref:`run_time_res` for the available options
 * ``override``: Override arbitrary settings from the model configuration. E.g., this could specify ``techs.nuclear.costs.monetary.e_cap = 1000`` to set the ``e_cap`` costs of ``nuclear``, overriding whatever was set in the model configuration
 * ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
 
 Optional debug settings:
 
-* ``subset_y``, ``subset_x``, ``subset_t``: specify if only a subset of technologies (y), locations (x), or timesteps (t) should be used for this run. This can be useful for debugging purposes. The timestep subset can be specified as ``[startdate, enddate]``, e.g. ``['2005-01-01', '2005-01-31']``
+* ``subset_y``, ``subset_x``, ``subset_t``: specify if only a subset of technologies (y), locations (x), or timesteps (t) should be used for this run. This can be useful for debugging purposes. The timestep subset can be specified as ``[startdate, enddate]``, e.g. ``['2005-01-01', '2005-01-31']``. The subsets are processed before building the model and applying time resolution adjustments, so time resolution functions will only see the reduced set of data.
 * ``debug.keepfiles``: Whether to keep temporary files (default ``false``), useful to debug model problems
 * ``debug.symbolic_solver_labels``: By default, Pyomo does not generate components with human-readable names, which is faster. To debug models (particularly when using ``debug.keepfiles: true``), this setting should also be set to ``true`` so that the generated model becomes human-readable
 

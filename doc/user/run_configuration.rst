@@ -17,7 +17,11 @@ At a minimum, the run configuration must provide three settings, as shown in thi
 
 ``model`` specifies the path to the model configuration file for the model to be run. ``mode`` specifies whether the model should be run in planning (``plan``) or operational (``operate``) mode (see :doc:`running`). Finally, ``solver`` specifies the solver to be used. Calliope has been tested with GLPK, Gurobi and CPLEX. Any of the solvers that Pyomo is compatible with should work.
 
-Additional (optional) settings, including debug settings, can be specified in the run configuration. Settings to adjust the timestep resolution and settings for parallel runs are discussed below. For a complete list of the other available settings, see :ref:`config_reference_run` in the configuration reference.
+Additional (optional) settings, including debug settings, can be specified in the run configuration. In particular, the run settings can override any model settings via the ``override:`` directive.
+
+.. Note:: If run settings override the ``data_path`` setting and specify a relative path, that path will be interpreted as relative to the run settings file and not the model settings file being overridden.
+
+The optional settings to adjust the timestep resolution and those for parallel runs are discussed below. For a complete list of the other available settings, see :ref:`config_reference_run` in the configuration reference.
 
 .. _run_time_res:
 
@@ -40,9 +44,9 @@ The following example demonstrates the second way:
 .. code-block:: yaml
 
    time:
-       function: resolution_series_min_week
+       function: 'resolution_series_min_week'
        function_options:
-           tech: wind_offshore
+           tech: 'wind_offshore'
            resolution: 24
 
 This passes the options, ``tech="wind_offshore", resolution=24`` to the specified function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, keeps that week at the original resolution, and resamples the rest of the data to 24-hourly timesteps.
@@ -98,10 +102,11 @@ The following example parallel settings show the available options. In this case
 .. code-block:: yaml
 
    parallel:
-       name: example-model  # Name of this run
-       environment: bsub  # Cluster environment, choices: bsub, qsub
+       name: 'example-model'  # Name of this run
+       environment: 'bsub'  # Cluster environment, choices: bsub, qsub
+       data_path_adjustment: '../../../model_config'
        # Execute additional commands in the run script before starting the model
-       additional_lines: ['export PATH=$HOME/bin:$PATH', 'source activate pyomo']
+       additional_lines: ['source activate pyomo']
        iterations:
            - override.techs.nuclear.costs.monetary.e_cap: 1000
            - override.techs.nuclear.costs.monetary.e_cap: 2000
@@ -112,6 +117,7 @@ The following example parallel settings show the available options. In this case
 
 This also shows the optional settings available:
 
+* ``data_path_adjustment``: replaces the ``data_path`` setting in the model configuration during parallel runs only
 * ``additional_lines``: one or multiple lines that will be executed in the run script before starting the model. If running on a computing cluster, this is likely to include a line or two setting up any environment variables and activating the necessary Python environment.
 * ``resources``: specifying these will include resource requests to the cluster controller into the generated run scripts. ``threads``, ``wall_time``, and ``memory`` are available. Whether and how these actually get processed or honored depends on the setup of the cluster environment.
 
