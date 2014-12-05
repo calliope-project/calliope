@@ -94,9 +94,12 @@ Each node has the following energy balance variables:
 
 For most technologies, ``ec`` is not actually defined, and ``es`` directly converts storage to carrier. ``ec`` is used for technologies where a difference between gross and net installed conversion capacity must be made (technologies which specify an internal energy use).
 
-.. TODO add a figure with the basic layout of the node and different variables going through from resource to storage to carrier (with the possible extra step of - es - ec - e)
+.. figure:: images/node.*
+   :alt: Layout of a node and its energy balance
 
-Internally, ``e``, ``es`` and ``ec`` are split into separate variables, for the positive and negative components, i.e. ``e_prod`` and ``e_con`` (analogously for ``es`` and ``ec``). This simplifies the formulation of some constraints. In the documentation, unless necessary in a specific context, the combined (e.g. ``e``) notation is used for simplicity.
+   The layout of a node and its energy balance variables. The outward arrows show where losses occur. Depending on a technology, some of these steps may be skipped. For example, most technologies will have no storage capacity or parasitic losses.
+
+Internally, ``es`` and ``ec`` are split into separate variables, for the positive and negative components, i.e. ``es_prod`` and ``es_con`` (analogously for ``ec``). This simplifies the formulation of some constraints. In the documentation, unless necessary in a specific context, the combined (e.g. ``es``) notation is used for simplicity.
 
 The secondary resource can deliver energy to storage via ``rbs`` alongside the primary energy source (via ``rs``), but only if the necessary setting (``constraints.allow_rsec:``) is enabled for a technology. Optionally, this can be allowed only during the ``startup_time:`` (defined in the model-wide settings), e.g. to allow storage to be filled up initially.
 

@@ -3,17 +3,38 @@
 Introduction
 ============
 
+Energy system models allow analysts to form internally coherent scenarios of how energy is extracted, converted, transported, and used, and how these processes might change in the future. These models have been gaining renewed importance as methods to help navigate the climate policy-driven transformation of the energy system.
+
+Calliope is an attempt to design an energy system model from the ground of up with specific design goals in mind (see below). Therefore, the model approach and data format layout may be different from approaches used in other models. The design of the nodes approach used in Calliope was influenced by the power nodes modeling framework by [Heussen2010]_.
+
+Calliope was designed to address questions around the transition to renewable energy, so there are tools that are likely to be more suitable for other types of questions. In particular, the following related energy modeling systems are available under open source or free software licenses:
+
+* `SWITCH <http://switch-model.org/>`_: A power system model focused on renewables integration, using multi-stage stochastic linear optimization, as well as hourly resource potential and demand data. Written in the commercial AMPL language and GPL-licensed.
+* `Temoa <http://temoaproject.org/>`_: An energy system model with multi-stage stochastic optimization functionality which can be deployed to computing clusters, to address parametric uncertainty. Written in Python/Pyomo and AGPL-licensed.
+* `OSEMOSyS <http://www.osemosys.org/>`_: A simplified energy system model similar to the MARKAL/TIMES model families, which can be used as a stand-alone tool or integrated in the `LEAP energy model <http://www.energycommunity.org/LEAP/>`_. Written in GLPK, a free subset of the commercial AMPL language, and Apache 2.0-licensed.
+
 .. _rationale:
 
 ---------
 Rationale
 ---------
 
-.. TODO
+Calliope was designed with the following goals in mind:
 
-Separation between model and code.
+* Designed from the ground up to analyze energy systems with high shares of renewable energy or other variable generation
+* Formulated to allow arbitrary spatial and temporal resolution, and equipped with the necessary tools to deal with time series input data
+* Allow easy separation of model code and data, and modular extensibility of model code
+* Make models easily modifiable, archiveable and auditable (e.g. with a Git repository), by using well-defined and human-readable text formats
+* Simplify the definition and deployment of large numbers of model runs to high-performance computing clusters
+* Able to run stand-alone from the command-line, but also provide an API for programmatic access and embedding in larger analyses
+* Be a first-class citizen of the Python world (installable with pip, properly documented and tested)
+* Have a free and open-source code base
 
-[insert figure 03_Calliope_ConfigurationModel here]
+---------------
+Acknowledgments
+---------------
+
+Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London, and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
 
 .. _license:
 
@@ -38,3 +59,9 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+----------
+References
+----------
+
+.. [Heussen2010] Heussen, K. et al., 2010. Energy storage in power system operation: The power nodes modeling framework. In Innovative Smart Grid Technologies Conference Europe (ISGT Europe), 2010 IEEE PES. pp. 1–8. `DOI: 10.1109/ISGTEUROPE.2010.5638865 <http://dx.doi.org/10.1109/ISGTEUROPE.2010.5638865>`_

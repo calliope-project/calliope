@@ -346,6 +346,10 @@ table.footnote td {
     padding: 0.3em 0.5em;
 }
 
+table.citation {
+    font-size: 15px;
+}
+
 dl {
     margin: 0;
     padding: 0;
