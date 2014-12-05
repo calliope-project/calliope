@@ -88,6 +88,27 @@ Refer to :ref:`config_reference_techs` for a complete list of all available tech
 
    The identifiers of the abstract base technologies are reserved and cannot be used for a user-defined technology. In addition, ``defaults`` is also a reserved identifier and cannot be used.
 
+.. _config_parents_and_groups:
+
+Parents and groups
+------------------
+
+Because each technology must define a ``parent``, the definition of all technologies represents a tree structure, with the built-in defaults representing the root node, the built-in abstract base technologies inheriting from that root node, and all other user-defined technologies inheriting from one of the abstract base technologies.
+
+There are two important aspects to this model definition structure.
+
+First, only leaf nodes (the outermost nodes) in this tree may actually be used as technologies in model definitions. In other words, the parent-child inheritance structure allows technologies to inherit settings from their parents, but only those technologies without any children themselves are considered "real". Calliope will raise an error if this requirement is not met.
+
+Second, every non-leaf node is implicitly a group of technologies, and the solution returned by Calliope reports aggregated information for each defined technology and its children (see :doc:`analysis`).
+
+The ``group`` option only has an effect on supply diversity functionality in the analysis module (again, see :doc:`analysis` for details). Because every non-leaf technology is implicitly a group, those that should be considered as distinct groups for the purpose of diversity of supply must be explicitly marked with ``group: true``.
+
+
+.. figure:: images/inheritance.*
+   :alt: Technology inheritance tree
+
+   An example of a simple technology inheritance tree. ``renewables`` could define any defaults that both ``pv`` and ``wind`` should inherit, furthermore, it sets ``group: true``. Thus, for purposes of supply diversity, ``pv`` and ``wind`` will be counted together, while ``nuclear`` will be counted separately.
+
 ---------
 Locations
 ---------

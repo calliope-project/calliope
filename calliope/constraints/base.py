@@ -147,7 +147,7 @@ def node_energy_balance(model):
             else:
                 s_loss = model.get_option(y + '.constraints.s_loss')
                 s_minus_one = (((1 - s_loss)
-                                ** model.data.time_res_series.at[model.prev(t)])
+                                ** d.time_res_series.at[model.prev(t)])
                                * m.s[y, x, model.prev(t)])
             return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
                     + rbs - e_prod - e_con)
@@ -348,7 +348,7 @@ def node_constraints_transmission(model):
     m = model.m
 
     # Constraint rules
-    def c_transmission_capacity_rule(m, y, x):
+    def c_trans_rule(m, y, x):
         y_remote, x_remote = transmission.get_remotes(y, x)
         if y_remote in m.y_trans:
             return m.e_cap[y, x] == m.e_cap[y_remote, x_remote]
@@ -356,7 +356,8 @@ def node_constraints_transmission(model):
             return po.Constraint.NoConstraint
 
     # Constraints
-    m.c_transmission_capacity = po.Constraint(m.y_trans, m.x, rule=c_transmission_capacity_rule)
+    m.c_transmission_capacity = po.Constraint(m.y_trans, m.x,
+                                              rule=c_trans_rule)
 
 
 def node_parasitics(model):

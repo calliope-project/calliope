@@ -208,6 +208,13 @@ div.body p, div.body dd, div.body li {
     line-height: 1.4em;
 }
 
+div.body p.caption {
+    // text-align: center;
+    padding: 0 60px;
+    font-size: 14px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 div.admonition {
     background: #fafafa;
     margin: 20px -30px;

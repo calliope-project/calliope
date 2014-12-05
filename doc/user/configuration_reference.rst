@@ -114,7 +114,7 @@ A technology with the identifier ``tech_identifier`` is configured by a YAML blo
        stack_weight: 100  # Weight of this technology in the stack when plotting
        color: false  # HTML color code, or `false` to choose a random color
        source_carrier: false # Carrier to consume, for conversion technologies
-       group: false  # Set to ``true`` if this is a group
+       group: false  # Make this a group for purposes of supply diversity analysis
        weight: 1.0 # Cost weighting in objective function
        constraints:
            # ... constraint definitions ...
@@ -125,7 +125,7 @@ A technology with the identifier ``tech_identifier`` is configured by a YAML blo
        depreciation:
            # ... depreciation definitions ...
 
-Each technology **must** define a ``parent``, which can either be an abstract base technology such as ``supply``, or any other technology previously defined in the model. The technology inherits all settings from its parent, but overwrites anything it specifies again itself.
+Each technology **must** define a ``parent``, which can either be an abstract base technology such as ``supply``, or any other technology previously defined in the model. The technology inherits all settings from its parent, but overwrites anything it specifies again itself. See :ref:`config_parents_and_groups` for more details on this and on the function of the ``group:`` option.
 
 ``stack_weight`` and ``color`` determine how the technology is shown in model outputs. The higher the ``stack_weight``, the lower a technology will be shown in stackplots.
 
