@@ -10,7 +10,7 @@ Calliope is a framework to develop energy system models using a modern and open 
 
 ------------
 
-This is the documentation for version |version|. See the `main project website <http://callio.pe/>`_ for contact details and other useful information.
+This is the documentation for version |version|. See the `main project website <http://www.callio.pe/>`_ for contact details and other useful information.
 
 ------------
 

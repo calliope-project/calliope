@@ -14,11 +14,11 @@ Calliope
 
 *A multi-scale energy systems (MUSES) modeling framework*
 
+Project website: `www.callio.pe <http://www.callio.pe/>`_
+
 
 Documentation
 -------------
-
-The project website is `callio.pe <http://callio.pe/>`_.
 
 Documentation is available at `docs.callio.pe <http://docs.callio.pe/>`_.
 
