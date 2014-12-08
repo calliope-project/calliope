@@ -3,5 +3,4 @@ Makefile
 *.pyc
 calliope.egg-info/
 doc/_build/
-doc/user/includes/
 *.ipynb

@@ -1,0 +1,5 @@
+# Ignore everything in this directory, since it is auto-generated
+*
+
+# Except this file
+!.gitignore
