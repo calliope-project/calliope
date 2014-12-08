@@ -6,7 +6,7 @@
    :target: https://coveralls.io/r/sjpfenninger/calliope
 
 .. image:: https://img.shields.io/badge/license-Apache-blue.svg
-   :target: https://calliope.readthedocs.org/en/latest/model/introduction.html#license
+   :target: http://docs.callio.pe/en/current/user/introduction.html#license
 
 
 Calliope
@@ -18,13 +18,15 @@ Calliope
 Documentation
 -------------
 
-Documentation is available at `calliope.readthedocs.org <https://calliope.readthedocs.org/>`_.
+The project website is `callio.pe <http://callio.pe/>`_.
+
+Documentation is available at `docs.callio.pe <http://docs.callio.pe/>`_.
 
 
 Installation
 ------------
 
-See the `documentation <https://calliope.readthedocs.org/en/latest/model/installation.html>`_ for installation requirements and instructions.
+See the `documentation <http://docs.callio.pe/en/current/user/installation.html>`_ for installation requirements and instructions.
 
 
 License

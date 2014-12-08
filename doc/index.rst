@@ -6,7 +6,13 @@ Calliope: a multi-scale energy systems (MUSES) modeling framework
 
 v\ |version| (:doc:`Release history <history>`)
 
-Calliope is a framework to develop energy systems models using a modern and open source Python-based toolchain.
+Calliope is a framework to develop energy system models using a modern and open source Python-based toolchain.
+
+------------
+
+This is the documentation for version |version|. See the `main project website <http://callio.pe/>`_ for contact details and other useful information.
+
+------------
 
 Main features:
 
@@ -17,9 +23,7 @@ Main features:
 * Able to run on computing clusters
 * Easily extensible
 * Uses a state-of-the-art Python toolchain based on `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_ and `Pandas <http://pandas.pydata.org/>`_
-* `Freely available <https://github.com/sjpfenninger/calliope>`_ under the Apache 2.0 license
-
-Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London, and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
+* Freely available under the Apache 2.0 license
 
 ----------
 User guide

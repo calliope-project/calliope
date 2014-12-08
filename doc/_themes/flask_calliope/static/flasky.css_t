@@ -350,6 +350,20 @@ table.citation {
     font-size: 15px;
 }
 
+table.citation td.label {
+    width: 120px;
+}
+
+table.citation, table.citation td, table.citation th {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+table.citation {
+    margin-bottom: 20px;
+}
+
 dl {
     margin: 0;
     padding: 0;
