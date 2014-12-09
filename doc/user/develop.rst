@@ -3,7 +3,7 @@
 Development guide
 =================
 
-The code lives on GitHub at `sjpfenninger/calliope <https://github.com/sjpfenninger/calliope>`_.
+The code lives on GitHub at `calliope-project/calliope <https://github.com/calliope-project/calliope>`_.
 
 Development takes place in the ``master`` branch. Stable versions are tagged off of ``master`` with `semantic versioning <http://semver.org/>`_.
 
@@ -15,11 +15,11 @@ Installing a development version
 
 With pip::
 
-   pip install -e git+https://github.com/sjpfenninger/calliope.git#egg=calliope
+   pip install -e git+https://github.com/calliope-project/calliope.git#egg=calliope
 
 Or, for a more easily modifiable local installation, first clone the repository to a location of your choosing, and then install via pip::
 
-   git clone https://github.com/sjpfenninger/calliope
+   git clone https://github.com/calliope-project/calliope
    pip install -e /path/to/your/cloned/repository
 
 ---------------------------

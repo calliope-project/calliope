@@ -1,9 +1,9 @@
 
-.. image:: https://travis-ci.org/sjpfenninger/calliope.svg
-   :target: https://travis-ci.org/sjpfenninger/calliope
+.. image:: https://travis-ci.org/calliope-project/calliope.svg
+   :target: https://travis-ci.org/calliope-project/calliope
 
-.. image:: https://img.shields.io/coveralls/sjpfenninger/calliope.svg
-   :target: https://coveralls.io/r/sjpfenninger/calliope
+.. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
+   :target: https://coveralls.io/r/calliope-project/calliope
 
 .. image:: https://img.shields.io/badge/license-Apache-blue.svg
    :target: http://docs.callio.pe/en/current/user/introduction.html#license
