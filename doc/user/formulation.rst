@@ -260,6 +260,8 @@ These are two constraints, ``c_ec_prod`` and ``c_ec_con``, which constrain ``ec`
 
    ec_{con}(c, y, x, t) = \frac{es_{con}(c, y, x, t)}{c_{eff}(y, x)}
 
+For conversion and transmission technologies, the second equation reads :math:`ec_{con}(c, y, x, t) = es_{con}(c, y, x, t)` so that the internal losses are applied only once.
+
 The two variables ``ec_prod`` and ``ec_con`` are only defined in the model for technologies where ``c_eff`` is not 1.0.
 
 .. Note:: When reading the model solution, Calliope automatically manages the ``es`` and ``ec`` variables. In the solution, every technology has an ``ec`` variable, which is simply set to ``es`` wherever it was not defined, to make the solution consistent.

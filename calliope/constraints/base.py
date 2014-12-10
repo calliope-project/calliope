@@ -383,9 +383,15 @@ def node_parasitics(model):
                 * model.get_option(y + '.constraints.c_eff', x=x))
 
     def c_ec_con_rule(m, c, y, x, t):
+        if y in m.y_trans or y in m.y_conv:
+            # Ensure that transmission and conversion technologies
+            # do not double count c_eff
+            c_eff = 1.0
+        else:
+            c_eff = model.get_option(y + '.constraints.c_eff', x=x)
         return (m.ec_con[c, y, x, t]
                 == m.es_con[c, y, x, t]
-                / model.get_option(y + '.constraints.c_eff', x=x))
+                / c_eff)
 
     # Constraints
     m.c_ec_prod = po.Constraint(m.c, m.y_p, m.x, m.t, rule=c_ec_prod_rule)

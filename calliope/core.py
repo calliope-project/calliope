@@ -19,6 +19,7 @@ import random
 import shutil
 import sys
 import time
+import warnings
 
 import pyomo.opt as popt
 import pyomo.core as po
@@ -488,7 +489,7 @@ class Model(object):
                             if i != 'defaults'}
         except KeyError:
             tech = inspect.trace()[-1][0].f_locals['i']
-            if 'parent' in list(o.techs[tech].keys()):
+            if 'parent' not in list(o.techs[tech].keys()):
                 e = exceptions.ModelError
                 raise e('Technology `' + tech + '` defines no parent!')
         # Verify that all parents are themselves actually defined
@@ -787,12 +788,13 @@ class Model(object):
                             if self.data.locations.at[x, y] == 0:
                                 self.debug.data_sources.set_key(k, '_NA_')
                             else:
-                                e = exceptions.ModelError
-                                raise e('Could not load data for {}, '
-                                        'with given option: '
-                                        '{}'.format(k, option))
-                                # v = 'file:_NOT_FOUND_'
-                                # self.debug.data_sources.set_key(k, v)
+                                w = exceptions.ModelWarning
+                                message = ('Could not load data for {}, '
+                                           'with given option: '
+                                           '{}'.format(k, option))
+                                warnings.warn(message, w)
+                                v = 'file:_NOT_FOUND_'
+                                self.debug.data_sources.set_key(k, v)
                     else:
                         d[param][y].loc[:, x] = option
                         self.debug.data_sources.set_key(k, 'model_config')
@@ -818,7 +820,7 @@ class Model(object):
             message = ('The following parameter values could not be read '
                        'from file. They were automatically set to `0`: '
                        + ', '.join(missing_data))
-            raise exceptions.ModelWarning(message)
+            warnings.warn(message, exceptions.ModelWarning)
 
     def _get_t_max_demand(self):
         t_max_demands = utils.AttrDict()
@@ -1006,38 +1008,27 @@ class Model(object):
         self.runtime = int(time.time() - self.start_time)
         logging.info('Runtime: ' + str(self.runtime) + ' secs')
 
-    def run(self, catch_model_warnings=True):
+    def run(self):
         """
         Instantiate and solve the model
 
-        If ``catch_model_warnings`` is True, ModelWarning exceptions are
-        caught, allowing the method to gracefully exit so that the
-        problematic model instance can be examined.
-
         """
-        try:
-            self.start_time = time.time()
-            if self.mode == 'plan':
-                self.generate_model()  # Generated model goes to self.m
-                self.solve()
-                self.load_solution()
-            elif self.mode == 'operate':
-                # solve_iterative() generates, solves, and loads the solution
-                self.solve_iterative()
-            else:
-                e = exceptions.ModelError
-                raise e('Invalid model mode: `{}`'.format(self.mode))
-            self._log_time()
-            if self.config_run.get_key('output.save', default=False) is True:
-                output_format = self.config_run.get_key('output.format',
-                                                        default='hdf')
-                self.save_solution(output_format)
-        except exceptions.ModelWarning as e:
-            self._log_time()
-            if catch_model_warnings:
-                logging.warning(str(e))
-            else:
-                raise
+        self.start_time = time.time()
+        if self.mode == 'plan':
+            self.generate_model()  # Generated model goes to self.m
+            self.solve()
+            self.load_solution()
+        elif self.mode == 'operate':
+            # solve_iterative() generates, solves, and loads the solution
+            self.solve_iterative()
+        else:
+            e = exceptions.ModelError
+            raise e('Invalid model mode: `{}`'.format(self.mode))
+        self._log_time()
+        if self.config_run.get_key('output.save', default=False) is True:
+            output_format = self.config_run.get_key('output.format',
+                                                    default='hdf')
+            self.save_solution(output_format)
 
     def solve(self, warmstart=False):
         """
@@ -1469,8 +1460,8 @@ class Model(object):
         if r is False:
             logging.critical(self.results.Problem)
             logging.critical(self.results.Solver)
-            e = exceptions.ModelWarning
-            raise e('Could not load results into model instance.')
+            w = exceptions.ModelWarning
+            warnings.warn('Could not load results into model instance.', w)
 
     def save_solution(self, how):
         """Save model solution. ``how`` can be 'hdf' or 'csv'

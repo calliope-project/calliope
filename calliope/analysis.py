@@ -67,16 +67,20 @@ def get_square_legend(lgd):
     return (rects, labels)
 
 
-def stack_plot(df, stack, figsize=None, colormap='jet', legend='default',
+def stack_plot(df, stack=None, figsize=None, colormap='jet', legend='default',
                ticks='daily', names=None, ax=None, leg_title=None,
                leg_fontsize=None, **kwargs):
     """
+    if stack is None, the columns of the passed df are used
+
     legend can be 'default' or 'right', can set legend title with `leg_title`
     ticks can be 'hourly', 'daily', 'monthly'
 
     kwargs get passed to ax.stackplot()
 
     """
+    if not stack:
+        stack = df.columns
     if not ax:
         if not figsize:
             figsize = (16, 4)
