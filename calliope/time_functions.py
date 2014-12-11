@@ -89,15 +89,37 @@ def resolution_series_uniform(data, resolution):
     return summarize
 
 
-def resolution_series_min_week(data, tech, var='r', resolution=24,
-                               how='sum'):
+def resolution_series_min_week(data, tech, var='r', resolution=24, how='sum'):
     """
-    Resolution series to keep the week where containing the day where
-    ``var`` of ``tech`` is minimal across the sum of or the mode (most)
-    of locations, depending on ``how``, and reduce everything else to
-    the given resolution (in hours, daily by default).
+    Wrapper providing backwards compatibility to access
+    `resolution_series_extreme_week`
 
-    ``how`` can be 'sum' or 'mode'
+    """
+    return resolution_series_extreme_week(data, tech, var, resolution,
+                                          how, what='min')
+
+
+def resolution_series_extreme_week(data, tech, var='r', resolution=24,
+                                   how='sum', what='min'):
+    """
+    Resolution series to keep the week containing the day where
+    ``var`` of ``tech`` is minimal (what='min') or maximal (what='max')
+    across the sum (how='sum') of or the mode (most) of locations,
+    (how='mode'), and reduce everything else to the given resolution
+    (in hours, daily by default).
+
+    Parameters
+    ----------
+    data : Calliope model data
+    tech : str
+        technology whose `var` to find extreme week for
+    var : str, default 'r'
+    resolution : int, default 24
+        resolution the non-extreme week is reduced to
+    how : str, default 'sum'
+        'sum' or 'mode'
+    what : str, default 'min'
+        'min' or 'max'
 
     """
     df = data[var][tech]
@@ -106,12 +128,16 @@ def resolution_series_min_week(data, tech, var='r', resolution=24,
     # Get day-wise sums
     dff_index = list(range(0, len(df), day_len))
     dff = pd.rolling_sum(df, window=day_len).reindex(dff_index)
+    # If what is 'min', this will get the 'idxmin' attribute (a method),
+    # similar for 'max', else most likely raise an error!
+    idx_extr = lambda x: getattr(x, '{}min'.format(what))
     if how == 'mode':
         # Get timestep where var/tech is minimal in the largest
         # number of locations
-        selected = int(dff[dff > 0].idxmin().mode()[0])
+        # e.g. if what='min', this does: int(dff[dff > 0]).idxmin().mode()[0])
+        selected = idx_extr(int(dff[dff > 0])().mode()[0])
     elif how == 'sum':
-        selected = dff[dff > 0].sum(axis=1).idxmin()
+        selected = idx_extr(dff[dff > 0].sum(axis=1))()
     d = data._dt.at[selected]
     # Determine the range for the calendar week
     # (7 days) to keep at full resolution

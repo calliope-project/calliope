@@ -333,8 +333,27 @@ table.field-list th {
     padding: 0 0.8em 0 0;
 }
 
+table.field-list th.field-name {
+    background-color: rgb(238, 238, 238);
+    padding: 1px 8px 1px 5px;
+    white-space: nowrap;
+    font-weight: normal;
+}
+
 table.field-list td {
     padding: 0;
+}
+
+table.field-list td.field-body {
+    padding-left: 10px;
+}
+
+table.field-list td.field-body > p {
+    font-style: italic;
+}
+
+table.field-list td.field-body > p > strong {
+    font-style: normal;
 }
 
 table.footnote td.label {
@@ -367,6 +386,11 @@ table.citation {
 dl {
     margin: 0;
     padding: 0;
+}
+
+dl.method {
+    border-top: 1px solid #E2E2E2;
+    padding-top: 10px;
 }
 
 dl dd {
