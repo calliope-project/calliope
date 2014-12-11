@@ -36,6 +36,8 @@ from . import time_functions
 from . import time_tools
 from . import utils
 
+warnings.formatwarning = exceptions._formatwarning
+
 
 def _load_function(source):
     """
