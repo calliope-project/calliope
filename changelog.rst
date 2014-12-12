@@ -2,10 +2,11 @@
 Release History
 ---------------
 
-0.3.0 (dev)
-+++++++++++
+0.3.0 (2014-12-12)
+++++++++++++++++++
 
 * Python 3 and Pyomo 4 are now minimum requirements
+* Significantly improved documentation
 * Improved model solution management by saving to HDF5 instead of CSV
 * Calculate shares of technologies, including the ability to define groups for the purpose of computing shares
 * Improved operational mode

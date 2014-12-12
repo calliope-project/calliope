@@ -40,7 +40,7 @@ Once you have Anaconda installed, you can create a new Python 3.4 environment ca
 
 Then, with the "calliope" environment activated (``source activate calliope`` if you are using Anaconda), install Calliope with the Python package installer pip, which will also install Pyomo (and any other remaining dependencies not installed already)::
 
-   $ pip install git+https://github.com/calliope-project/calliope.git#egg=calliope
+   $ pip install git+https://github.com/calliope-project/calliope.git@v0.3.0#egg=calliope
 
 .. _python_module_requirements:
 
