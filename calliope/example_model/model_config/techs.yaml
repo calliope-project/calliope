@@ -1,76 +1,66 @@
-#
+##
 # TECHNOLOGY DEFINITIONS
-#
+##
 
 techs:
+
+# Supply
+
     ccgt:
+        name: 'Combined cycle gas turbine'
+        color: '#FDC97D'
+        stack_weight: 200
         parent: supply
         carrier: power
         constraints:
             r: inf
-            e_cap_max: 40000  # Maximum installed generation capacity [kWe]
+            r_eff: 0.5
+            e_cap_max: 40000  # kW
         costs:
             monetary:
-                e_cap: 750
-                om_fuel: 0.12
-            emissions:
-                om_fuel: 0.25  # Assuming new build LNG, http://www.zerocarbonhub.org/resourcefiles/Carbon_Emission_Factors_for_Fuels-methodology_and_values_for_2013_and_2016.pdf
+                e_cap: 750  # USD per kW
+                om_fuel: 0.02  # USD per kWh
     csp:
+        name: 'Concentrating solar power'
+        color: '#99CB48'
+        stack_weight: 100
         parent: supply
         carrier: power
         constraints:
-            use_s_time: true  # Use s_time to calculate s_cap_max?
-            s_time_max: 15   # Maximum storage time [h]
-            s_cap_max: 745321  # Overriden by s_time_max if use_s_time = 1
+            use_s_time: true
+            s_time_max: 24
             s_loss: 0.002
-            # allow_rs_s: true
-            r: file
+            r: file  # Will look for `csp_r.csv` in data directory
             e_eff: 0.4
-            r_area_max: 318000  # Maximum solar field size [m2]
-            e_cap_max: 20000  # Maximum turbine size [kWe]
+            c_eff: 0.9
+            r_area_max: inf
+            e_cap_max: 10000
         costs:
             monetary:
-                s_cap: 30
+                s_cap: 50
                 r_area: 200
                 r_cap: 200
-                e_cap: 1350
+                e_cap: 1000
                 om_var: 0.002
         depreciation:
             monetary:
-                interest: 0.15
-    heater:
-        parent: conversion
-        carrier: heat
-        source_carrier: power
-        constraints:
-            e_eff: 0.8
-            e_cap_max: 5000
-        costs:
-            monetary:
-                e_cap: 200
+                interest: 0.12
 
-#
-# Demands
-#
+# Demand
 
     demand_power:
+        name: 'Power demand'
         parent: demand
         carrier: power
     unmet_demand_power:
+        name: 'Unmet power demand'
         parent: unmet_demand
         carrier: power
-    demand_heat:
-        parent: demand
-        carrier: heat
-    unmet_demand_heat:
-        parent: unmet_demand
-        carrier: heat
 
-#
 # Transmission
-#
 
     hvac:
+        name: 'AC power transmission'
         parent: transmission
         carrier: power
         constraints:
@@ -78,13 +68,4 @@ techs:
         costs:
             monetary:
                 e_cap: 200
-                om_var: 0.002
-    hvdc:
-        parent: transmission
-        carrier: power
-        constraints:
-            e_eff: 0.95
-        costs:
-            monetary:
-                e_cap: 400
                 om_var: 0.002

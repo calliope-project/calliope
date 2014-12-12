@@ -20,14 +20,13 @@ data_path: 'data'
 # OBJECTIVE FUNCTION
 ##
 
-# If this is not defined, 'constraints.objective.objective_cost_minimization' is used by default
+# 'constraints.objective.objective_cost_minimization' is used by default
 # objective:
 
 ##
 # ADDITIONAL CONSTRAINTS
 ##
 
-# List of additional constraints to load
 constraints:
     - constraints.ramping.ramping_rate
 
@@ -35,7 +34,6 @@ constraints:
 # OTHER MODEL-WIDE OPTIONS
 ##
 
-# System reserve margins
 system_margin:
     power: 0
     heat: 0

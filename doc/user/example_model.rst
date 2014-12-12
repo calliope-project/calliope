@@ -15,19 +15,20 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
    + model_config
       + data
          - csp_r.csv
-         - demand-r1_r.csv
-         - demand-r2_r.csv
+         - demand-1.csv
+         - demand-2.csv
          - set_t.csv
       - locations.yaml
       - model.yaml
       - techs.yaml
-      - transmission.yaml
 
 
 ``model.yaml``:
 
 .. literalinclude:: ../../calliope/example_model/model_config/model.yaml
    :language: yaml
+
+.. _examplemodel_techs:
 
 ``techs.yaml``:
 
@@ -39,10 +40,7 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 .. literalinclude:: ../../calliope/example_model/model_config/locations.yaml
    :language: yaml
 
-``transmission.yaml``:
-
-.. literalinclude:: ../../calliope/example_model/model_config/transmission.yaml
-   :language: yaml
+.. _examplemodel_runsettings:
 
 Run settings
 ------------

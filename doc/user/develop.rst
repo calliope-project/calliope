@@ -15,12 +15,12 @@ Installing a development version
 
 With pip::
 
-   pip install -e git+https://github.com/calliope-project/calliope.git#egg=calliope
+   $ pip install -e git+https://github.com/calliope-project/calliope.git#egg=calliope
 
 Or, for a more easily modifiable local installation, first clone the repository to a location of your choosing, and then install via pip::
 
-   git clone https://github.com/calliope-project/calliope
-   pip install -e /path/to/your/cloned/repository
+   $ git clone https://github.com/calliope-project/calliope
+   $ pip install -e ./calliope
 
 ---------------------------
 Creating custom constraints

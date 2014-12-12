@@ -24,10 +24,10 @@ Calliope was designed with the following goals in mind:
 * Designed from the ground up to analyze energy systems with high shares of renewable energy or other variable generation
 * Formulated to allow arbitrary spatial and temporal resolution, and equipped with the necessary tools to deal with time series input data
 * Allow easy separation of model code and data, and modular extensibility of model code
-* Make models easily modifiable, archiveable and auditable (e.g. with a Git repository), by using well-defined and human-readable text formats
+* Make models easily modifiable, archiveable and auditable (e.g. in a Git repository), by using well-defined and human-readable text formats
 * Simplify the definition and deployment of large numbers of model runs to high-performance computing clusters
 * Able to run stand-alone from the command-line, but also provide an API for programmatic access and embedding in larger analyses
-* Be a first-class citizen of the Python world (installable with pip, properly documented and tested)
+* Be a first-class citizen of the Python world (installable with pip and documented and tested code)
 * Have a free and open-source code base
 
 ---------------

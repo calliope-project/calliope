@@ -1,72 +1,70 @@
-#
+##
 # RUN SETTINGS
-#
+##
 
 model: 'model_config/model.yaml'
 
-output:  # Output settings are only used if the model is run via the 'calliope run' command-line tool
-    format: hdf  # Can be either hdf (default) or csv
-    path: 'Output'  # Path to an output directory, will be created if it doesn't exist
+output:  # Only used if run via the 'calliope run' command-line tool
+    format: csv  # Choices: hdf, csv
+    path: 'Output'  # Will be created if it doesn't exist
 
 mode: plan  # Choices: plan, operate
 
-#
+solver: glpk
+
+##
 # PARALLEL RUN SETTINGS
-#
-# Ignored unless this settings file is used to generate parallel runs
+##
+
+# Ignored unless run via the 'calliope generate' tool
 
 parallel:
-    name: example-model  # Name of this run
+    name: example-model
     environment: bsub  # Choices: bsub, qsub
-    additional_lines:  # Additional lines to add in run script before calling model, e.g. virtualenv setup
+    additional_lines:  # Added in run script before executing model
     iterations:
         - subset_t: ['2005-01-01', '2005-01-31']
           override.locations.r1.techs: ['demand', 'unmet_demand', 'ccgt']
         - subset_t: ['2005-02-01', '2005-02-31']
           override.locations.r1.techs: ['demand', 'unmet_demand']
     resources:  # Request resources on a computing cluster
-        threads:  # Set to request a non-default number of threads
-        wall_time:  # Set to request a non-default run time in minutes
-        memory:  # Set to request a non-default amount of memory in MB
+        threads:  # Non-default number of threads
+        wall_time:  # Run time (minutes)
+        memory:  # Working memory (MB)
 
-#
+##
 # TIME RESOLUTION ADJUSTMENT
-#
+##
 
-time:
-    function: resolution_series_min_week
-    function_options:
-        tech: csp  # Look for week where CSP output is minimal
-        resolution: 6  # Reduce rest of data to 6-hourly timesteps
+# time:
+#     function: resolution_series_extreme_week
+#     function_options:
+#         what: min
+#         tech: csp  # Look for week where CSP output is minimal
+#         resolution: 6  # Reduce rest of data to 6-hourly timesteps
 
-#
+##
 # SUBSETS
-#
+##
+
 # Leave any of these empty to disable subsetting
 
-subset_y: []  # Specify a subset of technologies
-subset_x: []  # Specify a subset of locations
-subset_t: ['2005-01-01', '2005-01-31']  # Specify a subset of time
+subset_y: []  # Subset of technologies
+subset_x: []  # Subset of locations
+subset_t: ['2005-01-01', '2005-01-05']  # Subset of timesteps
 
-#
+##
 # MODEL SETTINGS OVERRIDE
-#
-# This can be used to override any setting given in the model configuration (specified by model:)
+##
+
+# Override anything in the model configuration
 
 override:
 
-#
-# SOLVER AND DEBUG OPTIONS
-#
-
-solver: gurobi  # Calliope has been tested with cplex, gurobi, glpk
-
-# solver_options:
-    # emphasis_memory: 'yes'  # Set to 'yes' to conserve memory where possible
-    # workmem: 1000  # Allow CPLEX use to 1000 MB of memory
-    # threads: 1
-    # lpmethod: 4  # Use barrier method
+##
+# DEBUG OPTIONS
+##
 
 debug:
-    keepfiles: false  # Keep temporary files, useful to examine models for problems
-    symbolic_solver_labels: false  # If false, Pyomo does not generate human-readable expressions, so to successfully debug a model, this should be set to true (which is slower, thus off by default)
+    keepfiles: false  # Keep temporary files
+    symbolic_solver_labels: false # Use human-readable component labels? (slower)

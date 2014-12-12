@@ -3,6 +3,8 @@
 Configuration reference
 =======================
 
+.. _yaml_format:
+
 YAML configuration file format
 ------------------------------
 
@@ -34,7 +36,7 @@ Using quotation marks (``'`` or ``"``) to enclose strings is optional, but can h
    option: 'text'
    option: text
 
-Sometimes, a setting can be either enabled or disabled, in this case, the values ``true`` or ``false`` (boolean) are used.
+Sometimes, a setting can be either enabled or disabled, in this case, the boolean values ``true`` or ``false`` are used.
 
 Comments can be inserted anywhere in YAML files with the ``#`` symbol. The remainder of a line after ``#`` is interpreted as a comment.
 
@@ -49,7 +51,7 @@ Model-wide settings
 
 These settings can either be in a central ``model.yaml`` file, or imported from other files if desired.
 
-Mandatory model-wide settings with no default values (example settings are shown here). See :doc:`configuration` for more information on defining ``techs``, ``locations`` and ``links``:
+Mandatory model-wide settings with no default values (see :doc:`configuration` for more information on defining ``techs``, ``locations`` and ``links``):
 
 .. code-block:: yaml
 
@@ -73,7 +75,7 @@ Optional model-wide settings with no default values (example settings are shown 
        # ... other constraints to load ...
 
    group_fraction:
-       # ... setup for group_fraction constraints (see configuration section) ...
+       # ... setup for group_fraction constraints (see model formulation section) ...
 
    metadata:  # Metadata for analysis and plotting
        map_boundary: []
@@ -104,7 +106,7 @@ Optional model-wide settings that have defaults set by Calliope (default values 
 Technology
 ----------
 
-A technology with the identifier ``tech_identifier`` is configured by a YAML block within a ``techs:`` block. The following block shows all available options and their defaults (see further below for the constraints, costs, and depreciation definitions):
+A technology with the identifier ``tech_identifier`` is configured by a YAML block within a ``techs`` block. The following block shows all available options and their defaults (see further below for the constraints, costs, and depreciation definitions):
 
 .. code-block:: yaml
 
@@ -247,7 +249,7 @@ Optional settings:
    * ``output.format``:  Format to save results in, either ``hdf`` or ``csv``
 * ``parallel``: Settings used to generate parallel runs, see :ref:`run_config_parallel_runs` for the available options
 * ``time``: Settings to adjust time resolution, see :ref:`run_time_res` for the available options
-* ``override``: Override arbitrary settings from the model configuration. E.g., this could specify ``techs.nuclear.costs.monetary.e_cap = 1000`` to set the ``e_cap`` costs of ``nuclear``, overriding whatever was set in the model configuration
+* ``override``: Override arbitrary settings from the model configuration. E.g., this could specify ``techs.nuclear.costs.monetary.e_cap: 1000`` to set the ``e_cap`` costs of ``nuclear``, overriding whatever was set in the model configuration
 * ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
 
 Optional debug settings:

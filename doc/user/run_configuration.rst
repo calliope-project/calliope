@@ -17,7 +17,16 @@ At a minimum, the run configuration must provide three settings, as shown in thi
 
 ``model`` specifies the path to the model configuration file for the model to be run. ``mode`` specifies whether the model should be run in planning (``plan``) or operational (``operate``) mode (see :doc:`running`). Finally, ``solver`` specifies the solver to be used. Calliope has been tested with GLPK, Gurobi and CPLEX. Any of the solvers that Pyomo is compatible with should work.
 
-Additional (optional) settings, including debug settings, can be specified in the run configuration. In particular, the run settings can override any model settings via the ``override:`` directive.
+Additional (optional) settings, including debug settings, can be specified in the run configuration. In particular, the run settings can override any model settings by specifying ``override``, e.g.:
+
+.. code-block:: yaml
+
+   override:
+      techs:
+         nuclear:
+            costs:
+               monetary:
+                  e_cap: 1000
 
 .. Note:: If run settings override the ``data_path`` setting and specify a relative path, that path will be interpreted as relative to the run settings file and not the model settings file being overridden.
 
@@ -31,13 +40,13 @@ Time resolution adjustment
 
 Models must have a default timestep length (defined implicitly by the timesteps defined in ``set_t.csv``), and all time series files used in a given model must conform to that timestep length requirement.
 
-However, this default resolution can be adjusted over parts of the dataset via ``time:`` in the run settings (only support for downsampling is available).
+However, this default resolution can be adjusted over parts of the dataset via ``time`` in the run settings (only support for downsampling is available).
 
-There are two ways to adjust resolution (they may not both be used at the same time):
+There are two available ways to adjust resolution:
 
-1. A CSV file that contains a time resolution series, via ``time.file:``.
+1. A CSV file that contains a time resolution series, via ``time.file``.
 
-2. One of the resolution series functions defined in :mod:`calliope.time_functions`, via ``time.function:``. Currently, there are only two of them: :func:`~calliope.~time_functions.resolution_series_uniform` and :func:`~calliope.~time_functions.resolution_series_extreme_week`. Options can be passed to this function by ``time.unction_options:``.
+2. One of the resolution series functions defined in :mod:`calliope.time_functions`, via ``time.function``. Currently, there are only two of them: :func:`~calliope.~time_functions.resolution_series_uniform` and :func:`~calliope.~time_functions.resolution_series_extreme_week`. Options can be passed to this function by ``time.function_options``.
 
 The following example demonstrates the second way:
 
@@ -50,7 +59,7 @@ The following example demonstrates the second way:
            resolution: 24
            what: 'min'
 
-This passes the options, ``tech="wind_offshore", resolution=24, what='min'`` to the specified function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, keeps that week at the original resolution, and resamples the rest of the data to 24-hourly timesteps.
+This passes the options, ``tech='wind_offshore', resolution=24, what='min'`` to the specified function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, keeps that week at the original resolution, and resamples the rest of the data to 24-hourly timesteps.
 
 An alternative example is to specify ``time.function: resolution_series_uniform``, and ``time.function_options.resolution: 12`` to resample the entire dataset to 12-hourly timesteps.
 
@@ -84,15 +93,15 @@ Here, the first three timesteps will be summarized into one (0,1,2), as will the
 Settings for parallel runs
 --------------------------
 
-The run settings can also include a ``parallel:`` section.
+The run settings can also include a ``parallel`` section.
 
-This section is parsed when using the ``calliope generate`` command-line tool to generate a set of runs to be executed in parallel (see :ref:`parallel_runs`). A run settings file defining ``parallel:`` can be used normally to run a single model run, in which case the ``parallel:`` section is simply ignored.
+This section is parsed when using the ``calliope generate`` command-line tool to generate a set of runs to be executed in parallel (see :ref:`parallel_runs`). A run settings file defining ``parallel`` can still be used to execute a single model run, in which case the ``parallel`` section is simply ignored.
 
-The concept behind parallel runs is to specify a base model (via the run configuration's ``model:`` directive), and then define a set of model runs using this base model, but overriding one or a small number of settings in each run. For example, one could explore a range of costs of a specific technology and how this affects the result.
+The concept behind parallel runs is to specify a base model (via the run configuration's ``model`` setting), then define a set of model runs using this base model, but overriding one or a small number of settings in each run. For example, one could explore a range of costs of a specific technology and how this affects the result.
 
-Specifying the iterations is not (yet) automated, they must be manually entered under ``parallel.iterations:`` section. However, Calliope provides functionality to gather and process the results from a set of parallel runs (see :doc:`analysis`).
+Specifying these iterations is not (yet) automated, they must be manually entered under ``parallel.iterations:`` section. However, Calliope provides functionality to gather and process the results from a set of parallel runs (see :doc:`analysis`).
 
-At a minimum, the ``parallel:`` block must define:
+At a minimum, the ``parallel`` block must define:
 
 * a ``name`` for the run
 * the ``environment`` of the cluster (if it is to be run on a cluster), currently supported is ``bsub`` and ``qsub``. In either case, the generated scripts can also be run manually

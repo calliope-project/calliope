@@ -135,7 +135,8 @@ def node_energy_balance(model):
             rbs = 0
 
         # A) Case where no storage allowed
-        if model.get_option(y + '.constraints.s_cap_max', x=x) == 0:
+        if (model.get_option(y + '.constraints.s_cap_max', x=x) == 0 and
+                not model.get_option(y + '.constraints.use_s_time', x=x)):
             return m.rs[y, x, t] == e_prod + e_con - rbs
 
         # B) Case where storage is allowed
@@ -456,8 +457,10 @@ def node_costs(model):
             cost_r_area = 0
 
         if y in m.y_trans:
+            # Divided by 2 for transmission techs because construction costs
+            # are counted at both ends
             cost_e_cap = (_cost('e_cap', y, k)
-                          + _cost_per_distance('e_cap', y, k, x))
+                          + _cost_per_distance('e_cap', y, k, x)) / 2
         else:
             cost_e_cap = _cost('e_cap', y, k)
 

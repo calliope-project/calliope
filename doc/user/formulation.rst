@@ -311,6 +311,16 @@ The construction costs are computed in ``c_cost_con`` by
    & + cost_{e\_cap}(y, k) \times e_{cap}(y, x)) \\
    & + cost_{rb\_cap}(y, k) \times rb_{cap}(y, x))
 
+The costs are as defined in the model definition, e.g. e.g. cost_{r\_cap}(y, k) corresponds to ``y.costs.k.r_cap``.
+
+For transmission technologies, :math:`cost_{e\_cap}(y, k)` is computed differently, to include the per-distance costs:
+
+.. math::
+
+   cost_{e\_cap,transmission}(y, k) = \frac{cost_{e\_cap}(y, k) + cost_{e\_cap,perdistance}(y, k)}{2}
+
+This implies that for transmission technologies, the cost of construction is split equally across the two locations connected by the technology.
+
 The O&M costs are computed in four separate constraints, ``cost_op_fixed``, ``cost_op_var``, ``cost_op_fuel``, and ``cost_op_rb``, by
 
 .. math::

@@ -54,17 +54,13 @@ Each technology (that is, each member of the set ``y``) is of a specific *techno
 Cost classes
 ------------
 
-Costs are modeled in Calliope via *cost classes*. By default, only two classes are defined, ``monetary`` and ``emissions``.
+Costs are modeled in Calliope via *cost classes*. By default, only one classes is defined: ``monetary``.
 
 Technologies can define costs for components (installed capacity) and for operation & maintenance, for any cost class.
 
-The primary cost class, ``monetary``, is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one type of ``monetary`` cost, as it would be considered free otherwise.
+The primary cost class, ``monetary``, is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one type of ``monetary`` cost, as it would be considered free otherwise. By default, any cost not specified is assumed to be zero.
 
-By default, any cost not specified is assumed to be zero.
-
-The ``emissions`` cost class is not entered into the objective function but used to account for greenhouse gas emissions.
-
-Additional cost classes can be created simply by adding them to the definition of costs for a technology (see the :doc:`model configuration section <configuration>` for more detail on this). For example, emissions could be broken up into different classes, like ``co2`` and ``nox``.
+Only the ``monetary`` cost class is entered into the default objective function, but other cost classes can be defined for accounting purposes, e.g. ``emissions`` to account for greenhouse gas emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology (see the :doc:`model configuration section <configuration>` for more detail on this).
 
 --------------------------------------------------
 Putting technologies and locations together: Nodes
@@ -82,13 +78,11 @@ The most important node variables are laid out below, but more detail is also av
 Node energy balance
 -------------------
 
-The basic formulation of each node uses an energy balance to make sure that
-
-Each node has the following energy balance variables:
+The basic formulation of each node uses a set of energy balance equations. A node can have the following energy balance variables:
 
 * ``s(y, x, t)``: storage level at time ``t``
 * ``rs(y, x, t)``: resource to/from storage (+ production, - consumption) at time ``t``
-* ``rbs(y, x, t)``: secondary resource to storage (+ production) at time ``t``
+* ``rbs(y, x, t)``: secondary resource to storage at time ``t``
 * ``es(c, y, x, t)``: storage to/from carrier in default case (+ supply, - demand) at time ``t``
 * ``ec(c, y, x, t)``: conversion to/from carrier in case with parasitics (+ supply, - demand) at time ``t``
 
@@ -107,11 +101,11 @@ Each node also has the following capacity variables:
 
 * ``s_cap(y, x)``: installed storage capacity
 * ``r_cap(y, x)``: installed resource to storage conversion capacity
-* ``r_area(y, x)``: installed collector area
+* ``r_area(y, x)``: installed resource collector area
 * ``e_cap(y, x)``: installed storage to carrier conversion capacity
 * ``rb_cap(y, x)``: installed secondary resource to storage conversion capacity
 
-For nodes that have an internal (parasitic) energy consumption, ``e_cap_net(y, x)`` specifies the net storage capacity while ``e_cap(y, x)`` is gross capacity. If no internal energy consumption is specified, ``e_cap(y, x)`` is the net (and gross) capacity. ``e_cap_net`` is always calculated by the model and cannot be set or constrained manually.
+For nodes that have an internal (parasitic) energy consumption, ``e_cap_net(y, x)`` specifies the net conversion capacity while ``e_cap(y, x)`` is gross capacity. If no internal energy consumption is specified, ``e_cap(y, x)`` is the net (and gross) capacity. ``e_cap_net`` is always calculated by the model and cannot be set or constrained manually.
 
 When defining a technology, it must be given at least some constraints, that is, options that describe the functioning of the technology. If not specified, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies). Some examples of such options are:
 
@@ -132,4 +126,4 @@ Finally, each node tracks its costs, split in three basic parts:
 * ``cost_op_fixed``: fixed operational and maintenance (O&M) costs (i.e., per installed capacity)
 * ``cost_op_var``: variable O&M costs (i.e., per produced output)
 
-The next section, :doc:`formulation`, details the constraints that actually implement all these formulations mathematically. The section following it, :doc:`configuration`, details how a model is configured, and how the various components outlined here are defined in a working model.
+The next section is a brief tutorial. Following this, :doc:`formulation` details the constraints that actually implement all these formulations mathematically. The section following it, :doc:`configuration`, details how a model is configured, and how the various components outlined here are defined in a working model.

@@ -7,20 +7,20 @@ Model configuration
 
    See :doc:`configuration_reference` for a complete listing of all available configuration options.
 
-To run a model, two things are needed: a *model definition* (also referred to as the *model settings*) that define such things as technologies, locations, costs and constraints, and *run settings*, which specify how the given model should be run. At its most basic, these two components can be specified in just two YAML files:
+To run a model, two things are needed: a *model definition* that defines such things as technologies, locations, costs and constraints, and *run settings*, which specify how the given model should be run. At their most basic, these two components can be specified in just two YAML files:
 
-* ``model.yaml`` which sets up the model and may import any number of additional files in order to split large models up into manageable units. It must also specify, via the ``data_path:`` directive, the directory with data files for those technologies that have data explicit in space and time. The data directory must contain, at a minimum, a file called ``set_t.csv`` which defines the model's timesteps. See :ref:`configuration_timeseries` below for more information on this.
-* ``run.yaml`` which sets up run-specific and environment-specific settings such as which solver to use. It must also, with the ``model:`` directive, specify which model should be run by pointing to that model's primary model configuration file (e.g., ``model.yaml``).
+* ``model.yaml``, which sets up the model and may import any number of additional files in order to split large models up into manageable units. It must also specify, via the ``data_path`` setting, the directory with data files for those technologies that have data explicit in space and time. The data directory must contain, at a minimum, a file called ``set_t.csv`` which defines the model's timesteps. See :ref:`configuration_timeseries` below for more information on this.
+* ``run.yaml``, which sets up run-specific and environment-specific settings such as which solver to use. It must also, with the ``model`` setting, specify which model should be run, by pointing to that model's primary model configuration file (e.g., ``model.yaml``).
 
-Either of these files can have an arbitrary name, but for consistency we will refer to them as ``run.yaml`` (for the run settings) and ``model.yaml`` (for the model definition).
+Either of these files can have an arbitrary name, but it makes sense to call them something like ``run.yaml`` (for the run settings) and ``model.yaml`` (for the model definition).
 
 The remainder of this section deals with the model configuration, see :doc:`run_configuration` for the run configuration.
 
-There are two ways to split the model definition can be split into several files:
+There are two ways by the model definition can be split into several files:
 
-1. Model configuration files can can use an ``import:`` statement to specify a list of paths to additional files to import (the imported files, in turn, may include further files, so arbitrary degrees of nested configurations are possible). The ``import:`` statement can either give an absolute path or a path relative to the importing file. If a setting is defined both in the importing file and the imported file, the imported settings are overridden.
+1. Model configuration files can can use an ``import`` statement to specify a list of paths to additional files to import (the imported files, in turn, may include further files, so arbitrary degrees of nested configurations are possible). The ``import`` statement can either give an absolute path or a path relative to the importing file. If a setting is defined both in the importing file and the imported file, the imported settings are overridden.
 
-2. The ``model:`` directive in the run settings may either give a single file or a list of files with, which will be combined in on model initialization (so may not define the same setting twice). An example of this is:
+2. The ``model`` setting in the run settings may either give a single file or a list of files, which will combined on model initialization. An example of this is:
 
 .. code-block:: yaml
 
@@ -31,11 +31,11 @@ There are two ways to split the model definition can be split into several files
 
 .. Note::
 
-   Calliope includes a command-line tool, ``calliope new``, which will create a new model based on the built-in example model at the given path, e.g.::
+   Calliope includes a command-line tool, ``calliope new``, which will create a new model at the given path, based on the built-in example model and its run configuration::
 
-      calliope new models/my_new_model
+      calliope new my_new_model
 
-   This makes it easier to quickly create a new model based on an existing skeleton.
+   This makes it easier to experiment with the built-in example, and to quickly create a model by working off an existing skeleton.
 
 .. _configuration_techs:
 
@@ -57,14 +57,14 @@ A technology's identifier can be any alphanumeric string. The index of all techn
          monetary:
             e_cap: 500  # per kW of e_cap_max
 
-A demand technology based on a time series in the file ``demand_test.csv`` might define:
+A demand technology, with its demand data stored in a time series in the file ``demand.csv``, might look like this:
 
 .. code-block:: yaml
 
-   consumption-tech:
+   my_demand_tech:
       parent: 'demand'
       constraints:
-         r: 'file=demand_test.csv'
+         r: 'file=demand.csv'
 
 Technologies must always define a parent, and this can either be one of the pre-defined abstract base technologies or another previously defined technology. The pre-defined abstract base technologies that can be inherited from are:
 
@@ -117,9 +117,9 @@ A location's name can be any alphanumeric string, but using integers makes it ea
 
 There are currently some limitations to how locations work:
 
-* Locations must be assigned to either level 0 or level 1 (``level:``).
-* Locations at level 0 may be assigned to a parent location from level 1 (``within:``).
-* Using ``override:``, some (but not all) settings can be overriden on a per-location and per-technology basis (see the box below).
+* Locations must be assigned to either level 0 or level 1 (``level``).
+* Locations at level 0 may be assigned to a parent location from level 1 (``within``).
+* Using ``override``, some (but not all) settings can be overriden on a per-location and per-technology basis (see the box below).
 
 Locations can be given as a single location (e.g., ``location1``), a range of integer location names using the ``--`` operator (e.g., ``0--10``), or a comma-separated list of location names (e.g., ``location1,location2,10,11,12``).
 
@@ -138,22 +138,17 @@ An example locations block is:
        location2:
            level: 1
            techs: ['demand_power']
-       offshore1:
+       offshore1, offshore2:
            level: 0
            within: location2
            techs: ['offshore_wind']
-       offshore2:
-            level: 0
-            within: location2
-            techs: ['offshore_wind']
-
 
 .. Note::
 
    *Only* the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
 
    * x_map
-   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap_max, s_cap_max_force, s_init, s_time, s_time_max, use_s_time, r_cap_max, r_area_max, e_cap_max, e_cap_max_scale, e_cap_max_force, rb_eff, rb_cap_max, rb_cap_max_force, rb_cap_follows,
+   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap_max, s_cap_max_force, s_init, s_time, s_time_max, use_s_time, r_cap_max, r_area_max, e_cap_max, e_cap_max_scale, e_cap_max_force, rb_eff, rb_cap_max, rb_cap_max_force, rb_cap_follows
 
 .. NB this limitation is "implemented" simply by calling get_option with an x=x argument for some options but not for others
 
@@ -161,7 +156,7 @@ The balancing constraint looks at a location's level to decide which locations t
 
 .. Warning::
 
-   There must always be at least one location at level 1, because balancing of supply and demand takes place between level 1 locations only (this will be improved in the future).
+   There must always be at least one location at level 1, because balancing of supply and demand takes place between level 1 locations only.
 
 .. _transmission_links:
 
@@ -169,7 +164,7 @@ The balancing constraint looks at a location's level to decide which locations t
 Transmission links
 ------------------
 
-Transmission links are defined in the model settings as follows:
+Transmission links are defined in the model definition as follows:
 
 .. code-block:: yaml
 
@@ -188,7 +183,7 @@ Transmission links are defined in the model settings as follows:
 
 It is possible to specify multiple possible transmission technologies (e.g., with different costs or efficiencies) between two locations by simply listing them all.
 
-Transmission links can also specify a distance, which transmission technologies can use to compute distance-dependent costs or efficiencies. An ``e_loss`` can be specified under ``constraints_per_distance`` and any costs and cost classes can be specified under ``costs_per_distance`` (see example below).
+Transmission links can also specify a distance, which transmission technologies can use to compute distance-dependent costs or efficiencies. An ``e_loss`` can be specified under ``constraints_per_distance`` and costs for any cost class can be specified under ``costs_per_distance`` (see example below).
 
 .. code-block:: yaml
 
@@ -215,12 +210,12 @@ Overriding technology options
 
 Technologies can define generic options, for example, ``name``, constraints, for example ``constraints.e_cap_max``, and costs, for example ``costs.monetary.e_cap``.
 
-These options can be overridden in several ways, and whenever such an option is accessed by Calliope it works its way through the following list until it finds a definition (so an upper entry in this list take precedence over a lower entry):
+These options can be overridden in several ways, and whenever such an option is accessed by Calliope it works its way through the following list until it finds a definition (so entries further up in this list take precedence over those further down):
 
-1. Override for a specific location ``x1`` and technology ``y1``, which may be defined in the ``locations:`` directive (e.g. ``locations.x1.override.y1.constraints.e_cap_max``)
-2. Setting specific to the technology ``y1`` if defined in ``techs:`` directive (e.g. ``techs.y1.constraints.e_cap_max``)
+1. Override for a specific location ``x1`` and technology ``y1``, which may be defined via ``locations`` (e.g. ``locations.x1.override.y1.constraints.e_cap_max``)
+2. Setting specific to the technology ``y1`` if defined in ``techs`` (e.g. ``techs.y1.constraints.e_cap_max``)
 3. Check whether the immediate parent of the technology ``y`` defines the option (assuming that ``y1`` specifies ``parent: my_parent_tech``, e.g. ``techs.my_parent_tech.constraints.e_cap_max``)
-4. If the option is still not found, continue along the chain of parent relationships. Since every technology should inherit from one of the abstract base technologies, and those in turn inherit from the model-wide defaults, this will ultimately lead to the model-wide default setting if it has not been specified anywhere else. See :ref:`config_reference_constraints` for a complete listing of those defaults.
+4. If the option is still not found, continue along the chain of parent-child relationships. Since every technology should inherit from one of the abstract base technologies, and those in turn inherit from the model-wide defaults, this will ultimately lead to the model-wide default setting if it has not been specified anywhere else. See :ref:`config_reference_constraints` for a complete listing of those defaults.
 
 .. _configuration_timeseries:
 
@@ -228,7 +223,7 @@ These options can be overridden in several ways, and whenever such an option is 
 Using time series data
 ----------------------
 
-If a parameter is not explicit in time and space, it can be simply specified in the model settings (and, using location-specific overrides, be made spatially explicit).
+If a parameter is not explicit in time and space, it can be simply specified as a single value in the model definition (or, using location-specific overrides, be made spatially explicit).
 
 Each model however must at a minimum specify all timesteps with a file called ``set_t.csv``. This must contain two columns (comma-separated), the first one being integer indices, and the second, ISO 8601 compatible timestamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``).
 
@@ -247,7 +242,7 @@ For example, the first few lines of a file specifying hourly timesteps for the y
 Time series data can be used to specify the ``r`` and ``e_eff`` parameters for specific technologies. This can be done in two ways (using the example of ``r``):
 
 1. Specify ``r: file=filename.csv`` to pick the desired CSV file.
-2. Specify ``r: file``. In this case, the file name is automatically determined according the format ``tech_param.csv`` (e.g., ``pv_r.csv`` for the parameter ``r`` of a technology with the identifier ``pv``).
+2. Specify ``r: file``. In this case, the file name is automatically determined according to the format ``tech_param.csv`` (e.g., ``pv_r.csv`` for the parameter ``r`` of a technology with the identifier ``pv``).
 
 Each CSV file must have integer indices in the first column which match the integer indices from ``set_t.csv``. The first row must be column names, while the rest of the cells are the actual (integer or floating point) data values:
 
@@ -259,7 +254,7 @@ Each CSV file must have integer indices in the first column which match the inte
    2,12,18,9.8,...
    ...
 
-In the most straightforward case, the column names in the CSV files correspond to the location names defined in the model (in the above example, ``loc1``, ``loc2`` and ``loc3``). However, it is possible to define a mapping of column names to locations. For example, if our model has two locations, ``uk`` and ``germany``, but the electricity demand data columns are ``loc1``, ..., then the following ``x_map`` definition will properly read the demand data for the desired locations:
+In the most straightforward case, the column names in the CSV files correspond to the location names defined in the model (in the above example, ``loc1``, ``loc2`` and ``loc3``). However, it is possible to define a mapping of column names to locations. For example, if our model has two locations, ``uk`` and ``germany``, but the electricity demand data columns are ``loc1``, ``loc2`` and ``loc3``, then the following ``x_map`` definition will read the demand data for the desired locations from the specified columns:
 
 .. code-block:: yaml
 
@@ -272,7 +267,7 @@ In the most straightforward case, the column names in the CSV files correspond t
 
    After reading a CSV file, if any columns are missing (i.e. if a file does not contain columns for all locations defined in the current model), the value for those locations is simply set to :math:`0` for all timesteps.
 
-In all cases, all CSV files, alongside ``set_t.csv``, must be inside the data directory specified by ``data_path:`` in the model settings.
+In all cases, all CSV files, alongside ``set_t.csv``, must be inside the data directory specified by ``data_path`` in the model definition.
 
 For example, the files for a model specified in ``model.yaml``, which defined ``data_path: model_data``, might look like this (``+`` are directories, ``-`` files):
 

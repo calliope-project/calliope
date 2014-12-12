@@ -1,9 +1,6 @@
-import:
-    - 'transmission.yaml'
-
-#
+##
 # LOCATIONS
-#
+##
 
 locations:
     r1:
@@ -11,32 +8,35 @@ locations:
         techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
             demand_power:
-                x_map: 'r1: a'
+                x_map: 'r1: demand'
                 constraints:
-                    r: file=demand-r1_r.csv
-                    r_scale_to_peak: -50000
+                    r: file=demand-1.csv
+                    r_scale_to_peak: -40000
             ccgt:
                 constraints:
-                    e_cap_max: 40000
+                    e_cap_max: 30000
 
     r2:
         level: 1
-        techs: ['demand_power', 'unmet_demand_power',
-                'demand_heat', 'unmet_demand_heat',
-                'heater']
+        techs: ['demand_power', 'unmet_demand_power']
         override:
             demand_power:
-                x_map: 'r2: a'
+                x_map: 'r2: demand'
                 constraints:
-                    r: file=demand-r2_r.csv
+                    r: file=demand-2.csv
                     r_scale_to_peak: -5000
-            demand_heat:
-                x_map: 'r2: a'
-                constraints:
-                    r: file=demand-r1_r.csv
-                    r_scale_to_peak: -1000
 
-    tamanrasset,cardak,toledo:
+    csp1,csp2,csp3:
         level: 0
         within: r1
         techs: ['csp']
+
+##
+# TRANSMISSION CAPACITIES
+##
+
+links:
+    r1,r2:
+        hvac:
+            constraints:
+                e_cap_max: 10000
