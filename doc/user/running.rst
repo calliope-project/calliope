@@ -27,7 +27,7 @@ The included command-line tool ``calliope run`` will execute a given run configu
 
 It will generate and solve the model, then save the results to the the output directory given by ``output.path`` in the run configuration.
 
-Two output formats are available: CSV files and HDF, and they can be chosen by settings ``output.format`` in the run configuration (set to ``hdf`` or ``csv``). HDF results in a single compressed file in the high-performance HDF5 data format (see the `HDF5 website <TODO-HDF5>`_ for more information about the format). The :mod:`~calliope.analysis` module provides methods to read and analyze these HDF files.
+Two output formats are available: CSV files and HDF, and they can be chosen by settings ``output.format`` in the run configuration (set to ``hdf`` or ``csv``). HDF results in a single compressed file in the `high-performance HDF5 data format <http://www.hdfgroup.org/HDF5/>`_. The :mod:`~calliope.analysis` module provides methods to read and analyze these HDF files.
 
 For easier analysis via third-party tools, the CSV option saves a set of CSV files into the given output directory.
 

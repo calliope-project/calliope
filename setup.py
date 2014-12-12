@@ -12,6 +12,9 @@ setup(
     author='Stefan Pfenninger',
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
+    license='Apache 2.0',
+    url='http://www.callio.pe/',
+    download_url='https://github.com/calliope-project/calliope/releases',
     packages=find_packages(),
     package_data={'calliope': ['config/*.yaml',
                                'example_model/*.yaml',
@@ -34,5 +37,12 @@ setup(
         'console_scripts': [
             'calliope = calliope.cli:cli'
         ]
-    }
+    },
+    classifiers=[
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3'
+    ],
+    keywords=['energy systems', 'optimization', 'mathematical programming']
 )
