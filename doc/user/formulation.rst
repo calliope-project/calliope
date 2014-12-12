@@ -19,9 +19,9 @@ The default objective function minimizes cost:
 
 where :math:`k=monetary`.
 
-Alternative objective functions can be used by setting the ``objective:`` directive in the model configuration (see :ref:`config_reference_model_wide`).
+Alternative objective functions can be used by setting the ``objective`` in the model configuration (see :ref:`config_reference_model_wide`).
 
-`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting the ``weight:`` directive on any technology (see :ref:`config_reference_techs`).
+`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
 
 -----------------
 Basic constraints
@@ -46,7 +46,7 @@ It also defines the constraint ``c_rs``. This constraint defines the available r
 
 The ``c_rs`` constraint also decides how the resource and storage are linked.
 
-If the option ``constraints.force_r:`` is set to true, then
+If the option ``constraints.force_r`` is set to true, then
 
 .. math::
 
@@ -64,7 +64,7 @@ Finally, if it inherits from the ``demand`` technology,
 
    r_{s}(y, x, t) \geq r_{avail}(y, x, t)
 
-.. Note:: For the case of ``storage`` technologies, :math:`r{s}` is forced to 0 for internal reasons, while for ``transmission`` technologies, it is unconstrained. This is irrelevant when defining models and defining a resource for either ``storage`` or ``transmission`` technologies has no effect.
+.. Note:: For the case of ``storage`` technologies, :math:`r{s}` is forced to :math:`0` for internal reasons, while for ``transmission`` technologies, it is unconstrained. This is irrelevant when defining models and defining a resource for either ``storage`` or ``transmission`` technologies has no effect.
 
 Node energy balance
 -------------------
@@ -74,8 +74,8 @@ Provided by: :func:`calliope.constraints.base.node_energy_balance`
 Defines the following variables:
 
 * ``s``: storage level
-* ``es_prod``: storage -> carrier (+ production)
-* ``es_con``: storage <- carrier (- consumption)
+* ``es_prod``: energy from storage to carrier
+* ``es_con``: energy from carrier to storage
 
 It also defines three constraints, which are discussed in turn:
 
@@ -117,7 +117,7 @@ If no storage is allowed, the balancing equation simplifies to
 Transmission balance
 ^^^^^^^^^^^^^^^^^^^^
 
-Transmission technologies are internally expanded into a technology per transmission link, of the form ``technology_name:destination``.
+Transmission technologies are internally expanded into two technologies per transmission link, of the form ``technology_name:destination``.
 
 For example, if the technology ``hvdc`` is defined and connects ``region_1`` to ``region_2``, the framework will internally create a technology called ``hvdc:region_2`` which exists in ``region_1`` to connect it to ``region_2``, and a technology called ``hvdc:region_1`` which exists in ``region_2`` to connect it to ``region_1``.
 
@@ -144,7 +144,7 @@ The conversion balance is given by
 
    es_{prod}(c_{prod}, y, x, t) = -1 \times es_{con}(c_{source}, y, x, t) \times e_{eff}(y, x, t)
 
-The principle is similar to that of the transmission balance. The production of carrier :math:`c_{prod}` (the ``carrier`` option set by the transmission technology) is driven by the consumption of carrier :math:`c_{source}` (the ``source_carrier`` option set by the transmission technology).
+The principle is similar to that of the transmission balance. The production of carrier :math:`c_{prod}` (the ``carrier`` option set for the conversion technology) is driven by the consumption of carrier :math:`c_{source}` (the ``source_carrier`` option set for the conversion technology).
 
 
 Node build constraints
@@ -162,17 +162,17 @@ Defines the following variables:
 
 Built capacity is managed by six constraints.
 
-``c_s_cap`` constrains the built storage capacity by :math:`s_{cap}(y, x) \leq s_{cap,max}(y, xi)`. If ``y.constraints.use_s_time:`` is true at location ``x``, then ``y.constraints.s_time_max:`` and ``y.constraints.e_cap_max`` are used to to compute ``s_cap_max`` at reference efficiency. If ``y.constraints.s_cap_max_force:`` is true at location ``x`` or the model is running operational mode, the inequality in the equation above is turned into an equality constraint.
+``c_s_cap`` constrains the built storage capacity by :math:`s_{cap}(y, x) \leq s_{cap,max}(y, xi)`. If ``y.constraints.use_s_time`` is true at location ``x``, then ``y.constraints.s_time_max`` and ``y.constraints.e_cap_max`` are used to to compute ``s_cap_max`` at reference efficiency. If ``y.constraints.s_cap_max_force`` is true at location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
-``c_r_cap`` constrains the built resource conversion capacity by :math:`r_{cap}(y, x) \leq r_{cap,max}(y, x)`. If the model is running operational mode, the inequality in the equation above is turned into an equality constraint.
+``c_r_cap`` constrains the built resource conversion capacity by :math:`r_{cap}(y, x) \leq r_{cap,max}(y, x)`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
-``c_r_area`` constrains the resource conversion area by :math:`r_{area}(y, x) \leq r_{area,max}(y, x)`. By default, ``y.constraints.r_area_max`` is set to false, and in that case, :math:`r_{area}(y, x)` is forced to :math:`1.0`. If the model is running operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap:`` is given, then the equation :math:`r_{area}(y, x) = e_{cap}(y, x) * r\_area\_per\_cap` applies instead.
+``c_r_area`` constrains the resource conversion area by :math:`r_{area}(y, x) \leq r_{area,max}(y, x)`. By default, ``y.constraints.r_area_max`` is set to false, and in that case, :math:`r_{area}(y, x)` is forced to :math:`1.0`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap`` is given, then the equation :math:`r_{area}(y, x) = e_{cap}(y, x) * r\_area\_per\_cap` applies instead.
 
-``c_e_cap`` constrains the carrier conversion capacity. If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced. Else, :math:`e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_max\_scale` applies. ``y.constraints.e_cap_max_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary. Finally, if ``y.constraints.e_cap_max_force:`` is true at location ``x`` or the model is running operational mode, the inequality in the equation above is turned into an equality constraint.
+``c_e_cap`` constrains the carrier conversion capacity. If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced. Else, :math:`e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_max\_scale` applies. ``y.constraints.e_cap_max_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary. Finally, if ``y.constraints.e_cap_max_force`` is true at location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
-The ``c_e_cap_gross_net`` constraint is relevant only if ``y.constraints.c_eff`` is set to anything other than 1.0 (the default). In that case, :math:`e_{cap}(y, x) \times c_{eff} == e_{cap,net}(y, x)` computes the net installed carrier conversion capacity.
+The ``c_e_cap_gross_net`` constraint is relevant only if ``y.constraints.c_eff`` is set to anything other than 1.0 (the default). In that case, :math:`e_{cap}(y, x) \times c_{eff} = e_{cap,net}(y, x)` computes the net installed carrier conversion capacity.
 
-The final constraint, ``c_rb_cap``, manages the secondary resource conversion capacity by :math:`rb_{cap}(y, x) \leq rb_{cap,max}(y, x)`. If ``y.constraints.rb_cap_max_force:`` is true at location ``x`` or the model is running operational mode, the inequality in the equation above is turned into an equality constraint. There is an additional relevant option, ``y.constraints.rb_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``r_cap`` or ``e_cap``, and if set, sets ``c_rb_cap`` to track one of these, ie, :math:`rb_{cap,max} = r_{cap}(y, x)` (and analogously for ``e_cap``).
+The final constraint, ``c_rb_cap``, manages the secondary resource conversion capacity by :math:`rb_{cap}(y, x) \leq rb_{cap,max}(y, x)`. If ``y.constraints.rb_cap_max_force`` is true at location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. There is an additional relevant option, ``y.constraints.rb_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``r_cap`` or ``e_cap``, and if set, sets ``c_rb_cap`` to track one of these, ie, :math:`rb_{cap,max} = r_{cap}(y, x)` (analogously for ``e_cap``), and also turns the constraint into an equality constraint.
 
 Node operational constraints
 ----------------------------
@@ -209,15 +209,9 @@ For technologies where ``y.constraints.e_con`` is true (it defaults to false), a
 
    e_{s,con}(c, y, x, y) \geq -1 \times timeres(t) \times e_{cap}(y, x)
 
-and :math:`e_{s,con}(c, y, x, y) = 0` otherwise. There is however an additional special case, for transmission technologies there ``c`` is the ``source_carrier`` of ``y``, where the following equation replaces the above one:
+and :math:`e_{s,con}(c, y, x, y) = 0` otherwise.
 
-.. math::
-
-   e_{s,con}(x, y, x, t) = -1 \times e_{s,prod}(carrier, y, x, t)
-
-where :math:`carrier` is the (primary) carrier of technology ``y``.
-
-The constraint ``c_s_max_`` ensures that storage cannot exceed its maximum size by
+The constraint ``c_s_max`` ensures that storage cannot exceed its maximum size by
 
 .. math::
 
@@ -229,7 +223,7 @@ And finally, ``c_rbs_max`` constrains the secondary resource by
 
    rb_{s}(y, x, t) \leq timeres(t) \times rb_{cap}(y, x)
 
-There is an additional check if ``y.constraints.rb_startup_only`` is true. In this case, :math:`r_{sec,s}(y, x, t) = 0` unless the current timestep is still within the startup time set in the ``startup_time_bounds`` model-wide setting. This can be useful to prevent undesired edge effects from occurring in the model.
+There is an additional check if ``y.constraints.rb_startup_only`` is true. In this case, :math:`rb_{s}(y, x, t) = 0` unless the current timestep is still within the startup time set in the ``startup_time_bounds`` model-wide setting. This can be useful to prevent undesired edge effects from occurring in the model.
 
 Transmission constraints
 ------------------------
@@ -249,10 +243,10 @@ Provided by: :func:`calliope.constraints.base.node_parasitics`
 
 Defines the following variables:
 
- * ``ec_prod``: storage to carrier after parasitics (+ production)
- * ``ec_con``: carrier to storage after parasitics (- consumption)
+ * ``ec_prod``: storage to carrier after parasitics (positive, production)
+ * ``ec_con``: carrier to storage after parasitics (negative, consumption)
 
-These are two constraints, ``c_ec_prod`` and ``c_ec_con``, which constrain ``ec`` by
+There are two constraints, ``c_ec_prod`` and ``c_ec_con``, which constrain ``ec`` by
 
  .. math::
 
@@ -311,7 +305,7 @@ The construction costs are computed in ``c_cost_con`` by
    & + cost_{e\_cap}(y, k) \times e_{cap}(y, x)) \\
    & + cost_{rb\_cap}(y, k) \times rb_{cap}(y, x))
 
-The costs are as defined in the model definition, e.g. e.g. cost_{r\_cap}(y, k) corresponds to ``y.costs.k.r_cap``.
+The costs are as defined in the model definition, e.g. e.g. :math:`cost_{r\_cap}(y, k)` corresponds to ``y.costs.k.r_cap``.
 
 For transmission technologies, :math:`cost_{e\_cap}(y, k)` is computed differently, to include the per-distance costs:
 
@@ -356,7 +350,7 @@ In the first case, the following balancing equation applies:
 
 Where :math:`xs` are the level 1 location :math:`x` and all the level 0 locations that are within it.
 
-For ``c`` other than ``power``, the balancing equation is as above, but a :math:`\geq` inequality.
+For ``c`` other than ``power``, the balancing equation is as above, but with a :math:`\geq` inequality.
 
 .. Note:: The actual balancing constraint is implemented such that ``es`` and ``ec`` are used in the sum as appropriate for each technology.
 
@@ -419,7 +413,7 @@ Provided by: :func:`calliope.constraints.group_fraction.group_fraction`
 
 This component provides the ability to constrain groups of technologies to provide a certain fraction of total output, a certain fraction of total capacity, or a certain fraction of peak power demand. See :ref:`config_parents_and_groups` in the configuration section for further details on how to set up groups of technologies.
 
-The settings for the group fraction constraints are read from the model-wide configuration, in a ``group_fraction:`` directive, as follows:
+The settings for the group fraction constraints are read from the model-wide configuration, in a ``group_fraction`` setting, as follows:
 
 .. code-block:: yaml
 
@@ -427,7 +421,7 @@ The settings for the group fraction constraints are read from the model-wide con
       capacity:
          renewables: ['>=', 0.8]
 
-This is a minimal example that forces at least 80% of the installed capacity to be renewables. To activate the output group constraint, the ``output:`` key underneath ``group_fraction:`` can be set in the same way, or ``demand_power_peak:`` to activate the fraction of peak power demand group constraint.
+This is a minimal example that forces at least 80% of the installed capacity to be renewables. To activate the output group constraint, the ``output`` setting underneath ``group_fraction`` can be set in the same way, or ``demand_power_peak`` to activate the fraction of peak power demand group constraint.
 
 .. TODO ignored_techs option
 
@@ -439,7 +433,7 @@ For the above example, the ``c_group_fraction_capacity`` constraint sets up an e
 
 Here, :math:`y^*` is the subset of :math:`y` given by the specified group, in this example, ``renewables``. :math:`fraction` is the fraction specified, in this example, :math:`0.8`. The relation between the right-hand side and the left-hand side, :math:`\geq`, is determined by the setting given, ``>=``, which can be ``==``, ``<=``, or ``>=``.
 
-If more than one group were listed under ``capacity:``, several analogous constraints will be set up.
+If more than one group is listed under ``capacity``, several analogous constraints are set up.
 
 Similarly, ``c_group_fraction_output`` sets up constraints in the form of
 
