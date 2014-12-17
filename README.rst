@@ -20,13 +20,16 @@ Project website: `www.callio.pe <http://www.callio.pe/>`_
 Documentation
 -------------
 
-Documentation is available at `docs.callio.pe <http://docs.callio.pe/>`_.
+Documentation is available at docs.callio.pe:
+
+* `Stable version <http://docs.callio.pe/en/stable/>`_.
+* `Development version <http://docs.callio.pe/en/latest/>`_.
 
 
 License
 -------
 
-Copyright 2013--2014 Stefan Pfenninger
+Copyright 2013-2014 Stefan Pfenninger
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
