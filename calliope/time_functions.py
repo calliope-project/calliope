@@ -26,16 +26,16 @@ The name of a returned series must always be either 'mask' or
 import pandas as pd
 
 
-def masks_to_resolution_series(masks, how='or', min_resolution=None):
+def masks_to_resolution_series(masks, how='or', max_timesteps=None):
     """
     Converts a list of overlapping masks into a series of time step
     resolutions.
 
     ``how`` can be ``or`` (default) or ``and``.
 
-    If ``min_resolution`` given, will break up masked areas into
-    timesteps of at least the given resolution (with possibly a
-    leftover timestep at a higher resolution at the end of the
+    If ``max_timesteps`` given, will break up masked areas into
+    timesteps of at at most the given length (with possibly a
+    leftover timestep at a lower length at the end of the
     masked area).
 
     """
@@ -44,33 +44,54 @@ def masks_to_resolution_series(masks, how='or', min_resolution=None):
     # combine all masks into one
     df = pd.DataFrame({i: x for i, x in enumerate(masks)})
     if how == 'or':
-        combined_mask = df.sum(axis=1)
+        mask = df.sum(axis=1)
     elif how == 'and':
         # joiner: only return 1 if all items in the row are 1, else return 0
         joiner = lambda row: 1 if sum(row) == len(row) else 0
-        combined_mask = df.apply(joiner, axis=1)
+        mask = df.apply(joiner, axis=1)
     istart = 0
     end = False
     while not end:
-        ifrom = combined_mask[istart:].argmax()
-        ito = combined_mask[ifrom:].argmin()
+        ifrom = mask[istart:].argmax()
+        ito = mask[ifrom:].argmin()
         if ifrom == ito:  # Reached the end!
-            ito = len(combined_mask)
+            ito = len(mask)
             end = True
             # If `summarize` is zero at the very last entry
             # (`ito - `), we break out of the
             # loop to prevent it from adding a spurious summarization
-            if combined_mask[ito - 1] == 0:
+            if mask[ito - 1] == 0:
                 break
         resolution = ito - ifrom
-        combined_mask[ifrom] = resolution
-        combined_mask[ifrom + 1:ito] = -1
+        mask[ifrom] = resolution
+        mask[ifrom + 1:ito] = -1
         # Correct edge case where only one timestep would be "summarized"
-        if combined_mask[ifrom] >= 1 and resolution == 1:
-            combined_mask[ifrom] = 0
+        if mask[ifrom] >= 1 and resolution == 1:
+            mask[ifrom] = 0
         istart = ito
-    combined_mask.name = 'resolution_series'
-    return combined_mask
+    # Apply max_timesteps
+    if max_timesteps:
+        for index, value in mask[mask > max_timesteps].iteritems():
+            end_index = index + value
+            summary_index = list(range(index, end_index, max_timesteps))
+            for i in summary_index:
+                if i + max_timesteps < end_index:
+                    mask[i] = max_timesteps
+                else:  # Make sure the last timestep isn't too long
+                    mask[i] = end_index - i
+    mask.name = 'resolution_series'
+    return mask
+
+
+def resolution_series_to_mask(resolution_series):
+    """
+    Turns a resolution series into a mask.
+
+    """
+    mask = resolution_series
+    mask[mask != 0] = 1
+    mask.name = 'mask'
+    return mask
 
 
 def resolution_series_uniform(data, resolution):
@@ -87,16 +108,6 @@ def resolution_series_uniform(data, resolution):
             summarize.at[index] = resolution
     summarize.name = 'resolution_series'
     return summarize
-
-
-def resolution_series_min_week(data, tech, var='r', resolution=24, how='sum'):
-    """
-    Wrapper providing backwards compatibility to access
-    `resolution_series_extreme_week`
-
-    """
-    return resolution_series_extreme_week(data, tech, var, resolution,
-                                          how, what='min')
 
 
 def resolution_series_extreme_week(data, tech, var='r', resolution=24,
@@ -130,14 +141,13 @@ def resolution_series_extreme_week(data, tech, var='r', resolution=24,
     dff = pd.rolling_sum(df, window=day_len).reindex(dff_index)
     # If what is 'min', this will get the 'idxmin' attribute (a method),
     # similar for 'max', else most likely raise an error!
-    idx_extr = lambda x: getattr(x, '{}min'.format(what))
+    idx_extr = lambda x: getattr(x, 'idx{}'.format(what))
     if how == 'mode':
-        # Get timestep where var/tech is minimal in the largest
-        # number of locations
-        # e.g. if what='min', this does: int(dff[dff > 0]).idxmin().mode()[0])
-        selected = idx_extr(int(dff[dff > 0])().mode()[0])
+        # Find day where var/tech is min/max across the most locations
+        selected = idx_extr(dff)().mode()[0]
     elif how == 'sum':
-        selected = idx_extr(dff[dff > 0].sum(axis=1))()
+        # Find day where var/tech is min/max across all locations
+        selected = idx_extr(dff.sum(axis=1))()
     d = data._dt.at[selected]
     # Determine the range for the calendar week
     # (7 days) to keep at full resolution
@@ -157,7 +167,7 @@ def resolution_series_extreme_week(data, tech, var='r', resolution=24,
     return series
 
 
-def mask_zero(data, tech, var='r', locations=None):
+def mask_zero(data, tech, var='r', locations=None):  # FIXME
     """
     Mask where ``var`` for the technology ``tech``
     across the given list of ``locations`` is zero.
@@ -178,7 +188,7 @@ def mask_zero(data, tech, var='r', locations=None):
 
 
 def mask_extreme(data, tech, var='r', how='max',
-                 length=24, locations=None, padding=None):
+                 length=24, locations=None, padding=None):  # FIXME
     """
     Mask everywhere except the ``length`` where ``var`` for the technology
     ``tech`` across the given list of ``locations`` is either minmal or maximal.

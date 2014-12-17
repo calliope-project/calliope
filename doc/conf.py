@@ -14,6 +14,7 @@
 import sys
 import os
 
+__version__ = None
 # Sets the __version__ variable
 exec(open('../calliope/_version.py').read())
 
@@ -60,6 +61,12 @@ for m in MOCK_MODULES:
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
 
+# Generate RTD base url: if a dev version, point to "latest", else "v..."
+if 'dev' in __version__:
+    docs_base_url = 'en/latest/'
+else:
+    docs_base_url = 'en/v{}/'.format(__version__)
+
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -71,15 +78,27 @@ sys.path.insert(0, os.path.abspath('..'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
+              'sphinx.ext.extlinks',
               # 'numfig',
               # 'sphinx.ext.autosummary',
               'numpydoc']
+
+nbviewer_url = 'http://nbviewer.ipython.org/url/docs.callio.pe/'
+
+extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
+
+# A string of reStructuredText that will be included at the end
+# of every source file that is read. This is the right place to add
+# substitutions that should be available in every file.
+# rst_epilog = """
+# .. |docs_base_url| replace:: {}
+# """.format(docs_base_url)
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
