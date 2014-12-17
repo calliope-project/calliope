@@ -22,8 +22,8 @@ Documentation
 
 Documentation is available at docs.callio.pe:
 
-* `Stable version <http://docs.callio.pe/en/stable/>`_.
-* `Development version <http://docs.callio.pe/en/latest/>`_.
+* `Stable version <http://docs.callio.pe/en/stable/>`_
+* `Development version <http://docs.callio.pe/en/latest/>`_
 
 
 License
