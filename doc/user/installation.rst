@@ -30,19 +30,9 @@ Once you have Anaconda installed, you can create a new Python 3.4 environment ca
 
    $ conda create -n calliope python=3.4 pip pandas pytables pyyaml matplotlib networkx basemap
 
-.. Warning :: Until the release of Pyomo 4.0, Calliope 0.3.0 makes use of the development version of Pyomo. Because of this, for the moment, the following manual installation steps for Pyomo are necessary after setting up the environment, and before installing Calliope itself:
-
-   .. code-block:: bash
-
-      $ source activate calliope
-
-      $ pip install svn+https://software.sandia.gov/svn/public/pyutilib/pyutilib/trunk@3457#egg=pyutilib
-
-      $ pip install svn+https://software.sandia.gov/svn/public/pyomo/pyomo/trunk@9471#egg=pyomo
-
 Then, with the "calliope" environment activated (``source activate calliope`` if you are using Anaconda), install Calliope with the Python package installer pip, which will also install Pyomo (and any other remaining dependencies not installed already)::
 
-   $ pip install git+https://github.com/calliope-project/calliope.git@v0.3.0#egg=calliope
+   $ pip install calliope
 
 .. _python_module_requirements:
 

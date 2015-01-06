@@ -6,6 +6,7 @@ Release History
 +++++++++++
 
 * Fixes to time_functions
+* Other minor improvements and fixes
 
 0.3.0 (2014-12-12)
 ++++++++++++++++++
