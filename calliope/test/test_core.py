@@ -98,6 +98,17 @@ class TestInitialization:
         assert_almost_equal(float(scaled.max()), 10, tolerance=0.01)
         assert_almost_equal(float(scaled.min()), -2.5, tolerance=0.01)
 
+    def test_initialize_parents_defaults(self):
+        override = """
+                    override:
+                        techs:
+                            bad_tech:
+                                parent: defaults
+                    """
+        override = calliope.utils.AttrDict.from_yaml_string(override)
+        with pytest.raises(calliope.exceptions.ModelError):
+            model = common.simple_model(override=override)
+
     def test_initialize_sets_timesteps(self):
         model = common.simple_model()
         assert model.data._t.tolist() == list(range(0, 1416))

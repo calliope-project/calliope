@@ -36,7 +36,13 @@ from . import time_functions
 from . import time_tools
 from . import utils
 
+# Enable simple format when printing ModelWarnings
 warnings.formatwarning = exceptions._formatwarning
+
+# Get list of techs pre-defined in defaults.yaml
+module_config = os.path.join(os.path.dirname(__file__), 'config')
+o = utils.AttrDict.from_yaml(os.path.join(module_config, 'defaults.yaml'))
+DEFAULT_TECHS = list(o.techs.keys())
 
 
 def _load_function(source):
@@ -87,9 +93,6 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
     module_conf = os.path.join(os.path.dirname(__file__), 'config')
     o = utils.AttrDict.from_yaml(os.path.join(module_conf, 'defaults.yaml'))
 
-    # Get list of techs pre-defined in defaults.yaml
-    default_techs = list(o.techs.keys())
-
     # If defaults should not be inserted, replace the loaded AttrDict
     # with an empty one (a bit of a hack, but we also want the
     # default_techs list so we need to load the AttrDict anyway)
@@ -101,7 +104,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
     for path in cr.model:
         new_o = utils.AttrDict.from_yaml(path)
         if 'techs' in list(new_o.keys()):
-            overlap = set(default_techs) & set(new_o.techs.keys())
+            overlap = set(DEFAULT_TECHS) & set(new_o.techs.keys())
             if overlap:
                 e = exceptions.ModelError
                 raise e('Trying to re-define a default technology in '
@@ -494,6 +497,13 @@ class Model(object):
             if 'parent' not in list(o.techs[tech].keys()):
                 e = exceptions.ModelError
                 raise e('Technology `' + tech + '` defines no parent!')
+        # Verify that no technologies apart from the default technologies
+        # inherit from 'defaults'
+        for k, v in self.parents.items():
+            if k not in DEFAULT_TECHS and v == 'defaults':
+                e = exceptions.ModelError
+                raise e('Tech `' + k + '` inherits from `defaults` but ' +
+                        'should inherit from a built-in default technology.')
         # Verify that all parents are themselves actually defined
         for k, v in self.parents.items():
             if v not in list(o.techs.keys()):
