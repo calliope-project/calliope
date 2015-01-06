@@ -34,6 +34,8 @@ Once you have Anaconda installed, you can create a new Python 3.4 environment ca
 
    .. code-block:: bash
 
+      $ source activate calliope
+
       $ pip install svn+https://software.sandia.gov/svn/public/pyutilib/pyutilib/trunk@3457#egg=pyutilib
 
       $ pip install svn+https://software.sandia.gov/svn/public/pyomo/pyomo/trunk@9471#egg=pyomo
