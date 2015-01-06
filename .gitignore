@@ -1,5 +1,5 @@
-Makefile
 .coverage
 *.pyc
 calliope.egg-info/
 doc/_build/
+dist/

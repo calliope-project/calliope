@@ -2,8 +2,8 @@
 Release History
 ---------------
 
-0.3.1 (dev)
-+++++++++++
+0.3.1 (2015-01-06)
+++++++++++++++++++
 
 * Fixes to time_functions
 * Other minor improvements and fixes
