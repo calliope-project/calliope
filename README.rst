@@ -2,10 +2,10 @@
 .. image:: https://travis-ci.org/calliope-project/calliope.svg
    :target: https://travis-ci.org/calliope-project/calliope
 
-.. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
+.. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg?style=flat
    :target: https://coveralls.io/r/calliope-project/calliope
 
-.. image:: https://img.shields.io/badge/license-Apache-blue.svg
+.. image:: https://img.shields.io/badge/license-Apache-blue.svg?style=flat
    :target: http://docs.callio.pe/en/latest/user/introduction.html#license
 
 
