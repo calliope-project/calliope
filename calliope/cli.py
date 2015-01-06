@@ -9,12 +9,13 @@ Command-line interface.
 
 """
 
-import click
+import logging
 import os
 import shutil
 
+import click
+
 from . import core
-from . import exceptions
 from .parallel import Parallelizer
 
 
@@ -34,14 +35,15 @@ def new(path):
     """
     # Copies the included example model
     example_model = os.path.join(os.path.dirname(__file__), 'example_model')
+    click.echo('Creating new model at: {}'.format(path))
     shutil.copytree(example_model, path)
-    click.echo('Created new model at: {}'.format(path))
 
 
 @cli.command(short_help='directly run single model')
 @click.argument('run_config')
 def run(run_config):
     """Execute the given RUN_CONFIG run configuration file."""
+    logging.captureWarnings(True)
     model = core.Model(config_run=run_config)
     model.config_run.set_key('output.save', True)  # Always save output
     model.run()
@@ -59,9 +61,15 @@ def generate(run_config, path, silent):
     directory that must not yet exist (PATH defaults to 'runs'
     if not specified).
     """
+    logging.captureWarnings(True)
     parallelizer = Parallelizer(target_dir=path, config_run=run_config)
     if not silent and 'name' not in parallelizer.config.parallel:
-        raise exceptions.ModelError('`' + run_config + '` '
-                                    'does not specify a `parallel.name` '
-                                    'and was skipped.')
-    parallelizer.generate_runs()
+        click.echo('`' + run_config + '` does not specify a `parallel.name` '
+                   'and was skipped.')
+        return
+    click.echo('Generating runs from config '
+               '`{}` at `{}`'.format(run_config, path))
+    try:
+        parallelizer.generate_runs()
+    except Exception as e:
+        click.echo('Exception in run `{}`: {}'.format(run_config, e))
