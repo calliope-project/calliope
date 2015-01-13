@@ -25,8 +25,8 @@ setup(
                                'test/common/t_6h/*.csv',
                                'test/common/t_erroneous/*.csv']},
     install_requires=[
-        "pyomo >= 4.0rc9540",
-        "numpy >= 1.9.0",
+        "pyomo >= 4.0",
+        "numpy >= 1.8.2",
         "numexpr >= 2.3.1",
         "pandas >= 0.15.1",
         "pyyaml >= 3.11",
@@ -39,6 +39,7 @@ setup(
         ]
     },
     classifiers=[
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',

@@ -5,6 +5,12 @@ before_install:
   - "sudo apt-get update -qq"
   - "sudo apt-get install -y glpk-utils"
   - "sudo apt-get install -y libhdf5-serial-dev"  # Required to compile pytables
+# Install some Python dependencies via apt-get to speed things up
+  - "sudo apt-get install -y cython"
+  - "sudo apt-get install -y python-numpy"
+  - "sudo apt-get install -y python-matplotlib"
+  - "sudo apt-get install -y python-tables"
+
 install:
   - "pip install -r requirements.txt"
   - "pip install tables==3.1.0"  # Fails if in requirements.txt
