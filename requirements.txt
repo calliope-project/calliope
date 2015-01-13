@@ -1,13 +1,12 @@
-# Cython is here because it's needed to build pytables
-# Cython==0.21.1
-# The following four dependencies are install via apt-get on travis
-# numpy==1.8.2
-# matplotlib==1.4.1
-# tables==3.1.0
-numexpr==2.3.1
-pandas==0.15.1
-PyYAML==3.11
-pyomo>=4.0
-click==3.3
 pytest-cov==1.8.0
 python-coveralls==2.4.3
+# Cython is here because it's needed to build pytables
+Cython==0.21.1
+numexpr==2.3.1
+numpy==1.9.0
+matplotlib==1.4.1
+pandas==0.15.1
+PyYAML==3.11
+pyomo>=4.0rc9540
+# tables==3.1.0
+click==3.3
