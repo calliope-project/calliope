@@ -262,7 +262,7 @@ class Model(object):
                 res_file = utils.relative_path(cr.time.file,
                                                self.config_run_path)
                 res_series = pd.read_csv(res_file, index_col=0, header=None)[1]
-                res_series = res_series.astype(int)
+                res_series = res_series.astype(int)[self.slice]
             s.dynamic_timestepper(self.data, res_series)
 
     def prev(self, t):

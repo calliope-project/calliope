@@ -2,6 +2,11 @@
 Release History
 ---------------
 
+0.3.2 (dev)
++++++++++++
+
+* Other minor improvements and fixes
+
 0.3.1 (2015-01-06)
 ++++++++++++++++++
 
