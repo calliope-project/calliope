@@ -116,7 +116,9 @@ The following example parallel settings show the available options. In this case
        environment: 'bsub'  # Cluster environment, choices: bsub, qsub
        data_path_adjustment: '../../../model_config'
        # Execute additional commands in the run script before starting the model
-       additional_lines: ['source activate pyomo']
+       pre_run: ['source activate pyomo']
+       # Execute additional commands after running the model
+       post_run: []
        iterations:
            - override.techs.nuclear.costs.monetary.e_cap: 1000
            - override.techs.nuclear.costs.monetary.e_cap: 2000
@@ -128,7 +130,7 @@ The following example parallel settings show the available options. In this case
 This also shows the optional settings available:
 
 * ``data_path_adjustment``: replaces the ``data_path`` setting in the model configuration during parallel runs only
-* ``additional_lines``: one or multiple lines that will be executed in the run script before starting the model. If running on a computing cluster, this is likely to include a line or two setting up any environment variables and activating the necessary Python environment.
+* ``pre_run`` and ``post_run``: one or multiple lines (given as a list) that will be executed in the run script before / after running the model. If running on a computing cluster, ``pre_run`` is likely to include a line or two setting up any environment variables and activating the necessary Python environment.
 * ``resources``: specifying these will include resource requests to the cluster controller into the generated run scripts. ``threads``, ``wall_time``, and ``memory`` are available. Whether and how these actually get processed or honored depends on the setup of the cluster environment.
 
 For an iteration to override more than one setting at a time, the notation is as follows:

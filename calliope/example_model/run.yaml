@@ -21,7 +21,8 @@ solver: glpk
 parallel:
     name: example-model
     environment: bsub  # Choices: bsub, qsub
-    additional_lines:  # Added in run script before executing model
+    pre_run:  # Commands to run before executing model
+    post_run:  # Commands to run after executing model
     iterations:
         - subset_t: ['2005-01-01', '2005-01-31']
           override.locations.r1.techs: ['demand', 'unmet_demand', 'ccgt']

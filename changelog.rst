@@ -6,6 +6,8 @@ Release History
 +++++++++++
 
 * [new] Run settings ``output.save_constraints`` and ``output.save_constraints_options``
+* [new] Run setting ``parallel.post_run``
+* [changed] Run setting ``parallel.additional_lines`` renamed to ``parallel.pre_run``
 * [changed] Better error messages and CLI error handling
 * [fixed] Bug on saving YAML files with numpy dtypes fixed
 * [changed/fixed] Other minor improvements and fixes

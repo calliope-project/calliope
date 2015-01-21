@@ -130,14 +130,13 @@ class Parallelizer(object):
             if conf:
                 f.write('#BSUB -W {:.0f}\n'.format(conf))
 
-    def _write_additional_lines(self, f):
-        """Write additional lines (if configured) to file ``f``"""
-        c = self.config
-        lines = c.parallel.additional_lines
-        if isinstance(lines, list):
-            f.writelines([i + '\n' for i in lines])
-        else:
-            f.write(lines + '\n')
+    def _write_additional_lines(self, f, lines, formats=None):
+        """Write additional lines to file ``f``"""
+        if not isinstance(lines, list):
+            lines = [lines]
+        if formats:
+            lines = [i.format(formats) for i in lines]
+        f.writelines([i + '\n' for i in lines])
 
     def _get_iteration_config(self, config, index_str, iter_row):
         iter_c = config.copy()  # iter_c is this iteration's config
@@ -226,9 +225,12 @@ class Parallelizer(object):
             # Write run script entry
             with open(os.path.join(out_dir, self.f_run), 'a') as f:
                 f.write('{}) '.format(iter_id))
-                if c.parallel.additional_lines:
-                    self._write_additional_lines(f)
+                if c.parallel.pre_run:
+                    self._write_additional_lines(f, c.parallel.pre_run)
                 self._write_modelcommands(f, settings_file)
+                if c.parallel.post_run:
+                    self._write_additional_lines(f, c.parallel.post_run,
+                                                 formats={'id': iter_id})
                 f.write(';;\n\n')
 
             # If style is single, also write a single submission script
