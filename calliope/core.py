@@ -31,6 +31,7 @@ from pyutilib.services import TempfileManager
 from . import exceptions
 from . import constraints
 from . import locations
+from . import output
 from . import transmission
 from . import time_functions
 from . import time_tools
@@ -1025,6 +1026,7 @@ class Model(object):
         Instantiate and solve the model
 
         """
+        cr = self.config_run
         self.start_time = time.time()
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
@@ -1037,10 +1039,16 @@ class Model(object):
             e = exceptions.ModelError
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
-        if self.config_run.get_key('output.save', default=False) is True:
-            output_format = self.config_run.get_key('output.format',
-                                                    default='hdf')
+        if cr.get_key('output.save', default=False) is True:
+            output_format = cr.get_key('output.format', default='hdf')
             self.save_solution(output_format)
+            save_constr = cr.get_key('output.save_constraints', default=False)
+            if save_constr:
+                options = cr.get_key('output.save_constraints_options',
+                                     default={})
+                output.generate_constraints(self.solution,
+                                            output_path=save_constr,
+                                            **options)
 
     def solve(self, warmstart=False):
         """

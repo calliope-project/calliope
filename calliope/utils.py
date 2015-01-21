@@ -202,9 +202,9 @@ class AttrDict(dict):
             for k in result.keys_nested():
                 # Convert numpy numbers to regular python ones
                 v = result.get_key(k)
-                if isinstance(v, np.float):
+                if isinstance(v, np.floating):
                     result.set_key(k, float(v))
-                elif isinstance(v, np.int):
+                elif isinstance(v, np.integer):
                     result.set_key(k, int(v))
             result = result.as_dict()
         else:

@@ -5,7 +5,10 @@ Release History
 0.3.2 (dev)
 +++++++++++
 
-* Other minor improvements and fixes
+* [new] Run settings ``output.save_constraints`` and ``output.save_constraints_options``
+* [changed] Better error messages and CLI error handling
+* [fixed] Bug on saving YAML files with numpy dtypes fixed
+* [changed/fixed] Other minor improvements and fixes
 
 0.3.1 (2015-01-06)
 ++++++++++++++++++
