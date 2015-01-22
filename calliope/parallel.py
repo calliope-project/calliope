@@ -225,10 +225,10 @@ class Parallelizer(object):
             # Write run script entry
             with open(os.path.join(out_dir, self.f_run), 'a') as f:
                 f.write('{}) '.format(iter_id))
-                if c.parallel.pre_run:
+                if c.get_key('parallel.pre_run', default=False):
                     self._write_additional_lines(f, c.parallel.pre_run)
                 self._write_modelcommands(f, settings_file)
-                if c.parallel.post_run:
+                if c.get_key('parallel.post_run', default=False):
                     self._write_additional_lines(f, c.parallel.post_run,
                                                  formats={'id': iter_id})
                 f.write(';;\n\n')
