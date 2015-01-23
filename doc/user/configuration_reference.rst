@@ -250,6 +250,7 @@ Optional settings:
 * ``parallel``: Settings used to generate parallel runs, see :ref:`run_config_parallel_runs` for the available options
 * ``time``: Settings to adjust time resolution, see :ref:`run_time_res` for the available options
 * ``override``: Override arbitrary settings from the model configuration. E.g., this could specify ``techs.nuclear.costs.monetary.e_cap: 1000`` to set the ``e_cap`` costs of ``nuclear``, overriding whatever was set in the model configuration
+* ``model_override``: Path to a YAML configuration file which contains additional overrides for the model configuration. If both this and ``override`` are specified, anything defined in ``override`` takes precedence over model configuration added in the ``model_override`` file.
 * ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
 
 Optional debug settings:

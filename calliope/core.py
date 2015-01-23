@@ -128,15 +128,18 @@ class Model(object):
     """
     Calliope: a multi-scale energy systems (MUSES) modeling framework
 
-    Args:
-        config_run : path to YAML file with run settings OR an AttrDict
-                     containing settings. If not given, the included
-                     default run and model settings are used.
-        override : provide any additional options or override options
-                   from ``config_run`` by passing an AttrDict
-                   of the form ``{'model_settings': 'foo.yaml'}``.
-                   Any option possible in ``run.yaml`` can be specified
-                   in the dict, inluding ``override.`` options.
+    Parameters
+    ----------
+    config_run : str or AttrDict, default None
+        Path to YAML file with run settings, or AttrDict containing run
+        settings. If not given, the included default run and model
+        settings are used.
+    override : AttrDict, default None
+        Provide any additional options or override options from
+        ``config_run`` by passing an AttrDict of the form
+        ``{'model_settings': 'foo.yaml'}``. Any option possible in
+        ``run.yaml`` can be specified in the dict, inluding ``override.``
+        options.
 
     """
     def __init__(self, config_run=None, override=None):
@@ -154,25 +157,37 @@ class Model(object):
         self.initialize_availability()
         self.initialize_time()
 
+    def override_model_config(self, override_dict):
+        o = self.config_model
+        for k in override_dict.keys_nested():
+            o.set_key(k, override_dict.get_key(k))
+            # If run_config overrides data_path, interpret it as
+            # relative to the run_config file's path
+            if k == 'data_path':
+                o[k] = utils.relative_path(o.data_path,
+                                           self.config_run_path)
+
     def initialize_configuration(self, config_run, override):
         self.flush_option_cache()
         # Load run configuration
         if not config_run:
             config_run = os.path.join(os.path.dirname(__file__),
                                       'example_model', 'run.yaml')
-        self.config_run_path = config_run
         if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)
             # self.run_id is used to set an output folder for logs, if
             # debug.keepfiles is set to True
             self.run_id = os.path.splitext(os.path.basename(config_run))[0]
+            self.config_run_path = config_run
         else:
             # 2) config_run is not a string, assume it's an AttrDict
             cr = config_run
             assert isinstance(cr, utils.AttrDict)
             # we have no filename so we just use current date/time
             self.run_id = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            # Use current working directory as config_run path
+            self.config_run_path = os.getcwd()
         self.config_run = cr
         if override:
             assert isinstance(override, utils.AttrDict)
@@ -181,21 +196,22 @@ class Model(object):
         # If manually specify a run_id in debug, overwrite the generated one
         if 'debug.run_id' in cr.keys_nested():
             self.run_id = cr.debug.run_id
-        o = get_model_config(cr, self.config_run_path)
+        self.config_model = get_model_config(cr, self.config_run_path)
         # Override config_model settings if specified in config_run
+        # 1) Via 'model_override', which is the path to a YAML file
+        if 'model_override' in cr:
+            override_path = utils.relative_path(cr.model_override,
+                                                self.config_run_path)
+            override_dict = utils.AttrDict.from_yaml(override_path)
+            self.override_model_config(override_dict)
+        # 2) Via 'override', which is an AttrDict
         if ('override' in cr
                 and isinstance(cr.override, utils.AttrDict)):
-            for k in cr.override.keys_nested():
-                o.set_key(k, cr.override.get_key(k))
-                # If run_config overrides data_path, interpret it as
-                # relative to the run_config file's path
-                if k == 'data_path':
-                    o[k] = utils.relative_path(o.data_path,
-                                               self.config_run_path)
+            self.override_model_config(cr.override)
         # Initialize locations
-        o.locations = locations.process_locations(o.locations)
-        # Store initialized configuration on model object
-        self.config_model = o
+        locs = self.config_model.locations
+        self.config_model.locations = locations.process_locations(locs)
+        # As a final step, flush the option cache
         self.flush_option_cache()
 
     def get_timeres(self, verify=False):
