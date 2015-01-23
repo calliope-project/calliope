@@ -98,7 +98,4 @@ def generate(run_config, path, silent, debug):
             return
         click.echo('Generating runs from config '
                    '`{}` at `{}`'.format(run_config, path))
-        try:
-            parallelizer.generate_runs()
-        except Exception as e:
-            click.echo('Exception in run `{}`: {}'.format(run_config, e))
+        parallelizer.generate_runs()
