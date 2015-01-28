@@ -1543,8 +1543,6 @@ class Model(object):
         # Also set mode to 'w' so existing file will be overwritten
         store = pd.HDFStore(store_file, mode='w',
                             complevel=9, complib='blosc')
-        # Save locations
-        store.append('locations', self.data.locations)
         # Now save solution -- except for config_model and config_run, since
         # they are AttrDicts so are saved separately below
         for key in [k for k in sol if k not in ['config_model', 'config_run']]:
@@ -1561,8 +1559,7 @@ class Model(object):
         """Save solution as CSV files to ``self.config_run.output.path``"""
         d = self.data
         sol = self.solution
-        output_files = {'locations.csv': d.locations,
-                        'node_parameters.csv': sol.parameters.to_frame(),
+        output_files = {'node_parameters.csv': sol.parameters.to_frame(),
                         'costs.csv': sol.costs.to_frame(),
                         'capacity_factor.csv': sol.capacity_factor.to_frame(),
                         'metadata.csv': sol.metadata,

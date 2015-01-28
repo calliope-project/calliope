@@ -19,7 +19,7 @@ from . import utils
 
 
 REQUIRED_KEYS = ['capacity_factor', 'costs', 'levelized_cost',
-                 'locations', 'metadata', 'node', 'parameters',
+                 'metadata', 'node', 'parameters',
                  'shares', 'summary', 'time_res', 'totals', 'config_model',
                  'config_run']
 
