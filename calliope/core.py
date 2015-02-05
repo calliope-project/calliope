@@ -38,7 +38,17 @@ from . import time_tools
 from . import utils
 
 # Enable simple format when printing ModelWarnings
-warnings.formatwarning = exceptions._formatwarning
+formatwarning_orig = warnings.formatwarning
+
+
+def _formatwarning(message, category, filename, lineno, line=None):
+    """Formats ModelWarnings as "Warning: message" without extra crud"""
+    if category == exceptions.ModelWarning:
+        return 'Warning: ' + str(message) + '\n'
+    else:
+        return formatwarning_orig(message, category, filename, lineno, line)
+
+warnings.formatwarning = _formatwarning
 
 # Get list of techs pre-defined in defaults.yaml
 module_config = os.path.join(os.path.dirname(__file__), 'config')

@@ -9,8 +9,6 @@ Exceptions and Warnings.
 
 """
 
-import warnings
-
 
 class ModelError(Exception):
     """
@@ -32,11 +30,3 @@ class ModelWarning(Warning):
 
     """
     pass
-
-
-def _formatwarning(message, category, filename, lineno, line=None):
-    """Formats ModelWarnings as "Warning: message" without extra crud"""
-    if category == ModelWarning:
-        return 'Warning: ' + str(message) + '\n'
-    else:
-        return warnings.formatwarning(message, category, filename, lineno, line)
