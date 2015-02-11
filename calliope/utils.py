@@ -238,20 +238,36 @@ class AttrDict(dict):
                 keys.append(k)
         return keys
 
-    def union(self, other, allow_override=False):
+    def union(self, other, allow_override=False, allow_replacement=False):
         """
         Merges the AttrDict in-place with the passed ``other``
         AttrDict. Keys in ``other`` take precedence, and nested keys
-        are properly handled. If ``allow_override`` is False, a
-        KeyError is raised if other tries to redefine an already
-        defined key.
+        are properly handled.
+
+        If ``allow_override`` is False, a KeyError is raised if
+        other tries to redefine an already defined key.
+
+        If ``allow_replacement``, allow "__REPLACE__" key to replace an
+        entire sub-dict.
 
         """
-        for k in other.keys_nested():
+        if allow_replacement:
+            WIPE_KEY = '_REPLACE_'
+            override_keys = [k for k in other.keys_nested()
+                             if WIPE_KEY not in k]
+            wipe_keys = [k.split('.' + WIPE_KEY)[0]
+                         for k in other.keys_nested()
+                         if WIPE_KEY in k]
+        else:
+            override_keys = other.keys_nested()
+            wipe_keys = []
+        for k in override_keys:
             if not allow_override and k in self.keys_nested():
                 raise KeyError('Key defined twice: {}'.format(k))
             else:
                 self.set_key(k, other.get_key(k))
+        for k in wipe_keys:
+            self.set_key(k, other.get_key(k + '.' + WIPE_KEY))
 
 
 @contextmanager

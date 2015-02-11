@@ -141,6 +141,8 @@ class Parallelizer(object):
     def _get_iteration_config(self, config, index_str, iter_row):
         iter_c = config.copy()  # iter_c is this iteration's config
         # `iteration_override` is a pandas series (dataframe row)
+        # Build up an AttrDict with the specified overrides
+        override_c = utils.AttrDict()
         for k, v in iter_row.to_dict().items():
             # NaN values can show in this row if some but not all iterations
             # specify a value, so we simply skip them
@@ -153,7 +155,12 @@ class Parallelizer(object):
             # Convert numpy dtypes to python ones, else YAML chokes
             if isinstance(v, np.generic):
                 v = np.asscalar(v)
-            iter_c.set_key(k, copy.copy(v))
+            if isinstance(v, dict):
+                override_c.set_key(k, utils.AttrDict(v))
+            else:
+                override_c.set_key(k, copy.copy(v))
+        # Finally, add the override AttrDict to the existing configuration
+        iter_c.union(override_c, allow_override=True, allow_replacement=True)
         # Set output dir in configuration object, this is hardcoded
         iter_c.set_key('output.path', os.path.join('Output', index_str))
         return iter_c

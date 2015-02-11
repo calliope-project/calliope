@@ -169,13 +169,13 @@ class Model(object):
 
     def override_model_config(self, override_dict):
         o = self.config_model
-        for k in override_dict.keys_nested():
-            o.set_key(k, override_dict.get_key(k))
+        od = override_dict
+        if 'data_path' in od.keys_nested():
             # If run_config overrides data_path, interpret it as
             # relative to the run_config file's path
-            if k == 'data_path':
-                o[k] = utils.relative_path(o.data_path,
-                                           self.config_run_path)
+            od['data_path'] = utils.relative_path(od['data_path'],
+                                                  self.config_run_path)
+        o.union(od, allow_override=True, allow_replacement=True)
 
     def initialize_configuration(self, config_run, override):
         self.flush_option_cache()
@@ -201,8 +201,7 @@ class Model(object):
         self.config_run = cr
         if override:
             assert isinstance(override, utils.AttrDict)
-            for k in override.keys_nested():
-                cr.set_key(k, override.get_key(k))
+            cr.union(override, allow_override=True, allow_replacement=True)
         # If manually specify a run_id in debug, overwrite the generated one
         if 'debug.run_id' in cr.keys_nested():
             self.run_id = cr.debug.run_id
