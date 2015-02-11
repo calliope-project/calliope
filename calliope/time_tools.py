@@ -26,8 +26,8 @@ class TimeSummarizer(object):
     def __init__(self):
         super(TimeSummarizer, self).__init__()
         # Format: {'data item': 'method'}
-        self.known_data_types = {'_t': self._reduce_cut,
-                                 '_dt': self._reduce_cut,
+        self.known_data_types = {'_t': 'NOOP',
+                                 '_dt': 'NOOP',
                                  'a': self._reduce_r_to_a,
                                  'r': self._reduce_sum,
                                  'r_eff': self._reduce_average,
@@ -36,16 +36,31 @@ class TimeSummarizer(object):
 
     def _apply_method(self, data, method, s, param, src_param=None,
                       subkey=None):
+        if method == 'NOOP':
+            # NOOP method means we don't do anything, so return straight away
+            return
         i = data['_t'].iat[s.start]
         if not src_param:
             src_param = param
         if subkey:
-            data[param][subkey].loc[i] = method(data[src_param][subkey][s])
+            data[param][subkey].loc[i, :] = method(data[src_param][subkey][s])
         else:
             data[param].at[i] = method(data[src_param][s])
 
     def _reduce_resolution(self, data, resolution, t_range):
-        """Helper function called by dynamic_timestepper."""
+        """
+        Helper function called by dynamic_timestepper.
+
+        Parameters
+        ----------
+        data : AttrDict
+            data container
+        resolution : int
+            new time step resolution (in hours)
+        t_range : (int, int)
+            (absolute) time indices over which to apply resolution reduction
+
+        """
         # Initialize some common data
         resolution = resolution / data.time_res_data
         assert resolution.is_integer()
@@ -73,7 +88,7 @@ class TimeSummarizer(object):
                 logging.debug(msg)
 
     def dynamic_timestepper(self, data, mask):
-        """``mask`` must be a series with the same index as the given data.
+        """``mask`` must be a series with the same length as the given data.
 
         For each timestep, the ``mask`` can either be 0 (no
         adjustment), >0 (marks the first timestep to be compressed, with
@@ -92,6 +107,7 @@ class TimeSummarizer(object):
         Returns None on success.
 
         """
+        assert len(mask) == len(data['_t']), 'Mask & data must have same length.'
         df = pd.DataFrame(mask, index=mask.index)
         df.columns = ['summarize']  # rename the single column
         df['time_res'] = data.time_res_static
@@ -105,27 +121,29 @@ class TimeSummarizer(object):
             ifrom = i
             ito = i + int(v / data.time_res_static)
             resolution = v
-            self._reduce_resolution(data, resolution, t_range=[ifrom, ito])
+            self._reduce_resolution(data, resolution, t_range=(ifrom, ito))
             # Mark the rows that need to be killed with 0
             # Need ifrom+1 and ito-1 because .loc includes start and end slice
             df.loc[ifrom + 1:ito - 1, 'to_keep'] = 0
             df.at[ifrom, 'time_res'] = resolution
         # 2. Replace all data with its subset where to_keep is 1
+        # Create boolean mask with the right length -- but ignore index by
+        # turning it into a list (since data is indexed by timestep id, while
+        # '_t' is 0-indexed)
+        boolean_mask = (df.to_keep == 1).tolist()
         for k in list(data.keys()):
-            # # Special case for `_t`, which is the only known_data_type which is always 0-indexed
-            # if k == '_t' or k == '_dt':
-            #     # To get around non-matching index, we simply turn the boolean mask df into a list
-            #     data[k] = data[k][(df.summarize < 2).tolist()]
             if k in list(self.known_data_types.keys()):
                 if isinstance(data[k], utils.AttrDict):
                     for kk in list(data[k].keys()):
-                        data[k][kk] = data[k][kk][df.to_keep == 1]
+                        data[k][kk] = data[k][kk][boolean_mask]
                 else:
-                    data[k] = data[k][df.to_keep == 1]
+                    data[k] = data[k][boolean_mask]
             # NB unknown data types are checked for and logged earlier, inside
             # _reduce_resolution()
-        data.time_res_series = df.time_res[df.to_keep == 1]
-        # FIXME update data.time_res_static if the resultion
+        data.time_res_series = df.time_res[boolean_mask]
+        # Reindex '_t' so that it's again zero-indexed
+        data['_t'].index = list(range(len(data['_t'])))
+        # FIXME update data.time_res_static if the resolution
         # reduction was uniform!
         # data.time_res_static = resolution
 
@@ -145,9 +163,6 @@ class TimeSummarizer(object):
 
     def _reduce_sum(self, df):
         return df.sum(0)
-
-    def _reduce_cut(self, df):
-        return df.iloc[0]
 
     def _reduce_r_to_a(self, df):
         """
