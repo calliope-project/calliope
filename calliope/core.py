@@ -254,7 +254,7 @@ class Model(object):
         # case no dynamic timestepper is called
         for y in d._y_def_r:
             avail = self.get_option(y + '.constraints.availability')
-            d.a[y] = pd.DataFrame(avail, index=d._t, columns=d._x)
+            d.a[y] = pd.DataFrame(avail, index=d._dt.index, columns=d._x)
 
     def initialize_time(self):
         """
@@ -303,12 +303,12 @@ class Model(object):
             # Check if _t_index exists
             self._t_index.name
         except AttributeError:
-            self._t_index = pd.Index(self.data._t)
+            self._t_index = pd.Index(self.data._dt.index)
         # Get the location of t in the index and use it to retrieve
         # the desired value, raising an error if it's <0
         loc = self._t_index.get_loc(t) - 1
         if loc >= 0:
-            return self.data._t.iat[loc]
+            return self.data._dt.index[loc]
         else:
             e = exceptions.ModelError
             raise e('Attempted to get a timestep earlier than the first one.')
@@ -594,9 +594,10 @@ class Model(object):
         d.time_res_data = self.get_timeres()
         d.time_res_static = d.time_res_data
         # From time_res_data, initialize time_res_series
-        d.time_res_series = pd.Series(d.time_res_data, index=d._t.tolist())
+        d.time_res_series = pd.Series(d.time_res_data, index=d._dt.index)
         # Last index t for which model may still use startup exceptions
-        d.startup_time_bounds = d._t[int(o.startup_time / d.time_res_data)]
+        d.startup_time_bounds = d._dt.index[int(o.startup_time
+                                                / d.time_res_data)]
         #
         # y: Technologies set
         #
@@ -720,7 +721,7 @@ class Model(object):
             # define by d._t
             # NB: this comparison happens after slicing, but will still catch
             # problematic index mismatches
-            mismatch = df.index.difference(d._t)
+            mismatch = df.index.difference(d._dt.index)
             if len(mismatch) > 0:
                 e = exceptions.ModelError
                 entries = mismatch.tolist()
@@ -746,7 +747,7 @@ class Model(object):
         for param in d.params:
             d[param] = utils.AttrDict()
             for y in d._y:
-                d[param][y] = pd.DataFrame(np.nan, index=d._t,
+                d[param][y] = pd.DataFrame(np.nan, index=d._dt.index,
                                            columns=d._x)
                 # TODO this whole process could be refactored for efficiency
                 # to read files only once,
@@ -870,7 +871,7 @@ class Model(object):
             t_max_demand = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
             # Adjust for reduced resolution, only if t_max_demand not 0 anyway
             if t_max_demand != 0:
-                t_max_demand = max([t for t in self.data._t
+                t_max_demand = max([t for t in self.data._dt.index
                                     if t <= t_max_demand])
             t_max_demands[c] = t_max_demand
         return t_max_demands
@@ -891,7 +892,7 @@ class Model(object):
             logging.error('Error generating constraint' + index_string)
             raise
 
-    def _param_populator(self, src, t_start=None):
+    def _param_populator(self, src):
         """Returns a `getter` function that returns either
         (x, t)-specific values for parameters that define such, or
         always the same static value if only a static value is given.
@@ -899,10 +900,7 @@ class Model(object):
         """
         def getter(m, y, x, t):
             if isinstance(src[y], pd.core.frame.DataFrame):
-                if t_start:
-                    return float(src[y].loc[t_start + t, x])
-                else:
-                    return float(src[y].loc[t, x])
+                return float(src[y].loc[t, x])
             else:
                 return float(src[y])
         return getter
@@ -910,10 +908,9 @@ class Model(object):
     def update_parameters(self):
         mi = self.instance
         d = self.data
-        t_start = self.t_start
 
         for param in d.params:
-            initializer = self._param_populator(d[param], t_start)
+            initializer = self._param_populator(d[param])
             y_set = self.param_sets[param]
             param_object = getattr(mi, param)
             for y in y_set:
@@ -952,18 +949,18 @@ class Model(object):
 
         # Time steps
         if self.mode == 'plan':
-            m.t = po.Set(initialize=d._t, ordered=True)
+            m.t = po.Set(initialize=d._dt.index, ordered=True)
         elif self.mode == 'operate':
             t_end = (t_start + o.opmode.horizon / d.time_res_data) - 1
             self.t_end = int(t_end)
             # If t_end is beyond last timestep, cap it to last one, and
             # log the occurance
-            t_bound = d._t.iat[-1]
+            t_bound = d._dt.index[-1]
             if t_end > t_bound:
                 logging.warning('Capping t_end from {} to {}'.format(t_end,
                                                                      t_bound))
                 t_end = t_bound
-            m.t = po.Set(initialize=d._t.loc[self.t_start:self.t_end],
+            m.t = po.Set(initialize=d._dt.loc[self.t_start:self.t_end].index,
                          ordered=True)
         # Carriers
         m.c = po.Set(initialize=d._c, ordered=True)
@@ -1006,7 +1003,7 @@ class Model(object):
                            'a': m.y_def_r,
                            'e_eff': m.y_def_e_eff}
         for param in d.params:
-            initializer = self._param_populator(d[param], t_start)
+            initializer = self._param_populator(d[param])
             y = self.param_sets[param]
             setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer,
                                        mutable=True))
@@ -1456,7 +1453,7 @@ class Model(object):
         d = self.data
         time_res = d.time_res_series
         window_adj = int(o.opmode.window / d.time_res_data)
-        steps = [t for t in d._t if (t % window_adj) == 0]
+        steps = [t for t in d._dt.index if (t % window_adj) == 0]
         # Remove the last step - since we look forward at each step,
         # it would take us beyond actually existing data
         steps = steps[:-1]
@@ -1552,10 +1549,10 @@ class Model(object):
                        'using `{}` instead.'.format(store_file, alt_file))
             logging.warning(message)
             store_file = alt_file
-        # Set compression to highest level (9), using blosc, which is fast
-        # Also set mode to 'w' so existing file will be overwritten
+        # Use zlib compression (HDF standard)
+        # Using mode 'w' means existing file will be overwritten
         store = pd.HDFStore(store_file, mode='w',
-                            complevel=9, complib='blosc')
+                            complevel=3, complib='zlib')
         # Now save solution -- except for config_model and config_run, since
         # they are AttrDicts so are saved separately below
         for key in [k for k in sol if k not in ['config_model', 'config_run']]:
