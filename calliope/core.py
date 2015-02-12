@@ -1066,8 +1066,11 @@ class Model(object):
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
         if cr.get_key('output.save', default=False) is True:
-            output_format = cr.get_key('output.format', default='hdf')
-            self.save_solution(output_format)
+            output_format = cr.get_key('output.format', default=['hdf'])
+            if not isinstance(output_format, list):
+                output_format = [output_format]
+            for fmt in output_format:
+                self.save_solution(fmt)
             save_constr = cr.get_key('output.save_constraints', default=False)
             if save_constr:
                 options = cr.get_key('output.save_constraints_options',
