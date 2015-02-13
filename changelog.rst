@@ -2,8 +2,8 @@
 Release History
 ---------------
 
-0.3.2 (dev)
-+++++++++++
+0.3.2 (2015-02-13)
+++++++++++++++++++
 
 * [new] Run setting ``model_override`` allows specifying the path to a YAML file with overrides for the model configuration, applied at model initialization (path is given relative to the run configuration file used). This is in addition to the existing ``override`` setting, and is applied first (so ``override`` can override ``model_override``).
 * [new] Run settings ``output.save_constraints`` and ``output.save_constraints_options``
