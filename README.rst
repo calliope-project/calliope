@@ -2,12 +2,16 @@
 .. image:: https://travis-ci.org/calliope-project/calliope.svg
    :target: https://travis-ci.org/calliope-project/calliope
 
-.. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg?style=flat
+.. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
    :target: https://coveralls.io/r/calliope-project/calliope
 
-.. image:: https://img.shields.io/badge/license-Apache-blue.svg?style=flat
+.. image:: https://img.shields.io/pypi/l/calliope.svg
    :target: http://docs.callio.pe/en/latest/user/introduction.html#license
 
+.. image:: https://img.shields.io/pypi/v/calliope.svg
+   :target: https://pypi.python.org/pypi/calliope
+
+.. image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
 
 Calliope
 ========
@@ -15,7 +19,6 @@ Calliope
 *A multi-scale energy systems (MUSES) modeling framework*
 
 Project website: `www.callio.pe <http://www.callio.pe/>`_
-
 
 Documentation
 -------------
