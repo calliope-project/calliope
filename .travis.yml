@@ -7,6 +7,7 @@ before_install:
   - "sudo apt-get install -y libhdf5-serial-dev"  # Required to compile pytables
 install:
   - "pip install -r requirements.txt"
+  - 'pip install cython --install-option="--no-cython-compile"'
   - "pip install tables==3.1.0"  # Fails if in requirements.txt
   - "pip install ."
 script: "py.test --cov calliope --cov-report term-missing"
