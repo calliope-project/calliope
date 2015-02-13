@@ -588,11 +588,16 @@ class Model(object):
             self.slice = slice(table_t.iat[0, 0], table_t.iat[-1, 0] + 1)
         else:
             self.slice = slice(None)
-        d._t = pd.Series([int(t) for t in table_t['t_int'].tolist()])
-        d._dt = pd.Series(table_t.index, index=d._t.tolist())
+        _t = pd.Series([int(t) for t in table_t['t_int'].tolist()])
+        d._dt = pd.Series(table_t.index, index=_t.tolist())
         # First set time_res_data and time_res_static across all data
+        # `time_res_data` never changes, so always reflects the spacing
+        # of time step indices
         d.time_res_data = self.get_timeres()
+        # `time_res_static` is updated after time resolution adjustments,
+        # so does not reflect the spacing of time step indicex
         d.time_res_static = d.time_res_data
+        d.time_res_native = 1  # In the beginning, time_res is native
         # From time_res_data, initialize time_res_series
         d.time_res_series = pd.Series(d.time_res_data, index=d._dt.index)
         # Last index t for which model may still use startup exceptions
@@ -697,8 +702,8 @@ class Model(object):
 
         Note on indexing: if subset_t is set, a subset of the data is
         selected, and all data including their indices are subsetted.
-        d._t maps a simple [0, data length] index to the actual t index
-        used.
+        d._dt.index maps a simple [0, data length] index to the actual
+        t index used.
 
         Data is stored in the `self.data`  for each
         `param` and technology `y`: ``self.data[param][y]``
@@ -717,10 +722,7 @@ class Model(object):
             # for c in missing_cols:
             #     df[c] = np.nan
 
-            # Ensure that the freshly-read file's index matches the timesteps
-            # define by d._t
-            # NB: this comparison happens after slicing, but will still catch
-            # problematic index mismatches
+            # Ensure that the read file's index matches the data's timesteps
             mismatch = df.index.difference(d._dt.index)
             if len(mismatch) > 0:
                 e = exceptions.ModelError
@@ -892,7 +894,7 @@ class Model(object):
             logging.error('Error generating constraint' + index_string)
             raise
 
-    def _param_populator(self, src):
+    def _param_populator(self, src, t_offset=0):
         """Returns a `getter` function that returns either
         (x, t)-specific values for parameters that define such, or
         always the same static value if only a static value is given.
@@ -900,17 +902,17 @@ class Model(object):
         """
         def getter(m, y, x, t):
             if isinstance(src[y], pd.core.frame.DataFrame):
-                return float(src[y].loc[t, x])
+                return float(src[y].loc[t + t_offset, x])
             else:
                 return float(src[y])
         return getter
 
-    def update_parameters(self):
+    def update_parameters(self, t_offset):
         mi = self.instance
         d = self.data
 
         for param in d.params:
-            initializer = self._param_populator(d[param])
+            initializer = self._param_populator(d[param], t_offset)
             y_set = self.param_sets[param]
             param_object = getattr(mi, param)
             for y in y_set:
@@ -922,6 +924,22 @@ class Model(object):
         for y in mi.y_pc:
             for x in mi.x:
                 mi.s_init[y, x] = s_init_initializer(mi, y, x)
+
+    def _set_t_end(self):
+        # t_end is the timestep previous to t_start + horizon,
+        # because the .loc[start:end] slice includes the end
+        try:
+            self.t_end = self.prev(int(self.t_start
+                                   + self.config_model.opmode.horizon
+                                   / self.data.time_res_data))
+        except KeyError:
+            # If t_end is beyond last timestep, cap it to last one, and
+            # log the occurance
+            t_bound = self.data._dt.index[-1]
+            msg = 'Capping t_end to {}'.format(t_bound)
+            logging.debug(msg)
+            self.t_end = t_bound
+        print('\n\n***\n{}-{}\n***\n\n'.format(self.t_start, self.t_end))
 
     def generate_model(self, t_start=None):
         """
@@ -951,15 +969,7 @@ class Model(object):
         if self.mode == 'plan':
             m.t = po.Set(initialize=d._dt.index, ordered=True)
         elif self.mode == 'operate':
-            t_end = (t_start + o.opmode.horizon / d.time_res_data) - 1
-            self.t_end = int(t_end)
-            # If t_end is beyond last timestep, cap it to last one, and
-            # log the occurance
-            t_bound = d._dt.index[-1]
-            if t_end > t_bound:
-                logging.warning('Capping t_end from {} to {}'.format(t_end,
-                                                                     t_bound))
-                t_end = t_bound
+            self._set_t_end()
             m.t = po.Set(initialize=d._dt.loc[self.t_start:self.t_end].index,
                          ordered=True)
         # Carriers
@@ -1044,11 +1054,13 @@ class Model(object):
         self.runtime = int(time.time() - self.start_time)
         logging.info('Runtime: ' + str(self.runtime) + ' secs')
 
-    def run(self):
+    def run(self, iterative_warmstart=True):
         """
         Instantiate and solve the model
 
         """
+        o = self.config_model
+        d = self.data
         cr = self.config_run
         self.start_time = time.time()
         if self.mode == 'plan':
@@ -1056,8 +1068,13 @@ class Model(object):
             self.solve()
             self.load_solution()
         elif self.mode == 'operate':
+            assert len(self.data.time_res_series.unique()) == 1, \
+                'Operational mode only works with uniform time step lengths.'
+            assert (d.time_res_static <= o.opmode.horizon and
+                    d.time_res_static <= o.opmode.window), \
+                'Timestep length must be smaller than horizon and window.'
             # solve_iterative() generates, solves, and loads the solution
-            self.solve_iterative()
+            self.solve_iterative(iterative_warmstart)
         else:
             e = exceptions.ModelError
             raise e('Invalid model mode: `{}`'.format(self.mode))
@@ -1211,7 +1228,7 @@ class Model(object):
         # Nicify time axis
         if 't' in dims:
             t = getattr(m, 't')
-            if self.t_start == 0 or self.t_start is None:
+            if self.t_start is None:
                 new_index = self.data._dt.loc[t.first():t.last()].tolist()
             else:
                 new_index = self.data._dt.loc[self.t_start:self.t_end].tolist()
@@ -1442,9 +1459,12 @@ class Model(object):
         self.solution = utils.AttrDict(sol)
         self.process_solution()
 
-    def solve_iterative(self):
+    def solve_iterative(self, iterative_warmstart=True):
         """
         Solve iterative by updating model parameters.
+
+        By default, on optimizations subsequent to the first one,
+        warmstart is used to speed up the model generation process.
 
         Returns None on success, storing results under self.solution
 
@@ -1454,6 +1474,9 @@ class Model(object):
         time_res = d.time_res_series
         window_adj = int(o.opmode.window / d.time_res_data)
         steps = [t for t in d._dt.index if (t % window_adj) == 0]
+        print(d.time_res_data)
+        print(d.time_res_static)
+        print(steps)
         # Remove the last step - since we look forward at each step,
         # it would take us beyond actually existing data
         steps = steps[:-1]
@@ -1467,36 +1490,46 @@ class Model(object):
                 self.solve(warmstart=False)
             else:
                 self.t_start = step
-                t_end = (step + o.opmode.horizon / d.time_res_data) - 1
-                self.t_end = int(t_end)
-                self.update_parameters()
-                self.solve(warmstart=True)
+                self._set_t_end()
+                # Note: we don't update the timestep set, so it keeps the
+                # values it got on first construction. Instead,
+                # we use an offset when updating parameter data so that
+                # the correct values are read into the "incorrect" timesteps.
+                self.update_parameters(t_offset=step - steps[0])
+                self.solve(warmstart=iterative_warmstart)
             self.load_results()
             # Gather relevant model results over decision interval, so
-            # we only grab [0:window/time_res] steps!
-            # panel = self.get_system_variables()
-            # system_vars.append(panel.iloc[:, 0:target_index, :])
+            # we only grab [0:window/time_res_static] steps, where
+            # window/time_res_static will be an iloc index
             if index == (len(steps) - 1):
                 # Final iteration saves data from entire horizon
-                target_index = int(o.opmode.horizon / d.time_res_static)
+                stepsize = int(o.opmode.horizon / d.time_res_static)
             else:
                 # Non-final iterations only save data from window
-                target_index = int(o.opmode.window / d.time_res_static)
+                stepsize = int(o.opmode.window / d.time_res_static)
+            print(index)
+            print(stepsize)
+            print('\n')
             # Get node variables
             panel4d = self.get_node_variables()
-            node_vars.append(panel4d.iloc[:, :, 0:target_index, :])
+            node_vars.append(panel4d.iloc[:, :, 0:stepsize, :])
             # Get totals
-            totals = self.get_totals(t_subset=slice(0, target_index))
+            totals = self.get_totals(t_subset=slice(0, stepsize))
             total_vars.append(totals)
             # Get costs
-            cost = self.get_costs(t_subset=slice(0, target_index))
+            cost = self.get_costs(t_subset=slice(0, stepsize))
             cost_vars.append(cost)
-            timesteps = [time_res.at[t] for t in self.m.t][0:target_index]
+            timesteps = [time_res.at[t] for t in self.m.t][0:stepsize]
+            print(self.m.t.value)
             d.time_res_sum += sum(timesteps)
             # Save state of storage for carry over to next iteration
             s = self.get_var('s')
-            # NB: -1 to convert from length --> index
-            storage_state_index = target_index - 1
+            # Convert from timestep length to absolute index
+            storage_state_index = stepsize - 1
+            assert (isinstance(storage_state_index, int) or
+                    storage_state_index.is_integer())
+            storage_state_index = int(storage_state_index)
+            print('storage_state_index: {}'.format(storage_state_index))
             d.s_init = s.iloc[:, storage_state_index, :]
         self.load_solution_iterative(node_vars, total_vars, cost_vars)
 

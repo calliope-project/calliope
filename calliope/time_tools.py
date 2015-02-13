@@ -26,8 +26,7 @@ class TimeSummarizer(object):
     def __init__(self):
         super(TimeSummarizer, self).__init__()
         # Format: {'data item': 'method'}
-        self.known_data_types = {'_t': 'NOOP',
-                                 '_dt': 'NOOP',
+        self.known_data_types = {'_dt': 'NOOP',
                                  'a': self._reduce_r_to_a,
                                  'r': self._reduce_sum,
                                  'r_eff': self._reduce_average,
@@ -39,7 +38,7 @@ class TimeSummarizer(object):
         if method == 'NOOP':
             # NOOP method means we don't do anything, so return straight away
             return
-        i = data['_t'].iat[s.start]
+        i = data._dt.index[s.start]
         if not src_param:
             src_param = param
         if subkey:
@@ -107,7 +106,8 @@ class TimeSummarizer(object):
         Returns None on success.
 
         """
-        assert len(mask) == len(data['_t']), 'Mask & data must have same length.'
+        assert len(mask) == len(data['_dt']), \
+            'Mask and data must have same length.'
         df = pd.DataFrame(mask, index=mask.index)
         df.columns = ['summarize']  # rename the single column
         df['time_res'] = data.time_res_static
@@ -128,8 +128,7 @@ class TimeSummarizer(object):
             df.at[ifrom, 'time_res'] = resolution
         # 2. Replace all data with its subset where to_keep is 1
         # Create boolean mask with the right length -- but ignore index by
-        # turning it into a list (since data is indexed by timestep id, while
-        # '_t' is 0-indexed)
+        # turning it into a list (since data is indexed by timestep id)
         boolean_mask = (df.to_keep == 1).tolist()
         for k in list(data.keys()):
             if k in list(self.known_data_types.keys()):
@@ -141,11 +140,13 @@ class TimeSummarizer(object):
             # NB unknown data types are checked for and logged earlier, inside
             # _reduce_resolution()
         data.time_res_series = df.time_res[boolean_mask]
-        # Reindex '_t' so that it's again zero-indexed
-        data['_t'].index = list(range(len(data['_t'])))
-        # FIXME update data.time_res_static if the resolution
-        # reduction was uniform!
-        # data.time_res_static = resolution
+        # `df` is zero-indeed, so we have to re-set the actual timesteps as
+        # index for time_res_series
+        data.time_res_series.index = data._dt.index
+        # Update data.time_res_static if the resolution reduction was uniform
+        if len(data.time_res_series.unique()) == 1:
+            data.time_res_static = resolution
+        data.time_res_native = 0  # Unset native time_res flag
 
     def reduce_resolution(self, data, resolution):
         """

@@ -111,7 +111,7 @@ class TestInitialization:
 
     def test_initialize_sets_timesteps(self):
         model = common.simple_model()
-        assert model.data._t.tolist() == list(range(0, 1416))
+        assert model.data._dt.index.tolist() == list(range(0, 1416))
         assert model.data._dt[0].minute == 0
         assert model.data._dt[0].hour == 0
         assert model.data._dt[0].day == 1
@@ -127,7 +127,7 @@ class TestInitialization:
                         subset_t: ['2005-01-02', '2005-01-03']
                     """
         model = common.simple_model(config_run=config_run)
-        assert model.data._t.tolist() == list(range(24, 72))
+        assert model.data._dt.index.tolist() == list(range(24, 72))
         # NB: using iloc instead of iat to get around the underlying
         # numpy object and have pandas do the minute/hour/.. checking
         assert model.data._dt.iloc[0].minute == 0
