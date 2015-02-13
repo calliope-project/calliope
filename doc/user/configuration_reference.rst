@@ -44,6 +44,10 @@ See the `YAML website <http://www.yaml.org/>`_ for more general information abou
 
 Calliope internally represents the configuration as :class:`~calliope.utils.AttrDict`\ s, which are a subclass of the built-in Python dictionary data type (``dict``) with added functionality such as YAML reading/writing and attribute access to keys.
 
+.. TODO improve the docs on this warning as well as the underlying messy implementation. perhaps more specific docs on generating parallel runs and the quirks that entails.
+
+.. Warning:: When generating parallel runs with the ``calliope generate`` command-line tool, any ``import`` directive, unlike other settings that point to file system paths such as ``model_override`` or ``data_path``, is evaluated immediately and all imported files are combined into one model configuration file for the parallel runs. This means that while paths used in ``import`` directives don't need adjustment for parallel runs, other settings that work with file system paths probably do need adjustment to account for the way files are laid out on the system running the parallel runs. For this purpose, the ``data_path_adjustment`` inside a ``parallel`` configuration block can change the data path for parallel runs only.
+
 .. _config_reference_model_wide:
 
 Model-wide settings

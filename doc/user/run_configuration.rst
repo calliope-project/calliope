@@ -30,6 +30,8 @@ Additional (optional) settings, including debug settings, can be specified in th
 
 .. Note:: If run settings override the ``data_path`` setting and specify a relative path, that path will be interpreted as relative to the run settings file and not the model settings file being overridden.
 
+.. TODO add documentation on special _REPLACE_ key
+
 Instead of directly overriding settings within the run configuration file using an ``override`` block, it is also possible to specify an additional model configuration file with overriding settings by using the ``model_override: path/to/model_override.yaml`` setting (the path given here is relative to the run configuration file).
 
 The optional settings to adjust the timestep resolution and those for parallel runs are discussed below. For a complete list of the other available settings, see :ref:`config_reference_run` in the configuration reference.

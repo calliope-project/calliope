@@ -1399,11 +1399,11 @@ class Model(object):
         df.loc[:, 'carrier'] = df.index.map(lambda y: self.get_carrier(y))
         get_src_c = lambda y: self.get_source_carrier(y)
         df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
-        df.loc[:, 'weight'] = df.index.map(lambda y: self.get_weight(y))
+        df.loc[:, 'stack_weight'] = df.index.map(lambda y: self.get_weight(y))
         df.loc[:, 'color'] = df.index.map(lambda y: self.get_color(y))
         return df
 
-    def get_summary(self, sort_by='capacity', carrier='power'):
+    def get_summary(self, sort_by='e_cap', carrier='power'):
         sol = self.solution
         # Capacity factor per carrier
         df = pd.DataFrame({'cf': sol.capacity_factor.loc[carrier, 'total', :]})
@@ -1412,11 +1412,11 @@ class Model(object):
             # .loc[cost_class, carrier, location, tech]
             df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
         # Add totals per carrier
-        df['production'] = sol.totals.loc[carrier, 'ec_prod', :, :].sum(0)
-        df['consumption'] = sol.totals.loc[carrier, 'ec_con', :, :].sum(0)
+        df['e_prod'] = sol.totals.loc[carrier, 'ec_prod', :, :].sum(0)
+        df['e_con'] = sol.totals.loc[carrier, 'ec_con', :, :].sum(0)
         # Add other carrier-independent stuff
-        df['capacity'] = sol.parameters['e_cap'].sum()
-        df['area'] = sol.parameters['r_area'].sum()
+        df['e_cap'] = sol.parameters['e_cap'].sum()
+        df['r_area'] = sol.parameters['r_area'].sum()
         return df.sort(columns=sort_by, ascending=False)
 
     def get_shares(self):
@@ -1434,7 +1434,7 @@ class Model(object):
         df['group'] = df.index.map(gg)
         df['type'] = df.index.map(self.get_parent)
 
-        for var in ['production', 'consumption', 'capacity']:
+        for var in ['e_prod', 'e_con', 'e_cap']:
             for index, row in df.iterrows():
                 group_members = row['members'].split('|')
                 group_type = row['type']

@@ -154,7 +154,7 @@ def plot_solution(solution, data, carrier='power', demand='demand_power',
                                       'unmet_demand'], additional_types)
     stacked_techs = df.query(query_string).index.tolist()
     # Put stack in order according to stack_weights
-    weighted = df.weight.order(ascending=False).index.tolist()
+    weighted = df.stack_weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]
     names = [df.at[y, 'name'] for y in stacked_techs]
     # If no colormap given, derive one from colors given in metadata
@@ -186,7 +186,7 @@ def plot_installed_capacities(solution, additional_types=None, **kwargs):
 
     df = solution.parameters.e_cap.loc[:, supply_cap]
 
-    weighted = solution.metadata.weight.order(ascending=False).index.tolist()
+    weighted = solution.metadata.stack_weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in df.columns]
 
     df = df.loc[:, stacked_techs] / 1e6
@@ -348,7 +348,7 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
 
 
 def get_group_share(solution, techs, group_type='supply',
-                    var='production'):
+                    var='e_prod'):
     """
     From ``solution.summary``, get the share of the given list of ``techs``
     from the total for the given ``group_type``, for the given ``var``.
@@ -420,7 +420,7 @@ def areas_below_resolution(solution, resolution):
     return list(_get_ranges(selected.index.tolist()))
 
 
-def get_swi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
+def get_swi(solution, shares_var='e_cap', exclude_patterns=['unmet_demand']):
     """
     Returns the Shannon-Wiener diversity index.
 
@@ -441,7 +441,7 @@ def get_swi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
     return swi
 
 
-def get_hhi(solution, shares_var='capacity', exclude_patterns=['unmet_demand']):
+def get_hhi(solution, shares_var='e_cap', exclude_patterns=['unmet_demand']):
     """
     Returns the Herfindahl-Hirschmann diversity index.
 
