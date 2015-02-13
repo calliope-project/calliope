@@ -11,14 +11,14 @@
 .. image:: https://img.shields.io/pypi/v/calliope.svg
    :target: https://pypi.python.org/pypi/calliope
 
-.. image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
-
 Calliope
 ========
 
 *A multi-scale energy systems (MUSES) modeling framework*
 
 Project website: `www.callio.pe <http://www.callio.pe/>`_
+
+DOI for most recent stable version: .. image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg :target: #
 
 Documentation
 -------------

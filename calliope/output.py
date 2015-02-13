@@ -10,8 +10,32 @@ Functionality for generating model outputs.
 """
 
 import numpy as np
+import pandas as pd
 
 from . import utils
+
+
+def aggregate_parameters(results, iterations=None, how='max'):
+    """
+    Get aggregated plant sizes across all runs in the given ``results``.
+    Results must be a parallel run results container.
+
+    Parameters
+    ----------
+    results : parallel run results container
+    iterations : list or other iterable, default None
+        Subset of iteration indices to consider, by default (None), all
+        iterations are used.
+    how : str, default 'max'
+        Aggregation method to use, i.e. 'max', 'min', 'mean'.
+
+    """
+    if not iterations:
+        iterations = results.iterations.index.tolist()
+    solution_panel = pd.Panel4D({i: results.solutions[i].parameters
+                                 for i in iterations})
+    aggregator = getattr(solution_panel, how)
+    return aggregator(axis=0)
 
 
 def generate_constraints(solution, output_path=None, techs=None,

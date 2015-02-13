@@ -22,120 +22,60 @@ import numpy as np
 import pandas as pd
 
 from . import utils
+from . import analysis_utils as au
 
 
-def legend_on_right(ax, style='default', artists=None, labels=None, **kwargs):
-    """Draw a legend on outside on the right of the figure given by 'ax'"""
-    box = ax.get_position()
-    # originally box.width * 0.8 but 1.0 solves some problems
-    # it just means that the box becomes wider, which is ok though!
-    ax.set_position([box.x0, box.y0, box.width * 1.0, box.height])
-    if style == 'square':
-        artists, labels = get_square_legend(ax.legend())
-        l = ax.legend(artists, labels, loc='center left',
-                      bbox_to_anchor=(1, 0.5), **kwargs)
-    elif style == 'custom':
-        l = ax.legend(artists, labels, loc='center left',
-                      bbox_to_anchor=(1, 0.5), **kwargs)
-    else:
-        l = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), **kwargs)
-    return l
-
-
-def legend_below(ax, style='default', columns=5, artists=None, labels=None,
-                 **kwargs):
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0 + box.height * 0.1,
-                     box.width, box.height * 0.9])
-    if style == 'square':
-        artists, labels = get_square_legend(ax.legend())
-        l = ax.legend(artists, labels, loc='upper center',
-                      bbox_to_anchor=(0.5, -0.05), ncol=columns, **kwargs)
-    elif style == 'custom':
-        l = ax.legend(artists, labels, loc='upper center',
-                      bbox_to_anchor=(0.5, -0.05), ncol=columns, **kwargs)
-    else:
-        l = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-                      ncol=columns, **kwargs)
-    return l
-
-
-def get_square_legend(lgd):
-    rects = [plt.Rectangle((0, 0), 1, 1,
-             fc=l.get_color()) for l in lgd.get_lines()]
-    labels = [l.get_label() for l in lgd.get_lines()]
-    return (rects, labels)
-
-
-def stack_plot(df, stack=None, figsize=None, colormap='jet', legend='default',
-               ticks='daily', names=None, ax=None, leg_title=None,
-               leg_fontsize=None, **kwargs):
+def plot_carrier_production(solution, carrier='power', subset_t=None,
+                            **kwargs):
     """
-    if stack is None, the columns of the passed df are used
+    Generate a stackplot of the production by the given ``carrier``.
 
-    legend can be 'default' or 'right', can set legend title with `leg_title`
-    ticks can be 'hourly', 'daily', 'monthly'
-
-    kwargs get passed to ax.stackplot()
+    Parameters
+    ----------
+    solution : solution container
+    carrier : str, default 'power'
+    subset_t : 2-tuple of str or None, default None
+        Specify a date subset for which to plot, for example,
+        ('2005-02-01', '2005-02-10') , or ('2005-02-01', None)
+    **kwargs : passed to ``plot_timeseries`` (see its documentation)
 
     """
-    if not stack:
-        stack = df.columns
-    if not ax:
-        if not figsize:
-            figsize = (16, 4)
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
-    colors = plt.get_cmap(colormap)(np.linspace(0, 1.0, len(stack)))
-    fills = ax.stackplot(df.index, df[stack].T, label=stack, colors=colors,
-                         **kwargs)
-    # Rename the tech stack with friendly names, if given, for legend plotting
-    if names:
-        stack = names
-    # Legend via proxy artists
-    # Based on https://github.com/matplotlib/matplotlib/issues/1943
-    proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])
-               for i in fills]
-    if legend == 'default':
-        l = ax.legend(reversed(proxies), reversed(stack), title=leg_title)
-    elif legend == 'right':
-        l = legend_on_right(ax, artists=reversed(proxies),
-                            labels=reversed(stack),
-                            style='custom', title=leg_title)
-    if leg_title and leg_fontsize:
-        plt.setp(l.get_title(), fontsize=leg_fontsize)
-    # Format x datetime axis
-    # Based on http://stackoverflow.com/a/9627970/397746
-    import matplotlib.dates as mdates
-    if ticks == 'monthly':
-        formatter = mdates.DateFormatter('%b %Y')
-        locator = mdates.MonthLocator()
-    if ticks == 'daily':
-        formatter = mdates.DateFormatter('%d-%m-%Y')
-        locator = mdates.DayLocator()
-    if ticks == 'hourly':
-        formatter = mdates.DateFormatter('%H:%M\n%d-%m-%Y')
-        locator = mdates.HourLocator(byhour=[0])
-        minor_formatter = mdates.DateFormatter('%H:%M')
-        minor_locator = mdates.HourLocator(byhour=list(range(1, 24)))
-        plt.gca().xaxis.set_minor_formatter(minor_formatter)
-        plt.gca().xaxis.set_minor_locator(minor_locator)
-    plt.gca().xaxis.set_major_formatter(formatter)
-    plt.gca().xaxis.set_major_locator(locator)
-    return ax
+    data = solution.node['e:{}'.format(carrier)].sum(axis=2)
+    if subset_t:
+        data = data.loc[slice(*subset_t), :]
+    plot_timeseries(solution, data, carrier=carrier, **kwargs)
 
 
-def _get_query_string(types, additional_types=None):
-    query_string = ''
-    if additional_types:
-        types = types + additional_types
-    formatted_types = ['type == "{}"'.format(t) for t in types]
-    query_string = ' | '.join(formatted_types)
-    return query_string
+def plot_timeseries(solution, data, carrier='power', demand='demand_power',
+                    types=['supply', 'conversion', 'storage', 'unmet_demand'],
+                    colormap=None, ticks=None):
+    """
+    Generate a stackplot of the ``data`` for the given ``carrier``,
+    plotting the ``demand`` on top.
 
+    Use ``plot_carrier_production`` for a simpler way to plot production by
+    a given carrier.
 
-def plot_solution(solution, data, carrier='power', demand='demand_power',
-                  additional_types=None, colormap=None, ticks=None):
+    Parameters
+    ----------
+    solution : solution container
+    data : pandas DataFrame
+        subset of solution to plot
+    carrier : str, default 'power'
+        name of the carrier to plot
+    demand : str, default 'demand_power'
+        name of a demand tech whose time series to plot on top
+    types : list, default ['supply', 'conversion', 'storage', 'unmet_demand']
+        Technology types to include in the plot.
+    colormap : matplotlib colormap
+        Colormap to use, if not given, the colors specified for each
+        technology in the solution's metadata are used.
+    ticks : str, default None
+        Where to draw x-axis (time axis) ticks. By default (None),
+        auto-detects, but can manually set to either 'hourly', 'daily',
+        or 'monthly'.
+
+    """
     # Determine ticks
     if not ticks:
         timespan = (data.index[-1] - data.index[0]).days
@@ -150,8 +90,7 @@ def plot_solution(solution, data, carrier='power', demand='demand_power',
     plot_df = data.divide(time_res, axis='index')
     # Get tech stack and names
     df = solution.metadata[solution.metadata.carrier == carrier]
-    query_string = _get_query_string(['supply', 'conversion', 'storage',
-                                      'unmet_demand'], additional_types)
+    query_string = au._get_query_string(types)
     stacked_techs = df.query(query_string).index.tolist()
     # Put stack in order according to stack_weights
     weighted = df.stack_weight.order(ascending=False).index.tolist()
@@ -162,26 +101,28 @@ def plot_solution(solution, data, carrier='power', demand='demand_power',
         colors = [solution.metadata.at[i, 'color'] for i in stacked_techs]
         colormap = ListedColormap(colors)
     # Plot!
-    ax = stack_plot(plot_df, stacked_techs, colormap=colormap,
-                    alpha=0.9, ticks=ticks, legend='right', names=names)
+    ax = au.stack_plot(plot_df, stacked_techs, colormap=colormap,
+                       alpha=0.9, ticks=ticks, legend='right', names=names)
     ax.plot(plot_df[demand].index,
             plot_df[demand] * -1,
             color='black', lw=1, ls='-')
     return ax
 
 
-def plot_installed_capacities(solution, additional_types=None, **kwargs):
+def plot_installed_capacities(solution,
+                              types=['supply', 'conversion', 'storage'],
+                              **kwargs):
     """
-    Arguments:
+    Plot installed capacities (``e_cap``) with a bar plot.
 
-    additional_types: list of additional technology types to include,
-    default is 'supply', 'conversion', 'storage'
-
-    Additional kwargs are passed to pandas.DataFrame.plot()
+    Parameters
+    ----------
+    types : list, default ['supply', 'conversion', 'storage']
+        Technology types to include in the plot.
+    **kwargs : are passed to ``pandas.DataFrame.plot()``
 
     """
-    query_string = _get_query_string(['supply', 'conversion', 'storage'],
-                                     additional_types)
+    query_string = au._get_query_string(types)
     supply_cap = solution.metadata.query(query_string).index.tolist()
 
     df = solution.parameters.e_cap.loc[:, supply_cap]
@@ -210,7 +151,7 @@ def plot_installed_capacities(solution, additional_types=None, **kwargs):
 
     ax = df.plot(kind='barh', stacked=True, legend=False, colormap=colormap,
                  **kwargs)
-    leg = legend_on_right(ax, style='custom', artists=proxies, labels=names)
+    leg = au.legend_on_right(ax, style='custom', artists=proxies, labels=names)
 
     ylab = ax.set_ylabel('')
     xlab = ax.set_xlabel('Installed capacity [GW]')
@@ -222,12 +163,26 @@ def plot_transmission(solution, tech='hvac', carrier='power',
                       labels='utilization',
                       figsize=(15, 15), fontsize=9):
     """
-    Plots transmission links on a map.
+    Plot transmission links on a map. Requires that model metadata have
+    been defined with a lat/lon for each model location and a boundary for
+    the map display.
 
-    `labels` determines how transmission links are labeled,
-    can be `transmission` or `utilization`.
+    Requires Basemap and NetworkX to be installed.
 
-    NB: Requires Basemap and NetworkX to be installed.
+    Parameters
+    ----------
+    solution : solution container
+    tech : str, default 'hvac'
+        Which transmission technology to plot.
+    carrier : str, default 'power'
+        Which carrier to plot transmission for.
+    labels : str, default 'utilization'
+        Determines how transmission links are labeled, either
+        `transmission` or `utilization`.
+    figsize : (int, int), default (15, 15)
+        Size of resulting figure.
+    fontsize : int, default 9
+        Font size of figure labels.
 
     """
     from mpl_toolkits.basemap import Basemap
@@ -327,6 +282,20 @@ def plot_transmission(solution, tech='hvac', carrier='power',
 
 def get_delivered_cost(solution, cost_class='monetary', carrier='power',
                        count_unmet_demand=False):
+    """
+    Get the levelized cost per kWh delivered for the given cost_class
+    and carrier.
+
+    Parameters
+    ----------
+    solution : solution container
+    cost_class : str, default 'monetary'
+    carrier : str, default 'power'
+    count_unmet_demand : bool, default False
+        Whether to count the cost of unmet demand in the final
+        delivered cost
+
+    """
     summary = solution.summary
     meta = solution.metadata
     carrier_subset = meta[meta.carrier == carrier].index.tolist()
@@ -334,9 +303,9 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
         carrier_subset.remove('unmet_demand_' + carrier)
     cost = solution.costs.loc[cost_class, :, carrier_subset].sum().sum()
     # Actually, met_demand also includes demand "met" by unmet_demand
-    met_demand = summary.at['demand_' + carrier, 'consumption']
+    met_demand = summary.at['demand_' + carrier, 'e_con']
     try:
-        unmet_demand = summary.at['unmet_demand_' + carrier, 'consumption']
+        unmet_demand = summary.at['unmet_demand_' + carrier, 'e_con']
     except KeyError:
         unmet_demand = 0
     if count_unmet_demand is False:
@@ -384,7 +353,20 @@ def get_supply_groups(solution):
     return idx_1 + idx_2
 
 
-def get_unmet_load_hours(solution, carrier='power', details=False):
+def get_unmet_demand_hours(solution, carrier='power', details=False):
+    """
+    Get information about unmet demand from ``solution``.
+
+    Parameters
+    ----------
+    solution : solution container
+    carrier : str, default 'power'
+    details : bool, default False
+        By default, only the number of hours with unmet are returned. If
+        details is True, a dict with 'hours', 'timesteps', and 'dates' keys
+        is returned instead.
+
+    """
     unmet = solution.node['e:' + carrier]['unmet_demand_' + carrier].sum(1)
     timesteps = len(unmet[unmet > 0])
     hours = solution.time_res[unmet > 0].sum()
@@ -395,29 +377,14 @@ def get_unmet_load_hours(solution, carrier='power', details=False):
         return hours
 
 
-def _get_ranges(dates):
-    # Modified from http://stackoverflow.com/a/6934267/397746
-    while dates:
-        end = 1
-        timedelta = dates[end] - dates[end - 1]
-        try:
-            while dates[end] - dates[end - 1] == timedelta:
-                end += 1
-        except IndexError:
-            pass
-
-        yield (dates[0], dates[end - 1])
-        dates = dates[end:]
-
-
 def areas_below_resolution(solution, resolution):
     """
-    Returns a list of (start, end) tuples for areas in the solution
-    below the given timestep resolution.
+    Returns a list of (start, end) timestamp tuples delimiting those
+    areas in the solution below the given timestep resolution (in hours).
 
     """
     selected = solution.time_res[solution.time_res < resolution]
-    return list(_get_ranges(selected.index.tolist()))
+    return list(au._get_ranges(selected.index.tolist()))
 
 
 def get_swi(solution, shares_var='e_cap', exclude_patterns=['unmet_demand']):
@@ -461,24 +428,16 @@ def get_hhi(solution, shares_var='e_cap', exclude_patterns=['unmet_demand']):
 
 
 def get_domestic_supply_index(solution):
+    """
+    Assuming that ``solution`` specifies a ``domestic`` cost class to
+    give each technology a domesticity score, return the total domestic
+    supply index for the given solution.
+
+    """
     idx = solution.metadata.query('type == "supply"').index.tolist()
     dom = (solution.costs.domestic.loc[:, idx].sum().sum() /
            solution.totals.loc['power', 'ec_prod', :, :].sum().sum())
     return dom
-
-
-def aggregate_parameters(solution, iterations=None, how='max'):
-    """
-    Get aggregated plant sizes across all planning runs.
-    Used for operational runs.
-
-    """
-    if not iterations:
-        iterations = solution.iterations.index.tolist()
-    solution_panel = pd.Panel4D({i: solution.solutions[i].parameters
-                                 for i in iterations})
-    aggregator = getattr(solution_panel, how)
-    return aggregator(axis=0)
 
 
 class DummyModel(object):
