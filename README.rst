@@ -18,7 +18,10 @@ Calliope
 
 Project website: `www.callio.pe <http://www.callio.pe/>`_
 
-DOI for most recent stable version: .. image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg :target: #
+DOI for the most recent stable version on Zenodo: |badge_doi|
+
+.. |badge_doi| image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
+   :target: https://zenodo.org/search?ln=en&p=Calliope%3A+a+multi-scale+energy+systems+%28MUSES%29+modeling+framework&action_search=
 
 Documentation
 -------------
