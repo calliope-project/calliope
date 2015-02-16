@@ -79,6 +79,9 @@ def read_dir(directory, tables_to_read=None):
     """Combines output files from `directory` and return an AttrDict
     containing them all.
 
+    If a solution is missing or there is an error reading it, an empty
+    AttrDict is added to the results in its stead and the error is logged.
+
     """
     results = utils.AttrDict()
     results.iterations = pd.read_csv(os.path.join(directory, 'iterations.csv'),

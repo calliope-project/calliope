@@ -173,6 +173,14 @@ class TestAttrDict:
         with pytest.raises(KeyError):
             d.union(d_new)
 
+    def test_union_replacement(self, attr_dict):
+        d = attr_dict
+        d_new = utils.AttrDict.from_yaml_string("""
+            c: {_REPLACE_: foo}
+        """)
+        d.union(d_new, allow_override=True, allow_replacement=True)
+        assert d.c == 'foo'
+
 
 class TestCaptureOutput:
     def example_funct(self):

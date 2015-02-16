@@ -10,6 +10,7 @@ Core model functionality via the Model class.
 """
 
 import datetime
+import functools
 import importlib
 import inspect
 import itertools
@@ -50,10 +51,21 @@ def _formatwarning(message, category, filename, lineno, line=None):
 
 warnings.formatwarning = _formatwarning
 
-# Get list of techs pre-defined in defaults.yaml
-module_config = os.path.join(os.path.dirname(__file__), 'config')
-o = utils.AttrDict.from_yaml(os.path.join(module_config, 'defaults.yaml'))
-DEFAULT_TECHS = list(o.techs.keys())
+
+@functools.lru_cache(maxsize=1)
+def get_default_techs(foo=0):
+    """
+    Get list of techs pre-defined in defaults.yaml.
+
+    The foo=0 parameter makes sure that lru_cache has an argument to cache,
+    the function must always be called as get_default_techs() with no
+    arguments, ensuring that the values are only read from disk once and
+    then cached.
+
+    """
+    module_config = os.path.join(os.path.dirname(__file__), 'config')
+    o = utils.AttrDict.from_yaml(os.path.join(module_config, 'defaults.yaml'))
+    return list(o.techs.keys())
 
 
 def _load_function(source):
@@ -115,7 +127,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
     for path in cr.model:
         new_o = utils.AttrDict.from_yaml(path)
         if 'techs' in list(new_o.keys()):
-            overlap = set(DEFAULT_TECHS) & set(new_o.techs.keys())
+            overlap = set(get_default_techs()) & set(new_o.techs.keys())
             if overlap:
                 e = exceptions.ModelError
                 raise e('Trying to re-define a default technology in '
@@ -289,6 +301,9 @@ class Model(object):
                                                self.config_run_path)
                 res_series = pd.read_csv(res_file, index_col=0, header=None)[1]
                 res_series = res_series.astype(int)[self.slice]
+            # Silently ignore if neither time.file or time.function given
+            else:
+                return
             s.dynamic_timestepper(self.data, res_series)
 
     def prev(self, t):
@@ -526,7 +541,7 @@ class Model(object):
         # Verify that no technologies apart from the default technologies
         # inherit from 'defaults'
         for k, v in self.parents.items():
-            if k not in DEFAULT_TECHS and v == 'defaults':
+            if k not in get_default_techs() and v == 'defaults':
                 e = exceptions.ModelError
                 raise e('Tech `' + k + '` inherits from `defaults` but ' +
                         'should inherit from a built-in default technology.')
