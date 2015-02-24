@@ -247,7 +247,7 @@ class AttrDict(dict):
         If ``allow_override`` is False, a KeyError is raised if
         other tries to redefine an already defined key.
 
-        If ``allow_replacement``, allow "__REPLACE__" key to replace an
+        If ``allow_replacement``, allow "_REPLACE_" key to replace an
         entire sub-dict.
 
         """

@@ -67,5 +67,5 @@ override:
 ##
 
 debug:
-    keepfiles: false  # Keep temporary files
+    keep_temp_files: false  # Keep temporary files
     symbolic_solver_labels: false # Use human-readable component labels? (slower)

@@ -1135,7 +1135,7 @@ class Model(object):
             if cr.get_key('debug.symbolic_solver_labels', default=False):
                 self.opt.symbolic_solver_labels = True
         if cr.get_key('debug.keep_temp_files', default=False):
-            self.opt.keep_temp_files = True
+            self.opt.keepfiles = True
             if self.mode == 'plan':
                 logdir = os.path.join('Logs', self.run_id)
             elif self.mode == 'operate':
