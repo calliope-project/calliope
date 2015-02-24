@@ -257,11 +257,27 @@ Optional settings:
 * ``model_override``: Path to a YAML configuration file which contains additional overrides for the model configuration. If both this and ``override`` are specified, anything defined in ``override`` takes precedence over model configuration added in the ``model_override`` file.
 * ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
 
-Optional debug settings:
+Debugging failing runs
+^^^^^^^^^^^^^^^^^^^^^^
+
+A number of run settings exist to make debugging failing runs easier:
 
 * ``subset_y``, ``subset_x``, ``subset_t``: specify if only a subset of technologies (y), locations (x), or timesteps (t) should be used for this run. This can be useful for debugging purposes. The timestep subset can be specified as ``[startdate, enddate]``, e.g. ``['2005-01-01', '2005-01-31']``. The subsets are processed before building the model and applying time resolution adjustments, so time resolution functions will only see the reduced set of data.
-* ``debug.keepfiles``: Whether to keep temporary files (default ``false``), useful to debug model problems
-* ``debug.symbolic_solver_labels``: By default, Pyomo does not generate components with human-readable names, which is faster. To debug models (particularly when using ``debug.keepfiles: true``), this setting should also be set to ``true`` so that the generated model becomes human-readable
+
+In addition, settings relevant to debugging can be specified inside a ``debug`` block as follows:
+
+* ``debug.keep_temp_files``: Whether to keep temporary files inside a ``Logs`` directory rather than deleting them after completing the model run (which is the default). Useful to debug model problems.
+* ``debug.overwrite_temp_files``: When ``debug.keep_temp_files`` is true, and the ``Logs`` directory already exists, Calliope will stop with an error, but if this setting is true, it will overwrite the existing temporary files.
+* ``debug.symbolic_solver_labels``: By default, Pyomo uses short random names for all generated model components, rather than the variable and parameter names used in the model setup. This is faster but for debugging purposes models must be human-readable. Thus, particularly when using ``debug.keep_temp_files: true``, this setting should also be set to ``true``.
+* ``debug.echo_solver_log``: Displays output from the solver on screen while solving the model (by default, output is only logged to the log file, which is removed unless ``debug.keep_temp_files`` is true).
+
+The following example debug block would keep temporary files, removing possibly existing files from a previous run beforehand:
+
+.. code-block:: yaml
+
+   debug:
+       keep_temp_files: true
+       overwrite_temp_files: true
 
 Solver options
 ^^^^^^^^^^^^^^

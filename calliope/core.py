@@ -199,7 +199,7 @@ class Model(object):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)
             # self.run_id is used to set an output folder for logs, if
-            # debug.keepfiles is set to True
+            # debug.keep_temp_files is set to True
             self.run_id = os.path.splitext(os.path.basename(config_run))[0]
             self.config_run_path = config_run
         else:
@@ -1134,14 +1134,14 @@ class Model(object):
                 pass
             if cr.get_key('debug.symbolic_solver_labels', default=False):
                 self.opt.symbolic_solver_labels = True
-        if cr.get_key('debug.keepfiles', default=False):
-            self.opt.keepfiles = True
+        if cr.get_key('debug.keep_temp_files', default=False):
+            self.opt.keep_temp_files = True
             if self.mode == 'plan':
                 logdir = os.path.join('Logs', self.run_id)
             elif self.mode == 'operate':
                 logdir = os.path.join('Logs', self.run_id
                                       + '_' + str(self.t_start))
-            if (cr.get_key('debug.delete_old_logs', default=False)
+            if (cr.get_key('debug.overwrite_temp_files', default=False)
                     and os.path.exists(logdir)):
                 shutil.rmtree(logdir)
             os.makedirs(logdir)

@@ -6,6 +6,7 @@ Release History
 +++++++++++
 
 * [changed] Analysis tools restructured
+* [changed] Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
 
 0.3.2 (2015-02-13)
 ++++++++++++++++++
