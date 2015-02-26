@@ -24,15 +24,21 @@ from .parallel import Parallelizer
 
 _debug = click.option('--debug', is_flag=True, default=False,
                       help='Print debug information when encountering errors.')
+_pdb = click.option('--pdb', is_flag=True, default=False,
+                    help='If used together with --debug, drop into interactive '
+                         'debugger on encountering errors.')
 
 
 @contextlib.contextmanager
-def format_exceptions(debug=False):
+def format_exceptions(debug=False, pdb=False):
     try:
         yield
     except Exception as e:
         if debug:
             traceback.print_exc()
+            if pdb:
+                import pdb
+                pdb.post_mortem(e.__traceback__)
         else:
             stack = traceback.extract_tb(e.__traceback__)
             # Get last stack trace entry still in Calliope
@@ -66,10 +72,11 @@ def new(path):
 @cli.command(short_help='directly run single model')
 @click.argument('run_config')
 @_debug
-def run(run_config, debug):
+@_pdb
+def run(run_config, debug, pdb):
     """Execute the given RUN_CONFIG run configuration file."""
     logging.captureWarnings(True)
-    with format_exceptions(debug):
+    with format_exceptions(debug, pdb):
         model = core.Model(config_run=run_config)
         model.config_run.set_key('output.save', True)  # Always save output
         model.run()
@@ -81,7 +88,8 @@ def run(run_config, debug):
 @click.option('--silent', is_flag=True, default=False,
               help='Be less verbose.')
 @_debug
-def generate(run_config, path, silent, debug):
+@_pdb
+def generate(run_config, path, silent, debug, pdb):
     """
     Generate parallel runs based on the given RUN_CONFIG configuration
     file, saving them in the given PATH, which is a path to a
@@ -89,7 +97,7 @@ def generate(run_config, path, silent, debug):
     if not specified).
     """
     logging.captureWarnings(True)
-    with format_exceptions(debug):
+    with format_exceptions(debug, pdb):
         parallelizer = Parallelizer(target_dir=path, config_run=run_config)
         if not silent and 'name' not in parallelizer.config.parallel:
             click.echo('`' + run_config +
