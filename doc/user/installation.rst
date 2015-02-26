@@ -7,6 +7,8 @@ Download and installation
 Requirements
 ============
 
+Calliope has been tested on Linux, Mac OS X, and Windows (but see the :ref:`Windows notes <windows_install_note>` below).
+
 Running Calliope requires four things:
 
 1. the Python programming language (version 3.4 or higher)
@@ -33,6 +35,20 @@ Once you have Anaconda installed, you can create a new Python 3.4 environment ca
 Then, with the "calliope" environment activated (``source activate calliope`` if you are using Anaconda), install Calliope with the Python package installer pip, which will also install Pyomo (and any other remaining dependencies not installed already)::
 
    $ pip install calliope
+
+.. _windows_install_note:
+
+.. Note::
+
+   Calliope has been tested on Windows 7 and Windows 8 and should generally work, but running Python software on Windows can be trickier than on Linux or Mac OS:
+
+   There are some specifics to keep in mind when installing on Windows:
+
+   * On Windows, basemap is not currently available, so plotting maps is unavailable. Use the following command to install the Calliope environment::
+
+      conda create -n calliope python=3.4 pip pandas pytables pyyaml matplotlib
+
+   * To activate an Anaconda environment on Windows, use ``activate`` instead of ``source activate``, e.g: ``activate calliope``
 
 .. _python_module_requirements:
 
