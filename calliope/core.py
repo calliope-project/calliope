@@ -785,6 +785,11 @@ class Model(object):
                         d[param][y].loc[:, x] = 0
                         continue
                     option = self.get_option(y + '.constraints.' + param, x=x)
+                    if (isinstance(option, str)
+                            and not option.startswith('file')):
+                        e = exceptions.ModelError
+                        raise e('Invalid value for `{}.{}.{}`:'
+                                ' `{}`'.format(param, y, x, option))
                     k = param + '.' + y + '.' + x
                     if (isinstance(option, str)
                             and option.startswith('file')):
