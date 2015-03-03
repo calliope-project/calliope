@@ -2,6 +2,8 @@
 # RUN SETTINGS
 ##
 
+name: "Test run"  # Run name -- distinct from model name!
+
 model: 'model_config/model.yaml'
 
 output:  # Only used if run via the 'calliope run' command-line tool

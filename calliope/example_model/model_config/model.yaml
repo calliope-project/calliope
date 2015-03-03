@@ -9,6 +9,13 @@ import:
     - 'locations.yaml'
 
 ##
+# MODEL NAME
+##
+
+name: "Test model"
+
+
+##
 # DATASET PATH
 ##
 

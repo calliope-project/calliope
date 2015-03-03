@@ -5,6 +5,8 @@ Release History
 0.3.3 (dev)
 +++++++++++
 
+* [new] Models and runs have can have a ``name``
+* [changed] More verbose ``calliope run``
 * [changed] Analysis tools restructured
 * [changed] Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
 

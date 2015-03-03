@@ -59,9 +59,7 @@ class Parallelizer(object):
 
         """
         pth = os.path.join('Runs', settings)
-        f.write('python -c "import calliope\n')
-        f.write('model = calliope.Model(config_run=\'{}\')\n'.format(pth))
-        f.write('model.run()"\n')
+        f.write('calliope run {}'.format(pth))
 
     def _write_submit(self, f, n_iter, config=None):
         """

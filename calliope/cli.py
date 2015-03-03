@@ -10,6 +10,7 @@ Command-line interface.
 """
 
 import contextlib
+import datetime
 import logging
 import os
 import shutil
@@ -77,9 +78,27 @@ def run(run_config, debug, pdb):
     """Execute the given RUN_CONFIG run configuration file."""
     logging.captureWarnings(True)
     with format_exceptions(debug, pdb):
+        strf = '%Y-%m-%d %H:%M:%S'
+        start_time = datetime.datetime.now()
+        tstart = start_time.strftime(strf)
+        print('Calliope run starting at {}\n'.format(tstart))
         model = core.Model(config_run=run_config)
+        model_name = model.config_model.get_key('name', default='None')
+        run_name = model.config_run.get_key('name', default='None')
+        print('Model name:   {}'.format(model_name))
+        print('Run name:     {}'.format(run_name))
+        msize = '{x} locations, {y} technologies, {t} timesteps'.format(
+            x=len(model.config_model.locations),
+            y=len(model.config_model.techs),
+            t=len(model.data._dt))
+        print('Model size:   {}'.format(msize))
         model.config_run.set_key('output.save', True)  # Always save output
         model.run()
+        end_time = datetime.datetime.now()
+        secs = round((end_time - start_time).total_seconds(), 1)
+        tend = end_time.strftime(strf)
+        print('\nCalliope run complete. '
+              'Elapsed: {} seconds (completed at {})'.format(secs, tend))
 
 
 @cli.command(short_help='generate parallel runs')
