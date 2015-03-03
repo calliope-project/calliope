@@ -625,7 +625,12 @@ class Model(object):
         try:
             for k, v in o.locations.items():
                 for y in v.techs:
-                    d._y.add(y)
+                    if y in o.techs:
+                        d._y.add(y)
+                    else:
+                        e = exceptions.ModelError
+                        raise e('Location `{}` '
+                                'uses undefined tech `{}`.'.format(k, y))
         except KeyError:
             e = exceptions.ModelError
             raise e('The region `' + k + '` does not allow '

@@ -1,6 +1,3 @@
-
-
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -143,6 +140,19 @@ class TestInitialization:
         assert sorted(model.data._y) == ['ccgt', 'csp',
                                          'demand_electricity',
                                          'unmet_demand_electricity']
+
+    def test_initialize_sets_technologies_loc_invalid_tech(self):
+        locations = """
+                    override:
+                        locations:
+                            demand:
+                                level: 0
+                                within:
+                                techs: ['']
+                    """
+        override = calliope.utils.AttrDict.from_yaml_string(locations)
+        with pytest.raises(calliope.exceptions.ModelError):
+            model = common.simple_model(override=override)
 
     def test_initialize_sets_technologies_subset(self):
         config_run = """
