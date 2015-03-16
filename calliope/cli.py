@@ -23,6 +23,8 @@ from . import core
 from .parallel import Parallelizer
 
 
+STRF = '%Y-%m-%d %H:%M:%S'
+
 _debug = click.option('--debug', is_flag=True, default=False,
                       help='Print debug information when encountering errors.')
 _pdb = click.option('--pdb', is_flag=True, default=False,
@@ -31,7 +33,7 @@ _pdb = click.option('--pdb', is_flag=True, default=False,
 
 
 @contextlib.contextmanager
-def format_exceptions(debug=False, pdb=False):
+def format_exceptions(debug=False, pdb=False, start_time=None):
     try:
         yield
     except Exception as e:
@@ -46,8 +48,18 @@ def format_exceptions(debug=False, pdb=False):
             last = [i for i in stack if 'calliope' in i[0]][-1]
             err_string = 'Error in {}, {}:{}'.format(last[2], last[0], last[1])
             click.secho(err_string, fg='red')
-            click.secho('\n' + str(e) + '\n')
+            click.secho('\n' + str(e))
+            if start_time:
+                print_end_time(start_time, msg='aborted due to an error')
         sys.exit(1)
+
+
+def print_end_time(start_time, msg='complete'):
+    end_time = datetime.datetime.now()
+    secs = round((end_time - start_time).total_seconds(), 1)
+    tend = end_time.strftime(STRF)
+    print('\nCalliope run {}. '
+          'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
 
 @click.group()
@@ -66,7 +78,7 @@ def new(path):
     """
     # Copies the included example model
     example_model = os.path.join(os.path.dirname(__file__), 'example_model')
-    click.echo('Creating new model at: {}'.format(path))
+    click.echo('Creating new model in: {}'.format(path))
     shutil.copytree(example_model, path)
 
 
@@ -77,10 +89,9 @@ def new(path):
 def run(run_config, debug, pdb):
     """Execute the given RUN_CONFIG run configuration file."""
     logging.captureWarnings(True)
-    with format_exceptions(debug, pdb):
-        strf = '%Y-%m-%d %H:%M:%S'
-        start_time = datetime.datetime.now()
-        tstart = start_time.strftime(strf)
+    start_time = datetime.datetime.now()
+    with format_exceptions(debug, pdb, start_time):
+        tstart = start_time.strftime(STRF)
         print('Calliope run starting at {}\n'.format(tstart))
         model = core.Model(config_run=run_config)
         model_name = model.config_model.get_key('name', default='None')
@@ -94,11 +105,7 @@ def run(run_config, debug, pdb):
         print('Model size:   {}'.format(msize))
         model.config_run.set_key('output.save', True)  # Always save output
         model.run()
-        end_time = datetime.datetime.now()
-        secs = round((end_time - start_time).total_seconds(), 1)
-        tend = end_time.strftime(strf)
-        print('\nCalliope run complete. '
-              'Elapsed: {} seconds (completed at {})'.format(secs, tend))
+        print_end_time(start_time)
 
 
 @cli.command(short_help='generate parallel runs')
@@ -124,5 +131,5 @@ def generate(run_config, path, silent, debug, pdb):
                        'and was skipped.')
             return
         click.echo('Generating runs from config '
-                   '`{}` at `{}`'.format(run_config, path))
+                   '`{}` inside `{}`'.format(run_config, path))
         parallelizer.generate_runs()
