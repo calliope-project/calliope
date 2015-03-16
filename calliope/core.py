@@ -1623,6 +1623,11 @@ class Model(object):
         for key in [k for k in sol if k not in ['config_model', 'config_run']]:
             # Use .append instead of .add for Panel4D compatibility
             store.append(key, sol[key])
+        # Save r and e_eff time series alongside the solution
+        for k in self.data._y_def_r:
+            store.append('data/r/' + k, self.data.r[k])
+        for k in self.data._y_def_e_eff:
+            store.append('data/e_eff/' + k, self.data.e_eff[k])
         # Now, save config_model and config_run as YAML strings
         config = pd.Series({key: sol[key].to_yaml() for key in ['config_model', 'config_run']})
         store.append('config', config)
@@ -1632,7 +1637,6 @@ class Model(object):
 
     def _save_csv(self):
         """Save solution as CSV files to ``self.config_run.output.path``"""
-        d = self.data
         sol = self.solution
         output_files = {'node_parameters.csv': sol.parameters.to_frame(),
                         'costs.csv': sol.costs.to_frame(),
@@ -1654,6 +1658,13 @@ class Model(object):
         # Write all files to output dir
         for k, v in output_files.items():
             v.to_csv(os.path.join(self.config_run.output.path, k))
+        # Save r and e_eff time series alongside the solution
+        for k in self.data._y_def_r:
+            pth = os.path.join(self.config_run.output.path, 'data_r_' + k)
+            self.data.r[k].to_csv(pth)
+        for k in self.data._y_def_e_eff:
+            pth = os.path.join(self.config_run.output.path, 'data_e_eff_' + k)
+            self.data.e_eff[k].to_csv(pth)
         # Also save model and run configuration
         self.config_run.to_yaml(os.path.join(self.config_run.output.path,
                                              'config_run.yaml'))

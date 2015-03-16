@@ -21,7 +21,7 @@ from .utils import AttrDict
 REQUIRED_KEYS = ['capacity_factor', 'costs', 'levelized_cost',
                  'metadata', 'node', 'parameters',
                  'shares', 'summary', 'time_res', 'totals', 'config_model',
-                 'config_run']
+                 'config_run']  # 'data/...' keys are not required
 
 
 def read_hdf(hdf_file, tables_to_read=None):

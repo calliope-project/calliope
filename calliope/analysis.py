@@ -409,6 +409,13 @@ class DummyModel(object):
         """
         self.config_model = solution.config_model
         self.solution = solution
+        data_keys = [k for k in solution.keys() if 'data/' in k]
+        self.data = utils.AttrDict()
+        for k in data_keys:
+            # Turn 'data/r/pv' into 'r/pv', then turn 'r/pv' into 'r.pv'
+            data_k = k.split('/', 1)[1] \
+                      .replace('/', '.')
+            self.data.set_key(data_k, solution[k])
 
         # Add getters
         self._get_option = utils.option_getter(self.config_model, solution)
