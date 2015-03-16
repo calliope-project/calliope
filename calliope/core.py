@@ -162,9 +162,15 @@ class Model(object):
         ``{'model_settings': 'foo.yaml'}``. Any option possible in
         ``run.yaml`` can be specified in the dict, inluding ``override.``
         options.
+    initialize_config_only : bool, default False
+        If True, the model will not be runnable, and only the basic
+        model configuration will be initialized, but time series data
+        will be read or initialized, which can be useful for faster
+        debugging or processing the configuration.
 
     """
-    def __init__(self, config_run=None, override=None):
+    def __init__(self, config_run=None, override=None,
+                 initialize_config_only=False):
         super(Model, self).__init__()
         self.debug = utils.AttrDict()
         self.initialize_configuration(config_run, override)
@@ -174,10 +180,11 @@ class Model(object):
         self._get_option = utils.option_getter(self.config_model, self.data)
         self.initialize_parents()
         self.initialize_sets()
-        self.read_data()
-        self.mode = self.config_run.mode
-        self.initialize_availability()
-        self.initialize_time()
+        if not initialize_config_only:
+            self.read_data()
+            self.mode = self.config_run.mode
+            self.initialize_availability()
+            self.initialize_time()
 
     def override_model_config(self, override_dict):
         o = self.config_model

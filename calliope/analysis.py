@@ -185,9 +185,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
         Font size of figure labels.
 
     """
-    from mpl_toolkits.basemap import Basemap
     import networkx as nx
-    from calliope.lib import nx_pylab
 
     # Determine maximum that could have been transmitted across a link
     def get_edge_capacity(solution, a, b):
@@ -229,53 +227,9 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     # Set edge colors
     edge_colors = [edge_use[i] for i in G.edges()]
 
-    # Set up basemap
-    bounds = solution.config_model.metadata.map_boundary
-    bounds_width = bounds[2] - bounds[0]  # lon --> width
-    bounds_height = bounds[3] - bounds[1]  # lat --> height
-    m = Basemap(projection='merc', ellps='WGS84',
-                llcrnrlon=bounds[0], llcrnrlat=bounds[1],
-                urcrnrlon=bounds[2], urcrnrlat=bounds[3],
-                lat_ts=bounds[1] + bounds_width / 2,
-                resolution='i',
-                suppress_ticks=True)
-
-    # Node positions
-    pos = solution.config_model.metadata.location_coordinates
-    pos = {i: m(pos[i][1], pos[i][0]) for i in pos}  # Flip lat, lon to x, y!
-
-    # Create plot
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111, axisbg='w', frame_on=False)
-    m.drawmapboundary(fill_color=None, linewidth=0)
-    m.drawcoastlines(linewidth=0.2, color='#626262')
-
-    # Draw the graph
-
-    # Using nx_pylab to be able to set zorder below the edges
-    nx_pylab.draw_networkx_nodes(G, pos, node_color='#CCCCCC',
-                                 node_size=300, zorder=0)
-
-    # Using nx_pylab from lib to get arrow_style option
-    nx_pylab.draw_networkx_edges(G, pos, width=3,
-                                 edge_color=edge_colors,
-                                 # This works for edge_use
-                                 edge_vmin=0.0, edge_vmax=1.0,
-                                 edge_cmap=plt.get_cmap('seismic'),
-                                 arrows=True, arrow_style='->')
-
-    labels = nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
-                                          rotate=False, font_size=fontsize)
-
-    # Add a map scale
-    scale = m.drawmapscale(
-        bounds[0] + bounds_width * 0.05, bounds[1] + bounds_height * 0.05,
-        bounds[0], bounds[1],
-        100,
-        barstyle='simple', labelstyle='simple',
-        fillcolor1='w', fillcolor2='#555555',
-        fontcolor='#555555', fontsize=fontsize
-    )
+    ax, m = au.plot_graph_on_map(solution.config_model,
+                                 edge_colors, edge_labels,
+                                 figsize, fontsize)
 
     return ax
 

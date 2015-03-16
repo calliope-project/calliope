@@ -14,6 +14,7 @@ try:
 except ImportError:
     pass  # This is logged in analysis.py
 import numpy as np
+import pandas as pd
 
 
 def legend_on_right(ax, style='default', artists=None, labels=None, **kwargs):
@@ -137,3 +138,70 @@ def _get_ranges(dates):
 
         yield (dates[0], dates[end - 1])
         dates = dates[end:]
+
+
+def plot_graph_on_map(config_model, G=None,
+                      edge_colors=None, edge_labels=None,
+                      figsize=(15, 15), fontsize=9,
+                      arrow_style='->',
+                      rotate_labels=False,
+                      bounds=None,
+                      scale_left_distance=0.05,
+                      scale_bottom_distance=0.05):
+    from mpl_toolkits.basemap import Basemap
+    import networkx as nx
+    from calliope.lib import nx_pylab
+
+    # Set up basemap
+    if not bounds:
+        bounds = config_model.metadata.map_boundary
+    bounds_width = bounds[2] - bounds[0]  # lon --> width
+    bounds_height = bounds[3] - bounds[1]  # lat --> height
+    m = Basemap(projection='merc', ellps='WGS84',
+                llcrnrlon=bounds[0], llcrnrlat=bounds[1],
+                urcrnrlon=bounds[2], urcrnrlat=bounds[3],
+                lat_ts=bounds[1] + bounds_width / 2,
+                resolution='i',
+                suppress_ticks=True)
+
+    # Node positions
+    pos = config_model.metadata.location_coordinates
+    pos = {i: m(pos[i][1], pos[i][0]) for i in pos}  # Flip lat, lon to x, y!
+
+    # Create plot
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, axisbg='w', frame_on=False)
+    m.drawmapboundary(fill_color=None, linewidth=0)
+    m.drawcoastlines(linewidth=0.2, color='#626262')
+
+    # Draw the graph
+    if G:
+        # Using nx_pylab to be able to set zorder below the edges
+        nx_pylab.draw_networkx_nodes(G, pos, node_color='#CCCCCC',
+                                     node_size=300, zorder=0)
+
+        # Using nx_pylab from lib to get arrow_style option
+        nx_pylab.draw_networkx_edges(G, pos, width=3,
+                                     edge_color=edge_colors,
+                                     # This works for edge_use
+                                     edge_vmin=0.0, edge_vmax=1.0,
+                                     edge_cmap=plt.get_cmap('seismic'),
+                                     arrows=True, arrow_style=arrow_style)
+
+        # bbox = dict(color='white', alpha=0.5, edgecolor=None)
+        labels = nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
+                                              rotate=rotate_labels,
+                                              font_size=fontsize)
+
+    # Add a map scale
+    scale = m.drawmapscale(
+        bounds[0] + bounds_width * scale_left_distance,
+        bounds[1] + bounds_height * scale_bottom_distance,
+        bounds[0], bounds[1],
+        100,
+        barstyle='simple', labelstyle='simple',
+        fillcolor1='w', fillcolor2='#555555',
+        fontcolor='#555555', fontsize=fontsize
+    )
+
+    return ax, m

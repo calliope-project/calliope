@@ -76,6 +76,9 @@ techs:
                 om_var: 0  # Variable O&M costs (per kWh of ``es_prod``)
                 om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
                 om_rb: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
+        costs_per_distance:
+            default:
+                e_cap: 0
         depreciation:
             plant_life: 25  # Lifetime of a plant (years)
             interest:

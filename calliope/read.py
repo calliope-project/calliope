@@ -15,7 +15,7 @@ import os
 
 import pandas as pd
 
-from . import utils
+from .utils import AttrDict
 
 
 REQUIRED_KEYS = ['capacity_factor', 'costs', 'levelized_cost',
@@ -27,28 +27,32 @@ REQUIRED_KEYS = ['capacity_factor', 'costs', 'levelized_cost',
 def read_hdf(hdf_file, tables_to_read=None):
     """Read model solution from HDF file"""
     store = pd.HDFStore(hdf_file, mode='r')
-    solution = utils.AttrDict()
+    solution = AttrDict()
     if not tables_to_read:
-        # Make sure leading/trailing '/' are removed from keys
-        tables_to_read = [k.strip('/') for k in store.keys()]
-        # And don't read the 'config' key (yet)
-        tables_to_read.remove('config')
+        # Make sure leading/trailing '/' are removed from keys,
+        # and don't read the 'config' key (yet)
+        tables_to_read = [k.strip('/') for k in store.keys()
+                          if k != 'config']
     for k in tables_to_read:
         solution[k] = store.get(k)
     # Also add model and run config to the solution object, which are stored
     # as strings in a Series in the 'config' key
     for k in ['config_model', 'config_run']:
-        solution[k] = utils.AttrDict.from_yaml_string(store.get('config')[k])
+        try:
+            solution[k] = AttrDict.from_yaml_string(store.get('config')[k])
+        except KeyError:
+            pass  # Ignore missing 'config' key here, we log missing below
     # Check if any keys are missing
     missing_keys = set(REQUIRED_KEYS) - set(solution.keys())
     if len(missing_keys) > 0:
-        raise IOError('HDF file missing keys: {}'.format(missing_keys))
+        logging.warning('HDF file {} missing keys: '
+                        '{}'.format(hdf_file, missing_keys))
     store.close()
     return solution
 
 
 def read_csv(directory, tables_to_read=None):
-    solution = utils.AttrDict()
+    solution = AttrDict()
     if not tables_to_read:
         tables_to_read = glob.glob(directory + '/*.csv')
         if len(tables_to_read) == 0:
@@ -83,10 +87,10 @@ def read_dir(directory, tables_to_read=None):
     AttrDict is added to the results in its stead and the error is logged.
 
     """
-    results = utils.AttrDict()
+    results = AttrDict()
     results.iterations = pd.read_csv(os.path.join(directory, 'iterations.csv'),
                                      index_col=0)
-    results.solutions = utils.AttrDict()
+    results.solutions = AttrDict()
     for i in results.iterations.index.tolist():
         iteration_dir = os.path.join(directory, '{:0>4d}'.format(i))
         fmt = _detect_format(iteration_dir)
@@ -102,6 +106,6 @@ def read_dir(directory, tables_to_read=None):
         except IOError as err:
             logging.warning('I/O error in `{}` at iteration `{}`'
                             ': {}'.format(iteration_dir, i, err))
-            results.solutions[i] = utils.AttrDict()  # add an empty entry
+            results.solutions[i] = AttrDict()  # add an empty entry
             continue
     return results
