@@ -60,8 +60,6 @@ def node_resource(model):
             return m.rs[y, x, t] <= r_avail * availability(y, x, t)
         elif y in model.get_group_members('demand'):
             return m.rs[y, x, t] >= r_avail
-        elif y in model.get_group_members('storage'):
-            return m.rs[y, x, t] == 0
 
     # Constraints
     m.c_rs = po.Constraint(m.y_def_r, m.x, m.t, rule=c_rs_rule)
@@ -141,6 +139,12 @@ def node_energy_balance(model):
 
         # B) Case where storage is allowed
         else:
+            # Ensure that storage-only techs have no rs
+            if y in model.get_group_members('storage'):
+                rs = 0
+            else:
+                rs = m.rs[y, x, t]
+            m.rs[y, x, t]
             # set up s_minus_one
             # NB: From Pyomo 3.5 to 3.6, order_dict became zero-indexed
             if m.t.order_dict[t] == 0:
@@ -150,7 +154,7 @@ def node_energy_balance(model):
                 s_minus_one = (((1 - s_loss)
                                 ** d.time_res_series.at[model.prev(t)])
                                * m.s[y, x, model.prev(t)])
-            return (m.s[y, x, t] == s_minus_one + m.rs[y, x, t]
+            return (m.s[y, x, t] == s_minus_one + rs
                     + rbs - e_prod - e_con)
 
     # Constraints

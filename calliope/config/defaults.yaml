@@ -115,10 +115,10 @@ techs:
         costs:
             monetary:
                 om_var: 1.0e+9
-    storage:  # ``r`` is not used but still must be defined as 0
+    storage:  # ``r`` is not used but still must be defined as inf
         parent: defaults
         constraints:
-            r: 0
+            r: inf
             e_con: true
     transmission:  # ``r`` is not used but still must be defined as inf
         parent: defaults
