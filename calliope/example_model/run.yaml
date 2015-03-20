@@ -40,11 +40,11 @@ parallel:
 ##
 
 # time:
-#     function: resolution_series_extreme_week
-#     function_options:
-#         what: min
-#         tech: csp  # Look for week where CSP output is minimal
-#         resolution: 6  # Reduce rest of data to 6-hourly timesteps
+#     resolution: 6  # Reduce rest of data to 6-hourly timesteps
+#     masks:  # Look for week where CSP output is minimal
+#         - function: mask_extreme_week
+#           options: {what: min, tech: csp}
+#
 
 ##
 # SUBSETS

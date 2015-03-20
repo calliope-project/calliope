@@ -7,6 +7,17 @@ time_tools.py
 
 Provides the TimeSummarizer class to dynamically adjust time resolution.
 
+Also provides the masks_to_resolution_series function. A resolution series
+is a pandas Series with the same index as the input data, where each
+time step is one of:
+
+* a positive integer (signifying how many timesteps to summarize),
+* -1 (following a positive integer and marking the timesteps that
+  are summarized),
+* or 0 (no resolution adjustment to this timestep).
+
+The name of a resolution series must always be 'resolution_series'.
+
 """
 
 import logging
@@ -14,7 +25,6 @@ import logging
 import numpy as np
 import pandas as pd
 
-from . import time_functions
 from . import utils
 
 
@@ -86,15 +96,15 @@ class TimeSummarizer(object):
                 msg = 'Encountered unknown data type, skipping: {}'.format(k)
                 logging.debug(msg)
 
-    def dynamic_timestepper(self, data, mask):
-        """``mask`` must be a series with the same length as the given data.
+    def dynamic_timestepper(self, data, series):
+        """``series`` must be a series with the same length as the given data.
 
-        For each timestep, the ``mask`` can either be 0 (no
+        For each timestep, the ``series`` can either be 0 (no
         adjustment), >0 (marks the first timestep to be compressed, with
         the integer value giving the number of timesteps to compress) or
         -1 (marks timesteps following a >0 timestep that will be compressed).
 
-        For example, ``mask`` could contain::
+        For example, ``series`` could contain::
 
             [0, 0, 0, 3, -1, -1, 0, 0, 2, -1, 2, -1]
 
@@ -106,9 +116,9 @@ class TimeSummarizer(object):
         Returns None on success.
 
         """
-        assert len(mask) == len(data['_dt']), \
+        assert len(series) == len(data['_dt']), \
             'Mask and data must have same length.'
-        df = pd.DataFrame(mask, index=mask.index)
+        df = pd.DataFrame(series, index=series.index)
         df.columns = ['summarize']  # rename the single column
         df['time_res'] = data.time_res_static
         df['to_keep'] = 1
@@ -156,8 +166,8 @@ class TimeSummarizer(object):
         Modifies the passed data object in-place and returns None.
 
         """
-        mask = time_functions.resolution_series_uniform(data, resolution)
-        self.dynamic_timestepper(data, mask)
+        series = resolution_series_uniform(data, resolution)
+        self.dynamic_timestepper(data, series)
 
     def _reduce_average(self, df):
         return df.mean(0)
@@ -182,17 +192,20 @@ class TimeSummarizer(object):
         return result
 
 
-def masks_to_resolution_series(masks, how='or', max_timesteps=None):
+def masks_to_resolution_series(masks, how='or', masked_resolution=None):
     """
     Converts a list of overlapping masks into a series of time step
     resolutions.
 
-    ``how`` can be ``or`` (default) or ``and``.
-
-    If ``max_timesteps`` given, will break up masked areas into
-    timesteps of at at most the given length (with possibly a
-    leftover timestep at a lower length at the end of the
-    masked area).
+    Parameters
+    ----------
+    how : str, default 'or'
+        ``or`` or ``and``.
+    masked_resolution : int, default None
+        If given, will break up masked areas into timesteps of at most
+        the given length (with possibly a over timestep at a lower
+        length at the end of the masked area). If None, all contingent
+        masked areas become single timesteps.
 
     """
     if not isinstance(masks, list) or isinstance(masks, tuple):
@@ -226,17 +239,39 @@ def masks_to_resolution_series(masks, how='or', max_timesteps=None):
             mask[ifrom] = 0
         istart = ito
     # Apply max_timesteps
-    if max_timesteps:
-        for index, value in mask[mask > max_timesteps].iteritems():
+    if masked_resolution:
+        for index, value in mask[mask > masked_resolution].iteritems():
             end_index = index + value
-            summary_index = list(range(index, end_index, max_timesteps))
+            summary_index = list(range(index, end_index, masked_resolution))
             for i in summary_index:
-                if i + max_timesteps < end_index:
-                    mask[i] = max_timesteps
+                if i + masked_resolution < end_index:
+                    mask[i] = masked_resolution
                 else:  # Make sure the last timestep isn't too long
                     mask[i] = end_index - i
     mask.name = 'resolution_series'
     return mask
+
+
+def resolution_series_uniform(data, resolution):
+    """
+    Resolution series to reduce resolution uniformly.
+
+    Parameters
+    ----------
+    data : Calliope model data
+    resolution : int or float
+        Resolution (in hours) to downsample all data to.
+
+    """
+    res_length = resolution / data.time_res_static
+    df = data.r[list(data.r.keys())[0]]  # Grab length of data from any table
+    summarize = pd.Series(-1, index=list(range(len(df))))
+    # Set to 0 (keep timestep) for the given resolution
+    for index, item in summarize.items():
+        if index % res_length == 0:
+            summarize.at[index] = resolution
+    summarize.name = 'resolution_series'
+    return summarize
 
 
 def resolution_series_to_mask(resolution_series):

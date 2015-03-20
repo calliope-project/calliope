@@ -50,22 +50,23 @@ There are two available ways to adjust resolution:
 
 1. A CSV file that contains a time resolution series, via ``time.file``.
 
-2. One of the resolution series functions defined in :mod:`calliope.time_functions`, via ``time.function``. Currently, there are only two of them: :func:`~calliope.~time_functions.resolution_series_uniform` and :func:`~calliope.~time_functions.resolution_series_extreme_week`. Options can be passed to this function by ``time.function_options``.
+2. A uniform resolution reduction, via ``time.resolution``.
 
-The following example demonstrates the second way:
+3. Application of one or more of the masks defined in :mod:`calliope.time_masks`, via a list of masks given in ``time.masks``. See :ref:`api_time_masks` in the API documentation for the available masking functions. Options can be passed to this the masking functions by specifying ``options``. ``time.resolution`` can still be specified and will define the uniform resolution reduction applied to all masked areas.
+
+The following example demonstrates this third way:
 
 .. code-block:: yaml
 
    time:
-       function: 'resolution_series_extreme_week'
-       function_options:
-           tech: 'wind_offshore'
-           resolution: 24
-           what: 'min'
+       resolution: 24
+       masks:
+           - function: 'mask_extreme_week'
+             options:
+                 tech: 'wind_offshore'
+                 what: 'min'
 
-This passes the options, ``tech='wind_offshore', resolution=24, what='min'`` to the specified function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, keeps that week at the original resolution, and resamples the rest of the data to 24-hourly timesteps.
-
-An alternative example is to specify ``time.function: resolution_series_uniform``, and ``time.function_options.resolution: 12`` to resample the entire dataset to 12-hourly timesteps.
+This passes the options, ``tech='wind_offshore', what='min'`` to the specified masking function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, and returns a mask for the rest of the time series. That (unmasked) week is retained at the original resolution, the rest of the (masked) data is resampled to 24-hourly timesteps.
 
 If specifying a file (the path is relative to the run configuration file), it must contain two columns. The first is integer indices for the timesteps. The second contains either:
 

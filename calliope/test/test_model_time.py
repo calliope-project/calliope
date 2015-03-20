@@ -53,9 +53,11 @@ class TestModel:
 
     def test_model_time_res_uniform(self):
         override = """
-            time: {function: resolution_series_uniform, function_options: {resolution: 24}}
+            time:
+                resolution: 24
         """
         model = create_and_run_model(override)
+        assert len(model.data.time_res_series) == 4
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         df = model.solution.node
@@ -63,10 +65,12 @@ class TestModel:
 
     def test_model_time_res_uniform_subset_t_from_start(self):
         override = """
-            time: {function: resolution_series_uniform, function_options: {resolution: 24}}
+            time:
+                resolution: 24
             subset_t: ['2005-01-01', '2005-01-02']
         """
         model = create_and_run_model(override)
+        assert len(model.data.time_res_series) == 2
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         df = model.solution.node
@@ -74,10 +78,12 @@ class TestModel:
 
     def test_model_time_res_uniform_subset_t_from_middata(self):
         override = """
-            time: {function: resolution_series_uniform, function_options: {resolution: 24}}
+            time:
+                resolution: 24
             subset_t: ['2005-01-02', '2005-01-03']
         """
         model = create_and_run_model(override)
+        assert len(model.data.time_res_series) == 2
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         df = model.solution.node
@@ -105,10 +111,12 @@ class TestModel:
                 opmode:
                     horizon: 48  # Optimization period length (hours)
                     window: 24  # Operation period length (hours)
-            time: {function: resolution_series_uniform, function_options: {resolution: 12}}
+            time:
+                resolution: 12
             subset_t: ['2005-01-02', '2005-01-03']
         """
         model = create_and_run_model(override)
+        assert len(model.data.time_res_series) == 4
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         df = model.solution.node

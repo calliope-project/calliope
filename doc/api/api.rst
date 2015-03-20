@@ -30,10 +30,15 @@ Constraints
 Time resolution
 ===============
 
-.. autoclass:: calliope.TimeSummarizer
+.. automodule:: calliope.time_tools
     :members:
 
-.. automodule:: calliope.time_functions
+.. _api_time_masks:
+
+Time masks
+==========
+
+.. automodule:: calliope.time_masks
     :members:
 
 Reading results

@@ -34,7 +34,7 @@ from . import constraints
 from . import locations
 from . import output
 from . import transmission
-from . import time_functions
+from . import time_masks
 from . import time_tools
 from . import utils
 
@@ -280,40 +280,46 @@ class Model(object):
     def initialize_time(self):
         """
         Performs time resolution reduction, if set up in configuration
+
         """
         cr = self.config_run
         s = time_tools.TimeSummarizer()
         time = cr.get_key('time', default=False)
         if time:
-            if 'function' in time and 'file' in time:
+            if ('masks' in time or 'resolution' in time) and 'file' in time:
                 e = exceptions.ModelError
-                raise e('`time.function` and `time.file` cannot be'
-                        'given at the same time.')
-            if cr.get_key('time.function', default=False):
-                options = cr.get_key('time.function_options',
-                                     default=False)
-                func_string = 'time_functions.' + cr.time.function
-                mask_func = _load_function(func_string)
-                if options:
-                    mask_src = mask_func(self.data, **options)
+                raise e('`time.masks` or `time.resolution` and `time.file` '
+                        'cannot be given at the same time.')
+            if 'masks' in time:
+                masks = []
+                for entry in time.masks:
+                    func_string = 'time_masks.' + time.masks[entry].function
+                    mask_func = _load_function(func_string)
+                    mask_opts = time.masks[entry].get_key('function',
+                                                          default=False)
+                    if mask_opts:
+                        mask = mask_func(self.data, **mask_opts)
+                    else:
+                        mask = mask_func(self.data)
+                    masks.append(mask)
+                if 'resolution' in time:
+                    mask_res = time.resolution
                 else:
-                    mask_src = mask_func(self.data)
-                if mask_src.name == 'mask':
-                    getter = time_tools.masks_to_resolution_series
-                    res_series = getter([mask_src])
-                else:
-                    # mask_src.name is 'resolution_series', no further
-                    # processing needed
-                    res_series = mask_src
-            elif cr.get_key('time.file', default=False):
+                    mask_res = None
+                converter = time_tools.masks_to_resolution_series
+                series = converter(masks, mask_res)
+            elif 'resolution' in time:
+                getter = time_tools.resolution_series_uniform
+                series = getter(self.data, time.resolution)
+            elif 'file' in time:
                 res_file = utils.relative_path(cr.time.file,
                                                self.config_run_path)
-                res_series = pd.read_csv(res_file, index_col=0, header=None)[1]
-                res_series = res_series.astype(int)[self.slice]
+                series = pd.read_csv(res_file, index_col=0, header=None)[1] \
+                           .astype(int)[self.slice]
             # Silently ignore if neither time.file or time.function given
             else:
                 return
-            s.dynamic_timestepper(self.data, res_series)
+            s.dynamic_timestepper(self.data, series)
 
     def prev(self, t):
         """Using the timesteps set of this model instance, return `t-1`,
