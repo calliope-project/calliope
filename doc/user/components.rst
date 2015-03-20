@@ -120,7 +120,7 @@ When defining a technology, it must be given at least some constraints, that is,
 
 .. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`configuration` for details on this.
 
-Finally, each node tracks its costs, split in three basic parts:
+Finally, each node tracks its costs, formulated in three constraints (more details in the :doc:`formulation` section):
 
 * ``cost_con``: construction costs
 * ``cost_op_fixed``: fixed operational and maintenance (O&M) costs (i.e., per installed capacity)

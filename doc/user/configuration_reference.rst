@@ -150,6 +150,8 @@ Transmission technologies can additionally specify per-distance constraints and 
         monetary:
            e_cap: 10  # cost per 100 units of distance
 
+.. Note::  Transmission technologies can define both an ``e_loss`` (per-distance) and an ``e_eff`` (distance-independent). For example, setting ``e_eff`` to 0.9 implies a 10% loss during transmission, independent of distance. If both ``e_loss`` and ``e_eff`` are defined, their effects are cumulative.
+
 .. _config_reference_constraints:
 
 Technology constraints
