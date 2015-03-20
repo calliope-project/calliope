@@ -172,6 +172,8 @@ class Model(object):
     def __init__(self, config_run=None, override=None,
                  initialize_config_only=False):
         super(Model, self).__init__()
+        self.verbose = False
+        self.time_format = '%Y-%m-%d %H:%M:%S'
         self.debug = utils.AttrDict()
         self.initialize_configuration(config_run, override)
         # Other initialization tasks
@@ -971,7 +973,7 @@ class Model(object):
             msg = 'Capping t_end to {}'.format(t_bound)
             logging.debug(msg)
             self.t_end = t_bound
-        print('\n\n***\n{}-{}\n***\n\n'.format(self.t_start, self.t_end))
+        # print('\n\n***\n{}-{}\n***\n\n'.format(self.t_start, self.t_end))
 
     def generate_model(self, t_start=None):
         """
@@ -1173,6 +1175,10 @@ class Model(object):
             else:
                 results = self.opt.solve(self.instance, tee=True)
             return results
+
+        if self.verbose:
+            t = datetime.datetime.now().strftime(self.time_format)
+            print('\nModel preprocessing complete at {}'.format(t))
 
         if cr.get_key('debug.echo_solver_log', default=False):
             self.results = _solve(warmstart)
@@ -1506,9 +1512,6 @@ class Model(object):
         time_res = d.time_res_series
         window_adj = int(o.opmode.window / d.time_res_data)
         steps = [t for t in d._dt.index if (t % window_adj) == 0]
-        print(d.time_res_data)
-        print(d.time_res_static)
-        print(steps)
         # Remove the last step - since we look forward at each step,
         # it would take us beyond actually existing data
         steps = steps[:-1]
@@ -1539,9 +1542,6 @@ class Model(object):
             else:
                 # Non-final iterations only save data from window
                 stepsize = int(o.opmode.window / d.time_res_static)
-            print(index)
-            print(stepsize)
-            print('\n')
             # Get node variables
             panel4d = self.get_node_variables()
             node_vars.append(panel4d.iloc[:, :, 0:stepsize, :])
@@ -1552,7 +1552,6 @@ class Model(object):
             cost = self.get_costs(t_subset=slice(0, stepsize))
             cost_vars.append(cost)
             timesteps = [time_res.at[t] for t in self.m.t][0:stepsize]
-            print(self.m.t.value)
             d.time_res_sum += sum(timesteps)
             # Save state of storage for carry over to next iteration
             s = self.get_var('s')
@@ -1561,7 +1560,6 @@ class Model(object):
             assert (isinstance(storage_state_index, int) or
                     storage_state_index.is_integer())
             storage_state_index = int(storage_state_index)
-            print('storage_state_index: {}'.format(storage_state_index))
             d.s_init = s.iloc[:, storage_state_index, :]
         self.load_solution_iterative(node_vars, total_vars, cost_vars)
 

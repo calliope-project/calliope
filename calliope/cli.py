@@ -94,13 +94,17 @@ def run(run_config, debug, pdb):
         tstart = start_time.strftime(STRF)
         print('Calliope run starting at {}\n'.format(tstart))
         model = core.Model(config_run=run_config)
+        model.time_format = STRF
+        model.verbose = True  # Enables some print calls inside Model
         model_name = model.config_model.get_key('name', default='None')
         run_name = model.config_run.get_key('name', default='None')
         print('Model name:   {}'.format(model_name))
         print('Run name:     {}'.format(run_name))
+        num_techs = (len(model.config_model.techs)
+                     - len(core.get_default_techs()))
         msize = '{x} locations, {y} technologies, {t} timesteps'.format(
             x=len(model.config_model.locations),
-            y=len(model.config_model.techs),
+            y=num_techs,
             t=len(model.data._dt))
         print('Model size:   {}'.format(msize))
         model.config_run.set_key('output.save', True)  # Always save output
