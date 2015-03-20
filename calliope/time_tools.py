@@ -180,3 +180,71 @@ class TimeSummarizer(object):
             result = df.sum() / (df.max() * len(df))
             result = result.fillna(0)  # Fill NaNs from division by zero
         return result
+
+
+def masks_to_resolution_series(masks, how='or', max_timesteps=None):
+    """
+    Converts a list of overlapping masks into a series of time step
+    resolutions.
+
+    ``how`` can be ``or`` (default) or ``and``.
+
+    If ``max_timesteps`` given, will break up masked areas into
+    timesteps of at at most the given length (with possibly a
+    leftover timestep at a lower length at the end of the
+    masked area).
+
+    """
+    if not isinstance(masks, list) or isinstance(masks, tuple):
+        masks = [masks]
+    # combine all masks into one
+    df = pd.DataFrame({i: x for i, x in enumerate(masks)})
+    if how == 'or':
+        mask = df.sum(axis=1)
+    elif how == 'and':
+        # joiner: only return 1 if all items in the row are 1, else return 0
+        joiner = lambda row: 1 if sum(row) == len(row) else 0
+        mask = df.apply(joiner, axis=1)
+    istart = 0
+    end = False
+    while not end:
+        ifrom = mask[istart:].argmax()
+        ito = mask[ifrom:].argmin()
+        if ifrom == ito:  # Reached the end!
+            ito = len(mask)
+            end = True
+            # If `summarize` is zero at the very last entry
+            # (`ito - `), we break out of the
+            # loop to prevent it from adding a spurious summarization
+            if mask[ito - 1] == 0:
+                break
+        resolution = ito - ifrom
+        mask[ifrom] = resolution
+        mask[ifrom + 1:ito] = -1
+        # Correct edge case where only one timestep would be "summarized"
+        if mask[ifrom] >= 1 and resolution == 1:
+            mask[ifrom] = 0
+        istart = ito
+    # Apply max_timesteps
+    if max_timesteps:
+        for index, value in mask[mask > max_timesteps].iteritems():
+            end_index = index + value
+            summary_index = list(range(index, end_index, max_timesteps))
+            for i in summary_index:
+                if i + max_timesteps < end_index:
+                    mask[i] = max_timesteps
+                else:  # Make sure the last timestep isn't too long
+                    mask[i] = end_index - i
+    mask.name = 'resolution_series'
+    return mask
+
+
+def resolution_series_to_mask(resolution_series):
+    """
+    Turns a resolution series into a mask.
+
+    """
+    mask = resolution_series
+    mask[mask != 0] = 1
+    mask.name = 'mask'
+    return mask

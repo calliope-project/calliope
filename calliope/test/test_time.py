@@ -36,28 +36,28 @@ class TestMaskWhereZero:
         data = testdata
         mask = calliope.time_functions.mask_zero(data, 'tech2')
         assert mask.tolist() == [1, 1, 1, 0, 0, 0, 0, 0, 1, 1]
-        res = calliope.time_functions.masks_to_resolution_series([mask])
+        res = calliope.time_tools.masks_to_resolution_series([mask])
         assert res.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 2, -1]
 
     def test_mask_zero_one_zero(self, testdata):
         data = testdata
         mask = calliope.time_functions.mask_zero(data, 'tech3')
         assert mask.tolist() == [1, 1, 1, 0, 0, 0, 0, 0, 0, 1]
-        res = calliope.time_functions.masks_to_resolution_series([mask])
+        res = calliope.time_tools.masks_to_resolution_series([mask])
         assert res.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 0, 0]
 
     def test_mask_zero_start_zero(self, testdata):
         data = testdata
         mask = calliope.time_functions.mask_zero(data, 'tech4')
         assert mask.tolist() == [1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
-        res = calliope.time_functions.masks_to_resolution_series([mask])
+        res = calliope.time_tools.masks_to_resolution_series([mask])
         assert res.tolist() == [3, -1, -1, 0, 0, 0, 0, 0, 0, 0]
 
     def test_mask_zero_end_zero(self, testdata):
         data = testdata
         mask = calliope.time_functions.mask_zero(data, 'tech5')
         assert mask.tolist() == [0, 0, 0, 0, 0, 0, 0, 1, 1, 1]
-        res = calliope.time_functions.masks_to_resolution_series([mask])
+        res = calliope.time_tools.masks_to_resolution_series([mask])
         assert res.tolist() == [0, 0, 0, 0, 0, 0, 0, 3, -1, -1]
 
 

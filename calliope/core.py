@@ -299,7 +299,7 @@ class Model(object):
                 else:
                     mask_src = mask_func(self.data)
                 if mask_src.name == 'mask':
-                    getter = time_functions.masks_to_resolution_series
+                    getter = time_tools.masks_to_resolution_series
                     res_series = getter([mask_src])
                 else:
                     # mask_src.name is 'resolution_series', no further
