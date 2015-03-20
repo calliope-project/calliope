@@ -12,7 +12,7 @@ class TestModel:
         locations = """
             locations:
                 1:
-                    level: 1
+                    level: 0
                     within:
                     techs: ['ccgt', 'test_storage', 'demand_electricity',
                             'unmet_demand_electricity']

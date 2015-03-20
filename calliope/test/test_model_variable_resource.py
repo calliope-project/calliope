@@ -12,7 +12,7 @@ class TestModel:
         locations = """
             locations:
                 1:
-                    level: 1
+                    level: 0
                     within:
                     techs: ['demand_electricity']
                     override:
@@ -20,7 +20,7 @@ class TestModel:
                             constraints:
                                 r: -10
                 sub1:
-                    level: 0
+                    level: 1
                     within: 1
                     techs: ['ccgt']
                     override:
@@ -28,7 +28,7 @@ class TestModel:
                             constraints:
                                 e_cap_max: 9
                 sub2:
-                    level: 0
+                    level: 1
                     within: 1
                     techs: ['pv']
                     override:

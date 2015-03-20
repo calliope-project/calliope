@@ -118,7 +118,7 @@ A location's name can be any alphanumeric string, but using integers makes it ea
 There are currently some limitations to how locations work:
 
 * Locations must be assigned to either level 0 or level 1 (``level``).
-* Locations at level 0 may be assigned to a parent location from level 1 (``within``).
+* Locations at level 1 may be assigned to a parent location from level 0 (``within``).
 * Using ``override``, some (but not all) settings can be overriden on a per-location and per-technology basis (see the box below).
 
 Locations can be given as a single location (e.g., ``location1``), a range of integer location names using the ``--`` operator (e.g., ``0--10``), or a comma-separated list of location names (e.g., ``location1,location2,10,11,12``).
@@ -129,17 +129,17 @@ An example locations block is:
 
    locations:
        location1:
-           level: 1
+           level: 0
            techs: ['demand_power', 'nuclear']
            override:
                nuclear:
                    constraints:
                        e_cap_max: 10000
        location2:
-           level: 1
+           level: 0
            techs: ['demand_power']
        offshore1, offshore2:
-           level: 0
+           level: 1
            within: location2
            techs: ['offshore_wind']
 
@@ -152,11 +152,11 @@ An example locations block is:
 
 .. NB this limitation is "implemented" simply by calling get_option with an x=x argument for some options but not for others
 
-The balancing constraint looks at a location's level to decide which locations to consider in balancing supply and demand. Currently, balancing of supply and demand takes place between locations at level 1. In order for a location at level 0 to be included in the system-wide energy balance, it must therefore be assigned to a parent location at level 1. Transmission is *loss-free* within a location, between locations at level 0, and from locations at level 0 to locations at level 1. Transmission is only possible between locations at level 1 if a transmission link has been defined between them (see below). Losses in these transmission links are as defined for the specified transmission technology.
+The balancing constraint looks at a location's level to decide which locations to consider in balancing supply and demand. Currently, balancing of supply and demand takes place between locations at level 0. In order for a location at level 1 to be included in the system-wide energy balance, it must therefore be assigned to a parent location at level 0. Transmission is *loss-free* within a location, between locations at level 1, and from locations at level 1 to locations at level 0. In contrast, transmission between locations at level 0 is only possible if a transmission link has been defined between them (see below). Losses in these transmission links are as defined for the specified transmission technology.
 
 .. Warning::
 
-   There must always be at least one location at level 1, because balancing of supply and demand takes place between level 1 locations only.
+   There must always be at least one location at level 0, because balancing of supply and demand takes place between level 0 locations only.
 
 .. _transmission_links:
 

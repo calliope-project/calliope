@@ -542,8 +542,8 @@ def model_constraints(model):
 
     # Constraint rules
     def c_system_balance_rule(m, c, x, t):
-        # Hardcoded: balancing takes place between locations on level 1 only
-        parents = get_parents(1)
+        # Hardcoded: balancing takes place between locations on level 0 only
+        parents = get_parents(0)
         if x not in parents:
             return po.Constraint.NoConstraint
         else:

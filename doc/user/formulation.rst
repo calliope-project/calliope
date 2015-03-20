@@ -348,7 +348,7 @@ In the first case, the following balancing equation applies:
 
    \sum_y \sum_{xs} ec_{prod}(c, y, xs, t) = 0 \qquad\text{for each } t
 
-Where :math:`xs` are the level 1 location :math:`x` and all the level 0 locations that are within it.
+Where :math:`xs` are the level 0 location :math:`x` and all the level 1 locations that are within it.
 
 For ``c`` other than ``power``, the balancing equation is as above, but with a :math:`\geq` inequality.
 

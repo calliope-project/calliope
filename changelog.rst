@@ -1,9 +1,17 @@
 
 Release History
----------------
+===============
 
 0.3.3 (dev)
-+++++++++++
+-----------
+
+Major changes
+~~~~~~~~~~~~~
+
+[changed] In preparation for future enhancements, the ordering of location levels is flipped. The top-level locations at which balancing takes place is now level 0, and may contain level 1 locations. This is a backwards-incompatible change.
+
+Other changes
+~~~~~~~~~~~~~
 
 * [new] Models and runs have can have a ``name``
 * [changed] More verbose ``calliope run``
@@ -11,7 +19,7 @@ Release History
 * [changed] Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
 
 0.3.2 (2015-02-13)
-++++++++++++++++++
+------------------
 
 * [new] Run setting ``model_override`` allows specifying the path to a YAML file with overrides for the model configuration, applied at model initialization (path is given relative to the run configuration file used). This is in addition to the existing ``override`` setting, and is applied first (so ``override`` can override ``model_override``).
 * [new] Run settings ``output.save_constraints`` and ``output.save_constraints_options``
@@ -24,13 +32,13 @@ Release History
 * [changed/fixed] Other minor improvements and fixes
 
 0.3.1 (2015-01-06)
-++++++++++++++++++
+------------------
 
 * Fixes to time_functions
 * Other minor improvements and fixes
 
 0.3.0 (2014-12-12)
-++++++++++++++++++
+------------------
 
 * Python 3 and Pyomo 4 are now minimum requirements
 * Significantly improved documentation
@@ -47,7 +55,7 @@ Release History
 * Other improvements and fixes
 
 0.2.0 (2014-03-18)
-++++++++++++++++++
+------------------
 
 * Added cost classes with a new set ``k``
 * Added energy carriers with a new set ``c``
@@ -67,7 +75,7 @@ Release History
 * Other improvements and fixes
 
 0.1.0 (2013-12-10)
-++++++++++++++++++
+------------------
 
 * Some semblance of documentation
 * Usable built-in example model

@@ -4,7 +4,7 @@
 
 locations:
     r1:
-        level: 1
+        level: 0
         techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
             demand_power:
@@ -17,7 +17,7 @@ locations:
                     e_cap_max: 30000
 
     r2:
-        level: 1
+        level: 0
         techs: ['demand_power', 'unmet_demand_power']
         override:
             demand_power:
@@ -27,7 +27,7 @@ locations:
                     r_scale_to_peak: -5000
 
     csp1,csp2,csp3:
-        level: 0
+        level: 1
         within: r1
         techs: ['csp']
 
