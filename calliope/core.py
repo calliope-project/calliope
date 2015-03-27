@@ -292,11 +292,12 @@ class Model(object):
                         'cannot be given at the same time.')
             if 'masks' in time:
                 masks = []
+                # time.masks is a list of {'function': .., 'options': ..} dicts
                 for entry in time.masks:
-                    func_string = 'time_masks.' + time.masks[entry].function
+                    entry = utils.AttrDict(entry)
+                    func_string = 'time_masks.' + entry.function
                     mask_func = _load_function(func_string)
-                    mask_opts = time.masks[entry].get_key('function',
-                                                          default=False)
+                    mask_opts = entry.get_key('options', default=False)
                     if mask_opts:
                         mask = mask_func(self.data, **mask_opts)
                     else:
@@ -307,7 +308,7 @@ class Model(object):
                 else:
                     mask_res = None
                 converter = time_tools.masks_to_resolution_series
-                series = converter(masks, mask_res)
+                series = converter(masks, how='or', resolution=mask_res)
             elif 'resolution' in time:
                 getter = time_tools.resolution_series_uniform
                 series = getter(self.data, time.resolution)

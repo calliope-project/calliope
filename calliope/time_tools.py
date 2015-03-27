@@ -192,7 +192,7 @@ class TimeSummarizer(object):
         return result
 
 
-def masks_to_resolution_series(masks, how='or', masked_resolution=None):
+def masks_to_resolution_series(masks, how='or', resolution=None):
     """
     Converts a list of overlapping masks into a series of time step
     resolutions.
@@ -201,7 +201,7 @@ def masks_to_resolution_series(masks, how='or', masked_resolution=None):
     ----------
     how : str, default 'or'
         ``or`` or ``and``.
-    masked_resolution : int, default None
+    resolution : int, default None
         If given, will break up masked areas into timesteps of at most
         the given length (with possibly a over timestep at a lower
         length at the end of the masked area). If None, all contingent
@@ -231,21 +231,21 @@ def masks_to_resolution_series(masks, how='or', masked_resolution=None):
             # loop to prevent it from adding a spurious summarization
             if mask[ito - 1] == 0:
                 break
-        resolution = ito - ifrom
-        mask[ifrom] = resolution
+        step_resolution = ito - ifrom
+        mask[ifrom] = step_resolution
         mask[ifrom + 1:ito] = -1
         # Correct edge case where only one timestep would be "summarized"
-        if mask[ifrom] >= 1 and resolution == 1:
+        if mask[ifrom] >= 1 and step_resolution == 1:
             mask[ifrom] = 0
         istart = ito
     # Apply max_timesteps
-    if masked_resolution:
-        for index, value in mask[mask > masked_resolution].iteritems():
+    if resolution:
+        for index, value in mask[mask > resolution].iteritems():
             end_index = index + value
-            summary_index = list(range(index, end_index, masked_resolution))
+            summary_index = list(range(index, end_index, resolution))
             for i in summary_index:
-                if i + masked_resolution < end_index:
-                    mask[i] = masked_resolution
+                if i + resolution < end_index:
+                    mask[i] = resolution
                 else:  # Make sure the last timestep isn't too long
                     mask[i] = end_index - i
     mask.name = 'resolution_series'
