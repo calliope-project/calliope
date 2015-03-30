@@ -255,6 +255,13 @@ class TestInitialization:
         assert np.isnan(locations.at['1', '_override.hvac:1.constraints.e_cap_max'])
         assert locations.at['2', '_override.hvac:1.constraints.e_cap_max'] == 100
 
+    def test_read_data_supply_r_negative_check(self):
+        path = common._add_test_path('common/t_positive_demand')
+        override = ('override.techs.demand_electricity.'
+                    'constraints.r: file=demand-sin_r.csv')
+        override = calliope.utils.AttrDict.from_yaml_string(override)
+        with pytest.raises(AssertionError):
+            model = common.simple_model(path=path, override=override)
 
 class TestOptions:
     def test_get_option(self):

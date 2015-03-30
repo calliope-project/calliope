@@ -436,6 +436,7 @@ class Model(object):
             return None
 
     def get_parent(self, y):
+        """Returns the abstract base technology from which ``y`` descends."""
         if y in self.data._y_transmission:
             return 'transmission'
         else:
@@ -904,6 +905,21 @@ class Model(object):
                        'from file. They were automatically set to `0`: '
                        + ', '.join(missing_data))
             warnings.warn(message, exceptions.ModelWarning)
+        # Finally, check data consistency. For now, demand must be <= 0,
+        # and supply >=0, at all times.
+        # FIXME update these checks on implementing conditional param updates.
+        for y in d._y_def_r:
+            base_tech = self.get_parent(y)
+            # Check each column:
+            for c in d.r[y].columns:
+                series = d.r[y][c]
+                err_suffix = 'for tech: {}, at location: {}'.format(y, c)
+                if base_tech == 'demand':
+                    err = 'Demand resource must be <=0, ' + err_suffix
+                    assert (series <= 0).all(), err
+                elif base_tech == 'supply':
+                    err = 'Supply resource must be >=0, ' + err_suffix
+                    assert (series >= 0).all(), err
 
     def _get_t_max_demand(self):
         t_max_demands = utils.AttrDict()
