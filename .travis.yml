@@ -1,14 +1,22 @@
-language: "python"
+sudo: false  # Use container-based infrastructure
+addons:
+  apt_packages:
+    - glpk-utils
+    - libhdf5-serial-dev  # Required for pip to compile pytables
+language: python
 python:
   - "3.4"
-before_install:
-  - "sudo apt-get update -qq"
-  - "sudo apt-get install -y glpk-utils"
-  - "sudo apt-get install -y libhdf5-serial-dev"  # Required to compile pytables
+env:
+  - PIP_DOWNLOAD_CACHE=$HOME/.cache/pip  # Ensure pip-accel uses right dir
 install:
-  - "pip install -r requirements.txt"
-  - 'pip install cython --install-option="--no-cython-compile"'
-  - "pip install tables==3.1.0"  # Fails if in requirements.txt
-  - "pip install ."
+  - "pip install pip-accel"  # Use pip-accel to cache binaries
+  - "pip-accel install -r requirements.txt"
+  - 'pip-accel install cython --install-option="--no-cython-compile"'
+  - "pip-accel install tables==3.1.0"  # Fails if in requirements.txt
+  - "pip-accel install ."
+cache:
+  directories:
+    - $HOME/.pip-accel
+    - $HOME/.cache/pip
 script: "py.test --cov calliope --cov-report term-missing"
-after_success: "coveralls"
+after_success: coveralls
