@@ -111,6 +111,8 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
 
 def plot_installed_capacities(solution,
                               types=['supply', 'conversion', 'storage'],
+                              unit_multiplier=1.0,
+                              unit_label='kW',
                               **kwargs):
     """
     Plot installed capacities (``e_cap``) with a bar plot.
@@ -119,6 +121,11 @@ def plot_installed_capacities(solution,
     ----------
     types : list, default ['supply', 'conversion', 'storage']
         Technology types to include in the plot.
+    unit_multiplier : float or int, default 1.0
+        Multiply installed capacities by this value for plotting.
+    unit_label : str, default 'kW'
+        Label for capacity values, adjust this when
+        changing ``unit_multiplier``.
     **kwargs : are passed to ``pandas.DataFrame.plot()``
 
     """
@@ -130,7 +137,7 @@ def plot_installed_capacities(solution,
     weighted = solution.metadata.stack_weight.order(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in df.columns]
 
-    df = df.loc[:, stacked_techs] / 1e6
+    df = df.loc[:, stacked_techs] * unit_multiplier
 
     names = [solution.metadata.at[y, 'name'] for y in df.columns]
     colors = [solution.metadata.at[i, 'color'] for i in df.columns]
@@ -154,7 +161,7 @@ def plot_installed_capacities(solution,
     leg = au.legend_on_right(ax, style='custom', artists=proxies, labels=names)
 
     ylab = ax.set_ylabel('')
-    xlab = ax.set_xlabel('Installed capacity [GW]')
+    xlab = ax.set_xlabel('Installed capacity ({})'.format(unit_label))
 
     return ax
 
@@ -235,10 +242,10 @@ def plot_transmission(solution, tech='hvac', carrier='power',
 
 
 def get_delivered_cost(solution, cost_class='monetary', carrier='power',
-                       count_unmet_demand=False):
+                       count_unmet_demand=False, unit_multiplier=1.0):
     """
-    Get the levelized cost per kWh delivered for the given cost_class
-    and carrier.
+    Get the levelized cost per unit of energy delivered for the given
+    ``cost_class`` and ``carrier``.
 
     Parameters
     ----------
@@ -248,6 +255,10 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     count_unmet_demand : bool, default False
         Whether to count the cost of unmet demand in the final
         delivered cost
+    unit_multiplier : float or int, default 1.0
+        Adjust unit of the returned cost value. For example, if model units
+        are kW and kWh, ``unit_multiplier=1.0`` will return cost per kWh, and
+        ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
     summary = solution.summary
@@ -454,12 +465,12 @@ class DummyModel(object):
         cost_con['s_cap'] = (get_cost('s_cap', y, k)
                              * solution.parameters['s_cap'][y])
         cost_con['total'] = cost_con.sum(axis=1)
-        cost_con['total_per_kW'] = (cost_con['total']
-                                    / solution.parameters['e_cap'][y])
+        cost_con['total_per_e_cap'] = (cost_con['total']
+                                       / solution.parameters['e_cap'][y])
         cost_con.at['total', 'total'] = cost_con['total'].sum()
-        total_per_kW = (cost_con.at['total', 'total']
-                        / solution.parameters['e_cap'][y].sum())
-        cost_con.at['total', 'total_per_kW'] = total_per_kW
+        total_per_e_cap = (cost_con.at['total', 'total']
+                           / solution.parameters['e_cap'][y].sum())
+        cost_con.at['total', 'total_per_e_cap'] = total_per_e_cap
         return cost_con * cost_adjustment
 
     def recompute_operational_costs(self, y, k='monetary', carrier='power',
