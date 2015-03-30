@@ -15,9 +15,9 @@ The default objective function minimizes cost:
 
 .. math::
 
-   min: z = \sum_y (weight(y) \times \sum_x cost(y, x, k))
+   min: z = \sum_y (weight(y) \times \sum_x cost(y, x, k=k_{m}))
 
-where :math:`k=monetary`.
+where :math:`k_{m}` is the monetary cost class.
 
 Alternative objective functions can be used by setting the ``objective`` in the model configuration (see :ref:`config_reference_model_wide`).
 
@@ -346,11 +346,11 @@ In the first case, the following balancing equation applies:
 
 .. math::
 
-   \sum_y \sum_{xs} ec_{prod}(c, y, xs, t) = 0 \qquad\text{for each } t
+   \sum_{y, x \in X_{i}} ec_{prod}(c=c_{p}, y, x, t) + \sum_{y, x \in X_{i}} ec_{con}(c=c_{p}, y, x, t) = 0 \qquad\forall i, t
 
-Where :math:`xs` are the level 0 location :math:`x` and all the level 1 locations that are within it.
+:math:`i` are the level 0 locations, and :math:`X_{i}` is the set of level 1 locations (:math:`x`) within the given level 0 location, together with that location itself. :math:`c` is the carrier, and :math:`c_{p}` the carrier for power.
 
-For ``c`` other than ``power``, the balancing equation is as above, but with a :math:`\geq` inequality.
+For ``c`` other than ``power``, the balancing equation is as above, but with a :math:`\geq` inequality, and the corresponding change to :math:`c`.
 
 .. Note:: The actual balancing constraint is implemented such that ``es`` and ``ec`` are used in the sum as appropriate for each technology.
 
@@ -375,7 +375,7 @@ This is a simplified capacity margin constraint, requiring the capacity to suppl
 
 where :math:`y_{c}` is the subset of ``y`` that delivers the carrier ``c`` and :math:`m_{c}` is the system margin for that carrier.
 
-For each carrier (with the name ``carrier_name``), the model attempts to read the model-wide option ``system_margin.carrier_name``, only applying this constraint if a setting exists.
+For each carrier (with the name ``carrier_name``), Calliope attempts to read the model-wide option ``system_margin.carrier_name``, only applying this constraint if a setting exists.
 
 .. _optional_constraints:
 
