@@ -55,10 +55,15 @@ class AttrDict(dict):
 
         """
         for k, v in d.items():
+            # First, keys must be strings, not ints
             if isinstance(k, int):
-                k = str(k)  # Keys must be strings, not ints
+                k = str(k)
+            # Now, assign to the key, handling nested AttrDicts properly
             if isinstance(v, dict):
-                self[k] = AttrDict(v)
+                self.set_key(k, AttrDict(v))
+            elif isinstance(v, list):
+                self.set_key(k, [i if not isinstance(i, dict) else AttrDict(i)
+                                 for i in v])
             else:
                 self.set_key(k, v)
 
@@ -169,18 +174,34 @@ class AttrDict(dict):
         else:
             del self[key]
 
-    def as_dict(self):
+    def as_dict(self, flat=False):
         """
         Return the AttrDict as a pure dict (with nested dicts if
         necessary).
 
         """
+        if not flat:
+            return self.as_dict_nested()
+        else:
+            return self.as_dict_flat()
+
+    def as_dict_nested(self):
         d = {}
         for k, v in self.items():
             if isinstance(v, AttrDict):
                 d[k] = v.as_dict()
+            elif isinstance(v, list):
+                d[k] = [i if not isinstance(i, AttrDict) else i.as_dict()
+                        for i in v]
             else:
                 d[k] = v
+        return d
+
+    def as_dict_flat(self):
+        d = {}
+        keys = self.keys_nested()
+        for k in keys:
+            d[k] = self.get_key(k)
         return d
 
     def to_yaml(self, path=None, convert_objects=True, **kwargs):

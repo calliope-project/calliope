@@ -41,7 +41,8 @@ class Parallelizer(object):
         self.f_run = 'run.sh'
 
     def generate_iterations(self):
-        c = self.config.parallel.iterations
+        # Get each iteration config as a dict with flat (x.y.z-style) keys
+        c = [d.as_dict(flat=True) for d in self.config.parallel.iterations]
         if isinstance(c, list):
             df = pd.DataFrame(c)
         elif isinstance(c, dict):
@@ -59,7 +60,7 @@ class Parallelizer(object):
 
         """
         pth = os.path.join('Runs', settings)
-        f.write('calliope run {}'.format(pth))
+        f.write('calliope run --debug {}'.format(pth))
 
     def _write_submit(self, f, n_iter, config=None):
         """
@@ -185,9 +186,11 @@ class Parallelizer(object):
         # If different iterations ask for different resources, multiple
         # files are necessary
         c.set_key('parallel.style', 'array')  # Try setting 'array' as default
-        # Flatten iterations and check if parallel.resources are defined
-        # anywhere in the flattened list, if so, replace 'array' with 'single'
-        for i in itertools.chain.from_iterable(c['parallel']['iterations']):
+        # Flatten list of iteration keys, check if parallel.resources defined
+        # anywhere in the list, if so, replace 'array' with 'single', since
+        # we need each iteration's run script to be able to set its resources
+        iteration_keys = [d.keys_nested() for d in c.parallel.iterations]
+        for i in itertools.chain.from_iterable(iteration_keys):
             if 'parallel.resources' in i:
                 c.set_key('parallel.style', 'single')
                 break

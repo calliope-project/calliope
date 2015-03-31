@@ -70,13 +70,28 @@ class TestAttrDict:
         assert d.a == 1
         assert d.c.z.II == 2
 
-    def test_dot_access_firstl(self, attr_dict):
+    def test_from_yaml_string_dot_strings(self):
+        yaml_string = 'a.b.c: 1\na.b.foo: 2'
+        d = utils.AttrDict.from_yaml_string(yaml_string)
+        assert d.a.b.c == 1
+        assert d.a.b.foo == 2
+
+    def test_from_yaml_string_dot_strings_duplicate(self):
+        yaml_string = 'a.b.c: 1\na.b.c: 2'
+        d = utils.AttrDict.from_yaml_string(yaml_string)
+        assert d.a.b.c == 2
+
+    def test_dot_access_first(self, attr_dict):
         d = attr_dict
         assert d.a == 1
 
     def test_dot_access_second(self, attr_dict):
         d = attr_dict
         assert d.c.x == 'foo'
+
+    def test_dot_access_list(self):
+        d = utils.AttrDict.from_yaml_string("a: [{x: 1}, {y: 2}]")
+        assert d.a[0].x == 1
 
     def test_set_key_first(self, attr_dict):
         d = attr_dict
@@ -147,6 +162,16 @@ class TestAttrDict:
         dd = d.as_dict()
         assert dd['a'] == 1
         assert dd['c']['x'] == 'foo'
+
+    def test_as_dict_with_sublists(self):
+        d = utils.AttrDict.from_yaml_string("a: [{x: 1}, {y: 2}]")
+        dd = d.as_dict()
+        assert dd['a'][0]['x'] == 1
+        assert isinstance(dd['a'][0], dict)  # Not AttrDict!
+
+    def test_as_dict_flat(self, attr_dict):
+        dd = attr_dict.as_dict(flat=True)
+        assert dd['c.x'] == 'foo'
 
     def test_keys_nested_as_list(self, attr_dict):
         d = attr_dict
