@@ -310,8 +310,15 @@ class Model(object):
                 converter = time_tools.masks_to_resolution_series
                 series = converter(masks, how='or', resolution=mask_res)
             elif 'resolution' in time:
-                getter = time_tools.resolution_series_uniform
-                series = getter(self.data, time.resolution)
+                if self.data.time_res_static == time.resolution:
+                    # If time.resolution is set to the resolution that
+                    # the data is already in, do nothing
+                    return
+                else:
+                    # Otherwise, prepare an appropriate time resolution
+                    # series for resampling the data
+                    getter = time_tools.resolution_series_uniform
+                    series = getter(self.data, time.resolution)
             elif 'file' in time:
                 res_file = utils.relative_path(cr.time.file,
                                                self.config_run_path)
