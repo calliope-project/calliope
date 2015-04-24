@@ -1358,47 +1358,56 @@ class Model(object):
 
     def get_costs(self, t_subset=None):
         """Get costs."""
-        def _factor(var, t_subset):
+        def _factor(var, t_subset_slice):
             """Return the fraction of var within t_subset, used to
                calculate the correct fraction of operational costs."""
             if var.ndim == 4:  # Make Panel4D into Panel by summing carriers
                 var = var.sum(0)
-            return (var.iloc[:, t_subset, :].sum(1)
+            return (var.iloc[:, t_subset_slice, :].sum(1)
                     / var.sum(1)).fillna(0)
 
         if t_subset is None:
-            t_subset = slice(None)
+            t_subset_slice = slice(None)
+        else:
+            t_subset_slice = t_subset
 
         T = lambda x: pd.Panel.transpose(x, 'major_axis',
                                          'minor_axis', 'items')
 
-        len_adjust = (len(self.data.time_res_series.iloc[t_subset])
-                      / len(self.m.t))
+        # len_adjust is the fraction of construction and fixed costs
+        # that is accrued to the chosen t_subset. NB: construction and fixed
+        # operation costs are calculated for a whole year
+        len_adjust = (sum(self.data.time_res_series.iloc[t_subset_slice])
+                      / sum(self.data.time_res_series))
 
-        cost = T(self.get_var('cost_con').add(self.get_var('cost_op_fixed')))
         # Adjust for the fact that fixed costs accrue over a smaller length
         # of time as per len_adjust
+        cost = T(self.get_var('cost_con').add(self.get_var('cost_op_fixed')))
         cost = cost * len_adjust
+
+        # Get variable costs
         cost_var = T(self.get_var('cost_op_var'))
         cost_fuel = T(self.get_var('cost_op_fuel'))
         cost_rb = T(self.get_var('cost_op_rb'))
-        # Adjust for the fact that var and fuel costs are only accrued over
+
+        # Adjust for the fact that variable costs are only accrued over
         # the t_subset period
-        if t_subset:
+        if t_subset is not None:
             es_prod = self.get_var('es_prod')
             # Broadcast multiplication along items (i.e. cost classes)
-            cost_var = cost_var.multiply(_factor(es_prod, t_subset),
+            cost_var = cost_var.multiply(_factor(es_prod, t_subset_slice),
                                          axis='items')
             rs = self.get_var('rs')
-            cost_fuel = cost_fuel.multiply(_factor(rs, t_subset),
+            cost_fuel = cost_fuel.multiply(_factor(rs, t_subset_slice),
                                            axis='items')
             try:
                 rbs = self.get_var('rbs')
-                cost_rb = cost_rb.multiply(_factor(rbs, t_subset),
+                cost_rb = cost_rb.multiply(_factor(rbs, t_subset_slice),
                                            axis='items')
             except exceptions.ModelError:
                 pass  # If rbs doesn't exist in the data, ModelError is raised,
                 # and we simply move on...
+
         cost = cost.add(cost_var).add(cost_fuel).add(cost_rb)
         return cost
 

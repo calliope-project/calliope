@@ -2,6 +2,11 @@
 Release History
 ===============
 
+0.3.4 (dev)
+-----------
+
+* [fixed] Bug in construction and fixed O&M cost calculations in operational mode
+
 0.3.3 (2015-04-03)
 ------------------
 
