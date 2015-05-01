@@ -1,0 +1,31 @@
+
+This is a non-exhaustive overview of planned improvements. There is no fixed time plan. Contributions are welcome, see the `development guide <http://docs.callio.pe/en/latest/user/develop.html>`_.
+
+Upcoming release plans
+======================
+
+v0.3.5
+------
+
+* Improved and more general configuration for constraints
+
+v0.4.0
+------
+
+* Mixed integer (MILP) constraints
+* Dynamic conditional constraints: resource for ``supply`` techs can temporarily become negative to emulate parasitics or sub-sections of a connected grid
+
+v0.5.0
+------
+
+* Better timestep selection algorithms
+* Implement aliases in configuration
+
+
+Other planned improvements
+==========================
+
+* Multi-run configuration generator, e.g. with the ability to draw values for a specific parameter from a given distribution
+* Metadata handling in configuration objects
+    - Keep track of source file and line of each setting
+    - Permit dynamically updating configuration files
