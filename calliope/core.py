@@ -1402,8 +1402,12 @@ class Model(object):
                                            axis='items')
             try:
                 rbs = self.get_var('rbs')
+                # NB: we do .fillna(0) because the rbs var will only
+                # be defined for techs that actually use rbs, so
+                # we'd get NaN costs for all other techs, which would
+                # propagate through to making final costs NaN too
                 cost_rb = cost_rb.multiply(_factor(rbs, t_subset_slice),
-                                           axis='items')
+                                           axis='items').fillna(0)
             except exceptions.ModelError:
                 pass  # If rbs doesn't exist in the data, ModelError is raised,
                 # and we simply move on...
