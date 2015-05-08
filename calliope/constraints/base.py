@@ -219,7 +219,13 @@ def node_constraints_build(model):
         else:
             r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
             if r_area_max is False:
-                return m.r_area[y, x] == 1.0
+                e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
+                # If a technology has no e_cap here, we force r_area to zero,
+                # so as not to accrue spurious costs
+                if e_cap_max == 0:
+                    return m.r_area[y, x] == 0
+                else:
+                    return m.r_area[y, x] == 1.0
             elif model.mode == 'plan':
                 return m.r_area[y, x] <= r_area_max
             elif model.mode == 'operate':
