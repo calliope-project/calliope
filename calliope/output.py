@@ -41,7 +41,8 @@ def aggregate_parameters(results, iterations=None, how='max'):
 def generate_constraints(solution, output_path=None, techs=None,
                          constraints=None,
                          include_transmission=True, transmission_techs=None,
-                         transmission_constraints=['e_cap'], fillna=None):
+                         transmission_constraints=['e_cap'], fillna=None,
+                         map_numeric=None, map_any=None):
     """
     Generate constraints from a given solution.
 
@@ -56,10 +57,23 @@ def generate_constraints(solution, output_path=None, techs=None,
     If ``fillna`` set to something other than None, NA values will be
     replaced with the given value.
 
+    Use ``map_numeric`` and ``map_any`` to give functions that will be
+    applied to numeric or any value to modify it.
+
     """
-    def _setkey(d, key, value, fillna):
+    excluded_vars = ['e_cap_net']
+
+    def _setkey(d, key, value):  # fillna, round, multiply passed implicitly
         if fillna is not None and np.isnan(value):
             value = fillna
+        if map_numeric:
+            try:
+                # TypeError if not a number, we don't want to multiply strings
+                value = map_numeric(value)
+            except TypeError:
+                pass  # Ignore if not a number
+        if map_any:
+            value = map_any(value)
         d.set_key(key, value)
 
     d = utils.AttrDict()
@@ -84,11 +98,12 @@ def generate_constraints(solution, output_path=None, techs=None,
     key_string = 'locations.{0}.override.{1}.constraints.{2}'
     for x in locations:
         for y in techs:
-            for var in constraints:
+            for var in [v for v in constraints
+                        if v not in excluded_vars]:
                 key = key_string.format(x, y, var)
                 if var + '_max' in default_constraints:
                     key += '_max'
-                _setkey(d, key, solution.parameters.at[var, x, y], fillna)
+                _setkey(d, key, solution.parameters.at[var, x, y])
 
     # Transmission techs
     if include_transmission:
@@ -97,7 +112,6 @@ def generate_constraints(solution, output_path=None, techs=None,
         if not transmission_techs:
             transmission_techs = set([i.split(':')[0]
                                       for i in transmission_techs_in_sol])
-            print(transmission_techs)
         if not transmission_constraints:
             transmission_constraints = solution.parameters.items
 
@@ -105,7 +119,8 @@ def generate_constraints(solution, output_path=None, techs=None,
         t_key_string = 'links.{0}.{1}.constraints.{2}'
         for x in locations:
             for y in transmission_techs_in_sol:
-                for var in transmission_constraints:
+                for var in [v for v in transmission_constraints
+                            if v not in excluded_vars]:
                     value = solution.parameters.at[var, x, y]
                     y_bare, x_rem = y.split(':')
                     if x_rem == x:
@@ -120,7 +135,7 @@ def generate_constraints(solution, output_path=None, techs=None,
                         key = t_key_string.format(x + ',' + x_rem, y_bare, var)
                         if var + '_max' in default_constraints:
                             key += '_max'
-                        _setkey(d, key, value, fillna)
+                        _setkey(d, key, value)
 
     if output_path is not None:
         d.to_yaml(output_path)
