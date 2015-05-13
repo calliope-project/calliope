@@ -234,9 +234,10 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     # Set edge colors
     edge_colors = [edge_use[i] for i in G.edges()]
 
-    ax, m = au.plot_graph_on_map(solution.config_model,
-                                 edge_colors, edge_labels,
-                                 figsize, fontsize)
+    ax, m = au.plot_graph_on_map(solution.config_model, G=G,
+                                 edge_colors=edge_colors,
+                                 edge_labels=edge_labels,
+                                 figsize=figsize, fontsize=fontsize)
 
     return ax
 
@@ -291,6 +292,14 @@ def get_group_share(solution, techs, group_type='supply',
     summary = solution.summary
     meta = solution.metadata
     group = meta.query('type == "' + group_type + '"').index.tolist()
+    if group_type == 'transmission':
+        # Special case for transmission techs, we only want
+        # the base tech names, since we're looking this
+        # up in the summary table
+        def transmission_basenames(group):
+            return list(set([i.split(':')[0] for i in group]))
+        techs = transmission_basenames(techs)
+        group = transmission_basenames(group)
     supply_total = summary.loc[group, var].sum()
     supply_group = summary.loc[techs, var].sum()
     return supply_group / supply_total

@@ -6,6 +6,9 @@ Release History
 0.3.5 (dev)
 -----------
 
+* [changed] Improved summary table in the model solution: now shows aggregate information for transmission technologies only, and added missing ``s_cap`` information as well as technology type
+* [fixed] Bug causing some total levelized transmission costs to be infinite instead of zero
+* [fixed] Bug causing some CSV solution files to be empty
 
 0.3.4 (2015-04-27)
 ------------------

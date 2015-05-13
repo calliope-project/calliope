@@ -1325,8 +1325,9 @@ class Model(object):
         con = self.get_ec('con')
         ec = {}
         for i in prod.labels:
-            ec[i] = (prod[i].to_frame().add(con[i].to_frame(),
-                                            fill_value=0)).to_panel()
+            ec[i] = (prod[i].to_frame(filter_observations=False)
+                            .add(con[i].to_frame(filter_observations=False),
+                                 fill_value=0)).to_panel()
         return pd.Panel4D(ec)
 
     def get_node_variables(self):
@@ -1352,7 +1353,7 @@ class Model(object):
         except exceptions.ModelError:
             result['rb_cap'] = 0
         if built_only:
-            result = result.to_frame()
+            result = result.to_frame(filter_observations=False)
             result = result[result.e_cap > 0].dropna(axis=1).to_panel()
         return result
 
@@ -1442,9 +1443,9 @@ class Model(object):
             for carrier in self.data._c:
                 # Levelized cost of electricity (LCOE)
                 lc = sol.costs[cost] / sol.totals[carrier].ec_prod
-                lc[np.isinf(lc)] = 0
                 lc.loc['total', :] = (sol.costs[cost].sum(0)
                                       / sol.totals[carrier].ec_prod.sum(0))
+                lc = lc.replace(np.inf, 0)
                 p[carrier] = lc
             p4d[cost] = pd.Panel(p)
         return pd.Panel4D(p4d)
@@ -1486,18 +1487,60 @@ class Model(object):
 
     def get_summary(self, sort_by='e_cap', carrier='power'):
         sol = self.solution
+
         # Capacity factor per carrier
         df = pd.DataFrame({'cf': sol.capacity_factor.loc[carrier, 'total', :]})
+
         # Costs per carrier
         for k in sorted(sol.levelized_cost.labels):
             # .loc[cost_class, carrier, location, tech]
             df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
+
         # Add totals per carrier
         df['e_prod'] = sol.totals.loc[carrier, 'ec_prod', :, :].sum(0)
         df['e_con'] = sol.totals.loc[carrier, 'ec_con', :, :].sum(0)
+
         # Add other carrier-independent stuff
         df['e_cap'] = sol.parameters['e_cap'].sum()
         df['r_area'] = sol.parameters['r_area'].sum()
+        df['s_cap'] = sol.parameters['s_cap'].sum()
+
+        # Add technology type
+        df['type'] = df.index.map(self.get_parent)
+
+        # Get the basename of each tech (i.e., 'hvac' for 'hvac:location1')
+        df['index_name'] = df.index
+        basenames = [i[0] for i in df.index_name.str.split(':').tolist()]
+
+        # Add this to the summary df
+        df['basename'] = basenames
+
+        # Now go through each transmission tech and sum it up into one row,
+        # appending this to the summary df
+        transmission_basetechs = set([t for t in df.basename
+                                     if self.get_parent(t) == 'transmission'])
+
+        for basename in transmission_basetechs:
+            if df.basename.str.contains(basename).any():
+                temp = df.query('basename == "{}"'.format(basename))
+                temp_sum = temp.sum()
+                cf_cost_cols = ['cf'] + [c for c in df.columns if 'cost_' in c]
+                temp_cf_cost = temp.loc[:, cf_cost_cols] \
+                                   .mul(temp.loc[:, 'e_prod'], axis=0) \
+                                   .sum() / temp.loc[:, 'e_prod'].sum()
+                temp_sum.loc[cf_cost_cols] = temp_cf_cost
+                temp_sum.index_name = basename
+                temp_sum.type = 'transmission'
+                df = df.append(temp_sum, ignore_index=True)
+
+        # Finally, drop the transmission techs with ':' in their name,
+        # only keeping the summary rows, drop temporary columns, and re-set
+        # the index
+        df = df[~df.index_name.str.contains(':')]
+        df = df.set_index('index_name')
+        df.index.name = 'y'
+        df = df.drop(['basename'], axis=1)
+
         return df.sort(columns=sort_by, ascending=False)
 
     def get_shares(self):
@@ -1679,23 +1722,25 @@ class Model(object):
     def _save_csv(self):
         """Save solution as CSV files to ``self.config_run.output.path``"""
         sol = self.solution
-        output_files = {'node_parameters.csv': sol.parameters.to_frame(),
-                        'costs.csv': sol.costs.to_frame(),
-                        'capacity_factor.csv': sol.capacity_factor.to_frame(),
+        # Option-dict for to_frame() method
+        o = {'filter_observations': False}
+        output_files = {'node_parameters.csv': sol.parameters.to_frame(**o),
+                        'costs.csv': sol.costs.to_frame(**o),
+                        'capacity_factor.csv': sol.capacity_factor.to_frame(**o),
                         'metadata.csv': sol.metadata,
                         'summary.csv': sol.summary,
                         'shares.csv': sol.shares,
                         'time_res.csv': sol.time_res}
         for var in sol.node.labels:
             k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
-            v = sol.node[var].to_frame()
+            v = sol.node[var].to_frame(**o)
             output_files[k] = v
         for c in self.data._c:
             k = 'totals_{}.csv'.format(c)
-            output_files[k] = sol.totals[c].to_frame()
+            output_files[k] = sol.totals[c].to_frame(**o)
         for cost_class in self.data._k:
             k = 'levelized_cost_{}.csv'.format(cost_class)
-            output_files[k] = sol.levelized_cost[cost_class].to_frame()
+            output_files[k] = sol.levelized_cost[cost_class].to_frame(**o)
         # Write all files to output dir
         for k, v in output_files.items():
             v.to_csv(os.path.join(self.config_run.output.path, k))
