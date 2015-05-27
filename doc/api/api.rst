@@ -24,7 +24,7 @@ Constraints
 .. automodule:: calliope.constraints.planning
     :members:
 
-.. automodule:: calliope.constraints.ramping
+.. automodule:: calliope.constraints.optional
     :members:
 
 Time resolution

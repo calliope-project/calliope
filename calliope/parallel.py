@@ -114,8 +114,8 @@ class Parallelizer(object):
             if conf:
                 try:
                     penv = c.get_key('parallel.parallel_env')
-                except:
-                    raise KeyError('Must specify parallel_env for'
+                except KeyError:
+                    raise KeyError('Must specify parallel_env for '
                                    'threads >1 and qsub.')
                 f.write('#$ -pe {} {}\n'.format(penv, conf))
         elif c.parallel.environment == 'bsub':

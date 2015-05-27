@@ -9,7 +9,34 @@ Planning constraints.
 
 """
 
+import numpy as np
 import pyomo.core as po
+
+
+def node_constraints_build_total(model):
+    m = model.m
+
+    # Constraint rules
+    def c_e_cap_total_systemwide_rule(m, y):
+        e_cap_max_total = model.get_option(y + '.constraints.'
+                                           'e_cap_max_total')
+        e_cap_max_total_force = model.get_option(y + '.constraints.'
+                                                 'e_cap_max_total_force')
+        e_cap_max_scale = model.get_option(y + '.constraints.e_cap_max_scale')
+
+        if np.isinf(e_cap_max_total):
+            return po.Constraint.NoConstraint
+        else:
+            sum_expr = sum(m.e_cap[y, x] for x in m.x)
+            total_expr = e_cap_max_total * e_cap_max_scale
+            if e_cap_max_total_force:
+                return sum_expr == total_expr
+            elif model.mode == 'plan':
+                return sum_expr <= total_expr
+
+    # Constraints
+    m.c_e_cap_total_systemwide = \
+        po.Constraint(m.y, rule=c_e_cap_total_systemwide_rule)
 
 
 def system_margin(model):

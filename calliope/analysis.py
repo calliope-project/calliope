@@ -48,7 +48,7 @@ def plot_carrier_production(solution, carrier='power', subset_t=None,
 
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
                     types=['supply', 'conversion', 'storage', 'unmet_demand'],
-                    colormap=None, ticks=None):
+                    colormap=None, ticks=None, resample=None):
     """
     Generate a stackplot of the ``data`` for the given ``carrier``,
     plotting the ``demand`` on top.
@@ -74,6 +74,9 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
         Where to draw x-axis (time axis) ticks. By default (None),
         auto-detects, but can manually set to either 'hourly', 'daily',
         or 'monthly'.
+    resample : dict, default None
+        Give options for pandas.DataFrame.resample in a dict, to resample
+        the entire time series prior to plotting.
 
     """
     # Determine ticks
@@ -88,6 +91,8 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     # Set up time series to plot, dividing it by time_res_series
     time_res = solution.time_res
     plot_df = data.divide(time_res, axis='index')
+    if resample:
+        plot_df = plot_df.resample(**resample)
     # Get tech stack and names
     df = solution.metadata[solution.metadata.carrier == carrier]
     query_string = au._get_query_string(types)

@@ -1089,20 +1089,21 @@ class Model(object):
         #
         # Variables and constraints
         #
-        # 1. Required
-        required = [constraints.base.node_resource,
-                    constraints.base.node_energy_balance,
-                    constraints.base.node_constraints_build,
-                    constraints.base.node_constraints_operational,
-                    constraints.base.node_constraints_transmission,
-                    constraints.base.node_parasitics,
-                    constraints.base.node_costs,
-                    constraints.base.model_constraints]
-        for c in required:
-            self.add_constraint(c)
 
+        # 1. Required
+        constr = [constraints.base.node_resource,
+                  constraints.base.node_energy_balance,
+                  constraints.base.node_constraints_build,
+                  constraints.base.node_constraints_operational,
+                  constraints.base.node_constraints_transmission,
+                  constraints.base.node_parasitics,
+                  constraints.base.node_costs,
+                  constraints.base.model_constraints]
         if self.mode == 'plan':
-            self.add_constraint(constraints.planning.system_margin)
+            constr += [constraints.planning.system_margin,
+                       constraints.planning.node_constraints_build_total]
+        for c in constr:
+            self.add_constraint(c)
 
         # 2. Optional
         if o.get_key('constraints', default=False):

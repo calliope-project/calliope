@@ -6,7 +6,20 @@ Release History
 0.3.5 (dev)
 -----------
 
-* [changed] Improved summary table in the model solution: now shows aggregate information for transmission technologies only, and added missing ``s_cap`` information as well as technology type
+Major changes
+~~~~~~~~~~~~~
+
+[added] New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap_max_total``), in addition to its per-node capacity (``e_cap_max``)
+
+[changed] All optional constraints are now grouped together, under ``constraints.optional``:
+
+* ``constraints.group_fraction.group_fraction`` becomes ``constraints.optional.group_fraction``
+* ``constraints.ramping.ramping_rate`` becomes ``constraints.optional.ramping_rate``
+
+Other changes
+~~~~~~~~~~~~~
+
+* [changed] Improved summary table in the model solution: now shows only aggregate information for transmission technologies, also added missing ``s_cap`` column and technology type
 * [fixed] Bug causing some total levelized transmission costs to be infinite instead of zero
 * [fixed] Bug causing some CSV solution files to be empty
 
