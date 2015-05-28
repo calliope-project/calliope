@@ -17,7 +17,7 @@ def create_and_run_model(override, iterative_warmstart=False,
                 override:
                     ccgt:
                         constraints:
-                            e_cap_max: 100
+                            e_cap.max: 100
                     demand_electricity:
                         x_map: '1: demand'
                         constraints:

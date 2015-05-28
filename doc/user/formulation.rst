@@ -168,7 +168,7 @@ Built capacity is managed by six constraints.
 
 ``c_r_area`` constrains the resource conversion area by :math:`r_{area}(y, x) \leq r_{area,max}(y, x)`. By default, ``y.constraints.r_area_max`` is set to false, and in that case, :math:`r_{area}(y, x)` is forced to :math:`1.0`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap`` is given, then the equation :math:`r_{area}(y, x) = e_{cap}(y, x) * r\_area\_per\_cap` applies instead.
 
-``c_e_cap`` constrains the carrier conversion capacity. If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced. Else, :math:`e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_max\_scale` applies. ``y.constraints.e_cap_max_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary. Finally, if ``y.constraints.e_cap_max_force`` is true at location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+``c_e_cap`` constrains the carrier conversion capacity. If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced. Else, :math:`e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_max\_scale` applies. ``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary. Finally, if ``y.constraints.e_cap_max_force`` is true at location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
 The ``c_e_cap_gross_net`` constraint is relevant only if ``y.constraints.c_eff`` is set to anything other than 1.0 (the default). In that case, :math:`e_{cap}(y, x) \times c_{eff} = e_{cap,net}(y, x)` computes the net installed carrier conversion capacity.
 
@@ -390,7 +390,7 @@ These optional constraints can be used both in planning and operational modes.
 Ramping
 -------
 
-Provided by: :func:`calliope.constraints.ramping.ramping_rate`
+Provided by: :func:`calliope.constraints.optional.ramping_rate`
 
 Constrains the rate at which plants can adjust their output, for technologies that define ``constraints.e_ramping``:
 
@@ -409,7 +409,7 @@ Constrains the rate at which plants can adjust their output, for technologies th
 Group fractions
 ---------------
 
-Provided by: :func:`calliope.constraints.group_fraction.group_fraction`
+Provided by: :func:`calliope.constraints.optional.group_fraction`
 
 This component provides the ability to constrain groups of technologies to provide a certain fraction of total output, a certain fraction of total capacity, or a certain fraction of peak power demand. See :ref:`config_parents_and_groups` in the configuration section for further details on how to set up groups of technologies.
 

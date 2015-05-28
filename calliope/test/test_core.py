@@ -202,7 +202,7 @@ class TestInitialization:
 
     def test_initialize_locations_matrix(self):
         model = common.simple_model()
-        cols = ['_level', '_override.ccgt.constraints.e_cap_max',
+        cols = ['_level', '_override.ccgt.constraints.e_cap.max',
                 '_within', 'ccgt', 'csp', 'demand_electricity',
                 'unmet_demand_electricity']
         assert sorted(model.data.locations.columns) == cols
@@ -225,7 +225,7 @@ class TestInitialization:
                 1,2:
                     hvac:
                         constraints:
-                            e_cap_max: 100
+                            e_cap.max: 100
         """
         with tempfile.NamedTemporaryFile() as f:
             f.write(locations.encode('utf-8'))
@@ -243,17 +243,17 @@ class TestInitialization:
                                                            model_transmission):
         model = model_transmission
         cols = ['_level',
-                '_override.hvac:1.constraints.e_cap_max',
-                '_override.hvac:2.constraints.e_cap_max',
+                '_override.hvac:1.constraints.e_cap.max',
+                '_override.hvac:2.constraints.e_cap.max',
                 '_within', 'ccgt', 'csp', 'demand_electricity',
                 'hvac:1', 'hvac:2']
         assert sorted(model.data.locations.columns) == cols
         assert (sorted(model.data.locations.index.tolist())
                 == ['1', '2', 'demand'])
         locations = model.data.locations
-        assert locations.at['1', '_override.hvac:2.constraints.e_cap_max'] == 100
-        assert np.isnan(locations.at['1', '_override.hvac:1.constraints.e_cap_max'])
-        assert locations.at['2', '_override.hvac:1.constraints.e_cap_max'] == 100
+        assert locations.at['1', '_override.hvac:2.constraints.e_cap.max'] == 100
+        assert np.isnan(locations.at['1', '_override.hvac:1.constraints.e_cap.max'])
+        assert locations.at['2', '_override.hvac:1.constraints.e_cap.max'] == 100
 
     def test_read_data_supply_r_negative_check(self):
         path = common._add_test_path('common/t_positive_demand')
@@ -266,7 +266,7 @@ class TestInitialization:
 class TestOptions:
     def test_get_option(self):
         model = common.simple_model()
-        assert model.get_option('ccgt.constraints.e_cap_max') == 50
+        assert model.get_option('ccgt.constraints.e_cap.max') == 50
 
     def test_get_option_default(self):
         model = common.simple_model()
@@ -289,8 +289,8 @@ class TestOptions:
 
     def test_get_option_location(self):
         model = common.simple_model()
-        assert model.get_option('ccgt.constraints.e_cap_max', 'demand') == 50
-        assert model.get_option('ccgt.constraints.e_cap_max', '1') == 100
+        assert model.get_option('ccgt.constraints.e_cap.max', 'demand') == 50
+        assert model.get_option('ccgt.constraints.e_cap.max', '1') == 100
 
     def test_get_option_location_default(self):
         model = common.simple_model()
@@ -315,6 +315,6 @@ class TestOptions:
 
     def test_get_set_get_option(self):
         model = common.simple_model()
-        assert model.get_option('ccgt.constraints.e_cap_max') == 50
-        model.set_option('ccgt.constraints.e_cap_max', 'foo')
-        assert model.get_option('ccgt.constraints.e_cap_max') == 'foo'
+        assert model.get_option('ccgt.constraints.e_cap.max') == 50
+        model.set_option('ccgt.constraints.e_cap.max', 'foo')
+        assert model.get_option('ccgt.constraints.e_cap.max') == 'foo'

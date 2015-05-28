@@ -44,5 +44,5 @@ The default cost-minimizing objective function provides a good example:
    :language: python
    :lines: 12-
 
-See the source code of the :func:`~calliope.constraints.ramping.ramping_rate` function for a more elaborate example.
+See the source code of the :func:`~calliope.constraints.optional.ramping_rate` function for a more elaborate example.
 

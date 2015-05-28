@@ -54,7 +54,7 @@ This definition in the example model's configuration is more verbose:
    :language: yaml
    :lines: 23-47
 
-Again, ``csp`` has the definitions for name, color, stack_weight, parent, and carrier. Its constraints are more numerous: it defines a maximum storage time (``s_time_max``), an hourly storage loss rate (``s_loss``), then specifies that its resource should be read from a file (more on that below). It also defines an energy conversion efficiency of 0.4 and a carrier efficiency of 0.9 (i.e., an internal loss of 0.1). Finally, the resource collector area and the installed carrier conversion capacity are constrained to a maximum.
+Again, ``csp`` has the definitions for name, color, stack_weight, parent, and carrier. Its constraints are more numerous: it defines a maximum storage time (``s_time.max``), an hourly storage loss rate (``s_loss``), then specifies that its resource should be read from a file (more on that below). It also defines an energy conversion efficiency of 0.4 and a carrier efficiency of 0.9 (i.e., an internal loss of 0.1). Finally, the resource collector area and the installed carrier conversion capacity are constrained to a maximum.
 
 The costs are more numerous as well, and include monetary costs for all relevant components along the conversion from resource to carrier (power): storage capacity, resource collector area, resource conversion capacity, energy conversion capacity, and variable operational and maintenance costs. Finally, it also overrides the default value for the monetary interest rate.
 
@@ -177,9 +177,9 @@ Plan vs. operate
 
 A Calliope model can either be run in planning mode (``mode: plan``) or operational mode (``mode: operate``). In planning mode, an optimization problem is solved to design an energy system that satisfies the given constraints.
 
-In operational mode, all ``max`` constraints (such as ``e_cap_max``) are treated as fixed rather than as upper bounds. The resulting, fully defined energy system is then operated with a receding horizon control approach. The results are returned in exactly the same format as for planning mode results.
+In operational mode, all ``max`` constraints (such as ``e_cap.max``) are treated as fixed rather than as upper bounds. The resulting, fully defined energy system is then operated with a receding horizon control approach. The results are returned in exactly the same format as for planning mode results.
 
-To specify a useful operational model, all locations will usually define overrides for options such as ``e_cap_max``, for all their allowed technologies.
+To specify a useful operational model, all locations will usually define overrides for options such as ``e_cap.max``, for all their allowed technologies.
 
 For this tutorial, we are only using the planning mode.
 

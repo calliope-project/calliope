@@ -12,11 +12,11 @@ class TestTransmission:
             1,2:
                 hvac:
                     constraints:
-                        e_cap_max: 10
+                        e_cap.max: 10
             3,2:
                 hvac:
                     constraints:
-                        e_cap_max: 20
+                        e_cap.max: 20
         """)
         return utils.AttrDict.from_yaml(setup)
 
@@ -27,11 +27,11 @@ class TestTransmission:
             1,2:
                 hvac:
                     constraints:
-                        e_cap_max: 10
+                        e_cap.max: 10
             3,2:
                 hvac:
                     constraints:
-                        e_cap_max: 20
+                        e_cap.max: 20
             4,4:
         """)
         return utils.AttrDict.from_yaml(setup)
@@ -55,10 +55,10 @@ class TestTransmission:
         links = transmission_network.links
         possible_x = ['1', '2', '3']
         tree = transmission.explode_transmission_tree(links, possible_x)
-        assert tree == {'1': {'hvac:2': {'constraints': {'e_cap_max': 10}}},
-                        '3': {'hvac:2': {'constraints': {'e_cap_max': 20}}},
-                        '2': {'hvac:3': {'constraints': {'e_cap_max': 20}},
-                        'hvac:1': {'constraints': {'e_cap_max': 10}}}}
+        assert tree == {'1': {'hvac:2': {'constraints': {'e_cap': {'max': 10}}}},
+                        '3': {'hvac:2': {'constraints': {'e_cap': {'max': 20}}}},
+                        '2': {'hvac:3': {'constraints': {'e_cap': {'max': 20}}},
+                        'hvac:1': {'constraints': {'e_cap': {'max': 10}}}}}
 
     def test_explode_transmission_tree_invalid_x(self, transmission_network):
         links = transmission_network.links

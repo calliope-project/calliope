@@ -51,11 +51,11 @@ A technology's identifier can be any alphanumeric string. The index of all techn
       parent: 'supply'
       name: 'My test technology'
       constraints:
-         e_cap_max: 1000  # kW
+         e_cap.max: 1000  # kW
          r: inf
       costs:
          monetary:
-            e_cap: 500  # per kW of e_cap_max
+            e_cap: 500  # per kW of e_cap.max
 
 A demand technology, with its demand data stored in a time series in the file ``demand.csv``, might look like this:
 
@@ -134,7 +134,7 @@ An example locations block is:
            override:
                nuclear:
                    constraints:
-                       e_cap_max: 10000
+                       e_cap.max: 10000
        location2:
            level: 0
            techs: ['demand_power']
@@ -148,7 +148,7 @@ An example locations block is:
    *Only* the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
 
    * x_map
-   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap_max, s_cap_max_force, s_init, s_time, s_time_max, use_s_time, r_cap_max, r_area_max, e_cap_max, e_cap_max_scale, e_cap_max_force, rb_eff, rb_cap_max, rb_cap_max_force, rb_cap_follows
+   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap.min, s_cap.max, s_cap.equals, s_init, s_time.max, use_s_time, r_cap.min, r_cap.max, r_cap.equals, r_area.min, r_area.max, r_area.equals, e_cap.min, e_cap.max, e_cap.equals, e_cap_scale, rb_eff, rb_cap.min, rb_cap.max, rb_cap.equals, rb_cap_follow, rb_cap_follow_mode
 
 .. NB this limitation is "implemented" simply by calling get_option with an x=x argument for some options but not for others
 
@@ -172,7 +172,7 @@ Transmission links are defined in the model definition as follows:
       location1,location2:
          transmission-tech:
             constraints:
-               e_cap_max: 10000
+               e_cap.max: 10000
       location1,location3:
          transmission-tech:
             # ...
@@ -303,9 +303,9 @@ Additional constraints can be loaded in ``model.yaml`` by specifying ``constrain
 .. code-block:: yaml
 
    contraints:
-       - constraints.ramping.ramping_rate
+       - constraints.optional.ramping_rate
        - my_custom_module.my_constraint
 
-When resolving constraint names, Calliope first checks whether the constraint is part of Calliope itself (in the above example, this is the case for ``constraints.ramping.ramping_rate``, which is included in Calliope). If the constraint is not found as part of Calliope, the first part of the dot-separated name is interpreted as a Python module name (in the above example, ``my_custom_module``). The module is imported and the constraint loaded from it.
+When resolving constraint names, Calliope first checks whether the constraint is part of Calliope itself (in the above example, this is the case for ``constraints.optional.ramping_rate``, which is included in Calliope). If the constraint is not found as part of Calliope, the first part of the dot-separated name is interpreted as a Python module name (in the above example, ``my_custom_module``). The module is imported and the constraint loaded from it.
 
 This architecture makes it possible to add constraints in a modular way without modifying the Calliope source code. Custom constraints have access to all model configuration, so that additional settings can easily be included anywhere in the model configuration to support the functionality of custom constraints. See :doc:`develop` for information on this.

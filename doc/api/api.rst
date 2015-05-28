@@ -12,13 +12,10 @@ Model class
 Constraints
 ===========
 
-.. automodule:: calliope.constraints.base
-    :members:
-
-.. automodule:: calliope.constraints.group_fraction
-    :members:
-
 .. automodule:: calliope.constraints.objective
+    :members:
+
+.. automodule:: calliope.constraints.base
     :members:
 
 .. automodule:: calliope.constraints.planning

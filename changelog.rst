@@ -9,7 +9,13 @@ Release History
 Major changes
 ~~~~~~~~~~~~~
 
-[added] New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap_max_total``), in addition to its per-node capacity (``e_cap_max``)
+[changed] Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). Not backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
+
+* ``e_cap_max_scale`` becomes ``e_cap_scale``
+* ``rb_cap_follows`` becomes ``rb_cap_follow``, and addition of ``rb_cap_follow_mode``
+* ``s_time_max`` becomes ``s_time.max``
+
+[added] New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap.total_max``), in addition to its per-node capacity (``e_cap.max``)
 
 [changed] All optional constraints are now grouped together, under ``constraints.optional``:
 

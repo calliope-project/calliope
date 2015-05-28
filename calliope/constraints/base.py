@@ -133,7 +133,7 @@ def node_energy_balance(model):
             rbs = 0
 
         # A) Case where no storage allowed
-        if (model.get_option(y + '.constraints.s_cap_max', x=x) == 0 and
+        if (model.get_option(y + '.constraints.s_cap.max', x=x) == 0 and
                 not model.get_option(y + '.constraints.use_s_time', x=x)):
             return m.rs[y, x, t] == e_prod + e_con - rbs
 
@@ -179,6 +179,43 @@ def node_constraints_build(model):
     m = model.m
     d = model.data
 
+    def get_var_constraint(model_var, y, var, x,
+                           _equals=None, _max=None, _min=None,
+                           scale=None):
+
+        if not _equals:
+            _equals = model.get_option(y + '.constraints.'
+                                       + var + '.equals', x=x)
+        if not _max:
+            _max = model.get_option(y + '.constraints.' + var + '.max', x=x)
+        if not _min:
+            _min = model.get_option(y + '.constraints.' + var + '.min', x=x)
+        if scale:
+            _equals = scale * _equals
+            _min = scale * _min
+            _max = scale * _max
+        if _equals:
+            if np.isinf(_equals):
+                e = exceptions.ModelError
+                raise e('Cannot use inf in operational mode, for value of '
+                        '{}.{}.equals.{}'.format(y, var, x))
+            return model_var == _equals
+        elif model.mode == 'operate':
+            # Operational mode but 'equals' constraint not set, we use 'max'
+            # instead
+            # FIXME this should be logged
+            if np.isinf(_max):
+                return po.Constraint.NoConstraint
+            else:
+                return model_var == _max
+        else:
+            if np.isinf(_max):
+                _max = None  # to disable upper bound
+            if _min == 0 and _max is None:
+                return po.Constraint.NoConstraint
+            else:
+                return (_min, model_var, _max)
+
     # Variables
     m.s_cap = po.Var(m.y_pc, m.x, within=po.NonNegativeReals)
     m.r_cap = po.Var(m.y_def_r, m.x, within=po.NonNegativeReals)
@@ -188,93 +225,74 @@ def node_constraints_build(model):
 
     # Constraint rules
     def c_s_cap_rule(m, y, x):
-        max_force = model.get_option(y + '.constraints.s_cap_max_force', x=x)
-        # Get s_cap_max
         if model.get_option(y + '.constraints.use_s_time', x=x):
-            s_time_max = model.get_option(y + '.constraints.s_time_max', x=x)
-            e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
+            scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+            s_time_max = model.get_option(y + '.constraints.s_time.max', x=x)
+            e_cap = model.get_option(y + '.constraints.e_cap.equals', x=x)
+            if not e_cap:
+                e_cap = model.get_option(y + '.constraints.e_cap.max', x=x)
             e_eff_ref = model.get_eff_ref('e', y)
-            s_cap_max = s_time_max * e_cap_max / e_eff_ref
+            s_cap_max = s_time_max * e_cap * scale / e_eff_ref
         else:
-            s_cap_max = model.get_option(y + '.constraints.s_cap_max', x=x)
-        # Apply constraint
-        if max_force or model.mode == 'operate':
-            return m.s_cap[y, x] == s_cap_max
-        elif model.mode == 'plan':
-            return m.s_cap[y, x] <= s_cap_max
+            s_cap_max = None
+
+        return get_var_constraint(m.s_cap[y, x], y, 's_cap', x, _max=s_cap_max)
 
     def c_r_cap_rule(m, y, x):
-        r_cap_max = model.get_option(y + '.constraints.r_cap_max', x=x)
-        if np.isinf(r_cap_max):
-            return po.Constraint.NoConstraint
-        elif model.mode == 'plan':
-            return m.r_cap[y, x] <= r_cap_max
-        elif model.mode == 'operate':
-            return m.r_cap[y, x] == r_cap_max
+        return get_var_constraint(m.r_cap[y, x], y, 'r_cap', x)
 
     def c_r_area_rule(m, y, x):
         area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap')
         if area_per_cap:
             return m.r_area[y, x] == m.e_cap[y, x] * area_per_cap
         else:
-            r_area_max = model.get_option(y + '.constraints.r_area_max', x=x)
-            if r_area_max is False:
-                e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
+            e_cap_max = model.get_option(y + '.constraints.e_cap.max', x=x)
+            if e_cap_max == 0:
                 # If a technology has no e_cap here, we force r_area to zero,
                 # so as not to accrue spurious costs
-                if e_cap_max == 0:
-                    return m.r_area[y, x] == 0
-                else:
-                    return m.r_area[y, x] == 1.0
-            elif model.mode == 'plan':
-                return m.r_area[y, x] <= r_area_max
-            elif model.mode == 'operate':
-                return m.r_area[y, x] == r_area_max
+                return m.r_area[y, x] == 0
+            elif model.get_option(y + '.constraints.r_area.max', x=x) is False:
+                return m.r_area[y, x] == 1
+            else:
+                return get_var_constraint(m.r_area[y, x], y, 'r_area', x)
 
     def c_e_cap_rule(m, y, x):
-        e_cap_max = model.get_option(y + '.constraints.e_cap_max', x=x)
-        e_cap_max_scale = model.get_option(y + '.constraints.e_cap_max_scale',
-                                           x=x)
-        e_cap_max_force = model.get_option(y + '.constraints.e_cap_max_force',
-                                           x=x)
         # First check whether this tech is allowed at this location
         if not d.locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
-        elif np.isinf(e_cap_max):
-            return po.Constraint.NoConstraint
-        elif e_cap_max_force or model.mode == 'operate':
-            return m.e_cap[y, x] == e_cap_max * e_cap_max_scale
-        elif model.mode == 'plan':
-            return m.e_cap[y, x] <= e_cap_max * e_cap_max_scale
+        else:
+            e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+            return get_var_constraint(m.e_cap[y, x], y, 'e_cap', x,
+                                      scale=e_cap_scale)
 
     def c_e_cap_gross_net_rule(m, y, x):
         c_eff = model.get_option(y + '.constraints.c_eff', x=x)
         return m.e_cap[y, x] * c_eff == m.e_cap_net[y, x]
 
     def c_rb_cap_rule(m, y, x):
-        follows = model.get_option(y + '.constraints.rb_cap_follows', x=x)
-        force = model.get_option(y + '.constraints.rb_cap_max_force', x=x)
-        # First, determine what the maximum is
-        if follows == 'r_cap':
-            rb_cap_max = m.r_cap[y, x]
-        elif follows == 'e_cap':
-            rb_cap_max = m.e_cap[y, x]
-        elif follows is not False:
-            # Raise an error to make sure follows isn't accidentally set to
-            # something invalid
-            e = exceptions.ModelError
-            raise e('rb_cab_follows set to invalid value at '
-                    '({}, {}): {}'.format(y, x, follows))
-        else:
-            # If nothing else set up, simply read rb_cap_max from settings
-            rb_cap_max = model.get_option(y + '.constraints.rb_cap_max', x=x)
-        # Then return the appropriate constraint
-        if np.isinf(rb_cap_max):
-            return po.Constraint.NoConstraint
-        elif force or model.mode == 'operate':
-            return m.rb_cap[y, x] == rb_cap_max
-        elif model.mode == 'plan':
-            return m.rb_cap[y, x] <= rb_cap_max
+        follow = model.get_option(y + '.constraints.rb_cap_follow', x=x)
+        mode = model.get_option(y + '.constraints.rb_cap_follow_mode', x=x)
+
+        # First deal with the special case of ``rb_cap_follow`` being set
+        if follow:
+            if follow == 'r_cap':
+                rb_cap_val = m.r_cap[y, x]
+            elif follow == 'e_cap':
+                rb_cap_val = m.e_cap[y, x]
+            elif follow is not False:
+                # Raise an error to make sure follows isn't accidentally set to
+                # something invalid
+                e = exceptions.ModelError
+                raise e('rb_cab_follows set to invalid value at '
+                        '({}, {}): {}'.format(y, x, follows))
+
+            if mode == 'max':
+                return m.rb_cap[y, x] <= rb_cap_val
+            elif mode == 'equals':
+                return m.rb_cap[y, x] == rb_cap_val
+
+        else:  # If ``rb_cap_follow`` not set, set up standard constraints
+            return get_var_constraint(m.rb_cap[y, x], y, 'rb_cap', x)
 
     # Constraints
     m.c_s_cap = po.Constraint(m.y_pc, m.x, rule=c_s_cap_rule)

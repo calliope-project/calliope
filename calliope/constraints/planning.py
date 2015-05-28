@@ -18,21 +18,20 @@ def node_constraints_build_total(model):
 
     # Constraint rules
     def c_e_cap_total_systemwide_rule(m, y):
-        e_cap_max_total = model.get_option(y + '.constraints.'
-                                           'e_cap_max_total')
-        e_cap_max_total_force = model.get_option(y + '.constraints.'
-                                                 'e_cap_max_total_force')
-        e_cap_max_scale = model.get_option(y + '.constraints.e_cap_max_scale')
+        total_max = model.get_option(y + '.constraints.e_cap.total_max')
+        total_equals = model.get_option(y + '.constraints.e_cap.total_equals')
+        scale = model.get_option(y + '.constraints.e_cap_scale')
 
-        if np.isinf(e_cap_max_total):
+        if np.isinf(total_max) and not total_equals:
             return po.Constraint.NoConstraint
+
+        sum_expr = sum(m.e_cap[y, x] for x in m.x)
+        total_expr = total_equals * scale if total_equals else total_max * scale
+
+        if total_equals:
+            return sum_expr == total_expr
         else:
-            sum_expr = sum(m.e_cap[y, x] for x in m.x)
-            total_expr = e_cap_max_total * e_cap_max_scale
-            if e_cap_max_total_force:
-                return sum_expr == total_expr
-            elif model.mode == 'plan':
-                return sum_expr <= total_expr
+            return sum_expr <= total_expr
 
     # Constraints
     m.c_e_cap_total_systemwide = \

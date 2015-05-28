@@ -22,7 +22,7 @@ class TestLocations:
                         r_scale_to_peak: -10
                 ccgt:
                     constraints:
-                        e_cap_max: 10
+                        e_cap.max: 10
         test1:
             level: 1
             within: test
@@ -95,7 +95,7 @@ class TestLocations:
         techs = ['demand', 'unmet_demand', 'ccgt']
         result = locations._generate_location(location, items, techs)
         wanted_cols = ['_level', '_location',
-                       '_override.ccgt.constraints.e_cap_max',
+                       '_override.ccgt.constraints.e_cap.max',
                        '_override.demand.constraints.r',
                        '_override.demand.constraints.r_scale_to_peak',
                        '_override.demand.x_map',
@@ -108,7 +108,7 @@ class TestLocations:
         techs = ['unmet_demand', 'ccgt']
         result = locations._generate_location(location, items, techs)
         wanted_cols = ['_level', '_location',
-                       '_override.ccgt.constraints.e_cap_max',
+                       '_override.ccgt.constraints.e_cap.max',
                        '_override.demand.constraints.r',
                        '_override.demand.constraints.r_scale_to_peak',
                        '_override.demand.x_map',
@@ -161,7 +161,7 @@ class TestLocations:
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp']
         df = locations.generate_location_matrix(sample_locations, techs)
         wanted_cols = ['_level',
-                       '_override.ccgt.constraints.e_cap_max',
+                       '_override.ccgt.constraints.e_cap.max',
                        '_override.demand.constraints.r',
                        '_override.demand.constraints.r_scale_to_peak',
                        '_override.demand.x_map',
@@ -191,7 +191,7 @@ class TestLocations:
         techs = ['ccgt']
         df = locations.generate_location_matrix(sample_locations, techs)
         wanted_cols = ['_level',
-                       '_override.ccgt.constraints.e_cap_max',
+                       '_override.ccgt.constraints.e_cap.max',
                        '_override.demand.constraints.r',
                        '_override.demand.constraints.r_scale_to_peak',
                        '_override.demand.x_map',

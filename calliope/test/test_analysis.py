@@ -21,7 +21,7 @@ class TestModel:
                     override:
                         ccgt:
                             constraints:
-                                e_cap_max: 100
+                                e_cap.max: 100
                         demand_electricity:
                             constraints:
                                 r: -50

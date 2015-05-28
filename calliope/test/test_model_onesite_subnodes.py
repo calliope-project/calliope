@@ -26,7 +26,7 @@ class TestModel:
                     override:
                         ccgt:
                             constraints:
-                                e_cap_max: 25
+                                e_cap.max: 25
             links:
         """
         config_run = """

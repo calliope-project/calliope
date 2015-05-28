@@ -14,7 +14,7 @@ locations:
                     r_scale_to_peak: -40000
             ccgt:
                 constraints:
-                    e_cap_max: 30000
+                    e_cap.max: 30000
 
     r2:
         level: 0
@@ -39,4 +39,4 @@ links:
     r1,r2:
         hvac:
             constraints:
-                e_cap_max: 10000
+                e_cap.max: 10000

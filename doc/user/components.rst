@@ -110,13 +110,13 @@ For nodes that have an internal (parasitic) energy consumption, ``e_cap_net(y, x
 When defining a technology, it must be given at least some constraints, that is, options that describe the functioning of the technology. If not specified, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies). Some examples of such options are:
 
 * ``r(y, x, t)``: available resource (+ source, - sink)
-* ``s_cap_max(y)``: maximum storage capacity
+* ``s_cap.max(y)``: maximum storage capacity
 * ``s_loss(y)``: storage loss rate
-* ``r_area_max(y)``: maximum resource collector area
+* ``r_area.max(y)``: maximum resource collector area
 * ``r_eff(y)``: resource conversion efficiency
-* ``r_cap_max(y)``: maximum resource to storage conversion capacity
+* ``r_cap.max(y)``: maximum resource to storage conversion capacity
 * ``e_eff(y)``: maximum storage to carrier conversion efficiency
-* ``e_cap_max(y)``: maximum installed storage to/from carrier conversion capacity
+* ``e_cap.max(y)``: maximum installed storage to/from carrier conversion capacity
 
 .. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`configuration` for details on this.
 

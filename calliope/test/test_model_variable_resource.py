@@ -26,7 +26,7 @@ class TestModel:
                     override:
                         ccgt:
                             constraints:
-                                e_cap_max: 9
+                                e_cap.max: 9
                 sub2:
                     level: 1
                     within: 1
@@ -35,7 +35,7 @@ class TestModel:
                         pv:
                             x_map: 'sub2: demand'
                             constraints:
-                                e_cap_max: 9
+                                e_cap.max: 9
                                 r: file=demand-sin_r.csv
                                 r_scale_to_peak: 5
 

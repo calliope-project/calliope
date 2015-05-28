@@ -36,31 +36,41 @@ techs:
             force_r: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
             r_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
             r_eff: 1.0  # Resource to/from storage conversion efficiency
-            r_area_max: false  # Installed collector area (m\ :sup:`2`), set this to ``false`` to force to 1.0
+            r_area.min: 0  # Minimum installed collector area (m\ :sup:`2`)
+            r_area.max: false  # Maximum installed collector area (m\ :sup:`2`), set to false by default in order to disable this constraint and force r_area to 1
+            r_area.equals: false  # Specific installed collector area (m\ :sup:`2`)
             r_area_per_e_cap: false  # If set, forces ``r_area`` to follow ``e_cap`` with the given numerical ration (e.g. setting to 1.5 means that ``r_area == 1.5 * e_cap``)
-            r_cap_max: inf  # Maximum installed resource to/from storage conversion capacity (kW)
+            r_cap.min: 0  # Minimum installed resource to/from storage conversion capacity (kW)
+            r_cap.max: inf  # Maximum installed resource to/from storage conversion capacity (kW)
+            r_cap.equals: false  # Specific installed resource to/from storage conversion capacity (kW)
             r_scale: 1.0  # Scale resource by this value
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
             allow_rb: false  # Allow secondary resource
             rb_startup_only: false  # Allow secondary resource during startup_time only (only has an effect if ``allow_rb`` is ``true``)
             rb_eff: 1.0  # Secondary resource to/from storage conversion efficiency
-            rb_cap_max: inf  # Maximum installed secondary resource to storage conversion capacity (kW)
-            rb_cap_max_force: false  # If ``true``, force ``rb_cap`` to equal either ``rb_cap_max`` or the chosen value of ``rb_cap_follows``
-            rb_cap_follows:  false  # Can be set to ``e_cap`` or ``r_cap`` to force ``rb_cap_max`` to the respective value (in which case, ``rb_cap_max`` is ignored). ``false`` to disable
+            rb_cap.min: 0  # Minimum installed secondary resource to storage conversion capacity (kW)
+            rb_cap.max: inf  # Maximum installed secondary resource to storage conversion capacity (kW)
+            rb_cap.equals: 0  # Specific installed secondary resource to storage conversion capacity (kW)
+            rb_cap_follow:  false  # Can be set to ``e_cap`` or ``r_cap`` to set ``rb_cap.max`` to the respective value (in which case, any given ``rb_cap.max`` is ignored). ``false`` to disable
+            rb_cap_follow_mode: 'max'  # Can be set to `max` or `equals` to specifiy which ``rb_cap`` constraint is specific by the variable given in ``rb_cap_follow``
             s_init: 0  # Initial storage level (kWh)
-            s_cap_max: 0  # Maximum storage capacity (kWh)
-            s_cap_max_force: false  # If ``true``, force ``s_cap`` to equal ``s_cap_max``
+            s_cap.min: 0  # Minimum storage capacity (kWh)
+            s_cap.max: 0  # Maximum storage capacity (kWh)
+            s_cap.equals: false  # Specific storage capacity (kWh)
             use_s_time: false  # Use full load hours for storage sizing? (set to ``true`` or ``false``)
-            s_time_max: 0  # Max storage time (full load hours). Only has an effect if ``use_s_time`` is set to ``true``
+            s_time.max: 0  # Max storage time (full load hours). Only has an effect if ``use_s_time`` is set to ``true``
             s_loss: 0  # Storage loss rate (per hour)
             e_prod: true  # Allow this technology to supply energy to the carrier
             e_con: false  # Allow this technology to consume energy from the carrier
             c_eff: 1.0  # Carrier efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
             e_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
             e_eff_ref: false  # Reference storage to/from carrier efficiency. If set to false, e_eff is used instead. Currently only used when for storage size calculation when ``suse_s_time`` is ``true``.
-            e_cap_max: 0  # Maximum installed storage to/from carrier conversion capacity (kW)
-            e_cap_max_force: false  # If ``true``, force ``e_cap`` to equal ``e_cap_max``
-            e_cap_max_scale: 1.0  # Scale ``e_cap_max`` by this value
+            e_cap.min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
+            e_cap.max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
+            e_cap.equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
+            e_cap.total_max: inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
+            e_cap.total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
+            e_cap_scale: 1.0  # Scale all ``e_cap`` min/max/equals/total_max/total_equals constraints by this value
             e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
             e_ramping:  false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
             availability: 1.0  # UNDOCUMENTED -- experimental feature TODO
@@ -92,7 +102,7 @@ techs:
         constraints:
             r: 0
             force_r: true
-            e_cap_max: inf
+            e_cap.max: inf
             e_prod: false
             e_con: true
     unmet_demand:  # Unmet demand that is not child of 'supply' so doesn't get grouped with it
@@ -101,7 +111,7 @@ techs:
         parent: defaults
         constraints:
             r: inf
-            e_cap_max: inf
+            e_cap.max: inf
         costs:
             monetary:
                 om_var: 1.0e+9
@@ -111,7 +121,7 @@ techs:
         parent: supply
         constraints:
             r: inf
-            e_cap_max: inf
+            e_cap.max: inf
         costs:
             monetary:
                 om_var: 1.0e+9
@@ -124,7 +134,7 @@ techs:
         parent: defaults
         constraints:
             r: inf
-            e_cap_max: inf
+            e_cap.max: inf
             e_con: true
     conversion:  # ``r`` is not used but still must be defined as inf
         parent: defaults

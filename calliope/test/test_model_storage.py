@@ -19,11 +19,11 @@ class TestModel:
                     override:
                         test_storage:
                             constraints:
-                                e_cap_max: 0.5
+                                e_cap.max: 0.5
                                 s_init: 0
                         ccgt:
                             constraints:
-                                e_cap_max: 9.5
+                                e_cap.max: 9.5
                         demand_electricity:
                             x_map: '1: demand'
                             constraints:

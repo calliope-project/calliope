@@ -4,7 +4,7 @@ techs:
         carrier: power
         constraints:
             r: inf
-            e_cap_max: 50
+            e_cap.max: 50
             e_eff_ref: false
         costs:
             monetary:
@@ -15,15 +15,15 @@ techs:
         carrier: power
         constraints:
             use_s_time: false
-            s_time: 10
-            s_cap_max: 1000
+            s_time.max: 10
+            s_cap.max: 1000
             s_loss: 0.002
             r: 20
             r_eff: 0.9
-            r_area_max: 100
+            r_area.max: 100
             e_eff: 0.3
             e_eff_ref: 0.4
-            e_cap_max: 20
+            e_cap.max: 20
         costs:
             monetary:
                 s_cap: 5
@@ -36,7 +36,7 @@ techs:
         carrier: power
         constraints:
             r: 0
-            e_cap_max: 50
+            e_cap.max: 50
         costs:
             monetary:
                 e_cap: 20
@@ -44,8 +44,8 @@ techs:
         parent: storage
         carrier: power
         constraints:
-            e_cap_max: 100
-            s_cap_max: 100
+            e_cap.max: 100
+            s_cap.max: 100
             s_loss: 0.002
         costs:
             monetary:

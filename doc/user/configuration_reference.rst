@@ -75,7 +75,7 @@ Optional model-wide settings with no default values (example settings are shown 
 .. code-block:: yaml
 
    constraints:  # List of additional constraints
-       - constraints.ramping.ramping_rate
+       - constraints.optional.ramping_rate
        # ... other constraints to load ...
 
    group_fraction:

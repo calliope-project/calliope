@@ -15,7 +15,7 @@ techs:
         constraints:
             r: inf
             r_eff: 0.5
-            e_cap_max: 40000  # kW
+            e_cap.max: 40000  # kW
         costs:
             monetary:
                 e_cap: 750  # USD per kW
@@ -28,13 +28,13 @@ techs:
         carrier: power
         constraints:
             use_s_time: true
-            s_time_max: 24
+            s_time.max: 24
             s_loss: 0.002
             r: file  # Will look for `csp_r.csv` in data directory
             e_eff: 0.4
             c_eff: 0.9
-            r_area_max: inf
-            e_cap_max: 10000
+            r_area.max: inf
+            e_cap.max: 10000
         costs:
             monetary:
                 s_cap: 50

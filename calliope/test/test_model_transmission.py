@@ -30,13 +30,13 @@ class TestModel:
                     override:
                         ccgt:
                             constraints:
-                                e_cap_max: 60
+                                e_cap.max: 60
             links:
                 1,2:
                     hvac:
                         constraints:
                             e_eff: 0.90
-                            e_cap_max: 100
+                            e_cap.max: 100
         """
         config_run = """
             mode: plan
