@@ -21,6 +21,17 @@ import yaml
 from . import exceptions
 
 
+class __Missing(object):
+    def __repr__(self):
+        return ('MISSING')
+
+    def __nonzero__(self):
+        return False
+
+
+_MISSING = __Missing()
+
+
 class AttrDict(dict):
     """
     A subclass of ``dict`` with key access by attributes::
@@ -132,19 +143,19 @@ class AttrDict(dict):
         else:
             self[key] = value
 
-    def get_key(self, key, default=None):
+    def get_key(self, key, default=_MISSING):
         """
         Looks up the given ``key``. Like set_key(), deals with nested
         keys.
 
-        If default is given and not None (it may be, for example, False),
-        returns default if encounters a KeyError during lookup
+        If default is anything but the default _MISSING value, the given
+        default is returned if a KeyError is encountered during lookup.
 
         """
         if '.' in key:
             # Nested key of form "foo.bar"
             key, remainder = key.split('.', 1)
-            if default is not None:
+            if default != _MISSING:
                 try:
                     value = self[key].get_key(remainder, default)
                 except KeyError:
@@ -157,7 +168,7 @@ class AttrDict(dict):
                 value = self[key].get_key(remainder)
         else:
             # Single, non-nested key of form "foo"
-            if default is not None:
+            if default != _MISSING:
                 return self.get(key, default)
             else:
                 return self[key]
