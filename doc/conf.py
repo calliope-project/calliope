@@ -54,7 +54,7 @@ MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot',
                 'click']
 
 for m in MOCK_MODULES:
-  sys.modules[m] = Mock()
+    sys.modules[m] = Mock()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -257,8 +257,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Calliope.tex', 'Calliope Documentation',
-   'Stefan Pfenninger', 'manual'),
+    ('index', 'Calliope.tex', 'Calliope Documentation',
+     'Stefan Pfenninger', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -301,9 +301,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Calliope', 'Calliope Documentation',
-   'Stefan Pfenninger', 'Calliope', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'Calliope', 'Calliope Documentation',
+     'Stefan Pfenninger', 'Calliope', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
