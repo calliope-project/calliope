@@ -1,7 +1,7 @@
+.. include:: definitions.rst
 
 Release History
 ===============
-
 
 0.3.5 (dev)
 -----------
@@ -9,15 +9,17 @@ Release History
 Major changes
 ~~~~~~~~~~~~~
 
-[changed] Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). Not backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
+|changed| Removed the ``level`` option for locations. Level is now implicitly derived from the nested structure given by the ``within`` settings. Locations that define no or an empty ``within`` are implicitly at the topmost (0) level.
+
+|changed| |backwards-incompatible| Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). Not backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
 
 * ``e_cap_max_scale`` becomes ``e_cap_scale``
 * ``rb_cap_follows`` becomes ``rb_cap_follow``, and addition of ``rb_cap_follow_mode``
 * ``s_time_max`` becomes ``s_time.max``
 
-[added] New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap.total_max``), in addition to its per-node capacity (``e_cap.max``)
+|new| New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap.total_max``), in addition to its per-node capacity (``e_cap.max``)
 
-[changed] All optional constraints are now grouped together, under ``constraints.optional``:
+|changed| |backwards-incompatible| All optional constraints are now grouped together, under ``constraints.optional``:
 
 * ``constraints.group_fraction.group_fraction`` becomes ``constraints.optional.group_fraction``
 * ``constraints.ramping.ramping_rate`` becomes ``constraints.optional.ramping_rate``
@@ -25,14 +27,14 @@ Major changes
 Other changes
 ~~~~~~~~~~~~~
 
-* [changed] Improved summary table in the model solution: now shows only aggregate information for transmission technologies, also added missing ``s_cap`` column and technology type
-* [fixed] Bug causing some total levelized transmission costs to be infinite instead of zero
-* [fixed] Bug causing some CSV solution files to be empty
+* |changed| Improved summary table in the model solution: now shows only aggregate information for transmission technologies, also added missing ``s_cap`` column and technology type
+* |fixed| Bug causing some total levelized transmission costs to be infinite instead of zero
+* |fixed| Bug causing some CSV solution files to be empty
 
 0.3.4 (2015-04-27)
 ------------------
 
-* [fixed] Bug in construction and fixed O&M cost calculations in operational mode
+* |fixed| Bug in construction and fixed O&M cost calculations in operational mode
 
 0.3.3 (2015-04-03)
 ------------------
@@ -40,30 +42,30 @@ Other changes
 Major changes
 ~~~~~~~~~~~~~
 
-[changed] In preparation for future enhancements, the ordering of location levels is flipped. The top-level locations at which balancing takes place is now level 0, and may contain level 1 locations. This is a backwards-incompatible change.
+|changed| In preparation for future enhancements, the ordering of location levels is flipped. The top-level locations at which balancing takes place is now level 0, and may contain level 1 locations. This is a backwards-incompatible change.
 
-[changed] Refactored time resolution adjustment functionality. Can now give a list of masks in the run configuration which will all be applied, via ``time.masks``, with a base resolution via ``time.resolution`` (or instead, as before, load a resolution series from file via ``time.file``). Renamed the ``time_functions`` submodule to ``time_masks``.
+|changed| Refactored time resolution adjustment functionality. Can now give a list of masks in the run configuration which will all be applied, via ``time.masks``, with a base resolution via ``time.resolution`` (or instead, as before, load a resolution series from file via ``time.file``). Renamed the ``time_functions`` submodule to ``time_masks``.
 
 Other changes
 ~~~~~~~~~~~~~
 
-* [new] Models and runs have can have a ``name``
-* [changed] More verbose ``calliope run``
-* [changed] Analysis tools restructured
-* [changed] Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
+* |new| Models and runs have can have a ``name``
+* |changed| More verbose ``calliope run``
+* |changed| Analysis tools restructured
+* |changed| Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
 
 0.3.2 (2015-02-13)
 ------------------
 
-* [new] Run setting ``model_override`` allows specifying the path to a YAML file with overrides for the model configuration, applied at model initialization (path is given relative to the run configuration file used). This is in addition to the existing ``override`` setting, and is applied first (so ``override`` can override ``model_override``).
-* [new] Run settings ``output.save_constraints`` and ``output.save_constraints_options``
-* [new] Run setting ``parallel.post_run``
-* [changed] Solution column names more in line with model component names
-* [changed] Can specify more than one output format as a list, e.g. ``output.format: ['csv', 'hdf']``
-* [changed] Run setting ``parallel.additional_lines`` renamed to ``parallel.pre_run``
-* [changed] Better error messages and CLI error handling
-* [fixed] Bug on saving YAML files with numpy dtypes fixed
-* [changed/fixed] Other minor improvements and fixes
+* |new| Run setting ``model_override`` allows specifying the path to a YAML file with overrides for the model configuration, applied at model initialization (path is given relative to the run configuration file used). This is in addition to the existing ``override`` setting, and is applied first (so ``override`` can override ``model_override``).
+* |new| Run settings ``output.save_constraints`` and ``output.save_constraints_options``
+* |new| Run setting ``parallel.post_run``
+* |changed| Solution column names more in line with model component names
+* |changed| Can specify more than one output format as a list, e.g. ``output.format: ['csv', 'hdf']``
+* |changed| Run setting ``parallel.additional_lines`` renamed to ``parallel.pre_run``
+* |changed| Better error messages and CLI error handling
+* |fixed| Bug on saving YAML files with numpy dtypes fixed
+* Other minor improvements and fixes
 
 0.3.1 (2015-01-06)
 ------------------

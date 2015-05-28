@@ -642,3 +642,47 @@ a:hover tt {
 .revsys-inline {
     display: none!important;
 }
+
+
+/* colored changelog boxes */
+
+
+.green {
+  background-color: rgba(0, 151, 142, 0.25);
+  color: #00978e;
+  border-radius: 2px;
+  padding: 1px 4px 1px 4px;
+  font-size: 0.9em;
+}
+
+.blue {
+  background-color: rgba(0, 83, 159, 0.25);
+  color: #00539f;
+  border-radius: 2px;
+  padding: 1px 4px 1px 4px;
+  font-size: 0.9em;
+}
+
+.red {
+  background-color: rgba(217, 57, 54, 0.25);
+  color: #D93936;
+  border-radius: 2px;
+  padding: 1px 4px 1px 4px;
+  font-size: 0.9em;
+}
+
+.yellow {
+  background-color: rgba(254, 247, 80, 0.5);
+  color: #757719;
+  border-radius: 2px;
+  padding: 1px 4px 1px 4px;
+  font-size: 0.9em;
+}
+
+.grey {
+  background-color: rgba(73, 73, 73, 0.25);
+  color: #494949;
+  border-radius: 2px;
+  padding: 1px 4px 1px 4px;
+  font-size: 0.9em;
+}

@@ -11,8 +11,6 @@ class TestLocations:
     def sample_locations(self):
         setup = StringIO("""
         test:
-            level: 0
-            within:
             techs: ['demand', 'unmet_demand', 'ccgt']
             override:
                 demand:
@@ -24,7 +22,6 @@ class TestLocations:
                     constraints:
                         e_cap.max: 10
         test1:
-            level: 1
             within: test
             techs: ['csp']
         """)
@@ -54,24 +51,20 @@ class TestLocations:
     def sample_nested_locations(self):
         setup = StringIO("""
         1,2,3:
-            level: 0
-            within:
             techs: ['foo']
         foo:
-            level: 0
-            within:
             techs: ['foo']
         10,11,12:
-            level: 1
             within: 1
             techs: ['foo']
         20,21,22:
-            level: 1
             within: 2
             techs: ['foo']
         bar,baz:
-            level: 1
             within: foo
+            techs: ['foo']
+        qux:
+            within: bar
             techs: ['foo']
         """)
         return utils.AttrDict.from_yaml(setup)
@@ -80,8 +73,6 @@ class TestLocations:
     def sample_overlapping_locations(self):
         setup = StringIO("""
         1,2,3:
-            level: 0
-            within:
             techs: ['foo']
         1:
             override:
@@ -156,6 +147,13 @@ class TestLocations:
         o = locations.process_locations(fixture)
         assert o['1'].level == 0
         assert o['1'].override.bar == 'baz'
+
+    def test_process_locations_levels(self, sample_nested_locations):
+        fixture = sample_nested_locations
+        o = locations.process_locations(fixture)
+        assert o['1'].level == 0
+        assert o['bar'].level == 1
+        assert o['qux'].level == 2
 
     def test_generate_location_matrix_cols(self, sample_locations):
         techs = ['demand', 'unmet_demand', 'ccgt', 'csp']

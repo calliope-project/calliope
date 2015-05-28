@@ -12,15 +12,12 @@ class TestModel:
         locations = """
             locations:
                 1:
-                    level: 0
-                    within:
                     techs: ['demand_electricity']
                     override:
                         demand_electricity:
                             constraints:
                                 r: -50
                 sub1,sub2:
-                    level: 1
                     within: 1
                     techs: ['ccgt']
                     override:

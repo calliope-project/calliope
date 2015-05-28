@@ -129,17 +129,14 @@ An example locations block is:
 
    locations:
        location1:
-           level: 0
            techs: ['demand_power', 'nuclear']
            override:
                nuclear:
                    constraints:
                        e_cap.max: 10000
        location2:
-           level: 0
            techs: ['demand_power']
        offshore1, offshore2:
-           level: 1
            within: location2
            techs: ['offshore_wind']
 

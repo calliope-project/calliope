@@ -411,19 +411,34 @@ def option_getter(config_model, data):
             return result
 
         def _get_location_option(key, location):
-            # NB: KeyErrors raised here are always caught within _get_option
-            # so need no further information or handling
-            # Raises KeyError if the specific _override column does not exist
-            result = d.locations.at[location, '_override.' + key]
-            # Also raise KeyError if the result is NaN, i.e. if no
-            # location-specific override has been defined
-            try:
-                if np.isnan(result):
-                    raise KeyError
-            # Have to catch this because np.isnan not implemented for strings
-            except TypeError:
-                pass
-            return result
+
+            def getter(key, location):
+                # NB: KeyErrors raised here are always caught within _get_option
+                # so need no further information or handling
+                # Raises KeyError if the specific _override column does not exist
+                result = d.locations.at[location, '_override.' + key]
+                # Also raise KeyError if the result is NaN, i.e. if no
+                # location-specific override has been defined
+                try:
+                    if np.isnan(result):
+                        raise KeyError
+                # Have to catch this because np.isnan not implemented for strings
+                except TypeError:
+                    pass
+                return result
+
+            while True:
+                try:
+                    return getter(key, location)
+                except KeyError:
+                    parent_location = d.locations.at[location, '_within']
+                    if parent_location:  # Will be None if no parent
+                        return getter(key, parent_location)
+                    else:
+                        # Once top of "location inheritance" chain reached,
+                        # raise KeyError, which will cause the calling function
+                        # to fall back to non-location specific settings
+                        raise
 
         if x:
             try:

@@ -146,8 +146,6 @@ class TestInitialization:
                     override:
                         locations:
                             demand:
-                                level: 0
-                                within:
                                 techs: ['']
                     """
         override = calliope.utils.AttrDict.from_yaml_string(locations)
@@ -214,12 +212,8 @@ class TestInitialization:
         locations = """
             locations:
                 demand:
-                    level: 0
-                    within:
                     techs: ['demand_electricity']
                 1,2:
-                    level: 0
-                    within:
                     techs: ['ccgt', 'csp']
             links:
                 1,2:

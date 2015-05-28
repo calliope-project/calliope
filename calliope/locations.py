@@ -25,16 +25,10 @@ def _generate_location(location, items, techs):
         items : (AttrDict) location settings
         techs : (list) list of available technologies
     """
-    # Sanity check level: it can only currently be either 0 or 1
-    if items.level not in [0, 1]:
-        msg = '`level` must be 0 or 1 at location `{}`'.format(location)
-        raise exceptions.ModelError(msg)
     # Mandatory basics
-    try:
-        within = items.within
-    except KeyError:
-        within = None
-    d = {'_location': location, '_level': items.level,
+    within = items.get('within', None)
+    level = items.get('level', None)
+    d = {'_location': location, '_level': level,
          '_within': str(within)}
     # Override
     if 'override' in items:
@@ -83,6 +77,28 @@ def explode_locations(k):
     return finalkeys
 
 
+def set_location_levels(locations):
+    locset = set(locations.keys())
+
+    curr_lvl = 0
+
+    for l in tuple(locset):
+        if 'within' not in locations[l] or locations[l].within is None:
+            locations[l].level = curr_lvl
+            locset.remove(l)
+
+    while len(locset) > 0:
+        curr_lvl += 1
+        to_subtract = set()
+        for l in tuple(locset):
+            if locations[l].within not in locset:
+                locations[l].level = curr_lvl
+                to_subtract.add(l)
+        locset = locset - to_subtract
+
+    return locations
+
+
 def process_locations(d):
     """
     Process locations by taking an AttrDict that may include compact keys
@@ -107,7 +123,8 @@ def process_locations(d):
                 _set_loc_key(loc_dict, subkey, d[key].copy())
         else:
             _set_loc_key(loc_dict, key, d[key].copy())
-    return loc_dict
+    locations = set_location_levels(loc_dict)
+    return locations
 
 
 def generate_location_matrix(d, techs):
