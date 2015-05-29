@@ -18,10 +18,10 @@ Main features:
 
 * Generic technology definition allows modeling any mix of production, storage and consumption
 * Resolved in space: define locations with individual resource potentials
-* Resolved in time: can read time series with arbitrary resolution
-* Model specification in an easy-to-read YAML format
+* Resolved in time: read time series with arbitrary resolution
+* Model specification in an easy-to-read and machine-processable YAML format
 * Able to run on computing clusters
-* Easily extensible
+* Easily extensible in a modular way: custom constraint generator functions and custom time mask functions
 * Uses a state-of-the-art Python toolchain based on `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_ and `Pandas <http://pandas.pydata.org/>`_
 * Freely available under the Apache 2.0 license
 

@@ -14,6 +14,9 @@ import pyomo.core as po
 
 
 def node_constraints_build_total(model):
+    """
+
+    """
     m = model.m
 
     # Constraint rules

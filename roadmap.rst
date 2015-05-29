@@ -4,11 +4,6 @@ This is a non-exhaustive overview of planned improvements. There is no fixed tim
 Upcoming release plans
 ======================
 
-v0.3.5
-------
-
-* Improved and more general configuration for constraints
-
 v0.4.0
 ------
 
@@ -18,14 +13,9 @@ v0.4.0
 v0.5.0
 ------
 
-* Better timestep selection algorithms
-* Implement aliases in configuration
-
-
-Other planned improvements
-==========================
-
+* Better time mask functions
 * Multi-run configuration generator, e.g. with the ability to draw values for a specific parameter from a given distribution
+* Configuration aliases
 * Metadata handling in configuration objects
     - Keep track of source file and line of each setting
     - Permit dynamically updating configuration files
