@@ -66,7 +66,7 @@ def mask_relative_difference(data, target1, target2, days=5,
             # `selected` is the index of the first timestamp in the chosen day
             selected = data._dt[data._dt.dt.date == r].index[0]
             start = selected - padding_days * day_len
-            end = selected + padding_days * day_len
+            end = selected + (padding_days + 1) * day_len
             periods.append((start, end))
         return periods
 

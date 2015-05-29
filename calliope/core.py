@@ -318,12 +318,11 @@ class Model(BaseModel):
                     else:
                         mask = mask_func(self.data)
                     masks.append(mask)
-                if 'resolution' in time:
-                    mask_res = time.resolution
-                else:
-                    mask_res = None
+                mask_res = time.get('resolution', None)
+                mask_drop_with_padding = time.get('drop_with_padding', False)
                 converter = time_tools.masks_to_resolution_series
-                series = converter(masks, how='or', resolution=mask_res)
+                series = converter(masks, how='or', resolution=mask_res,
+                                   drop_with_padding=mask_drop_with_padding)
             elif 'resolution' in time:
                 if self.data.time_res_static == time.resolution:
                     # If time.resolution is set to the resolution that

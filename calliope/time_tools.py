@@ -12,8 +12,8 @@ is a pandas Series with the same index as the input data, where each
 time step is one of:
 
 * a positive integer (signifying how many timesteps to summarize),
-* -1 (following a positive integer and marking the timesteps that
-  are summarized),
+* -1 (marks timesteps that will be summarized if following a positive integer,
+  or dropped otherwise),
 * or 0 (no resolution adjustment to this timestep).
 
 The name of a resolution series must always be 'resolution_series'.
@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 from . import utils
+from . import exceptions
 
 
 class TimeSummarizer(object):
@@ -102,7 +103,7 @@ class TimeSummarizer(object):
         For each timestep, the ``series`` can either be 0 (no
         adjustment), >0 (marks the first timestep to be compressed, with
         the integer value giving the number of timesteps to compress) or
-        -1 (marks timesteps following a >0 timestep that will be compressed).
+        -1 (marks timesteps that will be dropped or compressed).
 
         For example, ``series`` could contain::
 
@@ -120,21 +121,21 @@ class TimeSummarizer(object):
             'Mask and data must have same length.'
         df = pd.DataFrame(series, index=series.index)
         df.columns = ['summarize']  # rename the single column
-        df['time_res'] = data.time_res_static
-        df['to_keep'] = 1
+        resolution = data.time_res_static
+        df['time_res'] = resolution
+        df['to_keep'] = 0
+        # Set to_keep to 1 where the series is 0, i.e. where timesteps
+        # should not be touched
+        df.loc[df[df.summarize == 0].index, 'to_keep'] = 1
         # Get all time steps that need summarizing
         entry_points = df.summarize[df.summarize > 0]
         # 1. Summarize by calling _reduce_resolution for the desired ranges
-        # This step still keeps the summarized data but marks it by setting
-        # `to_keep` 0
         for i, v in entry_points.items():
             ifrom = i
             ito = i + int(v / data.time_res_static)
             resolution = v
             self._reduce_resolution(data, resolution, t_range=(ifrom, ito))
-            # Mark the rows that need to be killed with 0
-            # Need ifrom+1 and ito-1 because .loc includes start and end slice
-            df.loc[ifrom + 1:ito - 1, 'to_keep'] = 0
+            df.at[ifrom, 'to_keep'] = 1  # Mark the timestep to keep
             df.at[ifrom, 'time_res'] = resolution
         # 2. Replace all data with its subset where to_keep is 1
         # Create boolean mask with the right length -- but ignore index by
@@ -192,7 +193,8 @@ class TimeSummarizer(object):
         return result
 
 
-def masks_to_resolution_series(masks, how='or', resolution=None):
+def masks_to_resolution_series(masks, how='or', resolution=None,
+                               drop_with_padding=False):
     """
     Converts a list of overlapping masks into a series of time step
     resolutions.
@@ -204,25 +206,41 @@ def masks_to_resolution_series(masks, how='or', resolution=None):
     resolution : int, default None
         If given, will break up masked areas into timesteps of at most
         the given length (with possibly a over timestep at a lower
-        length at the end of the masked area). If None, all contingent
-        masked areas become single timesteps.
+        length at the end of the masked area).
+        If None, all contingent masked areas become single timesteps.
+    drop_with_padding : int, default False
+        If given, all masked areas are dropped, except for a padding area
+        around the retained high-resolution areas. The padding is determined
+        by ``drop_with_padding * resolution``, so if drop_with padding is
+        1 and resolution is 24, a single 24-hour timestep each will be kept
+        before and after each high-resolution area. If set and resolution
+        is None an error is raised, unless set to 0, which will drop all
+        non-masked areas without padding.
 
     """
+    # Validate options
+    if resolution is None and drop_with_padding > 0:
+        e = exceptions.ModelError
+        raise e('If drop_with_padding is given and > 0, '
+                'resolution cannot be None.')
+
     if not isinstance(masks, list) or isinstance(masks, tuple):
         masks = [masks]
     # combine all masks into one
     df = pd.DataFrame({i: x for i, x in enumerate(masks)})
+
     if how == 'or':
         mask = df.sum(axis=1)
     elif how == 'and':
         # joiner: only return 1 if all items in the row are 1, else return 0
         joiner = lambda row: 1 if sum(row) == len(row) else 0
         mask = df.apply(joiner, axis=1)
+
     istart = 0
     end = False
     while not end:
-        ifrom = mask[istart:].argmax()
-        ito = mask[ifrom:].argmin()
+        ifrom = mask[istart:].argmax()  # Find first 1
+        ito = mask[ifrom:].argmin()  # Find first 0 after series of 1s
         if ifrom == ito:  # Reached the end!
             ito = len(mask)
             end = True
@@ -232,14 +250,34 @@ def masks_to_resolution_series(masks, how='or', resolution=None):
             if mask[ito - 1] == 0:
                 break
         step_resolution = ito - ifrom
-        mask[ifrom] = step_resolution
-        mask[ifrom + 1:ito] = -1
+        # Start by dropping the entire masked area, and if drop_with_padding
+        # is 0, that's all we do (drop it all)
+        mask[ifrom:ito] = -1
+        if drop_with_padding > 0:
+            # Drop masked areas with  padding
+            # Need to add padding before and after unmasked areas
+            if ifrom > 0:  # Don't add padding at beginning of the series
+                pad_after_end = ifrom + drop_with_padding * resolution
+                for i in range(ifrom, pad_after_end, resolution):
+                    mask[i] = resolution
+            if ito != len(mask):  # Don't add padding at the end of the series
+                pad_before_start = ito - drop_with_padding * resolution
+                for i in range(pad_before_start, ito, resolution):
+                    mask[i] = resolution
+        elif drop_with_padding != 0:
+            # Check for 0, because we want to do nothing if it's zero
+            # If dropping is None (implicitly), summarize into one step for now
+            mask[ifrom] = step_resolution
         # Correct edge case where only one timestep would be "summarized"
         if mask[ifrom] >= 1 and step_resolution == 1:
             mask[ifrom] = 0
         istart = ito
-    # Apply max_timesteps
-    if resolution:
+
+    # If we didn't drop_with_padding, but want a resolution reduction
+    # in masked areas, we go through the masked areas again
+    # and split them into smaller chunks
+    # FIXME assumes that data is in 1-hourly resolution?
+    if resolution is not None and drop_with_padding is False:
         for index, value in mask[mask > resolution].iteritems():
             end_index = index + value
             summary_index = list(range(index, end_index, resolution))
@@ -248,6 +286,7 @@ def masks_to_resolution_series(masks, how='or', resolution=None):
                     mask[i] = resolution
                 else:  # Make sure the last timestep isn't too long
                     mask[i] = end_index - i
+
     mask.name = 'resolution_series'
     return mask
 

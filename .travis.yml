@@ -13,7 +13,7 @@ install:
   - "pip-accel install -r requirements.txt"
   - 'pip-accel install cython --install-option="--no-cython-compile"'
   - "pip-accel install tables==3.1.0"  # Fails if in requirements.txt
-  - "pip install ."
+  - "pip install --no-cache-dir ."
 cache:
   directories:
     - $HOME/.pip-accel
