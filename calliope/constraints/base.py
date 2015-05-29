@@ -563,30 +563,39 @@ def model_constraints(model):
         return list(locations[locations._level == level].index)
 
     @utils.memoize
-    def get_children(parent):
+    def get_children(parent, childless_only=True):
+        """
+        If childless_only is True, only children that have no children
+        themselves are returned.
+
+        """
         locations = model.data.locations
-        return list(locations[locations._within == parent].index)
+        children = list(locations[locations._within == parent].index)
+        if childless_only:  # FIXME childless_only param needs tests
+            children = [i for i in children if len(get_children(i)) == 0]
+        return children
 
     # Constraint rules
     def c_system_balance_rule(m, c, x, t):
-        # Hardcoded: balancing takes place between locations on level 0 only
-        parents = get_parents(0)
-        if x not in parents:
-            return po.Constraint.NoConstraint
-        else:
-            fam = get_children(x) + [x]  # list of children + parent
+        # Balacing takes place at top-most (level 0) locations, as well
+        # as within any lower-level locations that contain children
+        if (model.data.locations.at[x, '_level'] == 0
+                or len(get_children(x)) > 0):
+            family = get_children(x) + [x]  # list of children + parent
             balance = (sum(m.es_prod[c, y, xs, t]
-                           for xs in fam for y in m.y_np)
+                           for xs in family for y in m.y_np)
                        + sum(m.ec_prod[c, y, xs, t]
-                             for xs in fam for y in m.y_p)
+                             for xs in family for y in m.y_p)
                        + sum(m.es_con[c, y, xs, t]
-                             for xs in fam for y in m.y_np)
+                             for xs in family for y in m.y_np)
                        + sum(m.ec_con[c, y, xs, t]
-                             for xs in fam for y in m.y_p))
+                             for xs in family for y in m.y_p))
             if c == 'power':
                 return balance == 0
             else:  # e.g. for heat
                 return balance >= 0
+        else:
+            return po.Constraint.NoConstraint
 
     # Constraints
     m.c_system_balance = po.Constraint(m.c, m.x, m.t,
