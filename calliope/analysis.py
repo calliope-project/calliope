@@ -9,7 +9,6 @@ Functionality to analyze model results.
 
 """
 
-import itertools
 import logging
 
 try:
@@ -21,6 +20,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
+from . import core
 from . import utils
 from . import analysis_utils as au
 
@@ -260,7 +260,7 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     carrier : str, default 'power'
     count_unmet_demand : bool, default False
         Whether to count the cost of unmet demand in the final
-        delivered cost
+        delivered cost.
     unit_multiplier : float or int, default 1.0
         Adjust unit of the returned cost value. For example, if model units
         are kW and kWh, ``unit_multiplier=1.0`` will return cost per kWh, and
@@ -310,28 +310,6 @@ def get_group_share(solution, techs, group_type='supply',
     return supply_group / supply_total
 
 
-def get_supply_groups(solution):
-    """
-    Get individual supply technologies and those groups that define
-    group == True, for purposes of calculating diversity of supply
-
-    """
-    # idx_1: group is True and '|' in members
-    grp_1 = solution.shares.query('group == True & type == "supply"')
-    idx_1 = grp_1[(grp_1.members != grp_1.index)
-                  & (grp_1.members.str.contains('\|'))].index.tolist()
-    # idx_2: group is False and no '|' in members
-    grp_2 = solution.shares.query('group == False & type == "supply"')
-    idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
-    # Also drop entries from idx_2 that are already covered by
-    # groups in idx_1
-    covered = [i.split('|')
-               for i in solution.shares.loc[idx_1, 'members'].tolist()]
-    covered_flat = [i for i in itertools.chain.from_iterable(covered)]
-    idx_2 = [i for i in idx_2 if i not in covered_flat]
-    return idx_1 + idx_2
-
-
 def get_unmet_demand_hours(solution, carrier='power', details=False):
     """
     Get information about unmet demand from ``solution``.
@@ -378,7 +356,7 @@ def get_swi(solution, shares_var='e_cap', exclude_patterns=['unmet_demand']):
     :math:`SWI` is zero when there is perfect concentration.
 
     """
-    techs = get_supply_groups(solution)
+    techs = au.get_supply_groups(solution)
     for pattern in exclude_patterns:
         techs = [t for t in techs if pattern not in t]
     swi = -1 * sum((p * np.log(p))
@@ -399,7 +377,7 @@ def get_hhi(solution, shares_var='e_cap', exclude_patterns=['unmet_demand']):
     considered a sign of a concentrated market.
 
     """
-    techs = get_supply_groups(solution)
+    techs = au.get_supply_groups(solution)
     for pattern in exclude_patterns:
         techs = [t for t in techs if pattern not in t]
     hhi = sum((solution.shares.at[y, shares_var] * 100.) ** 2 for y in techs)
@@ -419,19 +397,42 @@ def get_domestic_supply_index(solution):
     return dom
 
 
-class DummyModel(object):
+def map_results(results, func):
+    """
+    Applies ``func`` to each model solution in ``results``, returning
+    a pandas Series indexed by the run names (if available).
+
+    """
+    def map_func(x):
+        try:
+            return func(x)
+        except Exception:
+            return np.nan
+
+    iterations = results.iterations.index
+    items = [map_func(results.solutions[i]) for i in iterations]
+    names = [results.solutions[i].config_run.name
+             if 'name' in results.solutions[i].config_run
+             else i
+             for i in iterations]
+
+    return pd.Series(items, index=names)
+
+
+class SolutionModel(core.BaseModel):
     def __init__(self, solution):
         """
-        Create a dummy model object from a model solution,
-        which gives direct access to the ``config_model`` AttrDict and
-        the ``get_option``, ``get_cost``, and ``get_depreciation``
-        methods.
+        Dummy model created from a model solution,
+        which gives access to the ``config_model`` AttrDict and a subset
+        of Model methods, including ``get_option``, ``get_cost``, and
+        ``get_depreciation``.
 
         Furthermore, it provides several ``recompute_`` methods
         to recalculate costs for a given technology after modifying the
         underlying data.
 
         """
+        super().__init__()
         self.config_model = solution.config_model
         self.solution = solution
         data_keys = [k for k in solution.keys() if 'data/' in k]

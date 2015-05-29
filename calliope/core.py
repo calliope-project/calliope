@@ -146,9 +146,18 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
     return o
 
 
-class Model(object):
+class BaseModel(object):
     """
-    Calliope: a multi-scale energy systems (MUSES) modeling framework
+    Base model class.
+
+    """
+    def __init__(self):
+        super().__init__()
+
+
+class Model(BaseModel):
+    """
+    Calliope model.
 
     Parameters
     ----------
@@ -171,7 +180,7 @@ class Model(object):
     """
     def __init__(self, config_run=None, override=None,
                  initialize_config_only=False):
-        super(Model, self).__init__()
+        super().__init__()
         self.verbose = False
         self.time_format = '%Y-%m-%d %H:%M:%S'
         self.debug = utils.AttrDict()
@@ -1519,13 +1528,15 @@ class Model(object):
         # Now go through each transmission tech and sum it up into one row,
         # appending this to the summary df
         transmission_basetechs = set([t for t in df.basename
-                                     if self.get_parent(t) == 'transmission'])
+                                      if self.get_parent(t)
+                                      == 'transmission'])
 
         for basename in transmission_basetechs:
             if df.basename.str.contains(basename).any():
                 temp = df.query('basename == "{}"'.format(basename))
                 temp_sum = temp.sum()
-                cf_cost_cols = ['cf'] + [c for c in df.columns if 'cost_' in c]
+                cf_cost_cols = (['cf'] +
+                                [c for c in df.columns if 'cost_' in c])
                 temp_cf_cost = temp.loc[:, cf_cost_cols] \
                                    .mul(temp.loc[:, 'e_prod'], axis=0) \
                                    .sum() / temp.loc[:, 'e_prod'].sum()

@@ -9,15 +9,15 @@ Release History
 Major changes
 ~~~~~~~~~~~~~
 
+|new| New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap.total_max``), in addition to its per-node capacity (``e_cap.max``)
+
 |changed| Removed the ``level`` option for locations. Level is now implicitly derived from the nested structure given by the ``within`` settings. Locations that define no or an empty ``within`` are implicitly at the topmost (0) level.
 
-|changed| |backwards-incompatible| Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). Not backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
+|changed| |backwards-incompatible| Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). No backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
 
 * ``e_cap_max_scale`` becomes ``e_cap_scale``
 * ``rb_cap_follows`` becomes ``rb_cap_follow``, and addition of ``rb_cap_follow_mode``
 * ``s_time_max`` becomes ``s_time.max``
-
-|new| New constraint to constrain total (model-wide) installed capacity of a technology (``e_cap.total_max``), in addition to its per-node capacity (``e_cap.max``)
 
 |changed| |backwards-incompatible| All optional constraints are now grouped together, under ``constraints.optional``:
 
@@ -27,6 +27,8 @@ Major changes
 Other changes
 ~~~~~~~~~~~~~
 
+* |new| analysis.map_results function to extract solution details from multiple parallel runs
+* |new| Various other additions to analysis functionality, particularly in the analysis_utils module
 * |changed| Improved summary table in the model solution: now shows only aggregate information for transmission technologies, also added missing ``s_cap`` column and technology type
 * |fixed| Bug causing some total levelized transmission costs to be infinite instead of zero
 * |fixed| Bug causing some CSV solution files to be empty

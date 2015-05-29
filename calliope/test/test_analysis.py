@@ -44,13 +44,13 @@ class TestModel:
         df = model.solution.levelized_cost
         assert_almost_equal(df.at['monetary', 'power', 'total', 'ccgt'], 0.1)
         # Recomputed cost must be the same
-        dm = analysis.DummyModel(model.solution)
+        dm = analysis.SolutionModel(model.solution)
         recomputed = dm.recompute_levelized_costs('ccgt')
         assert_almost_equal(recomputed['total'], 0.1)
 
     def test_recompute_levelized_costs_after_changes(self, model):
         # Make changes
-        dm = analysis.DummyModel(model.solution)
+        dm = analysis.SolutionModel(model.solution)
         dm.config_model.techs.ccgt.costs.monetary.e_cap = 50
         dm.config_model.techs.ccgt.costs.monetary.om_fuel = 1.0
         # Recomputed cost

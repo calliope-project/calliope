@@ -43,6 +43,7 @@ techs:
             r_cap.min: 0  # Minimum installed resource to/from storage conversion capacity (kW)
             r_cap.max: inf  # Maximum installed resource to/from storage conversion capacity (kW)
             r_cap.equals: false  # Specific installed resource to/from storage conversion capacity (kW)
+            r_cap_equals_e_cap: false  # If true, r_cap is forced to equal e_cap
             r_scale: 1.0  # Scale resource by this value
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
             allow_rb: false  # Allow secondary resource

@@ -239,7 +239,10 @@ def node_constraints_build(model):
         return get_var_constraint(m.s_cap[y, x], y, 's_cap', x, _max=s_cap_max)
 
     def c_r_cap_rule(m, y, x):
-        return get_var_constraint(m.r_cap[y, x], y, 'r_cap', x)
+        if model.get_option(y + '.constraints.r_cap_equals_e_cap'):
+            return m.r_cap[y, x] == m.e_cap[y, x]
+        else:
+            return get_var_constraint(m.r_cap[y, x], y, 'r_cap', x)
 
     def c_r_area_rule(m, y, x):
         area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap')

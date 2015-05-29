@@ -500,3 +500,24 @@ def depreciation_getter(option_getter):
                    / (((1 + interest) ** plant_life) - 1))
         return dep
     return get_depreciation_rate
+
+
+def any_option_getter(model):
+    """
+    Get any option from the given Model or SolutionModel, including
+    ``costs.`` or ``costs_per_distance.`` options
+
+    """
+    get_cost = cost_getter(model.get_option)
+    get_cost_pd = cost_getter(model.get_option, 'costs_per_distance')
+
+    def get_any_option(option):
+        if 'costs.' in option:
+            y, rest, k, cost = option.split('.')
+            return get_cost(cost, y, k)
+        elif 'costs_per_distance.' in option:
+            y, rest, k, cost = option.split('.')
+            return get_cost_pd(cost, y, k)
+        else:
+            return model.get_option(option)
+    return get_any_option
