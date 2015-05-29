@@ -30,7 +30,7 @@ Other changes
 * |new| analysis.map_results function to extract solution details from multiple parallel runs
 * |new| Various other additions to analysis functionality, particularly in the analysis_utils module
 * |new| analysis.get_levelized_cost to get technology and location specific costs
-# |new| Allow dynamically loading time mask functions
+* |new| Allow dynamically loading time mask functions
 * |changed| Improved summary table in the model solution: now shows only aggregate information for transmission technologies, also added missing ``s_cap`` column and technology type
 * |fixed| Bug causing some total levelized transmission costs to be infinite instead of zero
 * |fixed| Bug causing some CSV solution files to be empty
