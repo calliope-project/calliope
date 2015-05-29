@@ -14,6 +14,10 @@ This is the documentation for version |version|. See the `main project website <
 
 ------------
 
+Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
+
+A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `Pandas <http://pandas.pydata.org/>`_ data structures for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+
 Main features:
 
 * Generic technology definition allows modeling any mix of production, storage and consumption
