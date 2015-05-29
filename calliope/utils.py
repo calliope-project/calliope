@@ -148,8 +148,8 @@ class AttrDict(dict):
         Looks up the given ``key``. Like set_key(), deals with nested
         keys.
 
-        If default is anything but the default _MISSING value, the given
-        default is returned if a KeyError is encountered during lookup.
+        If default is anything but ``_MISSING``, the given default is
+        returned if the key does not exist.
 
         """
         if '.' in key:

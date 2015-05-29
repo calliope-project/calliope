@@ -287,6 +287,47 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     return cost / demand * -1
 
 
+def get_levelized_cost(solution, cost_class='monetary', carrier='power',
+                       group=None, locations=None,
+                       unit_multiplier=1.0):
+    """
+    Get the levelized cost per unit of energy produced for the given
+    ``cost_class`` and ``carrier``, optionally for a subset of technologies
+    given by ``group`` and a subset of ``locations``.
+
+    Parameters
+    ----------
+    solution : solution container
+    cost_class : str, default 'monetary'
+    carrier : str, default 'power'
+    group : str, default None
+        Limit the computation to members of the given group (see the
+        ``shares`` table in the solution for valid groups).
+    locations : str or iterable, default None
+        Limit the computation to the given location or locations.
+    unit_multiplier : float or int, default 1.0
+        Adjust unit of the returned cost value. For example, if model units
+        are kW and kWh, ``unit_multiplier=1.0`` will return cost per kWh, and
+        ``unit_multiplier=0.001`` will return cost per MWh.
+
+    """
+    if group is None:
+        group = slice(None)
+    if locations is None:
+        locations = slice(None)
+
+    # Make sure that locations is a list if it's a single value
+    if isinstance(locations, (str, float, int)):
+        locations = [locations]
+
+    members = solution.shares.at[group, 'members'].split('|')
+
+    cost = solution.costs[cost_class].loc[locations, members].sum(1)
+    ec_prod = solution.totals[carrier].ec_prod.loc[locations, members].sum(1)
+
+    return (cost / ec_prod) * unit_multiplier
+
+
 def get_group_share(solution, techs, group_type='supply',
                     var='e_prod'):
     """
