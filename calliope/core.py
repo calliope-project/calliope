@@ -319,7 +319,7 @@ class Model(BaseModel):
                         mask = mask_func(self.data)
                     masks.append(mask)
                 mask_res = time.get('resolution', None)
-                mask_drop_with_padding = time.get('drop_with_padding', False)
+                mask_drop_with_padding = time.get('drop_with_padding', None)
                 converter = time_tools.masks_to_resolution_series
                 series = converter(masks, how='or', resolution=mask_res,
                                    drop_with_padding=mask_drop_with_padding)

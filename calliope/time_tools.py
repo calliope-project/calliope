@@ -194,7 +194,7 @@ class TimeSummarizer(object):
 
 
 def masks_to_resolution_series(masks, how='or', resolution=None,
-                               drop_with_padding=False):
+                               drop_with_padding=None):
     """
     Converts a list of overlapping masks into a series of time step
     resolutions.
@@ -208,7 +208,7 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
         the given length (with possibly a over timestep at a lower
         length at the end of the masked area).
         If None, all contingent masked areas become single timesteps.
-    drop_with_padding : int, default False
+    drop_with_padding : int, default None
         If given, all masked areas are dropped, except for a padding area
         around the retained high-resolution areas. The padding is determined
         by ``drop_with_padding * resolution``, so if drop_with padding is
@@ -219,7 +219,7 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
 
     """
     # Validate options
-    if resolution is None and drop_with_padding > 0:
+    if drop_with_padding and resolution is None and drop_with_padding != 0:
         e = exceptions.ModelError
         raise e('If drop_with_padding is given and > 0, '
                 'resolution cannot be None.')
@@ -253,8 +253,9 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
         # Start by dropping the entire masked area, and if drop_with_padding
         # is 0, that's all we do (drop it all)
         mask[ifrom:ito] = -1
-        if drop_with_padding > 0:
-            # Drop masked areas with  padding
+        if drop_with_padding and drop_with_padding > 0:
+            # Drop masked areas with padding, but if drop_with_padding == 0,
+            # don't do anything since we dimply drop it all
             # Need to add padding before and after unmasked areas
             if ifrom > 0:  # Don't add padding at beginning of the series
                 pad_after_end = ifrom + drop_with_padding * resolution
@@ -264,9 +265,8 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
                 pad_before_start = ito - drop_with_padding * resolution
                 for i in range(pad_before_start, ito, resolution):
                     mask[i] = resolution
-        elif drop_with_padding != 0:
-            # Check for 0, because we want to do nothing if it's zero
-            # If dropping is None (implicitly), summarize into one step for now
+        elif drop_with_padding is None:
+            # If dropping is None, summarize into one step for now
             mask[ifrom] = step_resolution
         # Correct edge case where only one timestep would be "summarized"
         if mask[ifrom] >= 1 and step_resolution == 1:
@@ -277,7 +277,7 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
     # in masked areas, we go through the masked areas again
     # and split them into smaller chunks
     # FIXME assumes that data is in 1-hourly resolution?
-    if resolution is not None and drop_with_padding is False:
+    if drop_with_padding is None and resolution:
         for index, value in mask[mask > resolution].iteritems():
             end_index = index + value
             summary_index = list(range(index, end_index, resolution))
