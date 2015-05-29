@@ -295,11 +295,11 @@ Calliope provides functionality to automatically adjust the resolution of time s
 Loading optional constraints
 ----------------------------
 
-Additional constraints can be loaded in ``model.yaml`` by specifying ``constraints``, for example:
+Calliope uses "constraint generator" functions that read the model configuration and build model constraints based on it. Constraint generators for optional constraints are included in the :mod:`calliope.constraints.optional` module. In addition, custom-built user constraints can be added by loading additional constraint generator functions. They can be added in ``model.yaml`` by specifying ``constraints``, for example:
 
 .. code-block:: yaml
 
-   contraints:
+   constraints:
        - constraints.optional.ramping_rate
        - my_custom_module.my_constraint
 

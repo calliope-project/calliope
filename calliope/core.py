@@ -304,8 +304,14 @@ class Model(BaseModel):
                 # time.masks is a list of {'function': .., 'options': ..} dicts
                 for entry in time.masks:
                     entry = utils.AttrDict(entry)
-                    func_string = 'time_masks.' + entry.function
-                    mask_func = _load_function(func_string)
+                    try:  # First try importing as a third-party module
+                        mask_func = _load_function(entry.function)
+                    except ValueError:
+                        # ValueError raised if we got a string without '.',
+                        # which implies a builtin time mask function,
+                        # so we attempt to load from the time_masks module
+                        func_string = 'time_masks.' + entry.function
+                        mask_func = _load_function(func_string)
                     mask_opts = entry.get_key('options', default=False)
                     if mask_opts:
                         mask = mask_func(self.data, **mask_opts)
