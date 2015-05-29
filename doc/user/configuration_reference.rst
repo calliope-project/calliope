@@ -135,7 +135,7 @@ Each technology **must** define a ``parent``, which can either be an abstract ba
 
 ``stack_weight`` and ``color`` determine how the technology is shown in model outputs. The higher the ``stack_weight``, the lower a technology will be shown in stackplots.
 
-The ``depreciation`` definition is optional and only necessary if defaults need to be overridden. However, at least one constraint (such as ``e_cap_max``) and one cost should usually be defined.
+The ``depreciation`` definition is optional and only necessary if defaults need to be overridden. However, at least one constraint (such as ``e_cap.max``) and one cost should usually be defined.
 
 Transmission technologies can additionally specify per-distance constraints and per-distance costs (see :ref:`transmission_links`). Currently, only ``e_loss`` constraints and ``e_cap`` costs are supported:
 
@@ -157,7 +157,7 @@ Transmission technologies can additionally specify per-distance constraints and 
 Technology constraints
 ----------------------
 
-The following table lists all available technology constraint settings and their default values. All of these can be set by ``tech_identifier.constraints.constraint_name``, e.g. ``nuclear.constraints.e_cap_max``.
+The following table lists all available technology constraint settings and their default values. All of these can be set by ``tech_identifier.constraints.constraint_name``, e.g. ``nuclear.constraints.e_cap.max``.
 
 .. csv-table::
    :file: includes/default_constraints.csv

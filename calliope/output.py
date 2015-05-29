@@ -38,8 +38,8 @@ def aggregate_parameters(results, iterations=None, how='max'):
     return aggregator(axis=0)
 
 
-def generate_constraints(solution, output_path=None, techs=None,
-                         constraints=None,
+def generate_constraints(solution, output_path=None, specifier='max',
+                         techs=None, constraints=None,
                          include_transmission=True, transmission_techs=None,
                          transmission_constraints=['e_cap'], fillna=None,
                          map_numeric=None, map_any=None):
@@ -79,9 +79,12 @@ def generate_constraints(solution, output_path=None, techs=None,
     d = utils.AttrDict()
 
     # Get a list of default constraints, so that we know which constraints
-    # exist in a '_max' form
+    # exist in a form that includes sub-constraints (like '.max')
     o = solution.config_model
-    default_constraints = list(o.techs.defaults.constraints.keys())
+    default_constraints = list(o.techs.defaults.constraints.keys_nested())
+    max_min_equals_constraints = set([c.split('.')[0]
+                                      for c in default_constraints
+                                      if '.max' in c])
 
     # Set up the list of locations, techs, constraints
     locations = solution.parameters.major_axis
@@ -101,8 +104,8 @@ def generate_constraints(solution, output_path=None, techs=None,
             for var in [v for v in constraints
                         if v not in excluded_vars]:
                 key = key_string.format(x, y, var)
-                if var + '_max' in default_constraints:
-                    key += '_max'
+                if var in max_min_equals_constraints:
+                    key += '.{}'.format(specifier)
                 _setkey(d, key, solution.parameters.at[var, x, y])
 
     # Transmission techs
@@ -133,8 +136,8 @@ def generate_constraints(solution, output_path=None, techs=None,
                         exists = False
                     if exists and y_bare in transmission_techs:
                         key = t_key_string.format(x + ',' + x_rem, y_bare, var)
-                        if var + '_max' in default_constraints:
-                            key += '_max'
+                        if var in max_min_equals_constraints:
+                            key += '.{}'.format(specifier)
                         _setkey(d, key, value)
 
     if output_path is not None:

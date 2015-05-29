@@ -113,17 +113,18 @@ The ``group`` option only has an effect on supply diversity functionality in the
 Locations
 ---------
 
-A location's name can be any alphanumeric string, but using integers makes it easier to define constraints for a whole range of locations by using the syntax ``from--to``. The index of all locations ``x`` is constructed at model instantiation from all locations defined in the configuration.
+A location's name can be any alphanumeric string, but using integers makes it easier to define constraints for a whole range of locations by using the syntax ``from--to``. Locations can be given as a single location (e.g., ``location1``), a range of integer location names using the ``--`` operator (e.g., ``0--10``), or a comma-separated list of alphanumeric location names (e.g., ``location1,location2,10,11,12``). Using ``override``, some (but not all) settings can be overriden on a per-location and per-technology basis (see the box below).
 
-There are currently some limitations to how locations work:
+.. Note::
 
-* Locations must be assigned to either level 0 or level 1 (``level``).
-* Locations at level 1 may be assigned to a parent location from level 0 (``within``).
-* Using ``override``, some (but not all) settings can be overriden on a per-location and per-technology basis (see the box below).
+   Only the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
 
-Locations can be given as a single location (e.g., ``location1``), a range of integer location names using the ``--`` operator (e.g., ``0--10``), or a comma-separated list of location names (e.g., ``location1,location2,10,11,12``).
+   * x_map
+   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap.min, s_cap.max, s_cap.equals, s_init, s_time.max, use_s_time, r_cap.min, r_cap.max, r_cap.equals, r_area.min, r_area.max, r_area.equals, e_cap.min, e_cap.max, e_cap.equals, e_cap_scale, rb_eff, rb_cap.min, rb_cap.max, rb_cap.equals, rb_cap_follow, rb_cap_follow_mode
 
-An example locations block is:
+.. NB this limitation is "implemented" simply by calling get_option with an x=x argument for some options but not for others
+
+Locations may also define a parent locating using ``within``, as shown in the following example:
 
 .. code-block:: yaml
 
@@ -140,20 +141,13 @@ An example locations block is:
            within: location2
            techs: ['offshore_wind']
 
-.. Note::
+The energy balancing constraint looks at a location's level to decide which locations to consider in balancing supply and demand. Locations that are not ``within`` another location are implicitly at the topmost level. Supply and demand within locations on the topmost level must always be be balanced, but they can exchange energy with each other via transmission technologies, which may define parameters such as costs, distance, and losses.
 
-   *Only* the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
-
-   * x_map
-   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap.min, s_cap.max, s_cap.equals, s_init, s_time.max, use_s_time, r_cap.min, r_cap.max, r_cap.equals, r_area.min, r_area.max, r_area.equals, e_cap.min, e_cap.max, e_cap.equals, e_cap_scale, rb_eff, rb_cap.min, rb_cap.max, rb_cap.equals, rb_cap_follow, rb_cap_follow_mode
-
-.. NB this limitation is "implemented" simply by calling get_option with an x=x argument for some options but not for others
-
-The balancing constraint looks at a location's level to decide which locations to consider in balancing supply and demand. Currently, balancing of supply and demand takes place between locations at level 0. In order for a location at level 1 to be included in the system-wide energy balance, it must therefore be assigned to a parent location at level 0. Transmission is *loss-free* within a location, between locations at level 1, and from locations at level 1 to locations at level 0. In contrast, transmission between locations at level 0 is only possible if a transmission link has been defined between them (see below). Losses in these transmission links are as defined for the specified transmission technology.
+Locations that are contained within a parent location have implicit loss-free and cost-free transmission between themselves and the parent location. The balancing constraint makes sure that supply and demand within a location and its direct children is balanced.
 
 .. Warning::
 
-   There must always be at least one location at level 0, because balancing of supply and demand takes place between level 0 locations only.
+   If a location contained within a parent location itself defines children, it is no longer included in the implicit free transmission between its siblings and parent location. In turn, it receives implicit free transmission with its own children.
 
 .. _transmission_links:
 
@@ -205,13 +199,13 @@ Transmission links can also specify a distance, which transmission technologies 
 Overriding technology options
 -----------------------------
 
-Technologies can define generic options, for example, ``name``, constraints, for example ``constraints.e_cap_max``, and costs, for example ``costs.monetary.e_cap``.
+Technologies can define generic options, for example ``name``, constraints, for example ``constraints.e_cap.max``, and costs, for example ``costs.monetary.e_cap``.
 
 These options can be overridden in several ways, and whenever such an option is accessed by Calliope it works its way through the following list until it finds a definition (so entries further up in this list take precedence over those further down):
 
-1. Override for a specific location ``x1`` and technology ``y1``, which may be defined via ``locations`` (e.g. ``locations.x1.override.y1.constraints.e_cap_max``)
-2. Setting specific to the technology ``y1`` if defined in ``techs`` (e.g. ``techs.y1.constraints.e_cap_max``)
-3. Check whether the immediate parent of the technology ``y`` defines the option (assuming that ``y1`` specifies ``parent: my_parent_tech``, e.g. ``techs.my_parent_tech.constraints.e_cap_max``)
+1. Override for a specific location ``x1`` and technology ``y1``, which may be defined via ``locations`` (e.g. ``locations.x1.override.y1.constraints.e_cap.max``)
+2. Setting specific to the technology ``y1`` if defined in ``techs`` (e.g. ``techs.y1.constraints.e_cap.max``)
+3. Check whether the immediate parent of the technology ``y`` defines the option (assuming that ``y1`` specifies ``parent: my_parent_tech``, e.g. ``techs.my_parent_tech.constraints.e_cap.max``)
 4. If the option is still not found, continue along the chain of parent-child relationships. Since every technology should inherit from one of the abstract base technologies, and those in turn inherit from the model-wide defaults, this will ultimately lead to the model-wide default setting if it has not been specified anywhere else. See :ref:`config_reference_constraints` for a complete listing of those defaults.
 
 .. _configuration_timeseries:

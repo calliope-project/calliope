@@ -311,16 +311,16 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
         ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
-    if group is None:
-        group = slice(None)
+    if group:
+        members = solution.shares.at[group, 'members'].split('|')
+    else:
+        members = slice(None)
     if locations is None:
         locations = slice(None)
 
     # Make sure that locations is a list if it's a single value
     if isinstance(locations, (str, float, int)):
         locations = [locations]
-
-    members = solution.shares.at[group, 'members'].split('|')
 
     cost = solution.costs[cost_class].loc[locations, members].sum(1)
     ec_prod = solution.totals[carrier].ec_prod.loc[locations, members].sum(1)
