@@ -39,16 +39,16 @@ Parallel runs
 
 .. Warning:: This functionality is currently not Windows-compatible.
 
-Parallel runs are created with the ``calliope generate`` command-line tool as follows:
+Scripts to simplify the creation and execution of a large number of Calliope model runs are generated with the ``calliope generate`` command-line tool as follows:
 
 * Create a ``run.yaml`` file with a ``parallel:`` section as needed (see :ref:`run_config_parallel_runs`).
 * On the command line, run ``calliope generate path/to/run.yaml``.
 * By default, this will create a new subdirectory inside a ``runs`` directory in the current working directory. You can optionally specify a different target directory by passing a second path to ``calliope generate``, e.g. ``calliope generate path/to/run.yaml path/to/my_run_files``.
-* Calliope generates several files and directories in the target path. The most important are the ``Runs`` subdirectory which hosts the self-contained configuration for the runs, the ``run.sh`` script, which is responsible for executing each run, and the submit.sh scripts, which contain the job control data for a cluster and should be submitted as jobs to the cluster controller (e.g., ``qsub submit.sh``).
+* Calliope generates several files and directories in the target path. The most important are the ``Runs`` subdirectory which hosts the self-contained configuration for the runs and ``run.sh`` script, which is responsible for executing each run. In order to execute these runs in parallel on a compute cluster, a submit.sh script is also generated containing job control data, and which can be submitted via a cluster controller (e.g., ``qsub submit.sh``).
 
-The ``run.sh`` script can simply be called with an integer argument from the sequence (1, number of parallel runs) to execute a given run, e.g. ``run.sh 1``, ``run.sh 2``, etc. This way the runs can easily be executed sequentially on a single machine.
+The ``run.sh`` script can simply be called with an integer argument from the sequence (1, number of parallel runs) to execute a given run, e.g. ``run.sh 1``, ``run.sh 2``, etc. This way the runs can easily be executed irrespective of the parallel computing environment available.
 
-.. Note:: In parallel mode, model outputs are automatically saved as HDF files inside the parallel run's ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
+.. Note:: Models generated via ``calliope generate`` automatically save results as HDF files inside the parallel run's ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
 
 See :ref:`run_config_parallel_runs` for details on configuring parallel runs.
 
