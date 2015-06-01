@@ -9,7 +9,7 @@ python:
 env:
   - PIP_DOWNLOAD_CACHE=$HOME/.cache/pip  # Ensure pip-accel uses right dir
 install:
-  - "pip install pip-accel"  # Use pip-accel to cache binaries
+  - "pip install --no-cache-dir pip-accel"  # Use pip-accel to cache binaries
   - "pip-accel install -r requirements.txt"
   - 'pip-accel install cython --install-option="--no-cython-compile"'
   - "pip-accel install tables==3.1.0"  # Fails if in requirements.txt

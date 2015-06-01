@@ -151,7 +151,8 @@ def plot_graph_on_map(config_model, G=None,
                       rotate_labels=False,
                       bounds=None,
                       scale_left_distance=0.05,
-                      scale_bottom_distance=0.05):
+                      scale_bottom_distance=0.05,
+                      ax=None, show_scale=True):
     from mpl_toolkits.basemap import Basemap
     import networkx as nx
     from calliope.lib import nx_pylab
@@ -173,8 +174,9 @@ def plot_graph_on_map(config_model, G=None,
     pos = {i: m(pos[i][1], pos[i][0]) for i in pos}  # Flip lat, lon to x, y!
 
     # Create plot
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111, axisbg='w', frame_on=False)
+    if not ax:
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111, axisbg='w', frame_on=False)
     m.drawmapboundary(fill_color=None, linewidth=0)
     m.drawcoastlines(linewidth=0.2, color='#626262')
 
@@ -198,15 +200,16 @@ def plot_graph_on_map(config_model, G=None,
                                               font_size=fontsize)
 
     # Add a map scale
-    scale = m.drawmapscale(
-        bounds[0] + bounds_width * scale_left_distance,
-        bounds[1] + bounds_height * scale_bottom_distance,
-        bounds[0], bounds[1],
-        100,
-        barstyle='simple', labelstyle='simple',
-        fillcolor1='w', fillcolor2='#555555',
-        fontcolor='#555555', fontsize=fontsize
-    )
+    if show_scale:
+        scale = m.drawmapscale(
+            bounds[0] + bounds_width * scale_left_distance,
+            bounds[1] + bounds_height * scale_bottom_distance,
+            bounds[0], bounds[1],
+            100,
+            barstyle='simple', labelstyle='simple',
+            fillcolor1='w', fillcolor2='#555555',
+            fontcolor='#555555', fontsize=fontsize
+        )
 
     return ax, m
 

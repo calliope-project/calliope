@@ -173,7 +173,9 @@ def plot_installed_capacities(solution,
 
 def plot_transmission(solution, tech='hvac', carrier='power',
                       labels='utilization',
-                      figsize=(15, 15), fontsize=9):
+                      figsize=(15, 15), fontsize=9,
+                      show_scale=True,
+                      ax=None):
     """
     Plot transmission links on a map. Requires that model metadata have
     been defined with a lat/lon for each model location and a boundary for
@@ -195,6 +197,9 @@ def plot_transmission(solution, tech='hvac', carrier='power',
         Size of resulting figure.
     fontsize : int, default 9
         Font size of figure labels.
+    show_scale : bool, default True
+        Plot a distance scale on the map.
+    ax : matplotlib axes, default None
 
     """
     import networkx as nx
@@ -242,7 +247,8 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     ax, m = au.plot_graph_on_map(solution.config_model, G=G,
                                  edge_colors=edge_colors,
                                  edge_labels=edge_labels,
-                                 figsize=figsize, fontsize=fontsize)
+                                 figsize=figsize, fontsize=fontsize,
+                                 ax=ax, show_scale=show_scale)
 
     return ax
 
