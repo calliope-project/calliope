@@ -91,6 +91,18 @@ def _load_function(source):
     return getattr(module, function_string)
 
 
+def plugin_load(name, builtin_module):
+    try:  # First try importing as a third-party module
+        func = _load_function(name)
+    except ValueError:
+        # ValueError raised if we got a string without '.',
+        # which implies a builtin function,
+        # so we attempt to load from the given module
+        func_string = builtin_module + '.' + name
+        func = _load_function(func_string)
+    return func
+
+
 def get_model_config(cr, config_run_path, adjust_data_path=None,
                      insert_defaults=True):
     """
@@ -295,23 +307,24 @@ class Model(BaseModel):
         s = time_tools.TimeSummarizer()
         time = cr.get_key('time', default=False)
         if time:
+            ##
+            # A) Check consistency of given options
+            ##
             if ('masks' in time or 'resolution' in time) and 'file' in time:
                 e = exceptions.ModelError
                 raise e('`time.masks` or `time.resolution` and `time.file` '
                         'cannot be given at the same time.')
+
+            ##
+            # B) Process masking and get a time resolution series
+            ##
             if 'masks' in time:
                 masks = []
                 # time.masks is a list of {'function': .., 'options': ..} dicts
                 for entry in time.masks:
                     entry = utils.AttrDict(entry)
-                    try:  # First try importing as a third-party module
-                        mask_func = _load_function(entry.function)
-                    except ValueError:
-                        # ValueError raised if we got a string without '.',
-                        # which implies a builtin time mask function,
-                        # so we attempt to load from the time_masks module
-                        func_string = 'time_masks.' + entry.function
-                        mask_func = _load_function(func_string)
+                    mask_func = plugin_load(entry.function,
+                                            builtin_module='time_masks')
                     mask_opts = entry.get_key('options', default=False)
                     if mask_opts:
                         mask = mask_func(self.data, **mask_opts)
@@ -327,7 +340,7 @@ class Model(BaseModel):
                 if self.data.time_res_static == time.resolution:
                     # If time.resolution is set to the resolution that
                     # the data is already in, do nothing
-                    return
+                    series = None
                 else:
                     # Otherwise, prepare an appropriate time resolution
                     # series for resampling the data
@@ -338,10 +351,17 @@ class Model(BaseModel):
                                                self.config_run_path)
                 series = pd.read_csv(res_file, index_col=0, header=None)[1] \
                            .astype(int)[self.slice]
-            # Silently ignore if neither time.file or time.function given
+            else:  # Neither time.masks, time.resolution nor time.file given
+                series = None
+
+            if series is not None:
+                s.dynamic_timestepper(self.data, series)
             else:
-                return
-            s.dynamic_timestepper(self.data, series)
+                # Silently ignore if no conformant time settings given
+                return None
+
+        else:  # not time
+            return None  # Nothing to do if no time settings given
 
     def prev(self, t):
         """Using the timesteps set of this model instance, return `t-1`,
@@ -1264,6 +1284,9 @@ class Model(BaseModel):
         """
         Return output for variable `var` as a series, dataframe or panel
 
+        If ``t`` is one of the variable's dimensions, Panels and Panel4Ds
+        are transposed such that ``t`` is in the major_axis.
+
         Args:
             var : variable name as string, e.g. 'es_prod'
 
@@ -1298,14 +1321,18 @@ class Model(BaseModel):
                 result = result.sort_index()
             if len(dims) == 3:
                 result = result.to_panel()
-                result = result.transpose(0, 2, 1)  # Flip time into major_axis
+                if 't' in dims:
+                    # Flip time into major_axis
+                    result = result.transpose(0, 2, 1)
                 result = result.sort_index(1)
             if len(dims) == 4:
                 # Panel4D needs manual treatment until pandas supports to_panel
                 # for anything else but the regular 3d panel
                 p = {}
                 for i in result.columns:
-                    p[i] = result[i].unstack(0).to_panel().transpose(0, 2, 1)
+                    p[i] = result[i].unstack(0).to_panel()
+                    if 't' in dims:
+                        p[i] = p[i].transpose(0, 2, 1)
                 result = pd.Panel4D(p)
                 result = result.sort_index(1)
         # Nicify time axis
@@ -1387,8 +1414,10 @@ class Model(BaseModel):
         else:
             t_subset_slice = t_subset
 
-        T = lambda x: pd.Panel.transpose(x, 'major_axis',
-                                         'minor_axis', 'items')
+        def T(panel):
+            """Transpose a panel"""
+            return pd.Panel.transpose(panel, 'minor_axis', 'major_axis',
+                                      'items')
 
         # len_adjust is the fraction of construction and fixed costs
         # that is accrued to the chosen t_subset. NB: construction and fixed
