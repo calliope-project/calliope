@@ -12,7 +12,7 @@ install:
   - "pip install --no-cache-dir pip-accel"  # Use pip-accel to cache binaries
   - "pip-accel install -r requirements.txt"
   - 'pip-accel install cython --install-option="--no-cython-compile"'
-  - "pip-accel install tables==3.1.0"  # Fails if in requirements.txt
+  - "pip-accel install tables==3.2.1.1"  # Fails if in requirements.txt
   - "pip install --no-cache-dir ."
 cache:
   directories:
@@ -21,4 +21,5 @@ cache:
 script: "py.test --cov calliope --cov-report term-missing"
 after_success:
     - coveralls
-    - rm /home/travis/.cache/pip/log/debug.log  # Delete pip's implicit debug log, can remove this line once pip>=7.0.0
+before_cache:
+    - rm $HOME/.cache/pip/log/debug.log  # Delete pip's implicit debug log, can remove this line once pip>=7.0.0

@@ -8,5 +8,5 @@ matplotlib==1.4.1
 pandas==0.16.2
 PyYAML==3.11
 pyomo>=4.0
-# tables==3.1.0
+# tables==3.2.1.1
 click==3.3

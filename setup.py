@@ -30,7 +30,7 @@ setup(
         "numexpr >= 2.3.1",
         "pandas >= 0.16.0",
         "pyyaml >= 3.11",
-        "tables >= 3.1.0",  # Requires cython to build
+        "tables >= 3.2.0",  # Requires cython to build
         "click >= 3.3"
     ],
     entry_points={
