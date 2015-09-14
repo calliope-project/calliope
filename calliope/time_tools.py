@@ -229,9 +229,9 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
     # combine all masks into one
     df = pd.DataFrame({i: x for i, x in enumerate(masks)})
 
-    if how == 'or':
+    if how == 'and':
         mask = df.sum(axis=1)
-    elif how == 'and':
+    elif how == 'or':
         # joiner: only return 1 if all items in the row are 1, else return 0
         joiner = lambda row: 1 if sum(row) == len(row) else 0
         mask = df.apply(joiner, axis=1)

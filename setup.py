@@ -28,7 +28,7 @@ setup(
         "pyomo >= 4.0",
         "numpy >= 1.9.0",
         "numexpr >= 2.3.1",
-        "pandas >= 0.15.1",
+        "pandas >= 0.16.0",
         "pyyaml >= 3.11",
         "tables >= 3.1.0",  # Requires cython to build
         "click >= 3.3"

@@ -19,4 +19,6 @@ cache:
     - $HOME/.pip-accel
     - $HOME/.cache/pip
 script: "py.test --cov calliope --cov-report term-missing"
-after_success: coveralls
+after_success:
+    - coveralls
+    - rm /home/travis/.cache/pip/log/debug.log  # Delete pip's implicit debug log, can remove this line once pip>=7.0.0

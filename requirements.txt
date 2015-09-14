@@ -1,11 +1,11 @@
-pytest-cov==1.8.0
+pytest-cov==2.1.0
 python-coveralls==2.4.3
 # Cython is here because it's needed to build pytables
 # Cython==0.21.1
-numexpr==2.3.1
-numpy==1.9.0
+numexpr==2.4.3
+numpy==1.9.2
 matplotlib==1.4.1
-pandas==0.15.1
+pandas==0.16.2
 PyYAML==3.11
 pyomo>=4.0
 # tables==3.1.0

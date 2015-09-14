@@ -286,8 +286,8 @@ def node_constraints_build(model):
                 # Raise an error to make sure follows isn't accidentally set to
                 # something invalid
                 e = exceptions.ModelError
-                raise e('rb_cab_follows set to invalid value at '
-                        '({}, {}): {}'.format(y, x, follows))
+                raise e('rb_cab_follow set to invalid value at '
+                        '({}, {}): {}'.format(y, x, follow))
 
             if mode == 'max':
                 return m.rb_cap[y, x] <= rb_cap_val

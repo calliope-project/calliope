@@ -160,13 +160,13 @@ At its most basic, the run configuration simply specifies which model to run, wh
 
 .. literalinclude:: ../../calliope/example_model/run.yaml
    :language: yaml
-   :lines: 5-13
+   :lines: 5-15
 
 To speed up model runs, the built-in model's run configuration also specifies a time subset:
 
 .. literalinclude:: ../../calliope/example_model/run.yaml
    :language: yaml
-   :lines: 54
+   :lines: 57
 
 The included time series is hourly for a full year. The ``subset_t`` setting runs the model over only a subset of five days.
 

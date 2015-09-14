@@ -444,10 +444,11 @@ def get_domestic_supply_index(solution):
     return dom
 
 
-def map_results(results, func):
+def map_results(results, func, as_frame=False):
     """
     Applies ``func`` to each model solution in ``results``, returning
-    a pandas Series indexed by the run names (if available).
+    a pandas DataFrame (if as_frame is True) or Series,
+    indexed by the run names (if available).
 
     """
     def map_func(x):
@@ -462,8 +463,10 @@ def map_results(results, func):
              if 'name' in results.solutions[i].config_run
              else i
              for i in iterations]
-
-    return pd.Series(items, index=names)
+    if as_frame:
+        return pd.DataFrame(items, index=names)
+    else:
+        return pd.Series(items, index=names)
 
 
 class SolutionModel(core.BaseModel):
