@@ -30,9 +30,7 @@ setup(
         "numexpr >= 2.3.1",
         "pandas >= 0.16.0",
         "pyyaml >= 3.11",
-        # Removed tables from required dependencies here because it causes
-        # readthedocs builds to fail
-        # "tables >= 3.2.0",  # Requires cython to build
+        "tables >= 3.2.0",  # Requires cython to build
         "click >= 3.3"
     ],
     entry_points={
