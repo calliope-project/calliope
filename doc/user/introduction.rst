@@ -11,7 +11,7 @@ Calliope was designed to address questions around the transition to renewable en
 
 * `SWITCH <http://switch-model.org/>`_: A power system model focused on renewables integration, using multi-stage stochastic linear optimization, as well as hourly resource potential and demand data. Written in the commercial AMPL language and GPL-licensed [Fripp2012]_.
 * `Temoa <http://temoaproject.org/>`_: An energy system model with multi-stage stochastic optimization functionality which can be deployed to computing clusters, to address parametric uncertainty. Written in Python/Pyomo and AGPL-licensed [Hunter2013]_.
-* `OSEMOSyS <http://www.osemosys.org/>`_: A simplified energy system model similar to the MARKAL/TIMES model families, which can be used as a stand-alone tool or integrated in the `LEAP energy model <http://www.energycommunity.org/LEAP/>`_. Written in GLPK, a free subset of the commercial AMPL language, and Apache 2.0-licensed [Howells2011]_.
+* `OSeMOSYS <http://www.osemosys.org/>`_: A simplified energy system model similar to the MARKAL/TIMES model families, which can be used as a stand-alone tool or integrated in the `LEAP energy model <http://www.energycommunity.org/LEAP/>`_. Written in GLPK, a free subset of the commercial AMPL language, and Apache 2.0-licensed [Howells2011]_.
 
 Additional energy models that are partially or fully open can be found on the `Open Energy Modelling Initiative's wiki <http://wiki.openmod-initiative.org/wiki/Model_fact_sheets>`_.
 

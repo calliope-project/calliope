@@ -7,5 +7,4 @@ upload:
 clean:
 	rm dist/*
 
-all-dist:
-	sdist upload clean
+all-dist: sdist upload clean

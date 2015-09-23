@@ -106,7 +106,6 @@ Let's now look at the first location definition:
 
 There are several things to note here:
 
-* The location defines a level (0). The current version of Calliope allows only two levels: 0 and 1. Transmission between locations at level 0 can take place if transmission links are defined between them. Transmission between locations at level 0 and 1, on the other hand, is unlimited. Level 1 locations can be grouped within level 0 locations, all level 1 locations plus the containing level 0 location are implicitly on a "copperplate" with no transmission constraints. Finally, balancing of supply and demand takes place only at level 0, so a model needs to define at least one level 0 location.
 * The location specifies a list of technologies that it allows (``techs``). Note that technologies listed here must have been defined elsewhere in the model configuration.
 * It also overrides some options for both ``demand_power`` and ``ccgt``. For the latter, it simply sets a location-specific maximum capacity constraint. For ``demand_power``, the options set here are related to reading the demand time series from a CSV file. CSV is a simple text-based format that stores tables by comma-separated rows. Note that we did not define any ``r`` option in the definition of the ``demand_power`` technology. Instead, this is done directly via a location-specific override. For this location, the file ``demand-1.csv`` is loaded, and the demand is then scaled such that the demand peak is at the given value. Note that in Calliope, a supply is positive and a demand is negative, so the peak demand is actually a negative value. Finally, the ``x_map`` option allows us to read a CSV file with a single column named "demand" and tell Calliope to load data from that column for region ``r1``. This is necessary unless the column name(s) in the CSV file already correspond to the location names defined in the model configuration.
 
@@ -114,15 +113,17 @@ The remaining location definitions look like this:
 
 .. literalinclude:: ../../calliope/example_model/model_config/locations.yaml
    :language: yaml
-   :lines: 19-32
+   :lines: 18-29
 
-``r2`` is very similar to ``r1``, except that it does not allow the ``ccgt`` technology. The three ``csp`` locations are defined together, i.e. they each get the exact same configuration. They are ``within`` the location ``r1`` and allow only the ``csp`` technology, this allows us to model three possible sites for CSP plants within ``r1`` (i.e., with no transmission constraints from these locations to ``r1`` or other locations within ``r1``).
+``r2`` is very similar to ``r1``, except that it does not allow the ``ccgt`` technology. The three ``csp`` locations are defined together, i.e. they each get the exact same configuration. They are ``within`` the location ``r1`` and allow only the ``csp`` technology, this allows us to model three possible sites for CSP plants within ``r1``.
 
-For transmission technologies, the model also needs to know which level 0 locations can be linked, and this is set up in the model configuration as follows:
+Locations that do not specify a ``within`` are implicitly at the topmost level. Transmission between locations at the topmost level can only take place if transmission links are defined between them. On the other hand, locations which are specified as ``within`` another location can automatically and without any losses transmit energy to and from their parent location. In other words, a topmost location and all its contained locations together are implicitly assumed to be on a "copperplate" with no transmission constraints. Balancing of supply and demand takes place only at the topmost level.
+
+For transmission technologies, the model also needs to know which top-level locations can be linked, and this is set up in the model configuration as follows:
 
 .. literalinclude:: ../../calliope/example_model/model_config/locations.yaml
    :language: yaml
-   :lines: 38-42
+   :lines: 35-40
 
 ---------------------------
 Files that define the model

@@ -3,6 +3,11 @@
 Release History
 ===============
 
+0.3.6 (2016-09-23)
+------------------
+
+* |fixed| Version 0.3.5 changes were not reflected in tutorial
+
 0.3.5 (2015-09-18)
 ------------------
 
