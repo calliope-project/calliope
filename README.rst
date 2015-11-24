@@ -6,6 +6,8 @@
     :target: #license
 .. image:: https://img.shields.io/pypi/v/calliope.svg
     :target: https://pypi.python.org/pypi/calliope
+.. image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
+    :target: https://zenodo.org/badge/latestdoi/9581/calliope-project/calliope
 
 ::
 
@@ -58,11 +60,6 @@ Documentation is available at docs.callio.pe:
 
 * `Stable version <http://docs.callio.pe/en/stable/>`_
 * `Development version <http://docs.callio.pe/en/latest/>`_
-
-DOI for the most recent stable version on Zenodo: |badge_doi|
-
-.. |badge_doi| image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
-    :target: https://zenodo.org/search?ln=en&p=Calliope%3A+a+multi-scale+energy+systems+%28MUSES%29+modeling+framework&action_search=
 
 License
 -------
