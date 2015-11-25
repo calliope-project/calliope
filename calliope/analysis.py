@@ -354,7 +354,13 @@ def get_group_share(solution, techs, group_type='supply',
         group = transmission_basenames(group)
     supply_total = summary.loc[group, var].sum()
     supply_group = summary.loc[techs, var].sum()
-    return supply_group / supply_total
+    try:
+        return supply_group / supply_total
+    except ZeroDivisionError:
+        # FIXME it seems that on some systems, supply_ are not numpy.floats
+        # but regular Python floats, leading to a ZeroDivisionError
+        # in cases such as demand groups
+        return np.nan
 
 
 def get_unmet_demand_hours(solution, carrier='power', details=False):
