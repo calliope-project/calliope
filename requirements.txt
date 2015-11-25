@@ -1,4 +1,6 @@
 pytest-cov==2.1.0
+# coveralls doesn't work with coverage>=4
+coverage==3.7.1
 python-coveralls==2.4.3
 # Cython is here because it's needed to build pytables
 # Cython==0.21.1
