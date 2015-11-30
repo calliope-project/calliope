@@ -25,7 +25,7 @@ setup(
                                'test/common/t_6h/*.csv',
                                'test/common/t_erroneous/*.csv']},
     install_requires=[
-        "pyomo >= 4.0",
+        "pyomo >= 4.2",
         "numpy >= 1.9.0",
         "numexpr >= 2.3.1",
         "pandas >= 0.16.0",

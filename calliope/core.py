@@ -1006,22 +1006,21 @@ class Model(BaseModel):
         return getter
 
     def update_parameters(self, t_offset):
-        mi = self.instance
         d = self.data
 
         for param in d.params:
             initializer = self._param_populator(d[param], t_offset)
             y_set = self.param_sets[param]
-            param_object = getattr(mi, param)
+            param_object = getattr(self.m, param)
             for y in y_set:
-                for x in mi.x:
-                    for t in mi.t:
-                        param_object[y, x, t] = initializer(mi, y, x, t)
+                for x in self.m.x:
+                    for t in self.m.t:
+                        param_object[y, x, t] = initializer(self.m, y, x, t)
 
         s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
-        for y in mi.y_pc:
-            for x in mi.x:
-                mi.s_init[y, x] = s_init_initializer(mi, y, x)
+        for y in self.m.y_pc:
+            for x in self.m.x:
+                self.m.s_init[y, x] = s_init_initializer(self.m, y, x)
 
     def _set_t_end(self):
         # t_end is the timestep previous to t_start + horizon,
@@ -1204,7 +1203,6 @@ class Model(BaseModel):
         m = self.m
         cr = self.config_run
         if not warmstart:
-            self.instance = m.create()
             solver_io = cr.get_key('solver_io', default=False)
             if solver_io:
                 self.opt = popt.SolverFactory(cr.solver, solver_io=solver_io)
@@ -1231,14 +1229,14 @@ class Model(BaseModel):
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
         # Always preprocess instance, for both cold start and warm start
-        self.instance.preprocess()
+        self.m.preprocess()
 
         def _solve(warmstart):
             if warmstart:
-                results = self.opt.solve(self.instance, warmstart=True,
+                results = self.opt.solve(self.m, warmstart=True,
                                          tee=True)
             else:
-                results = self.opt.solve(self.instance, tee=True)
+                results = self.opt.solve(self.m, tee=True)
             return results
 
         if self.verbose:
@@ -1697,7 +1695,7 @@ class Model(BaseModel):
 
     def load_results(self):
         """Load results into model instance for access via model variables."""
-        r = self.instance.load(self.results)
+        r = self.m.solutions.load_from(self.results)
         if r is False:
             logging.critical(self.results.Problem)
             logging.critical(self.results.Solver)
