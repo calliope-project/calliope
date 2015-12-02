@@ -56,7 +56,7 @@ def mask_relative_difference(data, target1, target2, days=5,
 
         diff = (relative_series[0] - relative_series[1]).abs()
 
-        most_different = diff.sort(ascending=False, inplace=False)
+        most_different = diff.sort_values(ascending=False, inplace=False)
         datetimes = data._dt.loc[most_different.index]
         # `result` are the datetimes for the found days (indexed by timestep index)
         result = datetimes.dt.date.drop_duplicates().head(days)

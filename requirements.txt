@@ -5,9 +5,9 @@ python-coveralls==2.4.3
 # Cython is here because it's needed to build pytables
 # Cython==0.21.1
 numexpr==2.4.3
-numpy==1.9.2
-matplotlib==1.4.1
-pandas==0.16.2
+numpy==1.10.1
+matplotlib==1.5.0
+pandas==0.17.1
 PyYAML==3.11
 pyomo==4.2.10784
 # tables==3.2.1.1

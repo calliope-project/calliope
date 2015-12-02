@@ -84,24 +84,25 @@ def stack_plot(df, stack=None, figsize=None, colormap='jet', legend='default',
             figsize = (16, 4)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111)
-    colors = plt.get_cmap(colormap)(np.linspace(0, 1.0, len(stack)))
-    fills = ax.stackplot(df.index, df[stack].T, label=stack, colors=colors,
+
+    colors = plt.get_cmap(colormap)(np.linspace(0, 1.0, len(stack))).tolist()
+    labels = names if names else stack  # Labels are friendly names, if given
+    fills = ax.stackplot(df.index, df[stack].T, colors=colors, labels=labels,
                          **kwargs)
-    # Rename the tech stack with friendly names, if given, for legend plotting
-    if names:
-        stack = names
-    # Legend via proxy artists
-    # Based on https://github.com/matplotlib/matplotlib/issues/1943
-    proxies = [plt.Rectangle((0, 0), 1, 1, fc=i.get_facecolor()[0])
-               for i in fills]
-    if legend == 'default':
-        l = ax.legend(reversed(proxies), reversed(stack), title=leg_title)
-    elif legend == 'right':
-        l = legend_on_right(ax, artists=reversed(proxies),
-                            labels=reversed(stack),
-                            style='custom', title=leg_title)
-    if leg_title and leg_fontsize:
-        plt.setp(l.get_title(), fontsize=leg_fontsize)
+
+    # A little hack to reverse the ordering of the just-added PolyCollections
+    ax.collections = [i for i in ax.collections if i not in fills]
+    ax.collections += reversed(fills)
+
+    # Add legend
+    if legend:
+        if legend == 'default':
+            l = ax.legend(title=leg_title)
+        elif legend == 'right':
+            l = legend_on_right(ax, title=leg_title)
+        if leg_title and leg_fontsize:
+            plt.setp(l.get_title(), fontsize=leg_fontsize)
+
     # Format x datetime axis
     # Based on http://stackoverflow.com/a/9627970/397746
     import matplotlib.dates as mdates

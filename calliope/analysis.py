@@ -43,7 +43,7 @@ def plot_carrier_production(solution, carrier='power', subset_t=None,
     data = solution.node['e:{}'.format(carrier)].sum(axis=2)
     if subset_t:
         data = data.loc[slice(*subset_t), :]
-    plot_timeseries(solution, data, carrier=carrier, **kwargs)
+    return plot_timeseries(solution, data, carrier=carrier, **kwargs)
 
 
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
@@ -98,7 +98,7 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     query_string = au._get_query_string(types)
     stacked_techs = df.query(query_string).index.tolist()
     # Put stack in order according to stack_weights
-    weighted = df.stack_weight.order(ascending=False).index.tolist()
+    weighted = df.stack_weight.sort_values(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]
     names = [df.at[y, 'name'] for y in stacked_techs]
     # If no colormap given, derive one from colors given in metadata
@@ -107,10 +107,12 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
         colormap = ListedColormap(colors)
     # Plot!
     ax = au.stack_plot(plot_df, stacked_techs, colormap=colormap,
-                       alpha=0.9, ticks=ticks, legend='right', names=names)
+                       alpha=0.9, ticks=ticks, legend=None, names=names)
     ax.plot(plot_df[demand].index,
             plot_df[demand] * -1,
-            color='black', lw=1, ls='-')
+            color='red', lw=1.5, ls='--', label=df.at[demand, 'name'])
+    # Add legend here rather than in stack_plot so we get demand too
+    au.legend_on_right(ax)
     return ax
 
 
@@ -139,7 +141,7 @@ def plot_installed_capacities(solution,
 
     df = solution.parameters.e_cap.loc[:, supply_cap]
 
-    weighted = solution.metadata.stack_weight.order(ascending=False).index.tolist()
+    weighted = solution.metadata.stack_weight.sort_values(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in df.columns]
 
     df = df.loc[:, stacked_techs] * unit_multiplier
@@ -158,7 +160,7 @@ def plot_installed_capacities(solution,
         for index, item in enumerate(meta_config.location_ordering):
             if item in df.index:
                 df.at[item, 'ordering'] = index
-        df = df.sort('ordering', ascending=False)
+        df = df.sort_values(by='ordering', ascending=False)
         df = df.drop('ordering', axis=1)
 
     ax = df.plot(kind='barh', stacked=True, legend=False, colormap=colormap,

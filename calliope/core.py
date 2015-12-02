@@ -1228,8 +1228,6 @@ class Model(BaseModel):
                 shutil.rmtree(logdir)
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
-        # Always preprocess instance, for both cold start and warm start
-        self.m.preprocess()
 
         def _solve(warmstart):
             if warmstart:
@@ -1585,7 +1583,7 @@ class Model(BaseModel):
         df.index.name = 'y'
         df = df.drop(['basename'], axis=1)
 
-        return df.sort(columns=sort_by, ascending=False)
+        return df.sort_values(by=sort_by, ascending=False)
 
     def get_shares(self):
         from . import analysis
@@ -1695,12 +1693,18 @@ class Model(BaseModel):
 
     def load_results(self):
         """Load results into model instance for access via model variables."""
+        not_optimal = (self.results['Solver'][0]['Termination condition'].key
+                       != 'optimal')
         r = self.m.solutions.load_from(self.results)
-        if r is False:
+        if r is False or not_optimal:
             logging.critical(self.results.Problem)
             logging.critical(self.results.Solver)
-            w = exceptions.ModelWarning
-            warnings.warn('Could not load results into model instance.', w)
+            if not_optimal:
+                message = 'Model solution was non-optimal.'
+            else:
+                message = 'Could not load results into model instance.'
+            raise exceptions.ModelError(message)
+
 
     def save_solution(self, how):
         """Save model solution. ``how`` can be 'hdf' or 'csv'
