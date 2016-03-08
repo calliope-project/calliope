@@ -72,7 +72,7 @@ After instantiating the ``Model`` object, and before calling the ``run()`` metho
 
 After the model has been solved, a processed set of solution variables and aggregated statistics is accessible under the ``solution`` property on the model instance.
 
-If used in an interactive IPython session the model instance can also be queried after running it, e.g.::
+If used in an interactive Python session (e.g., a Jupyter Notebook) the model instance can also be queried after running it, e.g.::
 
    # Get a pandas DataFrame of system variables
    system_vars = model.get_system_variables()

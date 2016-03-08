@@ -195,7 +195,7 @@ Running interactively
 
 The most straightforward way to run a Calliope model is to do so in an interactive Python session.
 
-An example which also demonstrates some of the analysis possibilities after running a model is given in the following IPython notebook. Note that you can download and run this notebook on your own machine (if both Calliope and IPython are installed):
+An example which also demonstrates some of the analysis possibilities after running a model is given in the following Jupyter notebook. Note that you can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed):
 
 :nbviewer_docs:`Calliope interactive example notebook <_static/notebooks/tutorial.ipynb>`
 

@@ -6,6 +6,7 @@ Release History
 0.3.7 (dev)
 -----------
 
+* |fixed| Improved installation instructions
 * |fixed| Pyomo 4.2 API compatibility
 * |fixed| Other minor fixes
 
