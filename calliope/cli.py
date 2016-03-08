@@ -32,6 +32,9 @@ _pdb = click.option('--pdb', is_flag=True, default=False,
                          'debugger on encountering errors.')
 
 
+logging.basicConfig(stream=sys.stderr)
+
+
 @contextlib.contextmanager
 def format_exceptions(debug=False, pdb=False, start_time=None):
     try:
@@ -46,9 +49,12 @@ def format_exceptions(debug=False, pdb=False, start_time=None):
             stack = traceback.extract_tb(e.__traceback__)
             # Get last stack trace entry still in Calliope
             last = [i for i in stack if 'calliope' in i[0]][-1]
-            err_string = 'Error in {}, {}:{}'.format(last[2], last[0], last[1])
+            if debug:
+                err_string = '\nError in {}, {}:{}'.format(last[2], last[0], last[1])
+            else:
+                err_string = '\nError in {}:'.format(last[2])
             click.secho(err_string, fg='red')
-            click.secho('\n' + str(e))
+            click.secho(str(e), fg='red')
             if start_time:
                 print_end_time(start_time, msg='aborted due to an error')
         sys.exit(1)

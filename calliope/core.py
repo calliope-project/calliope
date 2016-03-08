@@ -1230,23 +1230,34 @@ class Model(BaseModel):
             TempfileManager.tempdir = logdir
 
         def _solve(warmstart):
+            warning = None
             if warmstart:
-                results = self.opt.solve(self.m, warmstart=True,
-                                         tee=True)
+                try:
+                    results = self.opt.solve(self.m, warmstart=True,
+                                             tee=True)
+                except ValueError as e:
+                    if 'warmstart' in e.args[0]:
+                        warning = ('The chosen solver, {}, '
+                                   'does not support warmstart, '
+                                   'which may impact performance.').format(cr.get_key('solver'))
+                        results = self.opt.solve(self.m, tee=True)
             else:
                 results = self.opt.solve(self.m, tee=True)
-            return results
+
+            return results, warning
 
         if self.verbose:
             t = datetime.datetime.now().strftime(self.time_format)
-            print('\nModel preprocessing complete at {}'.format(t))
+            print('\nModel preprocessing complete at {}\n'.format(t))
 
         if cr.get_key('debug.echo_solver_log', default=False):
-            self.results = _solve(warmstart)
+            self.results, warnmsg = _solve(warmstart)
         else:
             # Silencing output by redirecting stdout and stderr
             with utils.capture_output() as self.pyomo_output:
-                self.results = _solve(warmstart)
+                self.results, warnmsg = _solve(warmstart)
+        if warnmsg:
+            warnings.warn(warnmsg, exceptions.ModelWarning)
         self.load_results()
 
     def process_solution(self):
@@ -1713,11 +1724,17 @@ class Model(BaseModel):
         HDF option should be used.
 
         """
+        if 'path' not in self.config_run.output:
+            self.config_run.output['path'] = 'Output'
+            logging.warning('`config_run.output.path` not set, using default: `Output`')
+
         # Create output dir, but ignore if it already exists
         try:
             os.makedirs(self.config_run.output.path)
         except OSError:  # Hoping this isn't raised for more serious stuff
             pass
+        # except KeyError:  # likely because `path` or `output` not defined
+        #     raise exceptions.ModelError('`config_run.output.path` not configured.')
         if how == 'hdf':
             self._save_hdf()
         elif how == 'csv':
@@ -1762,7 +1779,11 @@ class Model(BaseModel):
             store.append('data/e_eff/' + k, self.data.e_eff[k])
         # Now, save config_model and config_run as YAML strings
         config = pd.Series({key: sol[key].to_yaml() for key in ['config_model', 'config_run']})
-        store.append('config', config)
+        # FIXME this is really suboptimal as tables warns us that row size is too high,
+        # but we do it anyway and silence the warning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            store.append('config', config)
         store.close()
         # Return the path we used
         return store_file
