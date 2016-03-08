@@ -5,7 +5,7 @@ addons:
     - libhdf5-serial-dev  # Required for pip to compile pytables
 language: python
 python:
-  - "3.4"
+  - "3.5"
 env:
   - PIP_DOWNLOAD_CACHE=$HOME/.cache/pip  # Ensure pip-accel uses right dir
 install:

@@ -11,7 +11,7 @@ Calliope has been tested on Linux, Mac OS X, and Windows (but see the :ref:`Wind
 
 Running Calliope requires four things:
 
-1. the Python programming language (version 3.4 or higher)
+1. the Python programming language (version 3)
 2. a number of Python add-on modules (see :ref:`below for the complete list <python_module_requirements>`)
 3. a solver: Calliope has been tested with `GLPK <https://www.gnu.org/software/glpk/>`_, `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_, and `Gurobi <http://www.gurobi.com/>`_. Any other solver that is compatible with Pyomo, which Calliope uses to construct the models, should work.
 4. the Calliope software itself
@@ -28,9 +28,9 @@ Installing Python, required modules and Calliope
 
 By far the easiest and recommended way to obtain a working Python installation including the required Python modules (items 1 and 2 on the list above) is to use the free `Anaconda distribution <https://store.continuum.io/cshop/anaconda/>`_.
 
-Once you have Anaconda installed, you can create a new Python 3.4 environment called "calliope" with all the necessary modules with the following command::
+Once you have Anaconda installed, you can create a new Python 3.5 environment called "calliope" with all the necessary modules with the following command::
 
-   $ conda create -n calliope python=3.4 pip pandas pytables pyyaml matplotlib networkx basemap
+   $ conda create -n calliope python=3.5 pip pandas pytables pyyaml matplotlib networkx basemap
 
 Then, with the "calliope" environment activated (``source activate calliope`` if you are using Anaconda), install Calliope with the Python package installer pip, which will also install Pyomo (and any other remaining dependencies not installed already)::
 
@@ -46,7 +46,7 @@ Then, with the "calliope" environment activated (``source activate calliope`` if
 
    * On Windows, basemap is not currently available, so plotting maps is unavailable. Use the following command to install the Calliope environment::
 
-      conda create -n calliope python=3.4 pip pandas pytables pyyaml matplotlib
+      conda create -n calliope python=3.5 pip pandas pytables pyyaml matplotlib
 
    * To activate an Anaconda environment on Windows, use ``activate`` instead of ``source activate``, e.g: ``activate calliope``
 
