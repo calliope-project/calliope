@@ -1,3 +1,6 @@
+test:
+	py.test
+
 sdist:
 	python setup.py sdist
 
