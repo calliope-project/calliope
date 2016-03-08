@@ -113,18 +113,9 @@ The ``group`` option only has an effect on supply diversity functionality in the
 Locations
 ---------
 
-A location's name can be any alphanumeric string, but using integers makes it easier to define constraints for a whole range of locations by using the syntax ``from--to``. Locations can be given as a single location (e.g., ``location1``), a range of integer location names using the ``--`` operator (e.g., ``0--10``), or a comma-separated list of alphanumeric location names (e.g., ``location1,location2,10,11,12``). Using ``override``, some (but not all) settings can be overriden on a per-location and per-technology basis (see the box below).
+A location's name can be any alphanumeric string, but using integers makes it easier to define constraints for a whole range of locations by using the syntax ``from--to``. Locations can be given as a single location (e.g., ``location1``), a range of integer location names using the ``--`` operator (e.g., ``0--10``), or a comma-separated list of alphanumeric location names (e.g., ``location1,location2,10,11,12``). Using ``override``, some settings can be overridden on a per-location and per-technology basis (see below).
 
-.. Note::
-
-   Only the following constraints can be overriden on a per-location and per-tech basis (for now). Attempting to override any others will cause errors or simply be ignored:
-
-   * x_map
-   * constraints: r, r_eff, e_eff, c_eff, r_scale, r_scale_to_peak, s_cap.min, s_cap.max, s_cap.equals, s_init, s_time.max, use_s_time, r_cap.min, r_cap.max, r_cap.equals, r_area.min, r_area.max, r_area.equals, e_cap.min, e_cap.max, e_cap.equals, e_cap_scale, rb_eff, rb_cap.min, rb_cap.max, rb_cap.equals, rb_cap_follow, rb_cap_follow_mode
-
-.. NB this limitation is "implemented" simply by calling get_option with an x=x argument for some options but not for others
-
-Locations may also define a parent locating using ``within``, as shown in the following example:
+Locations may also define a parent location using ``within``, as shown in the following example:
 
 .. code-block:: yaml
 
@@ -207,6 +198,19 @@ These options can be overridden in several ways, and whenever such an option is 
 2. Setting specific to the technology ``y1`` if defined in ``techs`` (e.g. ``techs.y1.constraints.e_cap.max``)
 3. Check whether the immediate parent of the technology ``y`` defines the option (assuming that ``y1`` specifies ``parent: my_parent_tech``, e.g. ``techs.my_parent_tech.constraints.e_cap.max``)
 4. If the option is still not found, continue along the chain of parent-child relationships. Since every technology should inherit from one of the abstract base technologies, and those in turn inherit from the model-wide defaults, this will ultimately lead to the model-wide default setting if it has not been specified anywhere else. See :ref:`config_reference_constraints` for a complete listing of those defaults.
+
+The following technology options can be overriden on a per-location basis:
+
+* ``x_map``
+* ``constraints.*``
+* ``constraints_per_distance.*``
+* ``costs.*``
+
+The following settings cannot be overridden on a per-location basis:
+
+* Any other options, such as ``parent`` or ``carrier``
+* ``costs_per_distance.*``
+* ``depreciation.*``
 
 .. _configuration_timeseries:
 

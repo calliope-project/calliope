@@ -6,6 +6,25 @@ Release History
 0.3.7 (dev)
 -----------
 
+Major changes
+~~~~~~~~~~~~~
+
+|changed| Per-location configuration overrides improved. All technology constraints can now be set on a per-location basis, as can costs. This applies to the following settings:
+
+* ``techname.x_map``
+* ``techname.constraints.*``
+* ``techname.constraints_per_distance.*``
+* ``techname.costs.*``
+
+The following settings cannot be overridden on a per-location basis:
+
+* Any other options directly under ``techname``, such as ``techname.parent`` or ``techname.carrier``
+* ``techname.costs_per_distance.*``
+* ``techname.depreciation.*``
+
+Other changes
+~~~~~~~~~~~~~
+
 * |fixed| Improved installation instructions
 * |fixed| Pyomo 4.2 API compatibility
 * |fixed| Other minor fixes

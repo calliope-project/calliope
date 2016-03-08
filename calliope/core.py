@@ -295,6 +295,7 @@ class Model(BaseModel):
         # Fill in default values for a, so that something is there even in
         # case no dynamic timestepper is called
         for y in d._y_def_r:
+            # FIXME does this need to take into account per-location settings?
             avail = self.get_option(y + '.constraints.availability')
             d.a[y] = pd.DataFrame(avail, index=d._dt.index, columns=d._x)
 
@@ -676,6 +677,14 @@ class Model(BaseModel):
         # Last index t for which model may still use startup exceptions
         d.startup_time_bounds = d._dt.index[int(o.startup_time
                                                 / d.time_res_data)]
+
+        #
+        # x: Locations set
+        #
+        d._x = list(o.locations.keys())
+        if self.config_run.get_key('subset_x', default=False):
+            d._x = [x for x in d._x if x in self.config_run.subset_x]
+
         #
         # y: Technologies set
         #
@@ -718,12 +727,29 @@ class Model(BaseModel):
                      + d._y_transmission)
         d._y_con = ([y for y in d._y if not self.ischild(y, of='supply')]
                     + d._y_transmission)
+
         # Subset of technologies that allow rb
-        d._y_rb = [y for y in d._y
-                   if self.get_option(y + '.constraints.allow_rb') is True]
+        d._y_rb = []
+        for x in d._x:
+            if self.get_option(y + '.constraints.allow_rb', x=x) is True:
+                d._y_rb.append(y)
+                break  # No need to look at other x
+
         # Subset of technologies with parasitics (carrier efficiency != 1.0)
-        d._y_p = [y for y in d._y
-                  if self.get_option(y + '.constraints.c_eff') != 1.0]
+        d._y_p = []
+        for x in d._x:
+            if self.get_option(y + '.constraints.c_eff', x=x) != 1.0:
+                d._y_p.append(y)
+                break  # No need to look at other x
+
+        #
+        # Locations settings matrix and transmission technologies
+        #
+        d.locations = locations.generate_location_matrix(o.locations,
+                                                         techs=d._y)
+        # For simplicity, only keep the locations that are actually in set `x`
+        d.locations = d.locations.loc[d._x, :]
+
         #
         # c: Carriers set
         #
@@ -733,19 +759,7 @@ class Model(BaseModel):
             if self.get_option(y + '.source_carrier'):
                 d._c.update([self.get_option(y + '.source_carrier')])
         d._c = list(d._c)
-        #
-        # x: Locations set
-        #
-        d._x = list(o.locations.keys())
-        if self.config_run.get_key('subset_x', default=False):
-            d._x = [x for x in d._x if x in self.config_run.subset_x]
-        #
-        # Locations settings matrix and transmission technologies
-        #
-        d.locations = locations.generate_location_matrix(o.locations,
-                                                         techs=d._y)
-        # For simplicity, only keep the locations that are actually in set `x`
-        d.locations = d.locations.loc[d._x, :]
+
         #
         # Initialize transmission technologies
         #
@@ -927,7 +941,7 @@ class Model(BaseModel):
                             d._y_def_r.add(y)
                     # Convert power to energy for r, if necessary
                     if param == 'r':
-                        r_unit = self.get_option(y + '.constraints.r_unit')
+                        r_unit = self.get_option(y + '.constraints.r_unit', x=x)
                         if r_unit == 'power':
                             r_scale = d.time_res_data
                             d[param][y].loc[:, x] = (d[param][y].loc[:, x]
