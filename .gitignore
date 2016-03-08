@@ -3,3 +3,4 @@
 calliope.egg-info/
 doc/_build/
 dist/
+.cache
