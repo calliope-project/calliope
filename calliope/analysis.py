@@ -112,7 +112,7 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
             plot_df[demand] * -1,
             color='red', lw=1.5, ls='--', label=df.at[demand, 'name'])
     # Add legend here rather than in stack_plot so we get demand too
-    au.legend_on_right(ax)
+    au.legend_outside_ax(ax, where='right')
     return ax
 
 
@@ -165,7 +165,7 @@ def plot_installed_capacities(solution,
 
     ax = df.plot(kind='barh', stacked=True, legend=False, colormap=colormap,
                  **kwargs)
-    leg = au.legend_on_right(ax, style='custom', artists=proxies, labels=names)
+    leg = au.legend_outside_ax(ax, where='right', artists=proxies, labels=names)
 
     ylab = ax.set_ylabel('')
     xlab = ax.set_xlabel('Installed capacity ({})'.format(unit_label))

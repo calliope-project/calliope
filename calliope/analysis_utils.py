@@ -21,48 +21,39 @@ import pandas as pd
 from . import utils
 
 
-def legend_on_right(ax, style='default', artists=None, labels=None, **kwargs):
-    """Draw a legend on outside on the right of the figure given by ``ax``"""
+def legend_outside_ax(ax, where='right', artists=None, labels=None, **kwargs):
+    """
+    Draw a legend outside the figure given by ``ax``.
+
+    """
     box = ax.get_position()
-    # originally box.width * 0.8 but 1.0 solves some problems
-    # it just means that the box becomes wider, which is ok though!
-    ax.set_position([box.x0, box.y0, box.width * 1.0, box.height])
-    if style == 'square':
-        artists, labels = get_square_legend(ax.legend())
-        l = ax.legend(artists, labels, loc='center left',
-                      bbox_to_anchor=(1, 0.5), **kwargs)
-    elif style == 'custom':
-        l = ax.legend(artists, labels, loc='center left',
-                      bbox_to_anchor=(1, 0.5), **kwargs)
+
+    # Positions depending on `where`
+    # 3-tuples: (loc, bbox_to_anchor, positions for ax.set_position())
+    POS = {
+        'right': ('center left', (1, 0.5),
+                  [box.x0, box.y0, box.width * 1.0, box.height]),
+        'left': ('upper center', (05., -0.05),
+                 [box.x0, box.y0, box.width * 1.0, box.height]),
+        'bottom': ('center right', (-0.35, 0.5),
+                   [box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    }
+    try:
+        leg_loc, leg_bbox, new_ax_pos = POS[where]
+    except KeyError:
+        raise ValueError('Invalid for `where`: {}'.format(where))
+
+    ax.set_position(new_ax_pos)
+
+    # Use custom artists and labels?
+    if artists and labels:
+        args = [artists, labels]
     else:
-        l = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), **kwargs)
-    return l
+        args = []
 
+    legend = ax.legend(*args, loc=leg_loc, bbox_to_anchor=leg_bbox, **kwargs)
 
-def legend_below(ax, style='default', columns=5, artists=None, labels=None,
-                 **kwargs):
-    """Draw a legend on outside below the figure given by ``ax``"""
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0 + box.height * 0.1,
-                     box.width, box.height * 0.9])
-    if style == 'square':
-        artists, labels = get_square_legend(ax.legend())
-        l = ax.legend(artists, labels, loc='upper center',
-                      bbox_to_anchor=(0.5, -0.05), ncol=columns, **kwargs)
-    elif style == 'custom':
-        l = ax.legend(artists, labels, loc='upper center',
-                      bbox_to_anchor=(0.5, -0.05), ncol=columns, **kwargs)
-    else:
-        l = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-                      ncol=columns, **kwargs)
-    return l
-
-
-def get_square_legend(lgd):
-    rects = [plt.Rectangle((0, 0), 1, 1,
-             fc=l.get_color()) for l in lgd.get_lines()]
-    labels = [l.get_label() for l in lgd.get_lines()]
-    return (rects, labels)
+    return legend
 
 
 def stack_plot(df, stack=None, figsize=None, colormap='jet', legend='default',
@@ -98,8 +89,8 @@ def stack_plot(df, stack=None, figsize=None, colormap='jet', legend='default',
     if legend:
         if legend == 'default':
             l = ax.legend(title=leg_title)
-        elif legend == 'right':
-            l = legend_on_right(ax, title=leg_title)
+        elif legend in ['right', 'left', 'bottom']:
+            l = legend_outside_ax(ax, where=legend, title=leg_title)
         if leg_title and leg_fontsize:
             plt.setp(l.get_title(), fontsize=leg_fontsize)
 

@@ -6,7 +6,10 @@ Release History
 0.3.7 (dev)
 -----------
 
-0.3.6 (2016-09-23)
+* |fixed| Pyomo 4.2 API compatibility
+* |fixed| Other minor fixes
+
+0.3.6 (2015-09-23)
 ------------------
 
 * |fixed| Version 0.3.5 changes were not reflected in tutorial
