@@ -1216,6 +1216,7 @@ class Model(BaseModel):
         """
         m = self.m
         cr = self.config_run
+        solver_kwargs = {}
         if not warmstart:
             solver_io = cr.get_key('solver_io', default=False)
             if solver_io:
@@ -1229,9 +1230,9 @@ class Model(BaseModel):
             except KeyError:
                 pass
             if cr.get_key('debug.symbolic_solver_labels', default=False):
-                self.opt.symbolic_solver_labels = True
+                solver_kwargs['symbolic_solver_labels'] = True
         if cr.get_key('debug.keep_temp_files', default=False):
-            self.opt.keepfiles = True
+            solver_kwargs['keepfiles'] = True
             if self.mode == 'plan':
                 logdir = os.path.join('Logs', self.run_id)
             elif self.mode == 'operate':
@@ -1243,20 +1244,20 @@ class Model(BaseModel):
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
 
-        def _solve(warmstart):
+        def _solve(warmstart, solver_kwargs):
             warning = None
             if warmstart:
                 try:
                     results = self.opt.solve(self.m, warmstart=True,
-                                             tee=True)
+                                             tee=True, **solver_kwargs)
                 except ValueError as e:
                     if 'warmstart' in e.args[0]:
                         warning = ('The chosen solver, {}, '
                                    'does not support warmstart, '
                                    'which may impact performance.').format(cr.get_key('solver'))
-                        results = self.opt.solve(self.m, tee=True)
+                        results = self.opt.solve(self.m, tee=True, **solver_kwargs)
             else:
-                results = self.opt.solve(self.m, tee=True)
+                results = self.opt.solve(self.m, tee=True, **solver_kwargs)
 
             return results, warning
 
@@ -1265,11 +1266,11 @@ class Model(BaseModel):
             print('\nModel preprocessing complete at {}\n'.format(t))
 
         if cr.get_key('debug.echo_solver_log', default=False):
-            self.results, warnmsg = _solve(warmstart)
+            self.results, warnmsg = _solve(warmstart, solver_kwargs)
         else:
             # Silencing output by redirecting stdout and stderr
             with utils.capture_output() as self.pyomo_output:
-                self.results, warnmsg = _solve(warmstart)
+                self.results, warnmsg = _solve(warmstart, solver_kwargs)
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
         self.load_results()
