@@ -25,10 +25,10 @@ setup(
                                'test/common/t_6h/*.csv',
                                'test/common/t_erroneous/*.csv']},
     install_requires=[
-        "pyomo >= 4.2",
+        "pyomo >= 4.2, < 4.3",
         "numpy >= 1.10.1",
         "numexpr >= 2.3.1",
-        "pandas >= 0.17.1",
+        "pandas >= 0.17.1, < 0.18",
         "pyyaml >= 3.11",
         "tables >= 3.2.0",  # Requires cython to build
         "click >= 3.3"
