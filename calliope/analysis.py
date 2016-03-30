@@ -48,7 +48,8 @@ def plot_carrier_production(solution, carrier='power', subset_t=None,
 
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
                     types=['supply', 'conversion', 'storage', 'unmet_demand'],
-                    colormap=None, ticks=None, resample=None):
+                    colormap=None, ticks=None,
+                    resample_options=None, resample_func=None):
     """
     Generate a stackplot of the ``data`` for the given ``carrier``,
     plotting the ``demand`` on top.
@@ -74,9 +75,13 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
         Where to draw x-axis (time axis) ticks. By default (None),
         auto-detects, but can manually set to either 'hourly', 'daily',
         or 'monthly'.
-    resample : dict, default None
+    resample_options : dict, default None
         Give options for pandas.DataFrame.resample in a dict, to resample
-        the entire time series prior to plotting.
+        the entire time series prior to plotting. Both resample_options
+        and resample_func must be given for resampling to happen.
+    resample_func : string, default None
+        Give the name of the aggregating function to use when resampling,
+        e.g. "mean" or "sum".
 
     """
     # Determine ticks
@@ -91,8 +96,8 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     # Set up time series to plot, dividing it by time_res_series
     time_res = solution.time_res
     plot_df = data.divide(time_res, axis='index')
-    if resample:
-        plot_df = plot_df.resample(**resample)
+    if resample_options and resample_func:
+        plot_df = getattr(plot_df.resample(**resample_options), resample_func)()
     # Get tech stack and names
     df = solution.metadata[solution.metadata.carrier == carrier]
     query_string = au._get_query_string(types)

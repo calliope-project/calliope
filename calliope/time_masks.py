@@ -185,7 +185,7 @@ def mask_extreme_week(data, tech, var='r', how='sum', what='min'):
     day_len = int(24 / data.time_res_data)
     # Get day-wise sums
     dff_index = list(range(0, len(df), day_len))
-    dff = pd.rolling_sum(df, window=day_len).reindex(dff_index)
+    dff = df.rolling(window=day_len).sum().reindex(dff_index)
     # If what is 'min', this will get the 'idxmin' attribute (a method),
     # similar for 'max', else most likely raise an error!
     idx_extr = lambda x: getattr(x, 'idx{}'.format(what))

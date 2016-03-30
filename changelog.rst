@@ -3,6 +3,12 @@
 Release History
 ===============
 
+0.3.8 (dev)
+-----------
+
+* |changed| Pandas 0.18.0 compatibility
+
+
 0.3.7 (2016-03-10)
 ------------------
 
