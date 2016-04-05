@@ -51,10 +51,10 @@ techs:
             monetary:
                 s_cap: 500
                 e_cap: 10
-    demand_electricity:
+    demand_power:
         parent: demand
         carrier: power
-    unmet_demand_electricity:
+    unmet_demand_power:
         parent: unmet_demand
         carrier: power
     hvac:

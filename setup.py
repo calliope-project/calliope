@@ -29,6 +29,8 @@ setup(
         "numpy >= 1.10.1",
         "numexpr >= 2.3.1",
         "pandas >= 0.18, < 0.19",
+        "xarray >= 0.7.2, < 0.8",
+        "netcdf4 >= 1.2.2",
         "pyyaml >= 3.11",
         "tables >= 3.2.0",  # Requires cython to build
         "click >= 3.3"

@@ -37,3 +37,19 @@ links:
         hvac:
             constraints:
                 e_cap.max: 10000
+
+
+##
+# METADATA
+##
+
+metadata:
+    # lower left corner lon, lower left corner lat, upper right corner lon, upper right corner lat
+    map_boundary: [-10, 35, 5, 45]
+
+    location_coordinates:  # lat, lon coordinates
+        r1: [40, -2]
+        r2: [40, -8]
+        csp1: [41, -2]
+        csp2: [39, -1]
+        csp3: [39, -2]

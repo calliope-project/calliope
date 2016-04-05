@@ -138,8 +138,8 @@ class TestInitialization:
     def test_initialize_sets_technologies(self):
         model = common.simple_model()
         assert sorted(model.data._y) == ['ccgt', 'csp',
-                                         'demand_electricity',
-                                         'unmet_demand_electricity']
+                                         'demand_power',
+                                         'unmet_demand_power']
 
     def test_initialize_sets_technologies_loc_invalid_tech(self):
         locations = """
@@ -156,19 +156,19 @@ class TestInitialization:
         config_run = """
                         mode: plan
                         model: [{techs}, {locations}]
-                        subset_y: ['ccgt', 'demand_electricity']
+                        subset_y: ['ccgt', 'demand_power']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt', 'demand_electricity']
+        assert sorted(model.data._y) == ['ccgt', 'demand_power']
 
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
                         mode: plan
                         model: [{techs}, {locations}]
-                        subset_y: ['ccgt', 'demand_electricity', 'foo', 'bar']
+                        subset_y: ['ccgt', 'demand_power', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt', 'demand_electricity']
+        assert sorted(model.data._y) == ['ccgt', 'demand_power']
 
     def test_initialize_sets_carriers(self):
         model = common.simple_model()
@@ -201,8 +201,8 @@ class TestInitialization:
     def test_initialize_locations_matrix(self):
         model = common.simple_model()
         cols = ['_level', '_override.ccgt.constraints.e_cap.max',
-                '_within', 'ccgt', 'csp', 'demand_electricity',
-                'unmet_demand_electricity']
+                '_within', 'ccgt', 'csp', 'demand_power',
+                'unmet_demand_power']
         assert sorted(model.data.locations.columns) == cols
         assert (sorted(model.data.locations.index.tolist())
                 == ['1', '2', 'demand'])
@@ -212,7 +212,7 @@ class TestInitialization:
         locations = """
             locations:
                 demand:
-                    techs: ['demand_electricity']
+                    techs: ['demand_power']
                 1,2:
                     techs: ['ccgt', 'csp']
             links:
@@ -230,7 +230,7 @@ class TestInitialization:
     def test_initialize_sets_locations_with_transmission(self,
                                                          model_transmission):
         model = model_transmission
-        assert sorted(model.data._y) == ['ccgt', 'csp', 'demand_electricity',
+        assert sorted(model.data._y) == ['ccgt', 'csp', 'demand_power',
                                          'hvac:1', 'hvac:2']
 
     def test_initialize_locations_matrix_with_transmission(self,
@@ -239,7 +239,7 @@ class TestInitialization:
         cols = ['_level',
                 '_override.hvac:1.constraints.e_cap.max',
                 '_override.hvac:2.constraints.e_cap.max',
-                '_within', 'ccgt', 'csp', 'demand_electricity',
+                '_within', 'ccgt', 'csp', 'demand_power',
                 'hvac:1', 'hvac:2']
         assert sorted(model.data.locations.columns) == cols
         assert (sorted(model.data.locations.index.tolist())
@@ -251,7 +251,7 @@ class TestInitialization:
 
     def test_read_data_supply_r_negative_check(self):
         path = common._add_test_path('common/t_positive_demand')
-        override = ('override.techs.demand_electricity.'
+        override = ('override.techs.demand_power.'
                     'constraints.r: file=demand-sin_r.csv')
         override = calliope.utils.AttrDict.from_yaml_string(override)
         with pytest.raises(AssertionError):

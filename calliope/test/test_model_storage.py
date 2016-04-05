@@ -12,8 +12,8 @@ class TestModel:
         locations = """
             locations:
                 1:
-                    techs: ['ccgt', 'test_storage', 'demand_electricity',
-                            'unmet_demand_electricity']
+                    techs: ['ccgt', 'test_storage', 'demand_power',
+                            'unmet_demand_power']
                     override:
                         test_storage:
                             constraints:
@@ -22,7 +22,7 @@ class TestModel:
                         ccgt:
                             constraints:
                                 e_cap.max: 9.5
-                        demand_electricity:
+                        demand_power:
                             x_map: '1: demand'
                             constraints:
                                 r: file=demand-sin_r.csv
@@ -46,7 +46,7 @@ class TestModel:
          assert str(model.results.solver.termination_condition) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].iloc[0, :].sum() == 8.0
-        assert_almost_equal(df.loc['e:power', 'ccgt', :, :].sum(1).mean(),
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim='x')[dict(t=0)].mean() == 8.0
+        assert_almost_equal(sol['e'].loc[dict(c='power', y='ccgt')].sum(dim='x').mean(),
                             7.62, tolerance=0.01)

@@ -14,72 +14,72 @@ import logging
 import os
 
 import pandas as pd
+import xarray as xr
 
 from .utils import AttrDict
 
 
-REQUIRED_KEYS = ['capacity_factor', 'costs', 'levelized_cost',
-                 'metadata', 'node', 'parameters',
-                 'shares', 'summary', 'time_res', 'totals', 'config_model',
-                 'config_run']  # 'data/...' keys are not required
+REQUIRED_TABLES = ['capacity_factor', 'levelized_cost',
+                   'metadata', 'node', 'parameters',
+                   'groups', 'shares', 'summary', 'time_res']
 
-
-def read_hdf(hdf_file, tables_to_read=None):
-    """Read model solution from HDF file"""
-    store = pd.HDFStore(hdf_file, mode='r')
-    solution = AttrDict()
-    if not tables_to_read:
-        # Make sure leading/trailing '/' are removed from keys,
-        # and don't read the 'config' key (yet)
-        tables_to_read = [k.strip('/') for k in store.keys()
-                          if k != 'config']
-    for k in tables_to_read:
-        solution[k] = store.get(k)
-    # Also add model and run config to the solution object, which are stored
-    # as strings in a Series in the 'config' key
-    for k in ['config_model', 'config_run']:
-        try:
-            solution[k] = AttrDict.from_yaml_string(store.get('config')[k])
-        except KeyError:
-            pass  # Ignore missing 'config' key here, we log missing below
-    # Check if any keys are missing
-    missing_keys = set(REQUIRED_KEYS) - set(solution.keys())
+def _check(path, solution):
+    # Superficial check if some key tables are missing
+    missing_keys = set(REQUIRED_TABLES) - set(solution.data_vars)
     if len(missing_keys) > 0:
-        logging.warning('HDF file {} missing keys: '
-                        '{}'.format(hdf_file, missing_keys))
-    store.close()
+        logging.warning('Solution {} missing tables: '
+                        '{}'.format(path, missing_keys))
+
+
+def read_netcdf(path):
+    """Read model solution from NetCDF4 file"""
+    solution = xr.open_dataset(path)
+
+    # Deserialize YAML attributes
+    for k in ['config_model', 'config_run']:
+        solution.attrs[k] = AttrDict.from_yaml_string(solution.attrs[k])
+
+    _check(path, solution)
+
     return solution
 
 
-def read_csv(directory, tables_to_read=None):
+def read_csv(directory):
     solution = AttrDict()
-    if not tables_to_read:
-        tables_to_read = glob.glob(directory + '/*.csv')
-        if len(tables_to_read) == 0:
-            raise IOError('No CSV files found')
-        # Only keep basenames without extension
-        tables_to_read = [os.path.splitext(os.path.basename(f))[0]
-                          for f in tables_to_read]
+    tables_to_read = glob.glob(directory + '/*.csv')
+    if len(tables_to_read) == 0:
+        raise IOError('No CSV files found')
+    # Only keep basenames without extension
+    tables_to_read = [os.path.splitext(os.path.basename(f))[0]
+                      for f in tables_to_read]
+    arrays = {}
     for f in tables_to_read:
         src = os.path.join(directory, f + '.csv')
-        df = pd.read_csv(src, index_col=0, parse_dates=True)
-        # If 'minor' is in columns, we have a flattened panel!
-        if 'minor' in df.columns:
-            df['major'] = df.index
-            df = df.set_index(['major', 'minor']).to_panel()
-        solution[f] = df
+        cols = pd.read_csv(src, nrows=1).columns
+        series = pd.read_csv(src, index_col=list(range(len(cols) - 1)), parse_dates=True, squeeze=True)
+        # Make everything except the last column a MultiIndex
+        arrays[f] = xr.DataArray.from_series(series)
+    solution = xr.Dataset(arrays)
+
+    # Add YAML attributes
+    for k in ['config_model', 'config_run']:
+        file_path = os.path.join(directory, '{}.yaml'.format(k))
+        solution.attrs[k] = AttrDict.from_yaml(file_path)
+
+    _check(directory, solution)
+
     return solution
 
 
 def _detect_format(directory):
-    """Autodetects format, falling back to CSV if it can't find HDF"""
-    if os.path.exists(os.path.join(directory, 'solution.hdf')):
-        return 'hdf'
+    """Detects format, falling back to CSV if it can't find NetCDF4"""
+    if os.path.exists(os.path.join(directory, 'solution.nc4')):
+        return 'netcdf'
     else:
         return 'csv'
 
 
-def read_dir(directory, tables_to_read=None):
+def read_dir(directory):
     """Combines output files from `directory` and return an AttrDict
     containing them all.
 
@@ -96,13 +96,13 @@ def read_dir(directory, tables_to_read=None):
         fmt = _detect_format(iteration_dir)
         logging.debug('Iteration: {}, Format detected: {}'.format(i, fmt))
         try:
-            if fmt == 'hdf':
-                hdf_file = os.path.join(iteration_dir, 'solution.hdf')
-                logging.debug('Read HDF: {}'.format(hdf_file))
-                results.solutions[i] = read_hdf(hdf_file, tables_to_read)
+            if fmt == 'netcdf':
+                sol_path = os.path.join(iteration_dir, 'solution.nc4')
+                results.solutions[i] = read_netcdf(sol_path)
             else:
-                results.solutions[i] = read_csv(iteration_dir, tables_to_read)
-                logging.debug('Read CSV: {}'.format(iteration_dir))
+                sol_path = iteration_dir
+                results.solutions[i] = read_csv(sol_path)
+            logging.debug('Read as {}: {}'.format(fmt, sol_path))
         except IOError as err:
             logging.warning('I/O error in `{}` at iteration `{}`'
                             ': {}'.format(iteration_dir, i, err))

@@ -144,7 +144,8 @@ def plot_graph_on_map(config_model, G=None,
                       bounds=None,
                       scale_left_distance=0.05,
                       scale_bottom_distance=0.05,
-                      ax=None, show_scale=True):
+                      ax=None, show_scale=True,
+                      map_resolution='i'):
     from mpl_toolkits.basemap import Basemap
     import networkx as nx
     from calliope.lib import nx_pylab
@@ -158,7 +159,7 @@ def plot_graph_on_map(config_model, G=None,
                 llcrnrlon=bounds[0], llcrnrlat=bounds[1],
                 urcrnrlon=bounds[2], urcrnrlat=bounds[3],
                 lat_ts=bounds[1] + bounds_width / 2,
-                resolution='i',
+                resolution=map_resolution,
                 suppress_ticks=True)
 
     # Node positions
@@ -310,16 +311,17 @@ def _get_supply_groups(solution):
 
     """
     # idx_1: group is True and '|' in members
-    grp_1 = solution.shares.query('group == True & type == "supply"')
+    groups = solution.groups.to_pandas()
+    grp_1 = groups.query('group == True & type == "supply"')
     idx_1 = grp_1[(grp_1.members != grp_1.index)
                   & (grp_1.members.str.contains('\|'))].index.tolist()
     # idx_2: group is False and no '|' in members
-    grp_2 = solution.shares.query('group == False & type == "supply"')
+    grp_2 = groups.query('group == False & type == "supply"')
     idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
     # Also drop entries from idx_2 that are already covered by
     # groups in idx_1
     covered = [i.split('|')
-               for i in solution.shares.loc[idx_1, 'members'].tolist()]
+               for i in groups.loc[idx_1, 'members'].tolist()]
     covered_flat = [i for i in itertools.chain.from_iterable(covered)]
     idx_2 = [i for i in idx_2 if i not in covered_flat]
     return idx_1 + idx_2

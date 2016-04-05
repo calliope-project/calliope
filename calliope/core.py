@@ -27,6 +27,7 @@ import pyomo.core as po
 import pyomo.environ  # Necessary for solver plugins etc.
 import numpy as np
 import pandas as pd
+import xarray as xr
 from pyutilib.services import TempfileManager
 
 from . import exceptions
@@ -977,11 +978,14 @@ class Model(BaseModel):
                     assert (series >= 0).all(), err
 
     def _get_t_max_demand(self):
+        """Return timestep index with maximum demand"""
         t_max_demands = utils.AttrDict()
         for c in self.data._c:
             ys = [y for y in self.data._y
                   if self.get_option(y + '.carrier') == c]
-            r_carrier = pd.Panel(self.data.r.as_dict()).loc[ys].sum(axis=2)
+            # r_carrier is summed up over all techs ys and all locations (dim_1)
+            r_carrier = (xr.Dataset(self.data.r.as_dict())[ys]
+                           .sum(dim='dim_1').to_dataframe())
             t_max_demand = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
             # Adjust for reduced resolution, only if t_max_demand not 0 anyway
             if t_max_demand != 0:
@@ -1192,7 +1196,7 @@ class Model(BaseModel):
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
         if cr.get_key('output.save', default=False) is True:
-            output_format = cr.get_key('output.format', default=['hdf'])
+            output_format = cr.get_key('output.format', default=['netcdf'])
             if not isinstance(output_format, list):
                 output_format = [output_format]
             for fmt in output_format:
@@ -1276,59 +1280,73 @@ class Model(BaseModel):
         self.load_results()
 
     def process_solution(self):
+        """
+        Called from both load_solution() and load_solution_iterative()
+        """
         # Add levelized cost
-        self.solution['levelized_cost'] = self.get_levelized_cost()
+        self.solution = self.solution.merge(self.get_levelized_cost().to_dataset(name='levelized_cost'))
         # Add capacity factor
-        self.solution['capacity_factor'] = self.get_capacity_factor()
+        self.solution = self.solution.merge(self.get_capacity_factor().to_dataset(name='capacity_factor'))
         # Add metadata
-        self.solution['metadata'] = self.get_metadata()
+        md = self.get_metadata()
+        md.columns.name = 'cols_metadata'
+        md.index.name = 'y'
+        self.solution = self.solution.merge(xr.DataArray(md).to_dataset(name='metadata'))
         # Add summary
-        self.solution['summary'] = self.get_summary()
+        summary = self.get_summary()
+        summary.columns.name = 'cols_summary'
+        summary.index.name = 'techs'
+        self.solution = self.solution.merge(xr.DataArray(summary).to_dataset(name='summary'))
+        # Add groups
+        groups = self.get_groups()
+        groups.columns.name = 'cols_groups'
+        groups.index.name = 'techs'
+        self.solution = self.solution.merge(xr.DataArray(groups).to_dataset(name='groups'))
         # Add shares
-        self.solution['shares'] = self.get_shares()
+        shares = self.get_shares(groups)
+        shares.columns.name = 'cols_shares'
+        shares.index.name = 'techs'
+        self.solution = self.solution.merge(xr.DataArray(shares).to_dataset(name='shares'))
         # Add time resolution, and give it a nicer index
         time_res = self.data.time_res_series.copy()
-        time_res.index = self.solution.node.major_axis
-        self.solution['time_res'] = time_res
-        # Add model and run config
-        self.solution['config_run'] = self.config_run
-        self.solution['config_model'] = self.config_model
+        time_res.index = self.solution.coords['t'].values
+        time_res.index.name = 't'
+        self.solution = self.solution.merge(xr.DataArray(time_res).to_dataset(name='time_res'))
+        # Add model and run configuration
+        self.solution.attrs['config_run'] = self.config_run
+        self.solution.attrs['config_model'] = self.config_model
 
     def load_solution(self):
-        sol = {'node': self.get_node_variables(),
-               'totals': self.get_totals(),
-               'costs': self.get_costs(),
-               'parameters': self.get_node_parameters()}
-        self.solution = utils.AttrDict(sol)
+        sol = self.get_node_variables()
+        sol = sol.merge(self.get_totals())
+        sol = sol.merge(self.get_node_parameters())
+        sol = sol.merge(self.get_costs().to_dataset(name='costs'))
+        self.solution = sol
         self.process_solution()
 
-    def get_var(self, var, dims=None):
+    def get_var(self, var, dims=None, standardize_coords=True):
         """
-        Return output for variable `var` as a series, dataframe or panel
-
-        If ``t`` is one of the variable's dimensions, Panels and Panel4Ds
-        are transposed such that ``t`` is in the major_axis.
+        Return output for variable `var` as a pandas.Series (1d),
+        pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
 
         Args:
             var : variable name as string, e.g. 'es_prod'
-
             dims : list of indices as strings, e.g. ('y', 'x', 't');
             if not given, they are auto-detected
 
         """
-        # FIXME: even if `dims` were given where `t` is not in the last
-        # position, the code below assumes that `t` is in the last position,
-        # and won't work otherwise. All model variables are formulated
-        # so that `t` is always last, so this should not be a problem.
         m = self.m
         try:
-            var = getattr(m, var)
+            var_container = getattr(m, var)
         except AttributeError:
             raise exceptions.ModelError('Variable {} inexistent.'.format(var))
         # Get dims
         if not dims:
-            dims = [i.name for i in var.index_set().set_tuple]
-        result = pd.DataFrame.from_dict(var.get_values(), orient='index')
+            dims = [i.name for i in var_container.index_set().set_tuple]
+        # Make sure standard coordinate names are used
+        if standardize_coords:
+            dims = [i.split('_')[0] for i in dims]
+        result = pd.DataFrame.from_dict(var_container.get_values(), orient='index')
         if result.empty:
             raise exceptions.ModelError('Variable {} has no data.'.format(var))
         result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
@@ -1336,27 +1354,12 @@ class Model(BaseModel):
         # Unstack and sort by time axis
         if len(dims) == 1:
             result = result.sort_index()
-        else:
-            # if len(dims) is 2, we already have a well-formed panel
+        elif len(dims) == 2:
+            # if len(dims) is 2, we already have a well-formed DataFrame
             result = result.unstack(level=0)
-            if len(dims) == 2:
-                result = result.sort_index()
-            if len(dims) == 3:
-                result = result.to_panel()
-                if 't' in dims:
-                    # Flip time into major_axis
-                    result = result.transpose(0, 2, 1)
-                result = result.sort_index(1)
-            if len(dims) == 4:
-                # Panel4D needs manual treatment until pandas supports to_panel
-                # for anything else but the regular 3d panel
-                p = {}
-                for i in result.columns:
-                    p[i] = result[i].unstack(0).to_panel()
-                    if 't' in dims:
-                        p[i] = p[i].transpose(0, 2, 1)
-                result = pd.Panel4D(p)
-                result = result.sort_index(1)
+            result = result.sort_index()
+        else:  # len(dims) >= 3
+            result = xr.DataArray.from_series(result)
         # Nicify time axis
         if 't' in dims:
             t = getattr(m, 't')
@@ -1364,10 +1367,10 @@ class Model(BaseModel):
                 new_index = self.data._dt.loc[t.first():t.last()].tolist()
             else:
                 new_index = self.data._dt.loc[self.t_start:self.t_end].tolist()
-            if len(dims) <= 2:
+            if len(dims) <= 2:  # pandas
                 result.index = new_index
-            else:
-                result.major_axis = new_index
+            else:  # xarray
+                result.coords['t'] = new_index
         return result
 
     def get_ec(self, what='prod'):
@@ -1379,67 +1382,55 @@ class Model(BaseModel):
             return es
         # For those techs that have an `ec`, replace their `es` with `ec`,
         # for the others, `ec` is `es`, so no change needed
-        for carrier in ec.labels:
-            for tech in ec.items:
-                es[carrier][tech] = ec[carrier][tech]
+        for carrier in ec.coords['c'].values:
+            for tech in ec.coords['y'].values:
+                es.loc[dict(c=carrier, y=tech)] = ec.loc[dict(c=carrier, y=tech)]
         return es  # the variable is called es, but the thing is now ec
 
     def get_ec_sum(self):
-        prod = self.get_ec('prod')
-        con = self.get_ec('con')
-        ec = {}
-        for i in prod.labels:
-            ec[i] = (prod[i].to_frame(filter_observations=False)
-                            .add(con[i].to_frame(filter_observations=False),
-                                 fill_value=0)).to_panel()
-        return pd.Panel4D(ec)
+        ec = self.get_ec('prod') + self.get_ec('con')
+        return ec.fillna(0)
 
     def get_node_variables(self):
         detail = ['s', 'rs']
-        p = pd.Panel4D({v: self.get_var(v) for v in detail})
+        p = xr.Dataset({v: self.get_var(v) for v in detail})
         try:
             p['rbs'] = self.get_var('rbs')
         except exceptions.ModelError:
             # `rbs` doesn't exist in the model or exists without data
-            p['rbs'] = 0
-        # Add 'e:c' items for each c in carrier
-        temp = self.get_ec_sum()
-        for c in self.data._c:
-            p['e' + ':' + c] = temp.loc[c, :, :, :]
+            p['rbs'] = p['rs'].copy()  # get same dimensions
+            p['rbs'].loc[:] = 0
+        p['e'] = self.get_ec_sum()
         return p
 
-    def get_node_parameters(self, built_only=False):
-        """If built_only is True, disregard locations where e_cap==0"""
+    def get_node_parameters(self):
         detail = ['s_cap', 'r_cap', 'r_area', 'e_cap', 'e_cap_net']
-        result = pd.Panel({v: self.get_var(v) for v in detail})
+        result = xr.Dataset({v: self.get_var(v) for v in detail})
         try:
             result['rb_cap'] = self.get_var('rb_cap')
         except exceptions.ModelError:
-            result['rb_cap'] = 0
-        if built_only:
-            result = result.to_frame(filter_observations=False)
-            result = result[result.e_cap > 0].dropna(axis=1).to_panel()
+            result['rb_cap'] = result['r_cap'].copy()  # get same dimensions
+            result['rb_cap'].loc[:] = 0
         return result
 
     def get_costs(self, t_subset=None):
         """Get costs."""
+
         def _factor(var, t_subset_slice):
-            """Return the fraction of var within t_subset, used to
+            """Return the fraction of var within t_subset. Used to
                calculate the correct fraction of operational costs."""
-            if var.ndim == 4:  # Make Panel4D into Panel by summing carriers
-                var = var.sum(0)
-            return (var.iloc[:, t_subset_slice, :].sum(1)
-                    / var.sum(1)).fillna(0)
+            if 'c' in var.coords:
+                sum_dims = ('c', 't')
+            else:
+                sum_dims = ('t')
+
+            return (var[dict(t=t_subset_slice)].sum(dim=sum_dims)
+                    / var.sum(dim=sum_dims)).fillna(0)
 
         if t_subset is None:
             t_subset_slice = slice(None)
         else:
             t_subset_slice = t_subset
-
-        def T(panel):
-            """Transpose a panel"""
-            return pd.Panel.transpose(panel, 'minor_axis', 'major_axis',
-                                      'items')
 
         # len_adjust is the fraction of construction and fixed costs
         # that is accrued to the chosen t_subset. NB: construction and fixed
@@ -1449,50 +1440,44 @@ class Model(BaseModel):
 
         # Adjust for the fact that fixed costs accrue over a smaller length
         # of time as per len_adjust
-        cost = T(self.get_var('cost_con').add(self.get_var('cost_op_fixed')))
+        cost = self.get_var('cost_con') + self.get_var('cost_op_fixed')
         cost = cost * len_adjust
 
         # Get variable costs
-        cost_var = T(self.get_var('cost_op_var'))
-        cost_fuel = T(self.get_var('cost_op_fuel'))
-        cost_rb = T(self.get_var('cost_op_rb'))
+        cost_var = self.get_var('cost_op_var')
+        cost_fuel = self.get_var('cost_op_fuel')
+        cost_rb = self.get_var('cost_op_rb')
 
         # Adjust for the fact that variable costs are only accrued over
         # the t_subset period
         if t_subset is not None:
             es_prod = self.get_var('es_prod')
-            # Broadcast multiplication along items (i.e. cost classes)
-            cost_var = cost_var.multiply(_factor(es_prod, t_subset_slice),
-                                         axis='items')
+            # Broadcast multiplication along cost classes
+            cost_var = cost_var * _factor(es_prod, t_subset_slice)
             rs = self.get_var('rs')
-            cost_fuel = cost_fuel.multiply(_factor(rs, t_subset_slice),
-                                           axis='items')
+            cost_fuel = cost_fuel * _factor(rs, t_subset_slice)
             try:
                 rbs = self.get_var('rbs')
                 # NB: we do .fillna(0) because the rbs var will only
                 # be defined for techs that actually use rbs, so
                 # we'd get NaN costs for all other techs, which would
                 # propagate through to making final costs NaN too
-                cost_rb = cost_rb.multiply(_factor(rbs, t_subset_slice),
-                                           axis='items').fillna(0)
+                cost_rb = cost_rb * _factor(rbs, t_subset_slice).fillna(0)
             except exceptions.ModelError:
                 pass  # If rbs doesn't exist in the data, ModelError is raised,
                 # and we simply move on...
 
-        cost = cost.add(cost_var).add(cost_fuel).add(cost_rb)
+        cost = cost + cost_var + cost_fuel + cost_rb
         return cost
 
     def get_totals(self, t_subset=None):
         """Get total produced and consumed per technology and location."""
         if t_subset is None:
             t_subset = slice(None)
-        p = pd.Panel4D({'ec_' + i: self.get_ec(i)
-                        .iloc[:, :, t_subset, :]
-                        .sum(axis='major')
+        p = xr.Dataset({'ec_' + i: self.get_ec(i)[dict(t=t_subset)].sum(dim='t')
                         for i in ['prod', 'con']})
         for i in ['es_prod', 'es_con']:
-            p[i] = self.get_var(i).iloc[:, :, t_subset, :].sum(axis='major')
-        p = p.transpose('items', 'labels', 'minor_axis', 'major_axis')
+            p[i] = self.get_var(i)[dict(t=t_subset)].sum(dim='t')
         return p
 
     def get_levelized_cost(self):
@@ -1503,18 +1488,33 @@ class Model(BaseModel):
 
         """
         sol = self.solution
-        p4d = {}
+        cost_dict = {}
         for cost in self.data._k:
-            p = {}
+            carrier_dict = {}
             for carrier in self.data._c:
                 # Levelized cost of electricity (LCOE)
-                lc = sol.costs[cost] / sol.totals[carrier].ec_prod
-                lc.loc['total', :] = (sol.costs[cost].sum(0)
-                                      / sol.totals[carrier].ec_prod.sum(0))
+                lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                lc = lc.to_pandas()
+
+                # Make sure the dataframe has y as columns and x as index
+                if lc.index.name == 'y':
+                    lc = lc.T
+
                 lc = lc.replace(np.inf, 0)
-                p[carrier] = lc
-            p4d[cost] = pd.Panel(p)
-        return pd.Panel4D(p4d)
+                carrier_dict[carrier] = lc
+            cost_dict[cost] = xr.Dataset(carrier_dict).to_array(dim='c')
+        arr = xr.Dataset(cost_dict).to_array(dim='k')
+        return arr
+
+    def _get_time_res_sum(self):
+        m = self.m
+        time_res = self.data.time_res_series
+
+        try:  # Try loading time_res_sum from operational mode
+            time_res_sum = self.data.time_res_sum
+        except KeyError:
+            time_res_sum = sum(time_res.at[t] for t in m.t)
+        return time_res_sum
 
     def get_capacity_factor(self):
         """
@@ -1523,22 +1523,21 @@ class Model(BaseModel):
         NB: Only production, not consumption, is used in calculations.
 
         """
-        m = self.m
         sol = self.solution
-        time_res = self.data.time_res_series
-        e_cap = sol.parameters['e_cap_net']
         cfs = {}
-        for carrier in sol.totals.labels:
-            try:  # Try loading time_res_sum from operational mode
-                time_res_sum = self.data.time_res_sum
-            except KeyError:
-                time_res_sum = sum(time_res.at[t] for t in m.t)
-            cf = sol.totals[carrier].ec_prod / (e_cap * time_res_sum)
-            cf.loc['total', :] = (sol.totals[carrier].ec_prod.sum(0)
-                                  / (e_cap.sum(0) * time_res_sum))
+        for carrier in sol.coords['c'].values:
+            time_res_sum = self._get_time_res_sum()
+            cf = sol['ec_prod'].loc[dict(c=carrier)] / (sol['e_cap_net'] * time_res_sum)
+            cf = cf.to_pandas()
+
+            # Make sure the dataframe has y as columns and x as index
+            if cf.index.name == 'y':
+                cf = cf.T
+
             cf = cf.fillna(0)
             cfs[carrier] = cf
-        return pd.Panel(cfs)
+        arr = xr.Dataset(cfs).to_array(dim='c')
+        return arr
 
     def get_metadata(self):
         df = pd.DataFrame(index=self.data._y)
@@ -1554,25 +1553,28 @@ class Model(BaseModel):
     def get_summary(self, sort_by='e_cap', carrier='power'):
         sol = self.solution
 
-        # Capacity factor per carrier
-        df = pd.DataFrame({'cf': sol.capacity_factor.loc[carrier, 'total', :]})
+        # Total (over locations) capacity factors per carrier
+        time_res_sum = self._get_time_res_sum()
+        cf = (sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
+              / (sol['e_cap_net'].sum(dim='x') * time_res_sum)).to_pandas()
+        df = pd.DataFrame({'cf': cf})
 
-        # Costs per carrier
-        for k in sorted(sol.levelized_cost.labels):
-            # .loc[cost_class, carrier, location, tech]
-            df['cost_' + k] = sol.levelized_cost.loc[k, carrier, 'total', :]
+        # Total (over locations) levelized costs per carrier
+        for k in sorted(sol['levelized_cost'].coords['k'].values):
+            df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
+                               / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
-        df['e_prod'] = sol.totals.loc[carrier, 'ec_prod', :, :].sum(0)
-        df['e_con'] = sol.totals.loc[carrier, 'ec_con', :, :].sum(0)
+        df['e_prod'] = sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
+        df['e_con'] = sol['ec_con'].loc[dict(c=carrier)].sum(dim='x')
 
         # Add other carrier-independent stuff
-        df['e_cap'] = sol.parameters['e_cap'].sum()
-        df['r_area'] = sol.parameters['r_area'].sum()
-        df['s_cap'] = sol.parameters['s_cap'].sum()
+        df['e_cap'] = sol['e_cap'].sum(dim='x')
+        df['r_area'] = sol['r_area'].sum(dim='x')
+        df['s_cap'] = sol['s_cap'].sum(dim='x')
 
-        # Add technology type
-        df['type'] = df.index.map(self.get_parent)
+        # # Add technology type
+        # df['type'] = df.index.map(self.get_parent)
 
         # Get the basename of each tech (i.e., 'hvac' for 'hvac:location1')
         df['index_name'] = df.index
@@ -1611,8 +1613,7 @@ class Model(BaseModel):
 
         return df.sort_values(by=sort_by, ascending=False)
 
-    def get_shares(self):
-        from . import analysis
+    def get_groups(self):
         ggm = self.get_group_members
         s = pd.Series({k: '|'.join(ggm(k, head_nodes_only=True))
                       for k in self.config_model.techs
@@ -1625,30 +1626,31 @@ class Model(BaseModel):
                                        ignore_inheritance=True)
         df['group'] = df.index.map(gg)
         df['type'] = df.index.map(self.get_parent)
+        return df
 
-        for var in ['e_prod', 'e_con', 'e_cap']:
-            for index, row in df.iterrows():
+    def get_shares(self, groups):
+        from . import analysis
+        vars = ['e_prod', 'e_con', 'e_cap']
+        df = pd.DataFrame(index=groups.index, columns=vars)
+        for var in vars:
+            for index, row in groups.iterrows():
                 group_members = row['members'].split('|')
                 group_type = row['type']
                 share = analysis.get_group_share(self.solution, group_members,
                                                  group_type, var=var)
-                df.at[index, var] = share
+                df.at[index, var] = share.to_pandas()
         return df
 
     def load_solution_iterative(self, node_vars, total_vars, cost_vars):
-        def _panel_sum(panels):
-            # Sums a list of 3d or 4d panels
-            result = panels[0]  # Take first item
-            for i in range(1, len(panels)):  # Start at 1 as we dealt with 0
-                result = result.add(panels[i])
-            return result
-        totals = _panel_sum(total_vars)
-        costs = _panel_sum(cost_vars)
-        sol = {'node': pd.concat(node_vars, axis=2),
-               'totals': totals,
-               'costs': costs,
-               'parameters': self.get_node_parameters()}
-        self.solution = utils.AttrDict(sol)
+        totals = sum(total_vars)
+        costs = sum(cost_vars)
+        node = xr.concat(node_vars, dim='t')
+
+        sol = self.get_node_parameters()
+        sol = sol.merge(totals)
+        sol = sol.merge(costs)
+        sol = sol.merge(node)
+        self.solution = sol
         self.process_solution()
 
     def solve_iterative(self, iterative_warmstart=True):
@@ -1687,6 +1689,7 @@ class Model(BaseModel):
                 self.update_parameters(t_offset=step - steps[0])
                 self.solve(warmstart=iterative_warmstart)
             self.load_results()
+
             # Gather relevant model results over decision interval, so
             # we only grab [0:window/time_res_static] steps, where
             # window/time_res_static will be an iloc index
@@ -1696,17 +1699,18 @@ class Model(BaseModel):
             else:
                 # Non-final iterations only save data from window
                 stepsize = int(o.opmode.window / d.time_res_static)
-            # Get node variables
-            panel4d = self.get_node_variables()
-            node_vars.append(panel4d.iloc[:, :, 0:stepsize, :])
+
+            node = self.get_node_variables()
+            node_vars.append(node[dict(t=slice(0, stepsize))])
             # Get totals
             totals = self.get_totals(t_subset=slice(0, stepsize))
             total_vars.append(totals)
-            # Get costs
-            cost = self.get_costs(t_subset=slice(0, stepsize))
-            cost_vars.append(cost)
+            costs = self.get_costs(t_subset=slice(0, stepsize)).to_dataset(name='costs')
+            cost_vars.append(costs)
+
             timesteps = [time_res.at[t] for t in self.m.t][0:stepsize]
             d.time_res_sum += sum(timesteps)
+
             # Save state of storage for carry over to next iteration
             s = self.get_var('s')
             # Convert from timestep length to absolute index
@@ -1714,7 +1718,8 @@ class Model(BaseModel):
             assert (isinstance(storage_state_index, int) or
                     storage_state_index.is_integer())
             storage_state_index = int(storage_state_index)
-            d.s_init = s.iloc[:, storage_state_index, :]
+            d.s_init = s[dict(t=storage_state_index)].to_pandas().T
+
         self.load_solution_iterative(node_vars, total_vars, cost_vars)
 
     def load_results(self):
@@ -1731,9 +1736,15 @@ class Model(BaseModel):
                 message = 'Could not load results into model instance.'
             raise exceptions.ModelError(message)
 
+    def _get_data_array(self, param, subset):
+        data = {k: self.data[param][k] for k in self.data[subset]}
+        dim_name = subset[1:]  # Strip leading '_'
+        arr = xr.Dataset(data).rename({'dim_0': 't', 'dim_1': 'x'}).to_array(dim=dim_name)
+        arr.coords['t'].values = self.data._dt
+        return arr
 
     def save_solution(self, how):
-        """Save model solution. ``how`` can be 'hdf' or 'csv'
+        """Save model solution. ``how`` can be 'netcdf' or 'csv'
 
         CSV is supported for legacy purposes but usually, the
         HDF option should be used.
@@ -1750,27 +1761,42 @@ class Model(BaseModel):
             pass
         # except KeyError:  # likely because `path` or `output` not defined
         #     raise exceptions.ModelError('`config_run.output.path` not configured.')
-        if how == 'hdf':
-            self._save_hdf()
+
+        # Add r and e_eff time series alongside the solution
+        additional_params = ['r', 'e_eff']
+        for param in additional_params:
+            subset_name = '_y_def_' + param
+            if len(self.data[subset_name]) > 0:
+                self.solution[param] = self._get_data_array(param, subset_name)
+
+        if how == 'netcdf':
+            self._save_netcdf4()
         elif how == 'csv':
             self._save_csv()
         else:
             raise ValueError('Unsupported value for `how`: {}'.format(how))
 
-    def _save_hdf(self):
+        # Remove r and e_eff from solution again
+        for param in additional_params:
+            if param in self.solution:
+                del self.solution[param]
+
+        return None
+
+    def _save_netcdf4(self):
         """
-        Save solution as HDF5 to the file ``solution.hdf`` in
+        Save solution as NetCDF4 to the file ``solution.nc4`` in
         ``self.config_run.output.path``
 
         """
         sol = self.solution
-        store_file = os.path.join(self.config_run.output.path, 'solution.hdf')
+        store_file = os.path.join(self.config_run.output.path, 'solution.nc4')
         # Raise error if file exists already, to make sure we don't destroy
         # existing data
         if os.path.exists(store_file):
             i = 0
             alt_file = os.path.join(self.config_run.output.path,
-                                    'solution_{}.hdf')
+                                    'solution_{}.nc4')
             while os.path.exists(alt_file.format(i)):
                 i += 1
             alt_file = alt_file.format(i)  # Now "pick" the first free filename
@@ -1778,65 +1804,26 @@ class Model(BaseModel):
                        'using `{}` instead.'.format(store_file, alt_file))
             logging.warning(message)
             store_file = alt_file
-        # Use zlib compression (HDF standard)
-        # Using mode 'w' means existing file will be overwritten
-        store = pd.HDFStore(store_file, mode='w',
-                            complevel=3, complib='zlib')
-        # Now save solution -- except for config_model and config_run, since
-        # they are AttrDicts so are saved separately below
-        for key in [k for k in sol if k not in ['config_model', 'config_run']]:
-            # Use .append instead of .add for Panel4D compatibility
-            store.append(key, sol[key])
-        # Save r and e_eff time series alongside the solution
-        for k in self.data._y_def_r:
-            store.append('data/r/' + k, self.data.r[k])
-        for k in self.data._y_def_e_eff:
-            store.append('data/e_eff/' + k, self.data.e_eff[k])
-        # Now, save config_model and config_run as YAML strings
-        config = pd.Series({key: sol[key].to_yaml() for key in ['config_model', 'config_run']})
-        # FIXME this is really suboptimal as tables warns us that row size is too high,
-        # but we do it anyway and silence the warning
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            store.append('config', config)
-        store.close()
+
+        # Serialize config dicts to YAML strings
+        for k in ['config_model', 'config_run']:
+            sol.attrs[k] = sol.attrs[k].to_yaml()
+
+        self.solution.to_netcdf(store_file, format='netCDF4')
+
         # Return the path we used
         return store_file
 
     def _save_csv(self):
         """Save solution as CSV files to ``self.config_run.output.path``"""
-        sol = self.solution
-        # Option-dict for to_frame() method
-        o = {'filter_observations': False}
-        output_files = {'node_parameters.csv': sol.parameters.to_frame(**o),
-                        'costs.csv': sol.costs.to_frame(**o),
-                        'capacity_factor.csv': sol.capacity_factor.to_frame(**o),
-                        'metadata.csv': sol.metadata,
-                        'summary.csv': sol.summary,
-                        'shares.csv': sol.shares,
-                        'time_res.csv': sol.time_res}
-        for var in sol.node.labels:
-            k = 'node_variables_{}.csv'.format(var.replace(':', '_'))
-            v = sol.node[var].to_frame(**o)
-            output_files[k] = v
-        for c in self.data._c:
-            k = 'totals_{}.csv'.format(c)
-            output_files[k] = sol.totals[c].to_frame(**o)
-        for cost_class in self.data._k:
-            k = 'levelized_cost_{}.csv'.format(cost_class)
-            output_files[k] = sol.levelized_cost[cost_class].to_frame(**o)
-        # Write all files to output dir
-        for k, v in output_files.items():
-            v.to_csv(os.path.join(self.config_run.output.path, k))
-        # Save r and e_eff time series alongside the solution
-        for k in self.data._y_def_r:
-            pth = os.path.join(self.config_run.output.path, 'data_r_' + k)
-            self.data.r[k].to_csv(pth)
-        for k in self.data._y_def_e_eff:
-            pth = os.path.join(self.config_run.output.path, 'data_e_eff_' + k)
-            self.data.e_eff[k].to_csv(pth)
+        for k in self.solution.data_vars:
+            out_path = os.path.join(self.config_run.output.path, '{}.csv'.format(k))
+            self.solution[k].to_dataframe().to_csv(out_path)
+
         # Also save model and run configuration
         self.config_run.to_yaml(os.path.join(self.config_run.output.path,
                                              'config_run.yaml'))
         self.config_model.to_yaml(os.path.join(self.config_run.output.path,
                                                'config_model.yaml'))
+
+        return self.config_run.output.path

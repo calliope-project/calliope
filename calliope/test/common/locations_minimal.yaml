@@ -1,6 +1,6 @@
 locations:
     demand:
-        techs: ['demand_electricity', 'unmet_demand_electricity']
+        techs: ['demand_power', 'unmet_demand_power']
     1,2:
         techs: ['ccgt', 'csp']
         override:

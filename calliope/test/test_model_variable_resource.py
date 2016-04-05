@@ -12,9 +12,9 @@ class TestModel:
         locations = """
             locations:
                 1:
-                    techs: ['demand_electricity']
+                    techs: ['demand_power']
                     override:
-                        demand_electricity:
+                        demand_power:
                             constraints:
                                 r: -10
                 sub1:
@@ -55,14 +55,14 @@ class TestModel:
          assert str(model.results.solver.termination_condition) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.solution.node
-        assert_almost_equal(df.loc['e:power', 'pv', :, :].iloc[0, :].sum(), 7.5,
+        sol = model.solution
+        assert_almost_equal(sol['e'].loc[dict(c='power', y='pv')].sum(dim='x')[dict(t=0)], 7.5,
                             tolerance=0.01)
-        assert (df.loc['e:power', 'pv', :, :].sum(1) +
-                df.loc['e:power', 'ccgt', :, :].sum(1) ==
-                -1 * df.loc['e:power', 'demand_electricity', :, :].sum(1)).all()
+        assert (sol['e'].loc[dict(c='power', y='pv')].sum(dim='x') +
+                sol['e'].loc[dict(c='power', y='ccgt')].sum(dim='x') ==
+                -1 * sol['e'].loc[dict(c='power', y='demand_power')].sum(dim='x')).all()
 
     def test_model_costs(self, model):
-        df = model.solution.levelized_cost
-        assert_almost_equal(df.at['monetary', 'power', 'total', 'ccgt'], 0.1,
+        sol = model.solution
+        assert_almost_equal(sol['summary'].to_pandas().loc['ccgt', 'levelized_cost_monetary'], 0.1,
                             tolerance=0.001)

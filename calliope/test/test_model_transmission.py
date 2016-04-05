@@ -14,9 +14,9 @@ class TestModel:
                 1:
                     techs: []
                 2:
-                    techs: ['demand_electricity']
+                    techs: ['demand_power']
                     override:
-                        demand_electricity:
+                        demand_power:
                             constraints:
                                 r: -90
                 sub1,sub2:
@@ -51,11 +51,11 @@ class TestModel:
          assert str(model.results.solver.termination_condition) == 'optimal'
 
     def test_model_balanced(self, model):
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum(1).mean() == 100
-        assert (df.loc['e:power', 'hvac:1', :, :].sum(1) ==
-                -1 * df.loc['e:power', 'demand_electricity', :, :].sum(1)).all()
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim='x').mean() == 100
+        assert (sol['e'].loc[dict(c='power', y='hvac:1')].sum(dim='x') ==
+                -1 * sol['e'].loc[dict(c='power', y='demand_power')].sum(dim='x')).all()
 
     def test_model_costs(self, model):
-        df = model.solution.levelized_cost
-        assert_almost_equal(df.at['monetary', 'power', 'total', 'ccgt'], 0.1)
+        sol = model.solution
+        assert_almost_equal(sol['summary'].to_pandas().loc['ccgt', 'levelized_cost_monetary'], 0.1)

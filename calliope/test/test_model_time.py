@@ -10,12 +10,12 @@ def create_and_run_model(override, iterative_warmstart=False):
     locations = """
         locations:
             1:
-                techs: ['ccgt', 'demand_electricity']
+                techs: ['ccgt', 'demand_power']
                 override:
                     ccgt:
                         constraints:
                             e_cap.max: 100
-                    demand_electricity:
+                    demand_power:
                         x_map: '1: demand'
                         constraints:
                             r: file=demand-blocky_r.csv
@@ -46,8 +46,8 @@ class TestModel:
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum().sum() == 720
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 720
 
     def test_model_time_res_uniform(self):
         override = """
@@ -58,8 +58,8 @@ class TestModel:
         assert len(model.data.time_res_series) == 4
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum().sum() == 1320
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 1320
 
     def test_model_time_res_uniform_subset_t_from_start(self):
         override = """
@@ -71,8 +71,8 @@ class TestModel:
         assert len(model.data.time_res_series) == 2
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum().sum() == 600
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 600
 
     def test_model_time_res_uniform_subset_t_from_middata(self):
         override = """
@@ -84,8 +84,8 @@ class TestModel:
         assert len(model.data.time_res_series) == 2
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum().sum() == 720
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 720
 
     def test_model_subset_t_operational(self):
         override = """
@@ -99,8 +99,8 @@ class TestModel:
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum().sum() == 720
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 720
 
     def test_model_time_res_uniform_subset_t_operational(self):
         override = """
@@ -117,5 +117,5 @@ class TestModel:
         assert len(model.data.time_res_series) == 4
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
-        df = model.solution.node
-        assert df.loc['e:power', 'ccgt', :, :].sum().sum() == 720
+        sol = model.solution
+        assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 720
