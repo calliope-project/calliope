@@ -10,6 +10,10 @@ from . import common
 from .common import assert_almost_equal, solver
 
 
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')  # Prevents `Invalid DISPLAY variable` errors
+
+
 class TestModel:
     @pytest.fixture(scope='module')
     def model(self):
