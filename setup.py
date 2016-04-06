@@ -32,7 +32,6 @@ setup(
         "xarray >= 0.7.2, < 0.8",
         "netcdf4 >= 1.2.2",
         "pyyaml >= 3.11",
-        "tables >= 3.2.0",  # Requires cython to build
         "click >= 3.3"
     ],
     entry_points={
