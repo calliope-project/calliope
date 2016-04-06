@@ -1,0 +1,21 @@
+name: calliope
+dependencies:
+- basemap
+- click
+- geos
+- hdf5
+- libnetcdf
+- matplotlib=1.5.1
+- netcdf4
+- networkx
+- numexpr
+- numpy
+- pandas=0.18.0
+- pytest
+- pyyaml
+- xarray=0.7.2
+- pip:
+  - pyomo==4.2.10784
+#  - coverage==3.7.1  # coveralls doesn't work with coverage>=4
+  - python-coveralls
+  - pytest-cov

@@ -1,25 +1,39 @@
+# Modified from example at http://conda.pydata.org/docs/travis.html
+
+language: python
 sudo: false  # Use container-based infrastructure
 addons:
   apt_packages:
-    - glpk-utils
-    - libhdf5-serial-dev  # Required for pip to compile pytables
-language: python
+    - glpk-utils  # Required to actually solve test models
+
 python:
+  # We don't actually use the Travis Python, but this keeps it organized.
   - "3.5"
+
 env:
-  - PIP_DOWNLOAD_CACHE=$HOME/.cache/pip  # Ensure pip-accel uses right dir
+  - PIP_DOWNLOAD_CACHE=$HOME/.cache/pip
+
+before_install:
+  - "wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;"
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
 install:
-  - "pip install --no-cache-dir pip-accel"  # Use pip-accel to cache binaries
-  - "pip-accel install -r requirements.txt"
-  - 'pip-accel install cython --install-option="--no-cython-compile"'
-  - "pip-accel install tables==3.2.1.1"  # Fails if in requirements.txt
-  - "pip install --no-cache-dir ."
-cache:
-  directories:
-    - $HOME/.pip-accel
-    - $HOME/.cache/pip
+  - conda create -q -n calliope python=$TRAVIS_PYTHON_VERSION requirements.yml
+  - source activate calliope
+  - python setup.py install
+
 script: "py.test --cov calliope --cov-report term-missing"
+
 after_success:
     - coveralls
-before_cache:
-    - rm $HOME/.cache/pip/log/debug.log  # Delete pip's implicit debug log, can remove this line once pip>=7.0.0
+
+# FIXME cache miniconda and only-redownload/re-install if needed
+cache:
+  directories:
+    - $HOME/.cache/pip
