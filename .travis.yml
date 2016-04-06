@@ -25,7 +25,7 @@ before_install:
 install:
   - conda env create -n calliope --file requirements.yml
   - source activate calliope
-  - python setup.py install
+  - pip install --no-cache-dir .
 
 script: "py.test --cov calliope --cov-report term-missing"
 
