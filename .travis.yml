@@ -7,7 +7,6 @@ addons:
     - glpk-utils  # Required to actually solve test models
 
 python:
-  # We don't actually use the Travis Python, but this keeps it organized.
   - "3.5"
 
 env:
@@ -24,7 +23,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda create -q -n calliope python=$TRAVIS_PYTHON_VERSION requirements.yml
+  - conda env create -n calliope --file requirements.yml
   - source activate calliope
   - python setup.py install
 
