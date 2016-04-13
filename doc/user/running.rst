@@ -27,9 +27,7 @@ The included command-line tool ``calliope run`` will execute a given run configu
 
 It will generate and solve the model, then save the results to the the output directory given by ``output.path`` in the run configuration.
 
-Two output formats are available: CSV files and HDF, and they can be chosen by settings ``output.format`` in the run configuration (set to ``hdf`` or ``csv``). HDF results in a single compressed file in the `high-performance HDF5 data format <http://www.hdfgroup.org/HDF5/>`_. The :mod:`~calliope.analysis` module provides methods to read and analyze these HDF files.
-
-For easier analysis via third-party tools, the CSV option saves a set of CSV files into the given output directory.
+Two output formats are available: a collection CSV files or a single NetCDF file. They can be chosen by settings ``output.format`` in the run configuration (set to ``netcdf`` or ``csv``). The :mod:`~calliope.read` module provides methods to read results stored in either of these formats, so that they can then be analyzed with the :mod:`~calliope.analysis` module.
 
 .. _parallel_runs:
 
@@ -48,7 +46,7 @@ Scripts to simplify the creation and execution of a large number of Calliope mod
 
 The ``run.sh`` script can simply be called with an integer argument from the sequence (1, number of parallel runs) to execute a given run, e.g. ``run.sh 1``, ``run.sh 2``, etc. This way the runs can easily be executed irrespective of the parallel computing environment available.
 
-.. Note:: Models generated via ``calliope generate`` automatically save results as HDF files inside the parallel run's ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
+.. Note:: Models generated via ``calliope generate`` automatically save results as a single NetCDF file per run inside the parallel runs' ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
 
 See :ref:`run_config_parallel_runs` for details on configuring parallel runs.
 

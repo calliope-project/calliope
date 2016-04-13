@@ -73,7 +73,7 @@ def read_csv(directory):
 
 def _detect_format(directory):
     """Detects format, falling back to CSV if it can't find NetCDF4"""
-    if os.path.exists(os.path.join(directory, 'solution.nc4')):
+    if os.path.exists(os.path.join(directory, 'solution.nc')):
         return 'netcdf'
     else:
         return 'csv'
@@ -97,7 +97,7 @@ def read_dir(directory):
         logging.debug('Iteration: {}, Format detected: {}'.format(i, fmt))
         try:
             if fmt == 'netcdf':
-                sol_path = os.path.join(iteration_dir, 'solution.nc4')
+                sol_path = os.path.join(iteration_dir, 'solution.nc')
                 results.solutions[i] = read_netcdf(sol_path)
             else:
                 sol_path = iteration_dir

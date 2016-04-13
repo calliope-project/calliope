@@ -7,38 +7,28 @@ Analyzing results
 The solution object
 -------------------
 
-On successfully solving a model, Calliope creates a ``solution``, which is simply a key-value store with a number of result tables (implemented as an :class:`~calliope.utils.AttrDict`).
+On successfully solving a model, Calliope creates a ``solution``, which is a multi-dimensional `xarray.Dataset <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_, with the model and run configuration stored as :class:`~calliope.utils.AttrDict` attributes of the dataset (``config_model`` and ``config_run``).
 
-Most of the data in a solution come in the form of `pandas <http://pandas.pydata.org/>`_ Series, DataFrames, or Panels indexed by cost class (``k``), carrier (``c``), location (``x``), technology (``y``), or time (``t``).
+The analysis tools included with Calliope expect to operate on a dataset.
 
-The analysis tools included with Calliope operate on such a solution object (see below).
+The solution contains model variables such as ``rs``, ``s``, ``e_cap``, ``r_area``, etc, as well as variables derived from them such as ``capacity_factor`` and ``levelized_cost``. It also contains several two-dimensional summary and metadata tables:
 
-The solution contains the following data keys:
-
-* ``capacity_factor``: a Panel with the axes ``c``, ``y``, ``x``. The ``x`` axis includes a ``total`` row, giving total capacity factors per technology.
-* ``config_model``: the complete model definition used
-* ``config_run``: the complete run configuration used
-* ``costs``: a Panel with costs by cost classes, with the axes ``k``, ``x``, ``y``
-* ``levelized_cost``: a 4-dimensional Panel indexed by ``k``, ``c``, ``x``, ``y``, giving the computed levelized costs. The ``x`` axis includes a ``total`` row, giving the total levelized cost per technology.
-* ``metadata``: a DataFrame containing metadata for each technology (such as its ``stack_weight`` or ``color``), used for analysis and plotting.
-* ``node``: a 4-dimensional Panel with node-level variables. The axes are ``variable``, ``y``, ``t``, ``x``. The variables contained are ``rs``, ``s``, ``rbs``, and an ``e`` variable per carrier, e.g. ``e:power``
-* ``parameters``: a Panel with the axes ``variable``, ``x``, ``y``. The variables contained are ``e_cap``, ``e_cap_net``, ``r_area``, ``r_cap``, ``s_cap``, and ``rb_cap``.
-* ``shares``: a DataFrame containing technology and group based shares of production, consumption and installed capacity (index is ``y``).
-* ``summary``: a DataFrame containing summary information on each technology (index is ``y``)
-* ``time_res``: a Series indexed by date-times containing the time resolution of each timestep
-* ``totals``: a 4-dimensional Panel indexed by ``c``, ``variable``, ``x``, ``y``. The variables contained are ``ec_con``, ``ec_prod``, ``es_prod``, ``es_con``.
+* ``metadata``: metadata for each technology (such as its ``stack_weight`` or ``color``), used for analysis and plotting.
+* ``groups``: definition of technology groups and their members.
+* ``shares``: technology and group based shares of production, consumption and installed capacity (index is ``y``).
+* ``summary``: summary information on each technology.
 
 -----------------
 Reading solutions
 -----------------
 
-If the solution was written to an HDF file, Calliope provides functionality to read the HDF file and re-construct a ``solution`` object for further analysis in a Python session:
+Calliope provides functionality to read a solution from a single NetCDF file or a collection of CSV files and re-construct a ``solution`` object for further analysis in a Python session:
 
 .. code-block:: python
 
-   solution = calliope.read.read_hdf('my_solution.hdf')
+   solution_from_netcdf = calliope.read.read_netcdf('my_solution.nc')
 
-If the solution was written to CSV files, they can be processed by any data analysis tool. Similarly, the HDF files written contain only standard numerical and text data and can be read by any other software that can handle the HDF5 format.
+   solution_from_csv = calliope.read.read_csv('path/to/output_directory')
 
 ----------------------------------
 Reading results from parallel runs

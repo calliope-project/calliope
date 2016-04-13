@@ -28,7 +28,7 @@ class TestSave:
             model.save_solution('netcdf')
 
             # Try reading solution back in
-            sol_file = os.path.join(tempdir, 'solution.nc4')
+            sol_file = os.path.join(tempdir, 'solution.nc')
             solution_from_disk = calliope.read.read_netcdf(sol_file)
 
         verify_solution_integrity(model.solution, solution_from_disk, tempdir)

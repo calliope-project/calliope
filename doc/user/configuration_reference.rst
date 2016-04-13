@@ -252,7 +252,7 @@ Optional settings:
 
 * Output options -- these are only used when the model is run via the ``calliope run`` command-line tool:
    * ``output.path``: Path to an output directory to save results (will be created if it doesn't exist already)
-   * ``output.format``:  Format to save results in, either ``hdf`` or ``csv``
+   * ``output.format``:  Format to save results in, either ``netcdf`` or ``csv``
 * ``parallel``: Settings used to generate parallel runs, see :ref:`run_config_parallel_runs` for the available options
 * ``time``: Settings to adjust time resolution, see :ref:`run_time_res` for the available options
 * ``override``: Override arbitrary settings from the model configuration. E.g., this could specify ``techs.nuclear.costs.monetary.e_cap: 1000`` to set the ``e_cap`` costs of ``nuclear``, overriding whatever was set in the model configuration

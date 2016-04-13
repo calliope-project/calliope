@@ -1744,12 +1744,8 @@ class Model(BaseModel):
         return arr
 
     def save_solution(self, how):
-        """Save model solution. ``how`` can be 'netcdf' or 'csv'
+        """Save model solution. ``how`` can be 'netcdf' or 'csv'"""
 
-        CSV is supported for legacy purposes but usually, the
-        HDF option should be used.
-
-        """
         if 'path' not in self.config_run.output:
             self.config_run.output['path'] = 'Output'
             logging.warning('`config_run.output.path` not set, using default: `Output`')
@@ -1785,18 +1781,18 @@ class Model(BaseModel):
 
     def _save_netcdf4(self):
         """
-        Save solution as NetCDF4 to the file ``solution.nc4`` in
+        Save solution as NetCDF4 to the file ``solution.nc`` in
         ``self.config_run.output.path``
 
         """
         sol = self.solution
-        store_file = os.path.join(self.config_run.output.path, 'solution.nc4')
+        store_file = os.path.join(self.config_run.output.path, 'solution.nc')
         # Raise error if file exists already, to make sure we don't destroy
         # existing data
         if os.path.exists(store_file):
             i = 0
             alt_file = os.path.join(self.config_run.output.path,
-                                    'solution_{}.nc4')
+                                    'solution_{}.nc')
             while os.path.exists(alt_file.format(i)):
                 i += 1
             alt_file = alt_file.format(i)  # Now "pick" the first free filename

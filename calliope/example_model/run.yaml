@@ -7,7 +7,7 @@ name: "Test run"  # Run name -- distinct from model name!
 model: 'model_config/model.yaml'
 
 output:  # Only used if run via the 'calliope run' command-line tool
-    format: csv  # Choices: hdf, csv
+    format: csv  # Choices: netcdf, csv
     path: 'Output'  # Will be created if it doesn't exist
 
 mode: plan  # Choices: plan, operate
