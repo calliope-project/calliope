@@ -310,13 +310,13 @@ def _get_supply_groups(solution):
     group == True, for purposes of calculating diversity of supply
 
     """
-    # idx_1: group is True and '|' in members
+    # idx_1: group is 'True' and '|' in members
     groups = solution.groups.to_pandas()
-    grp_1 = groups.query('group == True & type == "supply"')
+    grp_1 = groups.query('group == "True" & type == "supply"')
     idx_1 = grp_1[(grp_1.members != grp_1.index)
                   & (grp_1.members.str.contains('\|'))].index.tolist()
-    # idx_2: group is False and no '|' in members
-    grp_2 = groups.query('group == False & type == "supply"')
+    # idx_2: group is 'False' and no '|' in members
+    grp_2 = groups.query('group == "False" & type == "supply"')
     idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
     # Also drop entries from idx_2 that are already covered by
     # groups in idx_1

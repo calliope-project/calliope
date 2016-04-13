@@ -1621,9 +1621,14 @@ class Model(BaseModel):
                       and ggm(k, head_nodes_only=True) is not None})
 
         df = pd.DataFrame(s, columns=['members'])
-        gg = lambda y: self.get_option(y + '.group',
-                                       default='defaults.group',
-                                       ignore_inheritance=True)
+
+        # Forcing booleans to strings so that groups table has
+        # uniform datatypes
+        gg = lambda y: str(self.get_option(
+            y + '.group', default='defaults.group',
+            ignore_inheritance=True)
+        )
+
         df['group'] = df.index.map(gg)
         df['type'] = df.index.map(self.get_parent)
         return df
