@@ -39,6 +39,9 @@ from . import time_masks
 from . import time_tools
 from . import utils
 
+# Parameters that may be defined as time series
+from .time_tools import _TIMESERIES_PARAMS
+
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
 
@@ -356,11 +359,23 @@ class Model(BaseModel):
             else:  # Neither time.masks, time.resolution nor time.file given
                 series = None
 
-            if series is not None:
-                s.dynamic_timestepper(self.data, series)
+            ##
+            # C) Process function, apply resolution adjustments
+            ##
+            if 'function' in time:
+                # Get masked timesteps
+                timesteps = series[series != 0].index \
+                    if series is not None else None
+                time_opts = time.get('function_options', {})
+                time_func = plugin_load(time.function,
+                                        builtin_module='time_funcs')
+                # FIXME weights not used for now
+                weights = time_func(data=self.data, timesteps=timesteps,
+                                    **time_opts)
             else:
-                # Silently ignore if no conformant time settings given
-                return None
+                # Apply timestep adjustment
+                if series is not None:
+                    s.dynamic_timestepper(self.data, series)
 
         else:  # not time
             return None  # Nothing to do if no time settings given
@@ -834,7 +849,7 @@ class Model(BaseModel):
                 d.s_init.at[x, y] = self.get_option(y + '.constraints.s_init',
                                                     x=x)
         # Parameters that may be defined over (x, t) for a given technology y
-        d.params = ['r', 'e_eff']
+        d.params = _TIMESERIES_PARAMS.copy()
         d._y_def_r = set()
         d._y_def_e_eff = set()
         # TODO could allow params in d.params to be defined only over
@@ -1308,7 +1323,8 @@ class Model(BaseModel):
         shares.index.name = 'techs'
         self.solution = self.solution.merge(xr.DataArray(shares).to_dataset(name='shares'))
         # Add time resolution, and give it a nicer index
-        time_res = self.data.time_res_series.copy()
+        # Make sure that only timesteps in the model are kept (via .loc)
+        time_res = self.data.time_res_series.copy().loc[self.data._dt.index]
         time_res.index = self.solution.coords['t'].values
         time_res.index.name = 't'
         self.solution = self.solution.merge(xr.DataArray(time_res).to_dataset(name='time_res'))
@@ -1763,9 +1779,8 @@ class Model(BaseModel):
         # except KeyError:  # likely because `path` or `output` not defined
         #     raise exceptions.ModelError('`config_run.output.path` not configured.')
 
-        # Add r and e_eff time series alongside the solution
-        additional_params = ['r', 'e_eff']
-        for param in additional_params:
+        # Add input time series (r and e_eff) alongside the solution
+        for param in _TIMESERIES_PARAMS:
             subset_name = '_y_def_' + param
             if len(self.data[subset_name]) > 0:
                 self.solution[param] = self._get_data_array(param, subset_name)
@@ -1777,8 +1792,8 @@ class Model(BaseModel):
         else:
             raise ValueError('Unsupported value for `how`: {}'.format(how))
 
-        # Remove r and e_eff from solution again
-        for param in additional_params:
+        # Remove time series from solution again after writing it to disk
+        for param in _TIMESERIES_PARAMS:
             if param in self.solution:
                 del self.solution[param]
 

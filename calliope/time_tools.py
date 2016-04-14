@@ -21,12 +21,16 @@ The name of a resolution series must always be 'resolution_series'.
 """
 
 import logging
+import itertools
 
 import numpy as np
 import pandas as pd
 
 from . import utils
 from . import exceptions
+
+
+_TIMESERIES_PARAMS = ['r', 'e_eff']
 
 
 class TimeSummarizer(object):
@@ -322,3 +326,56 @@ def resolution_series_to_mask(resolution_series):
     mask[mask != 0] = 1
     mask.name = 'mask'
     return mask
+
+
+def _apply_day_summarizer(data, ts_cluster_map):
+    """
+    Parameters
+    ----------
+    data : Calliope model data
+    ts_cluster_map :
+
+    Returns
+    -------
+    weights :
+
+    """
+    _dt_inverted = pd.Series(data._dt.index, index=data._dt)
+
+    total_ts_len = len(data._dt)
+    weights = []
+
+    # wrapping in pd.Series forces pd datetime objects
+    for cluster in pd.Series(ts_cluster_map.unique()):
+        cluster = cluster.strftime('%Y-%m-%d')
+        # Get timesteps
+        ts = [list(range(i, i + 24))
+              for i in ts_cluster_map[ts_cluster_map == cluster].index]
+        ts = [i for i in itertools.chain.from_iterable(ts)]
+
+        # Get mean day's indices
+        day_index = _dt_inverted[cluster].tolist()
+
+        # Update timestep data
+        ts_to_drop = sorted(list(set(ts) - set(day_index)))
+        data._dt = data._dt.drop(ts_to_drop, axis=0)
+
+        # Add weight information
+        weights.append({'weight': len(ts) / total_ts_len,
+                        'members': day_index})
+
+        for var in _TIMESERIES_PARAMS:
+            if var not in data:
+                continue
+            for k in data[var]:
+                # Compute mean day
+                day = data[var][k].loc[ts, :].groupby(lambda x: x % 24).mean()
+                day.index = day_index  # Also set the index correctly
+
+                # Drop all data given by ts except for the mean day
+                data[var][k] = data[var][k].drop(ts_to_drop, axis=0)
+
+                # Replace mean day data with computed mean day
+                data[var][k].loc[day_index, :] = day
+
+    return weights
