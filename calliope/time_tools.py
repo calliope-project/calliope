@@ -97,9 +97,9 @@ class TimeSummarizer(object):
                 else:
                     self._apply_method(data, how, s, param=k,
                                        src_param=src)
-            else:  # k is not in known_data_types.keys()
-                msg = 'Encountered unknown data type, skipping: {}'.format(k)
-                logging.debug(msg)
+            # else:  # k is not in known_data_types.keys()
+            #     msg = 'Encountered unknown data type, skipping: {}'.format(k)
+            #     logging.debug(msg)
 
     def dynamic_timestepper(self, data, series):
         """``series`` must be a series with the same length as the given data.
@@ -227,6 +227,12 @@ def masks_to_resolution_series(masks, how='or', resolution=None,
         e = exceptions.ModelError
         raise e('If drop_with_padding is given and > 0, '
                 'resolution cannot be None.')
+
+    # Enforce that resolution is int
+    if isinstance(resolution, float):
+        msg = 'Forcing resolution={} to int.'.format(resolution)
+        logging.debug(msg)
+        resolution = int(resolution)
 
     if not isinstance(masks, list) or isinstance(masks, tuple):
         masks = [masks]

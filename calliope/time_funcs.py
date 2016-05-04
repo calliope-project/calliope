@@ -11,64 +11,273 @@ returns the timestep weights for the modified timesteps.
 
 """
 
+import numpy as np
 import pandas as pd
+import xarray as xr
+from xarray.ufuncs import fabs
+
+import scipy.cluster.vq as vq
+from scipy.cluster import hierarchy
 
 from . import time_tools
 
 
-def _kmeans(data, target, timesteps=None, days=5):
-    """
-    Adjusts
+def get_y_coord(array):
+    # assumes a single _y coord in array
+    return [k for k in array.coords if '_y' in k][0]
 
-    Parameters
-    ----------
-    data : Calliope model data
-    target : series
-        Series to use for clustering.
-    timesteps : list or array, optional
-        Optional subset of timesteps to use for clustering.
-    days : int, optional
-        Number of clusters (days) to return, default = 5.
+
+def get_dataset(data):
+    """Temporary solution to get an xr.Dataset of input data"""
+    from ._version import __version__
+    arrays = {}
+    for p in time_tools._TIMESERIES_PARAMS:
+        y_dim = '_y_def_{}'.format(p)
+        arr = (xr.Dataset(data[p]).to_array(dim=y_dim)
+                 .rename({'dim_0': 't', 'dim_1': 'x'})
+               )
+        arr = arr.loc[{y_dim: list(data[y_dim])}]
+        arrays[p] = arr
+    ds = xr.Dataset(arrays)
+
+    # Replace integer timestep index with actual date-time objects
+    timestamps = len(data._dt)
+    ds.coords['t'] = data._dt.as_matrix()
+
+    ds['_weights'] = xr.DataArray(pd.Series(np.ones(timestamps), index=ds.coords['t'].values), dims=['t'])
+
+    for a in ['time_res_native', 'time_res_static', 'time_res_data']:
+        ds.attrs[a] = data[a]
+
+    ds.attrs['calliope_version'] = __version__
+
+    return ds
+
+
+def get_datavars(data):
+    return [var for var in data.data_vars if not var.startswith('_')]
+
+
+def normalize(data):
+    """
+    Return a copy of data, with the absolute taken and normalized to 0-1.
+
+    The maximum across all regions and timesteps is used to normalize.
+
+    """
+    ds = data.copy(deep=True)  # Work off a copy
+    for var in get_datavars(data):
+        y_var = '_y_def_{}'.format(var)
+        for y in ds.coords[y_var].values:
+            # Get max across all regions to normalize against
+            norm_max = fabs(ds[var].loc[{y_var: y}]).max()
+            for x in ds.coords['x'].values:
+                df = ds[var].loc[{'x': x, y_var: y}]
+                ds[var].loc[{'x': x, y_var: y}] = fabs(df) / norm_max
+    return ds
+
+
+def get_timesteps_per_day(data):
+    timesteps_per_day = data.attrs['time_res_static'] * 24
+    if isinstance(timesteps_per_day, float):
+        assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
+        timesteps_per_day = int(timesteps_per_day)
+    return timesteps_per_day
+
+
+def reshape_for_clustering(data, tech=None, invert=False):
+    y = get_y_coord(data.r)
+    timesteps_per_day = get_timesteps_per_day(data)
+    days = int(len(data.t) / timesteps_per_day)
+    regions = int(len(data['x']))
+    techs = int(len(data[y]))
+
+    if tech is not None:
+        X = data.r.loc[{y: tech}].values.reshape((days, timesteps_per_day * regions))
+    else:
+        X = data.r.transpose('t', 'x', y).values.reshape(days, timesteps_per_day * regions * techs)
+
+    return np.nan_to_num(X)  # replace any NaN with 0
+
+
+def reshape_clustered(clustered, data):
+    y = get_y_coord(data.r)
+    timesteps_per_day = get_timesteps_per_day(data)
+    regions = int(len(data['x']))
+    techs = int(len(data[y]))
+    days = clustered.shape[0]
+
+    arr = xr.DataArray(clustered.reshape(techs, days * timesteps_per_day, regions),
+                       dims=(y, 't', 'x'))
+    arr['x'] = data['x']
+    arr[y] = data[y]
+
+    return arr
+
+
+def get_mean_from_clusters(data, clusters, timesteps_per_day):
+
+    cluster_map = clusters.groupby(clusters).groups
+
+    hour_of_day = pd.Series([pd.Timestamp(i).hour
+                             for i in data.coords['t'].values])
+    # hour_of_day = pd.Series([i - (i // timesteps_per_day) * timesteps_per_day
+    #                          for i in data.coords['t'].values])
+
+    ds = {}
+    for var in get_datavars(data):
+        data_arrays = []
+        array = data[var]
+        y_coord = get_y_coord(array)
+
+        t_coords = ['{}-{}'.format(cid, t)
+                    for cid in cluster_map
+                    for t in range(timesteps_per_day)]
+
+        # Check if this variable has any data
+        if len(data.coords[y_coord].values) == 0:
+            e = np.empty((0, len(t_coords), len(data.coords['x'].values)))
+            ds[var] = xr.DataArray(e, dims=[y_coord, 't', 'x'],
+                                   coords={'x': data.coords['x'].values,
+                                           't': t_coords})
+        else:
+            for cluster_id, cluster_members in cluster_map.items():
+                y_arrays = []
+                for y in data.coords[y_coord].values:
+                    d = (array.loc[{'t': cluster_members, y_coord: y}]
+                              .to_pandas().groupby(lambda x: x.hour).mean()
+                              .to_xarray().to_array(dim='x').T
+                         )
+                    d.coords[y_coord] = y
+                    d = d.rename({'index': 't'})
+                    d.coords['t'] = [i for i in t_coords
+                                     if i.startswith('{}-'.format(cluster_id))]
+                    y_arrays.append(d)
+                data_arrays.append(xr.concat(y_arrays, dim=y_coord))
+                # data_arrays[-1].coords['cluster'] = cluster_id
+
+            ds[var] = xr.concat(data_arrays, dim='t')
+    ds = xr.Dataset(ds)
+    return ds
+
+
+def map_clusters_to_data(data, clusters, how, **kwargs):
+    """
+    Returns a copy of data that has been clustered.
+
+    how can be mean, centroid, closest_to_centroid
+
+    """
+
+    # NB: don't touch those timesteps not included in clusters (e.g. if have picked
+    # those manually to stay at maximum resolution)
+
+    # Get all timesteps, not just the first per day
+    ts_per_day = get_timesteps_per_day(data)
+    new_idx = pd.date_range(clusters.index[0], clusters.index[-1]
+                            + pd.Timedelta('1D'), freq='1H')[:-1]
+#    new_idx = (range(clusters.index[0], clusters.index[-1] + ts_per_day)
+    c = (clusters.reindex(new_idx)
+                 .fillna(method='ffill').astype(int))
+
+    # == PICK DATA ==
+    # TODO: additional options for picking data
+    # or pick cluster centroid (is that same as mean?)
+    # or pick the real day closest to cluster centroid
+    # if using centroid, need kwargs: centroids=None, variable=None, tech=None,
+    if how == 'mean':
+        new_data = get_mean_from_clusters(data, c, ts_per_day)
+
+        # Add timestep names by taking the median timestamp from daily clusters...
+        # (a random way of doing it, but we want some label to apply)
+        timestamps = clusters.groupby(clusters).apply(lambda x: x.index[int(len(x.index) / 2)])
+        new_t_coord = pd.concat([pd.Series(pd.date_range(ts, ts + pd.Timedelta('1D'), freq='1H')[:-1])
+                                for ts in timestamps], ignore_index=True)
+
+        new_data.coords['t'] = new_t_coord.as_matrix()
+
+    # == DETERMINE WEIGHTS ==
+    value_counts = c.value_counts()
+    weights = c.map(lambda x: value_counts[x])
+
+    timesteps_per_day = get_timesteps_per_day(data)
+    weights = weights / timesteps_per_day
+
+    new_data['_weights'] = xr.DataArray(weights, dims=['t'])
+
+    return new_data
+
+
+def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
+    """
 
     Returns
     -------
-    weights :
+    clusters : dataframe
+        Indexed by timesteps and with locations as columns, giving cluster
+        membership for first timestep of each day.
+    centroids
 
     """
-    import scipy.cluster.vq as vq
+    timesteps_per_day = get_timesteps_per_day(data)
 
-    timesteps_per_day = data.time_res_static * 24
+    if timesteps is not None:
+        data = data.loc[{'t': timesteps}]
+    else:
+        timesteps = data.t.values
 
-    if timesteps is None:
-        timesteps = data._dt.index  # All timesteps
+    X = reshape_for_clustering(data, tech)
 
-    # Get a (m,d) matrix where m is number of days in the matrix
-    # and d is the number of timesteps in a day
-    d = target.loc[timesteps, :].sum(1)
-    d = d.reshape(len(d) / timesteps_per_day, timesteps_per_day)
-    # Run k-means algorithm for the desired number of days (clusters)
-    centroids, distortion = vq.kmeans(d, days)
+    centroids, distortion = vq.kmeans(X, k)
 
     # Determine the cluster membership of each day
-    day_clusters = vq.vq(d, centroids)[0]
+    day_clusters = vq.vq(X, centroids)[0]
 
     # Create mapping of timesteps to clusters
-    ts_clusters = pd.Series(day_clusters, index=timesteps[::timesteps_per_day])
+    clusters = pd.Series(day_clusters, index=timesteps[::timesteps_per_day])
 
-    # Get date of each cluster
-    clusters = sorted(ts_clusters.unique())
-    dates = [data._dt[ts_clusters[ts_clusters == cluster].index].iat[0]
-             for cluster in clusters]
-    dates = pd.Series(dates, index=clusters)
+    # Reshape centroids
+    centroids = reshape_clustered(centroids, data)
 
-    # Return a 'timestep to chosen day' map
-    clusters = ts_clusters.map(lambda x: dates[x])
-
-    # Modify the timesteps and get timestep weights
-    weights = time_tools._apply_day_summarizer(data, clusters)
-    return weights
+    return clusters, centroids
 
 
-def kmeans_typicaldays_singlevariable(data, variable, timesteps=None, days=5):
-    df = data.get_key(variable)
-    return _kmeans(data, df, timesteps, days)
+def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
+    """
+    Parameters
+    ----------
+    max_d : float or int, optional
+        Max distance for returning clusters.
+    k : int, optional
+        Number of desired clusters.
+
+    Returns
+    -------
+    clusters
+    X
+    Z
+
+    """
+    data_n = normalize(data)
+    X = reshape_for_clustering(data_n, tech)
+
+    # Generate the linkage matrix
+    Z = hierarchy.linkage(X, 'ward')
+
+    if max_d:
+        # Get clusters based on maximum distance
+        clusters = hierarchy.fcluster(Z, max_d, criterion='distance')
+    elif k:
+        # Get clusters based on number of desired clusters
+        clusters = hierarchy.fcluster(Z, k, criterion='maxclust')
+    else:
+        clusters = None
+
+    # Make sure clusters are a pd.Series with a datetime index
+    if clusters is not None:
+        timesteps_per_day = get_timesteps_per_day(data)
+        timesteps = data.coords['t'].values  # All timesteps
+
+        clusters = pd.Series(clusters, index=timesteps[::timesteps_per_day])
+
+    return (clusters, X, Z)
