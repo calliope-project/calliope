@@ -26,7 +26,7 @@ setup(
                                'test/common/t_erroneous/*.csv']},
     install_requires=[
         "pyomo >= 4.2, < 4.3",
-        "numpy >= 1.10.1",
+        "numpy >= 1.11",
         "numexpr >= 2.3.1",
         "pandas >= 0.18, < 0.19",
         "xarray >= 0.7.2, < 0.8",

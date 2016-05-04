@@ -10,7 +10,7 @@ dependencies:
 - netcdf4
 - networkx
 - numexpr
-- numpy
+- numpy=1.11
 - pandas=0.18.0
 - pytest
 - pyyaml

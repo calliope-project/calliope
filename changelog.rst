@@ -15,6 +15,7 @@ Other changes
 ~~~~~~~~~~~~~
 
 * |changed| Pandas 0.18.0 compatibility
+* |changed| 1.11 is now the minimum required numpy version. This version makes datetime64 tz-naive by default, thus preventing some odd behavior when displaying time series.
 
 0.3.7 (2016-03-10)
 ------------------
