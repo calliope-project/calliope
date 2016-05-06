@@ -33,10 +33,13 @@ _pdb = click.option('--pdb', is_flag=True, default=False,
 
 
 logging.basicConfig(stream=sys.stderr)
+logger = logging.getLogger()
 
 
 @contextlib.contextmanager
 def format_exceptions(debug=False, pdb=False, start_time=None):
+    if debug:
+        logger.setLevel('DEBUG')
     try:
         yield
     except Exception as e:
