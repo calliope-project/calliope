@@ -20,6 +20,7 @@ import scipy.cluster.vq as vq
 from scipy.cluster import hierarchy
 
 from . import time_tools
+from .core import plugin_load
 
 
 def get_y_coord(array):
@@ -40,11 +41,10 @@ def get_dataset(data):
         arrays[p] = arr
     ds = xr.Dataset(arrays)
 
-    # Replace integer timestep index with actual date-time objects
-    timestamps = len(data._dt)
-    ds.coords['t'] = data._dt.as_matrix()
+    ds['_weights'] = xr.DataArray(data['_weights'].as_matrix(), dims=['t'])
 
-    ds['_weights'] = xr.DataArray(pd.Series(np.ones(timestamps), index=ds.coords['t'].values), dims=['t'])
+    # Replace integer timestep index with actual date-time objects
+    ds.coords['t'] = data._dt.as_matrix()
 
     for a in ['time_res_native', 'time_res_static', 'time_res_data']:
         ds.attrs[a] = data[a]
@@ -206,6 +206,61 @@ def map_clusters_to_data(data, clusters, how, **kwargs):
     new_data['_weights'] = xr.DataArray(weights, dims=['t'])
 
     return new_data
+
+
+def apply_clustering(model, timesteps=None, clustering_func=None, **args):
+    """
+    Modifies the passed model's data in-place
+
+    Returns
+    -------
+    data : xarray.Dataset
+        Original data
+    new_data : xarray.Dataset
+    new_data_scaled : xarray.Dataset
+
+    """
+    data = get_dataset(model.data)  # FIXME replace this
+
+    # Only apply clustering function on subset of masked timesteps
+    if timesteps:
+        data_to_cluster = data.loc[{'t': timesteps}]
+    else:
+        data_to_cluster = data
+
+    data_normalized = normalize(data_to_cluster)
+
+    # Get function from `clustering_func` string
+    func = plugin_load(clustering_func, builtin_module='time_funcs')
+
+    result = func(data_normalized, **args)
+    clusters = result[0]  # Ignore other stuff returned
+
+    data_new = map_clusters_to_data(data_to_cluster, clusters, how='mean')
+    # new_data_normalized = map_clusters_to_data(data_normalized, clusters, how='mean')
+
+    if timesteps:
+        # Drop timesteps from old data
+        data_excluded_from_clustering = data.drop(timesteps, dim='t')
+        # Combine the clustered with the old unclustered data
+        data_new = xr.concat(data_excluded_from_clustering, data_new, dim='t')
+
+    # Scale the new/combined data so that the mean for each (x, y, variable)
+    # combination matches that from the original data
+    data_new_scaled = data_new.copy(deep=True)
+    for var in get_datavars(data_to_cluster):
+        scale_to_match_mean = (data[var].mean(dim='t') / data_new[var].mean(dim='t')).fillna(0)
+        data_new_scaled[var] = data_new[var] * scale_to_match_mean
+
+    # FIXME attach updated data to the model object
+    # FIXME update metadata/attributes in new_data and new_data_scaled
+    ds['_weights'] = xr.DataArray(data['_weights'].as_matrix(), dims=['t'])
+
+
+    # Temporary way of attaching updated data to model instance
+    model.data['ds_data'] = data  # Data before processing
+    model.data['ds_data_new'] = data_new  # New combined data, unscaled
+    model.data['ds_data_new_scaled'] = data_new_scaled  # New combined data
 
 
 def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):

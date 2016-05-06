@@ -311,6 +311,7 @@ class Model(BaseModel):
         cr = self.config_run
         s = time_tools.TimeSummarizer()
         time = cr.get_key('time', default=False)
+        self.data['_weights'] = pd.Series(1, index=self.data['_dt'].index)
         if time:
             ##
             # A) Check consistency of given options
@@ -366,12 +367,9 @@ class Model(BaseModel):
                 # Get masked timesteps
                 timesteps = series[series != 0].index \
                     if series is not None else None
-                time_opts = time.get('function_options', {})
-                time_func = plugin_load(time.function,
-                                        builtin_module='time_funcs')
-                # FIXME weights not used for now
-                weights = time_func(data=self.data, timesteps=timesteps,
-                                    **time_opts)
+                opts = time.get('function_options', {})
+                func = plugin_load(time.function, builtin_module='time_funcs')
+                func(model=self, timesteps=timesteps, **opts)
             else:
                 # Apply timestep adjustment
                 if series is not None:
