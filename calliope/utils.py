@@ -14,6 +14,8 @@ from contextlib import contextmanager
 from io import StringIO
 import functools
 import os
+import importlib
+import sys
 
 import numpy as np
 import yaml
@@ -379,6 +381,41 @@ def relative_path(path, base_path_file):
     if not os.path.isabs(path) and isinstance(base_path_file, str):
         path = os.path.join(os.path.dirname(base_path_file), path)
     return path
+
+
+def _load_function(source):
+    """
+    Returns a function from a module, given a source string of the form:
+
+        'module.submodule.subsubmodule.function_name'
+
+    """
+    module_string, function_string = source.rsplit('.', 1)
+    modules = [i for i in sys.modules.keys() if 'calliope' in i]
+    # Check if module already loaded, if so, don't re-import it
+    if (module_string in modules):
+        module = sys.modules[module_string]
+    elif ('calliope.' + module_string) in modules:
+        module = sys.modules['calliope.' + module_string]
+    # Else load the module
+    else:
+        try:
+            module = importlib.import_module(module_string)
+        except ImportError:
+            module = importlib.import_module('calliope.' + module_string)
+    return getattr(module, function_string)
+
+
+def plugin_load(name, builtin_module):
+    try:  # First try importing as a third-party module
+        func = _load_function(name)
+    except ValueError:
+        # ValueError raised if we got a string without '.',
+        # which implies a builtin function,
+        # so we attempt to load from the given module
+        func_string = builtin_module + '.' + name
+        func = _load_function(func_string)
+    return func
 
 
 def option_getter(config_model, data):

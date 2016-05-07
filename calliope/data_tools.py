@@ -17,8 +17,8 @@ def get_dataset(data):
         arrays[p] = arr
     ds = xr.Dataset(arrays)
 
-    ds['_weights'] = xr.DataArray(data['_weights'].as_matrix(), dims=['t'])
-    ds['_time_res'] = xr.DataArray(data['time_res_series'].as_matrix(), dims=['t'])
+    ds['_weights'] = xr.DataArray(data['_weights'], dims=['t'])
+    ds['_time_res'] = xr.DataArray(data['time_res_series'], dims=['t'])
 
     # Replace integer timestep index with actual date-time objects
     ds.coords['t'] = data._dt.as_matrix()
@@ -63,11 +63,26 @@ def reattach(model, new_data):
     # FIXME TODO update metadata/attributes in model data
     ds = new_data
 
-    for p in _TIMESERIES_PARAMS:
-        y_dim = '_y_def_{}'.format(p)
-        for y in ds[y_dim].values:
-            model.data[p][y] = ds[p].loc[{y_dim: y}].to_pandas().reset_index(drop=True)
+    # i0 = model.data['_dt'].index[0]
+    # print(i0)
 
     model.data['_weights'] = ds['_weights'].to_pandas().reset_index(drop=True)
     model.data['time_res_series'] = ds['_time_res'].to_pandas().reset_index(drop=True)
     model.data['_dt'] = ds.coords['t'].to_pandas().reset_index(drop=True)
+    # list(range(i0, i0 + len(model.data['_dt']))), drop=True
+
+    for p in _TIMESERIES_PARAMS:
+        y_dim = '_y_def_{}'.format(p)
+        for y in model.data[p]:
+            if y in ds[y_dim].values:
+                model.data[p][y] = (ds[p].loc[{y_dim: y}]
+                                         .rename({'x': 'dim_1', 't': 'dim_0'})
+                                         .to_pandas()
+                                         .reset_index(drop=True))
+            else:
+                # FIXME
+                # We simply cut off the inf timeseries for params not specified
+                # by a time series -- ugly workaround until replace
+                # underlying data objects with xarray all the way through
+                ilen = model.data['_dt'].index.tolist()
+                model.data[p][y] = model.data[p][y].reset_index(drop=True).loc[ilen, :]

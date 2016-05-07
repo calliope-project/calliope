@@ -11,14 +11,12 @@ Core model functionality via the Model class.
 
 import datetime
 import functools
-import importlib
 import inspect
 import itertools
 import logging
 import os
 import random
 import shutil
-import sys
 import time
 import warnings
 
@@ -69,41 +67,6 @@ def get_default_techs(foo=0):
     module_config = os.path.join(os.path.dirname(__file__), 'config')
     o = utils.AttrDict.from_yaml(os.path.join(module_config, 'defaults.yaml'))
     return list(o.techs.keys())
-
-
-def _load_function(source):
-    """
-    Returns a function from a module, given a source string of the form:
-
-        'module.submodule.subsubmodule.function_name'
-
-    """
-    module_string, function_string = source.rsplit('.', 1)
-    modules = [i for i in sys.modules.keys() if 'calliope' in i]
-    # Check if module already loaded, if so, don't re-import it
-    if (module_string in modules):
-        module = sys.modules[module_string]
-    elif ('calliope.' + module_string) in modules:
-        module = sys.modules['calliope.' + module_string]
-    # Else load the module
-    else:
-        try:
-            module = importlib.import_module(module_string)
-        except ImportError:
-            module = importlib.import_module('calliope.' + module_string)
-    return getattr(module, function_string)
-
-
-def plugin_load(name, builtin_module):
-    try:  # First try importing as a third-party module
-        func = _load_function(name)
-    except ValueError:
-        # ValueError raised if we got a string without '.',
-        # which implies a builtin function,
-        # so we attempt to load from the given module
-        func_string = builtin_module + '.' + name
-        func = _load_function(func_string)
-    return func
 
 
 def get_model_config(cr, config_run_path, adjust_data_path=None,
@@ -209,7 +172,7 @@ class Model(BaseModel):
         if not initialize_config_only:
             self.read_data()
             self.mode = self.config_run.mode
-            self.initialize_availability()
+            # self.initialize_availability()
             self.initialize_time()
 
     def override_model_config(self, override_dict):
@@ -320,8 +283,8 @@ class Model(BaseModel):
             # time.masks is a list of {'function': .., 'options': ..} dicts
             for entry in time_config.masks:
                 entry = utils.AttrDict(entry)
-                mask_func = plugin_load(entry.function,
-                                        builtin_module='time_masks')
+                mask_func = utils.plugin_load(entry.function,
+                                              builtin_module='time_masks')
                 mask_kwargs = entry.get_key('options', default={})
                 masks[entry.to_yaml()] = mask_func(self.data_ds, **mask_kwargs)
 
@@ -339,7 +302,7 @@ class Model(BaseModel):
         # Process function, apply resolution adjustments
         ##
         if 'function' in time_config:
-            func = plugin_load(time_config.function, builtin_module='time_funcs')
+            func = utils.plugin_load(time_config.function, builtin_module='time_funcs')
             func_kwargs = time_config.get('function_options', {})
             data_ds_new = func(data=self.data_ds, timesteps=timesteps, **func_kwargs)
             # FIXME: rebuild self.data from self.data_ds
@@ -1108,7 +1071,7 @@ class Model(BaseModel):
         #
 
         self.param_sets = {'r': m.y_def_r,
-                           'a': m.y_def_r,
+                           # 'a': m.y_def_r,
                            'e_eff': m.y_def_e_eff}
         for param in d.params:
             initializer = self._param_populator(d[param])
@@ -1142,12 +1105,12 @@ class Model(BaseModel):
         # 2. Optional
         if o.get_key('constraints', default=False):
             for c in o.constraints:
-                self.add_constraint(_load_function(c))
+                self.add_constraint(utils._load_function(c))
 
         # 3. Objective function
         default_obj = 'constraints.objective.objective_cost_minimization'
         objective = o.get_key('objective', default=default_obj)
-        self.add_constraint(_load_function(objective))
+        self.add_constraint(utils._load_function(objective))
 
     def _log_time(self):
         self.runtime = int(time.time() - self.start_time)

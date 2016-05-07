@@ -5,14 +5,17 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 time_funcs.py
 ~~~~~~~~~~~~~
 
+Functions to process time series data.
+
 """
+
 import logging
 
 import pandas as pd
 import xarray as xr
 from xarray.ufuncs import fabs
 
-from .core import plugin_load
+from . import utils
 from . import data_tools as dt
 from . import time_clustering
 
@@ -71,7 +74,7 @@ def apply_clustering(data, timesteps, clustering_func, **kwargs):
     data_normalized = normalize(data_to_cluster)
 
     # Get function from `clustering_func` string
-    func = plugin_load(clustering_func, builtin_module='time_clustering')
+    func = utils.plugin_load(clustering_func, builtin_module='time_clustering')
 
     result = func(data_normalized, **kwargs)
     clusters = result[0]  # Ignore other stuff returned
@@ -97,7 +100,6 @@ _RESAMPLE_METHODS = {
     '_weights': 'mean',
     '_time_res': 'sum',
     'r': 'sum',
-    'r_eff': 'mean',
     'e_eff': 'mean',
 }
 
@@ -121,7 +123,7 @@ def resample(data, timesteps, resolution):
             data_rs = data_rs.drop(var)
 
     # Get rid of the filled-in NaN timestamps
-    data_rs = data_rs.dropna(dim='t')
+    data_rs = data_rs.dropna(dim='t', how='all')
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
