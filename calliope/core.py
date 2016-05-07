@@ -304,79 +304,48 @@ class Model(BaseModel):
             d.a[y] = pd.DataFrame(avail, index=d._dt.index, columns=d._x)
 
     def initialize_time(self):
-        """
-        Performs time resolution reduction, if set up in configuration
-
-        """
-        cr = self.config_run
-        s = time_tools.TimeSummarizer()
-        time = cr.get_key('time', default=False)
+        from . import data_tools as dt  # FIXME
+        # FIXME: creating weights and xarray-based dataset here
         self.data['_weights'] = pd.Series(1, index=self.data['_dt'].index)
-        if time:
-            ##
-            # A) Check consistency of given options
-            ##
-            if ('masks' in time or 'resolution' in time) and 'file' in time:
-                e = exceptions.ModelError
-                raise e('`time.masks` or `time.resolution` and `time.file` '
-                        'cannot be given at the same time.')
+        self.data_ds = dt.get_dataset(self.data)
 
-            ##
-            # B) Process masking and get a time resolution series
-            ##
-            if 'masks' in time:
-                masks = []
-                # time.masks is a list of {'function': .., 'options': ..} dicts
-                for entry in time.masks:
-                    entry = utils.AttrDict(entry)
-                    mask_func = plugin_load(entry.function,
-                                            builtin_module='time_masks')
-                    mask_opts = entry.get_key('options', default=False)
-                    if mask_opts:
-                        mask = mask_func(self.data, **mask_opts)
-                    else:
-                        mask = mask_func(self.data)
-                    masks.append(mask)
-                mask_res = time.get('resolution', None)
-                mask_drop_with_padding = time.get('drop_with_padding', None)
-                converter = time_tools.masks_to_resolution_series
-                series = converter(masks, how='or', resolution=mask_res,
-                                   drop_with_padding=mask_drop_with_padding)
-            elif 'resolution' in time:
-                if self.data.time_res_static == time.resolution:
-                    # If time.resolution is set to the resolution that
-                    # the data is already in, do nothing
-                    series = None
-                else:
-                    # Otherwise, prepare an appropriate time resolution
-                    # series for resampling the data
-                    getter = time_tools.resolution_series_uniform
-                    series = getter(self.data, time.resolution)
-            elif 'file' in time:
-                res_file = utils.relative_path(cr.time.file,
-                                               self.config_run_path)
-                series = pd.read_csv(res_file, index_col=0, header=None)[1] \
-                           .astype(int)[self.slice]
-            else:  # Neither time.masks, time.resolution nor time.file given
-                series = None
+        time_config = self.config_run.get('time', False)
+        if not time_config:
+            return None  # Nothing more to do here
 
-            ##
-            # C) Process function, apply resolution adjustments
-            ##
-            if 'function' in time:
-                # Get masked timesteps
-                timesteps = series[series != 0].index \
-                    if series is not None else None
-                opts = time.get('function_options', {})
-                func = plugin_load(time.function, builtin_module='time_funcs')
-                func(model=self, timesteps=timesteps, **opts)
-            else:
-                # Apply timestep adjustment
-                if series is not None:
-                    s.dynamic_timestepper(self.data, series)
+        ##
+        # Process masking and get list of timesteps to keep at high res
+        ##
+        if 'masks' in time_config:
+            masks = {}
+            # time.masks is a list of {'function': .., 'options': ..} dicts
+            for entry in time_config.masks:
+                entry = utils.AttrDict(entry)
+                mask_func = plugin_load(entry.function,
+                                        builtin_module='time_masks')
+                mask_kwargs = entry.get_key('options', default={})
+                masks[entry] = mask_func(self.data, **mask_kwargs)
 
-        else:  # not time
-            return None  # Nothing to do if no time settings given
+            # FIXME a better place to put masks
+            self.data.masks = masks
+            # Concatenate the DatetimeIndexes by using dummy Series
+            timesteps = pd.concat([pd.Series(0, index=m)
+                                   for m in masks.values()]).index
+        else:
+            timesteps = None
+
+        ##
+        # Process function, apply resolution adjustments
+        ##
+        if 'function' in time_config:
+            func = plugin_load(time_config.function, builtin_module='time_funcs')
+            func_kwargs = time_config.get('function_options', {})
+            data_new = func(model=self, timesteps=timesteps, **func_kwargs)
+
+            # FIXME: rebuild self.data from self.data_ds
+            dt.reattach(self, data_new)
+
+        return None
 
     def prev(self, t):
         """Using the timesteps set of this model instance, return `t-1`,
