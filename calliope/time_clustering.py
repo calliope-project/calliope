@@ -22,7 +22,6 @@ import scipy.cluster.vq as vq
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
 
-from .time_funcs import normalize
 from . import data_tools as dt
 
 
@@ -150,6 +149,10 @@ def map_clusters_to_data(data, clusters, how, **kwargs):
 
 def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
     """
+    Parameters
+    ----------
+    data : xarray.Dataset
+        Should be normalized
 
     Returns
     -------
@@ -186,6 +189,8 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
     """
     Parameters
     ----------
+    data : xarray.Dataset
+        Should be normalized
     max_d : float or int, optional
         Max distance for returning clusters.
     k : int, optional
@@ -198,8 +203,7 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
     Z
 
     """
-    data_n = normalize(data)
-    X = reshape_for_clustering(data_n, tech)
+    X = reshape_for_clustering(data, tech)
 
     # Generate the linkage matrix
     Z = hierarchy.linkage(X, 'ward')

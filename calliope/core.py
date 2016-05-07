@@ -331,6 +331,7 @@ class Model(BaseModel):
             # Concatenate the DatetimeIndexes by using dummy Series
             chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                          for m in masks.values()]).index
+            # timesteps: a list of timesteps NOT picked by masks
             timesteps = pd.Index(self.data_ds.t.values).difference(chosen_timesteps)
         else:
             timesteps = None

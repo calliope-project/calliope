@@ -1,5 +1,4 @@
 import xarray as xr
-from . import time_tools
 
 
 _TIMESERIES_PARAMS = ['r', 'e_eff']
@@ -52,6 +51,11 @@ def get_timesteps_per_day(data):
         assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
         timesteps_per_day = int(timesteps_per_day)
     return timesteps_per_day
+
+
+def get_freq(data):
+    ts_per_day = get_timesteps_per_day(data)
+    return ('{}H'.format(24 / ts_per_day))
 
 
 def reattach(model, new_data):

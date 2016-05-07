@@ -6,7 +6,9 @@ time_funcs.py
 ~~~~~~~~~~~~~
 
 """
+import logging
 
+import pandas as pd
 import xarray as xr
 from xarray.ufuncs import fabs
 
@@ -34,16 +36,22 @@ def normalize(data):
     return ds
 
 
-def apply_clustering(data, timesteps=None, clustering_func=None, **args):
+def apply_clustering(data, timesteps, clustering_func, **kwargs):
     """
-    Modifies the passed model's data in-place
+    Apply the given clustering function to the given data.
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+    timesteps : pandas.DatetimeIndex or list of timesteps or None
+    clustering_func : str
+        Name of clustering function.
+    **args : dict
+        Arguments passed to clustering_func.
 
     Returns
     -------
-    data : xarray.Dataset
-        Original data
-    new_data : xarray.Dataset
-    new_data_scaled : xarray.Dataset
+    data_new_scaled : xarray.Dataset
 
     """
     # Only apply clustering function on subset of masked timesteps
@@ -57,7 +65,7 @@ def apply_clustering(data, timesteps=None, clustering_func=None, **args):
     # Get function from `clustering_func` string
     func = plugin_load(clustering_func, builtin_module='time_clustering')
 
-    result = func(data_normalized, **args)
+    result = func(data_normalized, **kwargs)
     clusters = result[0]  # Ignore other stuff returned
 
     data_new = time_clustering.map_clusters_to_data(data_to_cluster, clusters, how='mean')
@@ -79,3 +87,61 @@ def apply_clustering(data, timesteps=None, clustering_func=None, **args):
         data_new_scaled[var] = data_new[var] * scale_to_match_mean
 
     return data_new_scaled
+
+
+_RESAMPLE_METHODS = {
+    '_weights': 'mean',
+    '_time_res': 'sum',
+    'r': 'sum',
+    'r_eff': 'mean',
+    'e_eff': 'mean',
+}
+
+
+def resample(data, timesteps, resolution):
+    data_new = data.copy(deep=True)
+    # First create a new dataset of the correct size by using first-resample,
+    # which should be a quick way to achieve this
+    data_new = data_new.resample(resolution, dim='t', how='first')
+
+    for var in data.data_vars:
+        if var in _RESAMPLE_METHODS:
+            how = _RESAMPLE_METHODS[var]
+            data_new[var] = data[var].resample(resolution, dim='t', how=how)
+        else:
+            # If we don't know how to resample a var, we drop it
+            logging.error('Dropping {} because it has no resampling method.'.format(var))
+            data_new = data_new.drop(var)
+
+    return data_new
+
+
+def drop(data, timesteps, padding=None):
+    """
+    Drop timesteps from data, with optional padding
+    around into the contiguous areas encompassed by the timesteps.
+
+    """
+    freq = dt.get_freq(data)  # FIXME freq should be an attr on data
+
+    if padding:
+        # Series of 1 where timesteps 'exist' and 0 where they don't
+        s = (pd.Series(1, index=timesteps)
+               .reindex(pd.date_range(timesteps[0], timesteps[-1], freq=freq))
+               .fillna(0))
+
+        # Blocks of contiguous 1's in the series
+        blocks = (s != s.shift()).cumsum().drop(s[s==0].index)
+
+        # Groups of contiguous areas
+        groups = blocks.groupby(blocks).apply(lambda x: (x.index[0], x.index[-1]))
+
+        # Reduce size of each block by `padding` on both sides
+        padding = pd.Timedelta(padding)
+        dt_indices = [pd.date_range(g[0] + padding, g[1] - padding, freq=freq)
+                      for g in groups]
+
+        # Concatenate the DatetimeIndexes by using dummy Series
+        timesteps = pd.concat([pd.Series(0, index=i) for i in dt_indices]).index
+
+    return data.drop(timesteps, dim='t')

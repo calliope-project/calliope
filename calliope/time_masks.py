@@ -45,7 +45,7 @@ def extreme(data, tech, var='r', how='max',
 
     Parameters
     ----------
-    data : Calliope model data
+    data : xarray.Dataset
     tech : str
         Technology whose `var` to find extreme for.
     var : str, optional
