@@ -36,6 +36,14 @@ def normalize(data):
     return ds
 
 
+def _combine_datasets(data0, data1):
+    # Combine the clustered with the old unclustered data
+    data_new = xr.concat([data0, data1], dim='t')
+    # Ensure time dimension is ordered
+    data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+    return data_new
+
+
 def apply_clustering(data, timesteps, clustering_func, **kwargs):
     """
     Apply the given clustering function to the given data.
@@ -73,11 +81,7 @@ def apply_clustering(data, timesteps, clustering_func, **kwargs):
 
     if timesteps is not None:
         # Drop timesteps from old data
-        data_excluded_from_clustering = data.drop(timesteps, dim='t')
-        # Combine the clustered with the old unclustered data
-        data_new = xr.concat([data_excluded_from_clustering, data_new], dim='t')
-        # Ensure time dimension is ordered
-        data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+        data_new = _combine_datasets(data.drop(timesteps, dim='t'), data_new)
 
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
@@ -100,20 +104,30 @@ _RESAMPLE_METHODS = {
 
 def resample(data, timesteps, resolution):
     data_new = data.copy(deep=True)
-    # First create a new dataset of the correct size by using first-resample,
-    # which should be a quick way to achieve this
-    data_new = data_new.resample(resolution, dim='t', how='first')
+    if timesteps is not None:
+        data_new = data_new.loc[{'t': timesteps}]
 
-    for var in data.data_vars:
+    # First create a new resampled dataset of the correct size by
+    # using first-resample, which should be a quick way to achieve this
+    data_rs = data_new.resample(resolution, dim='t', how='first')
+
+    for var in data_new.data_vars:
         if var in _RESAMPLE_METHODS:
             how = _RESAMPLE_METHODS[var]
-            data_new[var] = data[var].resample(resolution, dim='t', how=how)
+            data_rs[var] = data_new[var].resample(resolution, dim='t', how=how)
         else:
             # If we don't know how to resample a var, we drop it
             logging.error('Dropping {} because it has no resampling method.'.format(var))
-            data_new = data_new.drop(var)
+            data_rs = data_rs.drop(var)
 
-    return data_new
+    # Get rid of the filled-in NaN timestamps
+    data_rs = data_rs.dropna(dim='t')
+
+    if timesteps is not None:
+        # Combine leftover parts of passed in data with new data
+        data_rs = _combine_datasets(data.drop(timesteps, dim='t'), data_rs)
+
+    return data_rs
 
 
 def drop(data, timesteps, padding=None):
