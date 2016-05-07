@@ -36,7 +36,6 @@ from . import locations
 from . import output
 from . import transmission
 from . import time_masks
-from . import time_tools
 from . import utils
 
 # Parameters that may be defined as time series

@@ -24,18 +24,19 @@ Constraints
 .. automodule:: calliope.constraints.optional
     :members:
 
-Time resolution
-===============
-
-.. automodule:: calliope.time_tools
-    :members:
 
 .. _api_time_masks:
 
-Time masks
-==========
+Time series
+===========
+
+.. automodule:: calliope.time_funcs
+    :members:
 
 .. automodule:: calliope.time_masks
+    :members:
+
+.. automodule:: calliope.time_clustering
     :members:
 
 Reading results
