@@ -30,9 +30,6 @@ from . import utils
 from . import exceptions
 
 
-_TIMESERIES_PARAMS = ['r', 'e_eff']
-
-
 class TimeSummarizer(object):
     """
     Provides methods to reduce time resolution for the given model data.

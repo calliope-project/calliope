@@ -40,7 +40,7 @@ from . import time_tools
 from . import utils
 
 # Parameters that may be defined as time series
-from .time_tools import _TIMESERIES_PARAMS
+from .data_tools import _TIMESERIES_PARAMS
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
@@ -324,13 +324,14 @@ class Model(BaseModel):
                 mask_func = plugin_load(entry.function,
                                         builtin_module='time_masks')
                 mask_kwargs = entry.get_key('options', default={})
-                masks[entry] = mask_func(self.data, **mask_kwargs)
+                masks[entry.to_yaml()] = mask_func(self.data_ds, **mask_kwargs)
 
             # FIXME a better place to put masks
             self.data.masks = masks
             # Concatenate the DatetimeIndexes by using dummy Series
-            timesteps = pd.concat([pd.Series(0, index=m)
-                                   for m in masks.values()]).index
+            chosen_timesteps = pd.concat([pd.Series(0, index=m)
+                                         for m in masks.values()]).index
+            timesteps = pd.Index(self.data_ds.t.values).difference(chosen_timesteps)
         else:
             timesteps = None
 
@@ -340,10 +341,10 @@ class Model(BaseModel):
         if 'function' in time_config:
             func = plugin_load(time_config.function, builtin_module='time_funcs')
             func_kwargs = time_config.get('function_options', {})
-            data_new = func(model=self, timesteps=timesteps, **func_kwargs)
-
+            data_ds_new = func(data=self.data_ds, timesteps=timesteps, **func_kwargs)
             # FIXME: rebuild self.data from self.data_ds
-            dt.reattach(self, data_new)
+            self.data_ds_new = data_ds_new
+            dt.reattach(self, data_ds_new)
 
         return None
 

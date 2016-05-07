@@ -2,11 +2,14 @@ import xarray as xr
 from . import time_tools
 
 
+_TIMESERIES_PARAMS = ['r', 'e_eff']
+
+
 def get_dataset(data):
     """Temporary solution to get an xr.Dataset of input data"""
     from ._version import __version__
     arrays = {}
-    for p in time_tools._TIMESERIES_PARAMS:
+    for p in _TIMESERIES_PARAMS:
         y_dim = '_y_def_{}'.format(p)
         arr = (xr.Dataset(data[p]).to_array(dim=y_dim)
                  .rename({'dim_0': 't', 'dim_1': 'x'})
@@ -52,15 +55,11 @@ def get_timesteps_per_day(data):
 
 
 def reattach(model, new_data):
-    # FIXME temporary way of attaching updated data to model instance
-    model.data_ds_new = data_new  # New combined data, unscaled
-    model.data_ds_new_scaled = data_new_scaled  # New combined data
-
     # FIXME attach updated data to the model object
-    # FIXME update metadata/attributes in model data
+    # FIXME TODO update metadata/attributes in model data
     ds = new_data
 
-    for p in time_tools._TIMESERIES_PARAMS:
+    for p in _TIMESERIES_PARAMS:
         y_dim = '_y_def_{}'.format(p)
         for y in ds[y_dim].values:
             model.data[p][y] = ds[p].loc[{y_dim: y}].to_pandas().reset_index(drop=True)
