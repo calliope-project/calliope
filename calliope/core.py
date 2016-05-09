@@ -1276,9 +1276,11 @@ class Model(BaseModel):
         Return output for variable `var` as a pandas.Series (1d),
         pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
 
-        Args:
-            var : variable name as string, e.g. 'es_prod'
-            dims : list of indices as strings, e.g. ('y', 'x', 't');
+        Parameters
+        ----------
+        var : variable name as string, e.g. 'es_prod'
+        dims : list, optional
+            indices as strings, e.g. ('y', 'x', 't');
             if not given, they are auto-detected
 
         """
@@ -1362,60 +1364,30 @@ class Model(BaseModel):
 
     def get_costs(self, t_subset=None):
         """Get costs."""
-
-        def _factor(var, t_subset_slice):
-            """Return the fraction of var within t_subset. Used to
-               calculate the correct fraction of operational costs."""
-            if 'c' in var.coords:
-                sum_dims = ('c', 't')
-            else:
-                sum_dims = ('t')
-
-            return (var[dict(t=t_subset_slice)].sum(dim=sum_dims)
-                    / var.sum(dim=sum_dims)).fillna(0)
-
         if t_subset is None:
-            t_subset_slice = slice(None)
+            cost_fixed = self.get_var('cost_con') + self.get_var('cost_op_fixed')
+            cost_variable = self.get_var('cost_op_variable')
         else:
-            t_subset_slice = t_subset
+            # len_adjust is the fraction of construction and fixed costs
+            # that is accrued to the chosen t_subset. NB: construction and fixed
+            # operation costs are calculated for a whole year
+            len_adjust = (sum(self.data.time_res_series.iloc[t_subset])
+                          / sum(self.data.time_res_series))
 
-        # len_adjust is the fraction of construction and fixed costs
-        # that is accrued to the chosen t_subset. NB: construction and fixed
-        # operation costs are calculated for a whole year
-        len_adjust = (sum(self.data.time_res_series.iloc[t_subset_slice])
-                      / sum(self.data.time_res_series))
+            # Adjust for the fact that fixed costs accrue over a smaller length
+            # of time as per len_adjust
+            cost_fixed = self.get_var('cost_con') + self.get_var('cost_op_fixed')
+            cost_fixed = cost_fixed * len_adjust
 
-        # Adjust for the fact that fixed costs accrue over a smaller length
-        # of time as per len_adjust
-        cost = self.get_var('cost_con') + self.get_var('cost_op_fixed')
-        cost = cost * len_adjust
+            # Adjust for the fact that variable costs are only accrued over
+            # the t_subset period
+            cost_op_var = self.get_var('cost_op_var')[{'t': t_subset}].sum(dim='t')
+            cost_op_fuel = self.get_var('cost_op_fuel')[{'t': t_subset}].sum(dim='t')
+            cost_op_rb = self.get_var('cost_op_rb')[{'t': t_subset}].sum(dim='t')
 
-        # Get variable costs
-        cost_var = self.get_var('cost_op_var')
-        cost_fuel = self.get_var('cost_op_fuel')
-        cost_rb = self.get_var('cost_op_rb')
+            cost_variable = cost_op_var + cost_op_fuel + cost_op_rb
 
-        # Adjust for the fact that variable costs are only accrued over
-        # the t_subset period
-        if t_subset is not None:
-            es_prod = self.get_var('es_prod')
-            # Broadcast multiplication along cost classes
-            cost_var = cost_var * _factor(es_prod, t_subset_slice)
-            rs = self.get_var('rs')
-            cost_fuel = cost_fuel * _factor(rs, t_subset_slice)
-            try:
-                rbs = self.get_var('rbs')
-                # NB: we do .fillna(0) because the rbs var will only
-                # be defined for techs that actually use rbs, so
-                # we'd get NaN costs for all other techs, which would
-                # propagate through to making final costs NaN too
-                cost_rb = cost_rb * _factor(rbs, t_subset_slice).fillna(0)
-            except exceptions.ModelError:
-                pass  # If rbs doesn't exist in the data, ModelError is raised,
-                # and we simply move on...
-
-        cost = cost + cost_var + cost_fuel + cost_rb
-        return cost
+        return cost_fixed + cost_variable
 
     def get_totals(self, t_subset=None):
         """Get total produced and consumed per technology and location."""

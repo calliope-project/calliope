@@ -464,15 +464,19 @@ def node_costs(model):
     m.cost = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
     m.cost_con = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
     m.cost_op_fixed = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_op_var = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_op_fuel = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_op_rb = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_op_variable = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost_op_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
+    m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
+    m.cost_op_rb = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
-        return (m.cost[y, x, k] == m.cost_con[y, x, k]
-                + m.cost_op_fixed[y, x, k] + m.cost_op_var[y, x, k]
-                + m.cost_op_fuel[y, x, k] + m.cost_op_rb[y, x, k])
+        return (
+            m.cost[y, x, k] ==
+            m.cost_con[y, x, k] +
+            m.cost_op_fixed[y, x, k] +
+            m.cost_op_variable[y, x, k]
+        )
 
     def c_cost_con_rule(m, y, x, k):
         if y in m.y_pc:
@@ -500,58 +504,81 @@ def node_costs(model):
         else:
             cost_rb_cap = 0
 
-        return (m.cost_con[y, x, k] == _depreciation_rate(y, k)
-                * (sum(model.data.time_res_series) / 8760)
-                * (cost_s_cap + cost_r_cap + cost_r_area + cost_rb_cap
-                   + cost_e_cap * m.e_cap[y, x]))
+        return (
+            m.cost_con[y, x, k] == _depreciation_rate(y, k) *
+            (sum(model.data.time_res_series * model.data._weights) / 8760) *
+            (cost_s_cap + cost_r_cap + cost_r_area + cost_rb_cap +
+             cost_e_cap * m.e_cap[y, x])
+        )
 
     def c_cost_op_fixed_rule(m, y, x, k):
         if y in m.y:
             return (m.cost_op_fixed[y, x, k] ==
                     _cost('om_frac', y, k, x) * m.cost_con[y, x, k]
                     + (_cost('om_fixed', y, k, x) * m.e_cap[y, x] *
-                       (sum(model.data.time_res_series) / 8760)))
+                       (sum(model.data.time_res_series * model.data._weights) / 8760)))
         else:
             return m.cost_op_fixed[y, x, k] == 0
 
-    def c_cost_op_var_rule(m, y, x, k):
+    def c_cost_op_variable_rule(m, y, x, k):
+        return (
+            m.cost_op_variable[y, x, k] ==
+            sum(
+                m.cost_op_var[y, x, t, k] +
+                m.cost_op_fuel[y, x, t, k] +
+                m.cost_op_rb[y, x, t, k]
+                for t in m.t
+            )
+        )
+
+    def c_cost_op_var_rule(m, y, x, t, k):
         # Note: only counting es_prod for operational costs.
         # This should generally be a reasonable assumption to make.
         if y in m.y:
             carrier = model.get_option(y + '.carrier')
-            return (m.cost_op_var[y, x, k] ==
-                    _cost('om_var', y, k, x) * sum(m.es_prod[carrier, y, x, t]
-                                                for t in m.t))
+            return (
+                m.cost_op_var[y, x, t, k] ==
+                _cost('om_var', y, k, x) *
+                model.data._weights.loc[t] *
+                m.es_prod[carrier, y, x, t]
+            )
         else:
-            return m.cost_op_var[y, x, k] == 0
+            return m.cost_op_var[y, x, t, k] == 0
 
-    def c_cost_op_fuel_rule(m, y, x, k):
+    def c_cost_op_fuel_rule(m, y, x, t, k):
         if y in m.y:
             # Dividing by r_eff here so we get the actual r used, not the rs
             # moved into storage...
-            return (m.cost_op_fuel[y, x, k] ==
-                    _cost('om_fuel', y, k, x) * sum(m.rs[y, x, t]
-                    / model.get_option(y + '.constraints.r_eff', x=x)
-                    for t in m.t))
+            return (
+                m.cost_op_fuel[y, x, t, k] ==
+                _cost('om_fuel', y, k, x) *
+                model.data._weights.loc[t] *
+                (m.rs[y, x, t] /
+                    model.get_option(y + '.constraints.r_eff', x=x))
+            )
         else:
-            return m.cost_op_fuel[y, x, k] == 0
+            return m.cost_op_fuel[y, x, t, k] == 0
 
-    def c_cost_op_rb_rule(m, y, x, k):
+    def c_cost_op_rb_rule(m, y, x, t, k):
         if y in m.y_rb:
-            return (m.cost_op_rb[y, x, k] ==
-                    _cost('om_rb', y, k, x) * sum(m.rbs[y, x, t]
-                    / model.get_option(y + '.constraints.rb_eff', x=x)
-                    for t in m.t))
+            return (
+                m.cost_op_rb[y, x, t, k] ==
+                _cost('om_rb', y, k, x) *
+                model.data._weights.loc[t] *
+                (m.rbs[y, x, t] /
+                    model.get_option(y + '.constraints.rb_eff', x=x))
+            )
         else:
-            return m.cost_op_rb[y, x, k] == 0
+            return m.cost_op_rb[y, x, t, k] == 0
 
     # Constraints
     m.c_cost = po.Constraint(m.y, m.x, m.k, rule=c_cost_rule)
     m.c_cost_con = po.Constraint(m.y, m.x, m.k, rule=c_cost_con_rule)
     m.c_cost_op_fixed = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_fixed_rule)
-    m.c_cost_op_var = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_var_rule)
-    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_fuel_rule)
-    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_rb_rule)
+    m.c_cost_op_variable = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_variable_rule)
+    m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_var_rule)
+    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_fuel_rule)
+    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_rb_rule)
 
 
 def model_constraints(model):
