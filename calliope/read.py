@@ -106,6 +106,6 @@ def read_dir(directory):
         except IOError as err:
             logging.warning('I/O error in `{}` at iteration `{}`'
                             ': {}'.format(iteration_dir, i, err))
-            results.solutions[i] = AttrDict()  # add an empty entry
+            # results.solutions[i] = AttrDict()  # add an empty entry
             continue
     return results

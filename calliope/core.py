@@ -1389,14 +1389,24 @@ class Model(BaseModel):
 
         return cost_fixed + cost_variable
 
-    def get_totals(self, t_subset=None):
+    def get_totals(self, t_subset=None, apply_weights=True):
         """Get total produced and consumed per technology and location."""
         if t_subset is None:
             t_subset = slice(None)
-        p = xr.Dataset({'ec_' + i: self.get_ec(i)[dict(t=t_subset)].sum(dim='t')
+
+        if apply_weights:
+            try:
+                weights = self.data_ds_new._weights[dict(t=t_subset)]
+            except AttributeError:
+                weights = 1
+        else:
+            weights = 1
+
+        p = xr.Dataset({'ec_' + i: (self.get_ec(i)[dict(t=t_subset)]
+                        * weights).sum(dim='t')
                         for i in ['prod', 'con']})
         for i in ['es_prod', 'es_con']:
-            p[i] = self.get_var(i)[dict(t=t_subset)].sum(dim='t')
+            p[i] = (self.get_var(i)[dict(t=t_subset)] * weights).sum(dim='t')
         return p
 
     def get_levelized_cost(self):
@@ -1432,7 +1442,7 @@ class Model(BaseModel):
         try:  # Try loading time_res_sum from operational mode
             time_res_sum = self.data.time_res_sum
         except KeyError:
-            time_res_sum = sum(time_res.at[t] for t in m.t)
+            time_res_sum = sum(time_res.at[t] * self.data._weights.at[t] for t in m.t)
         return time_res_sum
 
     def get_capacity_factor(self):

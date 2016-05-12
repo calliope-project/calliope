@@ -228,6 +228,11 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
 
 
 def fancy_dendrogram(*args, **kwargs):
+    """
+    Code adapted from:
+    https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/
+
+    """
     max_d = kwargs.pop('max_d', None)
     if max_d and 'color_threshold' not in kwargs:
         kwargs['color_threshold'] = max_d

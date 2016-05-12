@@ -3,13 +3,15 @@
 Release History
 ===============
 
-0.3.8 (dev)
+0.4.0 (dev)
 -----------
 
 Major changes
 ~~~~~~~~~~~~~
 
 |changed| Major change to solution data structure. Model solution is now returned as a single `xarray DataSet <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
+
+|changed| Model data structures simplified and based on xarray
 
 Other changes
 ~~~~~~~~~~~~~
