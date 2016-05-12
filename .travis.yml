@@ -2,15 +2,9 @@
 
 language: python
 sudo: false  # Use container-based infrastructure
-addons:
-  apt_packages:
-    - glpk-utils  # Required to actually solve test models
 
 python:
   - "3.5"
-
-env:
-  - PIP_DOWNLOAD_CACHE=$HOME/.cache/pip
 
 before_install:
   - "wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;"
@@ -31,8 +25,3 @@ script: "py.test --cov calliope --cov-report term-missing"
 
 after_success:
     - coveralls
-
-# FIXME cache miniconda and only-redownload/re-install if needed
-cache:
-  directories:
-    - $HOME/.cache/pip
