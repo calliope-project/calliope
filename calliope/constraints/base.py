@@ -76,12 +76,14 @@ def node_energy_balance(model):
     """
     m = model.m
     d = model.data
+    time_res = model.data['_time_res'].to_series()
 
+    # FIXME this is very inefficient for y not in y_def_e_eff
     def get_e_eff(m, y, x, t):
         if y in m.y_def_e_eff:
             e_eff = m.e_eff[y, x, t]
-        else:
-            e_eff = d.e_eff[y][x].iat[0]  # Just get 0-th entry in DataFrame
+        else:  # This includes transmission technologies
+            e_eff = d.e_eff.loc[dict(y=y, x=x)][0]  # Just get first entry
         return e_eff
 
     def get_e_eff_per_distance(model, y, x):
@@ -152,8 +154,8 @@ def node_energy_balance(model):
             else:
                 s_loss = model.get_option(y + '.constraints.s_loss', x=x)
                 s_minus_one = (((1 - s_loss)
-                                ** d.time_res_series.at[model.prev(t)])
-                               * m.s[y, x, model.prev(t)])
+                                ** time_res.at[model.prev_t(t)])
+                               * m.s[y, x, model.prev_t(t)])
             return (m.s[y, x, t] == s_minus_one + rs
                     + rbs - e_prod - e_con)
 
@@ -261,7 +263,7 @@ def node_constraints_build(model):
 
     def c_e_cap_rule(m, y, x):
         # First check whether this tech is allowed at this location
-        if not d.locations.at[x, y] == 1:
+        if not model._locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
         else:
             e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
@@ -308,7 +310,7 @@ def node_constraints_build(model):
 
 def node_constraints_operational(model):
     m = model.m
-    time_res = model.data.time_res_series
+    time_res = model.data['_time_res'].to_series()
 
     # Constraint rules
     def c_rs_max_upper_rule(m, y, x, t):
@@ -352,8 +354,7 @@ def node_constraints_operational(model):
                 and t >= model.data.startup_time_bounds):
             return m.rbs[y, x, t] == 0
         else:
-            return m.rbs[y, x, t] <= (model.data.time_res_series.at[t]
-                                      * m.rb_cap[y, x])
+            return m.rbs[y, x, t] <= time_res.at[t] * m.rb_cap[y, x]
 
     # Constraints
     m.c_rs_max_upper = po.Constraint(m.y_def_r, m.x, m.t,
@@ -443,6 +444,8 @@ def node_costs(model):
 
     """
     m = model.m
+    time_res = model.data['_time_res'].to_series()
+    weights = model.data['_weights'].to_series()
 
     cost_getter = utils.cost_getter(model.get_option)
     depreciation_getter = utils.depreciation_getter(model.get_option)
@@ -506,7 +509,7 @@ def node_costs(model):
 
         return (
             m.cost_con[y, x, k] == _depreciation_rate(y, k) *
-            (sum(model.data.time_res_series * model.data._weights) / 8760) *
+            (sum(time_res * weights) / 8760) *
             (cost_s_cap + cost_r_cap + cost_r_area + cost_rb_cap +
              cost_e_cap * m.e_cap[y, x])
         )
@@ -516,7 +519,7 @@ def node_costs(model):
             return (m.cost_op_fixed[y, x, k] ==
                     _cost('om_frac', y, k, x) * m.cost_con[y, x, k]
                     + (_cost('om_fixed', y, k, x) * m.e_cap[y, x] *
-                       (sum(model.data.time_res_series * model.data._weights) / 8760)))
+                       (sum(time_res * weights) / 8760)))
         else:
             return m.cost_op_fixed[y, x, k] == 0
 
@@ -539,7 +542,7 @@ def node_costs(model):
             return (
                 m.cost_op_var[y, x, t, k] ==
                 _cost('om_var', y, k, x) *
-                model.data._weights.loc[t] *
+                weights.loc[t] *
                 m.es_prod[carrier, y, x, t]
             )
         else:
@@ -552,7 +555,7 @@ def node_costs(model):
             return (
                 m.cost_op_fuel[y, x, t, k] ==
                 _cost('om_fuel', y, k, x) *
-                model.data._weights.loc[t] *
+                weights.loc[t] *
                 (m.rs[y, x, t] /
                     model.get_option(y + '.constraints.r_eff', x=x))
             )
@@ -564,7 +567,7 @@ def node_costs(model):
             return (
                 m.cost_op_rb[y, x, t, k] ==
                 _cost('om_rb', y, k, x) *
-                model.data._weights.loc[t] *
+                weights.loc[t] *
                 (m.rbs[y, x, t] /
                     model.get_option(y + '.constraints.rb_eff', x=x))
             )
@@ -586,8 +589,7 @@ def model_constraints(model):
 
     @utils.memoize
     def get_parents(level):
-        locations = model.data.locations
-        return list(locations[locations._level == level].index)
+        return list(model._locations[model._locations._level == level].index)
 
     @utils.memoize
     def get_children(parent, childless_only=True):
@@ -596,7 +598,7 @@ def model_constraints(model):
         themselves are returned.
 
         """
-        locations = model.data.locations
+        locations = model._locations
         children = list(locations[locations._within == parent].index)
         if childless_only:  # FIXME childless_only param needs tests
             children = [i for i in children if len(get_children(i)) == 0]
@@ -606,7 +608,7 @@ def model_constraints(model):
     def c_system_balance_rule(m, c, x, t):
         # Balacing takes place at top-most (level 0) locations, as well
         # as within any lower-level locations that contain children
-        if (model.data.locations.at[x, '_level'] == 0
+        if (model._locations.at[x, '_level'] == 0
                 or len(get_children(x)) > 0):
             family = get_children(x) + [x]  # list of children + parent
             balance = (sum(m.es_prod[c, y, xs, t]

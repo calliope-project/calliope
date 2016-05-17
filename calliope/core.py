@@ -30,14 +30,16 @@ from pyutilib.services import TempfileManager
 
 from . import exceptions
 from . import constraints
+from . import data_tools
 from . import locations
 from . import output
+from . import sets
 from . import transmission
 from . import time_masks
 from . import utils
 
 # Parameters that may be defined as time series
-from .data_tools import _TIMESERIES_PARAMS
+_TIMESERIES_PARAMS = ['r', 'e_eff']
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
@@ -139,51 +141,46 @@ class Model(BaseModel):
 
     Parameters
     ----------
-    config_run : str or AttrDict, default None
+    config_run : str or AttrDict, optional
         Path to YAML file with run settings, or AttrDict containing run
         settings. If not given, the included default run and model
         settings are used.
-    override : AttrDict, default None
+    override : AttrDict, optional
         Provide any additional options or override options from
         ``config_run`` by passing an AttrDict of the form
         ``{'model_settings': 'foo.yaml'}``. Any option possible in
         ``run.yaml`` can be specified in the dict, inluding ``override.``
         options.
-    initialize_config_only : bool, default False
-        If True, the model will not be runnable, and only the basic
-        model configuration will be initialized, but time series data
-        will be read or initialized, which can be useful for faster
-        debugging or processing the configuration.
 
     """
-    def __init__(self, config_run=None, override=None,
-                 initialize_config_only=False):
+    def __init__(self, config_run=None, override=None):
         super().__init__()
         self.verbose = False
         self.time_format = '%Y-%m-%d %H:%M:%S'
         self.debug = utils.AttrDict()
+
+        # Populate self.config_run and self.config_model
         self.initialize_configuration(config_run, override)
-        # Other initialization tasks
-        self.data = utils.AttrDict()
-        # Initialize the option getter
-        self._get_option = utils.option_getter(self.config_model, self.data)
+        self._get_option = utils.option_getter(self.config_model)
+
+        # Initialize sets
         self.initialize_parents()
         self.initialize_sets()
-        if not initialize_config_only:
-            self.read_data()
-            self.mode = self.config_run.mode
-            # self.initialize_availability()
-            self.initialize_time()
+
+        # Read data and apply time resolution adjustments
+        self.read_data()
+        self.mode = self.config_run.mode
+        self.initialize_time()
 
     def override_model_config(self, override_dict):
-        o = self.config_model
         od = override_dict
         if 'data_path' in od.keys_nested():
             # If run_config overrides data_path, interpret it as
             # relative to the run_config file's path
             od['data_path'] = utils.relative_path(od['data_path'],
                                                   self.config_run_path)
-        o.union(od, allow_override=True, allow_replacement=True)
+        self.config_model.union(od, allow_override=True,
+                                allow_replacement=True)
 
     def initialize_configuration(self, config_run, override):
         self.flush_option_cache()
@@ -231,49 +228,18 @@ class Model(BaseModel):
         # As a final step, flush the option cache
         self.flush_option_cache()
 
-    def get_timeres(self, verify=False):
-        """Returns resolution of data in hours. Needs a properly
-        formatted ``set_t.csv`` file to work.
-
-        If ``verify=True``, verifies that the entire file is at the same
-        resolution. ``model.get_timeres(verify=True)`` can be called
-        after Model initialization to verify this.
-
-        """
-        path = self.config_model.data_path
-        df = pd.read_csv(os.path.join(path, 'set_t.csv'), index_col=0,
-                         header=None, parse_dates=[1])
-        seconds = (df.iat[0, 0] - df.iat[1, 0]).total_seconds()
-        if verify:
-            for i in range(len(df) - 1):
-                assert ((df.iat[i, 0] - df.iat[i+1, 0]).total_seconds()
-                        == seconds)
-        hours = abs(seconds) / 3600
-        return hours
-
-    def initialize_availability(self):
-        # Availability in time/space is only used if dynamic timestep
-        # adjustment is invoked
-        d = self.data
-        d['a'] = utils.AttrDict()
-        # Append 'a' to d.params, so that it is included in parameter updates!
-        d.params.append('a')
-        # Fill in default values for a, so that something is there even in
-        # case no dynamic timestepper is called
-        for y in d._y_def_r:
-            # FIXME does this need to take into account per-location settings?
-            avail = self.get_option(y + '.constraints.availability')
-            d.a[y] = pd.DataFrame(avail, index=d._dt.index, columns=d._x)
-
     def initialize_time(self):
-        from . import data_tools as dt  # FIXME
-        # FIXME: creating weights and xarray-based dataset here
-        self.data['_weights'] = pd.Series(1, index=self.data['_dt'].index)
-        self.data_ds = dt.get_dataset(self.data)
+        self.data['_weights'] = xr.DataArray(
+            pd.Series(1, index=self.data['t'].values),
+            dims=['t']
+        )
 
         time_config = self.config_run.get('time', False)
         if not time_config:
             return None  # Nothing more to do here
+        else:
+            # FIXME for analysis purposes, keep old data around
+            self.data_original = self.data.copy(deep=True)
 
         ##
         # Process masking and get list of timesteps to keep at high res
@@ -286,10 +252,10 @@ class Model(BaseModel):
                 mask_func = utils.plugin_load(entry.function,
                                               builtin_module='time_masks')
                 mask_kwargs = entry.get_key('options', default={})
-                masks[entry.to_yaml()] = mask_func(self.data_ds, **mask_kwargs)
+                masks[entry.to_yaml()] = mask_func(self.data, **mask_kwargs)
 
-            # FIXME a better place to put masks
-            self.data.masks = masks
+            self._masks = masks  # FIXME a better place to put masks
+
             # Concatenate the DatetimeIndexes by using dummy Series
             chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                          for m in masks.values()]).index
@@ -304,34 +270,47 @@ class Model(BaseModel):
         if 'function' in time_config:
             func = utils.plugin_load(time_config.function, builtin_module='time_funcs')
             func_kwargs = time_config.get('function_options', {})
-            data_ds_new = func(data=self.data_ds, timesteps=timesteps, **func_kwargs)
-            # FIXME: rebuild self.data from self.data_ds
-            self.data_ds_new = data_ds_new
-            dt.reattach(self, data_ds_new)
+            self.data = func(data=self.data, timesteps=timesteps, **func_kwargs)
+            self._sets['t'] = self.data['t'].to_index()
+
+            # Raise error if we've made adjustments incompatible
+            # with operational mode
+            if self.mode == 'operate':
+                opmode_safe = self.data.attrs.get('opmode_safe', False)
+                if opmode_safe:
+                    self.data.attrs['time_res'] = data_tools.get_timeres(self)
+                else:
+                    msg = 'Time settings incompatible with operational mode'
+                    raise exceptions.ModelError(msg)
 
         return None
 
-    def prev(self, t):
-        """Using the timesteps set of this model instance, return `t-1`,
-        even if the set is not continuous.
-
-        E.g., if t is [0, 1, 2, 6, 7, 8], model.prev(6) will return 2.
+    def get_t(self, timestamp, offset=0):
+        """
+        Get a timestamp before/after (by offset) from the given timestamp
+        in the model's set of timestamps. Raises ModelError if out of bounds.
 
         """
-        # Create an index to look up t, and save it for later use
-        try:
-            # Check if _t_index exists
-            self._t_index.name
-        except AttributeError:
-            self._t_index = pd.Index(self.data._dt.index)
-        # Get the location of t in the index and use it to retrieve
-        # the desired value, raising an error if it's <0
-        loc = self._t_index.get_loc(t) - 1
-        if loc >= 0:
-            return self.data._dt.index[loc]
+        idx = self.data['t'].to_index()
+        if isinstance(offset, pd.tslib.Timedelta):
+            loc = idx.get_loc(timestamp + offset)
+        else:  # integer
+            loc = idx.get_loc(timestamp) + offset
+        if loc < 0:
+            raise exceptions.ModelError(
+                'Attempted to get a timestep before the first one.'
+            )
         else:
-            e = exceptions.ModelError
-            raise e('Attempted to get a timestep earlier than the first one.')
+            try:
+                return idx[loc]
+            except IndexError:  # Beyond length of index
+                raise exceptions.ModelError(
+                    'Attempted to get a timestep beoynd the last one.'
+                )
+
+    def prev_t(self, timestamp):
+        """Return the timestep prior to the given timestep."""
+        return self.get_t(timestamp, offset=-1)
 
     def get_option(self, option, x=None, default=None,
                    ignore_inheritance=False):
@@ -384,12 +363,10 @@ class Model(BaseModel):
         ``defaults.constraints.e_eff``.
 
         """
-        o = self.config_model
-        d = self.data
         if x is None:
-            o.set_key('techs.' + option, value)
+            self.config_model.set_key('techs.' + option, value)
         else:  # Setting a specific x
-            d.locations.at[x, '_override.' + option] = value
+            self._locations.at[x, '_override.' + option] = value
         self.flush_option_cache()
 
     def flush_option_cache(self):
@@ -426,7 +403,7 @@ class Model(BaseModel):
 
     def get_parent(self, y):
         """Returns the abstract base technology from which ``y`` descends."""
-        if y in self.data._y_transmission:
+        if y in self._sets['y_trans']:
             return 'transmission'
         else:
             while True:
@@ -435,9 +412,6 @@ class Model(BaseModel):
                     break
                 y = parent
             return y
-
-    def get_date_index(self, date):
-        return self.data._dt[self.data._dt == date].index[0]
 
     def get_group_members(self, group, in_model=True, head_nodes_only=True,
                           expand_transmission=True):
@@ -486,15 +460,15 @@ class Model(BaseModel):
         _get(self, group, memberset)  # Fills memberset
         if in_model:
             memberset = set([y for y in memberset
-                             if (y in self.data._y
-                                 or y in self.data.transmission_y)])
+                             if (y in self._sets['y']
+                                 or y in self._sets['techs_transmission'])])
             # Expand transmission techs
             if expand_transmission:
                 for y in list(memberset):
-                    if y in self.data.transmission_y:
+                    if y in self._sets['techs_transmission']:
                         memberset.remove(y)
                         memberset.update([yt
-                                          for yt in self.data._y_transmission
+                                          for yt in self._sets['y_trans']
                                           if yt.startswith(y + ':')])
         return list(memberset)
 
@@ -525,7 +499,7 @@ class Model(BaseModel):
         # Normalize to (0, 1), then multiply by the desired maximum,
         # scaling this peak according to time_res
         if scale_time_res:
-            adjustment = self.get_timeres()
+            adjustment = data_tools.get_timeres(self)
         else:
             adjustment = 1
         if peak < 0:
@@ -535,13 +509,13 @@ class Model(BaseModel):
         return (df / scale) * peak * adjustment
 
     def initialize_parents(self):
-        o = self.config_model
+        techs = self.config_model.techs
         try:
-            self.parents = {i: o.techs[i].parent for i in o.techs.keys()
+            self.parents = {i: techs[i].parent for i in techs.keys()
                             if i != 'defaults'}
         except KeyError:
             tech = inspect.trace()[-1][0].f_locals['i']
-            if 'parent' not in list(o.techs[tech].keys()):
+            if 'parent' not in list(techs[tech].keys()):
                 e = exceptions.ModelError
                 raise e('Technology `' + tech + '` defines no parent!')
         # Verify that no technologies apart from the default technologies
@@ -553,7 +527,7 @@ class Model(BaseModel):
                         'should inherit from a built-in default technology.')
         # Verify that all parents are themselves actually defined
         for k, v in self.parents.items():
-            if v not in list(o.techs.keys()):
+            if v not in list(techs.keys()):
                 e = exceptions.ModelError
                 raise e('Parent `' + v + '` of technology `' +
                         k + '` is not defined.')
@@ -569,353 +543,229 @@ class Model(BaseModel):
             y = parent
         return result
 
-    def _initialize_transmission(self):
-        o = self.config_model
-        d = self.data
-        # Add transmission technologies to y, if any defined
-        if d._y_transmission:
-            d._y.extend(d._y_transmission)
-            # Add transmission tech columns to locations matrix
-            for y in d._y_transmission:
-                d.locations[y] = 0
-            # Create representation of location-tech links
-            tree = transmission.explode_transmission_tree(o.links, d._x)
-            # Populate locations matrix with allowed techs and overrides
-            if tree:
-                for x in tree:
-                    for y in tree[x]:
-                        # Allow the tech
-                        d.locations.at[x, y] = 1
-                        # Add constraints if needed
-                        for c in tree[x][y].keys_nested():
-                            colname = '_override.' + y + '.' + c
-                            if not colname in d.locations.columns:
-                                d.locations[colname] = np.nan
-                            d.locations.at[x, colname] = tree[x][y].get_key(c)
+    def get_time_slice(self):
+        if self.config_run.get_key('subset_t', default=False):
+            return slice(None)
+        else:
+            return slice(
+                self.config_run.subset_t[0],
+                self.config_run.subset_t[1]
+            )
 
     def initialize_sets(self):
-        o = self.config_model
-        d = self.data
-        path = o.data_path
-        #
-        # t: Timesteps set
-        #
-        table_t = pd.read_csv(os.path.join(path, 'set_t.csv'), header=None,
-                              index_col=1, parse_dates=[1])
-        table_t.columns = ['t_int']
+        self._sets = utils.AttrDict()
+        self.config_model
+
+        # t: time
+        _t = pd.read_csv(
+            os.path.join(self.config_model.data_path, 'set_t.csv'),
+            header=None, index_col=1, parse_dates=[1]
+        )
+        self._set_t_original = _t.index
         if self.config_run.get_key('subset_t', default=False):
-            table_t = table_t.loc[self.config_run.subset_t[0]:
-                                  self.config_run.subset_t[1]]
-            self.slice = slice(table_t.iat[0, 0], table_t.iat[-1, 0] + 1)
-        else:
-            self.slice = slice(None)
-        _t = pd.Series([int(t) for t in table_t['t_int'].tolist()])
-        d._dt = pd.Series(table_t.index, index=_t.tolist())
-        # First set time_res_data and time_res_static across all data
-        # `time_res_data` never changes, so always reflects the spacing
-        # of time step indices
-        d.time_res_data = self.get_timeres()
-        # `time_res_static` is updated after time resolution adjustments,
-        # so does not reflect the spacing of time step indicex
-        d.time_res_static = d.time_res_data
-        d.time_res_native = 1  # In the beginning, time_res is native
-        # From time_res_data, initialize time_res_series
-        d.time_res_series = pd.Series(d.time_res_data, index=d._dt.index)
-        # Last index t for which model may still use startup exceptions
-        d.startup_time_bounds = d._dt.index[int(o.startup_time
-                                                / d.time_res_data)]
+            _t = _t.loc[self.config_run.subset_t[0]:self.config_run.subset_t[1]]
+        self._sets['t'] = _t.index
 
-        #
-        # x: Locations set
-        #
-        d._x = list(o.locations.keys())
+        # x: locations
+        _x = list(self.config_model.locations.keys())
         if self.config_run.get_key('subset_x', default=False):
-            d._x = [x for x in d._x if x in self.config_run.subset_x]
+            _x = [i for i in _x if i in self.config_run.subset_x]
+        self._sets['x'] = _x
 
-        #
-        # y: Technologies set
-        #
-        d._y = set()
-        try:
-            for k, v in o.locations.items():
-                for y in v.techs:
-                    if y in o.techs:
-                        d._y.add(y)
-                    else:
-                        e = exceptions.ModelError
-                        raise e('Location `{}` '
-                                'uses undefined tech `{}`.'.format(k, y))
-        except KeyError:
-            e = exceptions.ModelError
-            raise e('The region `' + k + '` does not allow '
-                    'any technologies via `techs`. Must give '
-                    'at least one technology per region.')
-        d._y = list(d._y)
-        if self.config_run.get_key('subset_y', default=False):
-            d._y = [y for y in d._y if y in self.config_run.subset_y]
-        # Subset of transmission technologies, if any defined
-        # Used to initialized transmission techs further below
-        # (not yet added to d._y here)
-        if ('links' in o) and (o.links is not None):
-            d._y_transmission = transmission.get_transmission_techs(o.links)
-            d.transmission_y = list(set([list(v.keys())[0]
-                                    for k, v in o.links.items()]))
-        else:
-            d._y_transmission = []
-            d.transmission_y = []
-        # Subset of conversion technologies
-        d._y_conversion = [y for y in d._y if self.ischild(y, of='conversion')]
-        # Subset of supply, demand, storage technologies
-        d._y_pc = [y for y in d._y
-                   if not self.ischild(y, of='conversion')
-                   or self.ischild(y, of='transmission')]
-        # Subset of technologies that define es_prod/es_con
-        d._y_prod = ([y for y in d._y if not self.ischild(y, of='demand')]
-                     + d._y_transmission)
-        d._y_con = ([y for y in d._y if not self.ischild(y, of='supply')]
-                    + d._y_transmission)
+        # y: techs
+        sets_y = sets.init_set_y(self, _x)
+        self._sets = {**self._sets, **sets_y}
 
-        # Subset of technologies that allow rb
-        d._y_rb = []
-        for x in d._x:
-            if self.get_option(y + '.constraints.allow_rb', x=x) is True:
-                d._y_rb.append(y)
-                break  # No need to look at other x
-
-        # Subset of technologies with parasitics (carrier efficiency != 1.0)
-        d._y_p = []
-        for x in d._x:
-            if self.get_option(y + '.constraints.c_eff', x=x) != 1.0:
-                d._y_p.append(y)
-                break  # No need to look at other x
-
-        #
-        # Locations settings matrix and transmission technologies
-        #
-        d.locations = locations.generate_location_matrix(o.locations,
-                                                         techs=d._y)
-        # For simplicity, only keep the locations that are actually in set `x`
-        d.locations = d.locations.loc[d._x, :]
-
-        #
-        # c: Carriers set
-        #
-        d._c = set()
-        for y in d._y:  # Only add carriers for allowed technologies
-            d._c.update([self.get_option(y + '.carrier')])
+        # c: carriers
+        _c = set()
+        for y in self._sets['y']:  # Only add carriers for allowed technologies
+            _c.update([self.get_option(y + '.carrier')])
             if self.get_option(y + '.source_carrier'):
-                d._c.update([self.get_option(y + '.source_carrier')])
-        d._c = list(d._c)
+                _c.update([self.get_option(y + '.source_carrier')])
+        _c = list(_c)
+        self._sets['c'] = _c
 
-        #
+        # k: cost classes
+        classes = [list(self.config_model.techs[k].costs.keys())
+                   for k in self.config_model.techs
+                   if k != 'defaults'  # Prevent 'default' from entering set
+                   if 'costs' in self.config_model.techs[k]]
+        # Flatten list and make sure 'monetary' is in it
+        classes = ([i for i in itertools.chain.from_iterable(classes)]
+                   + ['monetary'])
+        # Remove any duplicates by going from list to set and back
+        self._sets['k'] = list(set(classes))
+
+        # Locations settings matrix and transmission technologies
+        self._locations = locations.generate_location_matrix(
+            self.config_model.locations, techs=self._sets['y']
+        )
+        # Locations table: only keep rows that are actually in set `x`
+        self._locations = self._locations.loc[_x, :]
+
         # Initialize transmission technologies
-        #
-        self._initialize_transmission()
-        #
-        # self.data._y is now complete, ensure that all techs conform to the
+        sets.init_y_trans(self)
+
+        # set 'y' is now complete, ensure that all techs conform to the
         # rule that only "head" techs can be used in the model
-        #
-        for y in self.data._y:
-            if self.get_option(y + '.parent') in self.data._y:
+        for y in self._sets['y']:
+            if self.get_option(y + '.parent') in self._sets['y']:
                 e = exceptions.ModelError
                 raise e('Only technologies without children can be used '
                         'in the model definition '
                         '({}, {}).'.format(y, self.get_option(y + '.parent')))
-        #
-        # k: Cost classes set
-        #
-        classes = [list(o.techs[k].costs.keys()) for k in o.techs
-                   if k != 'defaults'  # Prevent 'default' from entering set
-                   if 'costs' in o.techs[k]]
-        # Flatten list and make sure 'monetary' is in it
-        classes = ([i for i in itertools.chain.from_iterable(classes)]
-                   + ['monetary'])
-        d._k = list(set(classes))  # Remove any duplicates with a set roundtrip
 
-    def read_data(self):
-        """
-        Read parameter data from CSV files, if needed. Data that may be
-        defined in CSV files is read before generate_model() so that it
-        only has to be read from disk once, even if generate_model() is
-        repeatedly called.
+    @utils.memoize
+    def _get_option_from_csv(self, filename):
+        """Read CSV time series"""
+        d_path = os.path.join(self.config_model.data_path, filename)
+        df = pd.read_csv(d_path, index_col=0)
+        df.index = self._set_t_original
+        df = df.loc[self._sets['t'], :]  # Subset in case necessary
+        # Fill columns that weren't defined with NaN
+        # missing_cols = list(set(self.data._x) - set(df.columns))
+        # for c in missing_cols:
+        #     df[c] = np.nan
 
-        Note on indexing: if subset_t is set, a subset of the data is
-        selected, and all data including their indices are subsetted.
-        d._dt.index maps a simple [0, data length] index to the actual
-        t index used.
+        # Ensure that the read file's index matches the data's timesteps
+        mismatch = df.index.difference(self._sets['t'])
+        if len(mismatch) > 0:
+            e = exceptions.ModelError
+            entries = mismatch.tolist()
+            raise e('File has invalid index. Ensure that it has the same '
+                    'date range and resolution as set_t.csv: {}.\n\n'
+                    'Invalid entries: {}'.format(filename, entries))
+        return df
 
-        Data is stored in the `self.data`  for each
-        `param` and technology `y`: ``self.data[param][y]``
+    def _get_filename(self, param, y, x):
+        option = self.get_option(y + '.constraints.' + param, x=x)
+        # If we have a string, it must be `file` or `file=..`
+        if not option.startswith('file'):
+            e = exceptions.ModelError
+            raise e('Invalid value for `{}.{}.{}`:'
+                    ' `{}`'.format(param, y, x, option))
+        # Parse the option and return the filename
+        else:
+            try:
+                # Parse 'file=filename' option
+                f = option.split('=')[1]
+            except IndexError:
+                # If set to just 'file', set filename with y and
+                # param, e.g. 'csp_r_eff.csv'
+                f = y + '_' + param + '.csv'
+        return f
 
-        """
-        @utils.memoize
-        def _get_option_from_csv(filename):
-            """Read CSV time series"""
-            d_path = os.path.join(self.config_model.data_path, filename)
-            # [self.slice] to do time subset if needed
-            # Results in e.g. d.r_eff['csp'] being a dataframe
-            # of efficiencies for each time step t at location x
-            df = pd.read_csv(d_path, index_col=0)[self.slice]
-            # Fill columns that weren't defined with NaN
-            # missing_cols = list(set(self.data._x) - set(df.columns))
-            # for c in missing_cols:
-            #     df[c] = np.nan
-
-            # Ensure that the read file's index matches the data's timesteps
-            mismatch = df.index.difference(d._dt.index)
-            if len(mismatch) > 0:
+    def _apply_x_map(self, df, x_map, x=None):
+        # Format is <name in model config>:<name in data>
+        x_map_dict = {i.split(':')[0].strip():
+                      i.split(':')[1].strip()
+                      for i in x_map.split(',')}
+        x_map_str = 'x_map: \'{}\''.format(x_map)
+        # Get the mapping for this x from x_map
+        # NB not removing old columns in case
+        # those are also used somewhere!
+        if x is None:
+            x = list(x_map_dict.keys())
+        elif x in x_map_dict:
+            x = [x]
+        else:
+            x = []
+        for this_x in x:
+            try:
+                x_m = x_map_dict[this_x]
+            except KeyError:
                 e = exceptions.ModelError
-                entries = mismatch.tolist()
-                raise e('File has invalid index. Ensure that it has the same '
-                        'date range and resolution as set_t.csv: {}.\n\n'
-                        'Invalid entries: {}'.format(filename, entries))
-            return df
+                raise e('x_map defined but does not map '
+                        'location defined in model config: '
+                        '{}, with {}'.format(this_x, x_map_str))
+            if x_m not in df.columns:
+                e = exceptions.ModelError
+                raise e('Trying to map to a column not '
+                        'contained in data: {}, for region '
+                        '{}, with {}'
+                        .format(x_m, this_x, x_map_str))
+            df[this_x] = df[x_m]
+        return df
 
-        d = self.data
-        self.debug.data_sources = utils.AttrDict()
-        # Data for storage initialization parameter
-        d.s_init = pd.DataFrame(index=d._x, columns=d._y_pc)
-        for y in d.s_init.columns:
-            for x in d.s_init.index:
-                d.s_init.at[x, y] = self.get_option(y + '.constraints.s_init',
-                                                    x=x)
-        # Parameters that may be defined over (x, t) for a given technology y
-        d.params = _TIMESERIES_PARAMS.copy()
-        d._y_def_r = set()
-        d._y_def_e_eff = set()
-        # TODO could allow params in d.params to be defined only over
-        # x instead of either static or over (x, t) via CSV!
-        for param in d.params:
-            d[param] = utils.AttrDict()
-            for y in d._y:
-                d[param][y] = pd.DataFrame(np.nan, index=d._dt.index,
-                                           columns=d._x)
-                # TODO this whole process could be refactored for efficiency
-                # to read files only once,
-                # create a dict of files: {'f1.csv': ['x1', 'x2'],
-                #                          'f2.csv': ['x3'],
-                #                          'model_config': ['x4, x5']}
-                for x in d._x:
-                    # If this y is actually not defined at this x,
-                    # and is also not a transmission tech,
-                    # continue (but set the param to 0 first)
-                    # TODO this is a bit of a hack -- e.g. the extra check
-                    # for transmission tech is necessary because we set
-                    # e_eff to 0 for all transmission (as transmission techs
-                    # don't show up in the config_model.locations[x].techs)
-                    # Keep an eye out in case this causes other problems
-                    if (y not in self.config_model.locations[x].techs
-                            and y not in d._y_transmission):
-                        d[param][y].loc[:, x] = 0
-                        continue
-                    option = self.get_option(y + '.constraints.' + param, x=x)
-                    if (isinstance(option, str)
-                            and not option.startswith('file')):
-                        e = exceptions.ModelError
-                        raise e('Invalid value for `{}.{}.{}`:'
-                                ' `{}`'.format(param, y, x, option))
-                    k = param + '.' + y + '.' + x
-                    if (isinstance(option, str)
-                            and option.startswith('file')):
-                        if param == 'r':
-                            d._y_def_r.add(y)
-                        elif param == 'e_eff':
-                            d._y_def_e_eff.add(y)
-                        try:
-                            # Parse 'file=filename' option
-                            f = option.split('=')[1]
-                        except IndexError:
-                            # If set to just 'file', set filename with y and
-                            # param, e.g. 'csp_r_eff.csv'
-                            f = y + '_' + param + '.csv'
-                        df = _get_option_from_csv(f)
-                        # Set up x_map if that option has been set
-                        try:
-                            x_map = self.get_option(y + '.x_map', x=x)
-                        except exceptions.OptionNotSetError:
-                            x_map = None
-                        # If x_map is available, remap the current col
-                        if x_map:
-                            # TODO this is a hack and will take up a lot
-                            # of memory due to data duplication in case
-                            # of a lot of mappings pointing to the same
-                            # column in the data
-                            # Format is <name in model config>:<name in data>
-                            x_map_dict = {i.split(':')[0].strip():
-                                          i.split(':')[1].strip()
-                                          for i in x_map.split(',')}
-                            x_map_str = 'x_map: \'{}\''.format(x_map)
-                            # Get the mapping for this x from x_map
-                            # NB not removing old columns in case
-                            # those are also used somewhere!
-                            try:
-                                x_m = x_map_dict[x]
-                            except KeyError:
-                                e = exceptions.ModelError
-                                raise e('x_map defined but does not map '
-                                        'location defined in model config: '
-                                        '{}, with {}'.format(x, x_map_str))
-                            if x_m not in df.columns:
-                                e = exceptions.ModelError
-                                raise e('Trying to map to to a column not '
-                                        'contained in data: {}, for region '
-                                        '{}, with {}'
-                                        .format(x_m, x, x_map_str))
-                            df[x] = df[x_m]
-                        try:
-                            d[param][y].loc[:, x] = df[x]
-                            self.debug.data_sources.set_key(k, 'file:' + f)
-                        except KeyError:
-                            # If could not be read from file, set it to zero
-                            d[param][y].loc[:, x] = 0
-                            # Depending on whether or not the tech is allowed
-                            # at this location, set _NA_ for the data source,
-                            # or raise an error
-                            if self.data.locations.at[x, y] == 0:
-                                self.debug.data_sources.set_key(k, '_NA_')
-                            else:
-                                w = exceptions.ModelWarning
-                                message = ('Could not load data for {}, '
-                                           'with given option: '
-                                           '{}'.format(k, option))
-                                warnings.warn(message, w)
-                                v = 'file:_NOT_FOUND_'
-                                self.debug.data_sources.set_key(k, v)
-                    else:
-                        d[param][y].loc[:, x] = option
-                        self.debug.data_sources.set_key(k, 'model_config')
-                        if (param == 'r' and option != float('inf')):
-                            d._y_def_r.add(y)
-                    # Convert power to energy for r, if necessary
-                    if param == 'r':
-                        r_unit = self.get_option(y + '.constraints.r_unit', x=x)
-                        if r_unit == 'power':
-                            r_scale = d.time_res_data
-                            d[param][y].loc[:, x] = (d[param][y].loc[:, x]
-                                                     * r_scale)
-                    # Scale r to a given maximum if necessary
-                    scale = self.get_option(y + '.constraints.r_scale_to_peak',
-                                            x=x)
-                    if param == 'r' and scale:
-                        scaled = self.scale_to_peak(d[param][y][x], scale)
-                        d[param][y].loc[:, x] = scaled
-        ds = self.debug.data_sources
-        missing_data = [kk for kk in ds.keys_nested()
-                        if ds.get_key(kk) == 'file:_NOT_FOUND_']
+    def _read_param_for_tech(self, param, y, time_res, x=None):
+        option = self.get_option(y + '.constraints.' + param, x=x)
+        if option != float('inf'):
+            self._sets['y_def_' + param].add(y)
+        k = '{}.{}:{}'.format(param, y, x)
+
+        if isinstance(option, str):  # if option is string, read a file
+            f = self._get_filename(param, y, x)
+            df = self._get_option_from_csv(f)
+            self.debug.data_sources.set_key(k, 'file:' + f)
+
+        else:  # option is numeric
+            df = pd.DataFrame(
+                option,
+                index=self._sets['t'], columns=self._sets['x']
+            )
+            self.debug.data_sources.set_key(k, 'model_config')
+
+        # Apply x_map if necessary
+        x_map = self.get_option(y + '.x_map', x=x)
+        if x_map is not None:
+            df = self._apply_x_map(df, x_map, x)
+
+        if param == 'r' and (x in df.columns or x is None):
+            if x is None:
+                x_slice = slice(None)
+            else:
+                x_slice = x
+            # Convert power to energy for r, if necessary
+            r_unit = self.get_option(y + '.constraints.r_unit', x=x)
+            if r_unit == 'power':
+                df.loc[:, x_slice] = df.loc[:, x_slice] * time_res
+
+            # Scale r to a given maximum if necessary
+            scale = self.get_option(
+                y + '.constraints.r_scale_to_peak', x=x
+            )
+            if scale:
+                df.loc[:, x_slice] = self.scale_to_peak(df.loc[:, x_slice], scale)
+
+        if x is not None:
+            df = df.loc[:, x]
+
+        return df
+
+    def _validate_param_df(self, param, y, df):
+        for x in self._sets['x']:
+            if x not in df.columns:
+                if self._locations.at[x, y] == 0:
+                    df[x] = np.nan
+                else:
+                    df[x] = 0
+                    k = '{}.{}:{}'.format(param, y, x)
+                    w = exceptions.ModelWarning
+                    message = 'Could not load data for {}'.format(k)
+                    warnings.warn(message, w)
+                    v = '_NOT_FOUND_'
+                    self.debug.data_sources.set_key(k, v)
+
+    def _validate_param_dataset_consistency(self, dataset):
+        sources = self.debug.data_sources
+        missing_data = [kk for kk in sources.keys_nested()
+                        if sources.get_key(kk) == '_NOT_FOUND_']
         if len(missing_data) > 0:
             message = ('The following parameter values could not be read '
                        'from file. They were automatically set to `0`: '
                        + ', '.join(missing_data))
             warnings.warn(message, exceptions.ModelWarning)
+
         # Finally, check data consistency. For now, demand must be <= 0,
         # and supply >=0, at all times.
         # FIXME update these checks on implementing conditional param updates.
-        for y in d._y_def_r:
+        for y in self._sets['y_def_r']:
             base_tech = self.get_parent(y)
-            # Check each column:
-            for c in d.r[y].columns:
-                series = d.r[y][c]
-                err_suffix = 'for tech: {}, at location: {}'.format(y, c)
+            possible_x = [x for x in dataset['x'].values
+                          if self._locations.at[x, y] != 0]
+            for x in possible_x:
+                series = dataset['r'].loc[{'y': y, 'x': x}].to_pandas()
+                err_suffix = 'for tech: {}, at location: {}'.format(y, x)
                 if base_tech == 'demand':
                     err = 'Demand resource must be <=0, ' + err_suffix
                     assert (series <= 0).all(), err
@@ -923,21 +773,81 @@ class Model(BaseModel):
                     err = 'Supply resource must be >=0, ' + err_suffix
                     assert (series >= 0).all(), err
 
+    def read_data(self):
+        """
+        Populate parameter data from CSV files or model configuration.
+
+        """
+        data = {}
+        attrs = {}
+        self.debug.data_sources = utils.AttrDict()
+
+        # `time_res` never changes, so always reflects the spacing
+        # of time step indices
+        attrs['time_res'] = time_res = data_tools.get_timeres(self)
+        time_res_series = pd.Series(time_res, index=self._sets['t'])
+        time_res_series.index.name = 't'
+        data['_time_res'] = xr.DataArray(time_res_series)
+
+        # Last index t for which model may still use startup exceptions
+        startup_time_idx = int(self.config_model.startup_time / time_res)
+        attrs['startup_time_bounds'] = self._sets['t'][startup_time_idx]
+
+        # Storage initialization parameter, defined over (x, y)
+        s_init = {y: [self.get_option(y + '.constraints.s_init', x=x)
+                      for x in self._sets['x']]
+                  for y in self._sets['y']}
+        s_init = pd.DataFrame(s_init, index=self._sets['x'])
+        s_init.columns.name = 'y'
+        s_init.index.name = 'x'
+        data['s_init'] = xr.DataArray(s_init)
+
+        # Parameters that may be defined over (x, y, t)
+        ts_sets = {'y_def_' + k: set() for k in _TIMESERIES_PARAMS}
+        self._sets = {**self._sets, **ts_sets}
+
+        for param in _TIMESERIES_PARAMS:
+            param_data = {}
+            for y in self._sets['y']:
+                # First, set up each parameter without considering
+                # potential per-location (per-x) overrides
+                df = self._read_param_for_tech(param, y, time_res, x=None)
+                k = y + '.constraints.' + param
+
+                option = self.get_option(k)
+                for x in self._sets['x']:
+                    # Check for each x whether it defines an override
+                    # that is different from the generic option, and if so,
+                    # update the dataframe
+                    option_x = self.get_option(k, x=x)
+                    if option != option_x:
+                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, x=x)
+
+                self._validate_param_df(param, y, df)  # Have all `x` been set?
+
+                param_data[y] = xr.DataArray(df, dims=['t', 'x'])
+
+            # Turn param_data into a DataArray
+            data[param] = xr.Dataset(param_data).to_array(dim='y')
+
+        dataset = xr.Dataset(data)
+        dataset.attrs = attrs
+
+        # Check data consistency
+        self._validate_param_dataset_consistency(dataset)
+        self.data = dataset
+
     def _get_t_max_demand(self):
         """Return timestep index with maximum demand"""
         t_max_demands = utils.AttrDict()
-        for c in self.data._c:
-            ys = [y for y in self.data._y
+        for c in self._sets['c']:
+            ys = [y for y in self.data['y'].values
                   if self.get_option(y + '.carrier') == c]
-            # r_carrier is summed up over all techs ys and all locations (dim_1)
-            r_carrier = (xr.Dataset(self.data.r.as_dict())[ys]
-                           .sum(dim='dim_1').to_dataframe())
-            t_max_demand = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
-            # Adjust for reduced resolution, only if t_max_demand not 0 anyway
-            if t_max_demand != 0:
-                t_max_demand = max([t for t in self.data._dt.index
-                                    if t <= t_max_demand])
-            t_max_demands[c] = t_max_demand
+            # r_carrier is summed up over all techs ys and all locations (x)
+            r_carrier = (self.data['r']
+                             .loc[{'y': ys}]
+                             .sum(dim='x').to_dataframe())
+            t_max_demands[c] = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
         return t_max_demands
 
     def add_constraint(self, constraint, *args, **kwargs):
@@ -956,32 +866,36 @@ class Model(BaseModel):
             logging.error('Error generating constraint' + index_string)
             raise
 
-    def _param_populator(self, src, t_offset=0):
-        """Returns a `getter` function that returns either
-        (x, t)-specific values for parameters that define such, or
-        always the same static value if only a static value is given.
+    def _param_populator(self, src_data, src_param, t_offset=None):
+        """
+        Returns a `getter` function that returns (x, t)-specific
+        values for parameters
 
         """
+        getter_data = (src_data[src_param].to_dataframe()
+                                          .reorder_levels(['y', 'x', 't'])
+                                          .to_dict()[src_param])
         def getter(m, y, x, t):
-            if isinstance(src[y], pd.core.frame.DataFrame):
-                return float(src[y].loc[t + t_offset, x])
-            else:
-                return float(src[y])
+            if t_offset:
+                t = self.get_t(t, t_offset)
+            return getter_data[(y, x, t)]
+            # return src.loc[{'y': y, 'x': x, 't': t}]
         return getter
 
     def update_parameters(self, t_offset):
         d = self.data
 
-        for param in d.params:
-            initializer = self._param_populator(d[param], t_offset)
-            y_set = self.param_sets[param]
+        for param in _TIMESERIES_PARAMS:
+            initializer = self._param_populator(d, param, t_offset)
+            y_set = self._sets['y_def_' + param]
             param_object = getattr(self.m, param)
             for y in y_set:
                 for x in self.m.x:
                     for t in self.m.t:
                         param_object[y, x, t] = initializer(self.m, y, x, t)
 
-        s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
+        s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
+        s_init_initializer = lambda m, y, x: float(s_init[x, y])
         for y in self.m.y_pc:
             for x in self.m.x:
                 self.m.s_init[y, x] = s_init_initializer(self.m, y, x)
@@ -990,17 +904,16 @@ class Model(BaseModel):
         # t_end is the timestep previous to t_start + horizon,
         # because the .loc[start:end] slice includes the end
         try:
-            self.t_end = self.prev(int(self.t_start
-                                   + self.config_model.opmode.horizon
-                                   / self.data.time_res_data))
+            offset = int(self.config_model.opmode.horizon /
+                         self.data.attrs['time_res']) - 1
+            self.t_end = self.get_t(self.t_start, offset=offset)
         except KeyError:
             # If t_end is beyond last timestep, cap it to last one, and
             # log the occurance
-            t_bound = self.data._dt.index[-1]
+            t_bound = self._sets['t'][-1]
             msg = 'Capping t_end to {}'.format(t_bound)
             logging.debug(msg)
             self.t_end = t_bound
-        # print('\n\n***\n{}-{}\n***\n\n'.format(self.t_start, self.t_end))
 
     def generate_model(self, t_start=None):
         """
@@ -1015,10 +928,8 @@ class Model(BaseModel):
         #
         # Setup
         #
-        m = po.ConcreteModel()
-        o = self.config_model
+        self.m = m = po.ConcreteModel()
         d = self.data
-        self.m = m
         self.t_start = t_start
         self.t_max_demand = self._get_t_max_demand()
 
@@ -1027,59 +938,58 @@ class Model(BaseModel):
         #
 
         # Time steps
+        # datetimes = self.data['t'].to_pandas().reset_index(drop=True)
+        # datetimes = pd.Series(range(len(self.data['t'])), index=self.data['t'].values)
         if self.mode == 'plan':
-            m.t = po.Set(initialize=d._dt.index, ordered=True)
+            m.t = po.Set(initialize=d['t'].to_index(), ordered=True)
         elif self.mode == 'operate':
             self._set_t_end()
-            m.t = po.Set(initialize=d._dt.loc[self.t_start:self.t_end].index,
+            m.t = po.Set(initialize=d['t'].to_series()[self.t_start:self.t_end].index,
                          ordered=True)
         # Carriers
-        m.c = po.Set(initialize=d._c, ordered=True)
+        m.c = po.Set(initialize=self._sets['c'], ordered=True)
         # Locations
-        m.x = po.Set(initialize=d._x, ordered=True)
+        m.x = po.Set(initialize=self._sets['x'], ordered=True)
         # Cost classes
-        m.k = po.Set(initialize=d._k, ordered=True)
+        m.k = po.Set(initialize=self._sets['k'], ordered=True)
         #
         # Technologies and various subsets of technologies
         #
-        m.y = po.Set(initialize=d._y, ordered=True)
+        m.y = po.Set(initialize=self._sets['y'], ordered=True)
         # Production technologies
-        m.y_prod = po.Set(initialize=d._y_prod, within=m.y, ordered=True)
+        m.y_prod = po.Set(initialize=self._sets['y_prod'], within=m.y, ordered=True)
         # Production technologies
-        m.y_con = po.Set(initialize=d._y_con, within=m.y, ordered=True)
+        m.y_con = po.Set(initialize=self._sets['y_con'], within=m.y, ordered=True)
         # Production/consumption technologies
-        m.y_pc = po.Set(initialize=d._y_pc, within=m.y, ordered=True)
+        m.y_pc = po.Set(initialize=self._sets['y_pc'], within=m.y, ordered=True)
         # Transmission technologies
-        m.y_trans = po.Set(initialize=d._y_transmission, within=m.y,
-                           ordered=True)
+        m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y, ordered=True)
         # Conversion technologies
-        m.y_conv = po.Set(initialize=d._y_conversion, within=m.y,
-                          ordered=True)
+        m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
         # Technologies with specified `r`
-        m.y_def_r = po.Set(initialize=d._y_def_r, within=m.y)
+        m.y_def_r = po.Set(initialize=self._sets['y_def_r'], within=m.y)
         # Technologies with specified `e_eff`
-        m.y_def_e_eff = po.Set(initialize=d._y_def_e_eff, within=m.y)
+        m.y_def_e_eff = po.Set(initialize=self._sets['y_def_e_eff'], within=m.y)
         # Technologies that allow `rb`
-        m.y_rb = po.Set(initialize=d._y_rb, within=m.y)
+        m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
         # Technologies with parasitics
-        m.y_p = po.Set(initialize=d._y_p, within=m.y)
+        m.y_p = po.Set(initialize=self._sets['y_p'], within=m.y)
         # Technologies without parasitics
-        m.y_np = po.Set(initialize=set(d._y) - set(d._y_p), within=m.y)
+        set_no_parasitics = set(self._sets['y']) - set(self._sets['y_p'])
+        m.y_np = po.Set(initialize=set_no_parasitics, within=m.y)
 
         #
         # Parameters
         #
 
-        self.param_sets = {'r': m.y_def_r,
-                           # 'a': m.y_def_r,
-                           'e_eff': m.y_def_e_eff}
-        for param in d.params:
-            initializer = self._param_populator(d[param])
-            y = self.param_sets[param]
-            setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer,
-                                       mutable=True))
+        for param in _TIMESERIES_PARAMS:
+            y = getattr(m, 'y_def_' + param)
+            # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
+            initializer = self._param_populator(self.data, param)
+            setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer, mutable=True))
 
-        s_init_initializer = lambda m, y, x: float(d.s_init.at[x, y])
+        s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
+        s_init_initializer = lambda m, y, x: float(s_init[x, y])
         m.s_init = po.Param(m.y_pc, m.x, initialize=s_init_initializer,
                             mutable=True)
 
@@ -1103,13 +1013,13 @@ class Model(BaseModel):
             self.add_constraint(c)
 
         # 2. Optional
-        if o.get_key('constraints', default=False):
-            for c in o.constraints:
+        if self.config_model.get_key('constraints', default=False):
+            for c in self.config_model.constraints:
                 self.add_constraint(utils._load_function(c))
 
         # 3. Objective function
         default_obj = 'constraints.objective.objective_cost_minimization'
-        objective = o.get_key('objective', default=default_obj)
+        objective = self.config_model.get_key('objective', default=default_obj)
         self.add_constraint(utils._load_function(objective))
 
     def _log_time(self):
@@ -1130,10 +1040,11 @@ class Model(BaseModel):
             self.solve()
             self.load_solution()
         elif self.mode == 'operate':
-            assert len(self.data.time_res_series.unique()) == 1, \
+            assert len(self.data['_time_res'].to_series().unique()) == 1, \
                 'Operational mode only works with uniform time step lengths.'
-            assert (d.time_res_static <= o.opmode.horizon and
-                    d.time_res_static <= o.opmode.window), \
+            time_res = self.data.attrs['time_res']
+            assert (time_res <= self.config_model.opmode.horizon and
+                    time_res <= self.config_model.opmode.window), \
                 'Timestep length must be smaller than horizon and window.'
             # solve_iterative() generates, solves, and loads the solution
             self.solve_iterative(iterative_warmstart)
@@ -1253,12 +1164,8 @@ class Model(BaseModel):
         shares.columns.name = 'cols_shares'
         shares.index.name = 'techs'
         self.solution = self.solution.merge(xr.DataArray(shares).to_dataset(name='shares'))
-        # Add time resolution, and give it a nicer index
-        # Make sure that only timesteps in the model are kept (via .loc)
-        time_res = self.data.time_res_series.copy().loc[self.data._dt.index]
-        time_res.index = self.solution.coords['t'].values
-        time_res.index.name = 't'
-        self.solution = self.solution.merge(xr.DataArray(time_res).to_dataset(name='time_res'))
+        # Add time resolution
+        self.solution = self.solution.merge(self.data['_time_res'].copy(deep=True).to_dataset(name='time_res'))
         # Add model and run configuration
         self.solution.attrs['config_run'] = self.config_run
         self.solution.attrs['config_model'] = self.config_model
@@ -1309,17 +1216,6 @@ class Model(BaseModel):
             result = result.sort_index()
         else:  # len(dims) >= 3
             result = xr.DataArray.from_series(result)
-        # Nicify time axis
-        if 't' in dims:
-            t = getattr(m, 't')
-            if self.t_start is None:
-                new_index = self.data._dt.loc[t.first():t.last()].tolist()
-            else:
-                new_index = self.data._dt.loc[self.t_start:self.t_end].tolist()
-            if len(dims) <= 2:  # pandas
-                result.index = new_index
-            else:  # xarray
-                result.coords['t'] = new_index
         return result
 
     def get_ec(self, what='prod'):
@@ -1371,8 +1267,8 @@ class Model(BaseModel):
             # len_adjust is the fraction of construction and fixed costs
             # that is accrued to the chosen t_subset. NB: construction and fixed
             # operation costs are calculated for a whole year
-            len_adjust = (sum(self.data.time_res_series.iloc[t_subset])
-                          / sum(self.data.time_res_series))
+            len_adjust = (sum(self.data['_time_res'].to_series().iloc[t_subset])
+                          / sum(self.data['_time_res'].to_series()))
 
             # Adjust for the fact that fixed costs accrue over a smaller length
             # of time as per len_adjust
@@ -1418,9 +1314,9 @@ class Model(BaseModel):
         """
         sol = self.solution
         cost_dict = {}
-        for cost in self.data._k:
+        for cost in self._sets['k']:
             carrier_dict = {}
-            for carrier in self.data._c:
+            for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
                 lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
@@ -1437,12 +1333,13 @@ class Model(BaseModel):
 
     def _get_time_res_sum(self):
         m = self.m
-        time_res = self.data.time_res_series
+        time_res = self.data['_time_res'].to_series()
+        weights = self.data['_weights'].to_series()
 
         try:  # Try loading time_res_sum from operational mode
-            time_res_sum = self.data.time_res_sum
+            time_res_sum = self.data.attrs['time_res_sum']
         except KeyError:
-            time_res_sum = sum(time_res.at[t] * self.data._weights.at[t] for t in m.t)
+            time_res_sum = sum(time_res.at[t] * weights.at[t] for t in m.t)
         return time_res_sum
 
     def get_capacity_factor(self):
@@ -1469,7 +1366,7 @@ class Model(BaseModel):
         return arr
 
     def get_metadata(self):
-        df = pd.DataFrame(index=self.data._y)
+        df = pd.DataFrame(index=self._sets['y'])
         df.loc[:, 'type'] = df.index.map(lambda y: self.get_parent(y))
         df.loc[:, 'name'] = df.index.map(lambda y: self.get_name(y))
         df.loc[:, 'carrier'] = df.index.map(lambda y: self.get_carrier(y))
@@ -1579,6 +1476,10 @@ class Model(BaseModel):
         totals = sum(total_vars)
         costs = sum(cost_vars)
         node = xr.concat(node_vars, dim='t')
+        # We are simply concatenating the same timesteps over and over again
+        # when we concatenate the indivudal runs, so we need to set the
+        # correct time axis again
+        node['t'] = self._sets['t']
 
         sol = self.get_node_parameters()
         sol = sol.merge(totals)
@@ -1599,16 +1500,18 @@ class Model(BaseModel):
         """
         o = self.config_model
         d = self.data
-        time_res = d.time_res_series
-        window_adj = int(o.opmode.window / d.time_res_data)
-        steps = [t for t in d._dt.index if (t % window_adj) == 0]
+        time_res = d['_time_res'].to_series()
+        window_adj = int(self.config_model.opmode.window / d.attrs['time_res'])
+        steps = [self._sets['t'][i]
+                 for i in range(len(self._sets['t']))
+                 if (i % window_adj) == 0]
         # Remove the last step - since we look forward at each step,
         # it would take us beyond actually existing data
         steps = steps[:-1]
         node_vars = []
         total_vars = []
         cost_vars = []
-        d.time_res_sum = 0
+        d.attrs['time_res_sum'] = 0
         self.generate_model(t_start=steps[0])
         for index, step in enumerate(steps):
             if index == 0:
@@ -1629,10 +1532,10 @@ class Model(BaseModel):
             # window/time_res_static will be an iloc index
             if index == (len(steps) - 1):
                 # Final iteration saves data from entire horizon
-                stepsize = int(o.opmode.horizon / d.time_res_static)
+                stepsize = int(self.config_model.opmode.horizon / d.attrs['time_res'])
             else:
                 # Non-final iterations only save data from window
-                stepsize = int(o.opmode.window / d.time_res_static)
+                stepsize = int(self.config_model.opmode.window / d.attrs['time_res'])
 
             node = self.get_node_variables()
             node_vars.append(node[dict(t=slice(0, stepsize))])
@@ -1643,7 +1546,7 @@ class Model(BaseModel):
             cost_vars.append(costs)
 
             timesteps = [time_res.at[t] for t in self.m.t][0:stepsize]
-            d.time_res_sum += sum(timesteps)
+            d.attrs['time_res_sum'] += sum(timesteps)
 
             # Save state of storage for carry over to next iteration
             s = self.get_var('s')
@@ -1652,7 +1555,7 @@ class Model(BaseModel):
             assert (isinstance(storage_state_index, int) or
                     storage_state_index.is_integer())
             storage_state_index = int(storage_state_index)
-            d.s_init = s[dict(t=storage_state_index)].to_pandas().T
+            d['s_init'] = s[dict(t=storage_state_index)].to_pandas().T
 
         self.load_solution_iterative(node_vars, total_vars, cost_vars)
 
@@ -1669,13 +1572,6 @@ class Model(BaseModel):
             else:
                 message = 'Could not load results into model instance.'
             raise exceptions.ModelError(message)
-
-    def _get_data_array(self, param, subset):
-        data = {k: self.data[param][k] for k in self.data[subset]}
-        dim_name = subset[1:]  # Strip leading '_'
-        arr = xr.Dataset(data).rename({'dim_0': 't', 'dim_1': 'x'}).to_array(dim=dim_name)
-        arr.coords['t'].values = self.data._dt
-        return arr
 
     def save_solution(self, how):
         """Save model solution. ``how`` can be 'netcdf' or 'csv'"""
@@ -1694,9 +1590,10 @@ class Model(BaseModel):
 
         # Add input time series (r and e_eff) alongside the solution
         for param in _TIMESERIES_PARAMS:
-            subset_name = '_y_def_' + param
-            if len(self.data[subset_name]) > 0:
-                self.solution[param] = self._get_data_array(param, subset_name)
+            subset_name = 'y_def_' + param
+            # Only if the set has some members
+            if len(self._sets[subset_name]) > 0:
+                self.solution[param] = self.data[param]
 
         if how == 'netcdf':
             self._save_netcdf4()

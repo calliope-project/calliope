@@ -44,6 +44,12 @@ def _combine_datasets(data0, data1):
     data_new = xr.concat([data0, data1], dim='t')
     # Ensure time dimension is ordered
     data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+    # Manually copy over variables not in `t`. If we don't do this,
+    # these vars get polluted with a superfluous `t` dimension
+    non_t_vars = [v for v in data0.data_vars
+                  if 't' not in data0[v].dims]
+    for v in non_t_vars:
+        data_new[v] = data0[v]
     return data_new
 
 
@@ -113,7 +119,15 @@ def resample(data, timesteps, resolution):
     # using first-resample, which should be a quick way to achieve this
     data_rs = data_new.resample(resolution, dim='t', how='first')
 
-    for var in data_new.data_vars:
+    timestep_vars = [v for v in data_new.data_vars
+                     if 't' in data_new[v].dims]
+
+    # Resampling adds spurious `t` dimension to non-t vars, correct that
+    for v in data_rs.data_vars:
+        if v not in timestep_vars:
+            data_rs[v] = data[v]
+
+    for var in timestep_vars:
         if var in _RESAMPLE_METHODS:
             how = _RESAMPLE_METHODS[var]
             data_rs[var] = data_new[var].resample(resolution, dim='t', how=how)
@@ -124,10 +138,13 @@ def resample(data, timesteps, resolution):
 
     # Get rid of the filled-in NaN timestamps
     data_rs = data_rs.dropna(dim='t', how='all')
+    data_rs.attrs['opmode_safe'] = True  # Resampling still permits operational mode
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
         data_rs = _combine_datasets(data.drop(timesteps, dim='t'), data_rs)
+        # Having timesteps with different lengths does not permit operational mode
+        data_rs.attrs['opmode_safe'] = False
 
     return data_rs
 

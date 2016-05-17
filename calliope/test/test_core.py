@@ -4,6 +4,7 @@ import pytest
 import tempfile
 
 import calliope
+from calliope import data_tools
 
 from . import common
 from .common import assert_almost_equal
@@ -40,22 +41,22 @@ class TestInitialization:
 
     def test_gettimeres_1hourly(self):
         model = common.simple_model()
-        assert model.get_timeres() == 1
+        assert data_tools.get_timeres(model) == 1
 
     def test_gettimeres_6hourly(self):
         path = common._add_test_path('common/t_6h')
         model = common.simple_model(path=path)
-        assert model.get_timeres() == 6
+        assert data_tools.get_timeres(model) == 6
 
     def test_gettimeres_verify_1hourly(self):
         model = common.simple_model()
-        assert model.get_timeres(verify=True) == 1
+        assert data_tools.get_timeres(model, verify=True) == 1
 
     def test_gettimeres_verify_erroneous(self):
         path = common._add_test_path('common/t_erroneous')
         model = common.simple_model(path=path)
         with pytest.raises(AssertionError):
-            model.get_timeres(verify=True)
+            data_tools.get_timeres(model, verify=True)
 
     @pytest.fixture
     def sine_wave(self):
@@ -108,14 +109,15 @@ class TestInitialization:
 
     def test_initialize_sets_timesteps(self):
         model = common.simple_model()
-        assert model.data._dt.index.tolist() == list(range(0, 1416))
-        assert model.data._dt[0].minute == 0
-        assert model.data._dt[0].hour == 0
-        assert model.data._dt[0].day == 1
-        assert model.data._dt[0].month == 1
-        assert model.data.time_res_static == 1
-        assert model.data.time_res_series.tolist() == [1] * 1416
-        assert model.data.startup_time_bounds == 12
+        daterange = pd.Index(pd.date_range('2005-01-01 00:00', '2005-02-28 23:00', freq='1H'))
+        assert (model._sets['t'] == daterange).all()
+        assert model._sets['t'][0].minute == 0
+        assert model._sets['t'][0].hour == 0
+        assert model._sets['t'][0].day == 1
+        assert model._sets['t'][0].month == 1
+        assert model.data.attrs['time_res'] == 1
+        assert model.data['_time_res'].to_series().tolist() == [1] * 1416
+        assert model.data.attrs['startup_time_bounds'] == pd.Timestamp('2005-01-01 12:00')
 
     def test_initialize_sets_timesteps_subset(self):
         config_run = """
@@ -124,22 +126,20 @@ class TestInitialization:
                         subset_t: ['2005-01-02', '2005-01-03']
                     """
         model = common.simple_model(config_run=config_run)
-        assert model.data._dt.index.tolist() == list(range(24, 72))
-        # NB: using iloc instead of iat to get around the underlying
-        # numpy object and have pandas do the minute/hour/.. checking
-        assert model.data._dt.iloc[0].minute == 0
-        assert model.data._dt.iloc[0].hour == 0
-        assert model.data._dt.iloc[0].day == 2
-        assert model.data._dt.iloc[0].month == 1
-        assert model.data.time_res_static == 1
-        assert model.data.time_res_series.tolist() == [1] * 48
-        assert model.data.startup_time_bounds == 24 + 12
+        daterange = pd.Index(pd.date_range('2005-01-02 00:00', '2005-01-03 23:00', freq='1H'))
+        assert (model._sets['t'] == daterange).all()
+        assert model._sets['t'][0].minute == 0
+        assert model._sets['t'][0].hour == 0
+        assert model._sets['t'][0].day == 2
+        assert model._sets['t'][0].month == 1
+        assert model.data.attrs['time_res'] == 1
+        assert model.data['_time_res'].to_series().tolist() == [1] * 48
+        assert model.data.attrs['startup_time_bounds'] == pd.Timestamp('2005-01-02 12:00')
 
     def test_initialize_sets_technologies(self):
         model = common.simple_model()
-        assert sorted(model.data._y) == ['ccgt', 'csp',
-                                         'demand_power',
-                                         'unmet_demand_power']
+        y = ['ccgt', 'csp', 'demand_power', 'unmet_demand_power']
+        assert sorted(model._sets['y']) == y
 
     def test_initialize_sets_technologies_loc_invalid_tech(self):
         locations = """
@@ -159,7 +159,7 @@ class TestInitialization:
                         subset_y: ['ccgt', 'demand_power']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt', 'demand_power']
+        assert sorted(model._sets['y']) == ['ccgt', 'demand_power']
 
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
@@ -168,17 +168,17 @@ class TestInitialization:
                         subset_y: ['ccgt', 'demand_power', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._y) == ['ccgt', 'demand_power']
+        assert sorted(model._sets['y']) == ['ccgt', 'demand_power']
 
     def test_initialize_sets_carriers(self):
         model = common.simple_model()
-        assert sorted(model.data._c) == ['power']
+        assert sorted(model._sets['c']) == ['power']
 
     # TODO more extensive tests for carriers
 
     def test_initialize_sets_locations(self):
         model = common.simple_model()
-        assert sorted(model.data._x) == ['1', '2', 'demand']
+        assert sorted(model._sets['x']) == ['1', '2', 'demand']
 
     def test_initialize_sets_locations_subset(self):
         config_run = """
@@ -187,7 +187,7 @@ class TestInitialization:
                         subset_x: ['1', 'demand']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._x) == ['1', 'demand']
+        assert sorted(model._sets['x']) == ['1', 'demand']
 
     def test_initialize_sets_locations_too_large_subset(self):
         config_run = """
@@ -196,15 +196,15 @@ class TestInitialization:
                         subset_x: ['1', 'demand', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
-        assert sorted(model.data._x) == ['1', 'demand']
+        assert sorted(model._sets['x']) == ['1', 'demand']
 
     def test_initialize_locations_matrix(self):
         model = common.simple_model()
         cols = ['_level', '_override.ccgt.constraints.e_cap.max',
                 '_within', 'ccgt', 'csp', 'demand_power',
                 'unmet_demand_power']
-        assert sorted(model.data.locations.columns) == cols
-        assert (sorted(model.data.locations.index.tolist())
+        assert sorted(model._locations.columns) == cols
+        assert (sorted(model._locations.index.tolist())
                 == ['1', '2', 'demand'])
 
     @pytest.fixture
@@ -230,8 +230,8 @@ class TestInitialization:
     def test_initialize_sets_locations_with_transmission(self,
                                                          model_transmission):
         model = model_transmission
-        assert sorted(model.data._y) == ['ccgt', 'csp', 'demand_power',
-                                         'hvac:1', 'hvac:2']
+        y =['ccgt', 'csp', 'demand_power', 'hvac:1', 'hvac:2']
+        assert sorted(model._sets['y']) == y
 
     def test_initialize_locations_matrix_with_transmission(self,
                                                            model_transmission):
@@ -241,10 +241,10 @@ class TestInitialization:
                 '_override.hvac:2.constraints.e_cap.max',
                 '_within', 'ccgt', 'csp', 'demand_power',
                 'hvac:1', 'hvac:2']
-        assert sorted(model.data.locations.columns) == cols
-        assert (sorted(model.data.locations.index.tolist())
+        locations = model._locations
+        assert sorted(locations.columns) == cols
+        assert (sorted(locations.index.tolist())
                 == ['1', '2', 'demand'])
-        locations = model.data.locations
         assert locations.at['1', '_override.hvac:2.constraints.e_cap.max'] == 100
         assert np.isnan(locations.at['1', '_override.hvac:1.constraints.e_cap.max'])
         assert locations.at['2', '_override.hvac:1.constraints.e_cap.max'] == 100

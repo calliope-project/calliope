@@ -497,16 +497,17 @@ def map_results(results, func, as_frame=False):
         except Exception:
             return np.nan
 
-    iterations = results.iterations.index
+    iterations = list(results.solutions.keys())
     items = [map_func(results.solutions[i]) for i in iterations]
-    names = [results.solutions[i].config_run.name
-             if 'name' in results.solutions[i].config_run
-             else i
-             for i in iterations]
+    idx = list(results.solutions.keys())
+    try:
+        idx = results.iterations.loc[idx, 'name']
+    except Exception:
+        pass
     if as_frame:
-        return pd.DataFrame(items, index=names)
+        return pd.DataFrame(items, index=idx)
     else:
-        return pd.Series(items, index=names)
+        return pd.Series(items, index=idx)
 
 
 class SolutionModel(core.BaseModel):
@@ -526,18 +527,22 @@ class SolutionModel(core.BaseModel):
         self.config_model = solution.config_model
 
         # Reconstruct self.data from solution
-        self.data = utils.AttrDict()
-        for k in ['r', 'e_eff']:
-            if k in solution:
-                ds = solution[k].to_dataset(dim='y_def_{}'.format(k))
-                for y in ds.data_vars:
-                    self.data.set_key('{}.{}'.format(k, y), ds[y].to_pandas())
-                del solution[k]
+        params = ['r', 'e_eff']
+        try:
+            self.data = solution[params]
+        except KeyError:
+            pass
 
+        # Attach solution (minus data parameters)
+        for p in params:
+            try:
+                del solution[p]
+            except KeyError:
+                pass
         self.solution = solution
 
         # Add getters
-        self._get_option = utils.option_getter(self.config_model, solution)
+        self._get_option = utils.option_getter(self.config_model)
         self._get_cost = utils.cost_getter(self._get_option)
         self._get_dep = utils.depreciation_getter(self._get_option)
 

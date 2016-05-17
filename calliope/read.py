@@ -20,8 +20,9 @@ from .utils import AttrDict
 
 
 REQUIRED_TABLES = ['capacity_factor', 'levelized_cost',
-                   'metadata', 'node', 'parameters',
-                   'groups', 'shares', 'summary', 'time_res']
+                   'metadata', 'groups', 'shares', 'summary',
+                   'time_res']
+
 
 def _check(path, solution):
     # Superficial check if some key tables are missing

@@ -46,7 +46,7 @@ def system_margin(model):
 
     """
     m = model.m
-    time_res = model.data.time_res_series
+    time_res = model.data['_time_res'].to_series()
 
     def carrier(y):
         return model.get_option(y + '.carrier')

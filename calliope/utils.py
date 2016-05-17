@@ -418,16 +418,14 @@ def plugin_load(name, builtin_module):
     return func
 
 
-def option_getter(config_model, data):
+def option_getter(config_model):
     """Returns a get_option() function using the given config_model and data"""
-    o = config_model
-    d = data
 
     def get_option(option, x=None, default=None, ignore_inheritance=False):
 
         def _get_option(opt, fail=False):
             try:
-                result = o.get_key('techs.' + opt)
+                result = config_model.get_key('techs.' + opt)
             except KeyError:
                 if ignore_inheritance:
                     return _get_option(default, fail)
@@ -437,7 +435,7 @@ def option_getter(config_model, data):
                     parent = tech.split(':')[0]
                 else:
                     # parent = e.g. 'defaults'
-                    parent = o.get_key('techs.' + tech + '.parent')
+                    parent = config_model.get_key('techs.' + tech + '.parent')
                 try:
                     result = _get_option(parent + '.' + remainder, fail)
                 except KeyError:
@@ -459,34 +457,11 @@ def option_getter(config_model, data):
             return result
 
         def _get_location_option(key, location):
-
-            def getter(key, location):
-                # NB: KeyErrors raised here are always caught within _get_option
-                # so need no further information or handling
-                # Raises KeyError if the specific _override column does not exist
-                result = d.locations.at[location, '_override.' + key]
-                # Also raise KeyError if the result is NaN, i.e. if no
-                # location-specific override has been defined
-                try:
-                    if np.isnan(result):
-                        raise KeyError
-                # Have to catch this because np.isnan not implemented for strings
-                except TypeError:
-                    pass
-                return result
-
-            while True:
-                try:
-                    return getter(key, location)
-                except KeyError:
-                    parent_location = d.locations.at[location, '_within']
-                    if parent_location:  # Will be None if no parent
-                        return getter(key, parent_location)
-                    else:
-                        # Once top of "location inheritance" chain reached,
-                        # raise KeyError, which will cause the calling function
-                        # to fall back to non-location specific settings
-                        raise
+            # NB1: KeyErrors raised here are always caught in get_option
+            # so need no further information or handling
+            return config_model.get_key(
+                'locations.' + location + '.override.' + key
+            )
 
         if x:
             try:

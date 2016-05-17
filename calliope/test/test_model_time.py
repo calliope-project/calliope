@@ -54,7 +54,7 @@ class TestModel:
             time: {function: resample, function_options: {'resolution': '1D'}}
         """
         model = create_and_run_model(override)
-        assert len(model.data.time_res_series) == 4
+        assert len(model.data['_time_res']) == 4
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         sol = model.solution
@@ -66,7 +66,7 @@ class TestModel:
             subset_t: ['2005-01-01', '2005-01-02']
         """
         model = create_and_run_model(override)
-        assert len(model.data.time_res_series) == 2
+        assert len(model.data['_time_res']) == 2
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         sol = model.solution
@@ -78,7 +78,7 @@ class TestModel:
             subset_t: ['2005-01-02', '2005-01-03']
         """
         model = create_and_run_model(override)
-        assert len(model.data.time_res_series) == 2
+        assert len(model.data['_time_res']) == 2
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         sol = model.solution
@@ -99,8 +99,6 @@ class TestModel:
         sol = model.solution
         assert sol['e'].loc[dict(c='power', y='ccgt')].sum(dim=['x', 't']) == 720
 
-    # FIXME
-    @pytest.mark.xfail(reason="incomplete implementation of xarray-based data means operational mode not correctly functioning")
     def test_model_time_res_uniform_subset_t_operational(self):
         override = """
             mode: operate
@@ -112,7 +110,7 @@ class TestModel:
             subset_t: ['2005-01-02', '2005-01-03']
         """
         model = create_and_run_model(override)
-        assert len(model.data.time_res_series) == 4
+        assert len(model.data['_time_res']) == 4
         assert str(model.results.solver.termination_condition) == 'optimal'
         # Make sure the result is valid
         sol = model.solution

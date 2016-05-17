@@ -1,34 +1,30 @@
-import xarray as xr
+"""
+Copyright (C) 2013-2016 Stefan Pfenninger.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+data_tools.py
+~~~~~~~~~~~~~
+
+"""
 
 
-_TIMESERIES_PARAMS = ['r', 'e_eff']
+def get_timeres(model, verify=False):
+    """Returns resolution of data in hours. Needs a properly
+    formatted ``set_t.csv`` file to work.
 
+    If ``verify=True``, verifies that the entire file is at the same
+    resolution. ``model.get_timeres(verify=True)`` can be called
+    after Model initialization to verify this.
 
-def get_dataset(data):
-    """Temporary solution to get an xr.Dataset of input data"""
-    from ._version import __version__
-    arrays = {}
-    for p in _TIMESERIES_PARAMS:
-        y_dim = '_y_def_{}'.format(p)
-        arr = (xr.Dataset(data[p]).to_array(dim=y_dim)
-                 .rename({'dim_0': 't', 'dim_1': 'x'})
-               )
-        arr = arr.loc[{y_dim: list(data[y_dim])}]
-        arrays[p] = arr
-    ds = xr.Dataset(arrays)
-
-    ds['_weights'] = xr.DataArray(data['_weights'], dims=['t'])
-    ds['_time_res'] = xr.DataArray(data['time_res_series'], dims=['t'])
-
-    # Replace integer timestep index with actual date-time objects
-    ds.coords['t'] = data._dt.as_matrix()
-
-    for a in ['time_res_native', 'time_res_static', 'time_res_data']:
-        ds.attrs[a] = data[a]
-
-    ds.attrs['calliope_version'] = __version__
-
-    return ds
+    """
+    datetime_index = model._sets['t']
+    seconds = (datetime_index[0] - datetime_index[1]).total_seconds()
+    if verify:
+        for i in range(len(datetime_index) - 1):
+            assert ((datetime_index[i] - datetime_index[i+1]).total_seconds()
+                    == seconds)
+    hours = abs(seconds) / 3600
+    return hours
 
 
 ##
@@ -37,8 +33,14 @@ def get_dataset(data):
 
 
 def get_y_coord(array):
-    # assumes a single _y coord in array
-    return [k for k in array.coords if '_y' in k][0]
+    if 'y' in array.coords:
+        y = 'y'
+    else:
+        try:  # assumes a single y_ coord in array
+            y = [k for k in array.coords if 'y_' in k][0]
+        except IndexError:  # empty list
+            y = None
+    return y
 
 
 def get_datavars(data):
@@ -46,7 +48,7 @@ def get_datavars(data):
 
 
 def get_timesteps_per_day(data):
-    timesteps_per_day = data.attrs['time_res_static'] * 24
+    timesteps_per_day = data.attrs['time_res'] * 24
     if isinstance(timesteps_per_day, float):
         assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
         timesteps_per_day = int(timesteps_per_day)
@@ -56,33 +58,3 @@ def get_timesteps_per_day(data):
 def get_freq(data):
     ts_per_day = get_timesteps_per_day(data)
     return ('{}H'.format(24 / ts_per_day))
-
-
-def reattach(model, new_data):
-    # FIXME attach updated data to the model object
-    # FIXME TODO update metadata/attributes in model data
-    ds = new_data
-
-    # i0 = model.data['_dt'].index[0]
-    # print(i0)
-
-    model.data['_weights'] = ds['_weights'].to_pandas().reset_index(drop=True)
-    model.data['time_res_series'] = ds['_time_res'].to_pandas().reset_index(drop=True)
-    model.data['_dt'] = ds.coords['t'].to_pandas().reset_index(drop=True)
-    # list(range(i0, i0 + len(model.data['_dt']))), drop=True
-
-    for p in _TIMESERIES_PARAMS:
-        y_dim = '_y_def_{}'.format(p)
-        for y in model.data[p]:
-            if y in ds[y_dim].values:
-                model.data[p][y] = (ds[p].loc[{y_dim: y}]
-                                         .rename({'x': 'dim_1', 't': 'dim_0'})
-                                         .to_pandas()
-                                         .reset_index(drop=True))
-            else:
-                # FIXME
-                # We simply cut off the inf timeseries for params not specified
-                # by a time series -- ugly workaround until replace
-                # underlying data objects with xarray all the way through
-                ilen = model.data['_dt'].index.tolist()
-                model.data[p][y] = model.data[p][y].reset_index(drop=True).loc[ilen, :]
