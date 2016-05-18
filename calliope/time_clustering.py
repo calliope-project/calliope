@@ -103,11 +103,49 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
     return ds
 
 
+def find_nearest_vector_index(array, value):
+    return np.array([np.linalg.norm(x + y + z + u)
+                     for (x, y, z, u) in array - value]).argmin()
+
+
+def get_closest_days_from_clusters(data, mean_data, clusters):
+    subset_y = list(data.attrs['_sets']['y_def_r'])
+    dtindex = data['t'].to_index()
+
+    chosen_days = {}
+
+    for cluster in sorted(clusters.unique()):
+
+        subset_t = [t for t in mean_data.t.values if t.startswith('{}-'.format(cluster))]
+
+        target = mean_data['r'].loc[dict(t=subset_t, y=subset_y)].values
+
+        lookup_array = data['r'].loc[dict(y=subset_y)].values
+        lookup_array = lookup_array.reshape((4, 366, 24, 20)).transpose(1, 0, 2, 3)
+
+        # +1 because w are zero-indexed but want the day of year
+        chosen_day_index = find_nearest_vector_index(lookup_array, target) + 1
+        chosen_days[cluster] = chosen_day_index
+
+    days_list = sorted(list(set(chosen_days.values())))
+    new_t_coord = dtindex[np.in1d(dtindex.dayofyear, days_list)]
+
+    new_data = data.loc[dict(t=new_t_coord)]
+
+    return new_data, chosen_days
+
+
 def map_clusters_to_data(data, clusters, how, **kwargs):
     """
     Returns a copy of data that has been clustered.
 
-    how can be mean, centroid, closest_to_centroid
+    Parameters
+    ----------
+    how : str
+        How to select data from clusters.
+        Can be mean (centroid) or closest.
+    kwargs : optional
+        Additional keyword arguments for the chosen `how`.
 
     """
 
@@ -120,14 +158,10 @@ def map_clusters_to_data(data, clusters, how, **kwargs):
     c = (clusters.reindex(new_idx)
                  .fillna(method='ffill').astype(int))
 
-    # == PICK DATA ==
-    # TODO: additional options for picking data
-    # or pick cluster centroid
-    # or pick the real day closest to cluster centroid
-    # if using centroid, need kwargs: centroids=None, variable=None, tech=None,
-    if how == 'mean':
-        new_data = get_mean_from_clusters(data, c, ts_per_day)
+    new_data = get_mean_from_clusters(data, c, ts_per_day)
 
+    # == PICK DATA ==
+    if how == 'mean':
         # Add timestep names by taking the median timestamp from daily clusters...
         # (a random way of doing it, but we want some label to apply)
         timestamps = clusters.groupby(clusters).apply(lambda x: x.index[int(len(x.index) / 2)])
@@ -135,6 +169,12 @@ def map_clusters_to_data(data, clusters, how, **kwargs):
                                 for ts in timestamps], ignore_index=True)
 
         new_data.coords['t'] = new_t_coord.as_matrix()
+
+    elif how == 'closest':
+        new_data, chosen_days = get_closest_days_from_clusters(data, new_data, clusters)
+        # Deal with the case where more than one cluster has the same closest day
+        # An easy way is to rename the original clusters with the chosen days
+        c = c.map(lambda x: chosen_days[x])
 
     # == DETERMINE WEIGHTS ==
     value_counts = c.value_counts()

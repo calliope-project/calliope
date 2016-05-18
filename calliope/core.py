@@ -229,6 +229,8 @@ class Model(BaseModel):
         self.flush_option_cache()
 
     def initialize_time(self):
+        # Carry y_ subset sets over to data for easier data analysis
+        self.data.attrs['_sets'] = {k: v for k, v in self._sets.items() if 'y_' in k}
         self.data['_weights'] = xr.DataArray(
             pd.Series(1, index=self.data['t'].values),
             dims=['t']

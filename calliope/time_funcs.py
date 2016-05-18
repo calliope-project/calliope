@@ -54,7 +54,7 @@ def _combine_datasets(data0, data1):
     return data_new
 
 
-def apply_clustering(data, timesteps, clustering_func, **kwargs):
+def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
     """
     Apply the given clustering function to the given data.
 
@@ -64,6 +64,8 @@ def apply_clustering(data, timesteps, clustering_func, **kwargs):
     timesteps : pandas.DatetimeIndex or list of timesteps or None
     clustering_func : str
         Name of clustering function.
+    how : str
+        How to map clusters to data. 'mean' or 'closest'.
     **args : dict
         Arguments passed to clustering_func.
 
@@ -86,8 +88,8 @@ def apply_clustering(data, timesteps, clustering_func, **kwargs):
     result = func(data_normalized, **kwargs)
     clusters = result[0]  # Ignore other stuff returned
 
-    data_new = time_clustering.map_clusters_to_data(data_to_cluster, clusters, how='mean')
-    # new_data_normalized = map_clusters_to_data(data_normalized, clusters, how='mean')
+    data_new = time_clustering.map_clusters_to_data(data_to_cluster, clusters,
+                                                    how=how)
 
     if timesteps is not None:
         # Drop timesteps from old data
