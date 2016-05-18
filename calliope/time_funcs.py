@@ -28,14 +28,15 @@ def normalize(data):
 
     """
     ds = data.copy(deep=True)  # Work off a copy
-    for var in dt.get_datavars(data):
-        y_var = '_y_def_{}'.format(var)
-        for y in ds.coords[y_var].values:
+    data_vars_in_t = [v for v in dt.get_datavars(data)
+                      if 't' in data[v].dims]
+    for var in data_vars_in_t:
+        for y in ds.coords['y'].values:
             # Get max across all regions to normalize against
-            norm_max = fabs(ds[var].loc[{y_var: y}]).max()
+            norm_max = fabs(ds[var].loc[{'y': y}]).max()
             for x in ds.coords['x'].values:
-                df = ds[var].loc[{'x': x, y_var: y}]
-                ds[var].loc[{'x': x, y_var: y}] = fabs(df) / norm_max
+                df = ds[var].loc[{'x': x, 'y': y}]
+                ds[var].loc[{'x': x, 'y': y}] = fabs(df) / norm_max
     return ds
 
 
@@ -95,7 +96,9 @@ def apply_clustering(data, timesteps, clustering_func, **kwargs):
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
-    for var in dt.get_datavars(data_to_cluster):
+    data_vars_in_t = [v for v in dt.get_datavars(data)
+                      if 't' in data[v].dims]
+    for var in data_vars_in_t:
         scale_to_match_mean = (data[var].mean(dim='t') / data_new[var].mean(dim='t')).fillna(0)
         data_new_scaled[var] = data_new[var] * scale_to_match_mean
 

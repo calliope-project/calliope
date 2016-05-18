@@ -238,7 +238,7 @@ class Model(BaseModel):
         if not time_config:
             return None  # Nothing more to do here
         else:
-            # FIXME for analysis purposes, keep old data around
+            # For analysis purposes, keep old data around
             self.data_original = self.data.copy(deep=True)
 
         ##
@@ -260,7 +260,7 @@ class Model(BaseModel):
             chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                          for m in masks.values()]).index
             # timesteps: a list of timesteps NOT picked by masks
-            timesteps = pd.Index(self.data_ds.t.values).difference(chosen_timesteps)
+            timesteps = pd.Index(self.data.t.values).difference(chosen_timesteps)
         else:
             timesteps = None
 
@@ -1292,7 +1292,7 @@ class Model(BaseModel):
 
         if apply_weights:
             try:
-                weights = self.data_ds_new._weights[dict(t=t_subset)]
+                weights = self.data['_weights'][dict(t=t_subset)]
             except AttributeError:
                 weights = 1
         else:

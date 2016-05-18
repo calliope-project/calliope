@@ -28,13 +28,6 @@ def node_resource(model):
     """
     m = model.m
 
-    def availability(y, x, t):
-        if model.config_model.availability and y in model.data._y_def_r:
-            availability = m.a[y, x, t]
-        else:
-            availability = 1.0
-        return availability
-
     # Variables
     m.rs = po.Var(m.y, m.x, m.t, within=po.Reals)
     m.r_area = po.Var(m.y_def_r, m.x, within=po.NonNegativeReals)
@@ -56,8 +49,7 @@ def node_resource(model):
         # elif po.value(m.r[y, x, t]) > 0:
         elif (y in model.get_group_members('supply') or
               y in model.get_group_members('unmet_demand')):
-            # Supply technologies make use of availability
-            return m.rs[y, x, t] <= r_avail * availability(y, x, t)
+            return m.rs[y, x, t] <= r_avail
         elif y in model.get_group_members('demand'):
             return m.rs[y, x, t] >= r_avail
 

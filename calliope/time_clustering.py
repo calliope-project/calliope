@@ -65,7 +65,9 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
     #                          for i in data.coords['t'].values])
 
     ds = {}
-    for var in dt.get_datavars(data):
+    data_vars_in_t = [v for v in dt.get_datavars(data)
+                      if 't' in data[v].dims]
+    for var in data_vars_in_t:
         data_arrays = []
         array = data[var]
         y_coord = dt.get_y_coord(array)

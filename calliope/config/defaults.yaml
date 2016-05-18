@@ -20,8 +20,6 @@ opmode:
 system_margin:
     power: 0
 
-availability: false  # Disable availability constraint by default, EXPERIMENTAL
-
 #
 # TECH DEFAULTS
 #
@@ -75,7 +73,6 @@ techs:
             e_cap_scale: 1.0  # Scale all ``e_cap`` min/max/equals/total_max/total_equals constraints by this value
             e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
             e_ramping:  false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
-            availability: 1.0  # UNDOCUMENTED -- experimental feature TODO
         costs:
             default:  # These default are looked up for any value not defined for a specific cost class
                 s_cap: 0  # Cost of storage capacity (per kWh)
