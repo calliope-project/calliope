@@ -180,4 +180,11 @@ def drop(data, timesteps, padding=None):
         # Concatenate the DatetimeIndexes by using dummy Series
         timesteps = pd.concat([pd.Series(0, index=i) for i in dt_indices]).index
 
-    return data.drop(timesteps, dim='t')
+    # 'Distribute weight' of the dropped timesteps onto the remaining ones
+    dropped_weight = data._weights.loc[{'t': timesteps}].sum()
+
+    data = data.drop(timesteps, dim='t')
+
+    data['_weights'] = data['_weights'] + (dropped_weight / len(data['_weights']))
+
+    return data
