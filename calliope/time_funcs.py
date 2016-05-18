@@ -16,7 +16,6 @@ import xarray as xr
 from xarray.ufuncs import fabs
 
 from . import utils
-from . import data_tools as dt
 from . import time_clustering
 
 
@@ -28,7 +27,7 @@ def normalize(data):
 
     """
     ds = data.copy(deep=True)  # Work off a copy
-    data_vars_in_t = [v for v in dt.get_datavars(data)
+    data_vars_in_t = [v for v in time_clustering._get_datavars(data)
                       if 't' in data[v].dims]
     for var in data_vars_in_t:
         for y in ds.coords['y'].values:
@@ -98,7 +97,7 @@ def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
-    data_vars_in_t = [v for v in dt.get_datavars(data)
+    data_vars_in_t = [v for v in time_clustering._get_datavars(data)
                       if 't' in data[v].dims]
     for var in data_vars_in_t:
         scale_to_match_mean = (data[var].mean(dim='t') / data_new[var].mean(dim='t')).fillna(0)
@@ -160,9 +159,10 @@ def drop(data, timesteps, padding=None):
     around into the contiguous areas encompassed by the timesteps.
 
     """
-    freq = dt.get_freq(data)  # FIXME freq should be an attr on data
-
     if padding:
+        ts_per_day = time_clustering._get_timesteps_per_day(data)
+        freq = '{}H'.format(24 / ts_per_day)
+
         # Series of 1 where timesteps 'exist' and 0 where they don't
         s = (pd.Series(1, index=timesteps)
                .reindex(pd.date_range(timesteps[0], timesteps[-1], freq=freq))

@@ -10,13 +10,11 @@ Functions to pick timesteps from data given certain criteria.
 """
 
 import pandas as pd
-from . import data_tools as dt
 
 
 def _get_array(data, var, tech, locations):
     arr = data[var]
-    y_coord = dt.get_y_coord(arr)
-    arr = arr.loc[{y_coord: tech}]
+    arr = arr.loc[{'y': tech}]
     if locations is not None:
         arr = arr.loc[{'x': locations}]
     return arr

@@ -30,7 +30,6 @@ from pyutilib.services import TempfileManager
 
 from . import exceptions
 from . import constraints
-from . import data_tools
 from . import locations
 from . import output
 from . import sets
@@ -280,7 +279,7 @@ class Model(BaseModel):
             if self.mode == 'operate':
                 opmode_safe = self.data.attrs.get('opmode_safe', False)
                 if opmode_safe:
-                    self.data.attrs['time_res'] = data_tools.get_timeres(self)
+                    self.data.attrs['time_res'] = self.get_timeres()
                 else:
                     msg = 'Time settings incompatible with operational mode'
                     raise exceptions.ModelError(msg)
@@ -313,6 +312,23 @@ class Model(BaseModel):
     def prev_t(self, timestamp):
         """Return the timestep prior to the given timestep."""
         return self.get_t(timestamp, offset=-1)
+
+    def get_timeres(self, verify=False):
+        """Returns resolution of data in hours.
+
+        If ``verify=True``, verifies that the entire file is at the same
+        resolution. ``self.get_timeres(verify=True)`` can be called
+        after Model initialization to verify this.
+
+        """
+        datetime_index = self._sets['t']
+        seconds = (datetime_index[0] - datetime_index[1]).total_seconds()
+        if verify:
+            for i in range(len(datetime_index) - 1):
+                assert ((datetime_index[i] - datetime_index[i+1]).total_seconds()
+                        == seconds)
+        hours = abs(seconds) / 3600
+        return hours
 
     def get_option(self, option, x=None, default=None,
                    ignore_inheritance=False):
@@ -501,7 +517,7 @@ class Model(BaseModel):
         # Normalize to (0, 1), then multiply by the desired maximum,
         # scaling this peak according to time_res
         if scale_time_res:
-            adjustment = data_tools.get_timeres(self)
+            adjustment = self.get_timeres()
         else:
             adjustment = 1
         if peak < 0:
@@ -786,7 +802,7 @@ class Model(BaseModel):
 
         # `time_res` never changes, so always reflects the spacing
         # of time step indices
-        attrs['time_res'] = time_res = data_tools.get_timeres(self)
+        attrs['time_res'] = time_res = self.get_timeres()
         time_res_series = pd.Series(time_res, index=self._sets['t'])
         time_res_series.index.name = 't'
         data['_time_res'] = xr.DataArray(time_res_series)
@@ -837,6 +853,11 @@ class Model(BaseModel):
 
         # Check data consistency
         self._validate_param_dataset_consistency(dataset)
+
+        # Make sure there are no NaNs anywhere in the data
+        # to prevent potential solver problems
+        dataset = dataset.fillna(0)
+
         self.data = dataset
 
     def _get_t_max_demand(self):

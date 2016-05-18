@@ -13,21 +13,44 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import matplotlib.pyplot as plt
-import matplotlib.patches
-from matplotlib.colors import rgb2hex
-import seaborn as sns
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.patches
+    from matplotlib.colors import rgb2hex
+except ImportError:
+    pass  # This is logged in analysis.py
 
 import scipy.cluster.vq as vq
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
 
-from . import data_tools as dt
+
+def _get_y_coord(array):
+    if 'y' in array.coords:
+        y = 'y'
+    else:
+        try:  # assumes a single y_ coord in array
+            y = [k for k in array.coords if 'y_' in k][0]
+        except IndexError:  # empty list
+            y = None
+    return y
+
+
+def _get_datavars(data):
+    return [var for var in data.data_vars if not var.startswith('_')]
+
+
+def _get_timesteps_per_day(data):
+    timesteps_per_day = data.attrs['time_res'] * 24
+    if isinstance(timesteps_per_day, float):
+        assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
+        timesteps_per_day = int(timesteps_per_day)
+    return timesteps_per_day
 
 
 def reshape_for_clustering(data, tech=None, invert=False):
-    y = dt.get_y_coord(data.r)
-    timesteps_per_day = dt.get_timesteps_per_day(data)
+    y = _get_y_coord(data.r)
+    timesteps_per_day = _get_timesteps_per_day(data)
     days = int(len(data.t) / timesteps_per_day)
     regions = int(len(data['x']))
     techs = int(len(data[y]))
@@ -41,8 +64,8 @@ def reshape_for_clustering(data, tech=None, invert=False):
 
 
 def reshape_clustered(clustered, data):
-    y = dt.get_y_coord(data.r)
-    timesteps_per_day = dt.get_timesteps_per_day(data)
+    y = _get_y_coord(data.r)
+    timesteps_per_day = _get_timesteps_per_day(data)
     regions = int(len(data['x']))
     techs = int(len(data[y]))
     days = clustered.shape[0]
@@ -65,12 +88,12 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
     #                          for i in data.coords['t'].values])
 
     ds = {}
-    data_vars_in_t = [v for v in dt.get_datavars(data)
+    data_vars_in_t = [v for v in _get_datavars(data)
                       if 't' in data[v].dims]
     for var in data_vars_in_t:
         data_arrays = []
         array = data[var]
-        y_coord = dt.get_y_coord(array)
+        y_coord = _get_y_coord(array)
 
         t_coords = ['{}-{}'.format(cid, t)
                     for cid in cluster_map
@@ -150,7 +173,7 @@ def map_clusters_to_data(data, clusters, how, **kwargs):
     """
 
     # Get all timesteps, not just the first per day
-    ts_per_day = dt.get_timesteps_per_day(data)
+    ts_per_day = _get_timesteps_per_day(data)
     idx = clusters.index
     new_idx = pd.concat([pd.Series(1, pd.date_range(i, i + pd.Timedelta('1D'),
                                                     freq='1H')[:-1])
@@ -204,7 +227,7 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
     centroids
 
     """
-    timesteps_per_day = dt.get_timesteps_per_day(data)
+    timesteps_per_day = _get_timesteps_per_day(data)
 
     if timesteps is not None:
         data = data.loc[{'t': timesteps}]
@@ -261,7 +284,7 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
 
     # Make sure clusters are a pd.Series with a datetime index
     if clusters is not None:
-        timesteps_per_day = dt.get_timesteps_per_day(data)
+        timesteps_per_day = _get_timesteps_per_day(data)
         timesteps = data.coords['t'].values  # All timesteps
 
         clusters = pd.Series(clusters, index=timesteps[::timesteps_per_day])

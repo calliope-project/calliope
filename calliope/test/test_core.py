@@ -4,7 +4,6 @@ import pytest
 import tempfile
 
 import calliope
-from calliope import data_tools
 
 from . import common
 from .common import assert_almost_equal
@@ -41,22 +40,22 @@ class TestInitialization:
 
     def test_gettimeres_1hourly(self):
         model = common.simple_model()
-        assert data_tools.get_timeres(model) == 1
+        assert model.get_timeres() == 1
 
     def test_gettimeres_6hourly(self):
         path = common._add_test_path('common/t_6h')
         model = common.simple_model(path=path)
-        assert data_tools.get_timeres(model) == 6
+        assert model.get_timeres() == 6
 
     def test_gettimeres_verify_1hourly(self):
         model = common.simple_model()
-        assert data_tools.get_timeres(model, verify=True) == 1
+        assert model.get_timeres(verify=True) == 1
 
     def test_gettimeres_verify_erroneous(self):
         path = common._add_test_path('common/t_erroneous')
         model = common.simple_model(path=path)
         with pytest.raises(AssertionError):
-            data_tools.get_timeres(model, verify=True)
+            model.get_timeres(verify=True)
 
     @pytest.fixture
     def sine_wave(self):
