@@ -41,16 +41,16 @@ def normalize(data):
 
 
 def _combine_datasets(data0, data1):
-    # Combine the clustered with the old unclustered data
-    data_new = xr.concat([data0, data1], dim='t')
-    # Ensure time dimension is ordered
-    data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
     # Manually copy over variables not in `t`. If we don't do this,
     # these vars get polluted with a superfluous `t` dimension
     non_t_vars = [v for v in data0.data_vars
                   if 't' not in data0[v].dims]
     for v in non_t_vars:
-        data_new[v] = data0[v]
+        data1[v] = data0[v]
+    # Combine the clustered with the old unclustered data
+    data_new = xr.concat([data0, data1], dim='t')
+    # Ensure time dimension is ordered
+    data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
     return data_new
 
 
