@@ -1,5 +1,5 @@
 test:
-	py.test
+	py.test --cov calliope --cov-report term-missing
 
 sdist:
 	python setup.py sdist
