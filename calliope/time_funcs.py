@@ -39,17 +39,22 @@ def normalize(data):
     return ds
 
 
-def _combine_datasets(data0, data1):
+def _combine_datasets(data0, data1, only_copy_non_t_vars=False):
     # Manually copy over variables not in `t`. If we don't do this,
     # these vars get polluted with a superfluous `t` dimension
     non_t_vars = [v for v in data0.data_vars
                   if 't' not in data0[v].dims]
     for v in non_t_vars:
         data1[v] = data0[v]
-    # Combine the clustered with the old unclustered data
-    data_new = xr.concat([data0, data1], dim='t')
-    # Ensure time dimension is ordered
-    data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+
+    if only_copy_non_t_vars:
+        data_new = data1
+    else:
+        # Combine the clustered with the old unclustered data
+        data_new = xr.concat([data0, data1], dim='t')
+        # Ensure time dimension is ordered
+        data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+
     return data_new
 
 
@@ -90,7 +95,9 @@ def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
     data_new = time_clustering.map_clusters_to_data(data_to_cluster, clusters,
                                                     how=how)
 
-    if timesteps is not None:
+    if timesteps is None:
+        data_new = _combine_datasets(data, data_new, only_copy_non_t_vars=True)
+    else:
         # Drop timesteps from old data
         data_new = _combine_datasets(data.drop(timesteps, dim='t'), data_new)
 

@@ -48,32 +48,46 @@ def _get_timesteps_per_day(data):
     return timesteps_per_day
 
 
-def reshape_for_clustering(data, tech=None, invert=False):
-    y = _get_y_coord(data.r)
+def reshape_for_clustering(data, tech=None):
+    y_coord = 'y_def_r'
+    y_values = list(data.attrs['_sets'][y_coord])
     timesteps_per_day = _get_timesteps_per_day(data)
     days = int(len(data.t) / timesteps_per_day)
-    regions = int(len(data['x']))
-    techs = int(len(data[y]))
+    regions = len(data['x'])
+    techs = len(y_values)
 
-    if tech is not None:
-        X = data.r.loc[{y: tech}].values.reshape((days, timesteps_per_day * regions))
+    if tech is None:
+        X = (data.r.loc[{'y': y_values}]
+                   .transpose('t', 'x', 'y')
+                   .values.reshape(days, timesteps_per_day * regions * techs))
     else:
-        X = data.r.transpose('t', 'x', y).values.reshape(days, timesteps_per_day * regions * techs)
+        X = (data.r.loc[{'y': tech}]
+                   .values
+                   .reshape((days, timesteps_per_day * regions)))
 
     return np.nan_to_num(X)  # replace any NaN with 0
 
 
-def reshape_clustered(clustered, data):
-    y = _get_y_coord(data.r)
+def reshape_clustered(clustered, data, tech=None):
+    y_coord = 'y_def_r'
+    y_values = list(data.attrs['_sets'][y_coord])
     timesteps_per_day = _get_timesteps_per_day(data)
-    regions = int(len(data['x']))
-    techs = int(len(data[y]))
     days = clustered.shape[0]
+    regions = len(data['x'])
+    techs = len(y_values)
 
-    arr = xr.DataArray(clustered.reshape(techs, days * timesteps_per_day, regions),
-                       dims=(y, 't', 'x'))
+    if tech is None:
+        reshaped = clustered.reshape(techs, days * timesteps_per_day, regions)
+    else:
+        reshaped = clustered.reshape(1, days * timesteps_per_day, regions)
+
+    arr = xr.DataArray(reshaped, dims=('y', 't', 'x'))
+
     arr['x'] = data['x']
-    arr[y] = data[y]
+    if tech is None:
+        arr['y'] = y_values
+    else:
+        arr['y'] = tech
 
     return arr
 
@@ -158,7 +172,7 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
     return new_data, chosen_days
 
 
-def map_clusters_to_data(data, clusters, how, **kwargs):
+def map_clusters_to_data(data, clusters, how):
     """
     Returns a copy of data that has been clustered.
 
@@ -167,8 +181,6 @@ def map_clusters_to_data(data, clusters, how, **kwargs):
     how : str
         How to select data from clusters.
         Can be mean (centroid) or closest.
-    kwargs : optional
-        Additional keyword arguments for the chosen `how`.
 
     """
 
@@ -245,7 +257,7 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
     clusters = pd.Series(day_clusters, index=timesteps[::timesteps_per_day])
 
     # Reshape centroids
-    centroids = reshape_clustered(centroids, data)
+    centroids = reshape_clustered(centroids, data, tech)
 
     return clusters, centroids
 

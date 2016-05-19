@@ -870,7 +870,8 @@ class Model(BaseModel):
             # r_carrier is summed up over all techs ys and all locations (x)
             r_carrier = (self.data['r']
                              .loc[{'y': ys}]
-                             .sum(dim='x').to_dataframe())
+                             .sum(dim='x')
+                             .sum(dim='y').to_dataframe())
             t_max_demands[c] = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
         return t_max_demands
 
