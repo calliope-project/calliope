@@ -28,6 +28,7 @@ import pandas as pd
 import xarray as xr
 from pyutilib.services import TempfileManager
 
+from ._version import __version__
 from . import exceptions
 from . import constraints
 from . import locations
@@ -1654,14 +1655,16 @@ class Model(BaseModel):
             logging.warning(message)
             store_file = alt_file
 
-        # Serialize config dicts to YAML strings
+        # Metadata
         for k in ['config_model', 'config_run']:
+            # Serialize config dicts to YAML strings
             sol.attrs[k] = sol.attrs[k].to_yaml()
+        sol.attrs['run_time'] = self.runtime
+        sol.attrs['calliope_version'] = __version__
 
         self.solution.to_netcdf(store_file, format='netCDF4')
 
-        # Return the path we used
-        return store_file
+        return store_file  # Return the path to the NetCDF file we used
 
     def _save_csv(self):
         """Save solution as CSV files to ``self.config_run.output.path``"""
@@ -1669,10 +1672,12 @@ class Model(BaseModel):
             out_path = os.path.join(self.config_run.output.path, '{}.csv'.format(k))
             self.solution[k].to_dataframe().to_csv(out_path)
 
-        # Also save model and run configuration
-        self.config_run.to_yaml(os.path.join(self.config_run.output.path,
-                                             'config_run.yaml'))
-        self.config_model.to_yaml(os.path.join(self.config_run.output.path,
-                                               'config_model.yaml'))
+        # Metadata
+        md = utils.AttrDict()
+        md['config_run'] = self.config_run
+        md['config_model'] = self.config_model
+        md['run_time'] = self.runtime
+        md['calliope_version'] = __version__
+        md.to_yaml(os.path.join(self.config_run.output.path, 'metadata.yaml'))
 
         return self.config_run.output.path

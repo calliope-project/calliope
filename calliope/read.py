@@ -62,10 +62,10 @@ def read_csv(directory):
         arrays[f] = xr.DataArray.from_series(series)
     solution = xr.Dataset(arrays)
 
-    # Add YAML attributes
-    for k in ['config_model', 'config_run']:
-        file_path = os.path.join(directory, '{}.yaml'.format(k))
-        solution.attrs[k] = AttrDict.from_yaml(file_path)
+    # Restore metadata from YAML
+    md = AttrDict.from_yaml(os.path.join(directory, 'metadata.yaml'))
+    for k in md.keys():
+        solution.attrs[k] = md[k]
 
     _check(directory, solution)
 

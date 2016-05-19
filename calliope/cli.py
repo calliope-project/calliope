@@ -112,9 +112,9 @@ def run(run_config, debug, pdb):
         num_techs = (len(model.config_model.techs)
                      - len(core.get_default_techs()))
         msize = '{x} locations, {y} technologies, {t} timesteps'.format(
-            x=len(model.config_model.locations),
+            x=len(model._sets['x']),
             y=num_techs,
-            t=len(model.data._dt))
+            t=len(model._sets['t']))
         print('Model size:   {}'.format(msize))
         model.config_run.set_key('output.save', True)  # Always save output
         model.run()

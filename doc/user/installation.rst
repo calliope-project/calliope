@@ -59,12 +59,11 @@ GLPK
 
 `GLPK <https://www.gnu.org/software/glpk/>`_ is free and open-source, but can take too much time and/or too much memory on larger problems.
 
-On Windows, it can be easily installed into the "calliope" environment (make sure the environment has been activated as shown above)::
+If using Anaconda, GLPK can be easily installed into the "calliope" environment (make sure the environment has been activated as shown above)::
 
-   $ conda install -c sjpfenninger glpk
+   $ conda install -c cachemeorg glpk=4.47
 
-
-For Linux and Mac OS X, refer to the `GLPK website <https://www.gnu.org/software/glpk/>`_ for installation instructions.
+More recent versions of GLPK cause problems with Pyomo and should not be used for now. To install GLPK manually, refer to the `GLPK website <https://www.gnu.org/software/glpk/>`_.
 
 Gurobi
 ------
