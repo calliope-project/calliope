@@ -25,9 +25,9 @@ Calliope
 About
 -----
 
-Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data). It is under active development (see the `roadmap <roadmap.rst>`_).
+Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 
-A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `Pandas <http://pandas.pydata.org/>`_ data structures for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `Pandas <http://pandas.pydata.org/>`_ and `xarray <http://xarray.pydata.org/>`_ data structures for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
 
 A simple example model is `included with Calliope <calliope/example_model>`_.
 
@@ -51,7 +51,7 @@ It can also be run interactively from a Python session:
     import calliope
     model = calliope.Model('path/to/run.yaml')
     model.run()
-    solution = model.solution  # A dict of DataFrames
+    solution = model.solution  # An xarray.Dataset
 
 Documentation
 -------------
