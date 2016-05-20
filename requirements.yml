@@ -8,6 +8,7 @@ channels:
 dependencies:
     - python=3.5
     - basemap
+    - bottleneck
     - click
     - geos
     - glpk=4.57  # 4.60 causes problems with current version of Pyomo

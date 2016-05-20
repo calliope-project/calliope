@@ -24,7 +24,7 @@ By far the easiest and recommended way to obtain a working Python installation i
 
 Once you have Anaconda/Miniconda installed, you can create a new Python 3.5 environment called "calliope" with all the necessary modules with the following command (see the note on Windows below if this command causes an error)::
 
-   $ conda create -n calliope python=3.5 pip pandas xarray netcdf4 pyyaml matplotlib networkx basemap seaborn jupyter notebook --yes
+   $ conda create -n calliope python=3.5 pip pandas xarray numexpr netcdf4 pyyaml matplotlib networkx basemap seaborn jupyter notebook --yes
 
 Then, you need to activate the "calliope" environment. On Linux and Mac OS X::
 
@@ -46,7 +46,7 @@ Finally, install Calliope with the Python package installer pip, which will also
 
    Note that on Windows, basemap for Python 3.x is not currently available for Anaconda, so you need to `manually install it <http://matplotlib.org/basemap/users/installing.html>`_ if you want to plot maps. Use the following command, which does not include basemap, to install the Calliope environment on Windows::
 
-      $ conda create -n calliope python=3.5 pip pandas xarray netcdf4 pyyaml matplotlib networkx seaborn jupyter notebook --yes
+      $ conda create -n calliope python=3.5 pip pandas xarray numexpr netcdf4 pyyaml matplotlib networkx seaborn jupyter notebook --yes
 
 
 Installing a solver
