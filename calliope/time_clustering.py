@@ -148,6 +148,8 @@ def find_nearest_vector_index(array, value):
 def get_closest_days_from_clusters(data, mean_data, clusters):
     subset_y = list(data.attrs['_sets']['y_def_r'])
     dtindex = data['t'].to_index()
+    ts_per_day = _get_timesteps_per_day(data)
+    days = int(len(data['t']) / ts_per_day)
 
     chosen_days = {}
 
@@ -158,7 +160,7 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
         target = mean_data['r'].loc[dict(t=subset_t, y=subset_y)].values
 
         lookup_array = data['r'].loc[dict(y=subset_y)].values
-        lookup_array = lookup_array.reshape((4, 366, 24, 20)).transpose(1, 0, 2, 3)
+        lookup_array = lookup_array.reshape((4, days, ts_per_day, 20)).transpose(1, 0, 2, 3)
 
         # +1 because w are zero-indexed but want the day of year
         chosen_day_index = find_nearest_vector_index(lookup_array, target) + 1
@@ -167,9 +169,20 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
     days_list = sorted(list(set(chosen_days.values())))
     new_t_coord = dtindex[np.in1d(dtindex.dayofyear, days_list)]
 
+    chosen_day_timestamps = {k: dtindex[dtindex.dayofyear == v][0]
+                             for k, v in chosen_days.items()}
+
     new_data = data.loc[dict(t=new_t_coord)]
 
-    return new_data, chosen_days
+    return new_data, chosen_day_timestamps
+
+
+def _hourly_from_daily_index(idx):
+    dtrange = lambda i: pd.date_range(i, i + pd.Timedelta('1D'),
+                                      freq='1H')[:-1]
+    new_idx = pd.concat([pd.Series(1, dtrange(i))
+                         for i in idx]).index
+    return new_idx
 
 
 def map_clusters_to_data(data, clusters, how):
@@ -183,40 +196,46 @@ def map_clusters_to_data(data, clusters, how):
         Can be mean (centroid) or closest.
 
     """
+    # FIXME hardcoded time intervals ('1H', '1D')
 
     # Get all timesteps, not just the first per day
     ts_per_day = _get_timesteps_per_day(data)
     idx = clusters.index
-    new_idx = pd.concat([pd.Series(1, pd.date_range(i, i + pd.Timedelta('1D'),
-                                                    freq='1H')[:-1])
-                         for i in idx]).index
-    c = (clusters.reindex(new_idx)
-                 .fillna(method='ffill').astype(int))
+    new_idx = _hourly_from_daily_index(idx)
+    clusters_timeseries = (clusters.reindex(new_idx)
+                           .fillna(method='ffill').astype(int))
 
-    new_data = get_mean_from_clusters(data, c, ts_per_day)
+    new_data = get_mean_from_clusters(data, clusters_timeseries, ts_per_day)
 
-    # == PICK DATA ==
     if how == 'mean':
         # Add timestep names by taking the median timestamp from daily clusters...
         # (a random way of doing it, but we want some label to apply)
         timestamps = clusters.groupby(clusters).apply(lambda x: x.index[int(len(x.index) / 2)])
         new_t_coord = pd.concat([pd.Series(pd.date_range(ts, ts + pd.Timedelta('1D'), freq='1H')[:-1])
                                 for ts in timestamps], ignore_index=True)
-
         new_data.coords['t'] = new_t_coord.as_matrix()
 
+        # Generate weights
+        # weight of each timestep = number of timesteps in this timestep's cluster
+        # divided by timesteps per day (since we're grouping days together and
+        # a cluster consisting of 1 day = 24 hours should have weight of 1)
+        value_counts = clusters_timeseries.value_counts()  / ts_per_day
+        # And turn the index into dates (days)
+        value_counts = pd.DataFrame({
+            'dates': timestamps,
+            'counts': value_counts}).set_index('dates')['counts']
+
     elif how == 'closest':
-        new_data, chosen_days = get_closest_days_from_clusters(data, new_data, clusters)
+        new_data, chosen_ts = get_closest_days_from_clusters(data, new_data, clusters)
         # Deal with the case where more than one cluster has the same closest day
         # An easy way is to rename the original clusters with the chosen days
-        c = c.map(lambda x: chosen_days[x])
+        # So at this point, clusterdays_timeseries maps all timesteps to the day
+        # of year of the cluster the timestep belongs to
+        clusterdays_timeseries = clusters_timeseries.map(lambda x: chosen_ts[x])
+        value_counts = clusterdays_timeseries.value_counts() / ts_per_day
 
-    # == DETERMINE WEIGHTS ==
-    value_counts = c.value_counts()
-    weights = c.map(lambda x: value_counts[x])
-
-    weights = weights / ts_per_day
-
+    weights = (value_counts.reindex(_hourly_from_daily_index(value_counts.index))
+                           .fillna(method='ffill'))
     new_data['_weights'] = xr.DataArray(weights, dims=['t'])
     new_data['_time_res'] = xr.DataArray(np.ones(len(new_data['t'])) * (24 / ts_per_day),
                                          coords={'t': new_data['t']})

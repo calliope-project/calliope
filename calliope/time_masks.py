@@ -34,8 +34,40 @@ def zero(data, tech, var='r', locations=None):
     return s[s == 0].index
 
 
+def _concat_indices(indices):
+    return pd.concat([i.to_series() for i in indices]).sort_index().index
+
+
+def _get_minmax_timestaps(series, length, n, how='max', padding=None):
+    # Get the max/min timestamps
+    group = series.groupby(pd.TimeGrouper(length)).mean()
+    timesteps = []
+    for _ in range(n):
+        if how == 'max':
+            ts = group.idxmax()
+        elif how == 'min':
+            ts = group.idxmin()
+        timesteps.append(ts)
+        group = group.drop(ts)
+
+    # Get range of timestamps including padding
+    full_timesteps = []
+    for ts in timesteps:
+        ts_end = ts + pd.Timedelta(length)
+        if padding is not None:
+            ts -= pd.Timedelta(padding)
+            ts_end += pd.Timedelta(padding)
+        ts_range = pd.date_range(ts, ts_end, freq='1H')[:-1]
+        full_timesteps.append(ts_range)
+
+    ts_index = _concat_indices(full_timesteps)
+
+    return ts_index
+
+
 def extreme(data, tech, var='r', how='max',
-            length='1D', locations=None, padding=None):
+            length='1D', n=1, groupby_length=None,
+            locations=None, padding=None):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
     ``tech`` across the given list of ``locations`` is either minmal
@@ -50,8 +82,13 @@ def extreme(data, tech, var='r', how='max',
         default 'r'
     how : str, optional
         'max' (default) or 'min'.
-    length : int, optional
-        Timesteps to mask, default is 24.
+    length : str, optional
+        Defaults to '1D'.
+    n : int, optional
+        Number of periods of `length` to look for, default is 1.
+    groupby : str, optional
+        Group time series and return `n` periods of `length`
+        for each group.
     locations : list, optional
         List of locations to use, if None, uses all available locations.
     padding : int, optional
@@ -60,20 +97,17 @@ def extreme(data, tech, var='r', how='max',
 
     """
     arr = _get_array(data, var, tech, locations)
-    s = arr.mean(dim='x').to_pandas()  # Get a t-indexed Series
+    full_series = arr.mean(dim='x').to_pandas()  # Get a t-indexed Series
 
-    # Get the max or min timestamp
-    group = s.groupby(pd.TimeGrouper(length)).mean()
-    if how == 'max':
-        ts = group.idxmax()
-    elif how == 'min':
-        ts = group.idxmin()
+    if groupby_length:
+        groupby = pd.TimeGrouper(groupby_length)
+        group_indices = []
+        grouping = full_series.groupby(groupby)
+        for k in grouping.groups.keys():
+            s = grouping.get_group(k)
+            group_indices.append(_get_minmax_timestaps(s, length, n, how, padding))
+        ts_index = _concat_indices(group_indices)
+    else:
+        ts_index = _get_minmax_timestaps(full_series, length, n, how, padding)
 
-    # Get range of timestamps including padding
-    ts_end = ts + pd.Timedelta(length)
-    if padding is not None:
-        ts -= pd.Timedelta(padding)
-        ts_end += pd.Timedelta(padding)
-    ts_range = pd.date_range(ts, ts_end, freq='1H')[:-1]
-
-    return ts_range
+    return ts_index

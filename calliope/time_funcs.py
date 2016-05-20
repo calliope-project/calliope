@@ -39,21 +39,23 @@ def normalize(data):
     return ds
 
 
-def _combine_datasets(data0, data1, only_copy_non_t_vars=False):
-    # Manually copy over variables not in `t`. If we don't do this,
-    # these vars get polluted with a superfluous `t` dimension
+def _copy_non_t_vars(data0, data1):
+    """Copies non-t-indexed variables from data0 into data1, then
+    returns data1"""
     non_t_vars = [v for v in data0.data_vars
                   if 't' not in data0[v].dims]
+    # Manually copy over variables not in `t`. If we don't do this,
+    # these vars get polluted with a superfluous `t` dimension
     for v in non_t_vars:
         data1[v] = data0[v]
+    return data1
 
-    if only_copy_non_t_vars:
-        data_new = data1
-    else:
-        # Combine the clustered with the old unclustered data
-        data_new = xr.concat([data0, data1], dim='t')
-        # Ensure time dimension is ordered
-        data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+
+def _combine_datasets(data0, data1):
+    """Concatenates data0 and data1 along the t dimension"""
+    data_new = xr.concat([data0, data1], dim='t')
+    # Ensure time dimension is ordered
+    data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
 
     return data_new
 
@@ -79,10 +81,10 @@ def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
 
     """
     # Only apply clustering function on subset of masked timesteps
-    if timesteps is not None:
-        data_to_cluster = data.loc[{'t': timesteps}]
-    else:
+    if timesteps is None:
         data_to_cluster = data
+    else:
+        data_to_cluster = data.loc[{'t': timesteps}]
 
     data_normalized = normalize(data_to_cluster)
 
@@ -96,10 +98,12 @@ def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
                                                     how=how)
 
     if timesteps is None:
-        data_new = _combine_datasets(data, data_new, only_copy_non_t_vars=True)
+        data_new = _copy_non_t_vars(data, data_new)
     else:
         # Drop timesteps from old data
+        data_new = _copy_non_t_vars(data, data_new)
         data_new = _combine_datasets(data.drop(timesteps, dim='t'), data_new)
+        data_new = _copy_non_t_vars(data, data_new)
 
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
@@ -153,7 +157,9 @@ def resample(data, timesteps, resolution):
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
+        data_rs = _copy_non_t_vars(data, data_rs)
         data_rs = _combine_datasets(data.drop(timesteps, dim='t'), data_rs)
+        data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
         data_rs.attrs['opmode_safe'] = False
 
