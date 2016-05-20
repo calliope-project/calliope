@@ -162,14 +162,12 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
         lookup_array = data['r'].loc[dict(y=subset_y)].values
         lookup_array = lookup_array.reshape((4, days, ts_per_day, 20)).transpose(1, 0, 2, 3)
 
-        # +1 because w are zero-indexed but want the day of year
-        chosen_day_index = find_nearest_vector_index(lookup_array, target) + 1
-        chosen_days[cluster] = chosen_day_index
+        chosen_days[cluster] = find_nearest_vector_index(lookup_array, target)
 
     days_list = sorted(list(set(chosen_days.values())))
-    new_t_coord = dtindex[np.in1d(dtindex.dayofyear, days_list)]
+    new_t_coord = _hourly_from_daily_index(dtindex[::ts_per_day][days_list])
 
-    chosen_day_timestamps = {k: dtindex[dtindex.dayofyear == v][0]
+    chosen_day_timestamps = {k: dtindex[::ts_per_day][v]
                              for k, v in chosen_days.items()}
 
     new_data = data.loc[dict(t=new_t_coord)]
@@ -219,7 +217,7 @@ def map_clusters_to_data(data, clusters, how):
         # weight of each timestep = number of timesteps in this timestep's cluster
         # divided by timesteps per day (since we're grouping days together and
         # a cluster consisting of 1 day = 24 hours should have weight of 1)
-        value_counts = clusters_timeseries.value_counts()  / ts_per_day
+        value_counts = clusters_timeseries.value_counts() / ts_per_day
         # And turn the index into dates (days)
         value_counts = pd.DataFrame({
             'dates': timestamps,
