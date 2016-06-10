@@ -43,7 +43,7 @@ def plot_carrier_production(solution, carrier='power', subset=dict(),
 
     """
     data = solution['e'].loc[dict(c=carrier, **subset)].sum(dim='x')
-    return plot_timeseries(solution, data, carrier=carrier, **kwargs)
+    return plot_timeseries(solution, data, carrier=carrier, demand='demand_{}'.format(carrier), **kwargs)
 
 
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
