@@ -1201,6 +1201,7 @@ class Model(BaseModel):
         sol = sol.merge(self.get_totals())
         sol = sol.merge(self.get_node_parameters())
         sol = sol.merge(self.get_costs().to_dataset(name='costs'))
+        sol = sol.merge(self.get_revenue().to_dataset(name='revenue'))
         self.solution = sol
         self.process_solution()
 
@@ -1310,6 +1311,30 @@ class Model(BaseModel):
             cost_variable = cost_op_var + cost_op_fuel + cost_op_rb
 
         return cost_fixed + cost_variable
+
+    def get_revenue(self, t_subset=None):
+        """Get revenue."""
+        if t_subset is None:
+            revenue_fixed = self.get_var('revenue_fixed')
+            revenue_variable = self.get_var('revenue_var')
+        else:
+            # len_adjust is the fraction of construction and fixed costs
+            # that is accrued to the chosen t_subset. NB: construction and fixed
+            # operation revenue are calculated for a whole year
+            len_adjust = (sum(self.data['_time_res'].to_series().iloc[t_subset])
+                          / sum(self.data['_time_res'].to_series()))
+
+            # Adjust for the fact that fixed costs accrue over a smaller length
+            # of time as per len_adjust
+            revenue_fixed = self.get_var('revenue_fixed')
+            revenue_fixed = revenue_fixed * len_adjust
+
+            # Adjust for the fact that variable costs are only accrued over
+            # the t_subset period
+            revenue_variable = self.get_var('cost_op_variable')[{'t': t_subset}].sum(dim='t')
+
+        return revenue_fixed + revenue_variable
+
 
     def get_totals(self, t_subset=None, apply_weights=True):
         """Get total produced and consumed per technology and location."""
@@ -1501,6 +1526,7 @@ class Model(BaseModel):
     def load_solution_iterative(self, node_vars, total_vars, cost_vars):
         totals = sum(total_vars)
         costs = sum(cost_vars)
+        revenue = sum(rev_vars)
         node = xr.concat(node_vars, dim='t')
         # We are simply concatenating the same timesteps over and over again
         # when we concatenate the indivudal runs, so we need to set the
@@ -1510,6 +1536,7 @@ class Model(BaseModel):
         sol = self.get_node_parameters()
         sol = sol.merge(totals)
         sol = sol.merge(costs)
+        sol = sol.merge(revenue)
         sol = sol.merge(node)
         self.solution = sol
         self.process_solution()
@@ -1570,6 +1597,8 @@ class Model(BaseModel):
             total_vars.append(totals)
             costs = self.get_costs(t_subset=slice(0, stepsize)).to_dataset(name='costs')
             cost_vars.append(costs)
+            revenue = self.get_revenue(t_subset=slice(0, stepsize)).to_dataset(name='revenue')
+            rev_vars.append(revenue)
 
             timesteps = [time_res.at[t] for t in self.m.t][0:stepsize]
             d.attrs['time_res_sum'] += sum(timesteps)
