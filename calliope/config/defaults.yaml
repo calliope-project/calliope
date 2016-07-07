@@ -85,6 +85,11 @@ techs:
                 om_var: 0  # Variable O&M costs (per kWh of ``es_prod``)
                 om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
                 om_rb: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
+        revenue:
+            default:
+                sub_var: 0 #variable subsidy (per kWh of ``es_prod`` or ``es_con``)
+                sub_cap: 0 #fixed subsidy (per kW gross) ##e_cap.max must be defined (and not infinite) if using this with demand
+                sub_annual: 0 #annual subsidy (per kW of ``e_cap``) ##e_cap.max must be defined (and not infinite) if using this with demand
         costs_per_distance:
             default:
                 e_cap: 0
