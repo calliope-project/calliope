@@ -433,6 +433,9 @@ def node_costs(model):
     * cost_op_var: variable operation costs
     * cost_op_fuel: primary resource fuel costs
     * cost_op_rb: secondary resource fuel costs
+    * revenue_var: variable revenue (operation + fuel)
+    * revenue_fixed: fixed revenue
+    * revenue: total revenue
 
     """
     m = model.m
@@ -440,6 +443,7 @@ def node_costs(model):
     weights = model.data['_weights'].to_series()
 
     cost_getter = utils.cost_getter(model.get_option)
+    rev_getter = utils.cost_getter(model.get_option, costs_type='revenue')
     depreciation_getter = utils.depreciation_getter(model.get_option)
     cost_per_distance_getter = utils.cost_per_distance_getter(model.get_option)
 
@@ -450,6 +454,9 @@ def node_costs(model):
     @utils.memoize
     def _cost(cost, y, k, x=None):
         return cost_getter(cost, y, k, x=x)
+
+    def _revenue(cost, y, k, x=None):
+        return rev_getter(cost, y, k, x=x)
 
     @utils.memoize
     def _cost_per_distance(cost, y, k, x):
@@ -463,6 +470,9 @@ def node_costs(model):
     m.cost_op_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
     m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
     m.cost_op_rb = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
+    m.revenue_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
+    m.revenue_fixed = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.revenue = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
@@ -566,6 +576,36 @@ def node_costs(model):
         else:
             return m.cost_op_rb[y, x, t, k] == 0
 
+    def c_revenue_var_rule(m, y, x, t, k):
+        carrier = model.get_option(y + '.carrier')
+        if y in m.y_demand:
+            return (m.revenue_var[y, x, t, k] ==
+                _revenue('sub_var', y, k, x) * weights.loc[t]
+                * -m.es_con[carrier, y, x, t])
+        else:
+            return (m.revenue_var[y, x, t, k] ==
+                _revenue('sub_var', y, k, x) * weights.loc[t]
+                * m.es_prod[carrier, y, x, t])
+
+    def c_revenue_fixed_rule(m, y, x, k):
+        revenue = (sum(time_res * weights) / 8760 * 
+            (_revenue('sub_cap', y, k, x) 
+            * _depreciation_rate(y, k)
+            + _revenue('sub_annual', y, k, x)))
+        if y in m.y_demand and revenue > 0:
+            e = exceptions.ModelError
+            raise e('Cannot receive fixed revenue at a demand node, i.e. '
+                    '{}'.format(y))
+        else:
+            return (m.revenue_fixed[y, x, k] == 
+             revenue * m.e_cap[y, x])
+
+
+    def c_revenue_rule(m, y, x, k):
+        return (m.revenue[y, x, k] == m.revenue_fixed[y, x, k] +
+            sum(m.revenue_var[y, x, t, k] for t in m.t))
+
+
     # Constraints
     m.c_cost = po.Constraint(m.y, m.x, m.k, rule=c_cost_rule)
     m.c_cost_con = po.Constraint(m.y, m.x, m.k, rule=c_cost_con_rule)
@@ -574,6 +614,9 @@ def node_costs(model):
     m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_var_rule)
     m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_fuel_rule)
     m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_rb_rule)
+    m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_revenue_var_rule)
+    m.c_revenue_fixed = po.Constraint(m.y, m.x, m.k, rule=c_revenue_fixed_rule)
+    m.c_revenue = po.Constraint(m.y, m.x, m.k, rule=c_revenue_rule)
 
 
 def model_constraints(model):
