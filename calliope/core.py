@@ -39,9 +39,6 @@ from . import transmission
 from . import time_masks
 from . import utils
 
-# Parameters that may be defined as time series - only constraints at present
-#self.config_model.timeseries_params = ['r', 'e_eff', 'r_eff', 'rb_eff', 'c_eff', 's_loss', 'e_prod', 'e_con', 'e_cap_min_use']
-
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
 
@@ -173,16 +170,28 @@ class Model(BaseModel):
         allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
                                     'e_prod', 'e_con', 'c_eff', 'e_eff', 
                                     'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
+        allowed_timeseries_data = ['om_var', 'om_fuel',
+                                'om_rb'] #variable costs/revenue only
         config_string = str(self.config_model)
         for file_loc in re.finditer("': 'file",config_string):
             #find instances of reference to file loading and strip out the info as to the constraint
             indiv_timeseries_param = config_string[file_loc.start()-20:file_loc.start()].rsplit("'")[-1]
-            if any(indiv_timeseries_param in i for i in allowed_timeseries_params):
-                time_series_data.append(indiv_timeseries_param)
+            if any(indiv_timeseries_param in i for i in allowed_timeseries_constraints):
+                time_series_constraint.append(indiv_timeseries_param)
+            elif any(indiv_timeseries_param in i for i in allowed_timeseries_data):
+                # Get parent data ('costs', 'revenue') for the data source
+                parent_type = config_string[file_loc.start()-100:file_loc.start()].rsplit("': {'")[-3]
+                parent_type = parent_type.rsplit("'")[-1]
+                # Get cost type for data source ('monetary', etc.)
+                cost_type = config_string[file_loc.start()-100:file_loc.start()].rsplit("': {'")[-2]
+                # Check if that configuration already exists, add to list if not
+                if str(time_series_data).find(str([parent_type, cost_type, indiv_timeseries_param])) == -1:
+                    time_series_data.append([parent_type, cost_type, indiv_timeseries_param])
             else:
                 raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
-        #send list of paramters to config_model AttrDict
-        self.config_model['timeseries_params'] = list(set(time_series_data))
+        #send list of parameters to config_model AttrDict
+        self.config_model['timeseries_constraints'] = list(set(time_series_constraint))
+        self.config_model['timeseries_data'] = time_series_data
 
         # Read data and apply time resolution adjustments
         self.read_data()
@@ -867,6 +876,31 @@ class Model(BaseModel):
             # Turn param_data into a DataArray
             data[param] = xr.Dataset(param_data).to_array(dim='y')
 
+        for param in self.config_model.timeseries_data: #costs and revenue
+            param_data = {}
+            for y in self._sets['y']:
+                # First, set up each parameter without considering
+                # potential per-location (per-x) overrides
+                option = self.get_cost(param[2], y, param[1], costs_type=param[0])
+
+                df = self._read_param_for_tech(param, y, time_res, option, x=None)
+                
+                for x in self._sets['x']:
+                    # Check for each x whether it defines an override
+                    # that is different from the generic option, and if so,
+                    # update the dataframe
+                    option_x = self.get_cost(param[2], y, param[1], costs_type=param[0], x=x)
+                    if option != option_x:
+                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
+
+
+                self._validate_param_df(param, y, df)  # Have all `x` been set?
+
+                param_data[y] = xr.DataArray(df, dims=['t', 'x'])
+
+            # Turn param_data into a DataArray
+            data['_'.join(param)] = xr.Dataset(param_data).to_array(dim='y')
+
         dataset = xr.Dataset(data)
         dataset.attrs = attrs
 
@@ -1029,6 +1063,17 @@ class Model(BaseModel):
             # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
             initializer = self._param_populator(self.data, param)
             setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer, mutable=True))
+
+        s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
+        s_init_initializer = lambda m, y, x: float(s_init[x, y])
+        m.s_init = po.Param(m.y_pc, m.x, initialize=s_init_initializer,
+                            mutable=True)
+        
+        # Probably unnecessary addition to have these as Pyomo parameters.
+        for param in self.config_model.timeseries_data:
+            # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
+            initializer = self._param_populator(self.data, '_'.join(param))
+            setattr(m, '_'.join(param), po.Param(m.y, m.x, m.t, initialize=initializer, mutable=True))
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
