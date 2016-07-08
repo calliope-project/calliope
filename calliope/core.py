@@ -186,24 +186,19 @@ class Model(BaseModel):
                                     'e_prod', 'e_con', 'e_eff',
                                     'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
         allowed_timeseries_data = ['om_var', 'om_fuel',
-                                'om_rb', 'sub_var'] #variable costs/revenue only
-        config_string = str(self.config_model)
-        for file_loc in re.finditer("': 'file",config_string):
-            #find instances of reference to file loading and strip out the info as to the constraint
-            indiv_timeseries_param = config_string[file_loc.start()-20:file_loc.start()].rsplit("'")[-1]
-            if indiv_timeseries_param in allowed_timeseries_constraints:
-                time_series_constraint.append(indiv_timeseries_param)
-            elif indiv_timeseries_param in allowed_timeseries_data:
-                # Get parent data ('costs', 'revenue') for the data source
-                parent_type = config_string[file_loc.start()-100:file_loc.start()].rsplit("': {'")[-3]
-                parent_type = parent_type.rsplit("'")[-1]
-                # Get cost type for data source ('monetary', etc.)
-                cost_type = config_string[file_loc.start()-100:file_loc.start()].rsplit("': {'")[-2]
-                # Check if that configuration already exists, add to list if not
-                if str(time_series_data).find(str([parent_type, cost_type, indiv_timeseries_param])) == -1:
-                    time_series_data.append([parent_type, cost_type, indiv_timeseries_param])
-            else:
-                raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
+                                'om_rb'] #variable costs/revenue only
+        for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
+            if isinstance(v,str):
+                if v.startswith("file"): #find any refering to a file
+                    params = k.split('.') #split the elements of the key to get constraint/cost type
+                    if params[-1] in allowed_timeseries_constraints: #look for e.g. e_eff
+                        time_series_constraint.append(params[-1])
+                    elif params[-1] in allowed_timeseries_data: #look for e.g. om_fuel
+                        #make sure list e.g. ['costs','monetary','om_fuel'] doesn't already exist
+                        if str(time_series_data).find(str([params[-3],params[-2],params[-1]])) == -1: 
+                            time_series_data.append([params[-3],params[-2],params[-1]])
+                    else:
+                        raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
         #send list of parameters to config_model AttrDict
         self.config_model['timeseries_constraints'] = list(set(time_series_constraint))
         self.config_model['timeseries_data'] = time_series_data
