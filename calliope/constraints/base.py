@@ -413,16 +413,19 @@ def node_parasitics(model):
                 == m.es_prod[c, y, x, t]
                 * get_any_option(y + '.constraints.c_eff', x=x, t=t))
 
-    def c_ec_con_rule(m, c, y, x, t):
-        if y in m.y_trans or y in m.y_conv:
-            # Ensure that transmission and conversion technologies
-            # do not double count c_eff
-            c_eff = 1.0
-        else:
-            c_eff = get_any_option(y + '.constraints.c_eff', x=x, t=t)
-        return (m.ec_con[c, y, x, t]
-                == m.es_con[c, y, x, t]
-                / c_eff)
+    def c_ec_con_rule(m, c, y, x, t):                                       
+        if y in m.y_trans or y in m.y_conv:                                 
+            # Ensure that transmission and conversion technologies          
+            # do not double count c_eff                                     
+            c_eff = 1.0                                                     
+        else:                                                               
+            c_eff = get_any_option(y + '.constraints.c_eff', x=x, t=t)      
+        if c_eff > 0:                                                       
+            return (m.ec_con[c, y, x, t]                                    
+                    == m.es_con[c, y, x, t]                                 
+                    / c_eff)                                                
+        else:                                                               
+            return (m.ec_con[c, y, x, t] == 0)   
 
     # Constraints
     m.c_ec_prod = po.Constraint(m.c, m.y_p, m.x, m.t, rule=c_ec_prod_rule)
@@ -547,29 +550,28 @@ def node_costs(model):
         else:
             return m.cost_op_var[y, x, t, k] == 0
 
-
     def c_cost_op_fuel_rule(m, y, x, t, k):
-        if y in m.y:
+        r_eff = get_any_option(y + '.constraints.r_eff', x=x, t=t)
+        if r_eff > 0:
             # Dividing by r_eff here so we get the actual r used, not the rs
             # moved into storage...
             return (
                 m.cost_op_fuel[y, x, t, k] ==
                 _cost('om_fuel', y, k, x) *
                 weights.loc[t] *
-                (m.rs[y, x, t] /
-                    get_any_option(y + '.constraints.r_eff', x=x, t=t))
+                (m.rs[y, x, t] / r_eff)
             )
         else:
             return m.cost_op_fuel[y, x, t, k] == 0
 
     def c_cost_op_rb_rule(m, y, x, t, k):
-        if y in m.y_rb:
+        rb_eff = get_any_option(y + '.constraints.rb_eff', x=x, t=t)
+        if y in m.y_rb and rb_eff > 0:
             return (
                 m.cost_op_rb[y, x, t, k] ==
                 _cost('om_rb', y, k, x) *
                 weights.loc[t] *
-                (m.rbs[y, x, t] /
-                    get_any_option(y + '.constraints.rb_eff', x=x, t=t))
+                (m.rbs[y, x, t] / rb_eff)
             )
         else:
             return m.cost_op_rb[y, x, t, k] == 0
