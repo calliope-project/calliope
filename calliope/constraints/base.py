@@ -543,7 +543,7 @@ def node_costs(model):
             carrier = model.get_option(y + '.carrier')
             return (
                 m.cost_op_var[y, x, t, k] ==
-                _cost('om_var', y, k, x) *
+                get_any_option(y + '.costs.' + k + '.om_var', x=x, t=t) *
                 weights.loc[t] *
                 m.es_prod[carrier, y, x, t]
             )
@@ -558,7 +558,7 @@ def node_costs(model):
             # moved into storage...
             return (
                 m.cost_op_fuel[y, x, t, k] ==
-                _cost('om_fuel', y, k, x) *
+                get_any_option(y + '.costs.' + k + '.om_fuel', x=x, t=t) *
                 weights.loc[t] *
                 (m.rs[y, x, t] / r_eff)
             )
@@ -570,7 +570,7 @@ def node_costs(model):
         if y in m.y_rb and rb_eff > 0:
             return (
                 m.cost_op_rb[y, x, t, k] ==
-                _cost('om_rb', y, k, x) *
+                get_any_option(y + '.costs.' + k + '.om_rb', x=x, t=t) *
                 weights.loc[t] *
                 (m.rbs[y, x, t] / rb_eff)
             )
