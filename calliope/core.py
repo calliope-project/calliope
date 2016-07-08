@@ -164,6 +164,7 @@ class Model(BaseModel):
         # Populate self.config_run and self.config_model
         self.initialize_configuration(config_run, override)
         self._get_option = utils.option_getter(self.config_model)
+        self.get_cost = utils.cost_getter(self._get_option)
 
         # Set random seed if specified in run configuration
         random_seed = self.config_run.get('random_seed', None)
@@ -179,18 +180,20 @@ class Model(BaseModel):
         self.initialize_sets()
 
         # Get time series data
+        time_series_constraint = []
         time_series_data = []
         allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
-                                    'e_prod', 'e_con', 'c_eff', 'e_eff',
-                                    'e_cap_min_use', 'e_ramping']
-        allowed_timeseries_data = ['om_var', 'om_fuel', 'om_rb'] #variable costs/revenue only
+                                    'e_prod', 'e_con', 'e_eff',
+                                    'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
+        allowed_timeseries_data = ['om_var', 'om_fuel',
+                                'om_rb', 'sub_var'] #variable costs/revenue only
         config_string = str(self.config_model)
         for file_loc in re.finditer("': 'file",config_string):
             #find instances of reference to file loading and strip out the info as to the constraint
             indiv_timeseries_param = config_string[file_loc.start()-20:file_loc.start()].rsplit("'")[-1]
-            if any(indiv_timeseries_param in i for i in allowed_timeseries_constraints):
+            if indiv_timeseries_param in allowed_timeseries_constraints:
                 time_series_constraint.append(indiv_timeseries_param)
-            elif any(indiv_timeseries_param in i for i in allowed_timeseries_data):
+            elif indiv_timeseries_param in allowed_timeseries_data:
                 # Get parent data ('costs', 'revenue') for the data source
                 parent_type = config_string[file_loc.start()-100:file_loc.start()].rsplit("': {'")[-3]
                 parent_type = parent_type.rsplit("'")[-1]
@@ -726,8 +729,7 @@ class Model(BaseModel):
                     'Invalid entries: {}'.format(filename, entries))
         return df
 
-    def _get_filename(self, param, y, x):
-        option = self.get_option(y + '.constraints.' + param, x=x)
+    def _get_filename(self, param, option, y, x):
         # If we have a string, it must be `file` or `file=..`
         if not option.startswith('file'):
             e = exceptions.ModelError
@@ -741,7 +743,10 @@ class Model(BaseModel):
             except IndexError:
                 # If set to just 'file', set filename with y and
                 # param, e.g. 'csp_r_eff.csv'
-                f = y + '_' + param + '.csv'
+                if isinstance(param, str):
+                    f = y + '_' + param + '.csv'
+                else:
+                    f = y + '_' + '_'.join(param) + '.csv'
         return f
 
     def _apply_x_map(self, df, x_map, x=None):
@@ -776,14 +781,13 @@ class Model(BaseModel):
             df[this_x] = df[x_m]
         return df
 
-    def _read_param_for_tech(self, param, y, time_res, x=None):
-        option = self.get_option(y + '.constraints.' + param, x=x)
-        if option != float('inf'):
+    def _read_param_for_tech(self, param, y, time_res, option, x=None):
+        if option != float('inf') and isinstance(param, str): #added check that it is a constraint (string param)
             self._sets['y_def_' + param].add(y)
         k = '{}.{}:{}'.format(param, y, x)
 
         if isinstance(option, str):  # if option is string, read a file
-            f = self._get_filename(param, y, x)
+            f = self._get_filename(param, option, y, x)
             df = self._get_option_from_csv(f)
             self.debug.data_sources.set_key(k, 'file:' + f)
 
@@ -892,25 +896,27 @@ class Model(BaseModel):
         data['s_init'] = xr.DataArray(s_init)
 
         # Parameters that may be defined over (x, y, t)
-        ts_sets = {'y_def_' + k: set() for k in _TIMESERIES_PARAMS}
+        ts_sets = {'y_def_' + k: set() for k in self.config_model.timeseries_constraints}
         self._sets = {**self._sets, **ts_sets}
 
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_constraints: #constraints
             param_data = {}
             for y in self._sets['y']:
                 # First, set up each parameter without considering
                 # potential per-location (per-x) overrides
-                df = self._read_param_for_tech(param, y, time_res, x=None)
                 k = y + '.constraints.' + param
-
                 option = self.get_option(k)
+
+                df = self._read_param_for_tech(param, y, time_res, option, x=None)
+
                 for x in self._sets['x']:
                     # Check for each x whether it defines an override
                     # that is different from the generic option, and if so,
                     # update the dataframe
                     option_x = self.get_option(k, x=x)
                     if option != option_x:
-                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, x=x)
+                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
+
 
                 self._validate_param_df(param, y, df)  # Have all `x` been set?
 
@@ -1008,7 +1014,7 @@ class Model(BaseModel):
     def update_parameters(self, t_offset):
         d = self.data
 
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_constraints:
             initializer = self._param_populator(d, param, t_offset)
             y_set = self._sets['y_def_' + param]
             param_object = getattr(self.m, param)
@@ -1093,10 +1099,9 @@ class Model(BaseModel):
         m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
         # Demand technologies
         m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
-        # Technologies with specified `r`
-        m.y_def_r = po.Set(initialize=self._sets['y_def_r'], within=m.y)
-        # Technologies with specified `e_eff`
-        m.y_def_e_eff = po.Set(initialize=self._sets['y_def_e_eff'], within=m.y)
+        ##TIMESERIES vars
+        for param in self.config_model.timeseries_constraints:
+            setattr(m, 'y_def_'+param, po.Set(initialize = self._sets['y_def_' + param], within=m.y))
         # Technologies that allow `rb`
         m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
         # Technologies with parasitics
@@ -1109,16 +1114,11 @@ class Model(BaseModel):
         # Parameters
         #
 
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_constraints:
             y = getattr(m, 'y_def_' + param)
             # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
             initializer = self._param_populator(self.data, param)
             setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer, mutable=True))
-
-        s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
-        s_init_initializer = lambda m, y, x: float(s_init[x, y])
-        m.s_init = po.Param(m.y_pc, m.x, initialize=s_init_initializer,
-                            mutable=True)
 
         # Probably unnecessary addition to have these as Pyomo parameters.
         for param in self.config_model.timeseries_data:
@@ -1786,7 +1786,7 @@ class Model(BaseModel):
         #     raise exceptions.ModelError('`config_run.output.path` not configured.')
 
         # Add input time series (r and e_eff) alongside the solution
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_constraints:
             subset_name = 'y_def_' + param
             # Only if the set has some members
             if len(self._sets[subset_name]) > 0:
@@ -1800,7 +1800,7 @@ class Model(BaseModel):
             raise ValueError('Unsupported value for `how`: {}'.format(how))
 
         # Remove time series from solution again after writing it to disk
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_constraints:
             if param in self.solution:
                 del self.solution[param]
 
