@@ -439,9 +439,12 @@ def node_parasitics(model):
             c_eff = 1.0
         else:
             c_eff = model.get_option(y + '.constraints.c_eff', x=x)
-        return (m.ec_con[c, y, x, t]
-                == m.es_con[c, y, x, t]
-                / c_eff)
+        if c_eff > 0:
+            return (m.ec_con[c, y, x, t]
+                    == m.es_con[c, y, x, t]
+                    / c_eff)
+        else:
+            return (m.ec_con[c, y, x, t] == 0)
 
     # Constraints
     m.c_ec_prod = po.Constraint(m.c, m.y_p, m.x, m.t, rule=c_ec_prod_rule)
@@ -577,7 +580,7 @@ def node_costs(model):
 
     def c_cost_op_fuel_rule(m, y, x, t, k):
         r_eff = get_constraint_param(model, 'r_eff', y, x, t)
-        try:
+        if r_eff > 0:
             # Dividing by r_eff here so we get the actual r used, not the rs
             # moved into storage...
             return (
