@@ -1523,7 +1523,7 @@ class Model(BaseModel):
                 df.at[index, var] = share.to_pandas()
         return df
 
-    def load_solution_iterative(self, node_vars, total_vars, cost_vars):
+    def load_solution_iterative(self, node_vars, total_vars, cost_vars, rev_vars):
         totals = sum(total_vars)
         costs = sum(cost_vars)
         revenue = sum(rev_vars)
@@ -1564,6 +1564,7 @@ class Model(BaseModel):
         node_vars = []
         total_vars = []
         cost_vars = []
+        rev_vars = []
         d.attrs['time_res_sum'] = 0
         self.generate_model(t_start=steps[0])
         for index, step in enumerate(steps):
@@ -1612,7 +1613,7 @@ class Model(BaseModel):
             storage_state_index = int(storage_state_index)
             d['s_init'] = s[dict(t=storage_state_index)].to_pandas().T
 
-        self.load_solution_iterative(node_vars, total_vars, cost_vars)
+        self.load_solution_iterative(node_vars, total_vars, cost_vars, rev_vars)
 
     def load_results(self):
         """Load results into model instance for access via model variables."""
