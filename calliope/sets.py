@@ -61,6 +61,10 @@ def init_set_y(model, _x):
     _y_con = ([y for y in _y if not model.ischild(y, of='supply')]
               + _y_trans)
 
+    # Subset of technologies that are demand sources
+    _y_demand = [y for y in _y if model.ischild(y, of='demand')]
+
+
     # Subset of technologies that allow rb
     _y_rb = []
     for y in _y:
@@ -86,8 +90,8 @@ def init_set_y(model, _x):
         'y_rb': _y_rb,
         'y_p': _y_p,
         'y_trans': _y_trans,
-        'techs_transmission': transmission_techs
-
+        'techs_transmission': transmission_techs,
+        'y_demand': _y_demand
     }
 
     return sets

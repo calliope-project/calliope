@@ -1030,6 +1030,8 @@ class Model(BaseModel):
         m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y, ordered=True)
         # Conversion technologies
         m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
+        # Demand technologies
+        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
         # Technologies with specified `r`
         m.y_def_r = po.Set(initialize=self._sets['y_def_r'], within=m.y)
         # Technologies with specified `e_eff`
