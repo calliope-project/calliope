@@ -571,7 +571,7 @@ def node_costs(model):
             carrier = model.get_option(y + '.carrier')
             return (
                 m.cost_op_var[y, x, t, k] ==
-                _cost('om_var', y, k, x) *
+                get_any_option(y + '.costs.' + k + '.om_var', x=x, t=t) *
                 weights.loc[t] *
                 m.es_prod[carrier, y, x, t]
             )
@@ -585,7 +585,7 @@ def node_costs(model):
             # moved into storage...
             return (
                 m.cost_op_fuel[y, x, t, k] ==
-                _cost('om_fuel', y, k, x) *
+                get_any_option(y + '.costs.' + k + '.om_fuel', x=x, t=t) *
                 weights.loc[t] *
                 (m.rs[y, x, t] /
                     model.get_option(y + '.constraints.r_eff', x=x))
@@ -595,17 +595,14 @@ def node_costs(model):
 
     def c_cost_op_rb_rule(m, y, x, t, k):
         rb_eff = get_constraint_param(model, 'rb_eff', y, x, t)
-        if y in m.y_rb:
-            try:
-                return (
-                    m.cost_op_rb[y, x, t, k] ==
-                    _cost('om_rb', y, k, x) *
-                    weights.loc[t] *
-                    (m.rbs[y, x, t] / rb_eff)
-                )
-            except: #in case rb_eff is zero, to avoid an infinite value for cost_op_rb
-                return m.cost_op_rb[y, x, t, k] == 0
-        else: #in case rb_eff is zero, to avoid an infinite value for cost_op_rb
+        if y in m.y_rb and rb_eff > 0:
+            return (
+                m.cost_op_rb[y, x, t, k] ==
+                get_any_option(y + '.costs.' + k + '.om_rb', x=x, t=t) *
+                weights.loc[t] *
+                (m.rbs[y, x, t] / rb_eff)
+            )
+        else:
             return m.cost_op_rb[y, x, t, k] == 0
 
     def c_revenue_var_rule(m, y, x, t, k):
