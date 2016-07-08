@@ -173,14 +173,14 @@ class Model(BaseModel):
         allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
                                     'e_prod', 'e_con', 'c_eff', 'e_eff', 
                                     'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
-        config_string = str(self.config_model)
-        for file_loc in re.finditer("': 'file",config_string):
-            #find instances of reference to file loading and strip out the info as to the constraint
-            indiv_timeseries_param = config_string[file_loc.start()-20:file_loc.start()].rsplit("'")[-1]
-            if any(indiv_timeseries_param in i for i in allowed_timeseries_params):
-                time_series_data.append(indiv_timeseries_param)
-            else:
-                raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
+        for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
+            if isinstance(v,str):
+                if v.startswith("file"): #find any refering to a file
+                    params = k.split('.') #split the elements of the key to get constraint
+                    if params[-1] in allowed_timeseries_params: #look for e.g. e_eff
+                        time_series_data.append(params[-1])
+                    else:
+                        raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
         #send list of paramters to config_model AttrDict
         self.config_model['timeseries_params'] = list(set(time_series_data))
 
