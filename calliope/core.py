@@ -170,8 +170,7 @@ class Model(BaseModel):
         allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
                                     'e_prod', 'e_con', 'c_eff', 'e_eff', 
                                     'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
-        allowed_timeseries_data = ['om_var', 'om_fuel',
-                                'om_rb'] #variable costs/revenue only
+        allowed_timeseries_data = ['om_var', 'om_fuel', 'om_rb'] #variable costs/revenue only
         config_string = str(self.config_model)
         for file_loc in re.finditer("': 'file",config_string):
             #find instances of reference to file loading and strip out the info as to the constraint

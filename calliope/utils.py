@@ -515,6 +515,15 @@ def depreciation_getter(option_getter):
     return get_depreciation_rate
 
 
+def any_option_getter(model):
+    """
+    Get any option from the given Model or SolutionModel, including
+    ``costs.`` or ``costs_per_distance.`` options
+
+    """
+    get_cost = cost_getter(model.get_option)
+    get_cost_pd = cost_per_distance_getter(model.get_option)
+
     def get_any_option(option, x=None, t=None):
         if 'costs.' in option:
             if t and x:
