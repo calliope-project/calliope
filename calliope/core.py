@@ -640,16 +640,27 @@ class Model(BaseModel):
         _c = list(_c)
         self._sets['c'] = _c
 
-        # k: cost classes
-        classes = [list(self.config_model.techs[k].costs.keys())
+        # kc: cost classes
+        classes_c = [list(self.config_model.techs[k].costs.keys())
                    for k in self.config_model.techs
                    if k != 'defaults'  # Prevent 'default' from entering set
                    if 'costs' in self.config_model.techs[k]]
         # Flatten list and make sure 'monetary' is in it
-        classes = ([i for i in itertools.chain.from_iterable(classes)]
+        classes_c = ([i for i in itertools.chain.from_iterable(classes_c)]
                    + ['monetary'])
         # Remove any duplicates by going from list to set and back
-        self._sets['k'] = list(set(classes))
+        self._sets['kc'] = list(set(classes_c))
+
+        # kr: revenue classes
+        classes_r = [list(self.config_model.techs[k].revenue.keys())
+                   for k in self.config_model.techs
+                   if k != 'defaults'  # Prevent 'default' from entering set
+                   if 'revenue' in self.config_model.techs[k]]
+        # Flatten list and make sure 'monetary' is in it
+        classes_r = ([i for i in itertools.chain.from_iterable(classes_r)]
+                   + ['monetary'])
+        # Remove any duplicates by going from list to set and back
+        self._sets['kr'] = list(set(classes_r))
 
         # Locations settings matrix and transmission technologies
         self._locations = locations.generate_location_matrix(
@@ -1015,7 +1026,9 @@ class Model(BaseModel):
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
         # Cost classes
-        m.k = po.Set(initialize=self._sets['k'], ordered=True)
+        m.kc = po.Set(initialize=self._sets['kc'], ordered=True)
+        # Revenue classes
+        m.kr = po.Set(initialize=self._sets['kr'], ordered=True)
         #
         # Technologies and various subsets of technologies
         #
@@ -1380,8 +1393,7 @@ class Model(BaseModel):
     def get_revenue(self, t_subset=None):
         """Get revenue."""
         if t_subset is None:
-            revenue_fixed = self.get_var('revenue_fixed')
-            revenue_variable = self.get_var('revenue_var')
+            return self.get_var('revenue')
         else:
             # len_adjust is the fraction of construction and fixed costs
             # that is accrued to the chosen t_subset. NB: construction and fixed
@@ -1398,7 +1410,7 @@ class Model(BaseModel):
             # the t_subset period
             revenue_variable = self.get_var('revenue_variable')[{'t': t_subset}].sum(dim='t')
 
-        return revenue_fixed + revenue_variable
+            return revenue_fixed + revenue_variable
 
 
     def get_totals(self, t_subset=None, apply_weights=True):
@@ -1430,12 +1442,12 @@ class Model(BaseModel):
         """
         sol = self.solution
         cost_dict = {}
-        for cost in self._sets['k']:
+        for cost in self._sets['kc']:
             carrier_dict = {}
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
                 with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                    lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                    lc = sol['costs'].loc[dict(kc=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
@@ -1445,7 +1457,7 @@ class Model(BaseModel):
                 lc = lc.replace(np.inf, 0)
                 carrier_dict[carrier] = lc
             cost_dict[cost] = xr.Dataset(carrier_dict).to_array(dim='c')
-        arr = xr.Dataset(cost_dict).to_array(dim='k')
+        arr = xr.Dataset(cost_dict).to_array(dim='kc')
         return arr
 
     def _get_time_res_sum(self):
@@ -1505,9 +1517,9 @@ class Model(BaseModel):
         df = pd.DataFrame({'cf': cf})
 
         # Total (over locations) levelized costs per carrier
-        for k in sorted(sol['levelized_cost'].coords['k'].values):
+        for k in sorted(sol['levelized_cost'].coords['kc'].values):
             with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
+                df['levelized_cost_' + k] = (sol['costs'].loc[dict(kc=k)].sum(dim='x')
                                    / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
