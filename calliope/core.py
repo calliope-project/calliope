@@ -1380,7 +1380,7 @@ class Model(BaseModel):
         """
         sol = self.solution
         cost_dict = {}
-        for cost in self._sets['k']:
+        for cost in self._sets['kc']:
             carrier_dict = {}
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
