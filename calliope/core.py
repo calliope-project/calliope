@@ -1333,7 +1333,7 @@ class Model(BaseModel):
 
             # Adjust for the fact that variable costs are only accrued over
             # the t_subset period
-            revenue_variable = self.get_var('cost_op_variable')[{'t': t_subset}].sum(dim='t')
+            revenue_variable = self.get_var('revenue_variable')[{'t': t_subset}].sum(dim='t')
 
         return revenue_fixed + revenue_variable
 
