@@ -463,16 +463,16 @@ def node_costs(model):
         return cost_per_distance_getter(cost, y, k, x)
 
     # Variables
-    m.cost = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_con = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_op_fixed = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_op_variable = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.cost_op_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
-    m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
-    m.cost_op_rb = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
-    m.revenue_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
-    m.revenue_fixed = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    m.revenue = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
+    m.cost = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
+    m.cost_con = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
+    m.cost_op_fixed = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
+    m.cost_op_variable = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
+    m.cost_op_var = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
+    m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
+    m.cost_op_rb = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
+    m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
+    m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
+    m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
@@ -607,16 +607,16 @@ def node_costs(model):
 
 
     # Constraints
-    m.c_cost = po.Constraint(m.y, m.x, m.k, rule=c_cost_rule)
-    m.c_cost_con = po.Constraint(m.y, m.x, m.k, rule=c_cost_con_rule)
-    m.c_cost_op_fixed = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_fixed_rule)
-    m.c_cost_op_variable = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_variable_rule)
-    m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_var_rule)
-    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_fuel_rule)
-    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_rb_rule)
-    m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_revenue_var_rule)
-    m.c_revenue_fixed = po.Constraint(m.y, m.x, m.k, rule=c_revenue_fixed_rule)
-    m.c_revenue = po.Constraint(m.y, m.x, m.k, rule=c_revenue_rule)
+    m.c_cost = po.Constraint(m.y, m.x, m.kc, rule=c_cost_rule)
+    m.c_cost_con = po.Constraint(m.y, m.x, m.kc, rule=c_cost_con_rule)
+    m.c_cost_op_fixed = po.Constraint(m.y, m.x, m.kc, rule=c_cost_op_fixed_rule)
+    m.c_cost_op_variable = po.Constraint(m.y, m.x, m.kc, rule=c_cost_op_variable_rule)
+    m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_var_rule)
+    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_fuel_rule)
+    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_rb_rule)
+    m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.kr, rule=c_revenue_var_rule)
+    m.c_revenue_fixed = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_fixed_rule)
+    m.c_revenue = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_rule)
 
 
 def model_constraints(model):
