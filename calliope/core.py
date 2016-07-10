@@ -605,16 +605,27 @@ class Model(BaseModel):
         _c = list(_c)
         self._sets['c'] = _c
 
-        # k: cost classes
-        classes = [list(self.config_model.techs[k].costs.keys())
+        # kc: cost classes
+        classes_c = [list(self.config_model.techs[k].costs.keys())
                    for k in self.config_model.techs
                    if k != 'defaults'  # Prevent 'default' from entering set
                    if 'costs' in self.config_model.techs[k]]
         # Flatten list and make sure 'monetary' is in it
-        classes = ([i for i in itertools.chain.from_iterable(classes)]
+        classes_c = ([i for i in itertools.chain.from_iterable(classes_c)]
                    + ['monetary'])
         # Remove any duplicates by going from list to set and back
-        self._sets['k'] = list(set(classes))
+        self._sets['kc'] = list(set(classes_c))
+
+        # kr: revenue classes
+        classes_r = [list(self.config_model.techs[k].revenue.keys())
+                   for k in self.config_model.techs
+                   if k != 'defaults'  # Prevent 'default' from entering set
+                   if 'revenue' in self.config_model.techs[k]]
+        # Flatten list and make sure 'monetary' is in it
+        classes_r = ([i for i in itertools.chain.from_iterable(classes_r)]
+                   + ['monetary'])
+        # Remove any duplicates by going from list to set and back
+        self._sets['kr'] = list(set(classes_r))
 
         # Locations settings matrix and transmission technologies
         self._locations = locations.generate_location_matrix(
@@ -977,7 +988,9 @@ class Model(BaseModel):
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
         # Cost classes
-        m.k = po.Set(initialize=self._sets['k'], ordered=True)
+        m.kc = po.Set(initialize=self._sets['kc'], ordered=True)
+        # Revenue classes
+        m.kr = po.Set(initialize=self._sets['kr'], ordered=True)
         #
         # Technologies and various subsets of technologies
         #
