@@ -1384,7 +1384,7 @@ class Model(BaseModel):
             carrier_dict = {}
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
-                lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                lc = sol['costs'].loc[dict(kc=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
@@ -1394,7 +1394,7 @@ class Model(BaseModel):
                 lc = lc.replace(np.inf, 0)
                 carrier_dict[carrier] = lc
             cost_dict[cost] = xr.Dataset(carrier_dict).to_array(dim='c')
-        arr = xr.Dataset(cost_dict).to_array(dim='k')
+        arr = xr.Dataset(cost_dict).to_array(dim='kc')
         return arr
 
     def _get_time_res_sum(self):
@@ -1452,8 +1452,8 @@ class Model(BaseModel):
         df = pd.DataFrame({'cf': cf})
 
         # Total (over locations) levelized costs per carrier
-        for k in sorted(sol['levelized_cost'].coords['k'].values):
-            df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
+        for k in sorted(sol['levelized_cost'].coords['kc'].values):
+            df['levelized_cost_' + k] = (sol['costs'].loc[dict(kc=k)].sum(dim='x')
                                / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
