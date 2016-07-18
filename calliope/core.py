@@ -519,6 +519,10 @@ class Model(BaseModel):
             eff_ref = False
         if eff_ref is False:
             eff_ref = self.get_option(base + '_eff', x=x)
+            if isinstance(eff_ref,str):
+                e = exceptions.ModelError
+                raise e('"e_eff_ref" must be set in constraints for {} as '
+                        'e_eff is loaded from file and utilising storage'.format(y))
         # NOTE: Will cause errors in the case where (1) eff_ref is not defined
         # and (2) eff is set to "file". That is ok however because in this edge
         # case eff_ref should be manually set as there is no straightforward
@@ -1065,9 +1069,9 @@ class Model(BaseModel):
         self.add_constraint(utils._load_function(objective))
 
     def _log_time(self):
-        self.runtime = int(time.time() - self.start_time)
-        logging.info('Runtime: ' + str(self.runtime) + ' secs')
-
+        self.run_times["end"] = time.time()
+        self.run_times["runtime"] = int(time.time() - self.run_times["start"])
+        logging.info('Runtime: ' + str(self.run_times["runtime"]) + ' secs')
     def run(self, iterative_warmstart=True):
         """
         Instantiate and solve the model
@@ -1076,7 +1080,11 @@ class Model(BaseModel):
         o = self.config_model
         d = self.data
         cr = self.config_run
-        self.start_time = time.time()
+        self.run_times = {}
+        self.run_times["start"] = time.time()
+        if self.verbose:
+            print('\nModel started at {}\n'
+                  .format(time.strftime(self.time_format)))        
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
@@ -1094,6 +1102,11 @@ class Model(BaseModel):
             e = exceptions.ModelError
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
+        if self.verbose:
+            print('\nSolutions ready at {}\n'
+                  '\nTotal run time was {} seconds\n'
+                  .format(time.strftime(self.time_format,time.localtime(self.run_times["end"])),
+                          self.run_times["runtime"]))
         if cr.get_key('output.save', default=False) is True:
             output_format = cr.get_key('output.format', default=['netcdf'])
             if not isinstance(output_format, list):
@@ -1107,7 +1120,9 @@ class Model(BaseModel):
                 output.generate_constraints(self.solution,
                                             output_path=save_constr,
                                             **options)
-
+            if self.verbose:
+                print('\nSolutions saved to file at {}\n'
+                      .format(time.strftime(self.time_format)))
     def solve(self, warmstart=False):
         """
         Args:
@@ -1164,9 +1179,10 @@ class Model(BaseModel):
 
             return results, warning
 
+        self.run_times["preprocessed"] = time.time()
         if self.verbose:
-            t = datetime.datetime.now().strftime(self.time_format)
-            print('\nModel preprocessing complete at {}\n'.format(t))
+            print('\nModel preprocessing took {0:.2f} seconds\n'
+                  .format(self.run_times["preprocessed"] - self.run_times["start"]))
 
         if cr.get_key('debug.echo_solver_log', default=False):
             self.results, warnmsg = _solve(warmstart, solver_kwargs)
@@ -1177,7 +1193,10 @@ class Model(BaseModel):
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
         self.load_results()
-
+        self.run_times["solved"] = time.time()
+        if self.verbose:
+            print('\nSolving model took {0:.2f} seconds\n'
+                  .format(self.run_times["solved"] - self.run_times["preprocessed"]))
     def process_solution(self):
         """
         Called from both load_solution() and load_solution_iterative()
