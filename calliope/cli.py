@@ -20,6 +20,7 @@ import traceback
 import click
 
 from . import core
+from . import _version
 from .parallel import Parallelizer
 
 
@@ -70,6 +71,10 @@ def print_end_time(start_time, msg='complete'):
     print('\nCalliope run {}. '
           'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
+def print_debug_startup(debug):
+    if debug:
+        print('Version {}'.format(_version.__version__))
+
 
 @click.group()
 def cli():
@@ -79,12 +84,14 @@ def cli():
 
 @cli.command(short_help='create model')
 @click.argument('path')
-def new(path):
+@_debug
+def new(path, debug):
     """
     Create new model at the given PATH, based on the included example model.
     The directory must not yet exist, and intermediate directories will
     be created automatically.
     """
+    print_debug_startup(debug)
     # Copies the included example model
     example_model = os.path.join(os.path.dirname(__file__), 'example_model')
     click.echo('Creating new model in: {}'.format(path))
@@ -97,6 +104,7 @@ def new(path):
 @_pdb
 def run(run_config, debug, pdb):
     """Execute the given RUN_CONFIG run configuration file."""
+    print_debug_startup(debug)
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, start_time):
@@ -135,6 +143,7 @@ def generate(run_config, path, silent, debug, pdb):
     directory that must not yet exist (PATH defaults to 'runs'
     if not specified).
     """
+    print_debug_startup(debug)
     logging.captureWarnings(True)
     with format_exceptions(debug, pdb):
         parallelizer = Parallelizer(target_dir=path, config_run=run_config)

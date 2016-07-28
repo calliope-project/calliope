@@ -1160,6 +1160,8 @@ class Model(BaseModel):
                 self.results, warnmsg = _solve(warmstart, solver_kwargs)
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
+        if self.verbose:
+            print('\nSolver completed running at {}\n'.format(t))
         self.load_results()
 
     def process_solution(self):
@@ -1664,7 +1666,8 @@ class Model(BaseModel):
         sol.attrs['run_time'] = self.runtime
         sol.attrs['calliope_version'] = __version__
 
-        self.solution.to_netcdf(store_file, format='netCDF4')
+        encoding = {k: {'zlib': True, 'complevel': 4} for k in self.solution.data_vars}
+        self.solution.to_netcdf(store_file, format='netCDF4', encoding=encoding)
 
         return store_file  # Return the path to the NetCDF file we used
 
