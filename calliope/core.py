@@ -497,16 +497,16 @@ class Model(BaseModel):
         """Get reference efficiency, falling back to efficiency if no
         reference efficiency has been set."""
         base = y + '.constraints.' + var
-        try:
-            eff_ref = self.get_option(base + '_eff_ref', x=x)
-        except exceptions.OptionNotSetError:
-            eff_ref = False
+        eff_ref = self.get_option(base + '_eff_ref', x=x, default=False)
         if eff_ref is False:
             eff_ref = self.get_option(base + '_eff', x=x)
-        # NOTE: Will cause errors in the case where (1) eff_ref is not defined
-        # and (2) eff is set to "file". That is ok however because in this edge
-        # case eff_ref should be manually set as there is no straightforward
-        # way to derive it from the time series file.
+        # Check for case wher e_eff is a timeseries file (so the option
+        # is a string), and no e_eff_ref has been set to override that
+        # string with a numeric option
+        if isinstance(eff_ref, str):
+            raise exceptions.ModelError(
+                'Must set `e_eff_ref` if `e_eff` is a file.'
+            )
         return eff_ref
 
     def scale_to_peak(self, df, peak, scale_time_res=True):
