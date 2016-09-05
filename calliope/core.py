@@ -1679,7 +1679,7 @@ class Model(BaseModel):
         for k in ['config_model', 'config_run']:
             # Serialize config dicts to YAML strings
             sol.attrs[k] = sol.attrs[k].to_yaml()
-        sol.attrs['run_time'] = self.runtime
+        sol.attrs['run_time'] = self.run_times["runtime"]
         sol.attrs['calliope_version'] = __version__
 
         self.solution.to_netcdf(store_file, format='netCDF4')
@@ -1696,7 +1696,7 @@ class Model(BaseModel):
         md = utils.AttrDict()
         md['config_run'] = self.config_run
         md['config_model'] = self.config_model
-        md['run_time'] = self.runtime
+        md['run_time'] = self.run_times["runtime"]
         md['calliope_version'] = __version__
         md.to_yaml(os.path.join(self.config_run.output.path, 'metadata.yaml'))
 
