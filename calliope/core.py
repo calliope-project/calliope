@@ -503,6 +503,10 @@ class Model(BaseModel):
             eff_ref = False
         if eff_ref is False:
             eff_ref = self.get_option(base + '_eff', x=x)
+            if isinstance(eff_ref,str):
+                e = exceptions.ModelError
+                raise e('"e_eff_ref" must be set in constraints for {} as '
+                        'e_eff is loaded from file and utilising storage'.format(y))
         # NOTE: Will cause errors in the case where (1) eff_ref is not defined
         # and (2) eff is set to "file". That is ok however because in this edge
         # case eff_ref should be manually set as there is no straightforward
