@@ -181,7 +181,7 @@ class Model(BaseModel):
                     if params[-1] in allowed_timeseries_params: #look for e.g. e_eff
                         time_series_data.append(params[-1])
                     else:
-                        raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
+                        raise Exception("unable to handle loading data from file for '{}'".format(params[-1]))
         #send list of paramters to config_model AttrDict
         self.config_model['timeseries_params'] = list(set(time_series_data))
 
