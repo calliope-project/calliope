@@ -265,8 +265,17 @@ def node_constraints_build(model):
             return get_var_constraint(m.e_cap[y, x], y, 'e_cap', x,
                                       scale=e_cap_scale)
 
-    def c_e_cap_gross_net_rule(m, y, x, t):
-        c_eff = get_any_option(y + '.constraints.c_eff', x=x, t=t)
+    def c_e_cap_gross_net_rule(m, y, x):
+        # Existence of this rule currently means that you can't load c_eff from file.
+        # Changed for the time being to raise error if someone tries loading c_eff from file
+        # to remind me that it is an issue - might need c_eff_ref like e_eff_ref
+        c_eff = get_any_option(y + '.constraints.c_eff', x=x)
+        if isinstance(c_eff,str):
+            e = exceptions.ModelError
+            raise e('can\'t load c_eff from file (for '
+                        '{} at {}) until '
+                        'c_e_cap_gross_net_rule '
+                        'is updated'.format(y, x))
         return m.e_cap[y, x] * c_eff == m.e_cap_net[y, x]
 
     def c_rb_cap_rule(m, y, x):
@@ -299,7 +308,7 @@ def node_constraints_build(model):
     m.c_r_cap = po.Constraint(m.y_def_r, m.x, rule=c_r_cap_rule)
     m.c_r_area = po.Constraint(m.y_def_r, m.x, rule=c_r_area_rule)
     m.c_e_cap = po.Constraint(m.y, m.x, rule=c_e_cap_rule)
-    m.c_e_cap_gross_net = po.Constraint(m.y, m.x, m.t, rule=c_e_cap_gross_net_rule)
+    m.c_e_cap_gross_net = po.Constraint(m.y, m.x, rule=c_e_cap_gross_net_rule)
     m.c_rb_cap = po.Constraint(m.y_rb, m.x, rule=c_rb_cap_rule)
 
 

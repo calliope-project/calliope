@@ -171,8 +171,9 @@ class Model(BaseModel):
         # Get time series data
         time_series_data = []
         allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
-                                    'e_prod', 'e_con', 'c_eff', 'e_eff', 
+                                    'e_prod', 'e_con', 'e_eff', 
                                     'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
+                                                                  # removed c_eff due to constrinat conflict, see c_e_cap_gross_net_rule
         for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
             if isinstance(v,str):
                 if v.startswith("file"): #find any refering to a file
