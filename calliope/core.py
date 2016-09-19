@@ -497,16 +497,16 @@ class Model(BaseModel):
         """Get reference efficiency, falling back to efficiency if no
         reference efficiency has been set."""
         base = y + '.constraints.' + var
-        try:
-            eff_ref = self.get_option(base + '_eff_ref', x=x)
-        except exceptions.OptionNotSetError:
-            eff_ref = False
+        eff_ref = self.get_option(base + '_eff_ref', x=x, default=False)
         if eff_ref is False:
             eff_ref = self.get_option(base + '_eff', x=x)
-        # NOTE: Will cause errors in the case where (1) eff_ref is not defined
-        # and (2) eff is set to "file". That is ok however because in this edge
-        # case eff_ref should be manually set as there is no straightforward
-        # way to derive it from the time series file.
+        # Check for case wher e_eff is a timeseries file (so the option
+        # is a string), and no e_eff_ref has been set to override that
+        # string with a numeric option
+        if isinstance(eff_ref, str):
+            raise exceptions.ModelError(
+                'Must set `e_eff_ref` if `e_eff` is a file.'
+            )
         return eff_ref
 
     def scale_to_peak(self, df, peak, scale_time_res=True):
@@ -1064,8 +1064,9 @@ class Model(BaseModel):
         self.add_constraint(utils._load_function(objective))
 
     def _log_time(self):
-        self.runtime = int(time.time() - self.start_time)
-        logging.info('Runtime: ' + str(self.runtime) + ' secs')
+        self.run_times["end"] = time.time()
+        self.run_times["runtime"] = int(time.time() - self.run_times["start"])
+        logging.info('Runtime: ' + str(self.run_times["runtime"]) + ' secs')
 
     def run(self, iterative_warmstart=True):
         """
@@ -1075,7 +1076,11 @@ class Model(BaseModel):
         o = self.config_model
         d = self.data
         cr = self.config_run
-        self.start_time = time.time()
+        self.run_times = {}
+        self.run_times["start"] = time.time()
+        if self.verbose:
+            print('\nModel started at {}\n'
+                  .format(time.strftime(self.time_format)))
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
@@ -1093,6 +1098,11 @@ class Model(BaseModel):
             e = exceptions.ModelError
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
+        if self.verbose:
+            print('\nSolutions ready at {}\n'
+                  '\nTotal run time was {} seconds\n'
+                  .format(time.strftime(self.time_format,time.localtime(self.run_times["end"])),
+                          self.run_times["runtime"]))
         if cr.get_key('output.save', default=False) is True:
             output_format = cr.get_key('output.format', default=['netcdf'])
             if not isinstance(output_format, list):
@@ -1106,7 +1116,10 @@ class Model(BaseModel):
                 output.generate_constraints(self.solution,
                                             output_path=save_constr,
                                             **options)
-
+            if self.verbose:
+                print('\nSolutions saved to file at {}\n'
+                      .format(time.strftime(self.time_format)))
+    
     def solve(self, warmstart=False):
         """
         Args:
@@ -1162,10 +1175,11 @@ class Model(BaseModel):
                 results = self.opt.solve(self.m, tee=True, **solver_kwargs)
 
             return results, warning
-
+    
+        self.run_times["preprocessed"] = time.time()
         if self.verbose:
-            t = datetime.datetime.now().strftime(self.time_format)
-            print('\nModel preprocessing complete at {}\n'.format(t))
+            print('\nModel preprocessing took {0:.2f} seconds\n'
+                  .format(self.run_times["preprocessed"] - self.run_times["start"]))
 
         if cr.get_key('debug.echo_solver_log', default=False):
             self.results, warnmsg = _solve(warmstart, solver_kwargs)
@@ -1175,7 +1189,13 @@ class Model(BaseModel):
                 self.results, warnmsg = _solve(warmstart, solver_kwargs)
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
+        if self.verbose:
+            print('\nSolver completed running at {}\n'.format(t))
         self.load_results()
+        self.run_times["solved"] = time.time()
+        if self.verbose:
+            print('\nSolving model took {0:.2f} seconds\n'
+                  .format(self.run_times["solved"] - self.run_times["preprocessed"]))
 
     def process_solution(self):
         """
@@ -1706,10 +1726,11 @@ class Model(BaseModel):
         for k in ['config_model', 'config_run']:
             # Serialize config dicts to YAML strings
             sol.attrs[k] = sol.attrs[k].to_yaml()
-        sol.attrs['run_time'] = self.runtime
+        sol.attrs['run_time'] = self.run_times["runtime"]
         sol.attrs['calliope_version'] = __version__
 
-        self.solution.to_netcdf(store_file, format='netCDF4')
+        encoding = {k: {'zlib': True, 'complevel': 4} for k in self.solution.data_vars}
+        self.solution.to_netcdf(store_file, format='netCDF4', encoding=encoding)
 
         return store_file  # Return the path to the NetCDF file we used
 
@@ -1723,7 +1744,7 @@ class Model(BaseModel):
         md = utils.AttrDict()
         md['config_run'] = self.config_run
         md['config_model'] = self.config_model
-        md['run_time'] = self.runtime
+        md['run_time'] = self.run_times["runtime"]
         md['calliope_version'] = __version__
         md.to_yaml(os.path.join(self.config_run.output.path, 'metadata.yaml'))
 

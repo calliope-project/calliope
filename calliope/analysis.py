@@ -49,7 +49,8 @@ def plot_carrier_production(solution, carrier='power', subset=dict(),
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
                     types=['supply', 'conversion', 'storage', 'unmet_demand'],
                     colormap=None, ticks=None,
-                    resample_options=None, resample_func=None):
+                    resample_options=None, resample_func=None,
+                    add_legend=True, ax=None):
     """
     Generate a stackplot of ``data`` for the given ``carrier``,
     plotting ``demand`` on top.
@@ -117,13 +118,19 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
         colors = [df.at[i, 'color'] for i in stacked_techs]
         colormap = ListedColormap(colors)
     # Plot!
-    ax = au.stack_plot(plot_df, stacked_techs, colormap=colormap,
-                       alpha=0.9, ticks=ticks, legend=None, names=names)
+    if ax is None:
+        ax = au.stack_plot(plot_df, stacked_techs, colormap=colormap,
+                           alpha=0.9, ticks=ticks, legend=None, names=names)
+    else:
+        au.stack_plot(plot_df, stacked_techs, colormap=colormap,
+                      alpha=0.9, ticks=ticks, legend=None, names=names,
+                      ax=ax)
     ax.plot(plot_df[demand].index,
             plot_df[demand] * -1,
             color='red', lw=1.5, ls='--', label=df.at[demand, 'name'])
     # Add legend here rather than in stack_plot so we get demand too
-    au.legend_outside_ax(ax, where='right')
+    if add_legend:
+        au.legend_outside_ax(ax, where='right')
     return ax
 
 

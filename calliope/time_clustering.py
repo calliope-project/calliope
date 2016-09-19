@@ -17,6 +17,7 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.patches
     from matplotlib.colors import rgb2hex
+    import seaborn as sns
 except ImportError:
     pass  # This is logged in analysis.py
 
