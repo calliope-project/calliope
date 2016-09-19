@@ -11,7 +11,7 @@ Calliope has been tested on Linux, Mac OS X, and Windows (but see the :ref:`Wind
 
 Running Calliope requires four things:
 
-1. the Python programming language (version 3)
+1. the Python programming language, version 3.5
 2. a number of Python add-on modules (see :ref:`below for the complete list <python_module_requirements>`)
 3. a solver: Calliope has been tested with `GLPK <https://www.gnu.org/software/glpk/>`_, `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_, and `Gurobi <http://www.gurobi.com/>`_. Any other solver that is compatible with Pyomo, which Calliope uses to construct the models, should work.
 4. the Calliope software itself
