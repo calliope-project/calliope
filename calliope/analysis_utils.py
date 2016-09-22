@@ -192,6 +192,10 @@ def plot_graph_on_map(config_model, G=None,
                                               rotate=rotate_labels,
                                               font_size=fontsize)
 
+        # Adding node names just above node points
+        pos_offset = {i: (pos[i][0], pos[i][1]+20) for i in pos}
+        nx.draw_networkx_labels(G, pos_offset, font_size=fontsize)
+
     # Add a map scale
     if show_scale:
         scale = m.drawmapscale(
