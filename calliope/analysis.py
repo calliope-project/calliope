@@ -244,10 +244,14 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     df = pd.DataFrame({zone: get_annual_power_transmission(zone)
                       for zone in zones}, index=zones)
 
-    # Set smaller than zero to zero --
-    # we only want to know about 'production' from
-    # transmission, not their consumptions
-    df[df < 0] = 0
+    # Set negative and very small (erroneous) values to zero --
+    # Positive values = energy received at a node by transmission,
+    # negative values = energy sent by transmission.
+    # The absolute value sent and recieved between two nodes will be
+    # different when there is line loss (i.e. negative values will have a
+    # larger absolute value than the positive value for the same transmission
+    # line), which is why we take the recieving (positive) value.
+    df[df < df.max().max()*1e-10] = 0
 
     # Create directed graph
     G = nx.from_numpy_matrix(df.as_matrix().T, create_using=nx.DiGraph())
