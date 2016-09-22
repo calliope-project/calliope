@@ -1350,8 +1350,7 @@ class Model(BaseModel):
     def get_revenue(self, t_subset=None):
         """Get revenue."""
         if t_subset is None:
-            revenue_fixed = self.get_var('revenue_fixed')
-            revenue_variable = self.get_var('revenue_var')
+            return self.get_var('revenue')
         else:
             # len_adjust is the fraction of construction and fixed costs
             # that is accrued to the chosen t_subset. NB: construction and fixed
@@ -1368,7 +1367,7 @@ class Model(BaseModel):
             # the t_subset period
             revenue_variable = self.get_var('revenue_variable')[{'t': t_subset}].sum(dim='t')
 
-        return revenue_fixed + revenue_variable
+            return revenue_fixed + revenue_variable
 
 
     def get_totals(self, t_subset=None, apply_weights=True):
