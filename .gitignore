@@ -4,3 +4,7 @@ calliope.egg-info/
 doc/_build/
 dist/
 .cache
+/calliope/Logs/run
+/calliope/constraints/Logs/run
+.vscode
+Logs

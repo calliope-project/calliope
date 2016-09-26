@@ -36,6 +36,7 @@ from . import locations
 from . import output
 from . import sets
 from . import transmission
+from . import time_funcs
 from . import time_masks
 from . import utils
 
