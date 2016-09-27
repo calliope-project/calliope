@@ -33,6 +33,27 @@ def get_constraint_param(model, param_string, y, x, t):
     else:
         return get_any_option(y + '.constraints.' + param_string, x=x)
 
+def get_cost_param(model, cost, k, y, x, t):
+    """
+    Function to get values for constraints which can optionally be
+    loaded from file (so may have time dependency).
+
+    model = calliope model
+    cost = cost name, e.g. 'om_fuel'
+    k = cost type, e.g. 'monetary'
+    y = technology
+    x = location
+    t = timestep
+    """
+    get_any_option = utils.any_option_getter(model)
+
+    param_string = 'costs_' + k + '_' + cost #format stored in model.data
+    
+    if param_string in model.data:
+        return getattr(model.m, param_string)[y, x, t]
+    else: #turn e.g. costs_monetary_om_var to costs.monetary.om_var, then search in DataArray
+        return get_any_option(y + '.' + param_string.replace('_','.',2), x=x) 
+
 def node_resource(model):
     """
     Defines variables:
@@ -574,7 +595,7 @@ def node_costs(model):
             carrier = model.get_option(y + '.carrier')
             return (
                 m.cost_op_var[y, x, t, k] ==
-                get_any_option(y + '.costs.' + k + '.om_var', x=x, t=t) *
+                get_cost_param(model,'om_var',k,y,x,t) *
                 weights.loc[t] *
                 m.es_prod[carrier, y, x, t]
             )
@@ -583,24 +604,25 @@ def node_costs(model):
 
     def c_cost_op_fuel_rule(m, y, x, t, k):
         r_eff = get_constraint_param(model, 'r_eff', y, x, t)
-        try:
+        om_fuel = get_cost_param(model,'om_fuel',k,y,x,t)
+        if po.value(r_eff) > 0:
             # Dividing by r_eff here so we get the actual r used, not the rs
             # moved into storage...
             return (
                 m.cost_op_fuel[y, x, t, k] ==
-                get_any_option(y + '.costs.' + k + '.om_fuel', x=x, t=t) *
+                om_fuel *
                 weights.loc[t] *
                 (m.rs[y, x, t] / r_eff)
             )
-        except: #in case r_eff is zero, to avoid an infinite value for cost_op_fuel
+        else: #in case r_eff is zero, to avoid an infinite value for cost_op_fuel
             return m.cost_op_fuel[y, x, t, k] == 0
 
     def c_cost_op_rb_rule(m, y, x, t, k):
         rb_eff = get_constraint_param(model, 'rb_eff', y, x, t)
-        if y in m.y_rb:
+        if y in m.y_rb and po.value(rb_eff) > 0:
             return (
                 m.cost_op_rb[y, x, t, k] ==
-                get_any_option(y + '.costs.' + k + '.om_rb', x=x, t=t) *
+                get_cost_param(model,'om_rb',k,y,x,t) *
                 weights.loc[t] *
                 (m.rbs[y, x, t] / rb_eff)
             )
