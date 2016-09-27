@@ -513,7 +513,6 @@ def node_costs(model):
     weights = model.data['_weights'].to_series()
 
     cost_getter = utils.cost_getter(model.get_option)
-    rev_getter = utils.cost_getter(model.get_option, costs_type='revenue')
     depreciation_getter = utils.depreciation_getter(model.get_option)
     cost_per_distance_getter = utils.cost_per_distance_getter(model.get_option)
 
@@ -526,7 +525,7 @@ def node_costs(model):
         return cost_getter(cost, y, k, x=x)
 
     def _revenue(cost, y, k, x=None):
-        return rev_getter(cost, y, k, x=x)
+        return cost_getter(cost, y, k, x=x, costs_type='revenue')
 
     @utils.memoize
     def _cost_per_distance(cost, y, k, x):

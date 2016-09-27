@@ -1084,7 +1084,7 @@ class Model(BaseModel):
         m.y = po.Set(initialize=self._sets['y'], ordered=True)
         # Production technologies
         m.y_prod = po.Set(initialize=self._sets['y_prod'], within=m.y, ordered=True)
-        # Production technologies
+        # Consumption technologies
         m.y_con = po.Set(initialize=self._sets['y_con'], within=m.y, ordered=True)
         # Production/consumption technologies
         m.y_pc = po.Set(initialize=self._sets['y_pc'], within=m.y, ordered=True)
@@ -1092,7 +1092,7 @@ class Model(BaseModel):
         m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y, ordered=True)
         # Conversion technologies
         m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
-        # Demand technologies
+        # Demand sources
         m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
         ##TIMESERIES vars
         for param in self.config_model.timeseries_constraints:
