@@ -40,9 +40,6 @@ from . import time_funcs
 from . import time_masks
 from . import utils
 
-# Parameters that may be defined as time series - only constraints at present
-#self.config_model.timeseries_params = ['r', 'e_eff', 'r_eff', 'rb_eff', 'c_eff', 's_loss', 'e_prod', 'e_con', 'e_cap_min_use']
-
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
 
@@ -164,27 +161,35 @@ class Model(BaseModel):
         # Populate self.config_run and self.config_model
         self.initialize_configuration(config_run, override)
         self._get_option = utils.option_getter(self.config_model)
+        self.get_cost = utils.cost_getter(self._get_option)
 
         # Initialize sets
         self.initialize_parents()
         self.initialize_sets()
 
         # Get time series data
+        time_series_constraint = []
         time_series_data = []
-        allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
-                                    'e_prod', 'e_con', 'e_eff', 
-                                    'e_cap_min_use', 'e_ramping'] # these can be numeric, avoiding true/false constraints
-                                                                  # removed c_eff due to constraint conflict, see c_e_cap_gross_net_rule
+        allowed_timeseries_constraints = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
+                                    'e_prod', 'e_con', 'c_eff', 'e_eff', 
+                                    'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
+        allowed_timeseries_data = ['om_var', 'om_fuel',
+                                'om_rb'] #variable costs/revenue only
         for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
             if isinstance(v,str):
                 if v.startswith("file"): #find any refering to a file
-                    params = k.split('.') #split the elements of the key to get constraint
-                    if params[-1] in allowed_timeseries_params: #look for e.g. e_eff
-                        time_series_data.append(params[-1])
+                    params = k.split('.') #split the elements of the key to get constraint/cost type
+                    if params[-1] in allowed_timeseries_constraints: #look for e.g. e_eff
+                        time_series_constraint.append(params[-1])
+                    elif params[-1] in allowed_timeseries_data: #look for e.g. om_fuel
+                        #make sure list e.g. ['costs','monetary','om_fuel'] doesn't already exist
+                        if str(time_series_data).find(str([params[-3],params[-2],params[-1]])) == -1: 
+                            time_series_data.append([params[-3],params[-2],params[-1]])
                     else:
-                        raise Exception("unable to handle loading data from file for '{}'".format(params[-1]))
-        #send list of paramters to config_model AttrDict
-        self.config_model['timeseries_params'] = list(set(time_series_data))
+                        raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
+        #send list of parameters to config_model AttrDict
+        self.config_model['timeseries_constraints'] = list(set(time_series_constraint))
+        self.config_model['timeseries_data'] = time_series_data
 
         # Read data and apply time resolution adjustments
         self.read_data()
@@ -686,8 +691,7 @@ class Model(BaseModel):
                     'Invalid entries: {}'.format(filename, entries))
         return df
 
-    def _get_filename(self, param, y, x):
-        option = self.get_option(y + '.constraints.' + param, x=x)
+    def _get_filename(self, param, option, y, x):
         # If we have a string, it must be `file` or `file=..`
         if not option.startswith('file'):
             e = exceptions.ModelError
@@ -701,7 +705,10 @@ class Model(BaseModel):
             except IndexError:
                 # If set to just 'file', set filename with y and
                 # param, e.g. 'csp_r_eff.csv'
-                f = y + '_' + param + '.csv'
+                if isinstance(param, str):
+                    f = y + '_' + param + '.csv'
+                else:
+                    f = y + '_' + '_'.join(param) + '.csv'
         return f
 
     def _apply_x_map(self, df, x_map, x=None):
@@ -736,14 +743,13 @@ class Model(BaseModel):
             df[this_x] = df[x_m]
         return df
 
-    def _read_param_for_tech(self, param, y, time_res, x=None):
-        option = self.get_option(y + '.constraints.' + param, x=x)
-        if option != float('inf'):
+    def _read_param_for_tech(self, param, y, time_res, option, x=None):
+        if option != float('inf') and isinstance(param, str): #added check that it is a constraint (string param)
             self._sets['y_def_' + param].add(y)
         k = '{}.{}:{}'.format(param, y, x)
 
         if isinstance(option, str):  # if option is string, read a file
-            f = self._get_filename(param, y, x)
+            f = self._get_filename(param, option, y, x)
             df = self._get_option_from_csv(f)
             self.debug.data_sources.set_key(k, 'file:' + f)
 
@@ -853,25 +859,27 @@ class Model(BaseModel):
 
         
         # Parameters that may be defined over (x, y, t)
-        ts_sets = {'y_def_' + k: set() for k in self.config_model.timeseries_params}
+        ts_sets = {'y_def_' + k: set() for k in self.config_model.timeseries_constraints}
         self._sets = {**self._sets, **ts_sets}
 
-        for param in self.config_model.timeseries_params:
+        for param in self.config_model.timeseries_constraints: #constraints
             param_data = {}
             for y in self._sets['y']:
                 # First, set up each parameter without considering
                 # potential per-location (per-x) overrides
-                df = self._read_param_for_tech(param, y, time_res, x=None)
                 k = y + '.constraints.' + param
-
                 option = self.get_option(k)
+
+                df = self._read_param_for_tech(param, y, time_res, option, x=None)
+                
                 for x in self._sets['x']:
                     # Check for each x whether it defines an override
                     # that is different from the generic option, and if so,
                     # update the dataframe
                     option_x = self.get_option(k, x=x)
                     if option != option_x:
-                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, x=x)
+                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
+
 
                 self._validate_param_df(param, y, df)  # Have all `x` been set?
 
@@ -879,6 +887,31 @@ class Model(BaseModel):
 
             # Turn param_data into a DataArray
             data[param] = xr.Dataset(param_data).to_array(dim='y')
+
+        for param in self.config_model.timeseries_data: #costs and revenue
+            param_data = {}
+            for y in self._sets['y']:
+                # First, set up each parameter without considering
+                # potential per-location (per-x) overrides
+                option = self.get_cost(param[2], y, param[1], costs_type=param[0])
+
+                df = self._read_param_for_tech(param, y, time_res, option, x=None)
+                
+                for x in self._sets['x']:
+                    # Check for each x whether it defines an override
+                    # that is different from the generic option, and if so,
+                    # update the dataframe
+                    option_x = self.get_cost(param[2], y, param[1], costs_type=param[0], x=x)
+                    if option != option_x:
+                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
+
+
+                self._validate_param_df(param, y, df)  # Have all `x` been set?
+
+                param_data[y] = xr.DataArray(df, dims=['t', 'x'])
+
+            # Turn param_data into a DataArray
+            data['_'.join(param)] = xr.Dataset(param_data).to_array(dim='y')
 
         dataset = xr.Dataset(data)
         dataset.attrs = attrs
@@ -941,7 +974,7 @@ class Model(BaseModel):
     def update_parameters(self, t_offset):
         d = self.data
 
-        for param in self.config_model.timeseries_params:
+        for param in self.config_model.timeseries_constraints:
             initializer = self._param_populator(d, param, t_offset)
             y_set = self._sets['y_def_' + param]
             param_object = getattr(self.m, param)
@@ -1025,7 +1058,7 @@ class Model(BaseModel):
         # Conversion technologies
         m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
         ##TIMESERIES vars
-        for param in self.config_model.timeseries_params:
+        for param in self.config_model.timeseries_constraints:
             setattr(m, 'y_def_'+param, po.Set(initialize = self._sets['y_def_' + param], within=m.y))
         # Technologies that allow `rb`
         m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
@@ -1039,11 +1072,17 @@ class Model(BaseModel):
         # Parameters
         #
 
-        for param in self.config_model.timeseries_params:
+        for param in self.config_model.timeseries_constraints:
             y = getattr(m, 'y_def_' + param)
             # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
             initializer = self._param_populator(self.data, param)
             setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer, mutable=True))
+        
+        # Probably unnecessary addition to have these as Pyomo parameters.
+        for param in self.config_model.timeseries_data:
+            # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
+            initializer = self._param_populator(self.data, '_'.join(param))
+            setattr(m, '_'.join(param), po.Param(m.y, m.x, m.t, initialize=initializer, mutable=True))
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1695,7 +1734,7 @@ class Model(BaseModel):
         #     raise exceptions.ModelError('`config_run.output.path` not configured.')
 
         # Add input time series (r and e_eff) alongside the solution
-        for param in self.config_model.timeseries_params:
+        for param in self.config_model.timeseries_constraints:
             subset_name = 'y_def_' + param
             # Only if the set has some members
             if len(self._sets[subset_name]) > 0:
@@ -1709,7 +1748,7 @@ class Model(BaseModel):
             raise ValueError('Unsupported value for `how`: {}'.format(how))
 
         # Remove time series from solution again after writing it to disk
-        for param in self.config_model.timeseries_params:
+        for param in self.config_model.timeseries_constraints:
             if param in self.solution:
                 del self.solution[param]
 
