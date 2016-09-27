@@ -181,7 +181,7 @@ class Model(BaseModel):
                                     'e_prod', 'e_con', 'e_eff',
                                     'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
         allowed_timeseries_data = ['om_var', 'om_fuel',
-                                'om_rb'] #variable costs/revenue only
+                                'om_rb','sub_var'] #variable costs/revenue only
         for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
             if isinstance(v,str):
                 if v.startswith("file"): #find any refering to a file
