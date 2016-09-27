@@ -19,6 +19,7 @@ import random
 import shutil
 import time
 import warnings
+import re
 
 import pyomo.opt as popt
 import pyomo.core as po
@@ -39,8 +40,8 @@ from . import time_funcs
 from . import time_masks
 from . import utils
 
-# Parameters that may be defined as time series
-_TIMESERIES_PARAMS = ['r', 'e_eff']
+# Parameters that may be defined as time series - only constraints at present
+#self.config_model.timeseries_params = ['r', 'e_eff', 'r_eff', 'rb_eff', 'c_eff', 's_loss', 'e_prod', 'e_con', 'e_cap_min_use']
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
@@ -167,6 +168,23 @@ class Model(BaseModel):
         # Initialize sets
         self.initialize_parents()
         self.initialize_sets()
+
+        # Get time series data
+        time_series_data = []
+        allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
+                                    'e_prod', 'e_con', 'e_eff', 
+                                    'e_cap_min_use', 'e_ramping'] # these can be numeric, avoiding true/false constraints
+                                                                  # removed c_eff due to constraint conflict, see c_e_cap_gross_net_rule
+        for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
+            if isinstance(v,str):
+                if v.startswith("file"): #find any refering to a file
+                    params = k.split('.') #split the elements of the key to get constraint
+                    if params[-1] in allowed_timeseries_params: #look for e.g. e_eff
+                        time_series_data.append(params[-1])
+                    else:
+                        raise Exception("unable to handle loading data from file for '{}'".format(params[-1]))
+        #send list of paramters to config_model AttrDict
+        self.config_model['timeseries_params'] = list(set(time_series_data))
 
         # Read data and apply time resolution adjustments
         self.read_data()
@@ -833,11 +851,12 @@ class Model(BaseModel):
         s_init.index.name = 'x'
         data['s_init'] = xr.DataArray(s_init)
 
+        
         # Parameters that may be defined over (x, y, t)
-        ts_sets = {'y_def_' + k: set() for k in _TIMESERIES_PARAMS}
+        ts_sets = {'y_def_' + k: set() for k in self.config_model.timeseries_params}
         self._sets = {**self._sets, **ts_sets}
 
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_params:
             param_data = {}
             for y in self._sets['y']:
                 # First, set up each parameter without considering
@@ -922,7 +941,7 @@ class Model(BaseModel):
     def update_parameters(self, t_offset):
         d = self.data
 
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_params:
             initializer = self._param_populator(d, param, t_offset)
             y_set = self._sets['y_def_' + param]
             param_object = getattr(self.m, param)
@@ -1005,12 +1024,9 @@ class Model(BaseModel):
         m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y, ordered=True)
         # Conversion technologies
         m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
-        # Demand technologies
-        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
-        # Technologies with specified `r`
-        m.y_def_r = po.Set(initialize=self._sets['y_def_r'], within=m.y)
-        # Technologies with specified `e_eff`
-        m.y_def_e_eff = po.Set(initialize=self._sets['y_def_e_eff'], within=m.y)
+        ##TIMESERIES vars
+        for param in self.config_model.timeseries_params:
+            setattr(m, 'y_def_'+param, po.Set(initialize = self._sets['y_def_' + param], within=m.y))
         # Technologies that allow `rb`
         m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
         # Technologies with parasitics
@@ -1023,7 +1039,7 @@ class Model(BaseModel):
         # Parameters
         #
 
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_params:
             y = getattr(m, 'y_def_' + param)
             # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
             initializer = self._param_populator(self.data, param)
@@ -1679,7 +1695,7 @@ class Model(BaseModel):
         #     raise exceptions.ModelError('`config_run.output.path` not configured.')
 
         # Add input time series (r and e_eff) alongside the solution
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_params:
             subset_name = 'y_def_' + param
             # Only if the set has some members
             if len(self._sets[subset_name]) > 0:
@@ -1693,7 +1709,7 @@ class Model(BaseModel):
             raise ValueError('Unsupported value for `how`: {}'.format(how))
 
         # Remove time series from solution again after writing it to disk
-        for param in _TIMESERIES_PARAMS:
+        for param in self.config_model.timeseries_params:
             if param in self.solution:
                 del self.solution[param]
 
