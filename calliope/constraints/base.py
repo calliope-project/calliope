@@ -54,6 +54,27 @@ def get_cost_param(model, cost, k, y, x, t):
     else: #turn e.g. costs_monetary_om_var to costs.monetary.om_var, then search in DataArray
         return get_any_option(y + '.' + param_string.replace('_','.',2), x=x) 
 
+def get_revenue_param(model, rev, k, y, x, t):
+    """
+    Function to get values for constraints which can optionally be
+    loaded from file (so may have time dependency).
+
+    model = calliope model
+    rev = revenue name, e.g. 'sub_var'
+    k = revenue type, e.g. 'monetary'
+    y = technology
+    x = location
+    t = timestep
+    """
+    get_any_option = utils.any_option_getter(model)
+
+    param_string = 'revenue_' + k + '_' + rev #format stored in model.data
+    
+    if param_string in model.data:
+        return getattr(model.m, param_string)[y, x, t]
+    else: #turn e.g. revenue_monetary_om_var to revenue.monetary.om_var, then search in DataArray
+        return get_any_option(y + '.' + param_string.replace('_','.',2), x=x) 
+
 def node_resource(model):
     """
     Defines variables:
@@ -641,13 +662,14 @@ def node_costs(model):
 
     def c_revenue_var_rule(m, y, x, t, k):
         carrier = model.get_option(y + '.carrier')
+        sub_var = get_revenue_param(model,'sub_var',k,y,x,t)
         if y in m.y_demand:
             return (m.revenue_var[y, x, t, k] ==
-                _revenue('sub_var', y, k, x) * weights.loc[t]
+                sub_var * weights.loc[t]
                 * -m.es_con[carrier, y, x, t])
         else:
             return (m.revenue_var[y, x, t, k] ==
-                _revenue('sub_var', y, k, x) * weights.loc[t]
+                sub_var * weights.loc[t]
                 * m.es_prod[carrier, y, x, t])
 
     def c_revenue_fixed_rule(m, y, x, k):
