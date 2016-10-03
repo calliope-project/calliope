@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use('agg')  # Prevents `Invalid DISPLAY variable` errors
-
 import pytest
 import tempfile
 
@@ -11,6 +8,9 @@ from calliope import analysis
 
 from . import common
 from .common import assert_almost_equal, solver
+
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')  # Prevents `Invalid DISPLAY variable` errors
 
 
 class TestModel:
