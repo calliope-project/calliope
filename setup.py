@@ -25,11 +25,11 @@ setup(
                                'test/common/t_6h/*.csv',
                                'test/common/t_erroneous/*.csv']},
     install_requires=[
-        "pyomo >= 4.3, < 4.4",
+        "pyomo >= 4.4, < 4.5",
         "numpy >= 1.11",
         "numexpr >= 2.3.1",
-        "pandas >= 0.18, < 0.19",
-        "xarray >= 0.7.2, < 0.8",
+        "pandas >= 0.19, < 0.20",
+        "xarray >= 0.8.2, < 0.9",
         "netcdf4 >= 1.2.2",
         "pyyaml >= 3.11",
         "click >= 3.3"
