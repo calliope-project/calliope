@@ -1246,8 +1246,6 @@ class Model(BaseModel):
                 self.results, warnmsg = _solve(warmstart, solver_kwargs)
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
-        if self.verbose:
-            print('\nSolver completed running at {}\n'.format(t))
         self.load_results()
         self.run_times["solved"] = time.time()
         if self.verbose:

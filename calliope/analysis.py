@@ -12,7 +12,7 @@ Functionality to analyze model results.
 import logging
 
 try:
-    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
     from matplotlib.colors import ListedColormap
 except ImportError:
     logging.debug('Matplotlib could not be imported, '
@@ -168,7 +168,7 @@ def plot_installed_capacities(solution,
     names = [md.at[y, 'name'] for y in df.columns]
     colors = [md.at[i, 'color'] for i in df.columns]
     colormap = ListedColormap(colors)
-    proxies = [plt.Rectangle((0, 0), 1, 1, fc=i)
+    proxies = [Rectangle((0, 0), 1, 1, fc=i)
                for i in colors]
 
     # Order the locations nicely, but only take those locations that actually
