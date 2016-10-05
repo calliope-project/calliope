@@ -68,3 +68,30 @@ Like custom constraint generator functions, custom time mask functions can be lo
            options: {...}
 
 See :mod:`calliope.time_masks` for examples of time mask functions.
+
+-------------------------
+Checklist for new release
+-------------------------
+
+Pre-release
+-----------
+
+* Make sure all unit tests pass
+* Make sure documentation builds without errors
+* Make sure the release notes are up-to-date, especially that new features and backward incompatible changes are clearly marked
+
+Create release
+--------------
+
+* Change ``_version.py`` version number
+* Update changelog with final version number and release date
+* Commit with message "Release vXXXX", then add a "vXXXX" tag, push both to GitHub
+* Create a release through the GitHub web interface, using the same tag, titling it "Release vXXXX" (required for Zenodo to pull it in)
+* Upload new release to PyPI: ``make all-dist``
+
+Post-release
+------------
+
+* Update changelog, adding a new vXXXX-dev heading, and update ``_version.py`` accordingly, in preparation for the next master commit
+
+.. Note:: Adding '-dev' to the version string, such as ``__version__ = '0.1.0-dev'``, is required for the custom code in ``doc/conf.py`` to work when building in-development versions of the documentation.
