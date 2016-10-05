@@ -2,7 +2,6 @@ name: calliope
 
 channels:
     - anaconda
-    - cachemeorg  # for glpk=4.57 on linux64, osx64, win64
     - conda-forge
 
 dependencies:
@@ -11,19 +10,20 @@ dependencies:
     - bottleneck
     - click
     - geos
-    - glpk=4.57  # 4.60 causes problems with current version of Pyomo
+    - glpk=4.59  # 4.60 causes problems with current version of Pyomo
     - hdf5
     - libnetcdf
     - matplotlib=1.5.1
+    - pyqt=4.11.4  # Else conda installs PyQt5 and that breaks matplotlib
     - netcdf4
     - networkx
     - numexpr
-    - numpy=1.11
-    - pandas=0.18.0
-    - pyomo=4.3.11377
+    - numpy=1.11.1
+    - pandas=0.19.0
+    - pyomo=4.4.1
     - pytest
     - pytest-cov
     - python-coveralls
     - pyyaml
     - scipy
-    - xarray=0.7.2
+    - xarray=0.8.2

@@ -230,7 +230,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     # Determine maximum that could have been transmitted across a link
     def get_edge_capacity(solution, a, b):
         hrs = solution['time_res'].to_pandas().sum()
-        cap = solution['e_cap_net'].loc[dict(x=a, y='{}:'.format(tech) + b)].value() * hrs
+        cap = solution['e_cap_net'].loc[dict(x=a, y='{}:'.format(tech) + b)].to_pandas() * hrs
         return cap
 
     # Get annual power transmission between zones
@@ -238,16 +238,20 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     trans_tech = lambda x: '{}:{}'.format(tech, x)
     def get_annual_power_transmission(zone):
         try:
-            return solution['e'].loc[dict(c=carrier, y=trans_tech(zone))].sum(dim='t').value()
+            return solution['e'].loc[dict(c=carrier, y=trans_tech(zone))].sum(dim='t').to_pandas()
         except KeyError:
             return 0
     df = pd.DataFrame({zone: get_annual_power_transmission(zone)
                       for zone in zones}, index=zones)
 
-    # Set smaller than zero to zero --
-    # we only want to know about 'production' from
-    # transmission, not their consumptions
-    df[df < 0] = 0
+    # Set negative and very small (erroneous) values to zero --
+    # Positive values = energy received at a node by transmission,
+    # negative values = energy sent by transmission.
+    # The absolute value sent and recieved between two nodes will be
+    # different when there is line loss (i.e. negative values will have a
+    # larger absolute value than the positive value for the same transmission
+    # line), which is why we take the recieving (positive) value.
+    df[df < df.max().max()*1e-10] = 0
 
     # Create directed graph
     G = nx.from_numpy_matrix(df.as_matrix().T, create_using=nx.DiGraph())
