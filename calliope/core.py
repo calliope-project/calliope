@@ -864,16 +864,18 @@ class Model(BaseModel):
 
     def _get_t_max_demand(self):
         """Return timestep index with maximum demand"""
+        # FIXME needs unit tests
         t_max_demands = utils.AttrDict()
         for c in self._sets['c']:
             ys = [y for y in self.data['y'].values
                   if self.get_option(y + '.carrier') == c]
-            # r_carrier is summed up over all techs ys and all locations (x)
-            r_carrier = (self.data['r']
-                             .loc[{'y': ys}]
-                             .sum(dim='x')
-                             .sum(dim='y').to_dataframe())
-            t_max_demands[c] = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
+            # Get copy of r data array
+            r_carrier = self.data['r'].loc[{'y': ys}].copy()
+            # Only kep negative (=demand) values
+            r_carrier.values[r_carrier.values > 0] = 0
+            t_max_demands[c] = (r_carrier.sum(dim='y').sum(dim='x')
+                                         .to_dataframe()
+                                         .sum(axis=1).idxmin())
         return t_max_demands
 
     def add_constraint(self, constraint, *args, **kwargs):
@@ -1064,7 +1066,7 @@ class Model(BaseModel):
         self.run_times = {}
         self.run_times["start"] = time.time()
         if self.verbose:
-            print('\nModel started at {}\n'
+            print('\nModel run started at {}\n'
                   .format(time.strftime(self.time_format)))
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
@@ -1084,7 +1086,7 @@ class Model(BaseModel):
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
         if self.verbose:
-            print('\nSolutions ready at {}\n'
+            print('\nSolution ready at {}\n'
                   '\nTotal run time was {} seconds\n'
                   .format(time.strftime(self.time_format,time.localtime(self.run_times["end"])),
                           self.run_times["runtime"]))
@@ -1102,9 +1104,9 @@ class Model(BaseModel):
                                             output_path=save_constr,
                                             **options)
             if self.verbose:
-                print('\nSolutions saved to file at {}\n'
+                print('\nSolution saved to file at {}\n'
                       .format(time.strftime(self.time_format)))
-    
+
     def solve(self, warmstart=False):
         """
         Args:
@@ -1160,7 +1162,7 @@ class Model(BaseModel):
                 results = self.opt.solve(self.m, tee=True, **solver_kwargs)
 
             return results, warning
-    
+
         self.run_times["preprocessed"] = time.time()
         if self.verbose:
             print('\nModel preprocessing took {0:.2f} seconds\n'
