@@ -44,6 +44,11 @@ _TIMESERIES_PARAMS = ['r', 'e_eff']
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
+_time_format = '%Y-%m-%d %H:%M:%S'
+
+
+def _get_time():
+    return time.strftime(_time_format)
 
 
 def _formatwarning(message, category, filename, lineno, line=None):
@@ -157,7 +162,6 @@ class Model(BaseModel):
     def __init__(self, config_run=None, override=None):
         super().__init__()
         self.verbose = False
-        self.time_format = '%Y-%m-%d %H:%M:%S'
         self.debug = utils.AttrDict()
 
         # Populate self.config_run and self.config_model
@@ -1066,8 +1070,7 @@ class Model(BaseModel):
         self.run_times = {}
         self.run_times["start"] = time.time()
         if self.verbose:
-            print('\nModel run started at {}\n'
-                  .format(time.strftime(self.time_format)))
+            print('[{}] Model run started.'.format(_get_time()))
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
@@ -1086,16 +1089,17 @@ class Model(BaseModel):
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
         if self.verbose:
-            print('\nSolution ready at {}\n'
-                  '\nTotal run time was {} seconds\n'
-                  .format(time.strftime(self.time_format,time.localtime(self.run_times["end"])),
-                          self.run_times["runtime"]))
+            print('[{}] Solution ready. '
+                  'Total run time was {} seconds.'
+                  .format(_get_time(), self.run_times["runtime"]))
         if cr.get_key('output.save', default=False) is True:
             output_format = cr.get_key('output.format', default=['netcdf'])
             if not isinstance(output_format, list):
                 output_format = [output_format]
             for fmt in output_format:
                 self.save_solution(fmt)
+            if self.verbose:
+                print('[{}] Solution saved to file.'.format(_get_time()))
             save_constr = cr.get_key('output.save_constraints', default=False)
             if save_constr:
                 options = cr.get_key('output.save_constraints_options',
@@ -1103,9 +1107,8 @@ class Model(BaseModel):
                 output.generate_constraints(self.solution,
                                             output_path=save_constr,
                                             **options)
-            if self.verbose:
-                print('\nSolution saved to file at {}\n'
-                      .format(time.strftime(self.time_format)))
+                if self.verbose:
+                    print('[{}] Constraints saved to file.'.format(_get_time()))
 
     def solve(self, warmstart=False):
         """
@@ -1165,8 +1168,8 @@ class Model(BaseModel):
 
         self.run_times["preprocessed"] = time.time()
         if self.verbose:
-            print('\nModel preprocessing took {0:.2f} seconds\n'
-                  .format(self.run_times["preprocessed"] - self.run_times["start"]))
+            print('[{}] Model preprocessing took {:.2f} seconds.'
+                  .format(_get_time(), self.run_times["preprocessed"] - self.run_times["start"]))
 
         if cr.get_key('debug.echo_solver_log', default=False):
             self.results, warnmsg = _solve(warmstart, solver_kwargs)
@@ -1179,8 +1182,8 @@ class Model(BaseModel):
         self.load_results()
         self.run_times["solved"] = time.time()
         if self.verbose:
-            print('\nSolving model took {0:.2f} seconds\n'
-                  .format(self.run_times["solved"] - self.run_times["preprocessed"]))
+            print('[{}] Solving model took {:.2f} seconds.'
+                  .format(_get_time(), self.run_times["solved"] - self.run_times["preprocessed"]))
 
     def process_solution(self):
         """
