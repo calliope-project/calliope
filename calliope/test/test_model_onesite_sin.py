@@ -25,7 +25,7 @@ class TestModel:
         """
         config_run = """
             mode: plan
-            model: [{techs}, {locations}]
+            model: ['{techs}', '{locations}']
             subset_t: ['2005-01-01', '2005-01-03']
         """
         with tempfile.NamedTemporaryFile() as f:

@@ -24,7 +24,7 @@ def create_and_run_model(override, iterative_warmstart=False,
     """
     config_run = """
         mode: operate
-        model: [{techs}, {locations}]
+        model: ['{techs}', '{locations}']
     """
     override = AttrDict.from_yaml_string(override)
     override.set_key('solver', solver)
