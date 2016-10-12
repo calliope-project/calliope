@@ -1693,6 +1693,7 @@ class Model(BaseModel):
 
         encoding = {k: {'zlib': True, 'complevel': 4} for k in self.solution.data_vars}
         self.solution.to_netcdf(store_file, format='netCDF4', encoding=encoding)
+        self.solution.close()  # Force-close NetCDF file after writing
 
         return store_file  # Return the path to the NetCDF file we used
 
