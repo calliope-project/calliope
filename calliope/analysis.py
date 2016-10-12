@@ -389,7 +389,8 @@ def get_group_share(solution, techs, group_type='supply',
     supply_total = summary.loc[group, var].sum()
     supply_group = summary.loc[techs, var].sum()
     try:
-        return supply_group / supply_total
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return supply_group / supply_total
     except ZeroDivisionError:
         # FIXME it seems that on some systems, supply_ are not numpy.floats
         # but regular Python floats, leading to a ZeroDivisionError

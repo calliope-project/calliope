@@ -1367,7 +1367,8 @@ class Model(BaseModel):
             carrier_dict = {}
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
-                lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
+                    lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
@@ -1402,7 +1403,8 @@ class Model(BaseModel):
         cfs = {}
         for carrier in sol.coords['c'].values:
             time_res_sum = self._get_time_res_sum()
-            cf = sol['ec_prod'].loc[dict(c=carrier)] / (sol['e_cap_net'] * time_res_sum)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                cf = sol['ec_prod'].loc[dict(c=carrier)] / (sol['e_cap_net'] * time_res_sum)
             cf = cf.to_pandas()
 
             # Make sure the dataframe has y as columns and x as index
@@ -1430,14 +1432,16 @@ class Model(BaseModel):
 
         # Total (over locations) capacity factors per carrier
         time_res_sum = self._get_time_res_sum()
-        cf = (sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
-              / (sol['e_cap_net'].sum(dim='x') * time_res_sum)).to_pandas()
+        with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
+            cf = (sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
+                  / (sol['e_cap_net'].sum(dim='x') * time_res_sum)).to_pandas()
         df = pd.DataFrame({'cf': cf})
 
         # Total (over locations) levelized costs per carrier
         for k in sorted(sol['levelized_cost'].coords['k'].values):
-            df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
-                               / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
+            with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
+                df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
+                                   / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
         df['e_prod'] = sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
