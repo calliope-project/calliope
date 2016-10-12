@@ -27,7 +27,7 @@ class TestModel:
             model: ['{techs}', '{locations}']
             subset_t: ['2005-01-01', '2005-01-02']
         """
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(locations.encode('utf-8'))
             f.read()
             model = common.simple_model(config_run=config_run,

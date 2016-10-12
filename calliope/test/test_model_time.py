@@ -27,7 +27,7 @@ def create_and_run_model(override, iterative_warmstart=False):
     """
     override = AttrDict.from_yaml_string(override)
     override.set_key('solver', solver)
-    with tempfile.NamedTemporaryFile() as f:
+    with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(locations.encode('utf-8'))
         f.read()
         model = common.simple_model(config_run=config_run,

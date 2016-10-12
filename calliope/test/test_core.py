@@ -220,7 +220,7 @@ class TestInitialization:
                         constraints:
                             e_cap.max: 100
         """
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(locations.encode('utf-8'))
             print(f.read())
             model = common.simple_model(config_locations=f.name)
