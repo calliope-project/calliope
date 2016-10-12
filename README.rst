@@ -1,13 +1,14 @@
 .. image:: https://travis-ci.org/calliope-project/calliope.svg
     :target: https://travis-ci.org/calliope-project/calliope
+.. image:: https://ci.appveyor.com/api/projects/status/16aic413nfm35u4b/branch/master?svg=true
+    :target: https://ci.appveyor.com/project/sjpfenninger/calliope
 .. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
     :target: https://coveralls.io/r/calliope-project/calliope
 .. image:: https://img.shields.io/pypi/l/calliope.svg
     :target: #license
 .. image:: https://img.shields.io/pypi/v/calliope.svg
     :target: https://pypi.python.org/pypi/calliope
-.. image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
-    :target: https://zenodo.org/badge/latestdoi/9581/calliope-project/calliope
+
 
 ::
 
@@ -61,6 +62,15 @@ Documentation is available at docs.callio.pe:
 * `Stable version <http://docs.callio.pe/en/stable/>`_
 * `Development version <http://docs.callio.pe/en/latest/>`_
 
+Citing Calliope
+---------------
+
+If you use Calliope, please cite the following paper:
+
+Stefan Pfenninger and James Keirstead (2015). Renewables, nuclear, or fossil fuels? Scenarios for Great Britain's power system considering costs, emissions and energy security. *Applied Energy*, 152, pp. 83–93. `doi: 10.1016/j.apenergy.2015.04.102 <http://dx.doi.org/10.1016/j.apenergy.2015.04.102>`_
+
+All Calliope releases are archived on Zenodo and you can also refer to specific versions of Calliope with their Zenodo DOI. The most recent archived version is: |link-latest-doi|_
+
 License
 -------
 
@@ -77,3 +87,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+.. |link-latest-doi| image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
+.. _link-latest-doi: https://zenodo.org/badge/latestdoi/9581/calliope-project/calliope
