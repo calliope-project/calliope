@@ -1110,6 +1110,31 @@ class Model(BaseModel):
                 if self.verbose:
                     print('[{}] Constraints saved to file.'.format(_get_time()))
 
+    def _solve_with_output_capture(self, warmstart, solver_kwargs):
+        if self.config_run.get_key('debug.echo_solver_log', default=False):
+            return self._solve(warmstart, solver_kwargs)
+        else:
+            # Silencing output by redirecting stdout and stderr
+            with utils.capture_output() as self.pyomo_output:
+                return self._solve(warmstart, solver_kwargs)
+
+    def _solve(self, warmstart, solver_kwargs):
+        warning = None
+        solver = self.config_run.get_key('solver')
+        if warmstart:
+            try:
+                results = self.opt.solve(self.m, warmstart=True,
+                                         tee=True, **solver_kwargs)
+            except ValueError as e:
+                if 'warmstart' in e.args[0]:
+                    warning = ('The chosen solver, {}, '
+                               'does not support warmstart, '
+                               'which may impact performance.').format(solver)
+                    results = self.opt.solve(self.m, tee=True, **solver_kwargs)
+        else:
+            results = self.opt.solve(self.m, tee=True, **solver_kwargs)
+        return results, warning
+
     def solve(self, warmstart=False):
         """
         Args:
@@ -1119,7 +1144,6 @@ class Model(BaseModel):
         Returns: None
 
         """
-        m = self.m
         cr = self.config_run
         solver_kwargs = {}
         if not warmstart:
@@ -1149,36 +1173,16 @@ class Model(BaseModel):
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
 
-        def _solve(warmstart, solver_kwargs):
-            warning = None
-            if warmstart:
-                try:
-                    results = self.opt.solve(self.m, warmstart=True,
-                                             tee=True, **solver_kwargs)
-                except ValueError as e:
-                    if 'warmstart' in e.args[0]:
-                        warning = ('The chosen solver, {}, '
-                                   'does not support warmstart, '
-                                   'which may impact performance.').format(cr.get_key('solver'))
-                        results = self.opt.solve(self.m, tee=True, **solver_kwargs)
-            else:
-                results = self.opt.solve(self.m, tee=True, **solver_kwargs)
-
-            return results, warning
-
         self.run_times["preprocessed"] = time.time()
         if self.verbose:
             print('[{}] Model preprocessing took {:.2f} seconds.'
                   .format(_get_time(), self.run_times["preprocessed"] - self.run_times["start"]))
 
-        if cr.get_key('debug.echo_solver_log', default=False):
-            self.results, warnmsg = _solve(warmstart, solver_kwargs)
-        else:
-            # Silencing output by redirecting stdout and stderr
-            with utils.capture_output() as self.pyomo_output:
-                self.results, warnmsg = _solve(warmstart, solver_kwargs)
+        self.results, warnmsg = self._solve_with_output_capture(warmstart, solver_kwargs)
+
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
+
         self.load_results()
         self.run_times["solved"] = time.time()
         if self.verbose:
@@ -1618,6 +1622,7 @@ class Model(BaseModel):
                        != 'optimal')
         r = self.m.solutions.load_from(self.results)
         if r is False or not_optimal:
+            logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
             logging.critical(self.results.Problem)
             logging.critical(self.results.Solver)
             if not_optimal:

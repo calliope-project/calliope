@@ -13,6 +13,7 @@ of regular dict) used for managing model configuration.
 from contextlib import contextmanager
 from io import StringIO
 import functools
+import logging
 import os
 import importlib
 import sys
@@ -32,6 +33,25 @@ class __Missing(object):
 
 
 _MISSING = __Missing()
+
+
+def _yaml_load(src):
+    """Load YAML from a file object or path with useful parser errors"""
+    if not isinstance(src, str):
+        try:
+            src_name = src.name
+        except AttributeError:
+            src_name = '<yaml stringio>'
+        # Force-load file streams as that allows the parser to print
+        # much more context when it encounters an error
+        src = src.read()
+    else:
+        src_name = '<yaml string>'
+    try:
+        return yaml.load(src)
+    except yaml.YAMLError:
+        logging.error('Parser error when reading YAML from {}.'.format(src_name))
+        raise
 
 
 class AttrDict(dict):
@@ -95,9 +115,9 @@ class AttrDict(dict):
         """
         if isinstance(f, str):
             with open(f, 'r') as src:
-                loaded = cls(yaml.load(src))
+                loaded = cls(_yaml_load(src))
         else:
-            loaded = cls(yaml.load(f))
+            loaded = cls(_yaml_load(f))
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
                 imported = cls.from_yaml(relative_path(k, f))
@@ -115,7 +135,7 @@ class AttrDict(dict):
         must be valid YAML.
 
         """
-        return cls(yaml.load(string))
+        return cls(_yaml_load(string))
 
     def set_key(self, key, value):
         """

@@ -71,6 +71,7 @@ def print_end_time(start_time, msg='complete'):
     print('\nCalliope run {}. '
           'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
+
 def print_debug_startup(debug):
     if debug:
         print('Version {}'.format(_version.__version__))
