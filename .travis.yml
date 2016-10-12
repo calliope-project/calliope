@@ -19,6 +19,7 @@ before_install:
 install:
   - conda env create -n calliope --file requirements.yml
   - source activate calliope
+  - conda install python-coveralls  # Install manually here but not on appveyor
   - pip install --no-cache-dir .
 
 before_script:  # configure a headless display to test plot generation

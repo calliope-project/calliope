@@ -23,7 +23,6 @@ dependencies:
     - pyomo=4.4.1
     - pytest
     - pytest-cov
-    - python-coveralls
     - pyyaml
     - scipy
     - xarray=0.8.2
