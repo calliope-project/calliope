@@ -22,7 +22,8 @@ import warnings
 
 import pyomo.opt as popt
 import pyomo.core as po
-import pyomo.environ  # Necessary for solver plugins etc.
+# pyomo.environ is needed for pyomo solver plugins
+import pyomo.environ  # pylint: disable=unused-import
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -34,9 +35,8 @@ from . import constraints
 from . import locations
 from . import output
 from . import sets
-from . import transmission
-from . import time_funcs
-from . import time_masks
+from . import time_funcs  # pylint: disable=unused-import
+from . import time_masks  # pylint: disable=unused-import
 from . import utils
 
 # Parameters that may be defined as time series
@@ -62,7 +62,7 @@ warnings.formatwarning = _formatwarning
 
 
 @functools.lru_cache(maxsize=1)
-def get_default_techs(foo=0):
+def get_default_techs(foo=0):  # pylint: disable=unused-argument
     """
     Get list of techs pre-defined in defaults.yaml.
 
@@ -907,7 +907,8 @@ class Model(BaseModel):
         getter_data = (src_data[src_param].to_dataframe()
                                           .reorder_levels(['y', 'x', 't'])
                                           .to_dict()[src_param])
-        def getter(m, y, x, t):
+
+        def getter(m, y, x, t):  # pylint: disable=unused-argument
             if t_offset:
                 t = self.get_t(t, t_offset)
             return getter_data[(y, x, t)]
@@ -1518,9 +1519,9 @@ class Model(BaseModel):
 
     def get_shares(self, groups):
         from . import analysis
-        vars = ['e_prod', 'e_con', 'e_cap']
-        df = pd.DataFrame(index=groups.index, columns=vars)
-        for var in vars:
+        vars_ = ['e_prod', 'e_con', 'e_cap']
+        df = pd.DataFrame(index=groups.index, columns=vars_)
+        for var in vars_:
             for index, row in groups.iterrows():
                 group_members = row['members'].split('|')
                 group_type = row['type']

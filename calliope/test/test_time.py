@@ -1,8 +1,8 @@
-import pytest
+import pytest  # pylint: disable=unused-import
 
-import pandas as pd
+# import pandas as pd
 
-import calliope
+# import calliope
 
 
 # class TestMaskWhereZero:

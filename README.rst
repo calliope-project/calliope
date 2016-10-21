@@ -57,10 +57,10 @@ It can also be run interactively from a Python session:
 Documentation
 -------------
 
-Documentation is available at docs.callio.pe:
+Documentation is available on Read the Docs:
 
-* `Stable version <http://docs.callio.pe/en/stable/>`_
-* `Development version <http://docs.callio.pe/en/latest/>`_
+* `Stable version <https://calliope.readthedocs.io/en/stable/>`_
+* `Development version <https://calliope.readthedocs.io/en/latest/>`_
 
 Citing Calliope
 ---------------

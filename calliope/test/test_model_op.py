@@ -1,4 +1,4 @@
-import pytest
+import pytest  # pylint: disable=unused-import
 import tempfile
 
 from calliope.utils import AttrDict

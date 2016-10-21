@@ -285,7 +285,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
 
 
 def get_delivered_cost(solution, cost_class='monetary', carrier='power',
-                       count_unmet_demand=False, unit_multiplier=1.0):
+                       count_unmet_demand=False):
     """
     Get the levelized cost per unit of energy delivered for the given
     ``cost_class`` and ``carrier``.
@@ -298,10 +298,6 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     count_unmet_demand : bool, default False
         Whether to count the cost of unmet demand in the final
         delivered cost.
-    unit_multiplier : float or int, default 1.0
-        Adjust unit of the returned cost value. For example, if model units
-        are kW and kWh, ``unit_multiplier=1.0`` will return cost per kWh, and
-        ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
     summary = solution.summary.to_pandas()

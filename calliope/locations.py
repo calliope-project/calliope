@@ -11,7 +11,6 @@ Functions to deal with locations and their configuration.
 
 import pandas as pd
 
-from . import exceptions
 from . import utils
 
 
