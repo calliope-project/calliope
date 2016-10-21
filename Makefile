@@ -12,7 +12,7 @@ test :
 
 .PHONY : ci
 ci :
-ifeq ($(TEST_JOB), lint)
+ifeq ($(JOB_TYPE), lint)
 	make lint
 else
 	make test

@@ -7,8 +7,11 @@ python:
   - "3.5"
 
 matrix:
-  - TEST_JOB="lint"
-  - TEST_JOB="test"
+  include:
+    - env:
+      - JOB_TYPE="lint"
+    - env:
+      - JOB_TYPE="test"
 
 before_install:
   - "wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;"
@@ -35,4 +38,4 @@ before_script:  # configure a headless display to test plot generation
 script: "make ci"
 
 after_success:
-  - if [ "${TEST_JOB}" = "test" ]; then coveralls; fi
+  - if [ "${JOB_TYPE}" = "test" ]; then coveralls; fi
