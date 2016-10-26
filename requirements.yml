@@ -10,7 +10,6 @@ dependencies:
     - bottleneck
     - click
     - descartes  # For analysis_utils.plot_shapefile_polys
-    - geos
     - glpk=4.59  # 4.60 causes problems with current version of Pyomo
     - hdf5
     - libnetcdf

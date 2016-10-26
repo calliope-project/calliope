@@ -1,27 +1,18 @@
-.. image:: https://travis-ci.org/calliope-project/calliope.svg
-    :target: https://travis-ci.org/calliope-project/calliope
-.. image:: https://ci.appveyor.com/api/projects/status/16aic413nfm35u4b/branch/master?svg=true
-    :target: https://ci.appveyor.com/project/sjpfenninger/calliope
-.. image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
-    :target: https://coveralls.io/r/calliope-project/calliope
-.. image:: https://img.shields.io/pypi/l/calliope.svg
-    :target: #license
-.. image:: https://img.shields.io/pypi/v/calliope.svg
-    :target: https://pypi.python.org/pypi/calliope
+|badge_travis| |badge_appveyor| |badge_coveralls| |badge_pypi| |badge_license|
 
+-----
 
-::
-
-       _____     _____
-      / ___/__ _/ / (_)__  ___  ___
-     / /__/ _ `/ / / / _ \/ _ \/ -_)
-     \___/\_,_/_/_/_/\___/ .__/\__/
-                        /_/
-
-Calliope
-========
+.. image:: https://raw.githubusercontent.com/calliope-project/calliope/master/doc/_static/logo.png
 
 *A multi-scale energy systems (MUSES) modeling framework* | `www.callio.pe <http://www.callio.pe/>`_
+
+-----
+
+.. contents::
+
+.. section-numbering::
+
+-----
 
 About
 -----
@@ -62,6 +53,11 @@ Documentation is available on Read the Docs:
 * `Stable version <https://calliope.readthedocs.io/en/stable/>`_
 * `Development version <https://calliope.readthedocs.io/en/latest/>`_
 
+Changelog
+---------
+
+See `changelog.rst <https://github.com/calliope-project/calliope/blob/master/changelog.rst>`_.
+
 Citing Calliope
 ---------------
 
@@ -90,3 +86,22 @@ limitations under the License.
 
 .. |link-latest-doi| image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
 .. _link-latest-doi: https://zenodo.org/badge/latestdoi/9581/calliope-project/calliope
+
+.. |badge_pypi| image:: https://img.shields.io/pypi/v/calliope.svg
+    :target: https://pypi.python.org/pypi/calliope
+    :alt: PyPI version
+
+.. |badge_license| image:: https://img.shields.io/pypi/l/calliope.svg
+    :target: #license
+
+.. |badge_coveralls| image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
+    :target: https://coveralls.io/r/calliope-project/calliope
+    :alt: Test coverage
+
+.. |badge_travis| image:: https://travis-ci.org/calliope-project/calliope.svg
+    :target: https://travis-ci.org/calliope-project/calliope
+    :alt: Build status on Mac/Linux
+
+.. |badge_appveyor|  image:: https://ci.appveyor.com/api/projects/status/16aic413nfm35u4b/branch/master?svg=true
+    :target: https://ci.appveyor.com/project/sjpfenninger/calliope
+    :alt: Build status on Windows
