@@ -13,6 +13,7 @@ of regular dict) used for managing model configuration.
 from contextlib import contextmanager
 from io import StringIO
 import functools
+import logging
 import os
 import importlib
 import sys
@@ -32,6 +33,25 @@ class __Missing(object):
 
 
 _MISSING = __Missing()
+
+
+def _yaml_load(src):
+    """Load YAML from a file object or path with useful parser errors"""
+    if not isinstance(src, str):
+        try:
+            src_name = src.name
+        except AttributeError:
+            src_name = '<yaml stringio>'
+        # Force-load file streams as that allows the parser to print
+        # much more context when it encounters an error
+        src = src.read()
+    else:
+        src_name = '<yaml string>'
+    try:
+        return yaml.load(src)
+    except yaml.YAMLError:
+        logging.error('Parser error when reading YAML from {}.'.format(src_name))
+        raise
 
 
 class AttrDict(dict):
@@ -95,9 +115,9 @@ class AttrDict(dict):
         """
         if isinstance(f, str):
             with open(f, 'r') as src:
-                loaded = cls(yaml.load(src))
+                loaded = cls(_yaml_load(src))
         else:
-            loaded = cls(yaml.load(f))
+            loaded = cls(_yaml_load(f))
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
                 imported = cls.from_yaml(relative_path(k, f))
@@ -115,7 +135,7 @@ class AttrDict(dict):
         must be valid YAML.
 
         """
-        return cls(yaml.load(string))
+        return cls(_yaml_load(string))
 
     def set_key(self, key, value):
         """
@@ -315,7 +335,6 @@ def capture_output():
     Returns a list with the captured strings: ``[stderr, stdout]``
 
     """
-    import sys
     old_out, old_err = sys.stdout, sys.stderr
     try:
         out = [StringIO(), StringIO()]
@@ -479,21 +498,22 @@ def option_getter(config_model):
     return get_option
 
 
-def cost_getter(option_getter, costs_type='costs'):
+def cost_getter(option_getter_func, costs_type='costs'):
     def get_cost(cost, y, k, x=None):
-        return option_getter(y + '.' + costs_type + '.' + k + '.' + cost,
-                             default=y + '.' + costs_type + '.default.' + cost,
-                             x=x)
+        return option_getter_func(
+            y + '.' + costs_type + '.' + k + '.' + cost,
+            default=y + '.' + costs_type + '.default.' + cost,
+            x=x)
     return get_cost
 
 
-def cost_per_distance_getter(option_getter):
+def cost_per_distance_getter(option_getter_func):
     def get_cost_per_distance(cost, y, k, x):
         try:
             cost_option = y + '.costs_per_distance.' + k + '.' + cost
-            cost = option_getter(cost_option)
-            per_distance = option_getter(y + '.per_distance')
-            distance = option_getter(y + '.distance', x=x)
+            cost = option_getter_func(cost_option)
+            per_distance = option_getter_func(y + '.per_distance')
+            distance = option_getter_func(y + '.distance', x=x)
             distance_cost = cost * (distance / per_distance)
         except exceptions.OptionNotSetError:
             distance_cost = 0
@@ -501,11 +521,12 @@ def cost_per_distance_getter(option_getter):
     return get_cost_per_distance
 
 
-def depreciation_getter(option_getter):
+def depreciation_getter(option_getter_func):
     def get_depreciation_rate(y, k):
-        interest = option_getter(y + '.depreciation.interest.' + k,
-                                 default=y + '.depreciation.interest.default')
-        plant_life = option_getter(y + '.depreciation.plant_life')
+        interest = option_getter_func(
+            y + '.depreciation.interest.' + k,
+            default=y + '.depreciation.interest.default')
+        plant_life = option_getter_func(y + '.depreciation.plant_life')
         if interest == 0:
             dep = 1 / plant_life
         else:

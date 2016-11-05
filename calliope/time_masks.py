@@ -100,7 +100,7 @@ def extreme(data, tech, var='r', how='max',
     """
     arr = _get_array(data, var, tech, locations)
 
-    return _extreme(arr, how, length, n, groupby_length, locations, padding)
+    return _extreme(arr, how, length, n, groupby_length, padding)
 
 
 def extreme_diff(data, tech0, tech1, var='r', how='max',
@@ -111,12 +111,12 @@ def extreme_diff(data, tech0, tech1, var='r', how='max',
     arr1 = _get_array(data_n, var, tech1, locations)
     arr = arr0 - arr1
 
-    return _extreme(arr, how, length, n, groupby_length, locations, padding)
+    return _extreme(arr, how, length, n, groupby_length, padding)
 
 
 def _extreme(arr, how='max',
              length='1D', n=1, groupby_length=None,
-             locations=None, padding=None):
+             padding=None):
 
     full_series = arr.mean(dim='x').to_pandas()  # Get a t-indexed Series
 
@@ -156,6 +156,6 @@ def week(data, day_func, **day_func_kwargs):
     end_hour = day[-1] + pd.Timedelta('{}D'.format(days_after))
     before = pd.date_range(start_hour, day[0], freq='1H')[:-1]
     after = pd.date_range(day[-1], end_hour, freq='1H')[1:]
-    week = before.append(day).append(after)
+    result_week = before.append(day).append(after)
 
-    return week
+    return result_week

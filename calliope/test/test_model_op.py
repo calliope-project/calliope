@@ -1,4 +1,4 @@
-import pytest
+import pytest  # pylint: disable=unused-import
 import tempfile
 
 from calliope.utils import AttrDict
@@ -24,11 +24,11 @@ def create_and_run_model(override, iterative_warmstart=False,
     """
     config_run = """
         mode: operate
-        model: [{techs}, {locations}]
+        model: ['{techs}', '{locations}']
     """
     override = AttrDict.from_yaml_string(override)
     override.set_key('solver', solver)
-    with tempfile.NamedTemporaryFile() as f:
+    with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(locations.format(demand_file=demand_file).encode('utf-8'))
         f.read()
         model = common.simple_model(config_run=config_run,

@@ -24,8 +24,6 @@ from . import _version
 from .parallel import Parallelizer
 
 
-STRF = '%Y-%m-%d %H:%M:%S'
-
 _debug = click.option('--debug', is_flag=True, default=False,
                       help='Print debug information when encountering errors.')
 _pdb = click.option('--pdb', is_flag=True, default=False,
@@ -33,7 +31,9 @@ _pdb = click.option('--pdb', is_flag=True, default=False,
                          'debugger on encountering errors.')
 
 
-logging.basicConfig(stream=sys.stderr)
+logging.basicConfig(stream=sys.stderr,
+                    format='[%(asctime)s] %(levelname)-8s %(message)s',
+                    datefmt=core._time_format)
 logger = logging.getLogger()
 
 
@@ -67,9 +67,10 @@ def format_exceptions(debug=False, pdb=False, start_time=None):
 def print_end_time(start_time, msg='complete'):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
-    tend = end_time.strftime(STRF)
+    tend = end_time.strftime(core._time_format)
     print('\nCalliope run {}. '
           'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
+
 
 def print_debug_startup(debug):
     if debug:
@@ -108,10 +109,9 @@ def run(run_config, debug, pdb):
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, start_time):
-        tstart = start_time.strftime(STRF)
+        tstart = start_time.strftime(core._time_format)
         print('Calliope run starting at {}\n'.format(tstart))
         model = core.Model(config_run=run_config)
-        model.time_format = STRF
         model.verbose = True  # Enables some print calls inside Model
         model_name = model.config_model.get_key('name', default='None')
         run_name = model.config_run.get_key('name', default='None')
@@ -123,7 +123,7 @@ def run(run_config, debug, pdb):
             x=len(model._sets['x']),
             y=num_techs,
             t=len(model._sets['t']))
-        print('Model size:   {}'.format(msize))
+        print('Model size:   {}\n'.format(msize))
         model.config_run.set_key('output.save', True)  # Always save output
         model.run()
         print_end_time(start_time)

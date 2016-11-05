@@ -22,7 +22,8 @@ import warnings
 
 import pyomo.opt as popt
 import pyomo.core as po
-import pyomo.environ  # Necessary for solver plugins etc.
+# pyomo.environ is needed for pyomo solver plugins
+import pyomo.environ  # pylint: disable=unused-import
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -34,9 +35,8 @@ from . import constraints
 from . import locations
 from . import output
 from . import sets
-from . import transmission
-from . import time_funcs
-from . import time_masks
+from . import time_funcs  # pylint: disable=unused-import
+from . import time_masks  # pylint: disable=unused-import
 from . import utils
 
 # Parameters that may be defined as time series
@@ -44,6 +44,11 @@ _TIMESERIES_PARAMS = ['r', 'e_eff']
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
+_time_format = '%Y-%m-%d %H:%M:%S'
+
+
+def _get_time():
+    return time.strftime(_time_format)
 
 
 def _formatwarning(message, category, filename, lineno, line=None):
@@ -57,7 +62,7 @@ warnings.formatwarning = _formatwarning
 
 
 @functools.lru_cache(maxsize=1)
-def get_default_techs(foo=0):
+def get_default_techs(foo=0):  # pylint: disable=unused-argument
     """
     Get list of techs pre-defined in defaults.yaml.
 
@@ -157,7 +162,6 @@ class Model(BaseModel):
     def __init__(self, config_run=None, override=None):
         super().__init__()
         self.verbose = False
-        self.time_format = '%Y-%m-%d %H:%M:%S'
         self.debug = utils.AttrDict()
 
         # Populate self.config_run and self.config_model
@@ -888,16 +892,18 @@ class Model(BaseModel):
 
     def _get_t_max_demand(self):
         """Return timestep index with maximum demand"""
+        # FIXME needs unit tests
         t_max_demands = utils.AttrDict()
         for c in self._sets['c']:
             ys = [y for y in self.data['y'].values
                   if self.get_option(y + '.carrier') == c]
-            # r_carrier is summed up over all techs ys and all locations (x)
-            r_carrier = (self.data['r']
-                             .loc[{'y': ys}]
-                             .sum(dim='x')
-                             .sum(dim='y').to_dataframe())
-            t_max_demands[c] = r_carrier[r_carrier < 0].sum(axis=1).idxmin()
+            # Get copy of r data array
+            r_carrier = self.data['r'].loc[{'y': ys}].copy()
+            # Only kep negative (=demand) values
+            r_carrier.values[r_carrier.values > 0] = 0
+            t_max_demands[c] = (r_carrier.sum(dim='y').sum(dim='x')
+                                         .to_dataframe()
+                                         .sum(axis=1).idxmin())
         return t_max_demands
 
     def add_constraint(self, constraint, *args, **kwargs):
@@ -925,7 +931,8 @@ class Model(BaseModel):
         getter_data = (src_data[src_param].to_dataframe()
                                           .reorder_levels(['y', 'x', 't'])
                                           .to_dict()[src_param])
-        def getter(m, y, x, t):
+
+        def getter(m, y, x, t):  # pylint: disable=unused-argument
             if t_offset:
                 t = self.get_t(t, t_offset)
             return getter_data[(y, x, t)]
@@ -1088,8 +1095,7 @@ class Model(BaseModel):
         self.run_times = {}
         self.run_times["start"] = time.time()
         if self.verbose:
-            print('\nModel started at {}\n'
-                  .format(time.strftime(self.time_format)))
+            print('[{}] Model run started.'.format(_get_time()))
         if self.mode == 'plan':
             self.generate_model()  # Generated model goes to self.m
             self.solve()
@@ -1108,16 +1114,17 @@ class Model(BaseModel):
             raise e('Invalid model mode: `{}`'.format(self.mode))
         self._log_time()
         if self.verbose:
-            print('\nSolutions ready at {}\n'
-                  '\nTotal run time was {} seconds\n'
-                  .format(time.strftime(self.time_format,time.localtime(self.run_times["end"])),
-                          self.run_times["runtime"]))
+            print('[{}] Solution ready. '
+                  'Total run time was {} seconds.'
+                  .format(_get_time(), self.run_times["runtime"]))
         if cr.get_key('output.save', default=False) is True:
             output_format = cr.get_key('output.format', default=['netcdf'])
             if not isinstance(output_format, list):
                 output_format = [output_format]
             for fmt in output_format:
                 self.save_solution(fmt)
+            if self.verbose:
+                print('[{}] Solution saved to file.'.format(_get_time()))
             save_constr = cr.get_key('output.save_constraints', default=False)
             if save_constr:
                 options = cr.get_key('output.save_constraints_options',
@@ -1125,10 +1132,34 @@ class Model(BaseModel):
                 output.generate_constraints(self.solution,
                                             output_path=save_constr,
                                             **options)
-            if self.verbose:
-                print('\nSolutions saved to file at {}\n'
-                      .format(time.strftime(self.time_format)))
-    
+                if self.verbose:
+                    print('[{}] Constraints saved to file.'.format(_get_time()))
+
+    def _solve_with_output_capture(self, warmstart, solver_kwargs):
+        if self.config_run.get_key('debug.echo_solver_log', default=False):
+            return self._solve(warmstart, solver_kwargs)
+        else:
+            # Silencing output by redirecting stdout and stderr
+            with utils.capture_output() as self.pyomo_output:
+                return self._solve(warmstart, solver_kwargs)
+
+    def _solve(self, warmstart, solver_kwargs):
+        warning = None
+        solver = self.config_run.get_key('solver')
+        if warmstart:
+            try:
+                results = self.opt.solve(self.m, warmstart=True,
+                                         tee=True, **solver_kwargs)
+            except ValueError as e:
+                if 'warmstart' in e.args[0]:
+                    warning = ('The chosen solver, {}, '
+                               'does not support warmstart, '
+                               'which may impact performance.').format(solver)
+                    results = self.opt.solve(self.m, tee=True, **solver_kwargs)
+        else:
+            results = self.opt.solve(self.m, tee=True, **solver_kwargs)
+        return results, warning
+
     def solve(self, warmstart=False):
         """
         Args:
@@ -1138,7 +1169,6 @@ class Model(BaseModel):
         Returns: None
 
         """
-        m = self.m
         cr = self.config_run
         solver_kwargs = {}
         if not warmstart:
@@ -1168,41 +1198,21 @@ class Model(BaseModel):
             os.makedirs(logdir)
             TempfileManager.tempdir = logdir
 
-        def _solve(warmstart, solver_kwargs):
-            warning = None
-            if warmstart:
-                try:
-                    results = self.opt.solve(self.m, warmstart=True,
-                                             tee=True, **solver_kwargs)
-                except ValueError as e:
-                    if 'warmstart' in e.args[0]:
-                        warning = ('The chosen solver, {}, '
-                                   'does not support warmstart, '
-                                   'which may impact performance.').format(cr.get_key('solver'))
-                        results = self.opt.solve(self.m, tee=True, **solver_kwargs)
-            else:
-                results = self.opt.solve(self.m, tee=True, **solver_kwargs)
-
-            return results, warning
-    
         self.run_times["preprocessed"] = time.time()
         if self.verbose:
-            print('\nModel preprocessing took {0:.2f} seconds\n'
-                  .format(self.run_times["preprocessed"] - self.run_times["start"]))
+            print('[{}] Model preprocessing took {:.2f} seconds.'
+                  .format(_get_time(), self.run_times["preprocessed"] - self.run_times["start"]))
 
-        if cr.get_key('debug.echo_solver_log', default=False):
-            self.results, warnmsg = _solve(warmstart, solver_kwargs)
-        else:
-            # Silencing output by redirecting stdout and stderr
-            with utils.capture_output() as self.pyomo_output:
-                self.results, warnmsg = _solve(warmstart, solver_kwargs)
+        self.results, warnmsg = self._solve_with_output_capture(warmstart, solver_kwargs)
+
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)
+
         self.load_results()
         self.run_times["solved"] = time.time()
         if self.verbose:
-            print('\nSolving model took {0:.2f} seconds\n'
-                  .format(self.run_times["solved"] - self.run_times["preprocessed"]))
+            print('[{}] Solving model took {:.2f} seconds.'
+                  .format(_get_time(), self.run_times["solved"] - self.run_times["preprocessed"]))
 
     def process_solution(self):
         """
@@ -1386,7 +1396,8 @@ class Model(BaseModel):
             carrier_dict = {}
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
-                lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
+                    lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
@@ -1421,7 +1432,8 @@ class Model(BaseModel):
         cfs = {}
         for carrier in sol.coords['c'].values:
             time_res_sum = self._get_time_res_sum()
-            cf = sol['ec_prod'].loc[dict(c=carrier)] / (sol['e_cap_net'] * time_res_sum)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                cf = sol['ec_prod'].loc[dict(c=carrier)] / (sol['e_cap_net'] * time_res_sum)
             cf = cf.to_pandas()
 
             # Make sure the dataframe has y as columns and x as index
@@ -1449,14 +1461,16 @@ class Model(BaseModel):
 
         # Total (over locations) capacity factors per carrier
         time_res_sum = self._get_time_res_sum()
-        cf = (sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
-              / (sol['e_cap_net'].sum(dim='x') * time_res_sum)).to_pandas()
+        with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
+            cf = (sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
+                  / (sol['e_cap_net'].sum(dim='x') * time_res_sum)).to_pandas()
         df = pd.DataFrame({'cf': cf})
 
         # Total (over locations) levelized costs per carrier
         for k in sorted(sol['levelized_cost'].coords['k'].values):
-            df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
-                               / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
+            with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
+                df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
+                                   / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
         df['e_prod'] = sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x')
@@ -1529,9 +1543,9 @@ class Model(BaseModel):
 
     def get_shares(self, groups):
         from . import analysis
-        vars = ['e_prod', 'e_con', 'e_cap']
-        df = pd.DataFrame(index=groups.index, columns=vars)
-        for var in vars:
+        vars_ = ['e_prod', 'e_con', 'e_cap']
+        df = pd.DataFrame(index=groups.index, columns=vars_)
+        for var in vars_:
             for index, row in groups.iterrows():
                 group_members = row['members'].split('|')
                 group_type = row['type']
@@ -1633,6 +1647,7 @@ class Model(BaseModel):
                        != 'optimal')
         r = self.m.solutions.load_from(self.results)
         if r is False or not_optimal:
+            logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
             logging.critical(self.results.Problem)
             logging.critical(self.results.Solver)
             if not_optimal:
@@ -1708,6 +1723,7 @@ class Model(BaseModel):
 
         encoding = {k: {'zlib': True, 'complevel': 4} for k in self.solution.data_vars}
         self.solution.to_netcdf(store_file, format='netCDF4', encoding=encoding)
+        self.solution.close()  # Force-close NetCDF file after writing
 
         return store_file  # Return the path to the NetCDF file we used
 

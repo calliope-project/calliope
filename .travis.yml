@@ -3,8 +3,12 @@
 language: python
 sudo: false  # Use container-based infrastructure
 
-python:
-  - "3.5"
+matrix:
+  include:
+    - env:
+      - JOB_TYPE="lint"
+    - env:
+      - JOB_TYPE="test"
 
 before_install:
   - "wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;"
@@ -19,6 +23,8 @@ before_install:
 install:
   - conda env create -n calliope --file requirements.yml
   - source activate calliope
+  - conda install -c conda-forge python-coveralls  # Install manually here but not on appveyor
+  - conda install -c conda-forge pylint=1.6
   - pip install --no-cache-dir .
 
 before_script:  # configure a headless display to test plot generation
@@ -26,7 +32,7 @@ before_script:  # configure a headless display to test plot generation
   - "sh -e /etc/init.d/xvfb start"
   - sleep 3  # give xvfb some time to start
 
-script: "py.test --cov calliope --cov-report term-missing"
+script: "make ci"
 
 after_success:
-    - coveralls
+  - if [ "${JOB_TYPE}" = "test" ]; then coveralls; fi

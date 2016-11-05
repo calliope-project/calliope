@@ -25,8 +25,8 @@ def ramping_rate(model):
     # Constraint rules
     def _ramping_rule(m, y, x, t, direction):
         # e_ramping: Ramping rate [fraction of installed capacity per hour]
-        ramping_rate = model.get_option(y + '.constraints.e_ramping')
-        if ramping_rate is False:
+        ramping_rate_value = model.get_option(y + '.constraints.e_ramping')
+        if ramping_rate_value is False:
             # If the technology defines no `e_ramping`, we don't build a
             # ramping constraint for it!
             return po.Constraint.NoConstraint
@@ -42,7 +42,7 @@ def ramping_rate(model):
                         - (m.es_prod[carrier, y, x, model.prev_t(t)]
                            + m.es_con[carrier, y, x, model.prev_t(t)])
                         / time_res.at[model.prev_t(t)])
-                max_ramping_rate = ramping_rate * m.e_cap[y, x]
+                max_ramping_rate = ramping_rate_value * m.e_cap[y, x]
                 if direction == 'up':
                     return diff <= max_ramping_rate
                 else:
@@ -117,7 +117,7 @@ def group_fraction(model):
                   for t in m.t)
         return equalizer(lhs, rhs, sign)
 
-    def c_group_fraction_capacity_rule(m, c, capacity_group):
+    def c_group_fraction_capacity_rule(m, c, capacity_group):  # pylint: disable=unused-argument
         sign, fraction = sign_fraction(capacity_group, 'capacity')
         techs = techs_to_consider(supply_techs, 'capacity')
         rhs = (fraction

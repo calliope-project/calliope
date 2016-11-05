@@ -13,7 +13,7 @@ import logging
 
 import pandas as pd
 import xarray as xr
-from xarray.ufuncs import fabs
+from xarray.ufuncs import fabs  # pylint: disable=no-name-in-module
 
 from . import utils
 from . import time_clustering

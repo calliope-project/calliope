@@ -85,7 +85,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
 
 numpydoc_show_class_members = False   # numpydoc: don't do autosummary
 
-nbviewer_url = 'http://nbviewer.ipython.org/url/docs.callio.pe/'
+nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
 
 extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
 

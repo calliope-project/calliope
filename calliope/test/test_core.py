@@ -121,7 +121,7 @@ class TestInitialization:
     def test_initialize_sets_timesteps_subset(self):
         config_run = """
                         mode: plan
-                        model: [{techs}, {locations}]
+                        model: ['{techs}', '{locations}']
                         subset_t: ['2005-01-02', '2005-01-03']
                     """
         model = common.simple_model(config_run=config_run)
@@ -154,7 +154,7 @@ class TestInitialization:
     def test_initialize_sets_technologies_subset(self):
         config_run = """
                         mode: plan
-                        model: [{techs}, {locations}]
+                        model: ['{techs}', '{locations}']
                         subset_y: ['ccgt', 'demand_power']
                     """
         model = common.simple_model(config_run=config_run)
@@ -163,7 +163,7 @@ class TestInitialization:
     def test_initialize_sets_technologies_too_large_subset(self):
         config_run = """
                         mode: plan
-                        model: [{techs}, {locations}]
+                        model: ['{techs}', '{locations}']
                         subset_y: ['ccgt', 'demand_power', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
@@ -182,7 +182,7 @@ class TestInitialization:
     def test_initialize_sets_locations_subset(self):
         config_run = """
                         mode: plan
-                        model: [{techs}, {locations}]
+                        model: ['{techs}', '{locations}']
                         subset_x: ['1', 'demand']
                     """
         model = common.simple_model(config_run=config_run)
@@ -191,7 +191,7 @@ class TestInitialization:
     def test_initialize_sets_locations_too_large_subset(self):
         config_run = """
                         mode: plan
-                        model: [{techs}, {locations}]
+                        model: ['{techs}', '{locations}']
                         subset_x: ['1', 'demand', 'foo', 'bar']
                     """
         model = common.simple_model(config_run=config_run)
@@ -220,7 +220,7 @@ class TestInitialization:
                         constraints:
                             e_cap.max: 100
         """
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(locations.encode('utf-8'))
             print(f.read())
             model = common.simple_model(config_locations=f.name)
