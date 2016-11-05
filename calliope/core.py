@@ -19,7 +19,6 @@ import random
 import shutil
 import time
 import warnings
-from geopy.distance import distance
 
 import pyomo.opt as popt
 import pyomo.core as po
@@ -297,6 +296,7 @@ class Model(BaseModel):
         """
         Where distances are not given for links, use any metadata to fill
         in the gap.
+        Distance calculated using vincenty inverse formula (given in utils module).
         """
         # Check if metadata is loaded
         if 'metadata' in self.config_model:
@@ -307,8 +307,8 @@ class Model(BaseModel):
                         # Links are given as 'a,b', so need to split them into individuals
                         links = link.split(',')
                         # Find distance using geopy package & metadata of lat-long
-                        dist = int(distance(getattr(self.config_model.metadata.location_coordinates, links[0]),
-                                        getattr(self.config_model.metadata.location_coordinates, links[1])).meters)
+                        dist = utils.vincenty(getattr(self.config_model.metadata.location_coordinates, links[0]),
+                                        getattr(self.config_model.metadata.location_coordinates, links[1]))
                         # update config_model
                         self.config_model.links[link][trans]['distance'] = dist
 
