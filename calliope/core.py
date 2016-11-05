@@ -303,7 +303,7 @@ class Model(BaseModel):
         Distance calculated using vincenty inverse formula (given in utils module).
         """
         # Check if metadata is loaded
-        if 'metadata' in self.config_model:
+        if 'metadata' in self.config_model and 'links' in self.config_model:
             for link, v in self.config_model.links.items():
                 for trans, v2 in self.config_model.links[link].items():
                     # for a given link and transmission type (e.g. 'hvac'), check if distance is set.
