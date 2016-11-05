@@ -303,7 +303,7 @@ class Model(BaseModel):
         Distance calculated using vincenty inverse formula (given in utils module).
         """
         # Check if metadata & links are loaded
-        if 'metadata' not in self.config_model and 'links' not in self.config_model:
+        if 'metadata' not in self.config_model or 'links' not in self.config_model:
             return
         elif self.config_model.links:
             for link, v in self.config_model.links.items():
