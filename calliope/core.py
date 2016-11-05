@@ -168,6 +168,10 @@ class Model(BaseModel):
         self.initialize_configuration(config_run, override)
         self._get_option = utils.option_getter(self.config_model)
 
+        # Populate config_model with link distances, where metadata is given
+        # but no distances given in locations.yaml
+        self.get_distances()
+
         # Initialize sets
         self.initialize_parents()
         self.initialize_sets()
@@ -291,6 +295,28 @@ class Model(BaseModel):
                     raise exceptions.ModelError(msg)
 
         return None
+    
+    def get_distances(self):
+        """
+        Where distances are not given for links, use any metadata to fill
+        in the gap.
+        Distance calculated using vincenty inverse formula (given in utils module).
+        """
+        # Check if metadata & links are loaded
+        if 'metadata' not in self.config_model and 'links' not in self.config_model:
+            return
+        elif self.config_model.links:
+            for link, v in self.config_model.links.items():
+                for trans, v2 in self.config_model.links[link].items():
+                    # for a given link and transmission type (e.g. 'hvac'), check if distance is set.
+                    if 'distance' not in self.config_model.links[link][trans]:
+                        # Links are given as 'a,b', so need to split them into individuals
+                        links = link.split(',')
+                        # Find distance using geopy package & metadata of lat-long
+                        dist = utils.vincenty(getattr(self.config_model.metadata.location_coordinates, links[0]),
+                                        getattr(self.config_model.metadata.location_coordinates, links[1]))
+                        # update config_model
+                        self.config_model.links[link][trans]['distance'] = dist
 
     def get_t(self, timestamp, offset=0):
         """
