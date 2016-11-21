@@ -3,7 +3,7 @@ import tempfile
 
 from calliope.utils import AttrDict
 from . import common
-from .common import assert_almost_equal, solver, _add_test_path
+from .common import assert_almost_equal, solver, solver_io, _add_test_path
 
 
 def create_and_run_model(override, iterative_warmstart=False,
@@ -28,6 +28,7 @@ def create_and_run_model(override, iterative_warmstart=False,
     """
     override = AttrDict.from_yaml_string(override)
     override.set_key('solver', solver)
+    override.set_key('solver_io', solver_io)
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(locations.format(demand_file=demand_file).encode('utf-8'))
         f.read()

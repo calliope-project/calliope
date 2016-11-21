@@ -10,7 +10,7 @@ from calliope.utils import AttrDict
 from calliope import analysis
 
 from . import common
-from .common import assert_almost_equal, solver
+from .common import assert_almost_equal, solver, solver_io
 
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')  # Prevents `Invalid DISPLAY variable` errors
@@ -44,9 +44,13 @@ class TestModel:
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(locations.encode('utf-8'))
             f.read()
+            override_dict = AttrDict({
+                'solver': solver,
+                'solver_io': solver_io,
+            })
             model = common.simple_model(config_run=config_run,
                                         config_locations=f.name,
-                                        override=AttrDict({'solver': solver}))
+                                        override=override_dict)
         model.run()
         return model
 
