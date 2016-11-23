@@ -49,25 +49,19 @@ The default cost-minimizing objective function provides a good example:
 
 See the source code of the :func:`~calliope.constraints.optional.ramping_rate` function for a more elaborate example.
 
-Time mask functions
--------------------
+Time functions and masks
+------------------------
 
-Like custom constraint generator functions, custom time mask functions can be loaded dynamically during model initialization. By default, Calliope first checks whether a given time mask function string refers to a function inside an importable module, and if not, attempts to load the function from the :mod:`calliope.time_masks` module:
+Like custom constraint generator functions, custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.time_masks` or :mod:`calliope.time_functions` module, and if not, attempts to load the function from an importable module:
 
 .. code-block:: yaml
 
    time:
-      resolution: 24
       masks:
-         # Loaded from built-in masks in calliope.time_masks
-         - function: mask_extreme_week
-           options: {tech: demand_power, what: min}
-
-         # Loaded from a dynamically loaded custom module
-         - function: my_custom_module.my_custom_mask
-           options: {...}
-
-See :mod:`calliope.time_masks` for examples of time mask functions.
+          - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'min'}}
+          - {function: my_custom_module.my_custom_mask, options: {...}}
+      function: my_custom_module.my_custom_function
+      function_options: {...}
 
 -------------------------
 Checklist for new release
