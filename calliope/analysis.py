@@ -347,19 +347,28 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
         ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
-    if group:
-        members = solution.groups.to_pandas().at[group, 'members'].split('|')
-    else:
-        members = slice(None)
+    if group is None:
+        group = 'supply'
+
+    members = solution.groups.to_pandas().at[group, 'members'].split('|')
+
     if locations is None:
-        locations = slice(None)
+        locations_slice = slice(None)
+    elif isinstance(locations, (str, float, int)):
+        # Make sure that locations is a list if it's a single value
+        locations_slice = [locations]
+    else:
+        locations_slice = locations
 
-    # Make sure that locations is a list if it's a single value
-    if isinstance(locations, (str, float, int)):
-        locations = [locations]
+    cost = solution['costs'].loc[dict(k=cost_class, x=locations_slice, y=members)]
+    ec_prod = solution['ec_prod'].loc[dict(c=carrier, x=locations_slice, y=members)]
 
-    cost = solution['costs'].loc[dict(k=cost_class, x=locations, y=members)].sum(dim='x').to_pandas()
-    ec_prod = solution['ec_prod'].loc[dict(c=carrier, x=locations, y=members)].sum(dim='x').to_pandas()
+    if locations is None:
+        cost = cost.sum(dim='x').to_pandas()
+        ec_prod = ec_prod.sum(dim='x').to_pandas()
+    else:
+        cost = cost.to_pandas()
+        ec_prod = ec_prod.to_pandas()
 
     return (cost / ec_prod) * unit_multiplier
 

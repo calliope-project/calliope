@@ -566,9 +566,9 @@ def vincenty(coord1, coord2):
     a = 6378137  # equitorial radius in meters
     f = 1 / 298.257223563 # flattening from sphere to oblate spheroid
     b = a * (1 - f) # polar radius in meters
-    
+
     max_iter = 200
-    thresh = 1e-12 
+    thresh = 1e-12
 
     # short-circuit coincident points
     if coord1[0] == coord2[0] and coord1[1] == coord2[1]:

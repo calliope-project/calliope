@@ -295,7 +295,7 @@ class Model(BaseModel):
                     raise exceptions.ModelError(msg)
 
         return None
-    
+
     def get_distances(self):
         """
         Where distances are not given for links, use any metadata to fill
@@ -1205,7 +1205,11 @@ class Model(BaseModel):
             print('[{}] Model preprocessing took {:.2f} seconds.'
                   .format(_get_time(), self.run_times["preprocessed"] - self.run_times["start"]))
 
-        self.results, warnmsg = self._solve_with_output_capture(warmstart, solver_kwargs)
+        try:
+            self.results, warnmsg = self._solve_with_output_capture(warmstart, solver_kwargs)
+        except:
+            logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
+            raise
 
         if warnmsg:
             warnings.warn(warnmsg, exceptions.ModelWarning)

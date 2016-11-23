@@ -25,5 +25,6 @@ dependencies:
     - pytest-cov
     - pyyaml
     - scipy
+    - seaborn  # Used in the example notebook
     - shapely  # For analysis_utils.plot_shapefile_polys
     - xarray=0.8.2
