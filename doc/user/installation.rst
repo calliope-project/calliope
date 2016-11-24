@@ -7,7 +7,7 @@ Download and installation
 Requirements
 ============
 
-Calliope has been tested on Linux, macOS, and Windows (but see the :ref:`Windows notes <windows_install_note>` below).
+Calliope has been tested on Linux, macOS, and Windows.
 
 Running Calliope requires four things:
 
@@ -20,7 +20,7 @@ Running Calliope requires four things:
 Recommended installation method
 ===============================
 
-By far the easiest way to get a working Calliope installation is to use the free `Anaconda Python distribution <https://store.continuum.io/cshop/anaconda/>`_ and its package manager, ``conda``.
+The easiest way to get a working Calliope installation is to use the free `Anaconda Python distribution <https://store.continuum.io/cshop/anaconda/>`_ and its package manager, ``conda``.
 
 With Anaconda installed, you can create a new Python 3.5 environment called "calliope" with all the necessary modules, including the free and open source GLPK solver, with the following command::
 
@@ -51,11 +51,11 @@ Gurobi
 
 `Gurobi <http://www.gurobi.com/>`_ is commercial but significantly faster than GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
 
-Gurobi is most easily installed via conda::
+Like Calliope itself, Gurobi can also be installed via conda::
 
     $ conda install -c gurobi gurobi
 
-After installing, log on to the `Gurobi website <http://www.gurobi.com/>`_ and obtain a (free or paid) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
+After installing, log on to the `Gurobi website <http://www.gurobi.com/>`_ and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
 
 .. _python_module_requirements:
 

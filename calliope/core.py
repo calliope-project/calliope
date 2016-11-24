@@ -27,7 +27,7 @@ import pyomo.environ  # pylint: disable=unused-import
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pyutilib.services import TempfileManager
+from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from ._version import __version__
 from . import exceptions

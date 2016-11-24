@@ -68,11 +68,6 @@ If ``config_run`` is not specified (e.g. ``model = Model()``), the built-in exam
 
 After instantiating the ``Model`` object, and before calling the ``run()`` method, it is possible to manually inspect and adjust the configuration of the model.
 
-After the model has been solved, a processed set of solution variables and aggregated statistics is accessible under the ``solution`` property on the model instance.
-
-If used in an interactive Python session (e.g., a Jupyter Notebook) the model instance can also be queried after running it, e.g.::
-
-   # Get a pandas DataFrame of system variables
-   system_vars = model.get_system_variables()
+After the model has been solved, an xarray Dataset containing solution variables and aggregated statistics is accessible under the ``solution`` property on the model instance.
 
 The :doc:`API documentation <../api/api>` gives an overview of the available methods for programmatic access.

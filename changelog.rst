@@ -11,11 +11,11 @@ Major changes
 
 |new| Added new methods to deal with time resolution: clustering, resampling, and heuristic timestep selection
 
-|changed| Major change to solution data structure. Model solution is now returned as a single `xarray DataSet <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
+|changed| |backwards-incompatible| Major change to solution data structure. Model solution is now returned as a single `xarray DataSet <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
 
 While the recommended way to save and process model results is by NetCDF4, CSV saving functionality has now been upgraded for more flexibility. Each variable is saved as a separate CSV file with a single value column and as many index columns as required.
 
-|changed| Model data structures simplified and based on xarray
+|changed| |backwards-incompatible| Model data structures simplified and based on xarray
 
 Other changes
 ~~~~~~~~~~~~~
