@@ -1,2 +1,0 @@
-# Packages needed to build the docs
-numpydoc
