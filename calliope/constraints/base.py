@@ -393,11 +393,11 @@ def node_constraints_operational(model):
             return po.Constraint.NoConstraint
 
     def c_es_con_max_rule(m, c, y, x, t):
+        e_con = get_constraint_param(model, 'e_con', y, x, t)
         if y in m.y_conv:
-            carrier = '.source_carrier'
+            return po.Constraint.Skip
         else:
             carrier = '.carrier'
-        e_con = get_constraint_param(model, 'e_con', y, x, t)
         if (e_con is True and
                 c == model.get_option(y + carrier)):
             return m.es_con[c, y, x, t] >= (-1 * time_res.at[t]
