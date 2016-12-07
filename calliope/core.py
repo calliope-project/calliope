@@ -244,12 +244,12 @@ class Model(BaseModel):
         Find any constraints/costs/revenue values requested as from 'file' in YAMLs
         and store that information
         """
-        time_series_constraint = []
+        time_series_constraint = ['r']
         time_series_data = []
         # These can be numeric, avoiding true/false constraints.
         # No c_eff due to disagreement with non-timeseries constraint
         # c_e_cap_gross_net_rule.
-        allowed_timeseries_constraints = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
+        allowed_timeseries_constraints = ['r_eff', 'r_scale', 'rb_eff', 's_loss',
                                     'e_prod', 'e_con', 'c_eff', 'e_eff', 
                                     'e_cap_min_use', 'e_ramping'] 
         #variable costs/revenue only
@@ -260,7 +260,9 @@ class Model(BaseModel):
             if isinstance(v,str):
                 if v.startswith("file"): #find any refering to a file
                     params = k.split('.') #split the elements of the key to get constraint/cost type
-                    if params[-1] in allowed_timeseries_constraints: #look for e.g. e_eff
+                    if params[-1] == 'r':
+                        None # 'r' already in the list automatically
+                    elif params[-1] in allowed_timeseries_constraints: #look for e.g. e_eff
                         time_series_constraint.append(params[-1])
                     elif params[-1] in allowed_timeseries_data: #look for e.g. om_fuel
                         #make sure list e.g. ['costs','monetary','om_fuel'] doesn't already exist
@@ -1472,7 +1474,7 @@ class Model(BaseModel):
 
             # Adjust for the fact that variable costs are only accrued over
             # the t_subset period
-            revenue_variable = self.get_var('revenue_variable')[{'t': t_subset}].sum(dim='t')
+            revenue_variable = self.get_var('revenue_var')[{'t': t_subset}].sum(dim='t')
 
             return revenue_fixed + revenue_variable
 
@@ -1511,7 +1513,7 @@ class Model(BaseModel):
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
                 with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                    lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                    lc = sol['costs'].loc[dict(kc=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
