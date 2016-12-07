@@ -69,11 +69,11 @@ def get_revenue_param(model, rev, k, y, x, t):
     get_any_option = utils.any_option_getter(model)
 
     param_string = 'revenue_' + k + '_' + rev #format stored in model.data
-    
+
     if param_string in model.data:
         return getattr(model.m, param_string)[y, x, t]
     else: #turn e.g. revenue_monetary_om_var to revenue.monetary.om_var, then search in DataArray
-        return get_any_option(y + '.' + param_string.replace('_','.',2), x=x) 
+        return get_any_option(y + '.' + param_string.replace('_','.',2), x=x)
 
 def node_resource(model):
     """
@@ -524,6 +524,7 @@ def node_costs(model):
     def _cost(cost, y, k, x=None):
         return cost_getter(cost, y, k, x=x)
 
+    @utils.memoize
     def _revenue(cost, y, k, x=None):
         return cost_getter(cost, y, k, x=x, costs_type='revenue')
 
@@ -612,7 +613,7 @@ def node_costs(model):
             carrier = model.get_option(y + '.carrier')
             return (
                 m.cost_op_var[y, x, t, k] ==
-                get_cost_param(model,'om_var',k,y,x,t) *
+                get_cost_param(model,'om_var', k, y, x, t) *
                 weights.loc[t] *
                 m.es_prod[carrier, y, x, t]
             )
@@ -649,7 +650,7 @@ def node_costs(model):
 
     def c_revenue_var_rule(m, y, x, t, k):
         carrier = model.get_option(y + '.carrier')
-        sub_var = get_revenue_param(model,'sub_var',k,y,x,t)
+        sub_var = get_revenue_param(model, 'sub_var', k, y, x, t)
         if y in m.y_demand:
             return (m.revenue_var[y, x, t, k] ==
                 sub_var * weights.loc[t]
@@ -671,7 +672,6 @@ def node_costs(model):
         else:
             return (m.revenue_fixed[y, x, k] ==
              revenue * m.e_cap[y, x])
-
 
     def c_revenue_rule(m, y, x, k):
         return (m.revenue[y, x, k] == m.revenue_fixed[y, x, k] +
