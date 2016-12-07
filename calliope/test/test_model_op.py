@@ -134,7 +134,10 @@ class TestModel:
         assert cost1 == 60
         assert cost2 == 132
 
-    ## duplicate of cost tests, but now for revenue generation ##
+    ##
+    # Duplicate of cost tests, but now for revenue generation
+    ##
+
     def test_model_fixed_rev_op(self):
         override = """
             override:
@@ -152,7 +155,7 @@ class TestModel:
         rev2 = model2.solution['revenue'].loc[dict(kr='monetary', x='1', y='ccgt')]
         # Cost should be double in the second case as it's twice the time
         assert_almost_equal(2 * rev1, rev2, tolerance=0.0000001)
-    
+
     def test_model_var_rev_op(self):
         override = """
             override:
@@ -170,7 +173,7 @@ class TestModel:
         rev2 = model2.solution['revenue'].loc[dict(kr='monetary', x='1', y='ccgt')]
         # Cost should be double in the second case as it's twice the time
         assert_almost_equal(2 * rev1, rev2, tolerance=0.0000001)
-    
+
     def test_model_fixed_costs_op_with_varying_demand(self):
         override = """
             override:
@@ -189,7 +192,7 @@ class TestModel:
         rev2 = model2.solution['revenue'].loc[dict(kr='monetary', x='1', y='ccgt')]
         # Cost should be double in the second case as it's twice the time
         assert_almost_equal(2 * rev1, rev2, tolerance=0.0000001)
-    
+
     def test_model_var_rev_op_with_varying_demand(self):
         override = """
             override:
@@ -211,7 +214,7 @@ class TestModel:
         assert rev1 == 60
         assert rev2 == 132
 
-    ## test both cost and revenue simultaneously ##
+    # Test both cost and revenue simultaneously
     def test_model_fixed_rev_op_fixed_cost_op(self):
         override = """
             override:
@@ -236,6 +239,6 @@ class TestModel:
         # Cost should be double in the second case as it's twice the time
         assert_almost_equal(2 * rev1, rev2, tolerance=0.0000001)
         assert_almost_equal(2 * cost1, cost2, tolerance=0.0000001)
-        # Revenue and cost should be equal ##CURRENTLY FAILS
+        # Revenue and cost should be equal
         assert_almost_equal(cost1, rev1, tolerance=0.0000001)
         assert_almost_equal(cost2, rev2, tolerance=0.0000001)
