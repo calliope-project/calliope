@@ -1,9 +1,8 @@
-import pytest
 import tempfile
 
 from calliope.utils import AttrDict
 from . import common
-from .common import assert_almost_equal, solver, solver_io, _add_test_path
+from .common import solver, solver_io, _add_test_path
 
 def create_and_run_model(override, iterative_warmstart=False):
     locations = """
