@@ -217,7 +217,7 @@ class TestModel:
             override:
                 techs:
                     ccgt:
-                        cost:
+                        costs:
                             monetary:
                                 e_cap: 5
                                 om_fuel: 0
