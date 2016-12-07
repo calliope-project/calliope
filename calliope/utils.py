@@ -497,9 +497,9 @@ def option_getter(config_model):
 
     return get_option
 
-def cost_getter(option_getter):
+def cost_getter(option_getter_func):
     def get_cost(cost, y, k, x=None, costs_type='costs'):
-        return option_getter(y + '.' + costs_type + '.' + k + '.' + cost,
+        return option_getter_func(y + '.' + costs_type + '.' + k + '.' + cost,
                              default=y + '.' + costs_type + '.default.' + cost,
                              x=x)
     return get_cost
