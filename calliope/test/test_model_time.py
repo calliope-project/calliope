@@ -1,9 +1,9 @@
-import pytest
+import pytest  # pylint: disable=unused-import
 import tempfile
 
 from calliope.utils import AttrDict
 from . import common
-from .common import assert_almost_equal, solver, _add_test_path
+from .common import solver, solver_io, _add_test_path
 
 
 def create_and_run_model(override, iterative_warmstart=False):
@@ -23,11 +23,12 @@ def create_and_run_model(override, iterative_warmstart=False):
     """
     config_run = """
         mode: plan
-        model: [{techs}, {locations}]
+        model: ['{techs}', '{locations}']
     """
     override = AttrDict.from_yaml_string(override)
     override.set_key('solver', solver)
-    with tempfile.NamedTemporaryFile() as f:
+    override.set_key('solver_io', solver_io)
+    with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(locations.encode('utf-8'))
         f.read()
         model = common.simple_model(config_run=config_run,

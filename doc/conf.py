@@ -46,12 +46,17 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['numpy', 'matplotlib', 'matplotlib.pyplot',
-                'matplotlib.colors', 'matplotlib.colors.ListedColormap',
-                'pyomo', 'pyomo.core', 'pyomo.opt', 'pyomo.environ',
-                'pyutilib', 'pyutilib.services',
-                'pyutilib.services.TempfileManager', 'yaml', 'pandas',
-                'click']
+MOCK_MODULES = [
+    'numpy', 'matplotlib', 'matplotlib.pyplot',
+    'matplotlib.colors', 'matplotlib.colors.ListedColormap',
+    'pyomo', 'pyomo.core', 'pyomo.opt', 'pyomo.environ',
+    'pyutilib', 'pyutilib.services',
+    'pyutilib.services.TempfileManager', 'yaml', 'pandas',
+    'click', 'xarray', 'dask', 'xarray.ufuncs',
+    'numpy.random', 'numpy.fft', 'numpy.lib', 'numpy.lib.scimath',
+    'scipy', 'scipy.cluster', 'scipy.cluster.vq',
+    'scipy.spatial', 'scipy.spatial.distance'
+]
 
 for m in MOCK_MODULES:
     sys.modules[m] = Mock()
@@ -85,7 +90,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
 
 numpydoc_show_class_members = False   # numpydoc: don't do autosummary
 
-nbviewer_url = 'http://nbviewer.ipython.org/url/docs.callio.pe/'
+nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
 
 extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
 

@@ -9,7 +9,7 @@ dependencies:
     - basemap
     - bottleneck
     - click
-    - geos
+    - descartes  # For analysis_utils.plot_shapefile_polys
     - glpk=4.59  # 4.60 causes problems with current version of Pyomo
     - hdf5
     - libnetcdf
@@ -23,7 +23,8 @@ dependencies:
     - pyomo=4.4.1
     - pytest
     - pytest-cov
-    - python-coveralls
     - pyyaml
     - scipy
+    - seaborn  # Used in the example notebook
+    - shapely  # For analysis_utils.plot_shapefile_polys
     - xarray=0.8.2

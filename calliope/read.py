@@ -34,7 +34,8 @@ def _check(path, solution):
 
 def read_netcdf(path):
     """Read model solution from NetCDF4 file"""
-    solution = xr.open_dataset(path)
+    with xr.open_dataset(path) as solution:
+        solution.load()
 
     # Deserialize YAML attributes
     for k in ['config_model', 'config_run']:
@@ -184,6 +185,7 @@ def convert_run_dir_to_netcdf(in_dir, out_file, reset_time_index=False):
 
     encoding = {k: {'zlib': True, 'complevel': 4} for k in ds.data_vars}
     ds.to_netcdf(out_file, format='netCDF4', encoding=encoding)
+    ds.close()  # Force-close NetCDF file after writing
 
 
 def convert_subdirs_to_netcdfs(in_dir, out_dir, reset_time_index_for_subdirs=None):
@@ -224,3 +226,6 @@ def combine_subdir_netcdfs(in_dir, out_file):
 
     encoding = {k: {'zlib': True, 'complevel': 4} for k in ds.data_vars}
     ds.to_netcdf(out_file, format='netCDF4', encoding=encoding)
+    ds.close()  # Force-close NetCDF file after writing
+    for d in datasets:
+        d.close()

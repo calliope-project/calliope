@@ -285,7 +285,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
 
 
 def get_delivered_cost(solution, cost_class='monetary', carrier='power',
-                       count_unmet_demand=False, unit_multiplier=1.0):
+                       count_unmet_demand=False):
     """
     Get the levelized cost per unit of energy delivered for the given
     ``cost_class`` and ``carrier``.
@@ -298,10 +298,6 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     count_unmet_demand : bool, default False
         Whether to count the cost of unmet demand in the final
         delivered cost.
-    unit_multiplier : float or int, default 1.0
-        Adjust unit of the returned cost value. For example, if model units
-        are kW and kWh, ``unit_multiplier=1.0`` will return cost per kWh, and
-        ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
     summary = solution.summary.to_pandas()
@@ -351,19 +347,28 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
         ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
-    if group:
-        members = solution.groups.to_pandas().at[group, 'members'].split('|')
-    else:
-        members = slice(None)
+    if group is None:
+        group = 'supply'
+
+    members = solution.groups.to_pandas().at[group, 'members'].split('|')
+
     if locations is None:
-        locations = slice(None)
+        locations_slice = slice(None)
+    elif isinstance(locations, (str, float, int)):
+        # Make sure that locations is a list if it's a single value
+        locations_slice = [locations]
+    else:
+        locations_slice = locations
 
-    # Make sure that locations is a list if it's a single value
-    if isinstance(locations, (str, float, int)):
-        locations = [locations]
+    cost = solution['costs'].loc[dict(k=cost_class, x=locations_slice, y=members)]
+    ec_prod = solution['ec_prod'].loc[dict(c=carrier, x=locations_slice, y=members)]
 
-    cost = solution['costs'].loc[dict(k=cost_class, x=locations, y=members)].sum(dim='x').to_pandas()
-    ec_prod = solution['ec_prod'].loc[dict(c=carrier, x=locations, y=members)].sum(dim='x').to_pandas()
+    if locations is None:
+        cost = cost.sum(dim='x').to_pandas()
+        ec_prod = ec_prod.sum(dim='x').to_pandas()
+    else:
+        cost = cost.to_pandas()
+        ec_prod = ec_prod.to_pandas()
 
     return (cost / ec_prod) * unit_multiplier
 
@@ -389,7 +394,8 @@ def get_group_share(solution, techs, group_type='supply',
     supply_total = summary.loc[group, var].sum()
     supply_group = summary.loc[techs, var].sum()
     try:
-        return supply_group / supply_total
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return supply_group / supply_total
     except ZeroDivisionError:
         # FIXME it seems that on some systems, supply_ are not numpy.floats
         # but regular Python floats, leading to a ZeroDivisionError

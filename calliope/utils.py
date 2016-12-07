@@ -13,6 +13,7 @@ of regular dict) used for managing model configuration.
 from contextlib import contextmanager
 from io import StringIO
 import functools
+import logging
 import os
 import importlib
 import sys
@@ -32,6 +33,25 @@ class __Missing(object):
 
 
 _MISSING = __Missing()
+
+
+def _yaml_load(src):
+    """Load YAML from a file object or path with useful parser errors"""
+    if not isinstance(src, str):
+        try:
+            src_name = src.name
+        except AttributeError:
+            src_name = '<yaml stringio>'
+        # Force-load file streams as that allows the parser to print
+        # much more context when it encounters an error
+        src = src.read()
+    else:
+        src_name = '<yaml string>'
+    try:
+        return yaml.load(src)
+    except yaml.YAMLError:
+        logging.error('Parser error when reading YAML from {}.'.format(src_name))
+        raise
 
 
 class AttrDict(dict):
@@ -95,9 +115,9 @@ class AttrDict(dict):
         """
         if isinstance(f, str):
             with open(f, 'r') as src:
-                loaded = cls(yaml.load(src))
+                loaded = cls(_yaml_load(src))
         else:
-            loaded = cls(yaml.load(f))
+            loaded = cls(_yaml_load(f))
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
                 imported = cls.from_yaml(relative_path(k, f))
@@ -115,7 +135,7 @@ class AttrDict(dict):
         must be valid YAML.
 
         """
-        return cls(yaml.load(string))
+        return cls(_yaml_load(string))
 
     def set_key(self, key, value):
         """
@@ -315,7 +335,6 @@ def capture_output():
     Returns a list with the captured strings: ``[stderr, stdout]``
 
     """
-    import sys
     old_out, old_err = sys.stdout, sys.stderr
     try:
         out = [StringIO(), StringIO()]
@@ -487,13 +506,13 @@ def cost_getter(option_getter):
     return get_cost
 
 
-def cost_per_distance_getter(option_getter):
+def cost_per_distance_getter(option_getter_func):
     def get_cost_per_distance(cost, y, k, x):
         try:
             cost_option = y + '.costs_per_distance.' + k + '.' + cost
-            cost = option_getter(cost_option)
-            per_distance = option_getter(y + '.per_distance')
-            distance = option_getter(y + '.distance', x=x)
+            cost = option_getter_func(cost_option)
+            per_distance = option_getter_func(y + '.per_distance')
+            distance = option_getter_func(y + '.distance', x=x)
             distance_cost = cost * (distance / per_distance)
         except exceptions.OptionNotSetError:
             distance_cost = 0
@@ -501,11 +520,12 @@ def cost_per_distance_getter(option_getter):
     return get_cost_per_distance
 
 
-def depreciation_getter(option_getter):
+def depreciation_getter(option_getter_func):
     def get_depreciation_rate(y, k):
-        interest = option_getter(y + '.depreciation.interest.' + k,
-                                 default=y + '.depreciation.interest.default')
-        plant_life = option_getter(y + '.depreciation.plant_life')
+        interest = option_getter_func(
+            y + '.depreciation.interest.' + k,
+            default=y + '.depreciation.interest.default')
+        plant_life = option_getter_func(y + '.depreciation.plant_life')
         if interest == 0:
             dep = 1 / plant_life
         else:
@@ -560,3 +580,66 @@ def any_option_getter(model):
                 else:
                     return model.get_option(option)
     return get_any_option
+
+def vincenty(coord1, coord2):
+    """
+    Vincenty's inverse method formula to calculate the distance in metres
+    between two points on the surface of a spheroid (WGS84).
+    modified from https://github.com/maurycyp/vincenty
+    """
+
+    a = 6378137  # equitorial radius in meters
+    f = 1 / 298.257223563 # flattening from sphere to oblate spheroid
+    b = a * (1 - f) # polar radius in meters
+
+    max_iter = 200
+    thresh = 1e-12
+
+    # short-circuit coincident points
+    if coord1[0] == coord2[0] and coord1[1] == coord2[1]:
+        return 0
+
+    U1 = np.arctan((1 - f) * np.tan(np.radians(coord1[0])))
+    U2 = np.arctan((1 - f) * np.tan(np.radians(coord2[0])))
+    L = np.radians(coord2[1] - coord1[1])
+    Lambda = L
+
+    sinU1 = np.sin(U1)
+    cosU1 = np.cos(U1)
+    sinU2 = np.sin(U2)
+    cosU2 = np.cos(U2)
+
+    for iteration in range(max_iter):
+        sinLambda = np.sin(Lambda)
+        cosLambda = np.cos(Lambda)
+        sinSigma = np.sqrt((cosU2 * sinLambda) ** 2 +
+                             (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) ** 2)
+        if sinSigma == 0:
+            return 0.0  # coincident points
+        cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda
+        sigma = np.arctan2(sinSigma, cosSigma)
+        sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma
+        cosSqAlpha = 1 - sinAlpha ** 2
+        try:
+            cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha
+        except ZeroDivisionError:
+            cos2SigmaM = 0
+        C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha))
+        LambdaPrev = Lambda
+        Lambda = L + (1 - C) * f * sinAlpha * (sigma + C * sinSigma *
+                                               (cos2SigmaM + C * cosSigma *
+                                                (-1 + 2 * cos2SigmaM ** 2)))
+        if abs(Lambda - LambdaPrev) < thresh:
+            break  # successful convergence
+    else:
+        return None  # failure to converge
+
+    uSq = cosSqAlpha * (a ** 2 - b ** 2) / (b ** 2)
+    A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)))
+    B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)))
+    deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * (cosSigma *
+                 (-1 + 2 * cos2SigmaM ** 2) - B / 6 * cos2SigmaM *
+                 (-3 + 4 * sinSigma ** 2) * (-3 + 4 * cos2SigmaM ** 2)))
+    D = b * A * (sigma - deltaSigma)
+
+    return round(D)

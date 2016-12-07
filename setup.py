@@ -25,14 +25,14 @@ setup(
                                'test/common/t_6h/*.csv',
                                'test/common/t_erroneous/*.csv']},
     install_requires=[
-        "pyomo >= 4.4, < 4.5",
-        "numpy >= 1.11",
-        "numexpr >= 2.3.1",
-        "pandas >= 0.19, < 0.20",
-        "xarray >= 0.8.2, < 0.9",
+        "click >= 3.3",
         "netcdf4 >= 1.2.2",
+        "numexpr >= 2.3.1",
+        "numpy >= 1.11",
+        "pandas >= 0.19, < 0.20",
+        "pyomo >= 4.4, < 4.5",
         "pyyaml >= 3.11",
-        "click >= 3.3"
+        "xarray >= 0.8.2",
     ],
     entry_points={
         'console_scripts': [
@@ -44,7 +44,6 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3 :: Only'
     ],

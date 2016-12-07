@@ -7,6 +7,7 @@ import calliope
 # README: Hardcoding GLPK here which needs to be installed for tests to pass
 # Should also work with other solvers, e.g. 'cplex' or 'gurobi'
 solver = 'glpk'  # this gets imported by individual test_model_* files
+solver_io = 'lp'
 
 
 def assert_almost_equal(x, y, tolerance=0.0001):

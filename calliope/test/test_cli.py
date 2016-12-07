@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-import pytest
+import pytest  # pylint: disable=unused-import
 from click.testing import CliRunner
 
 from calliope import cli

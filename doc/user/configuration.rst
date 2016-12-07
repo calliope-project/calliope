@@ -239,6 +239,8 @@ Time series data can be used to specify the ``r`` and ``e_eff`` parameters for s
 1. Specify ``r: file=filename.csv`` to pick the desired CSV file.
 2. Specify ``r: file``. In this case, the file name is automatically determined according to the format ``tech_param.csv`` (e.g., ``pv_r.csv`` for the parameter ``r`` of a technology with the identifier ``pv``).
 
+.. Note:: If ``e_eff`` is loaded as a time series from file, ``e_eff_ref`` (a static reference efficiency) has to be specified, which is needed for example to compute storage capacity if a storage time is given.
+
 Each CSV file must have integer indices in the first column which match the integer indices from ``set_t.csv``. The first row must be column names, while the rest of the cells are the actual (integer or floating point) data values:
 
 .. code-block:: text
@@ -261,6 +263,10 @@ In the most straightforward case, the column names in the CSV files correspond t
 .. Warning::
 
    After reading a CSV file, if any columns are missing (i.e. if a file does not contain columns for all locations defined in the current model), the value for those locations is simply set to :math:`0` for all timesteps.
+
+.. Note::
+
+   ``x_map`` maps column names in an input CSV file to locations defined in the model, in the format ``name_in_model: name_in_file``, with as many comma-separated such definitions as necessary.
 
 In all cases, all CSV files, alongside ``set_t.csv``, must be inside the data directory specified by ``data_path`` in the model definition.
 

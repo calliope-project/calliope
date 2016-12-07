@@ -3,7 +3,7 @@ import tempfile
 
 from calliope.utils import AttrDict
 from . import common
-from .common import assert_almost_equal, solver
+from .common import assert_almost_equal, solver, solver_io
 
 
 class TestModel:
@@ -39,15 +39,19 @@ class TestModel:
         """
         config_run = """
             mode: plan
-            model: [{techs}, {locations}]
+            model: ['{techs}', '{locations}']
             subset_t: ['2005-01-01', '2005-01-02']
         """
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(locations.encode('utf-8'))
             f.read()
+            override_dict = AttrDict({
+                'solver': solver,
+                'solver_io': solver_io,
+            })
             model = common.simple_model(config_run=config_run,
                                         config_locations=f.name,
-                                        override=AttrDict({'solver': solver}))
+                                        override=override_dict)
         model.run()
         return model
 

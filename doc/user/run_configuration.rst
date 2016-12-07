@@ -44,53 +44,42 @@ Time resolution adjustment
 
 Models must have a default timestep length (defined implicitly by the timesteps defined in ``set_t.csv``), and all time series files used in a given model must conform to that timestep length requirement.
 
-However, this default resolution can be adjusted over parts of the dataset via ``time`` in the run settings (only support for downsampling is available).
+However, this default resolution can be adjusted over parts of the dataset via configuring ``time`` in the run settings. At its most basic, this allows running a function that can perform arbitrary adjustments to the time series data in the model, via ``time.function``, and/or applying a series of masks to the time series data to select specific areas of interest, such as periods of maximum or minimum production by certain technologies, via ``time.masks``.
 
-There are two available ways to adjust resolution:
+The available options include:
 
-1. A CSV file that contains a time resolution series, via ``time.file``.
-
-2. A uniform resolution reduction, via ``time.resolution``.
-
-3. Application of one or more of the masks defined in :mod:`calliope.time_masks`, via a list of masks given in ``time.masks``. See :ref:`api_time_masks` in the API documentation for the available masking functions. Options can be passed to this the masking functions by specifying ``options``. ``time.resolution`` can still be specified and will define the uniform resolution reduction applied to all masked areas.
-
-The following example demonstrates this third way:
+1. Uniform time resolution reduction through the resample function, which takes a `pandas-compatible rule describing the target resolution <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_. For example, to resample to 6-hourly timesteps:
 
 .. code-block:: yaml
 
    time:
-       resolution: 24
-       masks:
-           - function: 'mask_extreme_week'
-             options:
-                 tech: 'wind_offshore'
-                 what: 'min'
+       function: resample
+       function_options: {'resolution': '6H'}
 
-This passes the options, ``tech='wind_offshore', what='min'`` to the specified masking function. In this case, the result is that the function looks for the week where the resource data for the ``wind_offshore`` technology is minimal, and returns a mask for the rest of the time series. That (unmasked) week is retained at the original resolution, the rest of the (masked) data is resampled to 24-hourly timesteps.
+2. Deriving representative days from the input time series, by applying either k-means or hierarchical clustering as defined in :mod:`calliope.time_clustering`, for example:
 
-If specifying a file (the path is relative to the run configuration file), it must contain two columns. The first is integer indices for the timesteps. The second contains either:
+.. code-block:: yaml
 
-* a positive integer (signifying that this and following timesteps should be summarized with the new, given resolution)
-* :math:`-1` (following a positive integer and marking the timesteps that are summarized)
-* or :math:`0` (no adjustment made to this timestep).
+   time:
+       function: apply_clustering
+       function_options: {clustering_func: 'get_clusters_kmeans', how: 'mean', k: 20}
 
-The following example file illustrates this:
 
-.. code-block:: text
+3. Heuristic selection: application of one or more of the masks defined in :mod:`calliope.time_masks`, via a list of masks given in ``time.masks``. See :ref:`api_time_masks` in the API documentation for the available masking functions. Options can be passed to the masking functions by specifying ``options``. A ``time.function`` can still be specified and will be applied to the masked areas (i.e. those areas of the time series not selected), as in this example which looks for the week of minimum and maximum potential wind production (assuming a ``wind`` technology was specified), then reduces the rest of the input time series to 6-hourly resolution:
 
-   0,3
-   1,-1
-   2,-1
-   3,3
-   4,-1
-   5,-1
-   6,0
-   7,0
-   8,0
+.. code-block:: yaml
 
-Here, the first three timesteps will be summarized into one (0,1,2), as will the next three timesteps (3,4,5), and the final three timesteps are not touched (6,7,8).
+   time:
+      masks:
+          - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'max'}}
+          - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'min'}}
+      function: resample
+      function_options: {'resolution': '6H'}
 
-.. TODO Document the more complex approach of generating masks, then combining the masks into time resolution series and applying those. Also, it's actually possible to give a mask function to time.function, and it will then be turned into a resolution series... so should document the mask functions too, and the difference between masks and resolution series.
+
+.. Note::
+
+  When loading a model, all time steps initially have the same weight. Time step resolution reduction methods may adjust the weight of individual timesteps; this is used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. See the implementation of constraints in :mod:`calliope.constraints.base` for more detail.
 
 .. _run_config_parallel_runs:
 

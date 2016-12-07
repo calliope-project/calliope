@@ -67,17 +67,19 @@ def init_set_y(model, _x):
 
     # Subset of technologies that allow rb
     _y_rb = []
-    for x in _x:
-        if model.get_option(y + '.constraints.allow_rb', x=x) is True:
-            _y_rb.append(y)
-            break  # No need to look at other x
+    for y in _y:
+        for x in _x:
+            if model.get_option(y + '.constraints.allow_rb', x=x) is True:
+                _y_rb.append(y)
+                break  # No need to look at other x
 
     # Subset of technologies with parasitics (carrier efficiency != 1.0)
     _y_p = []
-    for x in _x:
-        if model.get_option(y + '.constraints.c_eff', x=x) != 1.0:
-            _y_p.append(y)
-            break  # No need to look at other x
+    for y in _y:
+        for x in _x:
+            if model.get_option(y + '.constraints.c_eff', x=x) != 1.0:
+                _y_p.append(y)
+                break  # No need to look at other x
 
     sets = {
         'y': _y,

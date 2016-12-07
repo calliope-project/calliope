@@ -42,7 +42,7 @@ It also defines the constraint ``c_rs``. This constraint defines the available r
 
 .. math::
 
-   r_{avail}(y, x, t) = r_{scale}(y, x) \times r_{area}(y, x) \times r_{eff}(y)
+   r_{avail}(y, x, t) = r(y, x, t) \times r_{scale}(y, x) \times r_{area}(y, x) \times r_{eff}(y)
 
 The ``c_rs`` constraint also decides how the resource and storage are linked.
 
@@ -276,6 +276,8 @@ Defines the following variables:
 
 These equations compute costs per node.
 
+Weights are adjusted for individual timesteps depending on the timestep reduction methods applied (see :ref:`run_time_res`), and are given by :math:`W(t)` when computing costs.
+
 The depreciation rate for each cost class ``k`` is calculated as
 
 .. math::
@@ -298,7 +300,7 @@ The construction costs are computed in ``c_cost_con`` by
 
 .. math::
 
-   cost_{con}(y, x, k) &= d(y, k) \times \frac{\sum\limits_t timeres(t)}{8760} \\
+   cost_{con}(y, x, k) &= d(y, k) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760} \\
    & \times (cost_{s\_cap}(y, k) \times s_{cap}(y, x) \\
    & + cost_{r\_cap}(y, k) \times r_{cap}(y, x) \\
    & + cost_{r\_area}(y, k) \times r_{area}(y, x) \\
@@ -321,15 +323,15 @@ The O&M costs are computed in four separate constraints, ``cost_op_fixed``, ``co
 
    cost_{op,fixed}(y, x, k) &= cost_{om\_frac}(y, k) \times cost_{con}(y, x, k) \\
    & + cost_{om\_fixed}(y, k) \times e_{cap}(y, x) \\
-   & \times \frac{\sum\limits_t timeres(t)}{8760}
+   & \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760}
 
 .. math::
 
-   cost_{op,var}(y, x, k) = cost_{om\_var}(y, k) \times \sum_t e_{prod}(c, y, x, t)
+   cost_{op,var}(y, x, k) = cost_{om\_var}(y, k) \times \sum_t W(t) \times e_{prod}(c, y, x, t)
 
-   cost_{op,fuel}(y, x, k) = \frac{cost_{om\_fuel}(y, k) \times \sum_t r_{s}(y, x, t)}{r_{eff}(y, x)}
+   cost_{op,fuel}(y, x, k) = \frac{cost_{om\_fuel}(y, k) \times \sum_t W(t) \times r_{s}(y, x, t)}{r_{eff}(y, x)}
 
-   cost_{op,rb}(y, x, k) = \frac{cost_{om\_rb}(y, k) \times \sum_t r_{bs}(y, x, t)}{rb_{eff}(y, x)}
+   cost_{op,rb}(y, x, k) = \frac{cost_{om\_rb}(y, k) \times \sum_t W(t) \times r_{bs}(y, x, t)}{rb_{eff}(y, x)}
 
 
 Model balancing constraints
