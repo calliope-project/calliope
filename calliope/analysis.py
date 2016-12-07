@@ -308,7 +308,7 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
             carrier_subset.remove('unmet_demand_' + carrier)
         except ValueError:  # no unmet demand technology
             pass
-    cost = solution['costs'].loc[dict(k=cost_class, y=carrier_subset)].to_pandas().sum().sum()
+    cost = solution['costs'].loc[dict(kc=cost_class, y=carrier_subset)].to_pandas().sum().sum()
     # Actually, met_demand also includes demand "met" by unmet_demand
     met_demand = summary.at['demand_' + carrier, 'e_con']
     try:
@@ -360,7 +360,7 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
     else:
         locations_slice = locations
 
-    cost = solution['costs'].loc[dict(k=cost_class, x=locations_slice, y=members)]
+    cost = solution['costs'].loc[dict(kc=cost_class, x=locations_slice, y=members)]
     ec_prod = solution['ec_prod'].loc[dict(c=carrier, x=locations_slice, y=members)]
 
     if locations is None:
@@ -495,7 +495,7 @@ def get_domestic_supply_index(solution):
     """
     # TODO: add unit tests
     idx = solution.metadata.query('type == "supply"').index.tolist()
-    dom = (solution.costs.loc[dict(k='domestic', y=idx)].sum().sum() /
+    dom = (solution.costs.loc[dict(kc='domestic', y=idx)].sum().sum() /
            solution['ec_prod'].loc[dict(c='power')].sum().sum())
     return dom
 
