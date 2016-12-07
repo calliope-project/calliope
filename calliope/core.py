@@ -267,7 +267,7 @@ class Model(BaseModel):
                         if str(time_series_data).find(str([params[-3],params[-2],params[-1]])) == -1:
                             time_series_data.append([params[-3],params[-2],params[-1]])
                     else:
-                        raise Exception("unable to handle loading data from file for '{}'".format(indiv_timeseries_param))
+                        raise Exception("unable to handle loading data from file for '{}'".format(params[-1]))
         #send list of parameters to config_model AttrDict
         self.config_model['timeseries_constraints'] = list(set(time_series_constraint))
         self.config_model['timeseries_data'] = time_series_data
