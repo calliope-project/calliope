@@ -1,0 +1,9 @@
+channels:
+    - anaconda
+    - conda-forge
+
+dependencies:
+    - memory_profiler
+    - snakeviz
+    - pip:
+        - pyprof2calltree

@@ -3,6 +3,14 @@
 Release History
 ===============
 
+0.4.1 (dev)
+-----------
+
+Other changes
+~~~~~~~~~~~~~
+
+* |new| Allow profiling with the ``--profile`` and ``--profile_filename`` command-line options
+
 0.4.0 (2016-12-09)
 ------------------
 
