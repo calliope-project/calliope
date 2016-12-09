@@ -30,7 +30,7 @@ setup(
         "numexpr >= 2.3.1",
         "numpy >= 1.11",
         "pandas >= 0.19, < 0.20",
-        "pyomo >= 4.4, < 4.5",
+        "pyomo >= 5.0, < 5.1",
         "pyyaml >= 3.11",
         "xarray >= 0.8.2",
     ],
