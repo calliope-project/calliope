@@ -826,7 +826,6 @@ class Model(BaseModel):
 
         if x is not None:
             df = df.loc[:, x]
-
         return df
 
     def _validate_param_df(self, param, y, df):
@@ -858,7 +857,7 @@ class Model(BaseModel):
         # FIXME update these checks on implementing conditional param updates.
         for y in self._sets['y_def_r']:
             base_tech = self.get_parent(y)
-            possible_x = [x for x in dataset['x'].values
+            possible_x = [x for x in self._sets['x']
                           if self._locations.at[x, y] != 0]
             for x in possible_x:
                 series = dataset['r'].loc[{'y': y, 'x': x}].to_pandas()
@@ -920,8 +919,7 @@ class Model(BaseModel):
                     option_x = self.get_option(k, x=x)
                     if option != option_x:
                         df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
-
-
+                
                 self._validate_param_df(param, y, df)  # Have all `x` been set?
 
                 param_data[y] = xr.DataArray(df, dims=['t', 'x'])
@@ -956,7 +954,7 @@ class Model(BaseModel):
 
         dataset = xr.Dataset(data)
         dataset.attrs = attrs
-
+        
         # Check data consistency
         self._validate_param_dataset_consistency(dataset)
 
