@@ -4,3 +4,5 @@ calliope.egg-info/
 doc/_build/
 dist/
 .cache
+mprofile_*
+profile_*

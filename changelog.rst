@@ -3,8 +3,16 @@
 Release History
 ===============
 
-0.4.0 (dev)
+0.4.1 (dev)
 -----------
+
+Other changes
+~~~~~~~~~~~~~
+
+* |new| Allow profiling with the ``--profile`` and ``--profile_filename`` command-line options
+
+0.4.0 (2016-12-09)
+------------------
 
 Major changes
 ~~~~~~~~~~~~~
@@ -21,7 +29,7 @@ Other changes
 ~~~~~~~~~~~~~
 
 * |new| Functionality to post-process parallel runs into aggregated NetCDF files in ``calliope.read``
-* |changed| Pandas 0.18.0 compatibility
+* |changed| Pandas 0.18/0.19 compatibility
 * |changed| 1.11 is now the minimum required numpy version. This version makes datetime64 tz-naive by default, thus preventing some odd behavior when displaying time series.
 * |changed| Improved logging, status messages, and error reporting
 * |fixed| Other minor fixes

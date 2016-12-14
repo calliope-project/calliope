@@ -1,0 +1,5 @@
+name: "Profiling run"
+model: 'model_config/model.yaml'
+mode: plan
+solver: glpk
+subset_t: ['2005-01-01', '2005-01-15']

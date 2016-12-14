@@ -82,6 +82,9 @@ enable=import-error,
        redefined-outer-name,
        no-name-in-module,
        unused-argument,
+       trailing-whitespace,
+       trailing-newlines,
+       missing-final-newline,
        # unused-variable
 
 # Things we'd like to enable someday:

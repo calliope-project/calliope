@@ -24,12 +24,26 @@ from . import _version
 from .parallel import Parallelizer
 
 
-_debug = click.option('--debug', is_flag=True, default=False,
-                      help='Print debug information when encountering errors.')
-_pdb = click.option('--pdb', is_flag=True, default=False,
-                    help='If used together with --debug, drop into interactive '
-                         'debugger on encountering errors.')
+_debug = click.option(
+    '--debug', is_flag=True, default=False,
+    help='Print debug information when encountering errors.'
+)
 
+_pdb = click.option(
+    '--pdb', is_flag=True, default=False,
+    help='If used together with --debug, drop into interactive '
+         'debugger on encountering errors.'
+)
+
+_profile = click.option(
+    '--profile', is_flag=True, default=False,
+    help='Run through cProfile.'
+)
+
+_profile_filename = click.option(
+    '--profile_filename', type=str,
+    help='Filename to save profile to if enabled --profile.'
+)
 
 logging.basicConfig(stream=sys.stderr,
                     format='[%(asctime)s] %(levelname)-8s %(message)s',
@@ -38,11 +52,26 @@ logger = logging.getLogger()
 
 
 @contextlib.contextmanager
-def format_exceptions(debug=False, pdb=False, start_time=None):
+def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=None, start_time=None):
     if debug:
         logger.setLevel('DEBUG')
+
     try:
+        if profile:
+            import cProfile
+            profile = cProfile.Profile()
+            profile.enable()
         yield
+        if profile:
+            profile.disable()
+            if profile_filename:
+                dump_path = os.path.expanduser(profile_filename)
+                print('\nSaving cProfile output to: {}'.format(dump_path))
+                profile.dump_stats(dump_path)
+            else:
+                print('\n\n----PROFILE OUTPUT----\n\n')
+                profile.print_stats()
+
     except Exception as e:
         if debug:
             traceback.print_exc()
@@ -103,12 +132,14 @@ def new(path, debug):
 @click.argument('run_config')
 @_debug
 @_pdb
-def run(run_config, debug, pdb):
+@_profile
+@_profile_filename
+def run(run_config, debug, pdb, profile, profile_filename):
     """Execute the given RUN_CONFIG run configuration file."""
     print_debug_startup(debug)
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
-    with format_exceptions(debug, pdb, start_time):
+    with format_exceptions(debug, pdb, profile, profile_filename, start_time):
         tstart = start_time.strftime(core._time_format)
         print('Calliope run starting at {}\n'.format(tstart))
         model = core.Model(config_run=run_config)
@@ -124,7 +155,8 @@ def run(run_config, debug, pdb):
             y=num_techs,
             t=len(model._sets['t']))
         print('Model size:   {}\n'.format(msize))
-        model.config_run.set_key('output.save', True)  # Always save output
+        if not profile:
+            model.config_run.set_key('output.save', True)  # Always save output
         model.run()
         print_end_time(start_time)
 

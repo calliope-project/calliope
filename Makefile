@@ -1,3 +1,5 @@
+PROFILE_FILE := profile_$(shell /bin/date +'%Y-%m-%d-%H-%M-%S')
+
 ###
 # Testing and linting
 ###
@@ -9,6 +11,17 @@ lint :
 .PHONY : test
 test :
 	py.test --cov calliope --cov-report term-missing
+
+.PHONY : profile
+profile :
+	mprof run -C -T 1.0 --python calliope run calliope/example_model/run_profiling.yaml --profile --profile_filename=$(PROFILE_FILE).profile
+	pyprof2calltree -i $(PROFILE_FILE).profile -o $(PROFILE_FILE).calltree
+	gprof2dot -f callgrind $(PROFILE_FILE).calltree | dot -Tsvg -o $(PROFILE_FILE).callgraph.svg
+
+.PHONY : profile-clean
+profile-clean :
+	rm profile_*
+	rm mprofile_*
 
 .PHONY : ci
 ci :
