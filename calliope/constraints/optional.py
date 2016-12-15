@@ -37,10 +37,10 @@ def ramping_rate(model):
                 return po.Constraint.NoConstraint
             else:
                 carrier = model.get_option(y + '.carrier')
-                diff = ((m.es_prod[carrier, y, x, t]
-                         + m.es_con[carrier, y, x, t]) / time_res.at[t]
-                        - (m.es_prod[carrier, y, x, model.prev_t(t)]
-                           + m.es_con[carrier, y, x, model.prev_t(t)])
+                diff = ((m.c_prod[carrier, y, x, t]
+                         + m.c_con[carrier, y, x, t]) / time_res.at[t]
+                        - (m.c_prod[carrier, y, x, model.prev_t(t)]
+                           + m.c_con[carrier, y, x, model.prev_t(t)])
                         / time_res.at[model.prev_t(t)])
                 max_ramping_rate = ramping_rate_value * m.e_cap[y, x]
                 if direction == 'up':
@@ -110,9 +110,9 @@ def group_fraction(model):
         sign, fraction = sign_fraction(output_group, 'output')
         techs = techs_to_consider(supply_techs, 'output')
         rhs = (fraction
-               * sum(m.es_prod[c, y, x, t] for y in techs
+               * sum(m.c_prod[c, y, x, t] for y in techs
                      for x in m.x for t in m.t))
-        lhs = sum(m.es_prod[c, y, x, t]
+        lhs = sum(m.c_prod[c, y, x, t]
                   for y in model.get_group_members(output_group) for x in m.x
                   for t in m.t)
         return equalizer(lhs, rhs, sign)

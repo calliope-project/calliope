@@ -62,7 +62,7 @@ techs:
             s_loss: 0  # Storage loss rate (per hour)
             e_prod: true  # Allow this technology to supply energy to the carrier
             e_con: false  # Allow this technology to consume energy from the carrier
-            c_eff: 1.0  # Carrier efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
+            p_eff: 1.0  # Plant parasitic efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
             e_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
             e_eff_ref: false  # Reference storage to/from carrier efficiency. If set to false, e_eff is used instead. Currently only used when for storage size calculation when ``suse_s_time`` is ``true``.
             e_cap.min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location

@@ -57,7 +57,7 @@ def system_margin(model):
         margin = model.config_model.system_margin.get_key(c, default=0)
         if margin:
             t = model.t_max_demand[c]
-            return (sum(m.es_prod[c, y, x, t] for y in m.y for x in m.x)
+            return (sum(m.c_prod[c, y, x, t] for y in m.y for x in m.x)
                     * (1 + margin)
                     <= time_res.at[t]
                     * sum((m.e_cap[y, x] / model.get_eff_ref('e', y, x))

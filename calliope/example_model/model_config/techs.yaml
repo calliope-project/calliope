@@ -32,7 +32,7 @@ techs:
             s_loss: 0.002
             r: file  # Will look for `csp_r.csv` in data directory
             e_eff: 0.4
-            c_eff: 0.9
+            p_eff: 0.9
             r_area.max: inf
             e_cap.max: 10000
         costs:

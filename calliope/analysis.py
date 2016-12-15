@@ -360,17 +360,17 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
     else:
         locations_slice = locations
 
-    cost = solution['costs'].loc[dict(k=cost_class, x=locations_slice, y=members)]
-    ec_prod = solution['ec_prod'].loc[dict(c=carrier, x=locations_slice, y=members)]
+    cost = solution['costs'].loc[dict(kc=cost_class, x=locations_slice, y=members)]
+    c_prod = solution['c_prod'].loc[dict(c=carrier, x=locations_slice, y=members)]
 
     if locations is None:
         cost = cost.sum(dim='x').to_pandas()
-        ec_prod = ec_prod.sum(dim='x').to_pandas()
+        c_prod = c_prod.sum(dim='x').to_pandas()
     else:
         cost = cost.to_pandas()
-        ec_prod = ec_prod.to_pandas()
+        c_prod = c_prod.to_pandas()
 
-    return (cost / ec_prod) * unit_multiplier
+    return (cost / c_prod) * unit_multiplier
 
 
 def get_group_share(solution, techs, group_type='supply',
@@ -495,8 +495,8 @@ def get_domestic_supply_index(solution):
     """
     # TODO: add unit tests
     idx = solution.metadata.query('type == "supply"').index.tolist()
-    dom = (solution.costs.loc[dict(k='domestic', y=idx)].sum().sum() /
-           solution['ec_prod'].loc[dict(c='power')].sum().sum())
+    dom = (solution.costs.loc[dict(kc='domestic', y=idx)].sum().sum() /
+           solution['c_prod'].loc[dict(c='power')].sum().sum())
     return dom
 
 
@@ -617,7 +617,7 @@ class SolutionModel(core.BaseModel):
         get_depreciation = self.get_depreciation
         solution = self.solution
         # Here we want gross production
-        production = solution['es_prod'].loc[dict(c=carrier, y=y)]
+        production = solution['c_prod'].loc[dict(c=carrier, y=y)]
         fuel = (solution['rs'].loc[dict(y=y)].sum(dim='t')
                 / self.get_option(y + '.constraints.r_eff'))
         fuel_rb = (solution['rbs'].loc[dict(y=y)].sum(dim='t')
@@ -654,7 +654,7 @@ class SolutionModel(core.BaseModel):
         cost_op = ocf(y, k=k, carrier=carrier,
                       cost_adjustment=cost_adjustment)['total']
         # Here we want net production
-        production = solution['ec_prod'].loc[dict(c=carrier, y=y)]
+        production = solution['c_prod'].loc[dict(c=carrier, y=y)]
         lc = (get_depreciation(y, k) * (solution['time_res'].to_pandas().sum() / 8760)
               * cost_con + cost_op) / production.to_pandas()
         lc.at['total'] = (get_depreciation(y, k)

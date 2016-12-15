@@ -73,7 +73,7 @@ def init_set_y(model, _x):
     _y_p = []
     for y in _y:
         for x in _x:
-            if model.get_option(y + '.constraints.c_eff', x=x) != 1.0:
+            if model.get_option(y + '.constraints.p_eff', x=x) != 1.0:
                 _y_p.append(y)
                 break  # No need to look at other x
 
