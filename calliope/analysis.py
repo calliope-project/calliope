@@ -230,7 +230,8 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     # Determine maximum that could have been transmitted across a link
     def get_edge_capacity(solution, a, b):
         hrs = solution['time_res'].to_pandas().sum()
-        cap = solution['e_cap_net'].loc[dict(x=a, y='{}:'.format(tech) + b)].to_pandas() * hrs
+        cap = (solution['e_cap_net'].loc[dict(x=a, y='{}:'.format(tech) + b)]
+                                    .to_pandas() * hrs)
         return cap
 
     # Get annual power transmission between zones
@@ -238,7 +239,8 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     trans_tech = lambda x: '{}:{}'.format(tech, x)
     def get_annual_power_transmission(zone):
         try:
-            return solution['e'].loc[dict(c=carrier, y=trans_tech(zone))].sum(dim='t').to_pandas()
+            return (solution['e'].loc[dict(c=carrier, y=trans_tech(zone))]
+                                .sum(dim='t').to_pandas())
         except KeyError:
             return 0
     df = pd.DataFrame({zone: get_annual_power_transmission(zone)
@@ -308,7 +310,8 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
             carrier_subset.remove('unmet_demand_' + carrier)
         except ValueError:  # no unmet demand technology
             pass
-    cost = solution['costs'].loc[dict(k=cost_class, y=carrier_subset)].to_pandas().sum().sum()
+    cost = (solution['costs'].loc[dict(kc=cost_class, y=carrier_subset)]
+                             .to_pandas().sum().sum())
     # Actually, met_demand also includes demand "met" by unmet_demand
     met_demand = summary.at['demand_' + carrier, 'e_con']
     try:
@@ -655,7 +658,8 @@ class SolutionModel(core.BaseModel):
                       cost_adjustment=cost_adjustment)['total']
         # Here we want net production
         production = solution['c_prod'].loc[dict(c=carrier, y=y)]
-        lc = (get_depreciation(y, k) * (solution['time_res'].to_pandas().sum() / 8760)
+        lc = (get_depreciation(y, k)
+              * (solution['time_res'].to_pandas().sum() / 8760)
               * cost_con + cost_op) / production.to_pandas()
         lc.at['total'] = (get_depreciation(y, k)
                           * (solution['time_res'].to_pandas().sum() / 8760)

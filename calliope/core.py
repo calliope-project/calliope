@@ -1153,15 +1153,18 @@ class Model(BaseModel):
         # Variables and constraints
         #
 
+        # Generate variables, uses same error checking as constraint generation
+        self.add_constraint(constraints.base_planning.generate_variables)
+
         # 1. Required
-        constr = [constraints.base.node_resource,
-                  constraints.base.node_energy_balance,
-                  constraints.base.node_constraints_build,
-                  constraints.base.node_constraints_operational,
-                  constraints.base.node_constraints_transmission,
-                  #constraints.base.node_parasitics,
-                  constraints.base.node_costs,
-                  constraints.base.model_constraints]
+        constr = [constraints.base_planning.node_resource,
+                  constraints.base_planning.node_energy_balance,
+                  constraints.base_planning.node_constraints_build,
+                  constraints.base_planning.node_constraints_operational,
+                  constraints.base_planning.node_constraints_transmission,
+                  #constraints.base_planning.node_parasitics,
+                  constraints.base_planning.node_costs,
+                  constraints.base_planning.model_constraints]
         if self.mode == 'plan':
             constr += [constraints.planning.system_margin,
                        constraints.planning.node_constraints_build_total]
@@ -1453,31 +1456,23 @@ class Model(BaseModel):
         return result
 
     def get_costs(self, t_subset=None):
-        """Get costs."""
         if t_subset is None:
-            cost_fixed = self.get_var('cost_con') + self.get_var('cost_op_fixed')
-            cost_variable = self.get_var('cost_op_variable')
+            return self.get_var('cost')
         else:
             # len_adjust is the fraction of construction and fixed costs
             # that is accrued to the chosen t_subset. NB: construction and fixed
             # operation costs are calculated for a whole year
             len_adjust = (sum(self.data['_time_res'].to_series().iloc[t_subset])
                           / sum(self.data['_time_res'].to_series()))
-
             # Adjust for the fact that fixed costs accrue over a smaller length
             # of time as per len_adjust
-            cost_fixed = self.get_var('cost_con') + self.get_var('cost_op_fixed')
-            cost_fixed = cost_fixed * len_adjust
+            cost_fixed = self.get_var('cost_fixed') * len_adjust
 
             # Adjust for the fact that variable costs are only accrued over
             # the t_subset period
-            cost_op_var = self.get_var('cost_op_var')[{'t': t_subset}].sum(dim='t')
-            cost_op_fuel = self.get_var('cost_op_fuel')[{'t': t_subset}].sum(dim='t')
-            cost_op_rb = self.get_var('cost_op_rb')[{'t': t_subset}].sum(dim='t')
+            cost_variable = self.get_var('cost_var')[{'t': t_subset}].sum(dim='t')
 
-            cost_variable = cost_op_var + cost_op_fuel + cost_op_rb
-
-        return cost_fixed + cost_variable
+            return cost_fixed + cost_variable
 
     def get_revenue(self, t_subset=None):
         """Get revenue."""
@@ -1492,8 +1487,7 @@ class Model(BaseModel):
 
             # Adjust for the fact that fixed costs accrue over a smaller length
             # of time as per len_adjust
-            revenue_fixed = self.get_var('revenue_fixed')
-            revenue_fixed = revenue_fixed * len_adjust
+            revenue_fixed = self.get_var('revenue_fixed') * len_adjust
 
             # Adjust for the fact that variable costs are only accrued over
             # the t_subset period
