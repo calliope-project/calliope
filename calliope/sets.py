@@ -14,26 +14,6 @@ from . import transmission
 
 
 def init_set_y(model, _x):
-    _y = set()
-    try:
-        for k, v in model.config_model.locations.items():
-            for y in v.techs:
-                if y in model.config_model.techs:
-                    _y.add(y)
-                else:
-                    e = exceptions.ModelError
-                    raise e('Location `{}` '
-                            'uses undefined tech `{}`.'.format(k, y))
-    except KeyError:
-        e = exceptions.ModelError
-        raise e('The region `' + k + '` does not allow '
-                'any technologies via `techs`. Must give '
-                'at least one technology per region.')
-    _y = list(_y)
-
-    # Potentially subset _y
-    if model.config_run.get_key('subset_y', default=False):
-        _y = [y for y in _y if y in model.config_run.subset_y]
 
     # Subset of transmission technologies, if any defined
     # Used to initialized transmission techs further below
@@ -46,6 +26,33 @@ def init_set_y(model, _x):
     else:
         _y_trans = []
         transmission_techs = []
+
+    _y = set()
+    _x_trans = set()
+    for k, v in model.config_model.locations.items():
+        if 'techs' in v.keys():
+            for y in v.techs:
+                if y in model.config_model.techs:
+                    _y.add(y)
+                else:
+                    e = exceptions.ModelError
+                    raise e('Location `{}` '
+                            'uses undefined tech `{}`.'.format(k, y))
+        elif [k in y for y in _y_trans]:
+            # This location is simply a transmission
+            _x_trans.add(k)
+        else:
+            e = exceptions.ModelError
+            raise e('The region `' + k + '` does not allow any '
+                    'technologies via `techs` nor does it have '
+                    'links to other locations. Must give at '
+                    'least one technology per region or link '
+                    'to other regions.')
+    _y = list(_y)
+
+    # Potentially subset _y
+    if model.config_run.get_key('subset_y', default=False):
+        _y = [y for y in _y if y in model.config_run.subset_y]
 
     # Subset of conversion technologies
     _y_conv = [y for y in _y if model.ischild(y, of='conversion')]
