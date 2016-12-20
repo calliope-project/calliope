@@ -1154,17 +1154,17 @@ class Model(BaseModel):
         #
 
         # Generate variables, uses same error checking as constraint generation
-        self.add_constraint(constraints.base_planning.generate_variables)
+        self.add_constraint(constraints.base.generate_variables)
 
         # 1. Required
-        constr = [constraints.base_planning.node_resource,
-                  constraints.base_planning.node_energy_balance,
-                  constraints.base_planning.node_constraints_build,
-                  constraints.base_planning.node_constraints_operational,
-                  constraints.base_planning.node_constraints_transmission,
-                  #constraints.base_planning.node_parasitics,
-                  constraints.base_planning.node_costs,
-                  constraints.base_planning.model_constraints]
+        constr = [constraints.base.node_resource,
+                  constraints.base.node_energy_balance,
+                  constraints.base.node_constraints_build,
+                  constraints.base.node_constraints_operational,
+                  constraints.base.node_constraints_transmission,
+                  #constraints.base.node_parasitics,
+                  constraints.base.node_costs,
+                  constraints.base.model_constraints]
         if self.mode == 'plan':
             constr += [constraints.planning.system_margin,
                        constraints.planning.node_constraints_build_total]
