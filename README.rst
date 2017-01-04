@@ -28,6 +28,12 @@ A more elaborate example is `UK-Calliope <https://github.com/sjpfenninger/uk-cal
 Quick start
 -----------
 
+Install Calliope and all dependencies with conda:
+
+.. code-block:: bash
+
+    $ conda create -c conda-forge -n calliope python=3.5 calliope
+
 Calliope can be run from the command line:
 
 .. code-block:: bash
