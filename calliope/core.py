@@ -1715,6 +1715,9 @@ class Model(BaseModel):
         d.attrs['time_res_sum'] = 0
         # This will fail if the time range given is too short, i.e. there are
         # no future timesteps to consider.
+        if len(steps) == 0:
+            raise exceptions.ModelError('Unable to solve iteratively with '
+                                        'current time subset and step-size')
         self.generate_model(t_start=steps[0])
         for index, step in enumerate(steps):
             if index == 0:
