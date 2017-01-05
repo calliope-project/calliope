@@ -498,12 +498,11 @@ def option_getter(config_model):
     return get_option
 
 
-def cost_getter(option_getter_func, costs_type='costs'):
-    def get_cost(cost, y, k, x=None):
-        return option_getter_func(
-            y + '.' + costs_type + '.' + k + '.' + cost,
-            default=y + '.' + costs_type + '.default.' + cost,
-            x=x)
+def cost_getter(option_getter_func):
+    def get_cost(cost, y, k, x=None, costs_type='costs'):
+        return option_getter_func(y + '.' + costs_type + '.' + k + '.' + cost,
+                             default=y + '.' + costs_type + '.default.' + cost,
+                             x=x)
     return get_cost
 
 
@@ -543,17 +542,43 @@ def any_option_getter(model):
 
     """
     get_cost = cost_getter(model.get_option)
-    get_cost_pd = cost_getter(model.get_option, 'costs_per_distance')
+    get_cost_pd = cost_per_distance_getter(model.get_option)
 
-    def get_any_option(option):
-        if 'costs.' in option:
-            y, rest, k, cost = option.split('.')
-            return get_cost(cost, y, k)
-        elif 'costs_per_distance.' in option:
-            y, rest, k, cost = option.split('.')
-            return get_cost_pd(cost, y, k)
+    def get_any_option(option, x=None, t=None):
+        if 'costs.' in option or 'revenue.' in option:
+            if t and x:
+                y, cost_type, k, cost = option.split('.')
+                try:
+                    return model.data['_'.join([cost_type,k,cost])].sel(y=y,x=x,t=t)
+                except:
+                    return model.get_cost(cost, y, k, x=x, costs_type=cost_type)
+            elif t and not x:
+                e = exceptions.OptionNotSetError
+                raise e('must define location for time dependant variable '
+                    '`{}`'.format(option))
+            else:
+                y, cost_type, k, cost = option.split('.')
+                return model.get_cost(cost, y, k, x=x, costs_type=cost_type)
         else:
-            return model.get_option(option)
+            if t and x:
+                y = option.split('.', 1)[0]
+                field = option.rsplit('.', 1)[-1]
+                try:
+                    return model.data[field].sel(y=y,x=x,t=t)
+                except:
+                    return model.get_option(option, x=x)
+            elif t and not x:
+                e = exceptions.OptionNotSetError
+                raise e('must define location for time dependant variable '
+                        '`{}`'.format(option))
+            elif x and not t:
+                return model.get_option(option, x=x)
+            else:
+                if 'costs_per_distance.' in option:
+                    y, rest, k, cost = option.split('.')
+                    return get_cost_pd(cost, y, k)
+                else:
+                    return model.get_option(option)
     return get_any_option
 
 def vincenty(coord1, coord2):
