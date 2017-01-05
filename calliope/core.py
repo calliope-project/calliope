@@ -181,6 +181,25 @@ class Model(BaseModel):
         self.initialize_parents()
         self.initialize_sets()
 
+<<<<<<< HEAD
+=======
+        # Get time series data
+        time_series_data = []
+        allowed_timeseries_params = ['r', 'r_eff', 'r_scale', 'rb_eff', 's_loss',
+                                    'e_prod', 'e_con', 'c_eff', 'e_eff',
+                                    'e_cap_min_use', 'e_ramping'] #these can be numeric, avoiding true/false constraints
+        for k, v in self.config_model.as_dict_flat().items(): #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
+            if isinstance(v,str):
+                if v.startswith("file"): #find any refering to a file
+                    params = k.split('.') #split the elements of the key to get constraint
+                    if params[-1] in allowed_timeseries_params: #look for e.g. e_eff
+                        time_series_data.append(params[-1])
+                    else:
+                        raise Exception("unable to handle loading data from file for '{}'".format(params[-1]))
+        #send list of paramters to config_model AttrDict
+        self.config_model['timeseries_params'] = list(set(time_series_data))
+
+>>>>>>> 67ea0e4... more robust logging of timeseries parameters
         # Read data and apply time resolution adjustments
         self.read_data()
         self.mode = self.config_run.mode
