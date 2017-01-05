@@ -93,7 +93,7 @@ def node_resource(model):
 
     # Constraint rules
     def c_rs_rule(m, y, x, t):
-        r_scale = get_any_option(y + '.constraints.r_scale', x=x)
+        r_scale = model.get_option(y + '.constraints.r_scale', x=x)
         r_eff = get_constraint_param(model, 'r_eff', y, x, t)
         force_r = get_constraint_param(model, 'force_r', y, x, t)
         r_avail = (m.r[y, x, t]
@@ -623,15 +623,14 @@ def node_costs(model):
     def c_cost_op_fuel_rule(m, y, x, t, k):
         r_eff = get_constraint_param(model, 'r_eff', y, x, t)
         if po.value(r_eff) > 0:
-            om_fuel = get_cost_param(model,'om_fuel',k,y,x,t)
+            om_fuel = get_cost_param(model,'om_fuel', k, y, x, t)
             # Dividing by r_eff here so we get the actual r used, not the rs
             # moved into storage...
             return (
                 m.cost_op_fuel[y, x, t, k] ==
                 om_fuel *
                 weights.loc[t] *
-                (m.rs[y, x, t] /
-                    model.get_option(y + '.constraints.r_eff', x=x))
+                (m.rs[y, x, t] / r_eff)
             )
         else: #in case r_eff is zero, to avoid an infinite value for cost_op_fuel
             return m.cost_op_fuel[y, x, t, k] == 0
