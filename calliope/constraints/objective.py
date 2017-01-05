@@ -14,7 +14,7 @@ import pyomo.core as po
 
 def objective_cost_minimization_exc_rev(model):
     """
-    Minimizes total system monetary cost. 
+    Minimizes total system monetary cost.
 
     """
     m = model.m
@@ -37,8 +37,8 @@ def objective_cost_minimization(model):
 
     def obj_rule(m):
         return sum(model.get_option(y + '.weight') *
-                   sum((m.cost[y, x, 'monetary'] - 
-                    m.revenue[y, x, 'monetary']) 
+                   sum((m.cost[y, x, 'monetary'] -
+                    m.revenue[y, x, 'monetary'])
                     for x in m.x) for y in m.y)
 
     m.obj = po.Objective(sense=po.minimize, rule=obj_rule)

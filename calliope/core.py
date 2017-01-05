@@ -919,7 +919,7 @@ class Model(BaseModel):
                     option_x = self.get_option(k, x=x)
                     if option != option_x:
                         df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
-                
+
                 self._validate_param_df(param, y, df)  # Have all `x` been set?
 
                 param_data[y] = xr.DataArray(df, dims=['t', 'x'])
@@ -954,7 +954,7 @@ class Model(BaseModel):
 
         dataset = xr.Dataset(data)
         dataset.attrs = attrs
-        
+
         # Check data consistency
         self._validate_param_dataset_consistency(dataset)
 
@@ -1708,6 +1708,8 @@ class Model(BaseModel):
         cost_vars = []
         rev_vars = []
         d.attrs['time_res_sum'] = 0
+        # This will fail if the time range given is too short, i.e. there are
+        # no future timesteps to consider.
         self.generate_model(t_start=steps[0])
         for index, step in enumerate(steps):
             if index == 0:
