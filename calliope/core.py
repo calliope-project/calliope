@@ -788,12 +788,13 @@ class Model(BaseModel):
 
     def _read_param_for_tech(self, param, y, time_res, option, x=None):
         # added check that it is a constraint (string param)
-        if option != float('inf') and isinstance(param, str):
-            self._sets['y_def_' + param].add(y)
+        if option != float('inf') and param == 'r':
+            self._sets['y_finite_r' + param].add(y)
         k = '{}.{}:{}'.format(param, y, x)
 
         if isinstance(option, str):  # if option is string, read a file
-            f = self._get_filename(param, y, x)
+            self._sets['y_' + param + '_timeseries'].add(y)
+            f = self._get_filename(param, option, y, x)
             df = self._get_option_from_csv(f)
             self.debug.data_sources.set_key(k, 'file:' + f)
 
@@ -858,7 +859,7 @@ class Model(BaseModel):
         # Finally, check data consistency. For now, demand must be <= 0,
         # and supply >=0, at all times.
         # FIXME update these checks on implementing conditional param updates.
-        for y in self._sets['y_def_r']:
+        for y in self._sets['y_finite_r']:
             base_tech = self.get_parent(y)
             possible_x = [x for x in dataset['x'].values
                           if self._locations.at[x, y] != 0]
@@ -902,7 +903,7 @@ class Model(BaseModel):
         data['s_init'] = xr.DataArray(s_init)
 
         # Parameters that may be defined over (x, y, t)
-        ts_sets = {'y_def_' + k: set()
+        ts_sets = {'y_' + k + '_timeseries': set()
             for k in self.config_model.timeseries_constraints}
         self._sets = {**self._sets, **ts_sets}
 
@@ -1002,34 +1003,62 @@ class Model(BaseModel):
             logging.error('Error generating constraint' + index_string)
             raise
 
-    def _param_populator(self, src_data, src_param, t_offset=None):
+    def _param_populator(self, src_data, src_param, t_offset=None,
+                         param_type='constraint'):
         """
         Returns a `getter` function that returns (x, t)-specific
         values for parameters
 
         """
-        getter_data = (src_data[src_param].to_dataframe()
-                                          .reorder_levels(['y', 'x', 't'])
-                                          .to_dict()[src_param])
+        if param_type == 'constraint':
+            getter_data = (src_data[src_param].to_dataframe()
+                                              .reorder_levels(['y', 'x', 't'])
+                                              .to_dict()[src_param])
 
-        def getter(m, y, x, t):  # pylint: disable=unused-argument
-            if t_offset:
-                t = self.get_t(t, t_offset)
-            return getter_data[(y, x, t)]
-            # return src.loc[{'y': y, 'x': x, 't': t}]
-        return getter
+            def getter(m, y, x, t):  # pylint: disable=unused-argument
+                if t_offset:
+                    t = self.get_t(t, t_offset)
+                return getter_data[(y, x, t)]
+                # return src.loc[{'y': y, 'x': x, 't': t}]
+            return getter
+        else: # i.e. cost/revenue
+            getter_data = (src_data[src_param].to_dataframe()
+                                              .reorder_levels(['y', 'x', 't', 'k'])
+                                              .to_dict()[src_param])
+
+            def getter(m, y, x, t, k):  # pylint: disable=unused-argument
+                if t_offset:
+                    t = self.get_t(t, t_offset)
+                return getter_data[(y, x, t, k)]
+                # return src.loc[{'y': y, 'x': x, 't': t}]
+            return getter
 
     def update_parameters(self, t_offset):
         d = self.data
 
         for param in _TIMESERIES_PARAMS:
             initializer = self._param_populator(d, param, t_offset)
-            y_set = self._sets['y_def_' + param]
-            param_object = getattr(self.m, param)
+            y_set = self._sets['y_' + param + '_timeseries']
+            param_object = getattr(self.m, param + '_param')
             for y in y_set:
                 for x in self.m.x:
                     for t in self.m.t:
                         param_object[y, x, t] = initializer(self.m, y, x, t)
+
+        for param in self.config_model.timeseries_costs:
+            initializer = self._param_populator(d, param, t_offset,
+                                                param_type='cost')
+            y_set = self._sets['y_' + param + '_timeseries']
+            if 'sub' in param:
+                ks = self.m.kr
+            else:
+                ks = self.m.kc
+            param_object = getattr(self.m, param + '_param')
+            for y in y_set:
+                for x in self.m.x:
+                    for t in self.m.t:
+                        for k in ks:
+                        param_object[y, x, t, k] = initializer(self.m, y, x, t, k)
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1107,16 +1136,11 @@ class Model(BaseModel):
         m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
         ##TIMESERIES vars
         for param in self.config_model.timeseries_constraints:
-            setattr(m, 'y_def_'+param,
-                    po.Set(initialize = self._sets['y_def_' + param],
+            setattr(m, 'y_' + param + '_timeseries',
+                    po.Set(initialize = self._sets['y_' + param + '_timeseries'],
                     within=m.y))
-        # Technologies that allow `rb`
-        m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
-        # Technologies with parasitics
-        m.y_p = po.Set(initialize=self._sets['y_p'], within=m.y)
-        # Technologies without parasitics
-        set_no_parasitics = set(self._sets['y']) - set(self._sets['y_p'])
-        m.y_np = po.Set(initialize=set_no_parasitics, within=m.y)
+        # Technologies that allow `r2`
+        m.y_r2 = po.Set(initialize=self._sets['y_r2'], within=m.y)
 
         #
         # Parameters
@@ -1127,20 +1151,16 @@ class Model(BaseModel):
         # dictionary to avoid over-dependance on Pyomo
 
         for param in self.config_model.timeseries_constraints:
-            y = getattr(m, 'y_def_' + param)
-            # param_data = self.data[param].to_dataframe()
-            #                              .reorder_levels(['y', 'x', 't'])
-            #                              .to_dict()[param]
+            y = getattr(m, 'y_' + param + '_timeseries')
             initializer = self._param_populator(self.data, param)
-            setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer,
-                                       mutable=True))
+            setattr(m, param + '_param', po.Param(y, m.x, m.t,
+                                                  initialize=initializer,
+                                                  mutable=True))
 
         for param in self.config_model.timeseries_data:
-            # param_data = self.data[param].to_dataframe()
-            #                              .reorder_levels(['y', 'x', 't'])
-            #                              .to_dict()[param]
+            y = getattr(m, 'y_' + param + '_timeseries')
             initializer = self._param_populator(self.data, '_'.join(param))
-            setattr(m, '_'.join(param), po.Param(m.y, m.x, m.t,
+            setattr(m, '_'.join(param) + '_param', po.Param(y, m.x, m.t,
                                                  initialize=initializer,
                                                  mutable=True))
 
