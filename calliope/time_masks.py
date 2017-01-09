@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 time_masks.py
@@ -96,6 +96,9 @@ def extreme(data, tech, var='r', how='max',
     padding : int, optional
         Pad beginning and end of the unmasked area by the number of
         timesteps given.
+    normalize : bool, optional
+        If True (default), data is normalized
+        using :func:`~calliope.time_funcs.normalized_copy`.
 
     """
     arr = _get_array(data, var, tech, locations)
@@ -105,8 +108,11 @@ def extreme(data, tech, var='r', how='max',
 
 def extreme_diff(data, tech0, tech1, var='r', how='max',
                  length='1D', n=1, groupby_length=None,
-                 locations=None, padding=None):
-    data_n = time_funcs.normalize(data)
+                 locations=None, padding=None, normalize=True):
+    if normalize:
+        data_n = time_funcs.normalized_copy(data)
+    else:
+        data_n = data
     arr0 = _get_array(data_n, var, tech0, locations)
     arr1 = _get_array(data_n, var, tech1, locations)
     arr = arr0 - arr1

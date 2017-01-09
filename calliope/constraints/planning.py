@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 planning.py
@@ -10,7 +10,7 @@ Planning constraints.
 """
 
 import numpy as np
-import pyomo.core as po
+import pyomo.core as po  # pylint: disable=import-error
 
 
 def node_constraints_build_total(model):

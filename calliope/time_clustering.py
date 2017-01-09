@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 time_clustering.py
@@ -151,6 +151,8 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
     dtindex = data['t'].to_index()
     ts_per_day = _get_timesteps_per_day(data)
     days = int(len(data['t']) / ts_per_day)
+    n_x = len(data['x'])
+    n_y = len(subset_y)
 
     chosen_days = {}
 
@@ -161,7 +163,7 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
         target = mean_data['r'].loc[dict(t=subset_t, y=subset_y)].values
 
         lookup_array = data['r'].loc[dict(y=subset_y)].values
-        lookup_array = lookup_array.reshape((4, days, ts_per_day, 20)).transpose(1, 0, 2, 3)
+        lookup_array = lookup_array.reshape((n_y, days, ts_per_day, n_x)).transpose(1, 0, 2, 3)
 
         chosen_days[cluster] = find_nearest_vector_index(lookup_array, target)
 

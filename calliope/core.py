@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 core.py
@@ -20,10 +20,10 @@ import shutil
 import time
 import warnings
 
-import pyomo.opt as popt
-import pyomo.core as po
+import pyomo.opt as popt  # pylint: disable=import-error
+import pyomo.core as po  # pylint: disable=import-error
 # pyomo.environ is needed for pyomo solver plugins
-import pyomo.environ  # pylint: disable=unused-import
+import pyomo.environ  # pylint: disable=unused-import,import-error
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -167,6 +167,11 @@ class Model(BaseModel):
         # Populate self.config_run and self.config_model
         self.initialize_configuration(config_run, override)
         self._get_option = utils.option_getter(self.config_model)
+
+        # Set random seed if specified in run configuration
+        random_seed = self.config_run.get('random_seed', None)
+        if random_seed:
+            np.random.seed(seed=random_seed)
 
         # Populate config_model with link distances, where metadata is given
         # but no distances given in locations.yaml

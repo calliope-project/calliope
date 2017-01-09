@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 base.py
@@ -9,7 +9,7 @@ Basic model constraints.
 
 """
 
-import pyomo.core as po
+import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
 from .. import exceptions
