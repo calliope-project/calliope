@@ -248,7 +248,7 @@ class Model(BaseModel):
                                     'e_prod', 'e_con', 'p_eff', 'e_eff',
                                     'e_cap_min_use', 'e_ramping']
         #variable costs/revenue only
-        allowed_timeseries_data = ['om_var', 'om_fuel',
+        allowed_timeseries_costs = ['om_var', 'om_fuel',
                                 'om_rb','sub_var']
         #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
         for k, v in self.config_model.as_dict_flat().items():
@@ -264,13 +264,14 @@ class Model(BaseModel):
                     elif params[-1] in allowed_timeseries_constraints:
                         time_series_constraint.append(params[-1])
                     # look for e.g. om_fuel
-                    elif params[-1] in allowed_timeseries_data:
+                    elif params[-1] in allowed_timeseries_costs:
                         #make sure list e.g. ['costs','monetary','om_fuel']
                         # doesn't already exist
-                        if str(time_series_data).find(str([params[-3],
-                         params[-2],params[-1]])) == -1:
-                            time_series_data.append([params[-3],params[-2],
-                            params[-1]])
+                        if (str(time_series_data).find(str([params[-3],
+                                                            params[-2],
+                                                            params[-1]])) == -1):
+                            time_series_data.append([params[-3],
+                                                     params[-2], params[-1]])
                     else:
                         raise Exception(
                             "unable to handle loading data from file for '{}'"
@@ -278,7 +279,7 @@ class Model(BaseModel):
         #send list of parameters to config_model AttrDict
         self.config_model['timeseries_constraints'] = list(
             set(time_series_constraint))
-        self.config_model['timeseries_data'] = time_series_data
+        self.config_model['timeseries_costs'] = time_series_data
 
     def initialize_time(self):
         # Carry y_ subset sets over to data for easier data analysis
@@ -903,9 +904,12 @@ class Model(BaseModel):
         data['s_init'] = xr.DataArray(s_init)
 
         # Parameters that may be defined over (x, y, t)
-        ts_sets = {'y_' + k + '_timeseries': set()
+        ts_constraint_sets = {'y_' + k + '_timeseries': set()
             for k in self.config_model.timeseries_constraints}
-        self._sets = {**self._sets, **ts_sets}
+        self._sets = {**self._sets, **ts_constraint_sets}
+        ts_cost_sets = {'_'.join('y', param[2], param[1], 'timeseries'): set() )
+            for k in self.config_model.timeseries_costs}
+        self._sets = {**self._sets, **ts_cost_sets}
 
         for param in _TIMESERIES_PARAMS:
             param_data = {}
@@ -933,31 +937,41 @@ class Model(BaseModel):
             # Turn param_data into a DataArray
             data[param] = xr.Dataset(param_data).to_array(dim='y')
 
-        for param in self.config_model.timeseries_data: #costs and revenue
+        for param in self.config_model.timeseries_costs: #costs and revenue
             param_data = {}
+            if param[0] == 'costs':
+                cost_class = 'kc'
+
+            else: # revenue
+                cost_class = 'kr'
             for y in self._sets['y']:
-                # First, set up each parameter without considering
-                # potential per-location (per-x) overrides
-                option = self.get_cost(param[2], y, param[1], costs_type=param[0])
+                df={}
+                for k in self._sets[cost_class]:
+                    # First, set up each parameter without considering
+                    # potential per-location (per-x) overrides
+                    option = self.get_cost(param[2], y, param[1], costs_type=param[0])
 
-                df = self._read_param_for_tech(param, y, time_res, option, x=None)
+                    df[k] = self._read_param_for_tech(param, y, time_res, option,
+                                                      x=None)
 
-                for x in self._sets['x']:
-                    # Check for each x whether it defines an override
-                    # that is different from the generic option, and if so,
-                    # update the dataframe
-                    option_x = self.get_cost(param[2], y, param[1],
-                                             costs_type=param[0], x=x)
-                    if option != option_x:
-                        df.loc[:, x] = self._read_param_for_tech(param,
-                                            y, time_res, option_x, x=x)
+                    for x in self._sets['x']:
+                        # Check for each x whether it defines an override
+                        # that is different from the generic option, and if so,
+                        # update the dataframe
+                        option_x = self.get_cost(param[2], y, param[1],
+                                                 costs_type=param[0], x=x)
+                        if option != option_x:
+                            df[k].loc[:, x] = self._read_param_for_tech(param,
+                                                y, time_res, option_x, x=x)
 
-                self._validate_param_df(param, y, df)  # Have all `x` been set?
 
-                param_data[y] = xr.DataArray(df, dims=['t', 'x'])
+                    self._validate_param_df(param, y, df[k])  # Have all `x` been set?
+                # Create 3D dataframe with axes ordered as (t, x, k)
+                df_k = pd.Panel(df).swapaxes(0,1).swapaxes(1,2)
+                param_data[y] = xr.DataArray(df, dims=['t', 'x', cost_class])
 
             # Turn param_data into a DataArray
-            data[param] = xr.Dataset(param_data).to_array(dim='y')
+            data[param[2]] = xr.Dataset(param_data).to_array(dim='y')
 
         dataset = xr.Dataset(data)
         dataset.attrs = attrs
@@ -1048,7 +1062,7 @@ class Model(BaseModel):
         for param in self.config_model.timeseries_costs:
             initializer = self._param_populator(d, param, t_offset,
                                                 param_type='cost')
-            y_set = self._sets['y_' + param + '_timeseries']
+            y_set = self._sets['_'.join('y', param[2], param[1], 'timeseries')]
             if 'sub' in param:
                 ks = self.m.kr
             else:
@@ -1139,6 +1153,11 @@ class Model(BaseModel):
             setattr(m, 'y_' + param + '_timeseries',
                     po.Set(initialize = self._sets['y_' + param + '_timeseries'],
                     within=m.y))
+        for param in self.config_model.timeseries_costs:
+            setattr(m, '_'.join('y', param[2]. param[1], '_timeseries'),
+                    po.Set(initialize = self._sets['_'.join('y', param[2]. param[1],
+                                                            '_timeseries')],
+                    within=m.y))
         # Technologies that allow `r2`
         m.y_r2 = po.Set(initialize=self._sets['y_r2'], within=m.y)
 
@@ -1157,10 +1176,14 @@ class Model(BaseModel):
                                                   initialize=initializer,
                                                   mutable=True))
 
-        for param in self.config_model.timeseries_data:
-            y = getattr(m, 'y_' + param + '_timeseries')
-            initializer = self._param_populator(self.data, '_'.join(param))
-            setattr(m, '_'.join(param) + '_param', po.Param(y, m.x, m.t,
+        for param in self.config_model.timeseries_costs:
+            y = getattr(m, '_'.join('y', param[2], param[1], 'timeseries'))
+            if param[0] == 'revenue':
+                k = self.m.kr
+            else: #costs
+                k = self.m.kc
+            initializer = self._param_populator(self.data, param[2])
+            setattr(m, param[2] + '_param', po.Param(y, m.x, m.t, k
                                                  initialize=initializer,
                                                  mutable=True))
 
@@ -1834,6 +1857,11 @@ class Model(BaseModel):
             # Only if the set has some members
             if len(self._sets[subset_name]) > 0:
                 self.solution[param] = self.data[param]
+        for param in self.config_model.timeseries_costs:
+            subset_name = '_'.join('y', param[2]. param[1], '_timeseries')
+            # Only if the set has some members
+            if len(self._sets[subset_name]) > 0:
+                self.solution[param[2]] = self.data[param[2]]
 
         if how == 'netcdf':
             self._save_netcdf4()
@@ -1846,7 +1874,9 @@ class Model(BaseModel):
         for param in _TIMESERIES_PARAMS:
             if param in self.solution:
                 del self.solution[param]
-
+        for param in self.config_model.timeseries_costs:
+            if param[2] in self.solution:
+                del self.solution[param[2]]
         return None
 
     def _save_netcdf4(self):
