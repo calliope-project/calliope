@@ -27,11 +27,11 @@ def get_constraint_param(model, param_string, y, x, t):
     x = location
     t = timestep
     """
-    get_any_option = utils.any_option_getter(model)
-    if param_string in model.data:
+
+    if param_string in model.data and y in model._sets['y_def_' + param_string]:
         return getattr(model.m, param_string)[y, x, t]
     else:
-        return get_any_option(y + '.constraints.' + param_string, x=x)
+        return model.get_option(y + '.constraints.' + param_string, x=x)
 
 def get_cost_param(model, cost, k, y, x, t):
     """
@@ -45,14 +45,18 @@ def get_cost_param(model, cost, k, y, x, t):
     x = location
     t = timestep
     """
-    get_any_option = utils.any_option_getter(model)
+    cost_getter = utils.cost_getter(model.get_option)
+
+    @utils.memoize
+    def _cost(cost, y, k, x=None):
+        return cost_getter(cost, y, k, x=x)
 
     param_string = 'costs_' + k + '_' + cost #format stored in model.data
 
-    if param_string in model.data:
+    if param_string in model.data and y in model._sets['y_def_' + k + '_' + cost]:
         return getattr(model.m, param_string)[y, x, t]
     else: #turn e.g. costs_monetary_om_var to costs.monetary.om_var, then search in DataArray
-        return get_any_option(y + '.' + param_string.replace('_','.',2), x=x)
+        return _cost(cost, y, k, x=x)
 
 def get_revenue_param(model, rev, k, y, x, t):
     """
@@ -66,14 +70,17 @@ def get_revenue_param(model, rev, k, y, x, t):
     x = location
     t = timestep
     """
-    get_any_option = utils.any_option_getter(model)
+    cost_getter = utils.cost_getter(model.get_option)
 
+    @utils.memoize
+    def _revenue(cost, y, k, x=None):
+        return cost_getter(cost, y, k, x=x, costs_type='revenue')
     param_string = 'revenue_' + k + '_' + rev #format stored in model.data
 
-    if param_string in model.data:
+    if param_string in model.data and y in model._sets['y_def_' + k + '_' + rev]:
         return getattr(model.m, param_string)[y, x, t]
     else: #turn e.g. revenue_monetary_om_var to revenue.monetary.om_var, then search in DataArray
-        return get_any_option(y + '.' + param_string.replace('_','.',2), x=x)
+        return _revenue(rev, y, k, x=x)
 
 def node_resource(model):
     """
