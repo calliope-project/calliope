@@ -10,6 +10,9 @@ Other changes
 ~~~~~~~~~~~~~
 
 * |new| Allow profiling with the ``--profile`` and ``--profile_filename`` command-line options
+* |new| Permit setting random seed with ``random_seed`` in the run configuration
+* |changed| Updated installation based on conda-forge package
+* |fixed| Other minor fixes
 
 0.4.0 (2016-12-09)
 ------------------

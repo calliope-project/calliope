@@ -1,4 +1,4 @@
-|badge_travis| |badge_appveyor| |badge_coveralls| |badge_pypi| |badge_license|
+|badge_travis| |badge_appveyor| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
 
 -----
 
@@ -93,21 +93,25 @@ limitations under the License.
 .. |link-latest-doi| image:: https://zenodo.org/badge/9581/calliope-project/calliope.svg
 .. _link-latest-doi: https://zenodo.org/badge/latestdoi/9581/calliope-project/calliope
 
-.. |badge_pypi| image:: https://img.shields.io/pypi/v/calliope.svg
+.. |badge_pypi| image:: https://img.shields.io/pypi/v/calliope.svg?style=flat-square
     :target: https://pypi.python.org/pypi/calliope
     :alt: PyPI version
 
-.. |badge_license| image:: https://img.shields.io/pypi/l/calliope.svg
+.. |badge_conda| image:: https://anaconda.org/conda-forge/calliope/badges/version.svg
+    :target: https://anaconda.org/conda-forge/calliope
+    :alt: Anaconda.org version
+
+.. |badge_license| image:: https://img.shields.io/pypi/l/calliope.svg?style=flat-square
     :target: #license
 
-.. |badge_coveralls| image:: https://img.shields.io/coveralls/calliope-project/calliope.svg
+.. |badge_coveralls| image:: https://img.shields.io/coveralls/calliope-project/calliope.svg?style=flat-square
     :target: https://coveralls.io/r/calliope-project/calliope
     :alt: Test coverage
 
-.. |badge_travis| image:: https://travis-ci.org/calliope-project/calliope.svg
+.. |badge_travis| image:: https://img.shields.io/travis/calliope-project/calliope.svg?style=flat-square
     :target: https://travis-ci.org/calliope-project/calliope
-    :alt: Build status on Mac/Linux
+    :alt: Build status on Linux
 
-.. |badge_appveyor|  image:: https://ci.appveyor.com/api/projects/status/16aic413nfm35u4b/branch/master?svg=true
+.. |badge_appveyor|  image:: https://img.shields.io/travis/calliope-project/calliope.svg?style=flat-square&label=windows%20build
     :target: https://ci.appveyor.com/project/sjpfenninger/calliope
     :alt: Build status on Windows
