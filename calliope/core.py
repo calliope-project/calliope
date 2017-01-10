@@ -786,11 +786,15 @@ class Model(BaseModel):
         return df
 
     def _read_param_for_tech(self, param, y, time_res, option, x=None):
-        if option != float('inf') and isinstance(param, str): #added check that it is a constraint (string param)
+        if isinstance(param, list): # costs/revenue
+            param = param[1] + '_' + param[2]
+        elif option != float('inf') and isinstance(param, str): # just for 'r'
             self._sets['y_def_' + param].add(y)
         k = '{}.{}:{}'.format(param, y, x)
 
-        if isinstance(option, str):  # if option is string, read a file
+        if isinstance(option, str) and option != float('inf'):  # if option is string, read a file
+            if param != 'r':
+                self._sets['y_def_' + param].add(y)
             f = self._get_filename(param, option, y, x)
             df = self._get_option_from_csv(f)
             self.debug.data_sources.set_key(k, 'file:' + f)
@@ -899,8 +903,12 @@ class Model(BaseModel):
         data['s_init'] = xr.DataArray(s_init)
 
         # Parameters that may be defined over (x, y, t)
-        ts_sets = {'y_def_' + k: set() for k in self.config_model.timeseries_constraints}
-        self._sets = {**self._sets, **ts_sets}
+        ts_sets_constraints = {'y_def_' + k: set()
+                               for k in self.config_model.timeseries_constraints}
+        self._sets = {**self._sets, **ts_sets_constraints}
+        ts_sets_costs = {'y_def_' + k[1] + '_' + k[2]: set()
+                   for k in self.config_model.timeseries_data}
+        self._sets = {**self._sets, **ts_sets_costs}
 
         for param in self.config_model.timeseries_constraints: #constraints
             param_data = {}
@@ -1025,6 +1033,15 @@ class Model(BaseModel):
                     for t in self.m.t:
                         param_object[y, x, t] = initializer(self.m, y, x, t)
 
+        for param in self.config_model.timeseries_data:
+            initializer = self._param_populator(d, param, t_offset)
+            y_set = self._sets['y_def_' + param[1] + '_' + param[2]]
+            param_object = getattr(self.m, param)
+            for y in y_set:
+                for x in self.m.x:
+                    for t in self.m.t:
+                        param_object[y, x, t] = initializer(self.m, y, x, t)
+
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
         for y in self.m.y_pc:
@@ -1104,6 +1121,10 @@ class Model(BaseModel):
         ##TIMESERIES vars
         for param in self.config_model.timeseries_constraints:
             setattr(m, 'y_def_'+param, po.Set(initialize = self._sets['y_def_' + param], within=m.y))
+        for param in self.config_model.timeseries_data:
+            param_string = 'y_def_' + param[1] + '_' + param[2]
+            setattr(m, param_string,
+                    po.Set(initialize = self._sets[param_string], within=m.y))
         # Technologies that allow `rb`
         m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
         # Technologies with parasitics
