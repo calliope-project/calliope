@@ -138,14 +138,6 @@ def node_energy_balance(model):
     d = model.data
     time_res = model.data['_time_res'].to_series()
 
-    # FIXME this is very inefficient for y not in y_def_e_eff
-    def get_e_eff(m, y, x, t):
-        if y in m.y_def_e_eff:
-            e_eff = m.e_eff[y, x, t]
-        else:  # This includes transmission technologies
-            e_eff = d.e_eff.loc[dict(y=y, x=x)][0]  # Just get first entry
-        return e_eff
-
     def get_e_eff_per_distance(model, y, x):
         try:
             e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
