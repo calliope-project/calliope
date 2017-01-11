@@ -539,9 +539,12 @@ def node_costs(model):
     m.cost_op_var = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
     m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
     m.cost_op_rb = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
-    m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
-    m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
-    m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
+    if model.functionality_switch('sub_var'):
+        m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
+    if model.functionality_switch('sub_fixed') or model.functionality_switch('sub_annual'):
+        m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
+    if model.functionality_switch('revenue'):
+        m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
@@ -672,8 +675,11 @@ def node_costs(model):
              revenue * m.e_cap[y, x])
 
     def c_revenue_rule(m, y, x, k):
-        return (m.revenue[y, x, k] == m.revenue_fixed[y, x, k] +
-            sum(m.revenue_var[y, x, t, k] for t in m.t))
+        revenue_var = sum(m.revenue_var[y, x, t, k] for t in m.t) \
+            if getattr(m, 'revenue_var', None) else 0
+        revenue_fixed = m.revenue_fixed[y, x, k] \
+            if getattr(m, 'revenue_fixed', None) else 0
+        return (m.revenue[y, x, k] == revenue_fixed + revenue_var)
 
 
     # Constraints
@@ -684,9 +690,12 @@ def node_costs(model):
     m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_var_rule)
     m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_fuel_rule)
     m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_rb_rule)
-    m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.kr, rule=c_revenue_var_rule)
-    m.c_revenue_fixed = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_fixed_rule)
-    m.c_revenue = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_rule)
+    if model.functionality_switch('sub_var'):
+        m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.kr, rule=c_revenue_var_rule)
+    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
+        m.c_revenue_fixed = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_fixed_rule)
+    if model.functionality_switch('revenue'):
+        m.c_revenue = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_rule)
 
 
 def model_constraints(model):

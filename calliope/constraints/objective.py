@@ -36,10 +36,15 @@ def objective_cost_minimization(model):
     m = model.m
 
     def obj_rule(m):
-        return sum(model.get_option(y + '.weight') *
-                   sum((m.cost[y, x, 'monetary'] -
-                    m.revenue[y, x, 'monetary'])
-                    for x in m.x) for y in m.y)
+        if model.functionality_switch('revenue'):
+            return sum(model.get_option(y + '.weight') *
+                       sum((m.cost[y, x, 'monetary'] -
+                        m.revenue[y, x, 'monetary'])
+                        for x in m.x) for y in m.y)
+        else:
+            return sum(model.get_option(y + '.weight') *
+                       sum(m.cost[y, x, 'monetary']
+                        for x in m.x) for y in m.y)
 
     m.obj = po.Objective(sense=po.minimize, rule=obj_rule)
     m.obj.domain = po.NonNegativeReals
