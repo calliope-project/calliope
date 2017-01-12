@@ -3,15 +3,12 @@
 Release History
 ===============
 
-0.4.1 (dev)
------------
-
-Other changes
-~~~~~~~~~~~~~
+0.4.1 (2017-01-12)
+------------------
 
 * |new| Allow profiling with the ``--profile`` and ``--profile_filename`` command-line options
 * |new| Permit setting random seed with ``random_seed`` in the run configuration
-* |changed| Updated installation based on conda-forge package
+* |changed| Updated installation documentation using conda-forge package
 * |fixed| Other minor fixes
 
 0.4.0 (2016-12-09)
