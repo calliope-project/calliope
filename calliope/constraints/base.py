@@ -132,6 +132,7 @@ def node_energy_balance(model):
     * s: storage level
     * es_prod: storage -> carrier (+ production)
     * es_con: storage <- carrier (- consumption)
+    * export: storage -> export link
 
     """
     m = model.m
@@ -151,6 +152,7 @@ def node_energy_balance(model):
     m.s = po.Var(m.y_pc, m.x, m.t, within=po.NonNegativeReals)
     m.es_prod = po.Var(m.c, m.y, m.x, m.t, within=po.NonNegativeReals)
     m.es_con = po.Var(m.c, m.y, m.x, m.t, within=po.NegativeReals)
+    m.export = po.Var(m.y_export, m.x, m.t, within=po.NonNegativeReals)
 
     # Constraint rules
     def transmission_rule(m, y, x, t):
@@ -169,7 +171,8 @@ def node_energy_balance(model):
         c_prod = model.get_option(y + '.carrier')
         c_source = model.get_option(y + '.source_carrier')
         e_eff = get_constraint_param(model, 'e_eff', y, x, t)
-        return (m.es_prod[c_prod, y, x, t]
+        export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
+        return (m.es_prod[c_prod, y, x, t] + export
                 == -1 * m.es_con[c_source, y, x, t] * e_eff)
 
     def pc_rule(m, y, x, t):
@@ -188,12 +191,16 @@ def node_energy_balance(model):
         else:
             rbs = 0
 
+        # If this tech allows export outside the system, include it
+        export = m.export[y, x, t] / e_eff \
+            if model.get_option(y + '.export', x=x) else 0
+
         # A) Case where no storage allowed
         s_cap_max = model.get_option(y + '.constraints.s_cap.max', x=x)
         use_s_time = get_constraint_param(model, 'use_s_time', y, x, t)
         if ( s_cap_max == 0 and
                 not use_s_time):
-            return m.rs[y, x, t] == e_prod + e_con - rbs
+            return m.rs[y, x, t] == e_prod + e_con + export - rbs
 
         # B) Case where storage is allowed
         else:
@@ -213,7 +220,7 @@ def node_energy_balance(model):
                                 ** time_res.at[model.prev_t(t)])
                                * m.s[y, x, model.prev_t(t)])
             return (m.s[y, x, t] == s_minus_one + rs
-                    + rbs - e_prod - e_con)
+                    + rbs - e_prod - e_con - export)
 
     # Constraints
     m.c_s_balance_transmission = po.Constraint(m.y_trans, m.x, m.t,
@@ -377,16 +384,18 @@ def node_constraints_operational(model):
 
     def c_es_prod_max_rule(m, c, y, x, t):
         e_prod = get_constraint_param(model, 'e_prod', y, x, t)
+        export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
         if (e_prod is True and
                 c == model.get_option(y + '.carrier')):
-            return m.es_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x]
+            return m.es_prod[c, y, x, t] + export <= time_res.at[t] * m.e_cap[y, x]
         else:
-            return m.es_prod[c, y, x, t] == 0
+            return m.es_prod[c, y, x, t] + export == 0
 
     def c_es_prod_min_rule(m, c, y, x, t):
         min_use = get_constraint_param(model, 'e_cap_min_use', y, x, t)
+        export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
         if (min_use and c == model.get_option(y + '.carrier')):
-            return (m.es_prod[c, y, x, t]
+            return (m.es_prod[c, y, x, t] + export
                     >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:
             return po.Constraint.NoConstraint
@@ -613,11 +622,12 @@ def node_costs(model):
         # This should generally be a reasonable assumption to make.
         if y in m.y:
             carrier = model.get_option(y + '.carrier')
+            export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
             return (
                 m.cost_op_var[y, x, t, k] ==
                 get_cost_param(model,'om_var', k, y, x, t) *
-                weights.loc[t] *
-                m.es_prod[carrier, y, x, t]
+                weights.loc[t] * (
+                m.es_prod[carrier, y, x, t] + export)
             )
         else:
             return m.cost_op_var[y, x, t, k] == 0
@@ -652,14 +662,16 @@ def node_costs(model):
     def c_revenue_var_rule(m, y, x, t, k):
         carrier = model.get_option(y + '.carrier')
         sub_var = get_revenue_param(model, 'sub_var', k, y, x, t)
+        sub_export = get_revenue_param(model, 'sub_export', k, y, x, t)
+        export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
         if y in m.y_demand:
             return (m.revenue_var[y, x, t, k] ==
                 sub_var * weights.loc[t]
                 * -m.es_con[carrier, y, x, t])
         else:
-            return (m.revenue_var[y, x, t, k] ==
-                sub_var * weights.loc[t]
-                * m.es_prod[carrier, y, x, t])
+            return (m.revenue_var[y, x, t, k] == weights.loc[t] * (
+                sub_var * (m.es_prod[carrier, y, x, t] + export) +
+                sub_export * export))
 
     def c_revenue_fixed_rule(m, y, x, k):
         revenue = (sum(time_res * weights) / 8760 *

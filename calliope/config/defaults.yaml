@@ -31,6 +31,7 @@ techs:
         source_carrier: false # Defaults to false, allows technologies to define a carrier to consume
         group: false
         x_map: null
+        export: null
         constraints:
             force_r: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
             r_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
@@ -90,6 +91,7 @@ techs:
                 sub_var: 0 #variable subsidy (per kWh of ``es_prod`` or ``es_con``)
                 sub_cap: 0 #fixed subsidy (per kW gross) ##e_cap.max must be defined (and not infinite) if using this with demand
                 sub_annual: 0 #annual subsidy (per kW of ``e_cap``) ##e_cap.max must be defined (and not infinite) if using this with demand
+                sub_export: 0
         costs_per_distance:
             default:
                 e_cap: 0
