@@ -531,7 +531,7 @@ def node_costs(model):
 
     cost_getter = utils.cost_getter(model.get_option)
     depreciation_getter = utils.depreciation_getter(model.get_option)
-    cost_per_distance_getter = utils.cost_per_distance_getter(model.get_option)
+    cost_per_distance_getter = utils.cost_per_distance_getter(model.config_model)
 
     @utils.memoize
     def _depreciation_rate(y, k):
