@@ -632,16 +632,18 @@ class Model(BaseModel):
     def functionality_switch(self, func_name):
         """
         Check if a given functionality of the model is required, based on whether
-        there is any reference to it in model configuration.
+        there is any reference to it in model configuration that isn't in defaults.
         Currently used to switch revenue on and off by checking for the use of
-        `sub_` (referring to revenue types within costs)
+        `sub_` (referring to revenue types within costs).
+
 
         Args:
          - func_name: str; the funcitonality to check
 
         Returns: bool; Whether the functionality is switched is on (True) or off (False)
         """
-        return any([func_name in i for i in self.config_model.as_dict_flat().keys()])
+        return any([func_name in i for i in self.config_model.as_dict_flat().keys()
+            if 'default' not in i])
 
     def get_time_slice(self):
         if self.config_run.get_key('subset_t', default=False):
