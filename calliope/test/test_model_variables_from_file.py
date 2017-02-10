@@ -88,7 +88,7 @@ class TestModel:
             override:
                 techs:
                     ccgt:
-                        revenue:
+                        costs:
                             monetary:
                                 sub_var: file=cost_rev_var.csv
                     """

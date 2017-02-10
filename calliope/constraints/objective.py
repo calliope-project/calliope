@@ -36,7 +36,7 @@ def objective_cost_minimization(model):
     m = model.m
 
     def obj_rule(m):
-        if model.functionality_switch('revenue'):
+        if model.functionality_switch('sub_'):
             return sum(model.get_option(y + '.weight') *
                        sum((m.cost[y, x, 'monetary'] -
                         m.revenue[y, x, 'monetary'])
