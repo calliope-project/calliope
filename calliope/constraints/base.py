@@ -541,7 +541,7 @@ def node_costs(model):
     m.cost_op_rb = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
     if model.functionality_switch('sub_var'):
         m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_fixed') or model.functionality_switch('sub_annual'):
+    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
         m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
     if model.functionality_switch('revenue'):
         m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
