@@ -139,30 +139,24 @@ def node_energy_balance(model):
     time_res = model.data['_time_res'].to_series()
 
     def get_e_eff_per_distance(model, y, x):
-        try:
-            e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
-        except exceptions.OptionNotSetError:
-            return 1.0
-        try:
-            per_distance = model.get_option(y + '.per_distance')
-        except: # assume one unit distance
-            per_distance = 1
-        # assuming only tranmission techs are passed into distance_getter:
+        e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
+        per_distance = model.get_option(y + '.per_distance')
         tech, x2 = y.split(':')
-        try:
-            link = model.config_model.get_key('links.'+ x + ',' + x2,
-                   default=model.config_model['links'].get(x2 + ',' + x))
-        except: #no link
+        link = model.config_model.get_key('links.'+ x + ',' + x2,
+            default=model.config_model['links'].get(x2 + ',' + x))
+        # link = None if no link exists
+        if not link:
             return 1.0
         try:
             distance = link.get_key(tech + '.distance')
         except KeyError:
-            e = exceptions.OptionNotSetError
-            raise e('Distance must be defined for '
-                    'link: {} and transmission tech: {}, '
-                    'as e_loss per distance is defined'.format(x + ',' + x2, tech))
-        except:
-            return 1.0
+            if e_loss > 0:
+                e = exceptions.OptionNotSetError
+                raise e('Distance must be defined for link: {} '
+                        'and transmission tech: {}, as e_loss per distance '
+                        'is defined'.format(x + ',' + x2, tech))
+            else:
+                return 1.0
         return 1 - (e_loss * (distance / per_distance))
 
     # Variables

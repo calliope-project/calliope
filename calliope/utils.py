@@ -508,31 +508,25 @@ def cost_getter(option_getter_func):
 def cost_per_distance_getter(config_model):
     option_getter_func = option_getter(config_model)
     def get_cost_per_distance(cost, y, k, x):
-        try:
-            cost_option = y + '.costs_per_distance.' + k + '.' + cost
-            cost = option_getter_func(cost_option)
-        except exceptions.OptionNotSetError:
-            return 0
-        try:
-            per_distance = option_getter_func(y + '.per_distance')
-        except: # assume one unit distance
-            per_distance = 1
-        # assuming only tranmission techs are passed into distance_getter:
+        _cost = cost_getter(option_getter_func)
+        cost = _cost(cost, y, k, x, costs_type='costs_per_distance')
         tech, x2 = y.split(':')
-        try:
-            link = config_model.get_key('links.'+ x + ',' + x2,
-                   default=config_model['links'].get(x2 + ',' + x))
-        except: #no link
+        per_distance = option_getter_func(y + '.per_distance')
+        link = config_model.get_key('links.'+ x + ',' + x2,
+            default=config_model['links'].get(x2 + ',' + x))
+        # link = None if no link exists
+        if not link:
             return 0
         try:
             distance = link.get_key(tech + '.distance')
         except KeyError:
-            e = exceptions.OptionNotSetError
-            raise e('Distance must be defined for '
-                    'link: {} and transmission tech: {}, '
-                    'as cost_per_distance is defined'.format(x + ',' + x2, tech))
-        except:
-            return 0
+            if cost > 0:
+                e = exceptions.OptionNotSetError
+                raise e('Distance must be defined for link: {} '
+                        'and transmission tech: {}, as cost_per_distance '
+                        'is defined'.format(x + ',' + x2, tech))
+            else:
+                return 0
         distance_cost = cost * (distance / per_distance)
         return distance_cost
     return get_cost_per_distance
