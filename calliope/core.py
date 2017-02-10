@@ -179,8 +179,9 @@ class Model(BaseModel):
         self.initialize_parents()
         self.initialize_sets()
 
-        # Get timeseries constraints/costs/revenue
+        # Get timeseries constraints/costs
         self.initialize_timeseries()
+
         # Read data and apply time resolution adjustments
         self.read_data()
         self.mode = self.config_run.mode
@@ -1497,8 +1498,8 @@ class Model(BaseModel):
 
             # Adjust for the fact that variable costs are only accrued over
             # the t_subset period
-            try: revenue_variable = self.get_var('revenue_var')[{'t': t_subset}] \
-                                   .sum(dim='t')
+            try: revenue_variable = (self.get_var('revenue_var')[{'t': t_subset}]
+                                     .sum(dim='t'))
             except: revenue_variable = 0
 
             return revenue_fixed + revenue_variable
@@ -1535,10 +1536,13 @@ class Model(BaseModel):
         cost_dict = {}
         for cost in self._sets['k']:
             carrier_dict = {}
+            revenue = sol['revenue'].loc[dict(k=cost)]\
+                if self.functionality_switch('sub_') else 0
+            net_cost = sol['costs'].loc[dict(k=cost)] - revenue
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
                 with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                    lc = sol['costs'].loc[dict(k=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                    lc = net_cost / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
@@ -1609,8 +1613,11 @@ class Model(BaseModel):
 
         # Total (over locations) levelized costs per carrier
         for k in sorted(sol['levelized_cost'].coords['k'].values):
+            revenue = (sol['revenue'].loc[dict(k=k)].sum(dim='x')
+                if self.functionality_switch('sub_') else 0)
+            net_cost = sol['costs'].loc[dict(k=k)].sum(dim='x') - revenue
             with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
+                df['levelized_cost_' + k] = (net_cost
                                    / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
