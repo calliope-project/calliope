@@ -39,7 +39,7 @@ def get_cost_param(model, param_string, k, y, x, t):
     loaded from file (so may have time dependency).
 
     model = calliope model
-    cost = cost name, e.g. 'om_fuel', 'sub_var'
+    cost = cost name, e.g. 'om_fuel', 'rev_var'
     k = cost type, e.g. 'monetary'
     y = technology
     x = location
@@ -510,11 +510,11 @@ def node_costs(model):
     m.cost_op_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
     m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
     m.cost_op_rb = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_var'):
+    if model.functionality_switch('rev_var'):
         m.revenue_var = po.Var(m.y, m.x, m.t, m.k, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
+    if model.functionality_switch('rev_cap') or model.functionality_switch('rev_annual'):
         m.revenue_fixed = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_'):
+    if model.functionality_switch('rev_'):
         m.revenue = po.Var(m.y, m.x, m.k, within=po.NonNegativeReals)
 
     # Constraint rules
@@ -622,21 +622,21 @@ def node_costs(model):
 
     def c_revenue_var_rule(m, y, x, t, k):
         carrier = model.get_option(y + '.carrier')
-        sub_var = get_cost_param(model, 'sub_var', k, y, x, t)
+        rev_var = get_cost_param(model, 'rev_var', k, y, x, t)
         if y in m.y_demand:
             return (m.revenue_var[y, x, t, k] ==
-                sub_var * weights.loc[t]
+                rev_var * weights.loc[t]
                 * -m.es_con[carrier, y, x, t])
         else:
             return (m.revenue_var[y, x, t, k] ==
-                sub_var * weights.loc[t]
+                rev_var * weights.loc[t]
                 * m.es_prod[carrier, y, x, t])
 
     def c_revenue_fixed_rule(m, y, x, k):
         revenue = (sum(time_res * weights) / 8760 *
-            (_cost('sub_cap', y, k, x)
+            (_cost('rev_cap', y, k, x)
             * _depreciation_rate(y, k)
-            + _cost('sub_annual', y, k, x)))
+            + _cost('rev_annual', y, k, x)))
         if y in m.y_demand and revenue > 0:
             e = exceptions.ModelError
             raise e('Cannot receive fixed revenue at a demand node, i.e. '
@@ -661,11 +661,11 @@ def node_costs(model):
     m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_var_rule)
     m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_fuel_rule)
     m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_rb_rule)
-    if model.functionality_switch('sub_var'):
+    if model.functionality_switch('rev_var'):
         m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_revenue_var_rule)
-    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
+    if model.functionality_switch('rev_cap') or model.functionality_switch('rev_annual'):
         m.c_revenue_fixed = po.Constraint(m.y, m.x, m.k, rule=c_revenue_fixed_rule)
-    if model.functionality_switch('sub_'):
+    if model.functionality_switch('rev_'):
         m.c_revenue = po.Constraint(m.y, m.x, m.k, rule=c_revenue_rule)
 
 

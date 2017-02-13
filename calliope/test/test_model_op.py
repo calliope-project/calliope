@@ -145,8 +145,8 @@ class TestModel:
                     ccgt:
                         costs:
                             monetary:
-                                sub_cap: 5
-                                sub_var: 0
+                                rev_cap: 5
+                                rev_var: 0
             subset_t: ['2005-01-01', '2005-01-0{}']
         """
         model1 = create_and_run_model(override.format(2))
@@ -163,8 +163,8 @@ class TestModel:
                     ccgt:
                         costs:
                             monetary:
-                                sub_cap: 0
-                                sub_var: 0.1
+                                rev_cap: 0
+                                rev_var: 0.1
             subset_t: ['2005-01-01', '2005-01-0{}']
         """
         model1 = create_and_run_model(override.format(2))
@@ -181,8 +181,8 @@ class TestModel:
                     ccgt:
                         costs:
                             monetary:
-                                sub_cap: 5
-                                sub_var: 0
+                                rev_cap: 5
+                                rev_var: 0
             subset_t: ['2005-01-01', '2005-01-0{}']
         """
         demand = 'demand-blocky_r.csv'
@@ -200,8 +200,8 @@ class TestModel:
                     ccgt:
                         costs:
                             monetary:
-                                sub_cap: 0
-                                sub_var: 0.1
+                                rev_cap: 0
+                                rev_var: 0.1
             subset_t: ['2005-01-01', '2005-01-0{}']
         """
         demand = 'demand-blocky_r.csv'
@@ -224,8 +224,8 @@ class TestModel:
                             monetary:
                                 e_cap: 5
                                 om_fuel: 0
-                                sub_cap: 5
-                                sub_var: 0
+                                rev_cap: 5
+                                rev_var: 0
             subset_t: ['2005-01-01', '2005-01-0{}']
         """
         model1 = create_and_run_model(override.format(2))

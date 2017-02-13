@@ -255,7 +255,7 @@ class Model(BaseModel):
         allowed_timeseries_constraints = ['r_eff', 'r_scale', 'rb_eff', 's_loss',
                                           'e_prod', 'e_con','e_eff',
                                           'e_cap_min_use', 'e_ramping',
-                                          'om_var', 'om_fuel', 'om_rb', 'sub_var']
+                                          'om_var', 'om_fuel', 'om_rb', 'rev_var']
         #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
         for k, v in self.config_model.as_dict_flat().items():
             if isinstance(v,str):
@@ -634,7 +634,7 @@ class Model(BaseModel):
         Check if a given functionality of the model is required, based on whether
         there is any reference to it in model configuration that isn't in defaults.
         Currently used to switch revenue on and off by checking for the use of
-        `sub_` (referring to revenue types within costs).
+        `rev_` (referring to revenue types within costs).
 
 
         Args:
@@ -913,15 +913,15 @@ class Model(BaseModel):
 
         for param in self.config_model.timeseries_constraints: #constraints
             param_data = {}
-            if 'om' in param or 'sub' in param: # cost constraints
+            if 'om' in param or 'rev' in param: # cost constraints
                 for y in self._sets['y']:
-                    df = {}
+                    cost_ts = {}
                     for k in self._sets['k']:
                         # First, set up each parameter without considering
                         # potential per-location (per-x) overrides
                         option = self.get_cost(param, y, k)
 
-                        df[k] = self._read_param_for_tech(param, y, time_res,
+                        cost_ts[k] = self._read_param_for_tech(param, y, time_res,
                                                        option, x=None)
                         for x in self._sets['x']:
                             # Check for each x whether it defines an override
@@ -929,14 +929,14 @@ class Model(BaseModel):
                             # update the dataframe
                             option_x = self.get_cost(param, y, k, x=x)
                             if option != option_x:
-                                df[k].loc[:, x] = self._read_param_for_tech(
+                                cost_ts[k].loc[:, x] = self._read_param_for_tech(
                                                             param, y, time_res,
                                                             option_x, x=x)
 
-                        self._validate_param_df(param, y, df[k])  # Have all `x` been set?
-                        # Create 3D dataframe with axes ordered as (t, x, k)
-                    df_k = pd.Panel(df).swapaxes(0,1).swapaxes(1,2)
-                    param_data[y] = xr.DataArray(df_k, dims=['t', 'x', 'k'])
+                        self._validate_param_df(param, y, cost_ts[k])  # Have all `x` been set?
+                    # Create
+                    cost_ts = {k: xr.DataArray(v, dims=['t', 'x']) for k, v in cost_ts.items()}
+                    param_data[y] = xr.Dataset(cost_ts).to_array(dim='k')
             else:
                 for y in self._sets['y']:
                     # First, set up each parameter without considering
@@ -944,19 +944,19 @@ class Model(BaseModel):
                     j = '.'.join([y, 'constraints', param])
                     option = self.get_option(j)
 
-                    df = self._read_param_for_tech(param, y, time_res,
-                                                      option, x=None)
+                    constraint_ts = self._read_param_for_tech(param, y,
+                                            time_res, option, x=None)
                     for x in self._sets['x']:
                         # Check for each x whether it defines an override
                         # that is different from the generic option, and if so,
                         # update the dataframe
                         option_x = self.get_option(j, x=x)
                         if option != option_x:
-                            df.loc[:, x] = self._read_param_for_tech(param,
+                            constraint_ts.loc[:, x] = self._read_param_for_tech(param,
                                                      y, time_res, option_x, x=x)
 
-                    self._validate_param_df(param, y, df)  # Have all `x` been set?
-                    param_data[y] = xr.DataArray(df, dims=['t', 'x'])
+                    self._validate_param_df(param, y, constraint_ts)  # Have all `x` been set?
+                    param_data[y] = xr.DataArray(constraint_ts, dims=['t', 'x'])
 
             # Turn param_data into a DataArray
             data[param] = xr.Dataset(param_data).to_array(dim='y')
@@ -1369,7 +1369,7 @@ class Model(BaseModel):
         sol = sol.merge(self.get_totals())
         sol = sol.merge(self.get_node_parameters())
         sol = sol.merge(self.get_costs().to_dataset(name='costs'))
-        if self.functionality_switch('sub_'):
+        if self.functionality_switch('rev_'):
             sol = sol.merge(self.get_revenue().to_dataset(name='revenue'))
         self.solution = sol
         self.process_solution()
@@ -1539,7 +1539,7 @@ class Model(BaseModel):
         for cost in self._sets['k']:
             carrier_dict = {}
             revenue = sol['revenue'].loc[dict(k=cost)]\
-                if self.functionality_switch('sub_') else 0
+                if self.functionality_switch('rev_') else 0
             net_cost = sol['costs'].loc[dict(k=cost)] - revenue
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
@@ -1616,7 +1616,7 @@ class Model(BaseModel):
         # Total (over locations) levelized costs per carrier
         for k in sorted(sol['levelized_cost'].coords['k'].values):
             revenue = (sol['revenue'].loc[dict(k=k)].sum(dim='x')
-                if self.functionality_switch('sub_') else 0)
+                if self.functionality_switch('rev_') else 0)
             net_cost = sol['costs'].loc[dict(k=k)].sum(dim='x') - revenue
             with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
                 df['levelized_cost_' + k] = (net_cost
@@ -1785,7 +1785,7 @@ class Model(BaseModel):
             total_vars.append(totals)
             costs = self.get_costs(t_subset=slice(0, stepsize)).to_dataset(name='costs')
             cost_vars.append(costs)
-            if self.functionality_switch('sub_'):
+            if self.functionality_switch('rev_'):
                 revenue = self.get_revenue(t_subset=slice(0, stepsize)).to_dataset(name='revenue')
                 rev_vars.append(revenue)
             else:
