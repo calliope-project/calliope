@@ -179,8 +179,9 @@ class Model(BaseModel):
         self.initialize_parents()
         self.initialize_sets()
 
-        # Get timeseries constraints/costs/revenue
+        # Get timeseries constraints/costs
         self.initialize_timeseries()
+
         # Read data and apply time resolution adjustments
         self.read_data()
         self.mode = self.config_run.mode
@@ -247,17 +248,14 @@ class Model(BaseModel):
         Find any constraints/costs/revenue values requested as from 'file' in YAMLs
         and store that information
         """
-        time_series_constraint = ['r']
-        time_series_data = []
+        timeseries_constraint = ['r']
         # These can be numeric, avoiding true/false constraints.
         # No c_eff due to disagreement with non-timeseries constraint
         # c_e_cap_gross_net_rule.
         allowed_timeseries_constraints = ['r_eff', 'r_scale', 'rb_eff', 's_loss',
-                                    'e_prod', 'e_con','e_eff',
-                                    'e_cap_min_use', 'e_ramping']
-        #variable costs/revenue only
-        allowed_timeseries_data = ['om_var', 'om_fuel',
-                                'om_rb','sub_var']
+                                          'e_prod', 'e_con','e_eff',
+                                          'e_cap_min_use', 'e_ramping',
+                                          'om_var', 'om_fuel', 'om_rb', 'rev_var']
         #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
         for k, v in self.config_model.as_dict_flat().items():
             if isinstance(v,str):
@@ -266,16 +264,11 @@ class Model(BaseModel):
                     if params[-1] == 'r':
                         None # 'r' already in the list automatically
                     elif params[-1] in allowed_timeseries_constraints: #look for e.g. e_eff
-                        time_series_constraint.append(params[-1])
-                    elif params[-1] in allowed_timeseries_data: #look for e.g. om_fuel
-                        #make sure list e.g. ['costs','monetary','om_fuel'] doesn't already exist
-                        if str(time_series_data).find(str([params[-3],params[-2],params[-1]])) == -1:
-                            time_series_data.append([params[-3],params[-2],params[-1]])
+                        timeseries_constraint.append(params[-1])
                     else:
                         raise Exception("unable to handle loading data from file for '{}'".format(params[-1]))
         #send list of parameters to config_model AttrDict
-        self.config_model['timeseries_constraints'] = list(set(time_series_constraint))
-        self.config_model['timeseries_data'] = time_series_data
+        self.config_model['timeseries_constraints'] = list(set(timeseries_constraint))
 
     def initialize_time(self):
         # Carry y_ subset sets over to data for easier data analysis
@@ -639,8 +632,10 @@ class Model(BaseModel):
     def functionality_switch(self, func_name):
         """
         Check if a given functionality of the model is required, based on whether
-        there is any reference to it in model configuration that isn't defaults.
-        Currently used to switch `revenue` on and off
+        there is any reference to it in model configuration that isn't in defaults.
+        Currently used to switch revenue on and off by checking for the use of
+        `rev_` (referring to revenue types within costs).
+
 
         Args:
          - func_name: str; the funcitonality to check
@@ -692,7 +687,7 @@ class Model(BaseModel):
         _c = list(_c)
         self._sets['c'] = _c
 
-        # kc: cost classes
+        # k: cost classes
         classes_c = [list(self.config_model.techs[k].costs.keys())
                    for k in self.config_model.techs
                    if k != 'defaults'  # Prevent 'default' from entering set
@@ -701,19 +696,7 @@ class Model(BaseModel):
         classes_c = ([i for i in itertools.chain.from_iterable(classes_c)]
                    + ['monetary'])
         # Remove any duplicates by going from list to set and back
-        self._sets['kc'] = list(set(classes_c))
-
-        if self.functionality_switch('revenue'):
-            # kr: revenue classes
-            classes_r = [list(self.config_model.techs[k].revenue.keys())
-                       for k in self.config_model.techs
-                       if k != 'defaults'  # Prevent 'default' from entering set
-                       if 'revenue' in self.config_model.techs[k]]
-            # Flatten list and make sure 'monetary' is in it
-            classes_r = ([i for i in itertools.chain.from_iterable(classes_r)]
-                       + ['monetary'])
-            # Remove any duplicates by going from list to set and back
-            self._sets['kr'] = list(set(classes_r))
+        self._sets['k'] = list(set(classes_c))
 
         # Locations settings matrix and transmission technologies
         self._locations = locations.generate_location_matrix(
@@ -809,9 +792,7 @@ class Model(BaseModel):
         return df
 
     def _read_param_for_tech(self, param, y, time_res, option, x=None):
-        if isinstance(param, list): # costs/revenue
-            param = param[1] + '_' + param[2]
-        elif option != float('inf') and isinstance(param, str): # just for 'r'
+        if option != float('inf') and isinstance(param, str): # just for 'r'
             self._sets['y_def_' + param].add(y)
         k = '{}.{}:{}'.format(param, y, x)
 
@@ -926,62 +907,60 @@ class Model(BaseModel):
         data['s_init'] = xr.DataArray(s_init)
 
         # Parameters that may be defined over (x, y, t)
-        ts_sets_constraints = {'y_def_' + k: set()
-                               for k in self.config_model.timeseries_constraints}
-        self._sets = {**self._sets, **ts_sets_constraints}
-        ts_sets_costs = {'y_def_' + k[1] + '_' + k[2]: set()
-                   for k in self.config_model.timeseries_data}
-        self._sets = {**self._sets, **ts_sets_costs}
+        ts_sets = {'y_def_' + param: set()
+                   for param in self.config_model.timeseries_constraints}
+        self._sets = {**self._sets, **ts_sets}
 
         for param in self.config_model.timeseries_constraints: #constraints
             param_data = {}
-            for y in self._sets['y']:
-                # First, set up each parameter without considering
-                # potential per-location (per-x) overrides
-                k = y + '.constraints.' + param
-                option = self.get_option(k)
+            if 'om' in param or 'rev' in param: # cost constraints
+                for y in self._sets['y']:
+                    cost_ts = {}
+                    for k in self._sets['k']:
+                        # First, set up each parameter without considering
+                        # potential per-location (per-x) overrides
+                        option = self.get_cost(param, y, k)
 
-                df = self._read_param_for_tech(param, y, time_res, option, x=None)
+                        cost_ts[k] = self._read_param_for_tech(param, y, time_res,
+                                                       option, x=None)
+                        for x in self._sets['x']:
+                            # Check for each x whether it defines an override
+                            # that is different from the generic option, and if so,
+                            # update the dataframe
+                            option_x = self.get_cost(param, y, k, x=x)
+                            if option != option_x:
+                                cost_ts[k].loc[:, x] = self._read_param_for_tech(
+                                                            param, y, time_res,
+                                                            option_x, x=x)
 
-                for x in self._sets['x']:
-                    # Check for each x whether it defines an override
-                    # that is different from the generic option, and if so,
-                    # update the dataframe
-                    option_x = self.get_option(k, x=x)
-                    if option != option_x:
-                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
+                        self._validate_param_df(param, y, cost_ts[k])  # Have all `x` been set?
+                    # Create
+                    cost_ts = {k: xr.DataArray(v, dims=['t', 'x']) for k, v in cost_ts.items()}
+                    param_data[y] = xr.Dataset(cost_ts).to_array(dim='k')
+            else:
+                for y in self._sets['y']:
+                    # First, set up each parameter without considering
+                    # potential per-location (per-x) overrides
+                    j = '.'.join([y, 'constraints', param])
+                    option = self.get_option(j)
 
-                self._validate_param_df(param, y, df)  # Have all `x` been set?
+                    constraint_ts = self._read_param_for_tech(param, y,
+                                            time_res, option, x=None)
+                    for x in self._sets['x']:
+                        # Check for each x whether it defines an override
+                        # that is different from the generic option, and if so,
+                        # update the dataframe
+                        option_x = self.get_option(j, x=x)
+                        if option != option_x:
+                            constraint_ts.loc[:, x] = self._read_param_for_tech(param,
+                                                     y, time_res, option_x, x=x)
 
-                param_data[y] = xr.DataArray(df, dims=['t', 'x'])
+                    self._validate_param_df(param, y, constraint_ts)  # Have all `x` been set?
+                    param_data[y] = xr.DataArray(constraint_ts, dims=['t', 'x'])
 
             # Turn param_data into a DataArray
             data[param] = xr.Dataset(param_data).to_array(dim='y')
 
-        for param in self.config_model.timeseries_data: #costs and revenue
-            param_data = {}
-            for y in self._sets['y']:
-                # First, set up each parameter without considering
-                # potential per-location (per-x) overrides
-                option = self.get_cost(param[2], y, param[1], costs_type=param[0])
-
-                df = self._read_param_for_tech(param, y, time_res, option, x=None)
-
-                for x in self._sets['x']:
-                    # Check for each x whether it defines an override
-                    # that is different from the generic option, and if so,
-                    # update the dataframe
-                    option_x = self.get_cost(param[2], y, param[1], costs_type=param[0], x=x)
-                    if option != option_x:
-                        df.loc[:, x] = self._read_param_for_tech(param, y, time_res, option_x, x=x)
-
-
-                self._validate_param_df(param, y, df)  # Have all `x` been set?
-
-                param_data[y] = xr.DataArray(df, dims=['t', 'x'])
-
-            # Turn param_data into a DataArray
-            data['_'.join(param)] = xr.Dataset(param_data).to_array(dim='y')
 
         dataset = xr.Dataset(data)
         dataset.attrs = attrs
@@ -1027,43 +1006,56 @@ class Model(BaseModel):
             logging.error('Error generating constraint' + index_string)
             raise
 
-    def _param_populator(self, src_data, src_param, t_offset=None):
+    def _param_populator(self, src_data, src_param, levels):
         """
         Returns a `getter` function that returns (x, t)-specific
-        values for parameters
+        values for parameters, used in parameter updating
 
         """
-        getter_data = (src_data[src_param].to_dataframe()
-                                          .reorder_levels(['y', 'x', 't'])
-                                          .to_dict()[src_param])
 
-        def getter(m, y, x, t):  # pylint: disable=unused-argument
-            if t_offset:
-                t = self.get_t(t, t_offset)
+        getter_data = (src_data[src_param].to_dataframe().reorder_levels(levels)
+                                                         .to_dict()[src_param])
+
+        def getter_constraint(m, y, x, t):  # pylint: disable=unused-argument
             return getter_data[(y, x, t)]
-            # return src.loc[{'y': y, 'x': x, 't': t}]
+        def getter_cost(m, y, x, t, k):  # pylint: disable=unused-argument
+            return getter_data[(y, x, t, k)]
+
+        if len(src_data[src_param].dims) == 4: # costs
+            return getter_cost
+        else: # all other constraints
+            return getter_constraint
+
+    def _param_updater(self, src_data, src_param, t_offset=None):
+        """
+        Returns a `getter` function that returns (x, t)-specific
+        values for parameters, used in parameter updating
+        """
+        if len(src_data[src_param].dims) == 4: # costs
+            levels = ['y', 'x', 't', 'k']
+        else: # all other constraints
+            levels = ['y', 'x', 't']
+        getter_data = (src_data[src_param].to_dataframe()
+                                          .reorder_levels(levels)
+                                          .to_dict()[src_param])
+        def getter(m, i):  # pylint: disable=unused-argument
+            # i is the key of the Pyomo Param, which is (y, x, t)
+            # for constraints and (y, x, t, k) for costs
+            j = list(i)
+            if t_offset:
+                j[2] = self.get_t(j[2], t_offset) # change time
+            return getter_data[tuple(j)]
         return getter
 
     def update_parameters(self, t_offset):
         d = self.data
 
         for param in self.config_model.timeseries_constraints:
-            initializer = self._param_populator(d, param, t_offset)
-            y_set = self._sets['y_def_' + param]
+            y_set = list(self._sets['y_def_' + param])
+            initializer = self._param_updater(d, param, t_offset)
             param_object = getattr(self.m, param)
-            for y in y_set:
-                for x in self.m.x:
-                    for t in self.m.t:
-                        param_object[y, x, t] = initializer(self.m, y, x, t)
-
-        for param in self.config_model.timeseries_data:
-            initializer = self._param_populator(d, param, t_offset)
-            y_set = self._sets['y_def_' + param[1] + '_' + param[2]]
-            param_object = getattr(self.m, param)
-            for y in y_set:
-                for x in self.m.x:
-                    for t in self.m.t:
-                        param_object[y, x, t] = initializer(self.m, y, x, t)
+            for i in param_object.iterkeys():
+                param_object[i] = initializer(self.m, i)
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1122,10 +1114,7 @@ class Model(BaseModel):
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
         # Cost classes
-        m.kc = po.Set(initialize=self._sets['kc'], ordered=True)
-        # Revenue classes
-        if self.functionality_switch('revenue'):
-            m.kr = po.Set(initialize=self._sets['kr'], ordered=True)
+        m.k = po.Set(initialize=self._sets['k'], ordered=True)
         #
         # Technologies and various subsets of technologies
         #
@@ -1145,10 +1134,6 @@ class Model(BaseModel):
         ##TIMESERIES vars
         for param in self.config_model.timeseries_constraints:
             setattr(m, 'y_def_'+param, po.Set(initialize = self._sets['y_def_' + param], within=m.y))
-        for param in self.config_model.timeseries_data:
-            param_string = 'y_def_' + param[1] + '_' + param[2]
-            setattr(m, param_string,
-                    po.Set(initialize = self._sets[param_string], within=m.y))
         # Technologies that allow `rb`
         m.y_rb = po.Set(initialize=self._sets['y_rb'], within=m.y)
         # Technologies with parasitics
@@ -1162,16 +1147,15 @@ class Model(BaseModel):
         #
 
         for param in self.config_model.timeseries_constraints:
-            y = getattr(m, 'y_def_' + param)
-            # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
-            initializer = self._param_populator(self.data, param)
-            setattr(m, param, po.Param(y, m.x, m.t, initialize=initializer, mutable=True))
-
-        # Probably unnecessary addition to have these as Pyomo parameters.
-        for param in self.config_model.timeseries_data:
-            # param_data = self.data[param].to_dataframe().reorder_levels(['y', 'x', 't']).to_dict()[param]
-            initializer = self._param_populator(self.data, '_'.join(param))
-            setattr(m, '_'.join(param), po.Param(m.y, m.x, m.t, initialize=initializer, mutable=True))
+            y_set = list(getattr(m, 'y_def_' + param))
+            if len(d[param].dims) == 4: # costs
+                initializer = self._param_populator(d, param, ['y', 'x', 't', 'k'])
+                setattr(m, param, po.Param(y_set, m.x, m.t, m.k,
+                                           initialize=initializer, mutable=True))
+            else: # all other constraints
+                initializer = self._param_populator(d, param, ['y', 'x', 't'])
+                setattr(m, param, po.Param(y_set, m.x, m.t,
+                                           initialize=initializer, mutable=True))
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1385,7 +1369,7 @@ class Model(BaseModel):
         sol = sol.merge(self.get_totals())
         sol = sol.merge(self.get_node_parameters())
         sol = sol.merge(self.get_costs().to_dataset(name='costs'))
-        if self.functionality_switch('revenue'):
+        if self.functionality_switch('rev_'):
             sol = sol.merge(self.get_revenue().to_dataset(name='revenue'))
         self.solution = sol
         self.process_solution()
@@ -1516,8 +1500,8 @@ class Model(BaseModel):
 
             # Adjust for the fact that variable costs are only accrued over
             # the t_subset period
-            try: revenue_variable = self.get_var('revenue_var')[{'t': t_subset}] \
-                                   .sum(dim='t')
+            try: revenue_variable = (self.get_var('revenue_var')[{'t': t_subset}]
+                                     .sum(dim='t'))
             except: revenue_variable = 0
 
             return revenue_fixed + revenue_variable
@@ -1552,12 +1536,15 @@ class Model(BaseModel):
         """
         sol = self.solution
         cost_dict = {}
-        for cost in self._sets['kc']:
+        for cost in self._sets['k']:
             carrier_dict = {}
+            revenue = sol['revenue'].loc[dict(k=cost)]\
+                if self.functionality_switch('rev_') else 0
+            net_cost = sol['costs'].loc[dict(k=cost)] - revenue
             for carrier in self._sets['c']:
                 # Levelized cost of electricity (LCOE)
                 with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                    lc = sol['costs'].loc[dict(kc=cost)] / sol['ec_prod'].loc[dict(c=carrier)]
+                    lc = net_cost / sol['ec_prod'].loc[dict(c=carrier)]
                 lc = lc.to_pandas()
 
                 # Make sure the dataframe has y as columns and x as index
@@ -1567,7 +1554,7 @@ class Model(BaseModel):
                 lc = lc.replace(np.inf, 0)
                 carrier_dict[carrier] = lc
             cost_dict[cost] = xr.Dataset(carrier_dict).to_array(dim='c')
-        arr = xr.Dataset(cost_dict).to_array(dim='kc')
+        arr = xr.Dataset(cost_dict).to_array(dim='k')
         return arr
 
     def _get_time_res_sum(self):
@@ -1627,9 +1614,12 @@ class Model(BaseModel):
         df = pd.DataFrame({'cf': cf})
 
         # Total (over locations) levelized costs per carrier
-        for k in sorted(sol['levelized_cost'].coords['kc'].values):
+        for k in sorted(sol['levelized_cost'].coords['k'].values):
+            revenue = (sol['revenue'].loc[dict(k=k)].sum(dim='x')
+                if self.functionality_switch('rev_') else 0)
+            net_cost = sol['costs'].loc[dict(k=k)].sum(dim='x') - revenue
             with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                df['levelized_cost_' + k] = (sol['costs'].loc[dict(kc=k)].sum(dim='x')
+                df['levelized_cost_' + k] = (net_cost
                                    / sol['ec_prod'].loc[dict(c=carrier)].sum(dim='x'))
 
         # Add totals per carrier
@@ -1795,7 +1785,7 @@ class Model(BaseModel):
             total_vars.append(totals)
             costs = self.get_costs(t_subset=slice(0, stepsize)).to_dataset(name='costs')
             cost_vars.append(costs)
-            if self.functionality_switch('revenue'):
+            if self.functionality_switch('rev_'):
                 revenue = self.get_revenue(t_subset=slice(0, stepsize)).to_dataset(name='revenue')
                 rev_vars.append(revenue)
             else:

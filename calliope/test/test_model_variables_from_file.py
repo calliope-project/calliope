@@ -83,14 +83,14 @@ class TestModel:
         assert str(model.results.solver.termination_condition) == 'optimal'
 
     # costs are a timeseries variables
-    def test_model_var_sub_var(self):
+    def test_model_var_rev_var(self):
         override = """
             override:
                 techs:
                     ccgt:
-                        revenue:
+                        costs:
                             monetary:
-                                sub_var: file=cost_rev_var.csv
+                                rev_var: file=cost_rev_var.csv
                     """
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'

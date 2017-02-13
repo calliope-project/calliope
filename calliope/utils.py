@@ -544,7 +544,7 @@ def any_option_getter(model):
     get_cost_pd = cost_per_distance_getter(model.get_option)
 
     def get_any_option(option, x=None, t=None):
-        if 'costs.' in option or 'revenue.' in option:
+        if 'costs.' in option:
             if t and x:
                 y, cost_type, k, cost = option.split('.')
                 try:
