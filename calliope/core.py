@@ -1142,6 +1142,8 @@ class Model(BaseModel):
         m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
         # Demand sources
         m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
+        # Exporting technologies
+        m.y_export = po.Set(initialize=self._sets['y_export'], within=m.y, ordered=True)
         ##TIMESERIES vars
         for param in self.config_model.timeseries_constraints:
             setattr(m, 'y_def_'+param, po.Set(initialize = self._sets['y_def_' + param], within=m.y))
@@ -1458,6 +1460,10 @@ class Model(BaseModel):
             p['rbs'] = p['rs'].copy()  # get same dimensions
             p['rbs'].loc[:] = 0
         p['e'] = self.get_ec_sum()
+        try:
+            p['export'] = self.get_var('export')
+        except:
+            None
         return p
 
     def get_node_parameters(self):

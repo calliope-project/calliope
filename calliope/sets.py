@@ -64,6 +64,12 @@ def init_set_y(model, _x):
     # Subset of technologies that are demand sources
     _y_demand = [y for y in _y if model.ischild(y, of='demand')]
 
+    _y_export = []
+    for y in _y:
+        for x in _x:
+            if model.get_option(y + '.export', x=x):
+                _y_export.append(y)
+                break
 
     # Subset of technologies that allow rb
     _y_rb = []
@@ -91,8 +97,10 @@ def init_set_y(model, _x):
         'y_p': _y_p,
         'y_trans': _y_trans,
         'techs_transmission': transmission_techs,
-        'y_demand': _y_demand
+        'y_demand': _y_demand,
+        'y_export': _y_export
     }
+
 
     return sets
 
