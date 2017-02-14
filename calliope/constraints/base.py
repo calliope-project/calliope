@@ -140,13 +140,25 @@ def node_energy_balance(model):
     time_res = model.data['_time_res'].to_series()
 
     def get_e_eff_per_distance(model, y, x):
-        try:
-            e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
-            per_distance = model.get_option(y + '.per_distance')
-            distance = model.get_option(y + '.distance')
-            return 1 - (e_loss * (distance / per_distance))
-        except exceptions.OptionNotSetError:
+        e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
+        per_distance = model.get_option(y + '.per_distance')
+        tech, x2 = y.split(':')
+        link = model.config_model.get_key('links.'+ x + ',' + x2,
+            default=model.config_model['links'].get(x2 + ',' + x))
+        # link = None if no link exists
+        if not link:
             return 1.0
+        try:
+            distance = link.get_key(tech + '.distance')
+        except KeyError:
+            if e_loss > 0:
+                e = exceptions.OptionNotSetError
+                raise e('Distance must be defined for link: {} '
+                        'and transmission tech: {}, as e_loss per distance '
+                        'is defined'.format(x + ',' + x2, tech))
+            else:
+                return 1.0
+        return 1 - (e_loss * (distance / per_distance))
 
     # Variables
     m.s = po.Var(m.y_pc, m.x, m.t, within=po.NonNegativeReals)
@@ -522,7 +534,7 @@ def node_costs(model):
 
     cost_getter = utils.cost_getter(model.get_option)
     depreciation_getter = utils.depreciation_getter(model.get_option)
-    cost_per_distance_getter = utils.cost_per_distance_getter(model.get_option)
+    cost_per_distance_getter = utils.cost_per_distance_getter(model.config_model)
 
     @utils.memoize
     def _depreciation_rate(y, k):
@@ -550,7 +562,7 @@ def node_costs(model):
     m.cost_op_rb = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
     if model.functionality_switch('sub_var'):
         m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_fixed') or model.functionality_switch('sub_annual'):
+    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
         m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
     if model.functionality_switch('revenue'):
         m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)

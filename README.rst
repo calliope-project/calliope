@@ -108,10 +108,10 @@ limitations under the License.
     :target: https://coveralls.io/r/calliope-project/calliope
     :alt: Test coverage
 
-.. |badge_travis| image:: https://img.shields.io/travis/calliope-project/calliope.svg?style=flat-square
+.. |badge_travis| image:: https://img.shields.io/travis/calliope-project/calliope/master.svg?style=flat-square
     :target: https://travis-ci.org/calliope-project/calliope
     :alt: Build status on Linux
 
-.. |badge_appveyor|  image:: https://img.shields.io/travis/calliope-project/calliope.svg?style=flat-square&label=windows%20build
+.. |badge_appveyor|  image:: https://img.shields.io/travis/calliope-project/calliope/master.svg?style=flat-square&label=windows%20build
     :target: https://ci.appveyor.com/project/sjpfenninger/calliope
     :alt: Build status on Windows

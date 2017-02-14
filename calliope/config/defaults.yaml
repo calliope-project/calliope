@@ -88,13 +88,15 @@ techs:
                 om_rb: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
         revenue:
             default:
-                sub_var: 0 #variable subsidy (per kWh of ``es_prod`` or ``es_con``)
-                sub_cap: 0 #fixed subsidy (per kW gross) ##e_cap.max must be defined (and not infinite) if using this with demand
-                sub_annual: 0 #annual subsidy (per kW of ``e_cap``) ##e_cap.max must be defined (and not infinite) if using this with demand
-                sub_export: 0
+                sub_var: 0 # Variable subsidy (per kWh of ``es_prod`` or ``es_con``)
+                sub_cap: 0 # Fixed subsidy (per kW gross) ##e_cap.max must be defined (and not infinite) if using this with demand
+                sub_annual: 0 # Annual subsidy (per kW of ``e_cap``) ##e_cap.max must be defined (and not infinite) if using this with demand
+                sub_export: 0 # Variable subsidy (per kWh of ``export``)
         costs_per_distance:
             default:
-                e_cap: 0
+                e_cap: 0 # cost per unit distance per unit e_cap
+        constraints_per_distance:
+            e_loss: 0 # Energy loss during transmission, per unit distance. Set as value between 0 (no loss) and 1 (all energy lost)
         depreciation:
             plant_life: 25  # Lifetime of a plant (years)
             interest:
@@ -138,6 +140,7 @@ techs:
             e_con: true
     transmission:  # ``r`` is not used but still must be defined as inf
         parent: defaults
+        per_distance: 1
         constraints:
             r: inf
             e_cap.max: inf
