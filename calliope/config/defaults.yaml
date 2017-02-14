@@ -53,13 +53,13 @@ techs:
 
             ## remove these and just have any technology with a secondary resource be a conversion_plus technology?
             allow_r2: false  # Allow secondary resource
-            r2_startup_only: false  # Allow secondary resource during startup_time only (only has an effect if ``allow_rb`` is ``true``)
+            r2_startup_only: false  # Allow secondary resource during startup_time only (only has an effect if ``allow_r2`` is ``true``)
             r2_eff: 1.0  # Secondary resource to/from storage conversion efficiency
             r2_cap.min: 0  # Minimum installed secondary resource to storage conversion capacity (kW)
             r2_cap.max: inf  # Maximum installed secondary resource to storage conversion capacity (kW)
             r2_cap.equals: 0  # Specific installed secondary resource to storage conversion capacity (kW)
-            r2_cap_follow:  false  # Can be set to ``e_cap`` or ``r_cap`` to set ``rb_cap.max`` to the respective value (in which case, any given ``rb_cap.max`` is ignored). ``false`` to disable
-            r2_cap_follow_mode: 'max'  # Can be set to `max` or `equals` to specifiy which ``rb_cap`` constraint is specific by the variable given in ``rb_cap_follow``
+            r2_cap_follow:  false  # Can be set to ``e_cap`` or ``r_cap`` to set ``r2_cap.max`` to the respective value (in which case, any given ``r2_cap.max`` is ignored). ``false`` to disable
+            r2_cap_follow_mode: 'max'  # Can be set to `max` or `equals` to specifiy which ``r2_cap`` constraint is specific by the variable given in ``r2_cap_follow``
             ##
 
             s_init: 0  # Initial storage level (kWh)
@@ -88,13 +88,13 @@ techs:
                 s_cap: 0  # Cost of storage capacity (per kWh)
                 r_area: 0  # Cost of resource collector area (per m\ :sup:`2`)
                 r_cap: 0  # Cost of resource conversion capacity (per kW)
-                rb_cap: 0  # Cost of secondary resource conversion capacity (per kW)
+                r2_cap: 0  # Cost of secondary resource conversion capacity (per kW)
                 e_cap: 0  # Cost of carrier conversion capacity (per kW gross)
                 om_frac: 0  # Yearly O&M costs (fraction of total investment)
                 om_fixed: 0  # Yearly O&M costs (per kW of ``e_cap``)
                 om_var: 0  # Variable O&M costs (per kWh of ``es_prod``)
                 om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
-                om_rb: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
+                om_r2: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
         revenue:
             default:
                 sub_var: 0 # Variable subsidy (per kWh of ``es_prod`` or ``es_con``)

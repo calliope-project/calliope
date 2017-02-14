@@ -81,14 +81,14 @@ def generate_variables(model):
     * s_cap: installed storage capacity
     * r_cap: installed resource <-> storage conversion capacity
     * e_cap: installed storage <-> grid conversion capacity (gross)
-    * rb_cap: installed secondary resource conversion capacity
+    * r2_cap: installed secondary resource conversion capacity
 
     * cost: total costs
     * cost_con: construction costs
     * cost_op_fixed: fixed operation costs
     * cost_op_var: variable operation costs
     * cost_op_fuel: primary resource fuel costs
-    * cost_op_rb: secondary resource fuel costs
+    * cost_op_r2: secondary resource fuel costs
     * revenue_var: variable revenue (operation + fuel)
     * revenue_fixed: fixed revenue
     * revenue: total revenue
@@ -453,7 +453,7 @@ def node_constraints_build(model):
         e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
         if y in m.y_store:
             charge_rate = model.get_option(y + '.constraints.c_rate', x=x)
-            return m.e_cap[y,x] * e_cap_scale == m.s_cap[x, y] * charge_rate
+            return m.e_cap[y, x] * e_cap_scale == m.s_cap[x, y] * charge_rate
         else:
             return get_var_constraint(m.e_cap[y, x], y, 'e_cap', x,
                                       scale=e_cap_scale)
@@ -602,7 +602,7 @@ def node_constraints_operational(model):
                                    rule=c_con_max_rule)
     m.c_s_max = po.Constraint(m.y_store, m.x_store, m.t,
                               rule=s_max_rule)
-    m.c_rbs_max = po.Constraint(m.y_sp_r2, m.x_r, m.t,
+    m.c_r2_max = po.Constraint(m.y_sp_r2, m.x_r, m.t,
                                 rule=r2_max_rule)
 
 
@@ -783,19 +783,19 @@ def node_costs(model):
         else:
             cost_op_fuel = 0
 
-        # in case rb_eff is zero, to avoid an infinite value
-        if y in m.y_rb:
-            rb_eff = get_constraint_param(model, 'rb_eff', y, x, t)
-            if po.value(rb_eff) > 0:
-                om_rb = get_cost_param(model, 'om_rb', k, y, x, t)
-                cost_op_rb = (om_rb * weights.loc[t] * (m.rbs[y, x, t] / rb_eff))
+        # in case r2_eff is zero, to avoid an infinite value
+        if y in m.y_r2:
+            r2_eff = get_constraint_param(model, 'r2_eff', y, x, t)
+            if po.value(r2_eff) > 0:
+                om_r2 = get_cost_param(model, 'om_r2', k, y, x, t)
+                cost_op_r2 = (om_r2 * weights.loc[t] * (m.rbs[y, x, t] / r2_eff))
             else:
-                cost_op_rb = 0
-        else: #in case rb_eff is zero, to avoid an infinite value
-            cost_op_rb = 0
+                cost_op_r2 = 0
+        else: #in case r2_eff is zero, to avoid an infinite value
+            cost_op_r2 = 0
 
         return (m.cost_var[y, x, t, k] == cost_op_var + cost_op_fuel
-                                                    + cost_op_rb)
+                                                    + cost_op_r2)
 
     def cost_rule(m, y, x, k):
         return (

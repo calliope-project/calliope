@@ -244,12 +244,12 @@ class Model(BaseModel):
         """
         time_series_constraint = ['r']
         time_series_data = []
-        allowed_timeseries_constraints = ['r_eff', 'r_scale', 'rb_eff', 's_loss',
+        allowed_timeseries_constraints = ['r_eff', 'r_scale', 'r2_eff', 's_loss',
                                     'e_prod', 'e_con', 'p_eff', 'e_eff',
                                     'e_cap_min_use', 'e_ramping']
         #variable costs/revenue only
         allowed_timeseries_costs = ['om_var', 'om_fuel',
-                                'om_rb','sub_var']
+                                'om_r2','sub_var']
         #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
         for k, v in self.config_model.as_dict_flat().items():
             if isinstance(v,str):
@@ -907,8 +907,8 @@ class Model(BaseModel):
         ts_constraint_sets = {'y_' + k + '_timeseries': set()
             for k in self.config_model.timeseries_constraints}
         self._sets = {**self._sets, **ts_constraint_sets}
-        ts_cost_sets = {'_'.join('y', param[2], param[1], 'timeseries'): set() )
-            for k in self.config_model.timeseries_costs}
+        ts_cost_sets = {'_'.join('y', param[2], param[1], 'timeseries'): set()
+            for param in self.config_model.timeseries_costs}
         self._sets = {**self._sets, **ts_cost_sets}
 
         for param in _TIMESERIES_PARAMS:
@@ -1072,7 +1072,7 @@ class Model(BaseModel):
                 for x in self.m.x:
                     for t in self.m.t:
                         for k in ks:
-                        param_object[y, x, t, k] = initializer(self.m, y, x, t, k)
+                            param_object[y, x, t, k] = initializer(self.m, y, x, t, k)
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1130,24 +1130,70 @@ class Model(BaseModel):
         m.c = po.Set(initialize=self._sets['c'], ordered=True)
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
+        # Locations with only transmission technologies defined
+        m.x_trans = po.Set(initialize=self._sets['x_trans'], within=m.x,
+            ordered=True)
         # Cost classes
         m.k = po.Set(initialize=self._sets['k'], ordered=True)
         #
         # Technologies and various subsets of technologies
         #
-        m.y = po.Set(initialize=self._sets['y'], ordered=True)
-        # Production technologies
-        m.y_prod = po.Set(initialize=self._sets['y_prod'], within=m.y, ordered=True)
-        # Production technologies
-        m.y_con = po.Set(initialize=self._sets['y_con'], within=m.y, ordered=True)
-        # Production/consumption technologies
-        m.y_pc = po.Set(initialize=self._sets['y_pc'], within=m.y, ordered=True)
+        m.y_all = po.Set(initialize=self._sets['y_all'], ordered=True)
+        # Supply technologies
+        m.y_supply = po.Set(initialize=self._sets['y_supply'], within=m.y_all,
+            ordered=True)
+        # Supply+ technologies
+        m.y_supply_plus = po.Set(initialize=self._sets['y_supply_plus'],
+            within=m.y_all, ordered=True)
+        # Storage only technologies
+        m.y_storage = po.Set(initialize=self._sets['y_storage'], within=m.y_all,
+            ordered=True)
         # Transmission technologies
-        m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y, ordered=True)
+        m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y_all,
+            ordered=True)
         # Conversion technologies
-        m.y_conv = po.Set(initialize=self._sets['y_conv'], within=m.y, ordered=True)
+        m.y_conversion = po.Set(initialize=self._sets['y_conversion'],
+            within=m.y_all, ordered=True)
+        # Conversion+ technologies
+        m.y_conversion_plus = po.Set(initialize=self._sets['y_conversion_plus'],
+            within=m.y_all, ordered=True)
         # Demand sources
-        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y, ordered=True)
+        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y_all,
+            ordered=True)
+        # Technologies to deal with unmet demand
+        m.y_unmet = po.Set(initialize=self._sets['y_unmet'], within=m.y_all,
+            ordered=True)
+        # Supply/Demand sources
+        m.y_sd = po.Set(initialize=self._sets['y_sd'], within=m.y_all,
+            ordered=True)
+        # Technologies that contain storage
+        m.y_store = po.Set(initialize=self._sets['y_store'], within=m.y_all,
+            ordered=True)
+        # Supply/demand technologies with r_area constraints
+        m.y_sd_r_area = po.Set(initialize=self._sets['y_sd_r_area'],
+            within=m.y_all, ordered=True)
+        # Supply+ technologies with r_area constraints
+        m.y_sp_r_area = po.Set(initialize=self._sets['y_sp_r_area'],
+            within=m.y_all, ordered=True)
+        # All technologies with r_area constraints
+        m.y_r_area = po.Set(initialize=self._sets['y_r_area'], within=m.y_all,
+            ordered=True)
+        # Supply+ technologies that allow secondary resource
+        m.y_sp_r2 = po.Set(initialize=self._sets['y_sp_r2'], within=m.y_all),
+            ordered=True)
+        # Conversion+ technologies that allow secondary carrier_out
+        m.y_cp_2out = po.Set(initialize=self._sets['y_cp_2out'], within=m.y_all),
+            ordered=True)
+        # Conversion+ technologies that allow tertiary carrier_out
+        m.y_cp_3out = po.Set(initialize=self._sets['y_cp_3out'], within=m.y_all),
+            ordered=True)
+        # Conversion+ technologies that allow secondary carrier_in
+        m.y_cp_2in = po.Set(initialize=self._sets['y_cp_2in'], within=m.y_all),
+            ordered=True)
+        # Conversion+ technologies that allow tertiary carrier_in
+        m.y_cp_3in = po.Set(initialize=self._sets['y_cp_3in'], within=m.y_all),
+            ordered=True)
+
         ##TIMESERIES vars
         for param in self.config_model.timeseries_constraints:
             setattr(m, 'y_' + param + '_timeseries',
@@ -1158,8 +1204,6 @@ class Model(BaseModel):
                     po.Set(initialize = self._sets['_'.join('y', param[2]. param[1],
                                                             '_timeseries')],
                     within=m.y))
-        # Technologies that allow `r2`
-        m.y_r2 = po.Set(initialize=self._sets['y_r2'], within=m.y)
 
         #
         # Parameters
@@ -1182,8 +1226,8 @@ class Model(BaseModel):
                 k = self.m.kr
             else: #costs
                 k = self.m.kc
-            initializer = self._param_populator(self.data, param[2])
-            setattr(m, param[2] + '_param', po.Param(y, m.x, m.t, k
+            initializer = self._param_populator(self.data, param[2], param_type='costs')
+            setattr(m, param[2] + '_param', po.Param(y, m.x, m.t, k,
                                                  initialize=initializer,
                                                  mutable=True))
 
@@ -1492,10 +1536,10 @@ class Model(BaseModel):
         result = xr.Dataset({v: self.get_var(v) for v in detail})
         result['e_cap_net'] = self.get_e_cap_net()
         try:
-            result['rb_cap'] = self.get_var('rb_cap')
+            result['r2_cap'] = self.get_var('r2_cap')
         except exceptions.ModelError:
-            result['rb_cap'] = result['r_cap'].copy()  # get same dimensions
-            result['rb_cap'].loc[:] = 0
+            result['r2_cap'] = result['r_cap'].copy()  # get same dimensions
+            result['r2_cap'].loc[:] = 0
         return result
 
     def get_costs(self, t_subset=None):

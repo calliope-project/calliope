@@ -124,13 +124,6 @@ def init_set_y(model, _x):
 
     # Subset of unmet technologies
     _y_unmet = [y for y in _y if model.ischild(y, of='unmet_demand')]
-    # Subset of technologies that allow rb
-    _y_rb = []
-    for y in _y:
-        for x in _x:
-            if model.get_option(y + '.constraints.allow_rb', x=x) is True:
-                _y_rb.append(y)
-                break  # No need to look at other x
 
     # Subset of basic supply & demand technologies
     _y_sd = [y for y in np.concatenate((_y_supply,_y_demand))]
@@ -154,9 +147,9 @@ def init_set_y(model, _x):
                          model.get_option(y + '.constraints.r_area_per_e_cap', x=x)
                          for x in _x])]
 
-    y_r_area = np.concatenate((_y_sd_r_area, _y_sp_r_area))
+    _y_r_area = np.concatenate((_y_sd_r_area, _y_sp_r_area))
 
-    y_sp_r2 = [y for y in _y_supply_plus if
+    _y_sp_r2 = [y for y in _y_supply_plus if
                any([model.get_option(y + '.constraints.allow_r2', x=x)
                     for x in _x])]
 
@@ -170,15 +163,25 @@ def init_set_y(model, _x):
                  if model.get_option(y + '.carrier_in_3')]
     sets = {
         'y_all': _y,
-        'y_conversion': _y_conv,
-        'y_sd': _y_pc,
-        'y_supply': _y_prod,
-        'y_supply_plus': _y_con,
-        'y_rb': _y_rb,
-        'y_p': _y_p,
-        'y_trans': _y_trans,
-        'techs_transmission': transmission_techs
-
+        'y_demand': _y_demand,
+        'y_supply': _y_supply,
+        'y_supply_plus': _y_supply_plus,
+        'y_storage': _y_storage,
+        'y_conversion': _y_conversion,
+        'y_conversion_plus': _y_conversion_plus,
+        'y_unmet': _y_unmet,
+        'y_sd': _y_sd,
+        'y_store': _y_store,
+        'y_sd_r_area': _y_sd_r_area,
+        'y_sp_r_area': _y_sp_r_area,
+        'y_r_area': _y_r_area,
+        'y_sp_r2': _y_sp_r2,
+        'y_cp_2out': _y_cp_2out,
+        'y_cp_3out': _y_cp_3out,
+        'y_cp_2in': _y_cp_2in,
+        'y_cp_3in': _y_cp_3in,
+        'y_trans': _y_trans
+        'x_trans': _x_trans
     }
 
     return sets
