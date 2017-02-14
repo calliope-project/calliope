@@ -90,9 +90,6 @@ techs:
                 sub_var: 0 #variable subsidy (per kWh of ``es_prod`` or ``es_con``)
                 sub_cap: 0 #fixed subsidy (per kW gross) ##e_cap.max must be defined (and not infinite) if using this with demand
                 sub_annual: 0 #annual subsidy (per kW of ``e_cap``) ##e_cap.max must be defined (and not infinite) if using this with demand
-        costs_per_distance:
-            default:
-                e_cap: 0
         depreciation:
             plant_life: 25  # Lifetime of a plant (years)
             interest:
@@ -136,10 +133,16 @@ techs:
             e_con: true
     transmission:  # ``r`` is not used but still must be defined as inf
         parent: defaults
+        per_distance: 1
         constraints:
             r: inf
             e_cap.max: inf
             e_con: true
+        costs_per_distance:
+            default:
+                e_cap: 0
+        constraints_per_distance:
+            e_loss: 0
     conversion:  # ``r`` is not used but still must be defined as inf
         parent: defaults
         constraints:
