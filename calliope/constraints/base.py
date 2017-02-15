@@ -33,7 +33,7 @@ def get_constraint_param(model, param_string, y, x, t):
     else:
         return model.get_option(y + '.constraints.' + param_string, x=x)
 
-def get_cost_param(model, cost, k, y, x, t):
+def get_cost_param(model, param_string, k, y, x, t):
     """
     Function to get values for constraints which can optionally be
     loaded from file (so may have time dependency).
@@ -51,36 +51,10 @@ def get_cost_param(model, cost, k, y, x, t):
     def _cost(cost, y, k, x=None):
         return cost_getter(cost, y, k, x=x)
 
-    param_string = 'costs_' + k + '_' + cost #format stored in model.data
-
-    if param_string in model.data and y in model._sets['y_def_' + k + '_' + cost]:
-        return getattr(model.m, param_string)[y, x, t]
-    else: #turn e.g. costs_monetary_om_var to costs.monetary.om_var, then search in DataArray
-        return _cost(cost, y, k, x=x)
-
-def get_revenue_param(model, rev, k, y, x, t):
-    """
-    Function to get values for constraints which can optionally be
-    loaded from file (so may have time dependency).
-
-    model = calliope model
-    rev = revenue name, e.g. 'sub_var'
-    k = revenue type, e.g. 'monetary'
-    y = technology
-    x = location
-    t = timestep
-    """
-    cost_getter = utils.cost_getter(model.get_option)
-
-    @utils.memoize
-    def _revenue(cost, y, k, x=None):
-        return cost_getter(cost, y, k, x=x, costs_type='revenue')
-    param_string = 'revenue_' + k + '_' + rev #format stored in model.data
-
-    if param_string in model.data and y in model._sets['y_def_' + k + '_' + rev]:
-        return getattr(model.m, param_string)[y, x, t]
-    else: #turn e.g. revenue_monetary_om_var to revenue.monetary.om_var, then search in DataArray
-        return _revenue(rev, y, k, x=x)
+    if param_string in model.data and y in model._sets['y_def_' + param_string]:
+        return getattr(model.m, param_string)[y, x, t, k]
+    else: # Search in model.config_model
+        return _cost(param_string, y, k, x=x)
 
 def node_resource(model):
     """
@@ -523,9 +497,6 @@ def node_costs(model):
     * cost_op_var: variable operation costs
     * cost_op_fuel: primary resource fuel costs
     * cost_op_rb: secondary resource fuel costs
-    * revenue_var: variable revenue (operation + fuel)
-    * revenue_fixed: fixed revenue
-    * revenue: total revenue
 
     """
     m = model.m
@@ -545,27 +516,39 @@ def node_costs(model):
         return cost_getter(cost, y, k, x=x)
 
     @utils.memoize
-    def _revenue(cost, y, k, x=None):
-        return cost_getter(cost, y, k, x=x, costs_type='revenue')
-
-    @utils.memoize
     def _cost_per_distance(cost, y, k, x):
         return cost_per_distance_getter(cost, y, k, x)
 
+    def _check_and_set(cost, y, x, k):
+        """
+        Ensure that sufficient constraints have been set to allow negative
+        costs, where applicable.
+        Returns cost if bounds are set, raises error if unset
+        """
+        e = exceptions.OptionNotSetError
+
+        if y in m.y_trans:
+            # Divided by 2 for transmission techs because construction costs
+            # are counted at both ends
+            unit_cost = (_cost(cost, y, k, x)
+                + _cost_per_distance(cost, y, k, x)) / 2
+        else:
+            unit_cost = _cost(cost, y, k, x)
+
+        if (y, x) in getattr(m, 'c_' + cost).keys() or unit_cost >= 0:
+            return unit_cost * getattr(m, cost)[y, x]
+        elif unit_cost < 0:
+            raise e(cost + '.max must be defined for {}:{} '
+                    'as cost is negative'.format(y, x))
+
     # Variables
-    m.cost = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
-    m.cost_con = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
-    m.cost_op_fixed = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
-    m.cost_op_variable = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
-    m.cost_op_var = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
-    m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
-    m.cost_op_rb = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_var'):
-        m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
-    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
-        m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
-    if model.functionality_switch('revenue'):
-        m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
+    m.cost = po.Var(m.y, m.x, m.k, within=po.Reals)
+    m.cost_con = po.Var(m.y, m.x, m.k, within=po.Reals)
+    m.cost_op_fixed = po.Var(m.y, m.x, m.k, within=po.Reals)
+    m.cost_op_variable = po.Var(m.y, m.x, m.k, within=po.Reals)
+    m.cost_op_var = po.Var(m.y, m.x, m.t, m.k, within=po.Reals)
+    m.cost_op_fuel = po.Var(m.y, m.x, m.t, m.k, within=po.Reals)
+    m.cost_op_rb = po.Var(m.y, m.x, m.t, m.k, within=po.Reals)
 
     # Constraint rules
     def c_cost_rule(m, y, x, k):
@@ -578,27 +561,21 @@ def node_costs(model):
 
     def c_cost_con_rule(m, y, x, k):
         if y in m.y_pc:
-            cost_s_cap = _cost('s_cap', y, k, x) * m.s_cap[y, x]
+            cost_s_cap = _check_and_set('s_cap', y, x, k)
         else:
             cost_s_cap = 0
 
         if y in m.y_def_r:
-            cost_r_cap = _cost('r_cap', y, k, x) * m.r_cap[y, x]
-            cost_r_area = _cost('r_area', y, k, x) * m.r_area[y, x]
+            cost_r_cap = _check_and_set('r_cap', y, x, k)
+            cost_r_area = _check_and_set('r_area', y, x, k)
         else:
             cost_r_cap = 0
             cost_r_area = 0
 
-        if y in m.y_trans:
-            # Divided by 2 for transmission techs because construction costs
-            # are counted at both ends
-            cost_e_cap = (_cost('e_cap', y, k, x)
-                          + _cost_per_distance('e_cap', y, k, x)) / 2
-        else:
-            cost_e_cap = _cost('e_cap', y, k, x)
+        cost_e_cap = _check_and_set('e_cap', y, x, k)
 
         if y in m.y_rb:
-            cost_rb_cap = _cost('rb_cap', y, k, x) * m.rb_cap[y, x]
+            cost_rb_cap = _check_and_set('rb_cap', y, x, k)
         else:
             cost_rb_cap = 0
 
@@ -606,11 +583,14 @@ def node_costs(model):
             m.cost_con[y, x, k] == _depreciation_rate(y, k) *
             (sum(time_res * weights) / 8760) *
             (cost_s_cap + cost_r_cap + cost_r_area + cost_rb_cap +
-             cost_e_cap * m.e_cap[y, x])
+             cost_e_cap)
         )
 
     def c_cost_op_fixed_rule(m, y, x, k):
         if y in m.y:
+            if _cost('om_fixed', y, k, x) < 0 and (y, x) not in m.c_e_cap.keys():
+                raise exceptions.OptionNotSetError('e_cap.max must be defined '
+                        'for {}:{} as `om_fixed` cost is negative'.format(y, x))
             return (m.cost_op_fixed[y, x, k] ==
                     _cost('om_frac', y, k, x) * m.cost_con[y, x, k]
                     + (_cost('om_fixed', y, k, x) * m.e_cap[y, x] *
@@ -636,10 +616,10 @@ def node_costs(model):
             carrier = model.get_option(y + '.carrier')
             export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
             return (
-                m.cost_op_var[y, x, t, k] ==
+                m.cost_op_var[y, x, t, k] == weights.loc[t] * (
                 get_cost_param(model,'om_var', k, y, x, t) *
-                weights.loc[t] * (
-                m.es_prod[carrier, y, x, t] + export)
+                (m.es_prod[carrier, y, x, t] + export) +
+                get_cost_param(model, 'export', k, y, x, t) * export)
             )
         else:
             return m.cost_op_var[y, x, t, k] == 0
@@ -671,55 +651,15 @@ def node_costs(model):
         else:
             return m.cost_op_rb[y, x, t, k] == 0
 
-    def c_revenue_var_rule(m, y, x, t, k):
-        carrier = model.get_option(y + '.carrier')
-        sub_var = get_revenue_param(model, 'sub_var', k, y, x, t)
-        sub_export = get_revenue_param(model, 'sub_export', k, y, x, t)
-        export = m.export[y, x, t] if model.get_option(y + '.export', x=x) else 0
-        if y in m.y_demand:
-            return (m.revenue_var[y, x, t, k] ==
-                sub_var * weights.loc[t]
-                * -m.es_con[carrier, y, x, t])
-        else:
-            return (m.revenue_var[y, x, t, k] == weights.loc[t] * (
-                sub_var * (m.es_prod[carrier, y, x, t] + export) +
-                sub_export * export))
-
-    def c_revenue_fixed_rule(m, y, x, k):
-        revenue = (sum(time_res * weights) / 8760 *
-            (_revenue('sub_cap', y, k, x)
-            * _depreciation_rate(y, k)
-            + _revenue('sub_annual', y, k, x)))
-        if y in m.y_demand and revenue > 0:
-            e = exceptions.ModelError
-            raise e('Cannot receive fixed revenue at a demand node, i.e. '
-                    '{}'.format(y))
-        else:
-            return (m.revenue_fixed[y, x, k] ==
-             revenue * m.e_cap[y, x])
-
-    def c_revenue_rule(m, y, x, k):
-        revenue_var = sum(m.revenue_var[y, x, t, k] for t in m.t) \
-            if getattr(m, 'revenue_var', None) else 0
-        revenue_fixed = m.revenue_fixed[y, x, k] \
-            if getattr(m, 'revenue_fixed', None) else 0
-        return (m.revenue[y, x, k] == revenue_fixed + revenue_var)
-
 
     # Constraints
-    m.c_cost = po.Constraint(m.y, m.x, m.kc, rule=c_cost_rule)
-    m.c_cost_con = po.Constraint(m.y, m.x, m.kc, rule=c_cost_con_rule)
-    m.c_cost_op_fixed = po.Constraint(m.y, m.x, m.kc, rule=c_cost_op_fixed_rule)
-    m.c_cost_op_variable = po.Constraint(m.y, m.x, m.kc, rule=c_cost_op_variable_rule)
-    m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_var_rule)
-    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_fuel_rule)
-    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.kc, rule=c_cost_op_rb_rule)
-    if model.functionality_switch('sub_var'):
-        m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.kr, rule=c_revenue_var_rule)
-    if model.functionality_switch('sub_cap') or model.functionality_switch('sub_annual'):
-        m.c_revenue_fixed = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_fixed_rule)
-    if model.functionality_switch('revenue'):
-        m.c_revenue = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_rule)
+    m.c_cost = po.Constraint(m.y, m.x, m.k, rule=c_cost_rule)
+    m.c_cost_con = po.Constraint(m.y, m.x, m.k, rule=c_cost_con_rule)
+    m.c_cost_op_fixed = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_fixed_rule)
+    m.c_cost_op_variable = po.Constraint(m.y, m.x, m.k, rule=c_cost_op_variable_rule)
+    m.c_cost_op_var = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_var_rule)
+    m.c_cost_op_fuel = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_fuel_rule)
+    m.c_cost_op_rb = po.Constraint(m.y, m.x, m.t, m.k, rule=c_cost_op_rb_rule)
 
 
 def model_constraints(model):

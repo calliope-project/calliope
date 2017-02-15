@@ -11,38 +11,16 @@ Objective functions.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-
-def objective_cost_minimization_exc_rev(model):
-    """
-    Minimizes total system monetary cost.
-
-    """
-    m = model.m
-
-    def obj_rule(m):
-        return sum(model.get_option(y + '.weight') *
-                   sum(m.cost[y, x, 'monetary'] for x in m.x)
-                   for y in m.y)
-
-    m.obj = po.Objective(sense=po.minimize, rule=obj_rule)
-    m.obj.domain = po.NonNegativeReals
-
 def objective_cost_minimization(model):
     """
-    Minimizes total system monetary cost and includes possible revenue streams.
+    Minimizes total system monetary cost.
     Used as a default if a model does not specify another objective.
 
     """
     m = model.m
 
     def obj_rule(m):
-        if model.functionality_switch('revenue'):
-            return sum(model.get_option(y + '.weight') *
-                       sum((m.cost[y, x, 'monetary'] -
-                        m.revenue[y, x, 'monetary'])
-                        for x in m.x) for y in m.y)
-        else:
-            return sum(model.get_option(y + '.weight') *
+        return sum(model.get_option(y + '.weight') *
                        sum(m.cost[y, x, 'monetary']
                         for x in m.x) for y in m.y)
 
