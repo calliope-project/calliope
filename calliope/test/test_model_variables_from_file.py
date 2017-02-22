@@ -68,7 +68,7 @@ class TestModel:
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
 
-    # costs are a timeseries variables
+    # costs are timeseries variables
     def test_model_var_om_var(self):
         override = """
             override:
@@ -76,21 +76,21 @@ class TestModel:
                     ccgt:
                         costs:
                             monetary:
-                                om_fuel: file=cost_rev_var.csv
-                                om_var: file=cost_rev_var.csv
+                                om_fuel: file=cost_var.csv
+                                om_var: file=cost_var.csv
                     """
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
 
-    # costs are a timeseries variables
+    # revenue is a timeseries variable
     def test_model_var_sub_var(self):
         override = """
             override:
                 techs:
                     ccgt:
-                        revenue:
+                        costs:
                             monetary:
-                                sub_var: file=cost_rev_var.csv
+                                om_var: file=rev_var.csv
                     """
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
