@@ -11,10 +11,10 @@ techs:
         color: '#FDC97D'
         stack_weight: 200
         parent: supply
-        carrier: power
+        carrier_out: power
         constraints:
             r: inf
-            r_eff: 0.5
+            e_eff: 0.5
             e_cap.max: 40000  # kW
         costs:
             monetary:
@@ -24,8 +24,8 @@ techs:
         name: 'Concentrating solar power'
         color: '#99CB48'
         stack_weight: 100
-        parent: supply
-        carrier: power
+        parent: supply_plus
+        carrier_out: power
         constraints:
             use_s_time: true
             s_time.max: 24

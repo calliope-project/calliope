@@ -11,6 +11,7 @@ Basic model constraints.
 
 import pyomo.core as po
 import numpy as np
+import xarray as xr
 
 from .. import exceptions
 from .. import transmission
@@ -29,7 +30,7 @@ def get_constraint_param(model, param_string, y, x, t):
     """
 
     if param_string in model.data:
-        return getattr(model.m, param_string)[y, x, t]
+        return getattr(model.m, param_string + '_param')[y, x, t]
     else:
         return model.get_option(y + '.constraints.' + param_string, x=x)
 
@@ -65,7 +66,7 @@ def get_cost_param(model, cost, k, y, x, t, cost_type='cost'):
     elif cost_type == 'revenue':
         param_string = 'revenue_' + k + '_' + cost #format stored in model.data
         if param_string in model.data:
-            return getattr(model.m, param_string)[y, x, t]
+            return getattr(model.m, param_string + '_param')[y, x, t]
         else:
             return _revenue(cost, y, k, x)
 
@@ -100,24 +101,24 @@ def generate_variables(model):
     # Capacity
     m.r_area = po.Var(m.y_r_area, m.x_r, within=po.NonNegativeReals)
     m.s_cap = po.Var(m.y_store, m.x_store, within=po.NonNegativeReals)
-    m.r_cap = po.Var(m.y_supply_plus, m.x_r, within=po.NonNegativeReals) # maybe should be y_finite_r?
-    m.e_cap = po.Var(m.y_all, m.x, within=po.NonNegativeReals)
+    m.r_cap = po.Var(m.y_sp_finite_r, m.x_r, within=po.NonNegativeReals) # maybe should be y_finite_r?
+    m.e_cap = po.Var(m.y, m.x, within=po.NonNegativeReals)
     m.r2_cap = po.Var(m.y_sp_r2, m.x_r, within=po.NonNegativeReals)
 
     # Unit commitment
     m.r = po.Var(m.y_sp_finite_r, m.x_r, m.t, within=po.Reals)
     m.r2 = po.Var(m.y_sp_r2, m.x_r, m.t, within=po.NonNegativeReals)
     m.s = po.Var(m.y_store, m.x_store, m.t, within=po.NonNegativeReals)
-    m.c_prod = po.Var(m.c, m.y_all, m.x, m.t, within=po.NonNegativeReals)
-    m.c_con = po.Var(m.c, m.y_all, m.x, m.t, within=po.NegativeReals)
+    m.c_prod = po.Var(m.c, m.y, m.x, m.t, within=po.NonNegativeReals)
+    m.c_con = po.Var(m.c, m.y, m.x, m.t, within=po.NegativeReals)
 
     # Costs/revenue
-    m.cost_var = po.Var(m.y_cost_var, m.x, m.t, m.kc, within=po.NonNegativeReals)
-    m.cost_fixed = po.Var(m.y_cost_fixed, m.x, m.kc, within=po.NonNegativeReals)
-    m.cost = po.Var(m.y_all, m.x, m.kc, within=po.NonNegativeReals)
-    m.revenue_var = po.Var(m.y_all, m.x, m.t, m.kr, within=po.NonNegativeReals)
-    m.revenue_fixed = po.Var(m.y_all, m.x, m.kr, within=po.NonNegativeReals)
-    m.revenue = po.Var(m.y_all, m.x, m.kr, within=po.NonNegativeReals)
+    m.cost_var = po.Var(m.y, m.x, m.t, m.kc, within=po.NonNegativeReals)
+    m.cost_fixed = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
+    m.cost = po.Var(m.y, m.x, m.kc, within=po.NonNegativeReals)
+    m.revenue_var = po.Var(m.y, m.x, m.t, m.kr, within=po.NonNegativeReals)
+    m.revenue_fixed = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
+    m.revenue = po.Var(m.y, m.x, m.kr, within=po.NonNegativeReals)
 
 def node_resource(model):
 
@@ -140,30 +141,28 @@ def node_resource(model):
             if po.value(e_eff) == 0:
                 c_prod = 0
             else:
-                c_prod = sum(m.c_prod[c, y, x, t] for c in m.c) / e_eff
-            c_con = sum(m.c_con[c, y, x, t] for c in m.c) * e_eff
+                c_prod = sum(m.c_prod[c, y, x, t] for c in m.c) / e_eff # supply techs
+            c_con = sum(m.c_con[c, y, x, t] for c in m.c) * e_eff # demand techs
 
             if y in m.y_sd_r_area:
-                r_area = model.get_option(y + '.constraints.r_area_per_r', x=x)
+                r_avail = (get_constraint_param(model, 'r', y, x, t) * r_scale
+                           * m.r_area[y, x])
             else:
-                r_area = 1.0
-            r_avail = m.r_param[y, x, t] * r_scale * r_area
+                r_avail = (get_constraint_param(model, 'r', y, x, t) * r_scale)
 
             if force_r:
-                return (c_prod * model.get_option(y + 'constraints.e_prod') +
-                  c_con * model.get_option(y + 'constraints.e_con') == r_avail)
-            elif y in m.y_supply or y in m.y_unmet:
-                return c_prod <= r_avail
-            elif y in m.y_demand:
-                return c_con >= r_avail
+                return c_prod + c_con == r_avail
+            else:
+                return c_prod - c_con <= r_avail
 
         elif y in m.y_supply_plus:
             r_eff = get_constraint_param(model, 'r_eff', y, x, t)
 
             if y in m.y_sp_r_area:
-                r_avail = m.r_param[y, x, t] * r_scale * m.r_area[y, x] * r_eff
+                r_avail = (get_constraint_param(model, 'r', y, x, t) * r_scale
+                           * m.r_area[y, x] * r_eff)
             else:
-                r_avail = m.r_param[y, x, t] * r_scale * r_eff
+                r_avail = get_constraint_param(model, 'r', y, x, t) * r_scale * r_eff
 
             if force_r:
                 return m.r[y, x, t] == r_avail
@@ -205,7 +204,7 @@ def node_energy_balance(model):
         if isinstance(c_1, dict):
             c_con1 = sum([m.c_con[c, y, x, t] * c_1[c] for c in c_1.keys()])
         else:
-            c_con1 = m.c_con[c_out, y, x, t]
+            c_con1 = m.c_con[c_1, y, x, t]
         if isinstance(c_2, dict):
             c_con2 = sum([m.c_con[c, y, x, t] * c_2[c] for c in c_2.keys()])
         else:
@@ -274,26 +273,22 @@ def node_energy_balance(model):
 
         # TODO once Pyomo supports it,
         # let this update conditionally on param update!
-        if po.value(e_eff) == 0:
+        if po.value(total_eff) == 0:
             c_prod = 0
         else:
             c_prod = sum(m.c_prod[c, y, x, t] for c in m.c) / total_eff
-        c_con = sum(m.c_con[c, y, x, t] for c in m.c) * total_eff
 
         # If this tech is in the set of techs allowing rb, include it
-        if y in m.y_r2:
+        if y in m.y_sp_r2:
             r2 = m.r2[y, x, t]
         else:
             r2 = 0
 
         # A) Case where no storage allowed
         if y not in m.y_store:
-            return m.r[y, x, t] == c_prod + c_con - r2
+            return m.r[y, x, t] == c_prod - r2
 
         # B) Case where storage is allowed
-        s_cap_max = model.get_option(y + '.constraints.s_cap.max', x=x)
-        use_s_time = get_constraint_param(model, 'use_s_time', y, x, t)
-        # Ensure that storage-only techs have no r_2_s
         r = m.r[y, x, t]
         if m.t.order_dict[t] == 0:
             s_minus_one = m.s_init[y, x]
@@ -302,7 +297,7 @@ def node_energy_balance(model):
             s_minus_one = (((1 - s_loss)
                             ** time_res.at[model.prev_t(t)])
                            * m.s[y, x, model.prev_t(t)])
-        return (m.s[y, x, t] == s_minus_one + r + r2 - c_prod - c_con)
+        return (m.s[y, x, t] == s_minus_one + r + r2 - c_prod)
 
     def storage_rule(m, y, x, t):
         e_eff = get_constraint_param(model, 'e_eff', y, x, t)
@@ -311,13 +306,11 @@ def node_energy_balance(model):
 
         # TODO once Pyomo supports it,
         # let this update conditionally on param update!
-        if po.value(e_eff) == 0:
+        if po.value(total_eff) == 0:
             c_prod = 0
         else:
             c_prod = sum(m.c_prod[c, y, x, t] for c in m.c) / total_eff
         c_con = sum(m.c_con[c, y, x, t] for c in m.c) * total_eff
-
-        s_cap_max = model.get_option(y + '.constraints.s_cap.max', x=x)
 
         if m.t.order_dict[t] == 0:
             s_minus_one = m.s_init[y, x]
@@ -331,7 +324,7 @@ def node_energy_balance(model):
     # Constraints
     m.c_balance_transmission = po.Constraint(m.y_transmission, m.x, m.t,
                                             rule=transmission_rule)
-    m.c_balance_conversion = po.Constraint(m.y_conv, m.x, m.t,
+    m.c_balance_conversion = po.Constraint(m.y_conversion, m.x, m.t,
                                             rule=conversion_rule)
     m.c_balance_conversion_plus = po.Constraint(m.y_conversion_plus, m.x, m.t,
                                             rule=conversion_plus_primary_rule)
@@ -390,6 +383,40 @@ def node_constraints_build(model):
             else:
                 return (_min, model_var, _max)
 
+    def get_s_cap(y, x, e_cap):
+        """
+        Get s_cap.max from s_time.max, where applicable. If s_time.max is used,
+        the maximum storage possible is the minimum value of storage possible for
+        any time length which meets the s_time.max value.
+        """
+        ##TODO:
+        # incorporate timeseries resolution. Currently assumes that each
+        # timestep is worth one unit of time.
+        s_time_max = model.get_option(y + '.constraints.s_time.max', x=x)
+
+        if not s_time_max:
+            return model.get_option(y + '.constraints.s_cap.max', x=x)
+
+        s_loss = model.data.loc[dict(y=y, x=x)].get('s_loss',
+                                model.get_option(y+ '.constraints.s_loss', x=x))
+        e_eff = model.data.loc[dict(y=y, x=x)].get('e_eff',
+                                model.get_option(y+ '.constraints.e_eff', x=x))
+        try:
+            leakage = 1 / (1 - s_loss) # if s_loss is timeseries dependant, will be a DataArray
+            discharge = e_cap / e_eff # if e_eff is timeseries dependant, will be a DataArray
+        except ZeroDivisionError: # if s_loss = 1 or e_eff = 0
+            return np.inf # i.e. no upper on storage
+        exponents = [i for i in range(s_time_max)]
+        if isinstance(leakage, xr.DataArray) or isinstance(discharge, xr.DataArray):
+            roll = model.data.t.rolling(t=s_time_max) # create arrays of all rolling horizons
+            S=[]
+            for label, arr_window in roll:
+                if len(arr_window) == s_time_max: # only consider arrays of the maximum time length
+                    S.append(sum(discharge * np.power(leakage, exponents)))
+            return min(S) # smallest value of storage is the maximum allowed
+        else: # no need to loop through rolling horizons if all values are static in time
+            return sum(discharge * np.power(leakage, exponents))
+
     # Constraint rules
     def c_s_cap_rule(m, y, x):
         """
@@ -400,24 +427,21 @@ def node_constraints_build(model):
         s_cap * charge rate = e_cap must hold. Otherwise, take the lowest capacity
         capacity defined by s_cap.max or e_cap.max / charge rate.
         """
-        s_cap = model.get_option(y + '.constraints.s_cap.equals', x=x)
+        s_cap_equals = model.get_option(y + '.constraints.s_cap.equals', x=x)
         scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
-        e_cap = model.get_option(y + '.constraints.s_cap.equals', x=x) * scale
+        e_cap = model.get_option(y + '.constraints.e_cap.equals', x=x) * scale
         charge_rate = model.get_option(y + '.constraints.c_rate', x=x)
-        if e_cap and s_cap and s_cap * charge_rate != e_cap:
+        if e_cap and s_cap_equals and s_cap_equals * charge_rate != e_cap:
             raise exceptions.ModelError('e_cap.equals and s_cap.equals must '
                         'be equivalent when considering charge rate for {}:{}'
                         .format(y, x))
-        if not s_cap:
-            s_cap = model.get_option(y + '.constraints.s_cap.max', x=x)
         if not e_cap:
             e_cap = model.get_option(y + '.constraints.e_cap.max', x=x) * scale
-        if e_cap and s_cap:
-            s_cap_max = min(s_cap, e_cap / charge_rate)
+        if not s_cap_equals:
+            s_cap_max = get_s_cap(y, x, e_cap)
+            return get_var_constraint(m.s_cap[y, x], y, 's_cap', x, _max=s_cap_max)
         else:
-            s_cap_max = max(s_cap, e_cap / charge_rate)
-
-        return get_var_constraint(m.s_cap[y, x], y, 's_cap', x, _max=s_cap_max)
+            return get_var_constraint(m.s_cap[y, x], y, 's_cap', x, _equals=s_cap_equals)
 
     def c_r_cap_rule(m, y, x):
         if model.get_option(y + '.constraints.r_cap_equals_e_cap', x=x):
@@ -438,8 +462,6 @@ def node_constraints_build(model):
                 # If a technology has no e_cap here, we force r_area to zero,
                 # so as not to accrue spurious costs
                 return m.r_area[y, x] == 0
-            elif model.get_option(y + '.constraints.r_area.max', x=x) is False:
-                return m.r_area[y, x] == 1
             else:
                 return get_var_constraint(m.r_area[y, x], y, 'r_area', x)
 
@@ -451,12 +473,11 @@ def node_constraints_build(model):
         if not model._locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
         e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
-        if y in m.y_store:
-            charge_rate = model.get_option(y + '.constraints.c_rate', x=x)
-            return m.e_cap[y, x] * e_cap_scale == m.s_cap[x, y] * charge_rate
-        else:
-            return get_var_constraint(m.e_cap[y, x], y, 'e_cap', x,
-                                      scale=e_cap_scale)
+        e_cap_max = None
+        if y in m.y_store and model.get_option(y + '.constraints.c_rate', x=x):
+            e_cap_max = m.s_cap[y, x] * model.get_option(y + '.constraints.c_rate', x=x)
+        return get_var_constraint(m.e_cap[y, x], y, 'e_cap', x,
+                                  scale=e_cap_scale, _max=e_cap_max)
 
     def c_r2_cap_rule(m, y, x):
         """
@@ -467,15 +488,13 @@ def node_constraints_build(model):
 
         # First deal with the special case of ``r2_cap_follow`` being set
         if follow:
-            if follow == 'r_cap':
-                r2_cap_val = m.r_cap[y, x]
-            elif follow == 'e_cap':
-                r2_cap_val = m.e_cap[y, x]
-            elif follow is not False:
+            try:
+                r2_cap_val = getattr(m, follow)[y, x]
+            except AttributeError:
                 # Raise an error to make sure follows isn't accidentally set to
                 # something invalid
                 e = exceptions.ModelError
-                raise e('r2_cab_follow set to invalid value at '
+                raise e('r2_cap_follow set to invalid value at '
                         '({}, {}): {}'.format(y, x, follow))
 
             if mode == 'max':
@@ -489,7 +508,7 @@ def node_constraints_build(model):
     # Constraints
     m.c_s_cap = po.Constraint(m.y_store, m.x, rule=c_s_cap_rule)
     m.c_r_cap = po.Constraint(m.y_sp_finite_r, m.x_r, rule=c_r_cap_rule)
-    m.c_r_area = po.Constraint(m.y_sp_r_area, m.x, rule=c_r_area_rule)
+    m.c_r_area = po.Constraint(m.y_r_area, m.x, rule=c_r_area_rule)
     m.c_e_cap = po.Constraint(m.y, m.x, rule=c_e_cap_rule)
     m.c_r2_cap = po.Constraint(m.y_sp_r2, m.x, rule=c_r2_cap_rule)
 
@@ -504,13 +523,6 @@ def node_constraints_operational(model):
         set maximum resource supply. Supply_plus techs only.
         """
         return m.r[y, x, t] <= time_res.at[t] * m.r_cap[y, x]
-
-    def r_max_lower_rule(m, y, x, t):
-        """
-        set maximum resource consumption. Demand techs only.
-        """
-        return m.r[y, x, t] >= -1 * time_res.at[t] * m.r_cap[y, x]
-
 
     def c_prod_max_rule(m, c, y, x, t):
         """
@@ -539,7 +551,7 @@ def node_constraints_operational(model):
             else:
                 return m.c_prod[c, y, x, t] == 0
         if (allow_c_prod is True and
-                c == model.get_option(y + '.carrier')):
+                c == model.get_option(y + '.carrier', default=y + '.carrier_out')):
             return m.c_prod[c, y, x, t] <= time_res.at[t] * m.e_cap[y, x] * p_eff
         else:
             return m.c_prod[c, y, x, t] == 0
@@ -549,7 +561,7 @@ def node_constraints_operational(model):
         Set minimum carrier production. All technologies.
         """
         min_use = get_constraint_param(model, 'e_cap_min_use', y, x, t)
-        if (min_use and c == model.get_option(y + '.carrier')):
+        if (min_use and c == model.get_option(y + '.carrier', default=y + '.carrier_out')):
             return (m.c_prod[c, y, x, t]
                     >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:
@@ -563,10 +575,8 @@ def node_constraints_operational(model):
         p_eff = model.get_option(y + '.constraints.p_eff', x=x)
         if y in m.y_conversion or y in m.y_conversion_plus:
             return po.Constraint.Skip
-        else:
-            carrier = '.carrier'
         if (c_con is True and
-                c == model.get_option(y + carrier)):
+                c == model.get_option(y + '.carrier', default=y + '.carrier_in')):
             return m.c_con[c, y, x, t] >= (-1 * time_res.at[t]
                                             * m.e_cap[y, x] * p_eff)
         else:
@@ -592,8 +602,6 @@ def node_constraints_operational(model):
     # Constraints
     m.c_r_max_upper = po.Constraint(m.y_sp_finite_r, m.x_r, m.t,
                                      rule=r_max_upper_rule)
-    m.c_r_max_lower = po.Constraint(m.y_sp_finite_r, m.x_r, m.t,
-                                     rule=r_max_lower_rule)
     m.c_prod_max = po.Constraint(m.c, m.y, m.x, m.t,
                                     rule=c_prod_max_rule)
     m.c_prod_min = po.Constraint(m.c, m.y, m.x, m.t,
@@ -727,7 +735,7 @@ def node_costs(model):
         else:
             cost_s_cap = 0
 
-        if y in m.y_sp_r_finite:
+        if y in m.y_finite_r:
             cost_r_cap = _cost('r_cap', y, k, x) * m.r_cap[y, x]
         else:
             cost_r_cap = 0
@@ -762,7 +770,7 @@ def node_costs(model):
 
     def cost_var_rule(m, y, x, t, k):
         om_var = get_cost_param(model,'om_var', k, y, x, t)
-        carrier = model.get_option(y + '.carrier')
+        carrier = model.get_option(y + '.carrier', default=y + '.carrier_out')
         # Note: only counting c_prod for operational costs.
         # This should generally be a reasonable assumption to make.
         # It might be necessary to remove parasitic losses for this
@@ -771,27 +779,31 @@ def node_costs(model):
         cost_op_var = om_var * weights.loc[t] * m.c_prod[carrier, y, x, t]
 
         # in case r_eff is zero, to avoid an infinite value
-        if y in m.y_pc:
+        if y in m.y_supply_plus:
             r_eff = get_constraint_param(model, 'r_eff', y, x, t)
             om_fuel = get_cost_param(model,'om_fuel', k, y, x, t)
             if po.value(r_eff) > 0:
                 # Dividing by r_eff here so we get the actual r used, not the rs
                 # moved into storage...
-                cost_op_fuel = (om_fuel * weights.loc[t] * (m.rs[y, x, t] / r_eff))
+                cost_op_fuel = (om_fuel * weights.loc[t] * (m.r[y, x, t] / r_eff))
             else:
                 cost_op_fuel = 0
+        elif y in m.y_supply: # m.r == m.c_con
+            om_fuel = get_cost_param(model,'om_fuel', k, y, x, t)
+            cost_op_fuel = (om_fuel * weights.loc[t]
+                            * sum(m.c_con[c, y, x, t] for c in m.c))
         else:
             cost_op_fuel = 0
 
         # in case r2_eff is zero, to avoid an infinite value
-        if y in m.y_r2:
+        if y in m.y_sp_r2:
             r2_eff = get_constraint_param(model, 'r2_eff', y, x, t)
             if po.value(r2_eff) > 0:
                 om_r2 = get_cost_param(model, 'om_r2', k, y, x, t)
-                cost_op_r2 = (om_r2 * weights.loc[t] * (m.rbs[y, x, t] / r2_eff))
-            else:
+                cost_op_r2 = (om_r2 * weights.loc[t] * (m.r2[y, x, t] / r2_eff))
+            else: #in case r2_eff is zero, to avoid an infinite value
                 cost_op_r2 = 0
-        else: #in case r2_eff is zero, to avoid an infinite value
+        else:
             cost_op_r2 = 0
 
         return (m.cost_var[y, x, t, k] == cost_op_var + cost_op_fuel
@@ -818,14 +830,15 @@ def node_costs(model):
              revenue * m.e_cap[y, x])
 
     def revenue_var_rule(m, y, x, t, k):
-        carrier = model.get_option(y + '.carrier')
         sub_var = get_cost_param(model, 'sub_var', k, y, x, t,
                                  cost_type='revenue')
         if y in m.y_demand:
+            carrier = model.get_option(y + '.carrier', default=y + '.carrier_in')
             return (m.revenue_var[y, x, t, k] ==
                 sub_var * weights.loc[t]
                 * -m.c_con[carrier, y, x, t])
         else:
+            carrier = model.get_option(y + '.carrier', default=y + '.carrier_out')
             return (m.revenue_var[y, x, t, k] ==
                 sub_var * weights.loc[t]
                 * m.c_prod[carrier, y, x, t])

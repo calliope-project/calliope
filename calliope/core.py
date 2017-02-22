@@ -478,8 +478,12 @@ class Model(BaseModel):
         except exceptions.OptionNotSetError:
             return y
 
-    def get_carrier(self, y):
-        return self.get_option(y + '.carrier')
+    def get_carrier(self, y, direction='out', level=None):
+        if level: # either 2 or 3
+            return self.get_option(y + '_'.join('.carrier', direction, str(level)))
+        else:
+            return self.get_option(y + '.carrier',
+                            default=y + '.carrier_' + direction)
 
     def get_weight(self, y):
         return self.get_option(y + '.stack_weight')
@@ -494,16 +498,9 @@ class Model(BaseModel):
             color = '#{:0>2x}{:0>2x}{:0>2x}'.format(r(), r(), r())
         return color
 
-    def get_source_carrier(self, y):
-        source_carrier = self.get_option(y + '.source_carrier')
-        if source_carrier:
-            return source_carrier
-        else:
-            return None
-
     def get_parent(self, y):
         """Returns the abstract base technology from which ``y`` descends."""
-        if y in self._sets['y_trans']:
+        if y in self._sets['y_transmission']:
             return 'transmission'
         else:
             while True:
@@ -568,7 +565,7 @@ class Model(BaseModel):
                     if y in self._sets['techs_transmission']:
                         memberset.remove(y)
                         memberset.update([yt
-                                          for yt in self._sets['y_trans']
+                                          for yt in self._sets['y_transmission']
                                           if yt.startswith(y + ':')])
         return list(memberset)
 
@@ -676,14 +673,12 @@ class Model(BaseModel):
         sets_y = sets.init_set_y(self, _x)
         self._sets = {**self._sets, **sets_y}
 
+        # x subsets
+        sets_x = sets.init_set_x(self)
+        self._sets = {**self._sets, **sets_x}
         # c: carriers
-        _c = set()
-        for y in self._sets['y']:  # Only add carriers for allowed technologies
-            _c.update([self.get_option(y + '.carrier')])
-            if self.get_option(y + '.source_carrier'):
-                _c.update([self.get_option(y + '.source_carrier')])
-        _c = list(_c)
-        self._sets['c'] = _c
+        sets_c = sets.init_set_c(self)
+        self._sets['c'] = sets_c
 
         # k: cost classes
         classes = [list(self.config_model.techs[k].costs.keys())
@@ -790,7 +785,7 @@ class Model(BaseModel):
     def _read_param_for_tech(self, param, y, time_res, option, x=None):
         # added check that it is a constraint (string param)
         if option != float('inf') and param == 'r':
-            self._sets['y_finite_r' + param].add(y)
+            self._sets['y_finite_r'].add(y)
         k = '{}.{}:{}'.format(param, y, x)
 
         if isinstance(option, str):  # if option is string, read a file
@@ -911,7 +906,10 @@ class Model(BaseModel):
             for param in self.config_model.timeseries_costs}
         self._sets = {**self._sets, **ts_cost_sets}
 
-        for param in _TIMESERIES_PARAMS:
+        # Add all instances of finite resource (either timeseries dependant or not)
+        self._sets['y_finite_r'] = set()
+
+        for param in self.config_model.timeseries_constraints: #constraints
             param_data = {}
             for y in self._sets['y']:
                 # First, set up each parameter without considering
@@ -983,6 +981,10 @@ class Model(BaseModel):
         # to prevent potential solver problems
         dataset = dataset.fillna(0)
 
+        # initialise an additional set now that we know y_finite_r
+        self._sets['y_sp_finite_r'] = [y for y in self._sets['y_finite_r']
+                                       if y in self._sets['y_supply_plus']]
+
         self.data = dataset
 
     def _get_t_max_demand(self):
@@ -991,7 +993,7 @@ class Model(BaseModel):
         t_max_demands = utils.AttrDict()
         for c in self._sets['c']:
             ys = [y for y in self.data['y'].values
-                  if self.get_option(y + '.carrier') == c]
+                  if self.get_carrier(y, 'in') == c]
             # Get copy of r data array
             r_carrier = self.data['r'].loc[{'y': ys}].copy()
             # Only kep negative (=demand) values
@@ -1076,7 +1078,7 @@ class Model(BaseModel):
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
-        for y in self.m.y_pc:
+        for y in self.m.y_store:
             for x in self.m.x:
                 self.m.s_init[y, x] = s_init_initializer(self.m, y, x)
 
@@ -1131,67 +1133,78 @@ class Model(BaseModel):
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
         # Locations with only transmission technologies defined
-        m.x_trans = po.Set(initialize=self._sets['x_trans'], within=m.x,
+        m.x_transmission = po.Set(initialize=self._sets['x_transmission'], within=m.x,
+            ordered=True)
+        # Source/sink locations (i.e. have `r` defined)
+        m.x_r = po.Set(initialize=self._sets['x_r'], within=m.x, ordered=True)
+        # Storage locations
+        m.x_store = po.Set(initialize=self._sets['x_store'], within=m.x,
             ordered=True)
         # Cost classes
         m.k = po.Set(initialize=self._sets['k'], ordered=True)
         #
         # Technologies and various subsets of technologies
         #
-        m.y_all = po.Set(initialize=self._sets['y_all'], ordered=True)
+        m.y = po.Set(initialize=self._sets['y'], ordered=True)
         # Supply technologies
-        m.y_supply = po.Set(initialize=self._sets['y_supply'], within=m.y_all,
+        m.y_supply = po.Set(initialize=self._sets['y_supply'], within=m.y,
             ordered=True)
         # Supply+ technologies
         m.y_supply_plus = po.Set(initialize=self._sets['y_supply_plus'],
-            within=m.y_all, ordered=True)
+            within=m.y, ordered=True)
         # Storage only technologies
-        m.y_storage = po.Set(initialize=self._sets['y_storage'], within=m.y_all,
+        m.y_storage = po.Set(initialize=self._sets['y_storage'], within=m.y,
             ordered=True)
         # Transmission technologies
-        m.y_trans = po.Set(initialize=self._sets['y_trans'], within=m.y_all,
+        m.y_transmission = po.Set(initialize=self._sets['y_transmission'], within=m.y,
             ordered=True)
         # Conversion technologies
         m.y_conversion = po.Set(initialize=self._sets['y_conversion'],
-            within=m.y_all, ordered=True)
+            within=m.y, ordered=True)
         # Conversion+ technologies
         m.y_conversion_plus = po.Set(initialize=self._sets['y_conversion_plus'],
-            within=m.y_all, ordered=True)
+            within=m.y, ordered=True)
         # Demand sources
-        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y_all,
+        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y,
             ordered=True)
         # Technologies to deal with unmet demand
-        m.y_unmet = po.Set(initialize=self._sets['y_unmet'], within=m.y_all,
+        m.y_unmet = po.Set(initialize=self._sets['y_unmet'], within=m.y,
             ordered=True)
         # Supply/Demand sources
-        m.y_sd = po.Set(initialize=self._sets['y_sd'], within=m.y_all,
+        m.y_sd = po.Set(initialize=self._sets['y_sd'], within=m.y,
             ordered=True)
         # Technologies that contain storage
-        m.y_store = po.Set(initialize=self._sets['y_store'], within=m.y_all,
+        m.y_store = po.Set(initialize=self._sets['y_store'], within=m.y,
             ordered=True)
+        # Technologies with a finite resource defined (timeseries or otherwise)
+        m.y_finite_r = po.Set(initialize=self._sets['y_finite_r'], within=m.y,
+            ordered=True)
+        # Supply+ technologies with a finite resource defined (timeseries or otherwise)
+        m.y_sp_finite_r = po.Set(initialize=self._sets['y_finite_r'],
+            within=m.y_finite_r, ordered=True)
         # Supply/demand technologies with r_area constraints
         m.y_sd_r_area = po.Set(initialize=self._sets['y_sd_r_area'],
-            within=m.y_all, ordered=True)
+            within=m.y, ordered=True)
         # Supply+ technologies with r_area constraints
         m.y_sp_r_area = po.Set(initialize=self._sets['y_sp_r_area'],
-            within=m.y_all, ordered=True)
+            within=m.y, ordered=True)
         # All technologies with r_area constraints
-        m.y_r_area = po.Set(initialize=self._sets['y_r_area'], within=m.y_all,
+        m.y_r_area = po.Set(initialize=self._sets['y_r_area'], within=m.y,
             ordered=True)
         # Supply+ technologies that allow secondary resource
-        m.y_sp_r2 = po.Set(initialize=self._sets['y_sp_r2'], within=m.y_all),
+        m.y_sp_r2 = po.Set(initialize=self._sets['y_sp_r2'], within=m.y,
             ordered=True)
         # Conversion+ technologies that allow secondary carrier_out
-        m.y_cp_2out = po.Set(initialize=self._sets['y_cp_2out'], within=m.y_all),
+        m.y_cp_2out = po.Set(initialize=self._sets['y_cp_2out'], within=m.y,
             ordered=True)
         # Conversion+ technologies that allow tertiary carrier_out
-        m.y_cp_3out = po.Set(initialize=self._sets['y_cp_3out'], within=m.y_all),
+        m.y_cp_3out = po.Set(initialize=self._sets['y_cp_3out'], within=m.y,
             ordered=True)
         # Conversion+ technologies that allow secondary carrier_in
-        m.y_cp_2in = po.Set(initialize=self._sets['y_cp_2in'], within=m.y_all),
+        m.y_cp_2in = po.Set(initialize=self._sets['y_cp_2in'], within=m.y,
             ordered=True)
         # Conversion+ technologies that allow tertiary carrier_in
-        m.y_cp_3in = po.Set(initialize=self._sets['y_cp_3in'], within=m.y_all),
+        m.y_cp_3in = po.Set(initialize=self._sets['y_cp_3in'], within=m.y,
             ordered=True)
 
         ##TIMESERIES vars
@@ -1233,7 +1246,7 @@ class Model(BaseModel):
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
-        m.s_init = po.Param(m.y_pc, m.x, initialize=s_init_initializer,
+        m.s_init = po.Param(m.y_store, m.x, initialize=s_init_initializer,
                             mutable=True)
 
         #
@@ -1507,14 +1520,14 @@ class Model(BaseModel):
         return c.fillna(0)
 
     def get_node_variables(self):
-        detail = ['s', 'rs']
+        detail = ['s', 'r']
         p = xr.Dataset({v: self.get_var(v) for v in detail})
         try:
-            p['rbs'] = self.get_var('rbs')
+            p['r2'] = self.get_var('r2')
         except exceptions.ModelError:
-            # `rbs` doesn't exist in the model or exists without data
-            p['rbs'] = p['rs'].copy()  # get same dimensions
-            p['rbs'].loc[:] = 0
+            # `r2` doesn't exist in the model or exists without data
+            p['r2'] = p['r'].copy()  # get same dimensions
+            p['r2'].loc[:] = 0
         p['e'] = self.get_c_sum()
         return p
 
@@ -1670,8 +1683,7 @@ class Model(BaseModel):
         df.loc[:, 'type'] = df.index.map(lambda y: self.get_parent(y))
         df.loc[:, 'name'] = df.index.map(lambda y: self.get_name(y))
         df.loc[:, 'carrier'] = df.index.map(lambda y: self.get_carrier(y))
-        get_src_c = lambda y: self.get_source_carrier(y)
-        df.loc[:, 'source_carrier'] = df.index.map(get_src_c)
+        df.loc[:, 'carrier_in'] = df.index.map(lambda y: self.get_carrier(y, direction='in'))
         df.loc[:, 'stack_weight'] = df.index.map(lambda y: self.get_weight(y))
         df.loc[:, 'color'] = df.index.map(lambda y: self.get_color(y))
         return df

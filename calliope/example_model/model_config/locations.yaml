@@ -13,7 +13,7 @@ locations:
                     r_scale_to_peak: -40000
             ccgt:
                 constraints:
-                    e_cap.max: 30000
+                    e_cap.max: 31000 # increased to ensure no unmet_demand in first timestep
 
     r2:
         techs: ['demand_power', 'unmet_demand_power']

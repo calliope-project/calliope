@@ -31,9 +31,9 @@ techs:
         carrier_in: false # Defaults to false, allows technologies to define primary carrier(s) to consume
         carrier_in_2: false # Defaults to false, allows technologies to define secondary carrier(s) to consume
         carrier_in_3: false # Defaults to false, allows technologies to define tertiary carrier(s) to consume
-        carrier_out: false # Defaults to false, allows conversion technologies to define a carrier to produce
-        carrier_out_2: false # Defaults to false, allows conversion technologies to define a carrier to produce
-        carrier_out_3: false # Defaults to false, allows conversion technologies to define a carrier to produce
+        carrier_out: false # Defaults to false, allows conversion technologies to define primary carrier(s) to produce
+        carrier_out_2: false # Defaults to false, allows conversion technologies to define secondary carrier(s) to produce
+        carrier_out_3: false # Defaults to false, allows conversion technologies to define tertiary carrier(s) to produce
         group: false
         x_map: null
         constraints:
@@ -66,9 +66,9 @@ techs:
             s_cap.min: 0  # Minimum storage capacity (kWh)
             s_cap.max: 0  # Maximum storage capacity (kWh)
             s_cap.equals: false  # Specific storage capacity (kWh)
-            c_rate: 0 # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
+            c_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
             # use_s_time: false  # Use full load hours for storage sizing? (set to ``true`` or ``false``)
-            # s_time.max: 0  # Max storage time (full load hours). Only has an effect if ``use_s_time`` is set to ``true``
+            s_time.max: 0  # Max storage time (full load hours). Only has an effect if ``use_s_time`` is set to ``true``
             s_loss: 0  # Storage loss rate (per hour)
             e_prod: true  # Allow this technology to supply energy to the carrier
             e_con: false  # Allow this technology to consume energy from the carrier

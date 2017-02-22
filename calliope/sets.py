@@ -30,6 +30,10 @@ Main sets & sub-sets:
     m.y_transmission: all transmission technologies
     m.y_unmet: dummy supply technologies to log
 
+    m.x_trans: all transmission locations
+    m.x_r: all locations which act as system sources/sinks
+    m.x_store: all locations in which storage is allowed
+
 Shared subsets:
     m.y_finite_r: shared between y_demand, y_supply, and y_supply_plus. Contains:
         m.y_sd_finite_r
@@ -39,13 +43,13 @@ Shared subsets:
         m.y_sp_r_area
 
 Meta-sets:
-    m.y_all: all technologies, includes:
+    m.y: all technologies, includes:
         m.y_demand
         m.y_supply
         m.y_storage
         m.y_supply_plus
-        m.y_conv
-        m.y_conv_plus
+        m.y_conversion
+        m.y_conversion_plus
         m.y_transmission
     m.y_sd: all basic supply & demand technologies, includes:
         m.y_demand
@@ -53,6 +57,11 @@ Meta-sets:
     m.y_store: all technologies that have storage capabilities, includes:
         m.y_storage
         m.y_supply_plus
+
+    m.x: all locations, includes:
+        m.x_trans
+        m.x_r
+        m.x_store
 
 
 """
@@ -64,6 +73,9 @@ from . import transmission
 
 
 def init_set_y(model, _x):
+    """
+    Initialise sets and subsets of y
+    """
 
     # Subset of transmission technologies, if any defined
     # Used to initialize transmission techs further below
@@ -89,7 +101,7 @@ def init_set_y(model, _x):
                     raise e('Location `{}` '
                             'uses undefined tech `{}`.'.format(k, y))
         elif [k in y for y in _y_trans]:
-            # This location is simply a transmission
+            # This location is simply a transmission node
             _x_trans.add(k)
         else:
             e = exceptions.ModelError
@@ -99,6 +111,7 @@ def init_set_y(model, _x):
                     'least one technology per region or link '
                     'to other regions.')
     _y = list(_y)
+    _x_trans = list(_x_trans)
 
     # Potentially subset _y
     if model.config_run.get_key('subset_y', default=False):
@@ -111,7 +124,7 @@ def init_set_y(model, _x):
     _y_supply = [y for y in _y if model.ischild(y, of='supply')]
 
     # Subset of supply_plus technologies
-    _y_supply_plus = [y for y in _y if model.ischild(y, of='conversion')]
+    _y_supply_plus = [y for y in _y if model.ischild(y, of='supply_plus')]
 
     # Subset of storage technologies
     _y_storage = [y for y in _y if model.ischild(y, of='storage')]
@@ -126,11 +139,12 @@ def init_set_y(model, _x):
     _y_unmet = [y for y in _y if model.ischild(y, of='unmet_demand')]
 
     # Subset of basic supply & demand technologies
-    _y_sd = [y for y in np.concatenate((_y_supply,_y_demand))]
+    _y_sd = _y_supply + _y_demand + _y_unmet
 
     # Subset of storage technologies
     _y_store = [y for y in np.concatenate((_y_storage,_y_supply_plus)) if
                 any([model.get_option(y + '.constraints.s_cap.max', x=x) +
+                     model.get_option(y + '.constraints.s_time.max', x=x) +
                      model.get_option(y + '.constraints.s_cap.equals', x=x) +
                      model.get_option(y + '.constraints.c_rate', x=x)
                      for x in _x])]
@@ -147,7 +161,7 @@ def init_set_y(model, _x):
                          model.get_option(y + '.constraints.r_area_per_e_cap', x=x)
                          for x in _x])]
 
-    _y_r_area = np.concatenate((_y_sd_r_area, _y_sp_r_area))
+    _y_r_area = _y_sd_r_area + _y_sp_r_area
 
     _y_sp_r2 = [y for y in _y_supply_plus if
                any([model.get_option(y + '.constraints.allow_r2', x=x)
@@ -162,7 +176,7 @@ def init_set_y(model, _x):
     _y_cp_3in = [y for y in _y_conversion_plus
                  if model.get_option(y + '.carrier_in_3')]
     sets = {
-        'y_all': _y,
+        'y': _y,
         'y_demand': _y_demand,
         'y_supply': _y_supply,
         'y_supply_plus': _y_supply_plus,
@@ -180,16 +194,64 @@ def init_set_y(model, _x):
         'y_cp_3out': _y_cp_3out,
         'y_cp_2in': _y_cp_2in,
         'y_cp_3in': _y_cp_3in,
-        'y_trans': _y_trans
-        'x_trans': _x_trans
+        'y_transmission': _y_trans,
+        'techs_transmission': transmission_techs,
+        'x_transmission': _x_trans
     }
 
     return sets
 
+def init_set_x(model):
+    """
+    Add subsets of x. x_transmission is defined in init_set_y.
+    """
+    _x_r = [x for x in model._sets['x'] if
+            any([model.get_option(y + '.constraints.r', x=x) for y in model._sets['y']])]
+    _x_store = [x for x in model._sets['x'] if
+                any([model.get_option(y + '.constraints.s_cap.max', x=x) +
+                     model.get_option(y + '.constraints.s_time.max', x=x) +
+                     model.get_option(y + '.constraints.s_cap.equals', x=x) +
+                     model.get_option(y + '.constraints.c_rate', x=x)
+                     for y in model._sets['y_store']])]
+
+    return {
+        'x_r': _x_r,
+        'x_store': _x_store
+    }
+
+def init_set_c(model):
+    """
+    Add all energy carriers to the set `c`.
+    """
+    _c = set()
+    sets = model._sets
+    for y in sets['y']:  # Only add carriers for allowed technologies
+        if y in sets['y_supply'] or y in sets['y_supply_plus']:
+            _c.update([model.get_option(y + '.carrier',
+                                default=y + '.carrier_out')])
+        if y in sets['y_demand']:
+            _c.update([model.get_option(y + '.carrier',
+                                default=y + '.carrier_in')])
+        if y in sets['y_transmission'] or y in sets['y_storage']:
+            _c.update([model.get_option(y + '.carrier')])
+        if y in sets['y_conversion'] or y in sets['y_conversion_plus']:
+            _c.update([model.get_option(y + '.carrier_in')])
+            _c.update([model.get_option(y + '.carrier_out')])
+        if y in sets['y_cp_2out']:
+            _c.update([model.get_option(y + '.carrier_out_2')])
+        if y in sets['y_cp_3out']:
+            _c.update([model.get_option(y + '.carrier_out_3')])
+        if y in sets['y_cp_2in']:
+            _c.update([model.get_option(y + '.carrier_in_2')])
+        if y in sets['y_cp_3in']:
+            _c.update([model.get_option(y + '.carrier_in_3')])
+    return list(_c)
+
+
 
 def init_y_trans(model):
     # Add transmission technologies to y, if any defined
-    _y_trans = model._sets['y_trans']
+    _y_trans = model._sets['y_transmission']
 
     if _y_trans:
         model._sets['y'].extend(_y_trans)
