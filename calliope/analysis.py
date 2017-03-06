@@ -47,7 +47,8 @@ def plot_carrier_production(solution, carrier='power', subset=dict(),
 
 
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
-                    types=['supply', 'conversion', 'storage', 'unmet_demand'],
+                    types=['supply', 'supply_plus', 'conversion',
+                           'conversion_plus', 'storage', 'unmet_demand'],
                     colormap=None, ticks=None,
                     resample_options=None, resample_func=None,
                     add_legend=True, ax=None):
@@ -106,7 +107,8 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     if resample_options and resample_func:
         plot_df = getattr(plot_df.resample(**resample_options), resample_func)()
     # Get tech stack and names
-    df = solution['metadata'].to_pandas().query('carrier == "{}"'.format(carrier))
+    df = solution['metadata'].to_pandas().query('carrier_in == "{}" or carrier_out'
+                                                ' == "{}"'.format(carrier, carrier))
     query_string = au._get_query_string(types)
     stacked_techs = df.query(query_string).index.tolist()
     # Put stack in order according to stack_weights
@@ -304,13 +306,13 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
     """
     summary = solution.summary.to_pandas()
     meta = solution.metadata.to_pandas()
-    carrier_subset = meta[meta.carrier == carrier].index.tolist()
+    carrier_subset = meta[meta.carrier_out == carrier].index.tolist()
     if count_unmet_demand is False:
         try:
             carrier_subset.remove('unmet_demand_' + carrier)
         except ValueError:  # no unmet demand technology
             pass
-    cost = (solution['costs'].loc[dict(kc=cost_class, y=carrier_subset)]
+    cost = (solution['costs'].loc[dict(k=cost_class, y=carrier_subset)]
                              .to_pandas().sum().sum())
     # Actually, met_demand also includes demand "met" by unmet_demand
     met_demand = summary.at['demand_' + carrier, 'e_con']
@@ -363,7 +365,7 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
     else:
         locations_slice = locations
 
-    cost = solution['costs'].loc[dict(kc=cost_class, x=locations_slice, y=members)]
+    cost = solution['costs'].loc[dict(k=cost_class, x=locations_slice, y=members)]
     c_prod = solution['c_prod'].loc[dict(c=carrier, x=locations_slice, y=members)]
 
     if locations is None:
@@ -498,7 +500,7 @@ def get_domestic_supply_index(solution):
     """
     # TODO: add unit tests
     idx = solution.metadata.query('type == "supply"').index.tolist()
-    dom = (solution.costs.loc[dict(kc='domestic', y=idx)].sum().sum() /
+    dom = (solution.costs.loc[dict(k='domestic', y=idx)].sum().sum() /
            solution['c_prod'].loc[dict(c='power')].sum().sum())
     return dom
 
@@ -589,14 +591,13 @@ class SolutionModel(core.BaseModel):
         cost_con = pd.DataFrame()
         cost_con['e_cap'] = (get_cost('e_cap', y, k)
                              * solution['e_cap'].loc[dict(y=y)])
-        cost_con['r_cap'] = (get_cost('r_cap', y, k)
-                             * solution['r_cap'].loc[dict(y=y)])
-        cost_con['r_area'] = (get_cost('r_area', y, k)
-                              * solution['r_area'].loc[dict(y=y)])
-        cost_con['rb_cap'] = (get_cost('rb_cap', y, k)
-                              * solution['rb_cap'].loc[dict(y=y)])
-        cost_con['s_cap'] = (get_cost('s_cap', y, k)
-                             * solution['s_cap'].loc[dict(y=y)])
+        optional_capacities = ['r_cap', 'r_area', 'r2_cap', 's_cap']
+        for option in optional_capacities:
+            try:
+                cost_con[option] = (get_cost(option, y, k)
+                                    * solution[option].loc[dict(y=y)])
+            except KeyError:
+                cost_con[option] = 0
         cost_con['total'] = cost_con.sum(axis=1)
         cost_con['total_per_e_cap'] = (cost_con['total']
                                        / solution['e_cap'].loc[dict(y=y)])
@@ -616,15 +617,27 @@ class SolutionModel(core.BaseModel):
         costs.
 
         """
+        ## FIXME: Currently doesn't account for time variable constraints/costs
         get_cost = self.get_cost
         get_depreciation = self.get_depreciation
         solution = self.solution
         # Here we want gross production
         production = solution['c_prod'].loc[dict(c=carrier, y=y)]
-        fuel = (solution['rs'].loc[dict(y=y)].sum(dim='t')
-                / self.get_option(y + '.constraints.r_eff'))
-        fuel_rb = (solution['rbs'].loc[dict(y=y)].sum(dim='t')
-                   / self.get_option(y + '.constraints.rb_eff'))
+        supply_techs = solution.groups.loc[:,'members'][
+                    solution.groups.loc[:,'type']=='supply'].to_pandas().values
+        if y in supply_techs:
+            fuel = (solution['e'].loc[dict(y=y)].sum(dim='t')
+                / self.get_option(y + '.constraints.e_eff'))
+        elif getattr(self.solution, 'r', None):
+            fuel = (solution['r'].loc[dict(y=y)].sum(dim='t')
+                    / self.get_option(y + '.constraints.r_eff'))
+        else:
+            fuel = 0
+        if getattr(self.solution, 'r2', None):
+            fuel_r2 = (solution['r2'].loc[dict(y=y)].sum(dim='t')
+                    / self.get_option(y + '.constraints.r2_eff'))
+        else:
+            fuel_r2 = 0
         icf = self.recompute_investment_costs
         cost_con = icf(y, k=k, cost_adjustment=cost_adjustment)['total'].sum()
         cost_op = pd.DataFrame()
@@ -636,7 +649,7 @@ class SolutionModel(core.BaseModel):
                                * (solution['time_res'].to_pandas().sum() / 8760))
         cost_op['om_var'] = get_cost('om_var', y, k) * production
         cost_op['om_fuel'] = get_cost('om_fuel', y, k) * fuel
-        cost_op['om_rb'] = get_cost('om_rb', y, k) * fuel_rb
+        cost_op['om_r2'] = get_cost('om_r2', y, k) * fuel_r2
         cost_op['total'] = cost_op.sum(axis=1)
         return cost_op
 

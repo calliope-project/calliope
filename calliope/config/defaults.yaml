@@ -28,6 +28,7 @@ techs:
     defaults:
         stack_weight: 100
         color: false  # If no color is defined, a random one will be chosen
+        primary_carrier: false # used for setting the primary carrier_out to associate with costs & constraints (if multiple primary carriers are assigned)
         carrier_in: false # Defaults to false, allows technologies to define primary carrier(s) to consume
         carrier_in_2: false # Defaults to false, allows technologies to define secondary carrier(s) to consume
         carrier_in_3: false # Defaults to false, allows technologies to define tertiary carrier(s) to consume
@@ -50,8 +51,6 @@ techs:
             r_cap_equals_e_cap: false  # If true, r_cap is forced to equal e_cap
             r_scale: 1.0  # Scale resource by this value
             r_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
-
-            ## remove these and just have any technology with a secondary resource be a conversion_plus technology?
             allow_r2: false  # Allow secondary resource
             r2_startup_only: false  # Allow secondary resource during startup_time only (only has an effect if ``allow_r2`` is ``true``)
             r2_eff: 1.0  # Secondary resource to/from storage conversion efficiency
@@ -60,21 +59,17 @@ techs:
             r2_cap.equals: 0  # Specific installed secondary resource to storage conversion capacity (kW)
             r2_cap_follow:  false  # Can be set to ``e_cap`` or ``r_cap`` to set ``r2_cap.max`` to the respective value (in which case, any given ``r2_cap.max`` is ignored). ``false`` to disable
             r2_cap_follow_mode: 'max'  # Can be set to `max` or `equals` to specifiy which ``r2_cap`` constraint is specific by the variable given in ``r2_cap_follow``
-            ##
-
             s_init: 0  # Initial storage level (kWh)
             s_cap.min: 0  # Minimum storage capacity (kWh)
             s_cap.max: 0  # Maximum storage capacity (kWh)
             s_cap.equals: false  # Specific storage capacity (kWh)
             c_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
-            # use_s_time: false  # Use full load hours for storage sizing? (set to ``true`` or ``false``)
             s_time.max: 0  # Max storage time (full load hours). Only has an effect if ``use_s_time`` is set to ``true``
             s_loss: 0  # Storage loss rate (per hour)
             e_prod: true  # Allow this technology to supply energy to the carrier
             e_con: false  # Allow this technology to consume energy from the carrier
             p_eff: 1.0  # Plant parasitic efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
             e_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
-            # e_eff_ref: false  # Reference storage to/from carrier efficiency. If set to false, e_eff is used instead. Currently only used when for storage size calculation when ``suse_s_time`` is ``true``.
             e_cap.min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
             e_cap.max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
             e_cap.equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
@@ -82,7 +77,8 @@ techs:
             e_cap.total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
             e_cap_scale: 1.0  # Scale all ``e_cap`` min/max/equals/total_max/total_equals constraints by this value
             e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
-            e_ramping:  false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
+            e_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
+            export_cap: false # Maximum allowed export for a technology, set to ``false`` to disable.
         costs:
             default:  # These default are looked up for any value not defined for a specific cost class
                 s_cap: 0  # Cost of storage capacity (per kWh)
@@ -95,6 +91,7 @@ techs:
                 om_var: 0  # Variable O&M costs (per kWh of ``es_prod``)
                 om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
                 om_r2: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
+                export: 0 # cost for energy exported outside the network
         revenue:
             default:
                 sub_var: 0 # Variable subsidy (per kWh of ``es_prod`` or ``es_con``)
@@ -111,6 +108,8 @@ techs:
         weight: 1.0  # Cost weight in objective function (higher: relatively more expensive)
     supply:
         parent: defaults
+        constraints:
+            r: inf
     supply_plus:
         parent: defaults
     demand:
@@ -136,30 +135,29 @@ techs:
         color: '#666666'
         parent: supply
         constraints:
-            r: inf
             e_cap.max: inf
         costs:
             monetary:
                 om_var: 1.0e+9
-    storage:  # ``r`` is not used but still must be defined as inf
+    storage:
         parent: defaults
         constraints:
-            r: inf
             e_con: true
-    transmission:  # ``r`` is not used but still must be defined as inf
+            r: inf # not used but has to be defined as infinite to avoid issues
+    transmission:
         parent: defaults
         constraints:
-            r: inf
             e_cap.max: inf
             e_con: true
-    conversion:  # ``r`` is not used but still must be defined as inf
+            r: inf # not used but has to be defined as infinite to avoid issues
+    conversion:
         parent: defaults
         constraints:
-            r: inf
             e_con: true
-    conversion_plus:  # ``r`` is not used but still must be defined as inf
+            r: inf # not used but has to be defined as infinite to avoid issues
+    conversion_plus:
         parent: defaults
         constraints:
-            r: inf
             e_con: true
+            r: inf # not used but has to be defined as infinite to avoid issues
 

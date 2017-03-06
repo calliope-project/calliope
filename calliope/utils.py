@@ -450,7 +450,7 @@ def option_getter(config_model):
                     return _get_option(default, fail)
                 # 'ccgt.constraints.s_time' -> 'ccgt', 'constraints.s_time'
                 tech, remainder = opt.split('.', 1)
-                if ':' in tech:
+                if ':' in tech: # transmission
                     parent = tech.split(':')[0]
                 else:
                     # parent = e.g. 'defaults'
@@ -464,7 +464,10 @@ def option_getter(config_model):
                                 'with given default '
                                 '`{}`'.format(option, default))
                     elif default:
-                        result = _get_option(default, fail=True)
+                        if not isinstance(default, str): #allow setting the default directly as anything that isn't a string - could do with being more robust
+                            result = default
+                        else:
+                            result = _get_option(default, fail=True)
                     elif tech == 'defaults':
                         raise e('Reached top of inheritance chain '
                                 'and no default defined for: '

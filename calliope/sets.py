@@ -85,24 +85,31 @@ def init_set_y(model, _x):
         _y_trans = transmission.get_transmission_techs(links)
         transmission_techs = list(set([list(v.keys())[0]
                                   for k, v in links.items()]))
+        _x_trans = set()
+        for link in links.keys():
+            locs = link.split(',')
+            _x_trans.add(locs[0])
+            _x_trans.add(locs[1])
+        _x_trans = list(_x_trans)
     else:
         _y_trans = []
+        _x_trans = []
         transmission_techs = []
 
     _y = set()
-    _x_trans = set()
+    _x = _x.copy()
     for k, v in model.config_model.locations.items():
         if 'techs' in v.keys():
-            for y in v.techs:
-                if y in model.config_model.techs:
-                    _y.add(y)
-                else:
-                    e = exceptions.ModelError
-                    raise e('Location `{}` '
-                            'uses undefined tech `{}`.'.format(k, y))
-        elif [k in y for y in _y_trans]:
-            # This location is simply a transmission node
-            _x_trans.add(k)
+            if set(v.techs).intersection(transmission_techs): # transmission nodes have only tranmission techs in techs list
+                _x.remove(k)
+            else:
+                for y in v.techs:
+                    if y in model.config_model.techs:
+                        _y.add(y)
+                    else:
+                        e = exceptions.ModelError
+                        raise e('Location `{}` '
+                                'uses undefined tech `{}`.'.format(k, y))
         else:
             e = exceptions.ModelError
             raise e('The region `' + k + '` does not allow any '
@@ -111,7 +118,6 @@ def init_set_y(model, _x):
                     'least one technology per region or link '
                     'to other regions.')
     _y = list(_y)
-    _x_trans = list(_x_trans)
 
     # Potentially subset _y
     if model.config_run.get_key('subset_y', default=False):
@@ -175,6 +181,10 @@ def init_set_y(model, _x):
                  if model.get_option(y + '.carrier_in_2')]
     _y_cp_3in = [y for y in _y_conversion_plus
                  if model.get_option(y + '.carrier_in_3')]
+
+    # subset of technologies allowing export
+    _y_export = [y for y in _y
+                 if any([model.get_option(y + '.export', x=x) for x in _x])]
     sets = {
         'y': _y,
         'y_demand': _y_demand,
@@ -196,33 +206,55 @@ def init_set_y(model, _x):
         'y_cp_3in': _y_cp_3in,
         'y_transmission': _y_trans,
         'techs_transmission': transmission_techs,
-        'x_transmission': _x_trans
+        'x_transmission': _x_trans,
+        'y_export': _y_export,
+        'x_transmission_plus': _x
     }
 
     return sets
 
 def init_set_x(model):
     """
-    Add subsets of x. x_transmission is defined in init_set_y.
+    Add subsets of x. x_transmission already set in init_set_y
+    This function has to be run *after* init_set_y to ensure technology sets are
+    already included in model._sets.
     """
+    locations = model.config_model.locations
+    # All locations which interact with the spatial boundary
     _x_r = [x for x in model._sets['x'] if
-            any([model.get_option(y + '.constraints.r', x=x) for y in model._sets['y']])]
+            set(model._sets['y_supply_plus'] +
+            model._sets['y_sd']).intersection(locations[x].techs)]
+    # All locations in which energy is stored
     _x_store = [x for x in model._sets['x'] if
-                any([model.get_option(y + '.constraints.s_cap.max', x=x) +
-                     model.get_option(y + '.constraints.s_time.max', x=x) +
-                     model.get_option(y + '.constraints.s_cap.equals', x=x) +
-                     model.get_option(y + '.constraints.c_rate', x=x)
-                     for y in model._sets['y_store']])]
+                set(model._sets['y_store']).intersection(locations[x].techs)]
+    # All locations which demand energy
+    _x_demand = [x for x in model._sets['x'] if
+                 set(model._sets['y_demand']).intersection(locations[x].techs)]
+    # All locations in which energy is converted between carriers
+    _x_conversion = [x for x in model._sets['x'] if
+                     set(model._sets['y_conversion_plus'] +
+                     model._sets['y_conversion']).intersection(locations[x].techs)]
+    # All locations in which energy is exported
+    _x_export = [x for x in model._sets['x'] if
+                     set(model._sets['y_export']).intersection(locations[x].techs)]
 
     return {
         'x_r': _x_r,
-        'x_store': _x_store
+        'x_store': _x_store,
+        'x_demand': _x_demand,
+        'x_conversion': _x_conversion,
+        'x_export': _x_export
     }
 
 def init_set_c(model):
     """
     Add all energy carriers to the set `c`.
     """
+    def _check_if_dict(option):
+        if isinstance(option, dict):
+            return option.keys()
+        else:
+            return [option]
     _c = set()
     sets = model._sets
     for y in sets['y']:  # Only add carriers for allowed technologies
@@ -234,17 +266,21 @@ def init_set_c(model):
                                 default=y + '.carrier_in')])
         if y in sets['y_transmission'] or y in sets['y_storage']:
             _c.update([model.get_option(y + '.carrier')])
-        if y in sets['y_conversion'] or y in sets['y_conversion_plus']:
+        if y in sets['y_conversion']:
             _c.update([model.get_option(y + '.carrier_in')])
             _c.update([model.get_option(y + '.carrier_out')])
+        if y in sets['y_conversion_plus']:
+            _c.update(_check_if_dict(model.get_option(y + '.carrier_in')))
+            _c.update(_check_if_dict(model.get_option(y + '.carrier_out')))
         if y in sets['y_cp_2out']:
-            _c.update([model.get_option(y + '.carrier_out_2')])
+            _c.update(_check_if_dict(model.get_option(y + '.carrier_out_2')))
         if y in sets['y_cp_3out']:
-            _c.update([model.get_option(y + '.carrier_out_3')])
+            _c.update(_check_if_dict(model.get_option(y + '.carrier_out_3')))
         if y in sets['y_cp_2in']:
-            _c.update([model.get_option(y + '.carrier_in_2')])
+            _c.update(_check_if_dict(model.get_option(y + '.carrier_in_2')))
         if y in sets['y_cp_3in']:
-            _c.update([model.get_option(y + '.carrier_in_3')])
+            _c.update(_check_if_dict(model.get_option(y + '.carrier_in_3')))
+    _c = _c.difference([True, False])
     return list(_c)
 
 
@@ -262,7 +298,7 @@ def init_y_trans(model):
 
         # Create representation of location-tech links
         tree = transmission.explode_transmission_tree(
-            model.config_model.links, model._sets['x']
+            model.config_model.links, model._sets['x_transmission']
         )
 
         # Populate locations matrix with allowed techs and overrides

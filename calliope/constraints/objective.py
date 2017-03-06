@@ -24,4 +24,4 @@ def objective_cost_minimization(model):
                    for y in m.y)
 
     m.obj = po.Objective(sense=po.minimize, rule=obj_rule)
-    m.obj.domain = po.NonNegativeReals
+    m.obj.domain = po.Reals
