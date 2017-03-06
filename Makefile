@@ -10,9 +10,9 @@ lint :
 
 .PHONY : test
 test :
-    py.test --cov calliope --cov-report term-missing
-    # Run simple profiling job to spot major performance regressions
-    calliope run calliope/example_model/run_profiling.yaml --profile
+	py.test --cov calliope --cov-report term-missing
+	# Run simple profiling job to spot major performance regressions
+	calliope run calliope/example_model/run_profiling.yaml --profile
 
 .PHONY : profile
 profile :
