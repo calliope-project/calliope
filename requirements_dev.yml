@@ -7,3 +7,4 @@ dependencies:
     - snakeviz
     - pip:
         - pyprof2calltree
+        - gprof2dot

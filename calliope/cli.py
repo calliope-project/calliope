@@ -13,6 +13,7 @@ import contextlib
 import datetime
 import logging
 import os
+import pstats
 import shutil
 import sys
 import traceback
@@ -70,7 +71,8 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
                 profile.dump_stats(dump_path)
             else:
                 print('\n\n----PROFILE OUTPUT----\n\n')
-                profile.print_stats()
+                stats = pstats.Stats(profile).sort_stats('cumulative')
+                stats.print_stats(20)  # Print first 20 lines
 
     except Exception as e:
         if debug:
