@@ -274,7 +274,7 @@ class Model(BaseModel):
         #send list of parameters to config_model AttrDict
         self.config_model['timeseries_constraints'] = list(set(timeseries_constraint))
 
-  def check_and_set_export(self):
+    def check_and_set_export(self):
         """
         In instances where a technology is allowing export, e.g. techs.ccgt.export: true
         then change 'true' to the carrier of that technology.
