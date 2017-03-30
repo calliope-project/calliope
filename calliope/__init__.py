@@ -1,6 +1,6 @@
 __title__ = 'Calliope'
 __author__ = 'Stefan Pfenninger'
-__copyright__ = 'Copyright 2013-2016 Stefan Pfenninger'
+__copyright__ = 'Copyright 2013-2017 Stefan Pfenninger'
 
 from ._version import __version__
 

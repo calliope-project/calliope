@@ -78,7 +78,6 @@ class TestModel:
 
     def test_model_invalid_r_cap(self):
         override = """
-
             override.techs.csp.costs.monetary.r_cap: -5
         """
         with pytest.raises(calliope.exceptions.OptionNotSetError):

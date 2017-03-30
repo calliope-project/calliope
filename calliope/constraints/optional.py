@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 optional.py
@@ -9,7 +9,7 @@ Optionally loaded constraints.
 
 """
 
-import pyomo.core as po
+import pyomo.core as po  # pylint: disable=import-error
 
 
 def ramping_rate(model):
@@ -151,3 +151,57 @@ def group_fraction(model):
     grp = m.demand_power_peak_group
     m.c_group_fraction_demand_power_peak = \
         po.Constraint(m.c, grp, rule=c_group_fraction_demand_power_peak_rule)
+
+def max_r_area_per_loc(model):
+    """
+    r_area of all technologies requiring physical space cannot exceed the
+    available area of a location. Available area defined for parent locations
+    (in which there are locations defined as being 'within' it) will set the
+    available area limit for the sum of all the family (parent + all desecendants).
+
+    To define, assign a value to `available_area` for a given location, e.g.
+    ``
+    locations:
+        r1:
+            techs: ['csp']
+            available_area: 100000
+    ``
+    To avoid including descendants in area limitation, `ignore_descendants`
+    can be specified for the location, in the same way as `available_area`
+    """
+    m = model.m
+    locations = model._locations
+
+
+    def _get_descendants(x):
+        """
+        Returns all locations in the family tree of location x, in one list.
+        """
+        descendants = []
+        children = list(locations[locations._within == x].index)
+        if not children:
+            return []
+        for child in children:
+            descendants += _get_descendants(child)
+        descendants += children
+        return descendants
+
+    def c_available_r_area_rule(m, x):
+        available_area = model.config_model.get_key(
+                            'locations.{}.available_area'.format(x), default=None)
+        if not available_area:
+            return po.Constraint.Skip
+        if model.config_model.get_key(
+            'locations.{}.ignore_descendants'.format(x), default=False):
+            descendants = []
+        else:
+            descendants = _get_descendants(x)
+        all_x = descendants + [x]
+        r_area_sum = sum(m.r_area[y, _x] for y in m.y_def_r for _x in all_x if
+                         model.get_option(y + '.constraints.r_area.max', x=_x)
+                         is not False)
+        # r_area_sum will be ``0`` if either ``m.y_def_r`` or ``all_x`` are empty
+        if not isinstance(r_area_sum, int):
+            return (available_area >= r_area_sum)
+
+    m.c_available_r_area = po.Constraint(m.x, rule=c_available_r_area_rule)

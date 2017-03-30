@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 sets.py
@@ -136,6 +136,7 @@ def init_set_y(model, _x):
     _y_storage = [y for y in _y if model.ischild(y, of='storage')]
 
     # Subset of conversion technologies
+
     _y_conversion = [y for y in _y if model.ischild(y, of='conversion')]
 
     # Subset of conversion+ technologies
@@ -160,7 +161,6 @@ def init_set_y(model, _x):
                          model.get_option(y + '.constraints.r_area.equals', x=x) +
                          model.get_option(y + '.constraints.r_area_per_e_cap', x=x)
                          for x in _x])]
-
     _y_sp_r_area = [y for y in _y_supply_plus if
                     any([model.get_option(y + '.constraints.r_area.max', x=x) +
                          model.get_option(y + '.constraints.r_area.equals', x=x) +
@@ -210,6 +210,7 @@ def init_set_y(model, _x):
         'y_export': _y_export,
         'x_transmission_plus': _x
     }
+
 
     return sets
 

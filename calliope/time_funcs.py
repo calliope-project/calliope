@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 time_funcs.py
@@ -19,7 +19,7 @@ from . import utils
 from . import time_clustering
 
 
-def normalize(data):
+def normalized_copy(data):
     """
     Return a copy of data, with the absolute taken and normalized to 0-1.
 
@@ -60,7 +60,7 @@ def _combine_datasets(data0, data1):
     return data_new
 
 
-def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
+def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kwargs):
     """
     Apply the given clustering function to the given data.
 
@@ -72,7 +72,10 @@ def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
         Name of clustering function.
     how : str
         How to map clusters to data. 'mean' or 'closest'.
-    **args : dict
+    normalize : bool, optional
+        If True (default), data is normalized before clustering is applied,
+        using :func:`~calliope.time_funcs.normalized_copy`.
+    **kwargs : optional
         Arguments passed to clustering_func.
 
     Returns
@@ -86,7 +89,10 @@ def apply_clustering(data, timesteps, clustering_func, how, **kwargs):
     else:
         data_to_cluster = data.loc[{'t': timesteps}]
 
-    data_normalized = normalize(data_to_cluster)
+    if normalize:
+        data_normalized = normalized_copy(data_to_cluster)
+    else:
+        data_normalized = data_to_cluster
 
     # Get function from `clustering_func` string
     func = utils.plugin_load(clustering_func, builtin_module='time_clustering')

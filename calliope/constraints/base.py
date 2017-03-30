@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 base_planning.py
@@ -9,7 +9,7 @@ Basic model constraints.
 
 """
 
-import pyomo.core as po
+import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 import xarray as xr
 
@@ -34,7 +34,7 @@ def get_constraint_param(model, param_string, y, x, t):
     else:
         return model.get_option(y + '.constraints.' + param_string, x=x)
 
-def get_cost_param(model, cost, k, y, x, t, cost_type='cost'):
+def get_cost_param(model, cost, k, y, x, t):
     """
     Function to get values for constraints which can optionally be
     loaded from file (so may have time dependency).
@@ -78,9 +78,6 @@ def generate_variables(model):
     * cost_op_var: variable operation costs
     * cost_op_fuel: primary resource fuel costs
     * cost_op_r2: secondary resource fuel costs
-    * revenue_var: variable revenue (operation + fuel)
-    * revenue_fixed: fixed revenue
-    * revenue: total revenue
 
     """
 
@@ -101,13 +98,12 @@ def generate_variables(model):
     m.c_con = po.Var(m.c, m.y, m.x, m.t, within=po.NegativeReals)
     m.export = po.Var(m.y_export, m.x_export, m.t, within=po.NonNegativeReals)
 
-    # Costs/revenue
+    # Costs
     m.cost_var = po.Var(m.y, m.x, m.t, m.k, within=po.Reals)
     m.cost_fixed = po.Var(m.y, m.x, m.k, within=po.Reals)
     m.cost = po.Var(m.y, m.x, m.k, within=po.Reals)
 
 def node_resource(model):
-
     m = model.m
 
     # Constraint rules
@@ -161,19 +157,30 @@ def node_resource(model):
 
 
 def node_energy_balance(model):
-
     m = model.m
     d = model.data
     time_res = model.data['_time_res'].to_series()
 
     def get_e_eff_per_distance(model, y, x):
-        try:
-            e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
-            per_distance = model.get_option(y + '.per_distance')
-            distance = model.get_option(y + '.distance')
-            return 1 - (e_loss * (distance / per_distance))
-        except exceptions.OptionNotSetError:
+        e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
+        per_distance = model.get_option(y + '.per_distance')
+        tech, x2 = y.split(':')
+        link = model.config_model.get_key('links.'+ x + ',' + x2,
+            default=model.config_model['links'].get(x2 + ',' + x))
+        # link = None if no link exists
+        if not link:
             return 1.0
+        try:
+            distance = link.get_key(tech + '.distance')
+        except KeyError:
+            if e_loss > 0:
+                e = exceptions.OptionNotSetError
+                raise e('Distance must be defined for link: {} '
+                        'and transmission tech: {}, as e_loss per distance '
+                        'is defined'.format(x + ',' + x2, tech))
+            else:
+                return 1.0
+        return 1 - (e_loss * (distance / per_distance))
 
     def get_conversion_out(c_1, c_2, m, y, x, t):
         if isinstance(c_1, dict):
@@ -260,7 +267,6 @@ def node_energy_balance(model):
         e_eff = get_constraint_param(model, 'e_eff', y, x, t)
         p_eff = model.get_option(y + '.constraints.p_eff', x=x)
         total_eff = e_eff * p_eff
-
         # TODO once Pyomo supports it,
         # let this update conditionally on param update!
         if po.value(total_eff) == 0:
@@ -268,11 +274,15 @@ def node_energy_balance(model):
         else:
             c_prod = (sum(m.c_prod[c, y, x, t] for c in m.c)) / total_eff
 
-        # If this tech is in the set of techs allowing rb, include it
+        # If this tech is in the set of techs allowing r2, include it
         if y in m.y_sp_r2:
             r2 = m.r2[y, x, t]
         else:
             r2 = 0
+
+        # If this tech allows export outside the system, include it
+        export = m.export[y, x, t] / e_eff \
+            if model.get_option(y + '.export', x=x) else 0
 
         # A) Case where no storage allowed
         if y not in m.y_store or x not in m.x_store:
@@ -540,6 +550,7 @@ def node_constraints_operational(model):
         """
         return m.r[y, x, t] <= time_res.at[t] * m.r_cap[y, x]
 
+
     def c_prod_max_rule(m, c, y, x, t):
         """
         Set maximum carrier production. All technologies.
@@ -583,6 +594,7 @@ def node_constraints_operational(model):
         else:
             return po.Constraint.Skip
 
+
     def c_con_max_rule(m, c, y, x, t):
         """
         Set maximum carrier consumption. All technologies.
@@ -608,6 +620,7 @@ def node_constraints_operational(model):
         """
         return m.s[y, x, t] <= m.s_cap[y, x]
 
+
     def r2_max_rule(m, y, x, t):
         """
         Set maximum secondary resource supply. Supply_plus techs only.
@@ -626,6 +639,7 @@ def node_constraints_operational(model):
         if get_constraint_param(model, 'export_cap', y, x, t):
             return (m.export[y, x, t] <=
                     get_constraint_param(model, 'export_cap', y, x, t))
+
         else:
             return po.Constraint.Skip
 
@@ -672,7 +686,7 @@ def node_costs(model):
 
     cost_getter = utils.cost_getter(model.get_option)
     depreciation_getter = utils.depreciation_getter(model.get_option)
-    cost_per_distance_getter = utils.cost_per_distance_getter(model.get_option)
+    cost_per_distance_getter = utils.cost_per_distance_getter(model.config_model)
 
     @utils.memoize
     def _depreciation_rate(y, k):
@@ -692,7 +706,6 @@ def node_costs(model):
         Returns cost if bounds are set, raises error if unset
         """
         e = exceptions.OptionNotSetError
-
         if y in m.y_transmission:
             # Divided by 2 for transmission techs because construction costs
             # are counted at both ends
@@ -702,17 +715,20 @@ def node_costs(model):
             unit_cost = _cost(cost, y, k, x)
 
         # Search the Pyomo constraint for this technology and location, see if it's set
+
         if (y, x) in getattr(m, 'c_' + cost).keys() or unit_cost >= 0:
             return unit_cost * getattr(m, cost)[y, x]
         elif unit_cost < 0:
             raise e(cost + '.max must be defined for {}:{} '
                     'as cost is negative'.format(y, x))
 
+
     def cost_fixed_rule(m, y, x, k):
         if y in m.y_store and x in m.x_store:
             cost_s_cap = _check_and_set('s_cap', y, x, k)
         else:
             cost_s_cap = 0
+
 
         if y in m.y_sp_finite_r and x in m.x_r:
             cost_r_cap = _check_and_set('r_cap', y, x, k)
@@ -807,46 +823,10 @@ def node_costs(model):
             sum(m.cost_var[y, x, t, k] for t in m.t)
         )
 
-    def revenue_fixed_rule(m, y, x, k):
-        revenue = (sum(time_res * weights) / 8760 *
-            (_revenue('sub_cap', y, k, x)
-            * _depreciation_rate(y, k)
-            + _revenue('sub_annual', y, k, x)))
-        if y in m.y_demand and revenue > 0:
-            e = exceptions.ModelError
-            raise e('Cannot receive fixed revenue at a demand node, i.e. '
-                    '{}'.format(y))
-        else:
-            return (m.revenue_fixed[y, x, k] ==
-             revenue * m.e_cap[y, x])
-
-    def revenue_var_rule(m, y, x, t, k):
-        sub_var = get_cost_param(model, 'sub_var', k, y, x, t,
-                                 cost_type='revenue')
-        if y in m.y_demand:
-            carrier = model.get_option(y + '.carrier', default=y + '.carrier_in')
-            return (m.revenue_var[y, x, t, k] ==
-                sub_var * weights.loc[t]
-                * -m.c_con[carrier, y, x, t])
-        else:
-            carrier = model.get_option(y + '.carrier', default=y + '.carrier_out')
-            return (m.revenue_var[y, x, t, k] ==
-                sub_var * weights.loc[t]
-                * m.c_prod[carrier, y, x, t])
-
-    def c_revenue_rule(m, y, x, k):
-        return (m.revenue[y, x, k] == m.revenue_fixed[y, x, k] +
-            sum(m.revenue_var[y, x, t, k] for t in m.t))
-
     # Constraints
     m.c_cost_fixed = po.Constraint(m.y, m.x, m.kc, rule=cost_fixed_rule)
     m.c_cost_var = po.Constraint(m.y, m.x, m.t, m.kc, rule=cost_var_rule)
     m.c_cost = po.Constraint(m.y, m.x, m.kc, rule=cost_rule)
-
-    m.c_revenue_fixed = po.Constraint(m.y, m.x, m.kr, rule=revenue_fixed_rule)
-    m.c_revenue_var = po.Constraint(m.y, m.x, m.t, m.kr, rule=revenue_var_rule)
-    m.c_revenue = po.Constraint(m.y, m.x, m.kr, rule=c_revenue_rule)
-
 
 def model_constraints(model):
     m = model.m

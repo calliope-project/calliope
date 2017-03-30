@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2016 Stefan Pfenninger.
+Copyright (C) 2013-2017 Stefan Pfenninger.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 cli.py
@@ -13,6 +13,7 @@ import contextlib
 import datetime
 import logging
 import os
+import pstats
 import shutil
 import sys
 import traceback
@@ -70,7 +71,8 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
                 profile.dump_stats(dump_path)
             else:
                 print('\n\n----PROFILE OUTPUT----\n\n')
-                profile.print_stats()
+                stats = pstats.Stats(profile).sort_stats('cumulative')
+                stats.print_stats(20)  # Print first 20 lines
 
     except Exception as e:
         if debug:
@@ -101,15 +103,20 @@ def print_end_time(start_time, msg='complete'):
           'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
 
-def print_debug_startup(debug):
-    if debug:
-        print('Version {}'.format(_version.__version__))
+def _get_version():
+    return 'Version {}'.format(_version.__version__)
 
 
-@click.group()
-def cli():
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.option('--version', is_flag=True, default=False,
+              help='Display version.')
+def cli(ctx, version):
     """Calliope: a multi-scale energy systems (MUSES) modeling framework"""
-    pass
+    if ctx.invoked_subcommand is None and not version:
+        print(ctx.get_help())
+    if version:
+        print(_get_version())
 
 
 @cli.command(short_help='create model')
@@ -121,7 +128,8 @@ def new(path, debug):
     The directory must not yet exist, and intermediate directories will
     be created automatically.
     """
-    print_debug_startup(debug)
+    if debug:
+        print(_get_version())
     # Copies the included example model
     example_model = os.path.join(os.path.dirname(__file__), 'example_model')
     click.echo('Creating new model in: {}'.format(path))
@@ -136,7 +144,8 @@ def new(path, debug):
 @_profile_filename
 def run(run_config, debug, pdb, profile, profile_filename):
     """Execute the given RUN_CONFIG run configuration file."""
-    print_debug_startup(debug)
+    if debug:
+        print(_get_version())
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
@@ -175,7 +184,8 @@ def generate(run_config, path, silent, debug, pdb):
     directory that must not yet exist (PATH defaults to 'runs'
     if not specified).
     """
-    print_debug_startup(debug)
+    if debug:
+        print(_get_version())
     logging.captureWarnings(True)
     with format_exceptions(debug, pdb):
         parallelizer = Parallelizer(target_dir=path, config_run=run_config)

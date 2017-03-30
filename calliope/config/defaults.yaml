@@ -37,6 +37,7 @@ techs:
         carrier_out_3: false # Defaults to false, allows conversion technologies to define tertiary carrier(s) to produce
         group: false
         x_map: null
+        export: null
         constraints:
             force_r: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
             r_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
@@ -91,15 +92,12 @@ techs:
                 om_var: 0  # Variable O&M costs (per kWh of ``es_prod``)
                 om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
                 om_r2: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
-                export: 0 # cost for energy exported outside the network
-        revenue:
-            default:
-                sub_var: 0 # Variable subsidy (per kWh of ``es_prod`` or ``es_con``)
-                sub_cap: 0 # Fixed subsidy (per kW gross) ##e_cap.max must be defined (and not infinite) if using this with demand
-                sub_annual: 0 # Annual subsidy (per kW of ``e_cap``) ##e_cap.max must be defined (and not infinite) if using this with demand
+                export: 0 # Cost of exporting excess energy (per kWh of ``export``). Usually used in the negative sense, as a subsidy.
         costs_per_distance:
             default:
-                e_cap: 0
+                e_cap: 0 # cost per unit distance per unit e_cap
+        constraints_per_distance:
+            e_loss: 0 # Energy loss during transmission, per unit distance. Set as value between 0 (no loss) and 1 (all energy lost)
         depreciation:
             plant_life: 25  # Lifetime of a plant (years)
             interest:
@@ -146,6 +144,7 @@ techs:
             r: inf # not used but has to be defined as infinite to avoid issues
     transmission:
         parent: defaults
+        per_distance: 1
         constraints:
             e_cap.max: inf
             e_con: true
