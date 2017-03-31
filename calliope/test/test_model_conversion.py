@@ -4,6 +4,7 @@ from calliope.utils import AttrDict
 from . import common
 from .common import assert_almost_equal, solver, solver_io
 
+
 def create_and_run_model(override=""):
     locations = """
         locations:
@@ -46,13 +47,14 @@ def create_and_run_model(override=""):
     model.run()
     return model
 
+
 class TestModel:
     def test_model_conversion(self):
         model = create_and_run_model()
         assert str(model.results.solver.termination_condition) == 'optimal'
 
     def test_model_conversion_plus(self):
-        override="""
+        override = """
             override.techs.demand_low_T.constraints.r: -5
             override.techs.demand_V_low_T.constraints.r: -5
         """

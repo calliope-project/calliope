@@ -4,6 +4,7 @@ from calliope.utils import AttrDict
 from . import common
 from .common import assert_almost_equal, solver, solver_io
 
+
 def create_and_run_model(override=""):
     locations = """
         locations:
@@ -38,9 +39,10 @@ def create_and_run_model(override=""):
     model.run()
     return model
 
+
 class TestModel:
     def test_model_e_cap_max(self):
-        override="""
+        override = """
             override.techs.test_storage.constraints.e_cap.max: 0.6
         """
         model = create_and_run_model(override)
@@ -52,7 +54,7 @@ class TestModel:
                             7.62, tolerance=0.01)
 
     def test_model_c_rate(self):
-        override="""
+        override = """
             override.techs.test_storage.constraints.c_rate: 0.006
         """
         model = create_and_run_model(override)
@@ -64,12 +66,12 @@ class TestModel:
                             7.62, tolerance=0.01)
 
     def test_model_compare_c_rate_e_cap(self):
-        override1="""
+        override1 = """
             override.techs.test_storage.constraints:
                             c_rate: 0.006
                             e_cap.max: 0.6
         """
-        override2="""
+        override2 = """
             override.techs.test_storage.constraints:
                             c_rate: 0.008
                             e_cap.max: 0.6
@@ -85,12 +87,12 @@ class TestModel:
                 sol2.s_cap.loc[dict(y='test_storage')].sum(dim='x'))
 
     def test_model_s_time(self):
-        override1="""
+        override1 = """
             override.techs.test_storage.constraints:
                             s_time.max: 12
                             c_rate: 0.01
         """
-        override2="""
+        override2 = """
             override.techs.test_storage.constraints:
                             s_time.max: 12
                             e_cap.max: 1

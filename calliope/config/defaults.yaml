@@ -62,10 +62,10 @@ techs:
             r2_cap_follow_mode: 'max'  # Can be set to `max` or `equals` to specifiy which ``r2_cap`` constraint is specific by the variable given in ``r2_cap_follow``
             s_init: 0  # Initial storage level (kWh)
             s_cap.min: 0  # Minimum storage capacity (kWh)
-            s_cap.max: 0  # Maximum storage capacity (kWh)
+            s_cap.max: 0  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
             s_cap.equals: false  # Specific storage capacity (kWh)
             c_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
-            s_time.max: 0  # Max storage time (full load hours). Only has an effect if ``use_s_time`` is set to ``true``
+            s_time.max: 0  # Max storage time (full load hours). If both this and s_cap.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
             s_loss: 0  # Storage loss rate (per hour)
             e_prod: true  # Allow this technology to supply energy to the carrier
             e_con: false  # Allow this technology to consume energy from the carrier

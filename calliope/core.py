@@ -181,7 +181,7 @@ class Model(BaseModel):
 
         # Get timeseries constraints/costs
         self.initialize_timeseries()
-        
+
         # For any exporting technology, set 'export' value to carrier_out
         self.check_and_set_export()
 
@@ -237,8 +237,7 @@ class Model(BaseModel):
             override_dict = utils.AttrDict.from_yaml(override_path)
             self.override_model_config(override_dict)
         # 2) Via 'override', which is an AttrDict
-        if ('override' in cr
-                and isinstance(cr.override, utils.AttrDict)):
+        if ('override' in cr and isinstance(cr.override, utils.AttrDict)):
             self.override_model_config(cr.override)
         # Initialize locations
         locs = self.config_model.locations
@@ -256,25 +255,25 @@ class Model(BaseModel):
         # No c_eff due to disagreement with non-timeseries constraint
         # c_e_cap_gross_net_rule.
         allowed_timeseries_constraints = ['r_eff', 'r_scale', 'r2_eff', 's_loss',
-                                          'e_prod', 'e_con','e_eff', 'p_eff',
+                                          'e_prod', 'e_con', 'e_eff', 'p_eff',
                                           'e_cap_min_use', 'e_ramping',
                                           'om_var', 'om_fuel', 'om_r2', 'export']
-        #flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
+        # Flatten the dictionary to get e.g. techs.ccgt.constraints.e_eff as keys
         for k, v in self.config_model.as_dict_flat().items():
             if isinstance(v, str):
-                if v.startswith("file"): #find any refering to a file
-                    params = k.split('.') #split the elements of the key to get constraint/cost type
+                if v.startswith("file"):  # Find any referring to a file
+                    params = k.split('.')  # Split the elements of the key to get constraint/cost type
                     if params[-1] == 'r':
-                        None # 'r' already in the list automatically
-                    elif params[-1] in allowed_timeseries_constraints: #look for e.g. e_eff
+                        None  # 'r' already in the list automatically
+                    elif params[-1] in allowed_timeseries_constraints:  #Look for e.g. e_eff
                         timeseries_constraint.append(params[-1])
                     else:
                         raise Exception("unable to handle loading data from "
                                         "file for '{}'".format(params[-1]))
-        #send list of parameters to config_model AttrDict
+        # Send list of parameters to config_model AttrDict
         self.config_model['timeseries_constraints'] = list(set(timeseries_constraint))
 
-  def check_and_set_export(self):
+    def check_and_set_export(self):
         """
         In instances where a technology is allowing export, e.g. techs.ccgt.export: true
         then change 'true' to the carrier of that technology.
@@ -283,18 +282,21 @@ class Model(BaseModel):
             for x in self._sets['x_export']:
                 export = self.get_option(y + '.export', x=x)
                 if y not in self._sets['y_conversion_plus']:
-                    carrier = self.get_option(y + '.carrier', x=x,
-                                           default=y + '.carrier_out')
+                    carrier = self.get_option(
+                        y + '.carrier', x=x, default=y + '.carrier_out'
+                    )
                     other_carriers = []
                 else:
                     carrier, other_carriers = self.get_cp_carriers(y, x)
-                if export == True:
+                if export is True:
                     self.set_option(y + '.export', carrier, x=x)
                 # any instance where export is not False, but is set to some string value
                 elif export != carrier and export not in other_carriers:
-                    raise exceptions.ModelError('Attempting to export carrier {} '
-                            'from {}:{} when this technology does not produce this '
-                            'carrier',format(export, y, x))
+                    raise exceptions.ModelError(
+                        'Attempting to export carrier {} '.format(export) +
+                        'from {}:{} '.format(y, x) +
+                        'when this technology does not produce this carrier'
+                    )
 
     def initialize_time(self):
         # Carry y_ subset sets over to data for easier data analysis
@@ -338,8 +340,8 @@ class Model(BaseModel):
         # Process function, apply resolution adjustments
         ##
         if 'function' in time_config:
-            func = utils.plugin_load(time_config.function,
-                builtin_module='time_funcs')
+            func = utils.plugin_load(
+                time_config.function, builtin_module='time_funcs')
             func_kwargs = time_config.get('function_options', {})
             self.data = func(data=self.data, timesteps=timesteps, **func_kwargs)
             self._sets['t'] = self.data['t'].to_index()
@@ -420,7 +422,7 @@ class Model(BaseModel):
         seconds = (datetime_index[0] - datetime_index[1]).total_seconds()
         if verify:
             for i in range(len(datetime_index) - 1):
-                assert ((datetime_index[i] - datetime_index[i+1]).total_seconds()
+                assert ((datetime_index[i] - datetime_index[i + 1]).total_seconds()
                         == seconds)
         hours = abs(seconds) / 3600
         return hours
@@ -494,11 +496,12 @@ class Model(BaseModel):
             return y
 
     def get_carrier(self, y, direction, level=None):
-        if level: # either 2 or 3
+        if level:  # Either 2 or 3
             return self.get_option(y + '_'.join('.carrier', direction, str(level)))
         else:
-            return self.get_option(y + '.carrier',
-                            default=y + '.carrier_' + direction)
+            return self.get_option(
+                y + '.carrier', default=y + '.carrier_' + direction
+            )
 
     def get_weight(self, y):
         return self.get_option(y + '.stack_weight')
@@ -566,10 +569,13 @@ class Model(BaseModel):
                 return members
             else:
                 memberset.add(group)
-        if not group in self.parents:
+
+        if group not in self.parents:
             return None
+
         memberset = set()
         _get(self, group, memberset)  # Fills memberset
+
         if in_model:
             memberset = set([y for y in memberset
                              if (y in self._sets['y']
@@ -605,7 +611,7 @@ class Model(BaseModel):
     def get_cp_carriers(self, y, x, direction='out'):
         """
         Find all carriers for conversion_plus technology & return the primary
-        output carrier as string and a;; other output carriers as list of strings
+        output carrier as string and all other output carriers as list of strings
         """
         c = self.get_option(y + '.carrier_{}'.format(direction), x=x)
         primary_carrier = self.get_option(y + '.primary_carrier', x=x)
@@ -696,8 +702,10 @@ class Model(BaseModel):
 
         Returns: bool; Whether the functionality is switched is on (True) or off (False)
         """
-        return any([func_name in i for i in self.config_model.as_dict_flat().keys()
-            if 'default' not in i])
+        return any([
+            func_name in i for i in self.config_model.as_dict_flat().keys()
+            if 'default' not in i
+        ])
 
     def get_time_slice(self):
         if self.config_run.get_key('subset_t', default=False):
@@ -740,13 +748,17 @@ class Model(BaseModel):
         self._sets['c'] = sets_c
 
         # k: cost classes
-        classes_c = [list(self.config_model.techs[k].costs.keys())
-                   for k in self.config_model.techs
-                   if k != 'defaults'  # Prevent 'default' from entering set
-                   if 'costs' in self.config_model.techs[k]]
+        classes_c = [
+            list(self.config_model.techs[k].costs.keys())
+            for k in self.config_model.techs
+            if k != 'defaults'  # Prevent 'default' from entering set
+            if 'costs' in self.config_model.techs[k]
+        ]
         # Flatten list and make sure 'monetary' is in it
-        classes_c = ([i for i in itertools.chain.from_iterable(classes_c)]
-                   + ['monetary'])
+        classes_c = (
+            [i for i in itertools.chain.from_iterable(classes_c)]
+            + ['monetary']
+        )
         # Remove any duplicates by going from list to set and back
         self._sets['k'] = list(set(classes_c))
 
@@ -960,16 +972,18 @@ class Model(BaseModel):
 
         # Parameters that may be defined over (x, y, t)
 
-        ts_constraint_sets = {'y_' + k + '_timeseries': set()
-            for k in self.config_model.timeseries_constraints}
+        ts_constraint_sets = {
+            'y_' + k + '_timeseries': set()
+            for k in self.config_model.timeseries_constraints
+        }
         self._sets = {**self._sets, **ts_constraint_sets}
-    
+
         # Add all instances of finite resource (either timeseries dependant or not)
         self._sets['y_finite_r'] = set()
-      
-        for param in self.config_model.timeseries_constraints: #constraints
+
+        for param in self.config_model.timeseries_constraints:  # Constraints
             param_data = {}
-            if 'om' in param or 'export' in param: # cost constraints
+            if 'om' in param or 'export' in param:  # Cost constraints
                 for y in self._sets['y']:
                     cost_ts = {}
                     for k in self._sets['k']:
@@ -977,8 +991,8 @@ class Model(BaseModel):
                         # potential per-location (per-x) overrides
                         option = self.get_cost(param, y, k)
 
-                        cost_ts[k] = self._read_param_for_tech(param, y, time_res,
-                                                       option, x=None)
+                        cost_ts[k] = self._read_param_for_tech(
+                            param, y, time_res, option, x=None)
                         for x in self._sets['x']:
                             # Check for each x whether it defines an override
                             # that is different from the generic option, and if so,
@@ -986,8 +1000,7 @@ class Model(BaseModel):
                             option_x = self.get_cost(param, y, k, x=x)
                             if option != option_x:
                                 cost_ts[k].loc[:, x] = self._read_param_for_tech(
-                                                            param, y, time_res,
-                                                            option_x, x=x)
+                                    param, y, time_res, option_x, x=x)
 
                         self._validate_param_df(param, y, cost_ts[k])  # Have all `x` been set?
                     # Create
@@ -1000,16 +1013,16 @@ class Model(BaseModel):
                     j = '.'.join([y, 'constraints', param])
                     option = self.get_option(j)
 
-                    constraint_ts = self._read_param_for_tech(param, y,
-                                            time_res, option, x=None)
+                    constraint_ts = self._read_param_for_tech(
+                        param, y, time_res, option, x=None)
                     for x in self._sets['x']:
                         # Check for each x whether it defines an override
                         # that is different from the generic option, and if so,
                         # update the dataframe
                         option_x = self.get_option(j, x=x)
                         if option != option_x:
-                            constraint_ts.loc[:, x] = self._read_param_for_tech(param,
-                                                     y, time_res, option_x, x=x)
+                            constraint_ts.loc[:, x] = self._read_param_for_tech(
+                                param, y, time_res, option_x, x=x)
 
                     self._validate_param_df(param, y, constraint_ts)  # Have all `x` been set?
                     param_data[y] = xr.DataArray(constraint_ts, dims=['t', 'x'])
@@ -1028,8 +1041,9 @@ class Model(BaseModel):
         dataset = dataset.fillna(0)
 
         # initialise an additional set now that we know y_finite_r
-        self._sets['y_sp_finite_r'] = list(self._sets['y_finite_r'].intersection(
-                                                    self._sets['y_supply_plus']))
+        self._sets['y_sp_finite_r'] = list(
+            self._sets['y_finite_r'].intersection(self._sets['y_supply_plus'])
+        )
 
         self.data = dataset
 
@@ -1065,7 +1079,6 @@ class Model(BaseModel):
             logging.error('Error generating constraint' + index_string)
             raise
 
-
     def _param_populator(self, src_data, src_param, levels):
 
         """
@@ -1074,13 +1087,16 @@ class Model(BaseModel):
         """
         getter_data = (src_data[src_param].to_dataframe().reorder_levels(levels)
                                                          .to_dict()[src_param])
+
         def getter_constraint(m, y, x, t):  # pylint: disable=unused-argument
             return getter_data[(y, x, t)]
+
         def getter_cost(m, y, x, t, k):  # pylint: disable=unused-argument
             return getter_data[(y, x, t, k)]
-        if len(src_data[src_param].dims) == 4: # costs
+
+        if len(src_data[src_param].dims) == 4:  # Costs
             return getter_cost
-        else: # all other constraints
+        else:  # All other constraints
             return getter_constraint
 
     def _param_updater(self, src_data, src_param, t_offset=None):
@@ -1088,19 +1104,20 @@ class Model(BaseModel):
         Returns a `getter` function that returns (x, t)-specific
         values for parameters, used in parameter updating
         """
-        if len(src_data[src_param].dims) == 4: # costs
+        if len(src_data[src_param].dims) == 4:  # Costs
             levels = ['y', 'x', 't', 'k']
         else: # all other constraints
             levels = ['y', 'x', 't']
         getter_data = (src_data[src_param].to_dataframe()
                                           .reorder_levels(levels)
                                           .to_dict()[src_param])
+
         def getter(m, i):  # pylint: disable=unused-argument
             # i is the key of the Pyomo Param, which is (y, x, t)
             # for constraints and (y, x, t, k) for costs
             j = list(i)
             if t_offset:
-                j[2] = self.get_t(j[2], t_offset) # change time
+                j[2] = self.get_t(j[2], t_offset)  # Change time
             return getter_data[tuple(j)]
 
         return getter
@@ -1108,14 +1125,12 @@ class Model(BaseModel):
     def update_parameters(self, t_offset):
         d = self.data
 
-
         for param in self.config_model.timeseries_constraints:
             y_set = self._sets['y_' + param + '_timeseries']
             initializer = self._param_updater(d, param, t_offset)
             param_object = getattr(self.m, param + '_param')
             for i in param_object.iterkeys():
                 param_object[i] = initializer(self.m, i)
-
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1169,102 +1184,108 @@ class Model(BaseModel):
             self._set_t_end()
             m.t = po.Set(initialize=d['t'].to_series()[self.t_start:self.t_end].index,
                          ordered=True)
+
         # Carriers
         m.c = po.Set(initialize=self._sets['c'], ordered=True)
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
         # Locations with only transmission technologies defined
-        m.x_transmission = po.Set(initialize=self._sets['x_transmission'], within=m.x,
-            ordered=True)
+        m.x_transmission = po.Set(
+            initialize=self._sets['x_transmission'], within=m.x, ordered=True)
         # Locations which have transmission AND other technologies
-        m.x_transmission_plus = po.Set(initialize=self._sets['x_transmission_plus'], within=m.x,
-            ordered=True)
+        m.x_transmission_plus = po.Set(
+            initialize=self._sets['x_transmission_plus'], within=m.x, ordered=True)
         # Source/sink locations (i.e. have `r` defined)
         m.x_r = po.Set(initialize=self._sets['x_r'], within=m.x, ordered=True)
         # Storage locations
-        m.x_store = po.Set(initialize=self._sets['x_store'], within=m.x,
-            ordered=True)
+        m.x_store = po.Set(
+            initialize=self._sets['x_store'], within=m.x, ordered=True)
         # Deman locations
-        m.x_demand = po.Set(initialize=self._sets['x_demand'], within=m.x,
-            ordered=True)
+        m.x_demand = po.Set(
+            initialize=self._sets['x_demand'], within=m.x, ordered=True)
         # Conversion locations
-        m.x_conversion = po.Set(initialize=self._sets['x_conversion'], within=m.x,
-            ordered=True)
+        m.x_conversion = po.Set(
+            initialize=self._sets['x_conversion'], within=m.x, ordered=True)
         # Export locations
-        m.x_export = po.Set(initialize=self._sets['x_export'], within=m.x,
-            ordered=True)
+        m.x_export = po.Set(
+            initialize=self._sets['x_export'], within=m.x, ordered=True)
         # Cost classes
         m.k = po.Set(initialize=self._sets['k'], ordered=True)
+
         #
         # Technologies and various subsets of technologies
         #
+
         m.y = po.Set(initialize=self._sets['y'], ordered=True)
         # Supply technologies
-        m.y_supply = po.Set(initialize=self._sets['y_supply'], within=m.y,
-            ordered=True)
+        m.y_supply = po.Set(
+            initialize=self._sets['y_supply'], within=m.y, ordered=True)
         # Supply+ technologies
-        m.y_supply_plus = po.Set(initialize=self._sets['y_supply_plus'],
-            within=m.y, ordered=True)
+        m.y_supply_plus = po.Set(
+            initialize=self._sets['y_supply_plus'], within=m.y, ordered=True)
         # Storage only technologies
-        m.y_storage = po.Set(initialize=self._sets['y_storage'], within=m.y,
-            ordered=True)
+        m.y_storage = po.Set(
+            initialize=self._sets['y_storage'], within=m.y, ordered=True)
         # Transmission technologies
-        m.y_transmission = po.Set(initialize=self._sets['y_transmission'], within=m.y,
-            ordered=True)
+        m.y_transmission = po.Set(
+            initialize=self._sets['y_transmission'], within=m.y, ordered=True)
         # Conversion technologies
-        m.y_conversion = po.Set(initialize=self._sets['y_conversion'],
-            within=m.y, ordered=True)
+        m.y_conversion = po.Set(
+            initialize=self._sets['y_conversion'], within=m.y, ordered=True)
         # Conversion+ technologies
-        m.y_conversion_plus = po.Set(initialize=self._sets['y_conversion_plus'],
-            within=m.y, ordered=True)
+        m.y_conversion_plus = po.Set(
+            initialize=self._sets['y_conversion_plus'], within=m.y, ordered=True)
         # Demand sources
-        m.y_demand = po.Set(initialize=self._sets['y_demand'], within=m.y,
-            ordered=True)
+        m.y_demand = po.Set(
+            initialize=self._sets['y_demand'], within=m.y, ordered=True)
         # Technologies to deal with unmet demand
-        m.y_unmet = po.Set(initialize=self._sets['y_unmet'], within=m.y,
-            ordered=True)
+        m.y_unmet = po.Set(
+            initialize=self._sets['y_unmet'], within=m.y, ordered=True)
         # Supply/Demand sources
-        m.y_sd = po.Set(initialize=self._sets['y_sd'], within=m.y,
-            ordered=True)
+        m.y_sd = po.Set(
+            initialize=self._sets['y_sd'], within=m.y, ordered=True)
         # Technologies that contain storage
-        m.y_store = po.Set(initialize=self._sets['y_store'], within=m.y,
-            ordered=True)
+        m.y_store = po.Set(
+            initialize=self._sets['y_store'], within=m.y, ordered=True)
         # Technologies with a finite resource defined (timeseries or otherwise)
-        m.y_finite_r = po.Set(initialize=self._sets['y_finite_r'], within=m.y,
-            ordered=True)
+        m.y_finite_r = po.Set(
+            initialize=self._sets['y_finite_r'], within=m.y, ordered=True)
         # Supply+ technologies with a finite resource defined (timeseries or otherwise)
-        m.y_sp_finite_r = po.Set(initialize=self._sets['y_sp_finite_r'],
-            within=m.y_finite_r, ordered=True)
+        m.y_sp_finite_r = po.Set(
+            initialize=self._sets['y_sp_finite_r'], within=m.y_finite_r,
+            ordered=True)
         # Supply/demand technologies with r_area constraints
-        m.y_sd_r_area = po.Set(initialize=self._sets['y_sd_r_area'],
-            within=m.y, ordered=True)
+        m.y_sd_r_area = po.Set(
+            initialize=self._sets['y_sd_r_area'], within=m.y, ordered=True)
         # Supply+ technologies with r_area constraints
-        m.y_sp_r_area = po.Set(initialize=self._sets['y_sp_r_area'],
-            within=m.y, ordered=True)
+        m.y_sp_r_area = po.Set(
+            initialize=self._sets['y_sp_r_area'], within=m.y, ordered=True)
         # All technologies with r_area constraints
-        m.y_r_area = po.Set(initialize=self._sets['y_r_area'], within=m.y,
-            ordered=True)
+        m.y_r_area = po.Set(
+            initialize=self._sets['y_r_area'], within=m.y, ordered=True)
         # Supply+ technologies that allow secondary resource
-        m.y_sp_r2 = po.Set(initialize=self._sets['y_sp_r2'], within=m.y,
-            ordered=True)
+        m.y_sp_r2 = po.Set(
+            initialize=self._sets['y_sp_r2'], within=m.y, ordered=True)
         # Conversion+ technologies that allow secondary carrier_out
-        m.y_cp_2out = po.Set(initialize=self._sets['y_cp_2out'], within=m.y,
-            ordered=True)
+        m.y_cp_2out = po.Set(
+            initialize=self._sets['y_cp_2out'], within=m.y, ordered=True)
         # Conversion+ technologies that allow tertiary carrier_out
-        m.y_cp_3out = po.Set(initialize=self._sets['y_cp_3out'], within=m.y,
-            ordered=True)
+        m.y_cp_3out = po.Set(
+            initialize=self._sets['y_cp_3out'], within=m.y, ordered=True)
         # Conversion+ technologies that allow secondary carrier_in
-        m.y_cp_2in = po.Set(initialize=self._sets['y_cp_2in'], within=m.y,
-            ordered=True)
+        m.y_cp_2in = po.Set(
+            initialize=self._sets['y_cp_2in'], within=m.y, ordered=True)
         # Conversion+ technologies that allow tertiary carrier_in
-        m.y_cp_3in = po.Set(initialize=self._sets['y_cp_3in'], within=m.y,
-            ordered=True)
+        m.y_cp_3in = po.Set(
+            initialize=self._sets['y_cp_3in'], within=m.y, ordered=True)
+        # Technologies that allow export
+        m.y_export = po.Set(initialize=self._sets['y_export'], within=m.y, ordered=True)
 
-        ##TIMESERIES vars
+        # Timeseries
         for param in self.config_model.timeseries_constraints:
             setattr(m, 'y_' + param + '_timeseries',
-                    po.Set(initialize = self._sets['y_' + param + '_timeseries'],
-                    within=m.y))
+                    po.Set(initialize=self._sets['y_' + param + '_timeseries'],
+                           within=m.y))
 
         #
         # Parameters
@@ -1276,14 +1297,20 @@ class Model(BaseModel):
 
         for param in self.config_model.timeseries_constraints:
             y_set = list(getattr(m, 'y_' + param + '_timeseries'))
-            if len(d[param].dims) == 4: # costs
+            if len(d[param].dims) == 4:  # Costs
                 initializer = self._param_populator(d, param, ['y', 'x', 't', 'k'])
-                setattr(m, param, po.Param(y_set, m.x, m.t, m.k,
-                                           initialize=initializer, mutable=True))
-            else: # all other constraints
+                setattr(
+                    m, param + '_param',
+                    po.Param(y_set, m.x, m.t, m.k,
+                             initialize=initializer, mutable=True)
+                )
+            else:  # All other constraints
                 initializer = self._param_populator(d, param, ['y', 'x', 't'])
-                setattr(m, param, po.Param(y_set, m.x, m.t,
-                                           initialize=initializer, mutable=True))
+                setattr(
+                    m, param + '_param',
+                    po.Param(y_set, m.x, m.t,
+                             initialize=initializer, mutable=True)
+                )
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
@@ -1303,7 +1330,7 @@ class Model(BaseModel):
                   constraints.base.node_constraints_build,
                   constraints.base.node_constraints_operational,
                   constraints.base.node_constraints_transmission,
-                  #constraints.base.node_parasitics,
+                  # constraints.base.node_parasitics,
                   constraints.base.node_costs,
                   constraints.base.model_constraints]
         if self.mode == 'plan':
@@ -1469,41 +1496,41 @@ class Model(BaseModel):
         """
         # Add levelized cost
         self.solution = (self.solution
-                            .merge(self.get_levelized_cost()
-                                       .to_dataset(name='levelized_cost')))
+                             .merge(self.get_levelized_cost()
+                                        .to_dataset(name='levelized_cost')))
         # Add capacity factor
         self.solution = (self.solution
-                            .merge(self.get_capacity_factor()
-                                       .to_dataset(name='capacity_factor')))
+                             .merge(self.get_capacity_factor()
+                                        .to_dataset(name='capacity_factor')))
         # Add metadata
         md = self.get_metadata()
         md.columns.name = 'cols_metadata'
         md.index.name = 'y'
         self.solution = (self.solution.merge(xr.DataArray(md)
-                                              .to_dataset(name='metadata')))
+                                               .to_dataset(name='metadata')))
         # Add summary
         summary = self.get_summary()
         summary.columns.name = 'cols_summary'
         summary.index.name = 'techs'
         self.solution = (self.solution.merge(xr.DataArray(summary)
-                                              .to_dataset(name='summary')))
+                                               .to_dataset(name='summary')))
         # Add groups
         groups = self.get_groups()
         groups.columns.name = 'cols_groups'
         groups.index.name = 'techs'
         self.solution = (self.solution.merge(xr.DataArray(groups)
-                                              .to_dataset(name='groups')))
+                                               .to_dataset(name='groups')))
         # Add shares
         shares = self.get_shares(groups)
         shares.columns.name = 'cols_shares'
         shares.index.name = 'techs'
         self.solution = (self.solution.merge(xr.DataArray(shares)
-                                              .to_dataset(name='shares')))
+                                               .to_dataset(name='shares')))
         # Add time resolution
         self.solution = (self.solution
                              .merge(self.data['_time_res']
-                                       .copy(deep=True)
-                                       .to_dataset(name='time_res')))
+                                        .copy(deep=True)
+                                        .to_dataset(name='time_res')))
         # Add model and run configuration
         self.solution.attrs['config_run'] = self.config_run
         self.solution.attrs['config_model'] = self.config_model
@@ -1575,11 +1602,10 @@ class Model(BaseModel):
         # Create a DataFrame of p_eff to combine with the decision variable e_cap
         # to get e_cap_net
         m = self.m
-        p_eff = pd.DataFrame.from_dict({(y,x):
-                                        self.get_option(y+'.constraints.p_eff', x=x)
-                                        for y in m.y for x in m.x},
-                                       orient = 'index')
-        p_eff.index = pd.MultiIndex.from_tuples(p_eff.index, names=['y','x'])
+        p_eff = pd.DataFrame.from_dict({
+            (y, x): self.get_option(y + '.constraints.p_eff', x=x)
+            for y in m.y for x in m.x}, orient='index')
+        p_eff.index = pd.MultiIndex.from_tuples(p_eff.index, names=['y', 'x'])
         p_eff = p_eff[0].unstack(level=0).sort_index()
 
         return self.get_var('e_cap') * p_eff
@@ -1712,15 +1738,19 @@ class Model(BaseModel):
         # Total (over locations) capacity factors per carrier
         time_res_sum = self._get_time_res_sum()
         with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-            cf = (sol['c_prod'].loc[dict(c=carrier)].sum(dim='x')
-                  / (sol['e_cap_net'].sum(dim='x') * time_res_sum)).to_pandas()
+            cf = (
+                sol['c_prod'].loc[dict(c=carrier)].sum(dim='x') /
+                (sol['e_cap_net'].sum(dim='x') * time_res_sum)
+            ).to_pandas()
         df = pd.DataFrame({'cf': cf})
 
         # Total (over locations) levelized costs per carrier
         for k in sorted(sol['levelized_cost'].coords['k'].values):
             with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-                df['levelized_cost_' + k] = (sol['costs'].loc[dict(k=k)].sum(dim='x')
-                                   / sol['c_prod'].loc[dict(c=carrier)].sum(dim='x'))
+                df['levelized_cost_' + k] = (
+                    sol['costs'].loc[dict(k=k)].sum(dim='x') /
+                    sol['c_prod'].loc[dict(c=carrier)].sum(dim='x')
+                )
 
         # Add totals per carrier
         df['e_prod'] = sol['c_prod'].loc[dict(c=carrier)].sum(dim='x')
@@ -1885,7 +1915,7 @@ class Model(BaseModel):
             totals = self.get_totals(t_subset=slice(0, stepsize))
             total_vars.append(totals)
             costs = (self.get_costs(t_subset=slice(0, stepsize))
-                        .to_dataset(name='costs'))
+                         .to_dataset(name='costs'))
             cost_vars.append(costs)
             timesteps = [time_res.at[t] for t in self.m.t][0:stepsize]
             d.attrs['time_res_sum'] += sum(timesteps)
@@ -1934,7 +1964,7 @@ class Model(BaseModel):
 
         # Add input time series (r and e_eff) alongside the solution
         for param in self.config_model.timeseries_constraints:
-            subset_name = 'y_def_' + param
+            subset_name = 'y_' + param + '_timeseries'
             # Only if the set has some members
             if len(self._sets[subset_name]) > 0:
                 self.solution[param] = self.data[param]
