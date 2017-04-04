@@ -3,8 +3,22 @@
 Release History
 ===============
 
-0.4.2 (dev)
+0.5.0 (dev)
 -----------
+
+Major changes
+~~~~~~~~~~~~~
+
+|new| Revised technology definitions and sets
+
+|new| Supply technologies split into two types: ``supply`` and ``supply_plus``
+
+|new| Allow technologies to generate revenue
+
+Other changes
+~~~~~~~~~~~~~
+
+* |changed| Removed SolutionModel class
 
 0.4.1 (2017-01-12)
 ------------------

@@ -316,11 +316,11 @@ def _get_supply_groups(solution):
     """
     # idx_1: group is 'True' and '|' in members
     groups = solution.groups.to_pandas()
-    grp_1 = groups.query('group == "True" & type == "supply"')
+    grp_1 = groups.query('group == "True" & (type == "supply" | type == "supply_plus")')
     idx_1 = grp_1[(grp_1.members != grp_1.index)
                   & (grp_1.members.str.contains('\|'))].index.tolist()
     # idx_2: group is 'False' and no '|' in members
-    grp_2 = groups.query('group == "False" & type == "supply"')
+    grp_2 = groups.query('group == "False" & (type == "supply" | type == "supply_plus")')
     idx_2 = grp_2[grp_2.members == grp_2.index].index.tolist()
     # Also drop entries from idx_2 that are already covered by
     # groups in idx_1
@@ -418,7 +418,7 @@ def df_transmission_matrix(config_model, tech, constraint='e_cap.max'):
     return df
 
 
-def df_tech_table(model, columns, parent='supply'):
+def df_tech_table(model, columns, parents=['supply', 'supply_plus']):
     """
     Returns a pandas DataFrame of technologies from the given model with
     the given parent tech, with  a column for each of the tech
@@ -427,8 +427,12 @@ def df_tech_table(model, columns, parent='supply'):
     """
     get_any_option = utils.any_option_getter(model)
     cm = model.config_model
-    techs = [k for k in cm.techs
-             if model.ischild(k, parent) and 'name' in cm.techs[k]]
+    techs = []
+    for p in parents:
+        techs.extend([
+            k for k in cm.techs
+            if model.ischild(k, p) and 'name' in cm.techs[k]
+        ])
     data = []
     for t in techs:
         item = {'name': cm.techs[t].name}

@@ -500,6 +500,7 @@ def option_getter(config_model):
 
     return get_option
 
+
 def cost_getter(option_getter_func):
     def get_cost(cost, y, k, x=None, costs_type='costs'):
         return option_getter_func(y + '.' + costs_type + '.' + k + '.' + cost,
@@ -552,7 +553,7 @@ def depreciation_getter(option_getter_func):
 
 def any_option_getter(model):
     """
-    Get any option from the given Model or SolutionModel, including
+    Get any option from the given Model, including
     ``costs.`` or ``costs_per_distance.`` options
 
     """
@@ -595,6 +596,7 @@ def any_option_getter(model):
                 else:
                     return model.get_option(option)
     return get_any_option
+
 
 def vincenty(coord1, coord2):
     """

@@ -71,7 +71,7 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
         default 'demand_power'.
     types : list, optional
         Technology types to include in the plot. Default list is
-        ['supply', 'conversion', 'storage', 'unmet_demand'].
+        ['supply', 'supply_plus' , 'conversion', 'storage', 'unmet_demand'].
     colormap : matplotlib colormap, optional
         Colormap to use. If not given, the colors specified for each
         technology in the solution's metadata are used.
@@ -137,7 +137,7 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
 
 
 def plot_installed_capacities(solution,
-                              types=['supply', 'conversion', 'storage'],
+                              types=['supply', 'supply_plus', 'conversion', 'storage'],
                               unit_multiplier=1.0,
                               unit_label='kW',
                               **kwargs):
@@ -146,7 +146,7 @@ def plot_installed_capacities(solution,
 
     Parameters
     ----------
-    types : list, default ['supply', 'conversion', 'storage']
+    types : list, default ['supply', 'supply_plus', 'conversion', 'storage']
         Technology types to include in the plot.
     unit_multiplier : float or int, default 1.0
         Multiply installed capacities by this value for plotting.
@@ -329,21 +329,22 @@ def get_delivered_cost(solution, cost_class='monetary', carrier='power',
 
 
 def get_levelized_cost(solution, cost_class='monetary', carrier='power',
-                       group=None, locations=None,
+                       groups=None, locations=None,
                        unit_multiplier=1.0):
     """
     Get the levelized cost per unit of energy produced for the given
     ``cost_class`` and ``carrier``, optionally for a subset of technologies
-    given by ``group`` and a subset of ``locations``.
+    given by ``groups`` and a subset of ``locations``.
 
     Parameters
     ----------
     solution : solution container
     cost_class : str, default 'monetary'
     carrier : str, default 'power'
-    group : str, default None
-        Limit the computation to members of the given group (see the
-        groups table in the solution for valid groups).
+    groups : list, default None
+        Limit the computation to members of the given groups (see the
+        groups table in the solution for valid groups). Defaults to
+        ['supply', 'supply_plus'] if not given.
     locations : str or iterable, default None
         Limit the computation to the given location or locations.
     unit_multiplier : float or int, default 1.0
@@ -352,10 +353,12 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
         ``unit_multiplier=0.001`` will return cost per MWh.
 
     """
-    if group is None:
-        group = 'supply'
+    if groups is None:
+        groups = ['supply', 'supply_plus']
 
-    members = solution.groups.to_pandas().at[group, 'members'].split('|')
+    members = []
+    for g in groups:
+        members.extend(solution.groups.to_pandas().at[g, 'members'].split('|'))
 
     if locations is None:
         locations_slice = slice(None)
@@ -378,8 +381,7 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
     return (cost / c_prod) * unit_multiplier
 
 
-def get_group_share(solution, techs, group_type='supply',
-                    var='e_prod'):
+def get_group_share(solution, techs, group, var='e_prod'):
     """
     From ``solution.summary``, get the share of the given list of ``techs``
     from the total for the given ``group_type``, for the given ``var``.
@@ -387,16 +389,16 @@ def get_group_share(solution, techs, group_type='supply',
     """
     summary = solution.summary
     meta = solution.metadata.to_pandas()
-    group = meta.query('type == "' + group_type + '"').index.tolist()
-    if group_type == 'transmission':
+    members = meta.query('type == "' + group + '"').index.tolist()
+    if group == 'transmission':
         # Special case for transmission techs, we only want
         # the base tech names, since we're looking this
         # up in the summary table
         def transmission_basenames(group):
             return list(set([i.split(':')[0] for i in group]))
         techs = transmission_basenames(techs)
-        group = transmission_basenames(group)
-    supply_total = summary.loc[group, var].sum()
+        members = transmission_basenames(members)
+    supply_total = summary.loc[members, var].sum()
     supply_group = summary.loc[techs, var].sum()
     try:
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -530,153 +532,3 @@ def map_results(results, func, as_frame=False):
         return pd.DataFrame(items, index=idx)
     else:
         return pd.Series(items, index=idx)
-
-
-class SolutionModel(core.BaseModel):
-    def __init__(self, solution):
-        """
-        Dummy model created from a model solution,
-        which gives access to the ``config_model`` AttrDict and a subset
-        of Model methods, including ``get_option``, ``get_cost``, and
-        ``get_depreciation``.
-
-        Furthermore, it provides several ``recompute_`` methods
-        to recalculate costs for a given technology after modifying the
-        underlying data.
-
-        """
-        super().__init__()
-        self.config_model = solution.config_model
-
-        # Reconstruct self.data from solution
-        params = ['r', 'e_eff']
-        try:
-            self.data = solution[params]
-        except KeyError:
-            pass
-
-        # Attach solution (minus data parameters)
-        for p in params:
-            try:
-                del solution[p]
-            except KeyError:
-                pass
-        self.solution = solution
-
-        # Add getters
-        self._get_option = utils.option_getter(self.config_model)
-        self._get_cost = utils.cost_getter(self._get_option)
-        self._get_dep = utils.depreciation_getter(self._get_option)
-
-    def get_option(self, *args, **kwargs):
-        return self._get_option(*args, **kwargs)
-
-    def get_cost(self, *args, **kwargs):
-        return self._get_cost(*args, **kwargs)
-
-    def get_depreciation(self, *args, **kwargs):
-        return self._get_dep(*args, **kwargs)
-
-    def recompute_investment_costs(self, y, k='monetary',
-                                   cost_adjustment=1.0):
-        """
-        Recompute investment costs for the given technology ``y``.
-
-        ``cost_adjustment`` allows linear scaling of the costs by the
-        given amount.
-
-        """
-        get_cost = self.get_cost
-        solution = self.solution
-        cost_con = pd.DataFrame()
-        cost_con['e_cap'] = (get_cost('e_cap', y, k)
-                             * solution['e_cap'].loc[dict(y=y)])
-        optional_capacities = ['r_cap', 'r_area', 'r2_cap', 's_cap']
-        for option in optional_capacities:
-            try:
-                cost_con[option] = (get_cost(option, y, k)
-                                    * solution[option].loc[dict(y=y)])
-            except KeyError:
-                cost_con[option] = 0
-        cost_con['total'] = cost_con.sum(axis=1)
-        cost_con['total_per_e_cap'] = (cost_con['total']
-                                       / solution['e_cap'].loc[dict(y=y)])
-        cost_con.at['total', 'total'] = cost_con['total'].sum()
-        total_per_e_cap = (cost_con.at['total', 'total']
-                           / solution['e_cap'].loc[dict(y=y)].sum())
-        cost_con.at['total', 'total_per_e_cap'] = total_per_e_cap
-        return cost_con * cost_adjustment
-
-    def recompute_operational_costs(self, y, k='monetary', carrier='power',
-                                    cost_adjustment=1.0):
-        """
-        Recompute operational costs for the given technology ``y``.
-
-        ``cost_adjustment`` linearly scales the construction costs used
-        internally, but is not applied to the rest of the operational
-        costs.
-
-        """
-        ## FIXME: Currently doesn't account for time variable constraints/costs
-        get_cost = self.get_cost
-        get_depreciation = self.get_depreciation
-        solution = self.solution
-        # Here we want gross production
-        production = solution['c_prod'].loc[dict(c=carrier, y=y)]
-        supply_techs = solution.groups.loc[:,'members'][
-                    solution.groups.loc[:,'type']=='supply'].to_pandas().values
-        if y in supply_techs:
-            fuel = (solution['e'].loc[dict(y=y)].sum(dim='t')
-                / self.get_option(y + '.constraints.e_eff'))
-        elif getattr(self.solution, 'r', None):
-            fuel = (solution['r'].loc[dict(y=y)].sum(dim='t')
-                    / self.get_option(y + '.constraints.r_eff'))
-        else:
-            fuel = 0
-        if getattr(self.solution, 'r2', None):
-            fuel_r2 = (solution['r2'].loc[dict(y=y)].sum(dim='t')
-                    / self.get_option(y + '.constraints.r2_eff'))
-        else:
-            fuel_r2 = 0
-        icf = self.recompute_investment_costs
-        cost_con = icf(y, k=k, cost_adjustment=cost_adjustment)['total'].sum()
-        cost_op = pd.DataFrame()
-        cost_op['om_frac'] = (get_cost('om_frac', y, k) * cost_con
-                              * get_depreciation(y, k)
-                              * (solution['time_res'].to_pandas().sum() / 8760))
-        cost_op['om_fixed'] = (get_cost('om_fixed', y, k)
-                               * solution['e_cap'].loc[dict(y=y)]
-                               * (solution['time_res'].to_pandas().sum() / 8760))
-        cost_op['om_var'] = get_cost('om_var', y, k) * production
-        cost_op['om_fuel'] = get_cost('om_fuel', y, k) * fuel
-        cost_op['om_r2'] = get_cost('om_r2', y, k) * fuel_r2
-        cost_op['total'] = cost_op.sum(axis=1)
-        return cost_op
-
-    def recompute_levelized_costs(self, y, k='monetary', carrier='power',
-                                  cost_adjustment=1.0):
-        """
-        Recompute levelized costs for the given technology ``y``.
-
-        ``cost_adjustment`` linearly scales the construction costs used
-        internally to compute levelized costs.
-
-        """
-        get_depreciation = self.get_depreciation
-        solution = self.solution
-        icf = self.recompute_investment_costs
-        cost_con = icf(y, k=k, cost_adjustment=cost_adjustment)['total']
-        ocf = self.recompute_operational_costs
-        cost_op = ocf(y, k=k, carrier=carrier,
-                      cost_adjustment=cost_adjustment)['total']
-        # Here we want net production
-        production = solution['c_prod'].loc[dict(c=carrier, y=y)]
-        lc = (get_depreciation(y, k)
-              * (solution['time_res'].to_pandas().sum() / 8760)
-              * cost_con + cost_op) / production.to_pandas()
-        lc.at['total'] = (get_depreciation(y, k)
-                          * (solution['time_res'].to_pandas().sum() / 8760)
-                          * cost_con.total
-                          # * cost_con.drop(['total'], axis=0).sum()
-                          + cost_op.sum()) / production.sum()
-        return lc
