@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2017 Stefan Pfenninger.
+Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 cli.py

@@ -9,7 +9,7 @@ exec(open('calliope/_version.py').read())
 setup(
     name='calliope',
     version=__version__,
-    author='Stefan Pfenninger',
+    author='Stefan Pfenninger and Calliope contributors listed in AUTHORS',
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
     license='Apache 2.0',

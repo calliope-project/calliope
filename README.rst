@@ -69,14 +69,14 @@ Citing Calliope
 
 If you use Calliope, please cite the following paper:
 
-Stefan Pfenninger and James Keirstead (2015). Renewables, nuclear, or fossil fuels? Scenarios for Great Britain's power system considering costs, emissions and energy security. *Applied Energy*, 152, pp. 83–93. `doi: 10.1016/j.apenergy.2015.04.102 <http://dx.doi.org/10.1016/j.apenergy.2015.04.102>`_
+Stefan Pfenninger (2017). Dealing with multiple decades of hourly wind and PV time series in energy models: a comparison of methods to reduce time resolution and the planning implications of inter-annual variability. *Applied Energy*. `doi: 10.1016/j.apenergy.2017.03.051 <https://dx.doi.org/10.1016/j.apenergy.2017.03.051>`_
 
 All Calliope releases are archived on Zenodo and you can also refer to specific versions of Calliope with their Zenodo DOI. The most recent archived version is: |link-latest-doi|_
 
 License
 -------
 
-Copyright 2013-2017 Stefan Pfenninger
+Copyright 2013-2017 Calliope contributors listed in AUTHORS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

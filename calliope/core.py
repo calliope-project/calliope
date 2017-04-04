@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2017 Stefan Pfenninger.
+Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 core.py
@@ -1330,7 +1330,6 @@ class Model(BaseModel):
                   constraints.base.node_constraints_build,
                   constraints.base.node_constraints_operational,
                   constraints.base.node_constraints_transmission,
-                  # constraints.base.node_parasitics,
                   constraints.base.node_costs,
                   constraints.base.model_constraints]
         if self.mode == 'plan':
