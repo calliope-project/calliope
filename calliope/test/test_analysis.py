@@ -86,9 +86,9 @@ class TestModel:
         lcoe = analysis.get_levelized_cost(model.solution)
         assert_almost_equal(lcoe.at['ccgt'], 0.1)
 
-    def test_get_group_share(self, model):
+    def test_get_group_share(self, model,):
         # TODO this should be tested with a more complex model
-        share = analysis.get_group_share(model.solution, techs=['ccgt'])
+        share = analysis.get_group_share(model.solution, techs=['ccgt'], group='supply')
         assert share == 1.0
 
     def test_get_unmet_demand_hours(self, builtin_model):

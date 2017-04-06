@@ -358,7 +358,10 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
 
     members = []
     for g in groups:
-        members.extend(solution.groups.to_pandas().at[g, 'members'].split('|'))
+        try:
+            members.extend(solution.groups.to_pandas().at[g, 'members'].split('|'))
+        except KeyError:
+            pass
 
     if locations is None:
         locations_slice = slice(None)
@@ -384,7 +387,7 @@ def get_levelized_cost(solution, cost_class='monetary', carrier='power',
 def get_group_share(solution, techs, group, var='e_prod'):
     """
     From ``solution.summary``, get the share of the given list of ``techs``
-    from the total for the given ``group_type``, for the given ``var``.
+    from the total for the given ``group``, for the given ``var``.
 
     """
     summary = solution.summary
