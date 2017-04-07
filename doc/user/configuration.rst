@@ -52,7 +52,6 @@ A technology's identifier can be any alphanumeric string. The index of all techn
       name: 'My test technology'
       constraints:
          e_cap.max: 1000  # kW
-         r: inf
       costs:
          monetary:
             e_cap: 500  # per kW of e_cap.max
@@ -68,13 +67,15 @@ A demand technology, with its demand data stored in a time series in the file ``
 
 Technologies must always define a parent, and this can either be one of the pre-defined abstract base technologies or another previously defined technology. The pre-defined abstract base technologies that can be inherited from are:
 
-* ``supply``: Supplies energy to a carrier, has a positive resource
-* ``demand``: Demands energy from a carrier, has a negative resource
+* ``supply``: Supplies energy to a carrier, has a positive resource.
+* ``supply_plus``: Supplies energy to a carrier, has a positive resource. Additional possible constraints, including efficiencies and storage, distinguish this from ``supply``.
+* ``demand``: Demands energy from a carrier, has a negative resource.
 * ``unmet_demand``: Supplies unlimited energy to a carrier with a very high cost, but does not get counted as a supply technology for analysis and grouping purposes. An ``unmet_demand`` technology for all relevant carriers should usually be included in a model to keep the solution feasible in all cases (see the :doc:`tutorial <tutorial>` for a practical example).
-* ``unmet_demand_as_supply_tech``: Works like ``unmet_demand`` but is a normal ``supply`` technology, so it does get counted as a supply technology for analysis and grouping purposes
-* ``storage``: Stores energy
-* ``transmission``: Transmits energy from one location to another
-* ``conversion``: Converts energy from one carrier to another
+* ``unmet_demand_as_supply_tech``: Works like ``unmet_demand`` but is a normal ``supply`` technology, so it does get counted as a supply technology for analysis and grouping purposes.
+* ``storage``: Stores energy.
+* ``transmission``: Transmits energy from one location to another.
+* ``conversion``: Converts energy from one carrier to another.
+* ``conversion_plus``: Converts energy from one or more carrier(s) to one or more different carrier(s).
 
 A technology inherits the configuration that its parent specifies (which, in turn, inherits from its own parent). The abstract base technologies inherit from a model-wide default technology called ``defaults``.
 

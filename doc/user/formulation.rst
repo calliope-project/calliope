@@ -23,6 +23,36 @@ Alternative objective functions can be used by setting the ``objective`` in the 
 
 `weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
 
+------------------
+Decision variables
+------------------
+
+Capacity
+--------
+
+* ``s_cap(y, x)``: installed storage capacity. Supply plus/Storage only
+* ``r_cap(y, x)``: installed resource <-> storage conversion capacity
+* ``e_cap(y, x)``: installed storage <-> grid conversion capacity (gross)
+* ``r2_cap(y, x)``: installed secondary resource conversion capacity
+* ``r_area(y, x)``: resource collector area
+
+Unit Commitment
+---------------
+
+* ``r(y, x, t)``: resource <-> storage/carrier_in (+ production, - consumption)
+* ``r2(y, x, t)``: secondary resource -> storage (+ production)
+* ``c_prod(c, y, x, t)``: resource/storage/carrier_in -> carrier_out (+ production)
+* ``c_con(c, y, x, t)``: resource/storage/carrier_in <- carrier_out (- consumption)
+* ``s(y, x, t)``: total energy stored in device
+* ``export(y, x, t)``: carrier_out -> export
+
+Costs
+-----
+
+* ``cost(y, x, k)``: total costs
+* ``cost_fixed(y, x, k)``: fixed operation costs
+* ``cost_var(y, x, k, t)``: variable operation costs
+
 -----------------
 Basic constraints
 -----------------
@@ -32,87 +62,74 @@ Node resource
 
 Provided by: :func:`calliope.constraints.base.node_resource`
 
-Defines the following variables:
-
- * ``rs``: resource to/from storage (+ production, - consumption)
- * ``r_area``: resource collector area
- * ``rbs``: secondary resource to storage (+ production)
-
-It also defines the constraint ``c_rs``. This constraint defines the available resource for a node, :math:`r_{avail}`:
+Defines constraint c_r_available:
 
 .. math::
 
-   r_{avail}(y, x, t) = r(y, x, t) \times r_{scale}(y, x) \times r_{area}(y, x) \times r_{eff}(y)
+   r_{avail}(y, x, t) = resource(y, x, t) \times r_{scale}(y, x) \times r_{area}(y, x)
 
-The ``c_rs`` constraint also decides how the resource and storage are linked.
+Which limits the resource flow **to** ``supply`` and ``supply_plus`` technologies, or **from** ``demand`` technologies.
+
+For ``supply``:
 
 If the option ``constraints.force_r`` is set to true, then
 
 .. math::
 
-   r_{s}(y, x, t) = r_{avail}(y, x, t)
+   \frac{c_{prod}(c, y, x, t)}{e_{eff}(y, x, t)} = r_{avail}(y, x, t)
 
-If that option is not set, and the technology inherits from the ``supply`` or ``unmet_demand`` base technologies,
-
-.. math::
-
-   r_{s}(y, x, t) \leq r_{avail}(y, x, t)
-
-Finally, if it inherits from the ``demand`` technology,
+If that option is not set:
 
 .. math::
 
-   r_{s}(y, x, t) \geq r_{avail}(y, x, t)
+    \frac{c_{prod}(c, y, x, t)}{e_{eff}(y, x, t)} \leq r_{avail}(y, x, t)
 
-.. Note:: For the case of ``storage`` technologies, :math:`r{s}` is forced to :math:`0` for internal reasons, while for ``transmission`` technologies, it is unconstrained. This is irrelevant when defining models and defining a resource for either ``storage`` or ``transmission`` technologies has no effect.
+For ``demand``:
+
+If the option ``constraints.force_r`` is set to true, then
+
+.. math::
+
+   c_{con}(c, y, x, t) \times e_{eff}(y, x, t) = r_{avail}(y, x, t)
+
+If that option is not set:
+
+.. math::
+
+  c_{con}(c, y, x, t) \times e_{eff}(y, x, t) \geq r_{avail}(y, x, t)
+
+For ``supply_plus``:
+
+If the option ``constraints.force_r`` is set to true, then
+
+.. math::
+
+   r(y, x, t) = r_{avail}(y, x, t) \times r_{eff}(y, x, t)
+
+If that option is not set:
+
+.. math::
+
+  r(y, x, t) \leq r_{avail}(y, x, t) \times r_{eff}(y, x, t)
+
+.. Note:: For all other technology types, defining a resource is irrelevant, so they are not constrained here.
 
 Node energy balance
 -------------------
 
 Provided by: :func:`calliope.constraints.base.node_energy_balance`
 
-Defines the following variables:
+Defines nine constraints, which are discussed in turn:
 
-* ``s``: storage level
-* ``es_prod``: energy from storage to carrier
-* ``es_con``: energy from carrier to storage
-
-It also defines three constraints, which are discussed in turn:
-
-* ``c_s_balance_pc``: energy balance for supply, demand, and storage technologies
-* ``c_s_balance_transmission``: energy balance for transmission technologies
-* ``c_s_balance_conversion``: energy balance for conversion technologies
-
-Supply/demand/storage balance
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A node that allows storage and either supply or demand is the most complex case, with the balancing equation
-
-.. math::
-
-   s(y, x, t) = s_{minusone} + r_{s}(y, x, t) + r_{bs}(y, x, t) - e_{prod} - e_{con}
-
-:math:`e_{prod}` is defined as :math:`es_{prod}(c, y, x, t) \times e_{eff}(y, x, t)`.
-
-:math:`e_{con}` is defined as :math:`\frac{es_{con}(c, y, x, t)}{e_{eff}(y, x, t)}`, or as :math:`0` if :math:`e_{eff}(y, x, t)` is :math:`0`.
-
-:math:`r_{bs}(y, x, t)` is the secondary resource and is always set to zero unless the technology explicitly defines a secondary resource.
-
-:math:`s(y, x, t)` is the storage level at time :math:`t`.
-
-:math:`s_{minusone}` describes the state of storage at the previous timestep. :math:`s_{minusone} = s_{init}(y, x)` at time :math:`t=0`. Else,
-
-.. math::
-
-   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(y, x, t-1)
-
-.. Note:: In operation mode, ``s_init`` is carried over from the previous optimization period.
-
-If no storage is allowed, the balancing equation simplifies to
-
-.. math::
-
-   r_{s}(y, x, t) + r_{bs}(y, x, t) = e_{prod} + e_{con}
+* ``c_balance_transmission``: energy balance for ``transmission`` technologies
+* ``c_balance_conversion``: energy balance for ``conversion`` technologies
+* ``c_balance_conversion_plus``: energy balance for ``conversion_plus`` technologies
+* ``c_balance_conversion_plus_secondary_out``: energy balance for ``conversion_plus`` technologies which have a secondary output carriers
+* ``c_balance_conversion_plus_tertiary_out``: energy balance for ``conversion_plus`` technologies which have a tertiary output carriers
+* ``c_balance_conversion_plus_secondary_in``: energy balance for ``conversion_plus`` technologies which have a secondary input carriers
+* ``c_balance_conversion_plus_tertiary_in``: energy balance for ``conversion_plus`` technologies which have a tertiary input carriers
+* ``c_balance_supply_plus``: energy balance for ``supply_plus`` technologies
+* ``c_balance_storage``: energy balance for ``storage`` technologies
 
 Transmission balance
 ^^^^^^^^^^^^^^^^^^^^
@@ -125,11 +142,11 @@ The balancing for transmission technologies is given by
 
 .. math::
 
-   es_{prod}(c, y, x, t) = -1 \times es_{con}(c, y_{remote}, x_{remote}, t) \times e_{eff}(y, x, t) \times e_{eff,perdistance}(y, x)
+   c_{prod}(c, y, x, t) = -1 \times c_{con}(c, y_{remote}, x_{remote}, t) \times e_{eff}(y, x, t) \times e_{eff,perdistance}(y, x)
 
 Here, :math:`x_{remote}, y_{remote}` are x and y at the remote end of the transmission technology. For example, for ``(y, x) = ('hvdc:region_2', 'region_1')``, the remotes would be ``('hvdc:region_1', 'region_2')``.
 
-:math:`es_{prod}(c, y, x, t)` for ``c='power', y='hvdc:region_2', x='region_1'`` would be the import of power from ``region_2`` to ``region_1``, via a ``hvdc`` connection, at time ``t``.
+:math:`c_{prod}(c, y, x, t)` for ``c='power', y='hvdc:region_2', x='region_1'`` would be the import of power from ``region_2`` to ``region_1``, via a ``hvdc`` connection, at time ``t``.
 
 This also shows that transmission technologies can have both a static or time-dependent efficiency (line loss), :math:`e_{eff}(y, x, t)`, and a distance-dependent efficiency, :math:`e_{eff,perdistance}(y, x)`.
 
@@ -142,9 +159,101 @@ The conversion balance is given by
 
 .. math::
 
-   es_{prod}(c_{prod}, y, x, t) = -1 \times es_{con}(c_{source}, y, x, t) \times e_{eff}(y, x, t)
+   c_{prod}(c_{out}, y, x, t) = -1 \times c_{con}(c_{in}, y, x, t) \times e_{eff}(y, x, t)
 
-The principle is similar to that of the transmission balance. The production of carrier :math:`c_{prod}` (the ``carrier`` option set for the conversion technology) is driven by the consumption of carrier :math:`c_{source}` (the ``source_carrier`` option set for the conversion technology).
+The principle is similar to that of the transmission balance. The production of carrier :math:`c_{out}` (the ``carrier_out`` option set for the conversion technology) is driven by the consumption of carrier :math:`c_{in}` (the ``carrier_in`` option set for the conversion technology).
+
+Conversion_plus balance
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Conversion plus technologies can have several carriers in and several carriers out, leading to a more complex production/consumption balance.
+
+For the primary carrier(s), the balance is:
+
+.. math::
+
+  \sum\limits_{c_{out_1}} \frac{c_{prod}(c_{out_1}, y, x, t) }{carrier_{fraction}(c_{out_1})} =  -1 \times \sum\limits_{c_{in_1}} c_{con}(c_{in_1}, y, x, t) \times carrier_{fraction}(c_{in_1}) \times e_{eff}(x, y, t)
+
+Where ``c_{out_1}`` and ``c_{in_1}`` are the sets of primary production and consumption carriers, respectively and ``carrier_{fraction}`` is the relative contribution of these carriers, as defined in ??.
+
+The remaining constraints (``c_balance_conversion_plus_secondary_out``, ``c_balance_conversion_plus_tertiary_out``, ``c_balance_conversion_plus_secondary_in``, ``c_balance_conversion_plus_tertiary_in``) link the input/output of the technology secondary and tertiary carriers to the primary consumption/production.
+
+For production:
+
+.. math::
+
+  \sum\limits_{c_{out_1}} \frac{c_{prod}}{\frac{(c_{out_1}, y, x, t)}{carrier_{fraction}(c_{out_1})}} \times min(carrier_{fraction}(c_{out_x}))=  \sum\limits_{c_{out_x}} c_{prod}(c_{out_x}, y, x, t) \times \frac{carrier_{fraction}(c_{out_x})}{min(carrier_{fraction}(c_{out_x}))}
+
+For consumption:
+
+.. math::
+
+  \sum\limits_{c_{in_1}} \frac{c_{con}(c_{in_1}, y, x, t) }{carrier_{fraction}(c_{in_1})} \times min(carrier_{fraction}(c_{in_x}))=  \sum\limits_{c_{in_x}} c_{con}(c_{in_x}, y, x, t) \times \frac{carrier_{fraction}(c_{in_x})}{min(carrier_{fraction}(c_{in_x}))}
+
+Where ``x`` is either 2 (secondary carriers) or 3 (tertiary carriers).
+
+Supply_plus balance
+^^^^^^^^^^^^^^^^^^^
+
+``Supply_plus`` technologies are ``supply`` technologies with more control over resource flow. You can have multiple resources, a resource capacity, and storage of resource before it is converted to the primary carrier_out.
+
+If storage is possible:
+
+.. math::
+
+   s(y, x, t) = s_{minusone} + r(y, x, t) + r_{2}(y, x, t) - c_{prod}
+
+Otherwise:
+
+.. math::
+
+  r(y, x, t) = c_{prod} - r_{2}
+
+
+Where:
+
+:math:`c_{prod}` is defined as :math:`\frac{c_{prod}(c, y, x, t)}{total_{eff}}`.
+
+:math:`total_{eff}(y, x, t)` is defined as :math:`e_{eff}(y, x, t) + p_{eff}(y, x, t)`, the plant efficiency including parasitic losses
+
+:math:`r_{2}(y, x, t)` is the secondary resource and is always set to zero unless the technology explicitly defines a secondary resource.
+
+:math:`s(y, x, t)` is the storage level at time :math:`t`.
+
+:math:`s_{minusone}` describes the state of storage at the previous timestep. :math:`s_{minusone} = s_{init}(y, x)` at time :math:`t=0`. Else,
+
+.. math::
+
+   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(y, x, t-1)
+
+.. Note:: In operation mode, ``s_init`` is carried over from the previous optimization period.
+
+
+Storage balance
+^^^^^^^^^^^^^^^^^^^^
+Storage technologies balance energy charge, energy discharge, and energy stored:
+
+.. math::
+
+   s(y, x, t) = s_{minusone} - c_{prod} - c_{con}
+
+Where:
+
+:math:`c_{prod}` is defined as :math:`\frac{c_{prod}(c, y, x, t)}{total_{eff}}` if :math:`total_{eff} > 0`, otherwise :math:`c_{prod} = 0`
+
+:math:`c_{con}` is defined as :math:`c_{con}(c, y, x, t) \times total_{eff}`
+
+:math:`total_{eff}(y, x, t)` is defined as :math:`e_{eff}(y, x, t) + p_{eff}(y, x, t)`, the plant efficiency including parasitic losses
+
+:math:`s(y, x, t)` is the storage level at time :math:`t`.
+
+:math:`s_{minusone}` describes the state of storage at the previous timestep. :math:`s_{minusone} = s_{init}(y, x)` at time :math:`t=0`. Else,
+
+.. math::
+
+   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(y, x, t-1)
+
+.. Note:: In operation mode, ``s_init`` is carried over from the previous optimization period.
 
 
 Node build constraints
@@ -152,78 +261,149 @@ Node build constraints
 
 Provided by: :func:`calliope.constraints.base.node_constraints_build`
 
-Defines the following variables:
-
-* ``s_cap``: installed storage capacity
-* ``r_cap``: installed resource to/from storage conversion capacity
-* ``e_cap``: installed storage to/from grid conversion capacity (gross)
-* ``e_cap_net``: installed storage to/from grid conversion capacity (net)
-* ``rb_cap``: installed secondary resource conversion capacity
-
 Built capacity is managed by six constraints.
 
-``c_s_cap`` constrains the built storage capacity by :math:`s_{cap}(y, x) \leq s_{cap,max}(y, xi)`. If ``y.constraints.use_s_time`` is true at location ``x``, then ``y.constraints.s_time.max`` and ``y.constraints.e_cap.max`` are used to to compute ``s_cap.max`` at reference efficiency. If ``y.constraints.s_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+``c_s_cap``
+^^^^^^^^^^^
+This constrains the built storage capacity by:
 
-``c_r_cap`` constrains the built resource conversion capacity by :math:`r_{cap}(y, x) \leq r_{cap,max}(y, x)`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+.. math::
 
-``c_r_area`` constrains the resource conversion area by :math:`r_{area}(y, x) \leq r_{area,max}(y, x)`. By default, ``y.constraints.r_area.max`` is set to false, and in that case, :math:`r_{area}(y, x)` is forced to :math:`1.0`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap`` is given, then the equation :math:`r_{area}(y, x) = e_{cap}(y, x) * r\_area\_per\_cap` applies instead.
+    s_{cap}(y, x) \leq s_{cap,max}(y, x)
 
-``c_e_cap`` constrains the carrier conversion capacity. If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced. Else, :math:`e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_scale` applies. ``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary. Finally, if ``y.constraints.e_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+If ``y.constraints.s_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
-The ``c_e_cap_gross_net`` constraint is relevant only if ``y.constraints.c_eff`` is set to anything other than 1.0 (the default). In that case, :math:`e_{cap}(y, x) \times c_{eff} = e_{cap,net}(y, x)` computes the net installed carrier conversion capacity.
+If both :math:`e_{cap,max}(y, x)` and :math:`charge\_rate` are not given, :math:`s_{cap}(y, x)` is automatically set to zero.
 
-The final constraint, ``c_rb_cap``, manages the secondary resource conversion capacity by :math:`rb_{cap}(y, x) \leq rb_{cap,max}(y, x)`. If ``y.constraints.rb_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. There is an additional relevant option, ``y.constraints.rb_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``r_cap`` or ``e_cap``, and if set, sets ``c_rb_cap`` to track one of these, ie, :math:`rb_{cap,max} = r_{cap}(y, x)` (analogously for ``e_cap``), and also turns the constraint into an equality constraint.
+If ``y.constraints.s_time.max`` is true at location ``x``, then ``y.constraints.s_time.max`` and ``y.constraints.e_cap.max`` are used to to compute ``s_cap.max``. The minimum value of ``s_cap.max`` is taken, based on analysis of all possible time sets which meet the s_time.max value. This allows time-varying efficiency, :math:`e_{eff}(y, x, t)` to be accounted for.
+
+``c_r_cap``
+^^^^^^^^^^^
+This constrains the built resource conversion capacity by:
+
+.. math::
+
+  r_{cap}(y, x) \leq r_{cap,max}(y, x)
+
+If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+
+``c_r_area``
+^^^^^^^^^^^^
+This constrains the resource conversion area by:
+
+.. math::
+
+  r_{area}(y, x) \leq r_{area,max}(y, x)
+
+By default, ``y.constraints.r_area.max`` is set to false, and in that case, :math:`r_{area}(y, x)` is forced to :math:`1.0`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap`` is given, then the equation :math:`r_{area}(y, x) = e_{cap}(y, x) * r\_area\_per\_cap` applies instead.
+
+``c_e_cap``
+^^^^^^^^^^^
+This constrains the carrier conversion capacity by:
+
+.. math::
+  e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_scale
+
+If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced.
+
+``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary.
+
+If ``y.constraints.e_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+
+``c_e_cap_storage``
+^^^^^^^^^^^^^^^^^^^
+This constrains the carrier conversion capacity for storage technologies by:
+
+.. math::
+  e_{cap}(y, x) \leq e_{cap,max}
+
+Where :math:`e_{cap,max} = s_{cap}(y, x) * charge\_rate * e\_cap\_scale`
+
+``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary.
+
+``c_r2_cap``
+^^^^^^^^^^^^
+This manages the secondary resource conversion capacity by:
+
+.. math::
+  r2_{cap}(y, x) \leq r2_{cap,max}(y, x)
+
+If ``y.constraints.r2_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
+
+There is an additional relevant option, ``y.constraints.r2_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``r_cap`` or ``e_cap``, and if set, sets ``c_r2_cap`` to track one of these, ie, :math:`r2_{cap,max} = r_{cap}(y, x)` (analogously for ``e_cap``), and also turns the constraint into an equality constraint.
 
 Node operational constraints
 ----------------------------
 
 Provided by: :func:`calliope.constraints.base.node_constraints_operational`
 
-This component ensures that nodes remain within their operational limits, by constraining ``rs``, ``es``, ``s``, and ``rbs``.
+This component ensures that nodes remain within their operational limits, by constraining ``r``, ``c_prod``, ``c_con``, ``s``, ``r2``, and ``export``.
 
-:math:`r_{s}(y, x, t)` is constrained to remain within :math:`r_{cap}(y, x)`, with the two constraints ``c_rs_max_upper`` and ``c_rs_max_lower``:
-
-.. math::
-
-   r_{s}(y, x, t) \leq timeres(t) \times r_{cap}(y, x)
-
-   r_{s}(y, x, t) \geq -1 \times timeres(t) \times r_{cap}(y, x)
-
-:math:`e_{s}(c, y, x, t)` is constrained by three constraints, ``c_es_prod_max``, ``c_es_prod_min``, and ``c_es_con_max``:
+``r``
+^^^^^
+:math:`r(y, x, t)` is constrained to remain within :math:`r_{cap}(y, x)`, with the constraint ``c_r_max_upper``:
 
 .. math::
 
-   e_{s,prod}(c, y, x, y) \leq timeres(t) \times e_{cap}(y, x)
+   r(y, x, t) \leq time\_res(t) \times r_{cap}(y, x)
 
-if ``c`` is the ``carrier`` of ``y``, else :math:`e_{s,prod}(c, y, x, y) = 0`.
-
-If ``e_cap_min_use`` is defined, the minimum output is constrained by
-
-.. math::
-
-   e_{s,prod}(c, y, x, y) \geq timeres(t) \times e_{cap}(y, x) \times e_{cap,minuse}
-
-For technologies where ``y.constraints.e_con`` is true (it defaults to false), and for conversion technologies,
+``c_prod``
+^^^^^^^^^^
+:math:`c_prod(c, y, x, t)` is constrained by ``c_prod_max`` and ``c_prod_min``:
 
 .. math::
 
-   e_{s,con}(c, y, x, y) \geq -1 \times timeres(t) \times e_{cap}(y, x)
+   c_{prod}(c, y, x, t) \leq time\_res(t) \times e_{cap}(y, x) \times p_{eff}(y, x, t)
 
-and :math:`e_{s,con}(c, y, x, y) = 0` otherwise.
+if ``c`` is the ``carrier_out`` of ``y``, else :math:`c_{prod}(c, y, x, y) = 0`.
 
+If ``e_cap_min_use`` is defined, the minimum output is constrained by:
+
+.. math::
+
+   c_{prod}(c, y, x, t) \geq time\_res(t) \times e_{cap}(y, x) \times e_{cap,minuse} \times p_{eff}(y, x, t)
+
+These contraints are skipped for ``conversion_plus`` technologies if ``c`` is not the primary carrier.
+
+``c_con``
+^^^^^^^^^
+For technologies which are not ``supply`` or ``supply_plus``, :math:`c_con(c, y, x, t)` is non-zero. Thus :math:`c_con(c, y, x, t)` is constrainted by ``c_con_max``:
+
+.. math::
+
+   c_{con}(c, y, x, t) \geq -1 \times timeres(t) \times e_{cap}(y, x)
+
+and :math:`c_{con}(c, y, x, t) = 0` otherwise.
+
+This constraint is skipped for a ``conversion_plus`` and ``conversion`` technologies If ``c`` is a possible consumption carrier (primary, secondary, or tertiary).
+
+``s``
+^^^^^
 The constraint ``c_s_max`` ensures that storage cannot exceed its maximum size by
 
 .. math::
 
    s(y, x, t) \leq s_{cap}(y, x)
 
-And finally, ``c_rbs_max`` constrains the secondary resource by
+``r2``
+^^^^^^
+
+``c_r2_max`` constrains the secondary resource by
 
 .. math::
 
-   rb_{s}(y, x, t) \leq timeres(t) \times rb_{cap}(y, x)
+   r2(y, x, t) \leq timeres(t) \times r2_{cap}(y, x)
 
-There is an additional check if ``y.constraints.rb_startup_only`` is true. In this case, :math:`rb_{s}(y, x, t) = 0` unless the current timestep is still within the startup time set in the ``startup_time_bounds`` model-wide setting. This can be useful to prevent undesired edge effects from occurring in the model.
+There is an additional check if ``y.constraints.r2_startup_only`` is true. In this case, :math:`r2(y, x, t) = 0` unless the current timestep is still within the startup time set in the ``startup_time_bounds`` model-wide setting. This can be useful to prevent undesired edge effects from occurring in the model.
+
+``export``
+^^^^^^^^^^
+
+``c_export_max`` constrains the export of a produced carrier by
+
+.. math::
+
+   export(y, x, t) \leq export_{cap}(y, x)
 
 Transmission constraints
 ------------------------
@@ -236,43 +416,10 @@ This component provides a single constraint, ``c_transmission_capacity``, which 
 
    e_{cap}(hvdc:x_2, x_1) = e_{cap}(hvdc:x_1, x_2)
 
-Node parasitics
----------------
-
-Provided by: :func:`calliope.constraints.base.node_parasitics`
-
-Defines the following variables:
-
- * ``ec_prod``: storage to carrier after parasitics (positive, production)
- * ``ec_con``: carrier to storage after parasitics (negative, consumption)
-
-There are two constraints, ``c_ec_prod`` and ``c_ec_con``, which constrain ``ec`` by
-
- .. math::
-
-   ec_{prod}(c, y, x, t) = es_{prod}(c, y, x, t) \times c_{eff}(y, x)
-
-   ec_{con}(c, y, x, t) = \frac{es_{con}(c, y, x, t)}{c_{eff}(y, x)}
-
-For conversion and transmission technologies, the second equation reads :math:`ec_{con}(c, y, x, t) = es_{con}(c, y, x, t)` so that the internal losses are applied only once.
-
-The two variables ``ec_prod`` and ``ec_con`` are only defined in the model for technologies where ``c_eff`` is not 1.0.
-
-.. Note:: When reading the model solution, Calliope automatically manages the ``es`` and ``ec`` variables. In the solution, every technology has an ``ec`` variable, which is simply set to ``es`` wherever it was not defined, to make the solution consistent.
-
 Node costs
 ----------
 
 Provided by: :func:`calliope.constraints.base.node_costs`
-
-Defines the following variables:
-
-* ``cost``: total costs
-* ``cost_con``: construction costs
-* ``cost_op_fixed``: fixed operation costs
-* ``cost_op_var``: variable operation costs
-* ``cost_op_fuel``: primary resource fuel costs
-* ``cost_op_rb``: secondary resource fuel costs
 
 These equations compute costs per node.
 
@@ -290,24 +437,31 @@ if the interest rate :math:`i` is :math:`0`, else
 
    d(y, k) = \frac{i \times (1 + i(y, k))^{plant\_life(k)}}{(1 + i(y, k))^{plant\_life(k)} - 1}
 
-Costs are split into construction and operational and maintenance (O&M) costs. The total costs are computed in ``c_cost`` by
+Costs are split into fixed and variable costs. The total costs are computed in ``c_cost`` by
 
 .. math::
 
-   cost(y, x, k) = cost_{con}(y, x, k) + cost_{op,fixed}(y, x, k) + cost_{op,var}(y, x, k) + cost_{op,fuel}(y, x, k) + cost_{op,rb}(y, x, k)
+   cost(y, x, k) = cost_{fixed}(y, x, k) + \sum\limits_t cost_{var}(y, x, k, t)
 
-The construction costs are computed in ``c_cost_con`` by
+The fixed costs include construction costs, annual operation and maintenance (O\&M) costs, and O\&M costs which are a fraction of the construction costs.
+The total fixed costs are computed in ``c_cost_fixed`` by
 
 .. math::
 
-   cost_{con}(y, x, k) &= d(y, k) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760} \\
+  cost_{fixed}(y, x, k) = cost_{con} + cost_{om, frac} \times cost_{con} + cost_{om, fixed} \times e_{cap}(y, x) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760}
+
+Where
+
+.. math::
+
+   cost_{con} &= d(y, k) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760} \\
    & \times (cost_{s\_cap}(y, k) \times s_{cap}(y, x) \\
    & + cost_{r\_cap}(y, k) \times r_{cap}(y, x) \\
    & + cost_{r\_area}(y, k) \times r_{area}(y, x) \\
    & + cost_{e\_cap}(y, k) \times e_{cap}(y, x)) \\
-   & + cost_{rb\_cap}(y, k) \times rb_{cap}(y, x))
+   & + cost_{r2\_cap}(y, k) \times r2_{cap}(y, x))
 
-The costs are as defined in the model definition, e.g. e.g. :math:`cost_{r\_cap}(y, k)` corresponds to ``y.costs.k.r_cap``.
+The costs are as defined in the model definition, e.g. :math:`cost_{r\_cap}(y, k)` corresponds to ``y.costs.k.r_cap``.
 
 For transmission technologies, :math:`cost_{e\_cap}(y, k)` is computed differently, to include the per-distance costs:
 
@@ -317,21 +471,29 @@ For transmission technologies, :math:`cost_{e\_cap}(y, k)` is computed different
 
 This implies that for transmission technologies, the cost of construction is split equally across the two locations connected by the technology.
 
-The O&M costs are computed in four separate constraints, ``cost_op_fixed``, ``cost_op_var``, ``cost_op_fuel``, and ``cost_op_rb``, by
+The variable costs are O&M costs applied at each time step:
 
 .. math::
 
-   cost_{op,fixed}(y, x, k) &= cost_{om\_frac}(y, k) \times cost_{con}(y, x, k) \\
-   & + cost_{om\_fixed}(y, k) \times e_{cap}(y, x) \\
-   & \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760}
+   cost_{var} = cost_{op,var} + cost_{op,fuel} + cost_{op,r2} + cost_{op, export}
+
+Where:
 
 .. math::
+   cost_{op,var} = cost_{om\_var}(k, y, x, t) \times \sum_t W(t) \times c_{prod}(c, y, x, t)
 
-   cost_{op,var}(y, x, k) = cost_{om\_var}(y, k) \times \sum_t W(t) \times e_{prod}(c, y, x, t)
+   cost_{op,fuel} = \frac{cost_{om\_fuel}(k, y, x, t) \times \sum_t W(t) \times r(y, x, t)}{r_{eff}(y, x)}
 
-   cost_{op,fuel}(y, x, k) = \frac{cost_{om\_fuel}(y, k) \times \sum_t W(t) \times r_{s}(y, x, t)}{r_{eff}(y, x)}
+   cost_{op,r2} = \frac{cost_{om\_r2}(k, y, x, t) \times \sum_t W(t) \times r_{2}(y, x, t)}{r2_{eff}(y, x)}
 
-   cost_{op,rb}(y, x, k) = \frac{cost_{om\_rb}(y, k) \times \sum_t W(t) \times r_{bs}(y, x, t)}{rb_{eff}(y, x)}
+   cost_{op, export} = cost_{export}(k, y, x, t) \times export(y, x, t)
+
+If :math:`cost_{om\_fuel}(k, y, x, t)` is given for a ``supply`` technology and :math:`e_{eff}(y, x) > 0` for that technology, then:
+
+.. math::
+  cost_{op,fuel} =cost_{om\_fuel}(k, y, x, t) \times \sum_t W(t) \times \frac{c_{prod}(c, y, x, t)}{e_{eff}(y, x)}
+
+``c`` is the technology primary ``carrier_out`` in all cases.
 
 
 Model balancing constraints
@@ -339,22 +501,19 @@ Model balancing constraints
 
 Provided by: :func:`calliope.constraints.base.model_constraints`
 
-Model-wide balancing constraints are constructed for nodes that have children. They differentiate between:
-
-* ``c = power``
-* All other ``c``
-
-In the first case, the following balancing equation applies:
+Model-wide balancing constraints are constructed for nodes that have children:
 
 .. math::
 
-   \sum_{y, x \in X_{i}} ec_{prod}(c=c_{p}, y, x, t) + \sum_{y, x \in X_{i}} ec_{con}(c=c_{p}, y, x, t) = 0 \qquad\forall i, t
+   \sum_{y, x \in X_{i}} c_{prod}(c, y, x, t) + \sum_{y, x \in X_{i}} c_{con}(c, y, x, t) = 0 \qquad\forall i, t
 
-:math:`i` are the level 0 locations, and :math:`X_{i}` is the set of level 1 locations (:math:`x`) within the given level 0 location, together with that location itself. :math:`c` is the carrier, and :math:`c_{p}` the carrier for power.
+:math:`i` are the level 0 locations, and :math:`X_{i}` is the set of level 1 locations (:math:`x`) within the given level 0 location, together with that location itself.
 
-For ``c`` other than ``power``, the balancing equation is as above, but with a :math:`\geq` inequality, and the corresponding change to :math:`c`.
+There is also the need to ensure that technologies cannot export more energy than they produce:
 
-.. Note:: The actual balancing constraint is implemented such that ``es`` and ``ec`` are used in the sum as appropriate for each technology.
+.. math::
+
+   c_{prod}(c, y, x, t) \geq export(y, x, t)
 
 --------------------
 Planning constraints
@@ -373,7 +532,30 @@ This is a simplified capacity margin constraint, requiring the capacity to suppl
 
 .. math::
 
-   \sum_y \sum_x es_{prod}(c, y, x, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_x (e_{cap}(y, x) / e_{eff,ref}(y, x))
+   \sum_y \sum_x c_{prod}(c, y, x, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_x (e_{cap}(y, x) / e_{eff}(y, x, t_{max,c}))
+
+where :math:`y_{c}` is the subset of ``y`` that delivers the carrier ``c`` and :math:`m_{c}` is the system margin for that carrier.
+
+For each carrier (with the name ``carrier_name``), Calliope attempts to read the model-wide option ``system_margin.carrier_name``, only applying this constraint if a setting exists.
+
+.. _system_e_cap:
+
+System-wide capacity
+--------------------
+
+Provided by: :func:`calliope.constraints.planning.node_constraints_build_total`
+
+This constraint sets a maximum for capacity, ``e_cap``, across all locations for any given technology:
+
+.. math::
+
+  \sum_x e_{cap}(x, y) \leq e_{cap,total\_max}(y)
+
+If :math:`e_{cap,total\_equals}` is given instead, this becomes :math:`\sum_x e_{cap}(x, y) \leq e_{cap,total\_max}(y)`.
+
+.. math::
+
+   \sum_y \sum_x c_{prod}(c, y, x, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_x (e_{cap}(y, x) / e_{eff}(y, x, t_{max,c}))
 
 where :math:`y_{c}` is the subset of ``y`` that delivers the carrier ``c`` and :math:`m_{c}` is the system margin for that carrier.
 
@@ -398,7 +580,7 @@ Constrains the rate at which plants can adjust their output, for technologies th
 
 .. math::
 
-   diff = \frac{es_{prod}(c, y, x, t) + es_{con}(c, y, x, t)}{timeres(t)} - \frac{es_{prod}(c, y, x, t-1) + es_{con}(c, y, x, t-1)}{timeres(t-1)}
+   diff = \frac{c_{prod}(c, y, x, t) + c_{con}(c, y, x, t)}{timeres(t)} - \frac{c_{prod}(c, y, x, t-1) + c_{con}(c, y, x, t-1)}{timeres(t-1)}
 
    max\_ramping\_rate = e_{ramping} \times e_{cap}(y, x)
 
@@ -441,7 +623,7 @@ Similarly, ``c_group_fraction_output`` sets up constraints in the form of
 
 .. math::
 
-   \sum_{y^*} \sum_x \sum_t es_{prod}(c, y, x, t) \geq fraction \times \sum_y \sum_x \sum_t es_{prod}(c, y, x, t)
+   \sum_{y^*} \sum_x \sum_t c_{prod}(c, y, x, t) \geq fraction \times \sum_y \sum_x \sum_t c_{prod}(c, y, x, t)
 
 Finally, ``c_group_fraction_demand_power_peak`` sets up constraints in the form of
 
@@ -454,3 +636,16 @@ Finally, ``c_group_fraction_demand_power_peak`` sets up constraints in the form 
 This assumes the existence of a technology, ``demand_power``, which defines a demand (negative resource). :math:`y_d` is ``demand_power``. :math:`m_{c}` is the capacity margin defined for the carrier ``c`` in the model-wide settings (see :ref:`system_margin`). :math:`t_{peak}` is the timestep where :math:`r(y_d, x, t)` is maximal.
 
 Whether any of these equations are equalities, greater-or-equal-than inequalities, or lesser-or-equal-than inequalities, is determined by whether ``>=``, ``<=``, or ``==`` is given in their respective settings.
+
+Available area
+--------------
+
+Provided by: :func:`calliope.constraints.optional.max_r_area_per_loc`
+
+Where several technologies require space to acquire resource (e.g. solar collecting technologies) at a given location, this constraint provides the ability to limit the total area available at a location:
+
+.. math::
+
+  area_{available}(x) \geq \sum_y \sum_{xi} r_{area}(y, xi)
+
+Where ``xi`` is the set of locations within the family tree, descending from and including ``x``.

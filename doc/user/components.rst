@@ -42,11 +42,13 @@ In some cases, these index sets may have only a single member. For example, if o
 Technology types
 ----------------
 
-Each technology (that is, each member of the set ``y``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of five abstract base technologies (see :ref:`configuration_techs` in the model configuration section for more details on this inheritance model):
+Each technology (that is, each member of the set ``y``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of seven abstract base technologies (see :ref:`configuration_techs` in the model configuration section for more details on this inheritance model):
 
-* Supply: Supplies energy from a resource to a carrier (a source). Can have storage. Can define an additional secondary resource (base technology: ``supply``)
-* Demand: Acts like supply but with a resource that is negative (a sink). Draws energy from a carrier to satisfy a resource demand. Can also have storage (base technology: ``demand``)
+* Supply: Supplies energy from a resource to a carrier (a source) (base technology: ``supply``)
+* Supply_plus: A more feature_rich version of ``supply``. It can have storage of resource before conversion to carrier, can define an additional secondary resource, and can have several more intermediate loss factors (base technology: ``supply_plus``)
+* Demand: Acts like supply but with a resource that is negative (a sink). Draws energy from a carrier to satisfy a resource demand (base technology: ``demand``)
 * Conversion: Converts energy from one carrier to another, can have neither resource nor storage associated with it (base technology: ``conversion``)
+* Conversion_plus: A more feature rich version of ``conversion``. There can be several carriers in, converted to several carriers out (base technology: ``conversion_plus``)
 * Storage: Can store energy of a specific carrier, cannot have any resource (base technology: ``storage``)
 * Transmission: Transports energy of a specific carrier from one location to another, can have neither resource nor storage (base technology: ``transmission``)
 
@@ -56,7 +58,7 @@ Cost classes
 
 Costs are modeled in Calliope via *cost classes*. By default, only one classes is defined: ``monetary``.
 
-Technologies can define costs for components (installed capacity) and for operation & maintenance, for any cost class.
+Technologies can define costs for components (installed capacity), for operation & maintenance, and for export for any cost class. costs can be given as negative, to define a revenue source.
 
 The primary cost class, ``monetary``, is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one type of ``monetary`` cost, as it would be considered free otherwise. By default, any cost not specified is assumed to be zero.
 
@@ -78,52 +80,61 @@ The most important node variables are laid out below, but more detail is also av
 Node energy balance
 -------------------
 
-The basic formulation of each node uses a set of energy balance equations. A node can have the following energy balance variables:
+The basic formulation of each node uses a set of energy balance equations. Depending on the technology type, different energy balance variables are used:
 
 * ``s(y, x, t)``: storage level at time ``t``
-* ``rs(y, x, t)``: resource to/from storage (+ production, - consumption) at time ``t``
-* ``rbs(y, x, t)``: secondary resource to storage at time ``t``
-* ``es(c, y, x, t)``: storage to/from carrier in default case (+ supply, - demand) at time ``t``
-* ``ec(c, y, x, t)``: conversion to/from carrier in case with parasitics (+ supply, - demand) at time ``t``
+    This is used for ``storage`` and ``supply_plus`` technologies.
+* ``r(y, x, t)``: resource to technology (+ production) at time ``t``. If storage is defined for ``supply_plus``, this is resource to storage flow.
+    This is used for ``supply_plus`` technologies.
+* ``r2(y, x, t)``: secondary resource to technology at time ``t``
+    This is used for ``supply_plus`` technologies.
+* ``c_prod(c, y, x, t)``: production of a given energy carrier by a technology (+ supply) at time ``t``.
+    This is used for all technologies, except ``demand``.
+* ``c_con(c, y, x, t)``: consumption of a given energy carrier by a technology at time ``t``
+    This is used for all technologies, except ``supply`` and ``supply_plus``.
 
-For most technologies, ``ec`` is not actually defined, and ``es`` directly converts storage to carrier. ``ec`` is used for technologies where a difference between gross and net installed conversion capacity must be made (technologies which specify an internal energy use).
+The resulting losses associated with energy balancing also depend on the technology type. Each technology node is mapped here, with details on interactions given in :doc:`configuration`.
 
-.. figure:: images/node.*
-   :alt: Layout of a node and its energy balance
+.. figure:: images/nodes.*
+   :alt: Layout of a various node and their energy balance
 
-   The layout of a node and its energy balance variables. The outward arrows show where losses occur. Depending on a technology, some of these steps may be skipped. For example, most technologies will have no storage capacity or parasitic losses.
+   The layout of nodes, and their energy balance variables, associated with each technology type. The outward arrows show where losses occur. Depending on a technology, some of these steps may be skipped. For example, most ``supply_plus`` technologies will have no parasitic losses.
 
-Internally, ``es`` and ``ec`` are split into separate variables, for the positive and negative components, i.e. ``es_prod`` and ``es_con`` (analogously for ``ec``). This simplifies the formulation of some constraints. In the documentation, unless necessary in a specific context, the combined (e.g. ``es``) notation is used for simplicity.
+The secondary resource can deliver energy to storage via ``r_2`` alongside the primary energy source (via ``r``), but only if the necessary setting (``constraints.allow_r2:``) is enabled for a technology. Optionally, this can be allowed only during the ``startup_time:`` (defined in the model-wide settings), e.g. to allow storage to be filled up initially.
 
-The secondary resource can deliver energy to storage via ``rbs`` alongside the primary energy source (via ``rs``), but only if the necessary setting (``constraints.allow_rsec:``) is enabled for a technology. Optionally, this can be allowed only during the ``startup_time:`` (defined in the model-wide settings), e.g. to allow storage to be filled up initially.
-
-Each node also has the following capacity variables:
+Each node can also have the following capacity variables:
 
 * ``s_cap(y, x)``: installed storage capacity
+    This is used for ``storage`` and ``supply_plus`` technologies.
 * ``r_cap(y, x)``: installed resource to storage conversion capacity
+    This is used for ``supply_plus`` technologies.
 * ``r_area(y, x)``: installed resource collector area
+    This is used for ``supply``, ``supply_plus``, and ``demand`` technologies.
 * ``e_cap(y, x)``: installed storage to carrier conversion capacity
-* ``rb_cap(y, x)``: installed secondary resource to storage conversion capacity
+    This is used for all technologies,.
+* ``r2_cap(y, x)``: installed secondary resource to storage conversion capacity
+    This is used for ``supply_plus`` technologies.
 
-For nodes that have an internal (parasitic) energy consumption, ``e_cap_net(y, x)`` specifies the net conversion capacity while ``e_cap(y, x)`` is gross capacity. If no internal energy consumption is specified, ``e_cap(y, x)`` is the net (and gross) capacity. ``e_cap_net`` is always calculated by the model and cannot be set or constrained manually.
+.. Note:: For nodes that have an internal (parasitic) energy consumption, ``e_cap_net`` is also included in the solution. This specifies the net conversion capacity, while ``e_cap(y, x)`` is gross capacity.
 
 When defining a technology, it must be given at least some constraints, that is, options that describe the functioning of the technology. If not specified, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies). Some examples of such options are:
 
-* ``r(y, x, t)``: available resource (+ source, - sink)
+* ``resource(y, x, t)``: available resource (+ source, - sink)
 * ``s_cap.max(y)``: maximum storage capacity
-* ``s_loss(y)``: storage loss rate
+* ``s_loss(y, t)``: storage loss rate
 * ``r_area.max(y)``: maximum resource collector area
 * ``r_eff(y)``: resource conversion efficiency
 * ``r_cap.max(y)``: maximum resource to storage conversion capacity
-* ``e_eff(y)``: maximum storage to carrier conversion efficiency
+* ``e_eff(y, t)``: maximum storage to carrier conversion efficiency
 * ``e_cap.max(y)``: maximum installed storage to/from carrier conversion capacity
 
 .. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`configuration` for details on this.
 
-Finally, each node tracks its costs, formulated in three constraints (more details in the :doc:`formulation` section):
+Finally, each node tracks its costs (+ costs, - revenue), formulated in two constraints (more details in the :doc:`formulation` section):
 
-* ``cost_con``: construction costs
-* ``cost_op_fixed``: fixed operational and maintenance (O&M) costs (i.e., per installed capacity)
-* ``cost_op_var``: variable O&M costs (i.e., per produced output)
+* ``cost_fixed``: construction and fixed operational and maintenance (O&M) costs
+* ``cost_op_var``: variable O&M and export costs (i.e., per produced output)
+
+.. Note:: Efficiencies, available resource, and costs can be defined to vary in time. Equally (and more likely) they can be given as single values.
 
 The next section is a brief tutorial. Following this, :doc:`formulation` details the constraints that actually implement all these formulations mathematically. The section following it, :doc:`configuration`, details how a model is configured, and how the various components outlined here are defined in a working model.
