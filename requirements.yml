@@ -12,6 +12,7 @@ dependencies:
     - descartes  # For analysis_utils.plot_shapefile_polys
     - glpk=4.59  # 4.60 causes problems with current version of Pyomo
     - hdf5
+    - icu=56  # Need to pin version 56 for pyqt=4
     - libnetcdf
     - matplotlib=1.5.1
     - pyqt=4.11.4  # Else conda installs PyQt5 and that breaks matplotlib
