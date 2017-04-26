@@ -519,7 +519,7 @@ def cost_per_distance_getter(config_model):
         link = config_model.get_key('links.'+ x + ',' + x2,
             default=config_model['links'].get(x2 + ',' + x))
         # link = None if no link exists
-        if not link:
+        if not link or tech not in link.keys():
             return 0
         try:
             distance = link.get_key(tech + '.distance')

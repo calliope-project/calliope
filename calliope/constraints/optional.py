@@ -167,7 +167,8 @@ def max_r_area_per_loc(model):
             available_area: 100000
     ``
     To avoid including descendants in area limitation, `ignore_descendants`
-    can be specified for the location, in the same way as `available_area`
+    can be specified for the location, in the same way as `available_area`.
+
     """
     m = model.m
     locations = model._locations
@@ -197,10 +198,10 @@ def max_r_area_per_loc(model):
         else:
             descendants = _get_descendants(x)
         all_x = descendants + [x]
-        r_area_sum = sum(m.r_area[y, _x] for y in m.y_def_r for _x in all_x if
+        r_area_sum = sum(m.r_area[y, _x] for y in m.y_r_area for _x in all_x if
                          model.get_option(y + '.constraints.r_area.max', x=_x)
                          is not False)
-        # r_area_sum will be ``0`` if either ``m.y_def_r`` or ``all_x`` are empty
+        # r_area_sum will be ``0`` if either ``m.y_r_area`` or ``all_x`` are empty
         if not isinstance(r_area_sum, int):
             return (available_area >= r_area_sum)
 

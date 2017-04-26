@@ -205,7 +205,7 @@ class Model(BaseModel):
         # Load run configuration
         if not config_run:
             config_run = os.path.join(os.path.dirname(__file__),
-                                      'example_model', 'run.yaml')
+                                      'example_models', 'national_scale', 'run.yaml')
         if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)
@@ -495,13 +495,42 @@ class Model(BaseModel):
         except exceptions.OptionNotSetError:
             return y
 
-    def get_carrier(self, y, direction, level=None):
-        if level:  # Either 2 or 3
-            return self.get_option(y + '_'.join('.carrier', direction, str(level)))
+    def get_carrier(self, y, direction, level=None, primary=False, all_carriers=False):
+        """
+        Get the ``carrier_in`` or ``carrier_out`` of a technology in the model
+
+        Parameters
+        ----------
+        y: str
+            technology
+        direction: str, `in` or `out`
+            For `carrier_in` and `carrier_out` repectively
+        level: int; 2 or 3; optional, default = None
+            for conversion_plus technologies, define the carrier level if
+            not top level, e.g. level=3 gives `carrier_out_3`
+        primary: bool, optional, default = False
+            give `primary carrier` for a given technology, which is a carrier in
+            `carrier_out` given ass `primary carrier` in the technology definition
+        all_carriers: bool, optional, default = False
+            give all carriers for tech y and given direction. For conversion_plus
+            technologies, this will give an array of carriers, if more than one
+            carrier has been defined in the given direction. All levels are combined.
+        """
+        if y in self._sets['y_conversion_plus']:
+            if level:  # Either 2 or 3
+                return self.get_option(y + '_'.join('.carrier', direction, str(level)))
+            if primary:
+                return self.get_cp_carriers(y, direction=direction)[0]
+            if all_carriers:
+                return self.get_cp_carriers(y, direction=direction)[1]
         else:
-            return self.get_option(
+            carrier = self.get_option(
                 y + '.carrier', default=y + '.carrier_' + direction
             )
+            if not carrier:  # no carrier_in/carrier_out defined
+                return 'resource'
+            else:
+                return carrier
 
     def get_weight(self, y):
         return self.get_option(y + '.stack_weight')
@@ -608,7 +637,7 @@ class Model(BaseModel):
         return eff_ref
 
     @utils.memoize_instancemethod
-    def get_cp_carriers(self, y, x, direction='out'):
+    def get_cp_carriers(self, y, x=None, direction='out'):
         """
         Find all carriers for conversion_plus technology & return the primary
         output carrier as string and all other output carriers as list of strings
@@ -618,24 +647,26 @@ class Model(BaseModel):
         c_2 = self.get_option(y + '.carrier_{}_2'.format(direction), x=x)
         c_3 = self.get_option(y + '.carrier_{}_3'.format(direction), x=x)
         other_c = set()
-        if direction == 'in':
-            other_c.update(c.keys() if isinstance(c, dict) else [c])
-            other_c.update(c_2.keys() if isinstance(c_2, dict) else [c_2])
-            other_c.update(c_3.keys() if isinstance(c_3, dict) else [c_3])
-            return other_c
-
-        if isinstance(c, dict):
+        # direction = 'out', 'primary_carrier' has to be defined if 'carrier_in'
+        # contains several carriers (i.e. is a dict)
+        if direction == 'out' and isinstance(c, dict):
             if not primary_carrier:
                 e = exceptions.ModelError
                 raise e('primary_carrier must be set for conversion_plus technology '
                         '`{}` as carrier_out contains multiple carriers'.format(y))
             other_c.update(c.keys())
             other_c.remove(primary_carrier)
-        elif isinstance(c, str):
+        elif direction == 'out' and isinstance(c, str):
+            other_c.update([c])
             primary_carrier = c
+        # direction = 'in', there is no "primary_carrier"
+        elif direction == 'in':
+            other_c.update(c.keys() if isinstance(c, dict) else [c])
+            primary_carrier = None
         other_c.update(c_2.keys() if isinstance(c_2, dict) else [c_2])
         other_c.update(c_3.keys() if isinstance(c_3, dict) else [c_3])
-        return primary_carrier, other_c
+        other_c.discard(False) # if there is no secondary or tertiary carrier, they return False
+        return [primary_carrier, tuple(other_c)]
 
     def scale_to_peak(self, df, peak, scale_time_res=True):
         """Returns the given dataframe scaled to the given peak value.
@@ -1725,8 +1756,10 @@ class Model(BaseModel):
         df = pd.DataFrame(index=self._sets['y'])
         df.loc[:, 'type'] = df.index.map(lambda y: self.get_parent(y))
         df.loc[:, 'name'] = df.index.map(lambda y: self.get_name(y))
-        df.loc[:, 'carrier_in'] = df.index.map(lambda y: self.get_carrier(y, direction='in'))
-        df.loc[:, 'carrier_out'] = df.index.map(lambda y: self.get_carrier(y, direction='out'))
+        df.loc[:, 'carrier_in'] = df.index.map(
+            lambda y: self.get_carrier(y, direction='in', all_carriers=True))
+        df.loc[:, 'carrier_out'] = df.index.map(
+            lambda y: self.get_carrier(y, direction='out', all_carriers=True))
         df.loc[:, 'stack_weight'] = df.index.map(lambda y: self.get_weight(y))
         df.loc[:, 'color'] = df.index.map(lambda y: self.get_color(y))
         return df

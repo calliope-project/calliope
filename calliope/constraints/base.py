@@ -173,7 +173,7 @@ def node_energy_balance(model):
             default=model.config_model['links'].get(x2 + ',' + x)
         )
         # link = None if no link exists
-        if not link:
+        if not link or tech not in link.keys():
             return 1.0
         try:
             distance = link.get_key(tech + '.distance')
@@ -603,7 +603,7 @@ def node_constraints_operational(model):
         allow_c_con = get_constraint_param(model, 'e_con', y, x, t)
         p_eff = model.get_option(y + '.constraints.p_eff', x=x)
         if y in m.y_conversion or y in m.y_conversion_plus:
-            carriers = model.get_cp_carriers(y, x, direction='in')
+            carriers = model.get_cp_carriers(y, x, direction='in')[1]
             if c not in carriers:
                 return m.c_con[c, y, x, t] == 0
             else:
@@ -763,7 +763,7 @@ def node_costs(model):
     def cost_var_rule(m, y, x, t, k):
         om_var = get_cost_param(model, 'om_var', k, y, x, t)
         om_fuel = get_cost_param(model, 'om_fuel', k, y, x, t)
-        if y in m.y_export:
+        if y in m.y_export and x in m.x_export:
             export = m.export[y, x, t]
             cost_export = get_cost_param(model, 'export', k, y, x, t) * export
         else:

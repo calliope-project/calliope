@@ -45,7 +45,7 @@ def plot_carrier_production(solution, carrier='power', subset=dict(),
 
 
 def plot_timeseries(solution, data, carrier='power', demand='demand_power',
-                    types=['supply', 'supply_plus', 'conversion',
+                    tech_types=['supply', 'supply_plus', 'conversion',
                            'conversion_plus', 'storage', 'unmet_demand'],
                     colormap=None, ticks=None,
                     resample_options=None, resample_func=None,
@@ -67,7 +67,7 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     demand : str, optional
         Name of a demand tech whose time series to plot on top,
         default 'demand_power'.
-    types : list, optional
+    tech_types : list, optional
         Technology types to include in the plot. Default list is
         ['supply', 'supply_plus' , 'conversion', 'storage', 'unmet_demand'].
     colormap : matplotlib colormap, optional
@@ -104,11 +104,18 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     plot_df = data.divide(time_res, axis='index')
     if resample_options and resample_func:
         plot_df = getattr(plot_df.resample(**resample_options), resample_func)()
+    df_metadata = solution['metadata'].to_pandas()
+    # Get pandas DataFrame based on carrier being plotted
+    df = df_metadata.query('carrier_in == "{}" or '
+                           'carrier_out == "{}"'.format(carrier, carrier))
+    # Specifically add pertinent conversion_plus technologies to df
+    if 'conversion_plus' in tech_types:
+        df_cp = df_metadata.query('type == "conversion_plus"')
+        for y, columns in df_cp.iterrows():
+            if carrier in columns.carrier_in or carrier in columns.carrier_out:
+                df = df.append(df_metadata.loc[y])
     # Get tech stack and names
-    df = solution['metadata'].to_pandas().query('carrier_in == "{}" or carrier_out'
-                                                ' == "{}"'.format(carrier, carrier))
-    query_string = au._get_query_string(types)
-    stacked_techs = df.query(query_string).index.tolist()
+    stacked_techs = df_metadata.query('type in {}'.format(tech_types)).index.tolist()
     # Put stack in order according to stack_weights
     weighted = df.stack_weight.sort_values(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in stacked_techs]
@@ -135,7 +142,8 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
 
 
 def plot_installed_capacities(solution,
-                              types=['supply', 'supply_plus', 'conversion', 'storage'],
+                              tech_types=['supply', 'supply_plus', 'conversion',
+                                     'conversion_plus', 'storage'],
                               unit_multiplier=1.0,
                               unit_label='kW',
                               **kwargs):
@@ -144,7 +152,8 @@ def plot_installed_capacities(solution,
 
     Parameters
     ----------
-    types : list, default ['supply', 'supply_plus', 'conversion', 'storage']
+    tech_types : list, default ['supply', 'supply_plus', 'conversion',
+                                'conversion_plus', 'storage']
         Technology types to include in the plot.
     unit_multiplier : float or int, default 1.0
         Multiply installed capacities by this value for plotting.
@@ -154,7 +163,7 @@ def plot_installed_capacities(solution,
     **kwargs : are passed to ``pandas.DataFrame.plot()``
 
     """
-    query_string = au._get_query_string(types)
+    query_string = au._get_query_string(tech_types)
     md = solution.metadata.to_pandas()
     supply_cap = md.query(query_string).index.tolist()
 
