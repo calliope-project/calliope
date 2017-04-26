@@ -1,0 +1,68 @@
+##
+# LOCATIONS
+##
+
+locations:
+    X1:
+        techs: ['chp', 'pv',
+         'supply_grid_power', 'supply_gas',
+         'demand_power', 'demand_heat',
+         'unmet_demand_power', 'unmet_demand_heat']
+        available_area: 500
+        override:
+            demand_power.constraints.r: file=demand_power.csv
+            demand_heat.constraints.r: file=demand_heat.csv
+            supply_grid_power.costs.monetary.e_cap: 100 # cost of transformers
+
+    X2:
+        techs: ['boiler', 'pv',
+         'supply_gas',
+         'demand_power', 'demand_heat',
+         'unmet_demand_power', 'unmet_demand_heat'
+         ]
+        available_area: 1300
+        override:
+            demand_power.constraints.r: file=demand_power.csv
+            demand_heat.constraints.r: file=demand_heat.csv
+            boiler.costs.monetary.e_cap: 43.1 # different boiler costs
+            pv.costs.monetary:
+                        om_var: -0.0203 # revenue for just producing electricity
+                        export: -0.0491 # FIT return for PV export
+
+    X3:
+        techs: ['boiler', 'pv',
+         'supply_gas',
+         'demand_power', 'demand_heat',
+         'unmet_demand_power', 'unmet_demand_heat'
+         ]
+        available_area: 900
+        override:
+            demand_power.constraints.r: file=demand_power.csv
+            demand_heat.constraints.r: file=demand_heat.csv
+            boiler.costs.monetary.e_cap: 78 # different boiler costs
+            pv:
+                constraints:
+                    e_cap.max: 50 # changing tariff structure below 50kW
+                costs.monetary:
+                        om_fixed: -80.5 # reimbursement per kWp from FIT
+
+
+    N1: # location for branching heat transmission network
+        techs: ['heat_pipes']
+
+links:
+    X1,X2:
+        power_lines:
+            distance: 0.5
+    X1,X3:
+        power_lines:
+            distance: 0.6
+    X1,N1:
+        heat_pipes:
+            distance: 0.25
+    N1,X2:
+        heat_pipes:
+            distance: 0.25
+    N1,X3:
+        heat_pipes:
+            distance: 0.35

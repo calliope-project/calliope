@@ -1,0 +1,128 @@
+##
+# TECHNOLOGY DEFINITIONS
+##
+
+techs:
+
+##-GRID SUPPLY-##
+
+    supply_grid_power:
+        name: 'National grid import'
+        parent: supply
+        carrier: power
+        constraints:
+            r: inf
+            e_cap.max: 2000
+        costs:
+            monetary:
+                e_cap: 15
+                om_fuel: 0.1 # 10p/kWh electricity price #ppt
+
+    supply_gas:
+        name: 'Natural gas import'
+        parent: supply
+        carrier: gas
+        constraints:
+            r: inf
+            e_cap.max: 2000
+        costs:
+            monetary:
+                e_cap: 1
+                om_fuel: 0.025 # 2.5p/kWh gas price #ppt
+
+##-Renewables-##
+
+    pv:
+        name: 'Solar photovoltaic power'
+        color: '#99CB48'
+        stack_weight: 100
+        parent: supply
+        export: true
+        carrier_out: power
+        constraints:
+            r: file  # Will look for `pv_r.csv` in data directory - already accounted for panel efficiency
+            e_eff: 0.85
+            e_cap.max: 250
+            r_area.max: 1500
+        costs:
+            monetary:
+                e_cap: 1350
+# Conversion
+
+    boiler:
+        name: 'Natural gas boiler'
+        stack_weight: 100
+        parent: conversion
+        carrier_out: heat
+        carrier_in: gas
+        constraints:
+            e_cap.max: 600
+            e_eff: 0.85
+
+# Conversion_plus
+
+    chp:
+        name: 'Combined heat and power'
+        stack_weight: 100
+        parent: conversion_plus
+        export: true
+        primary_carrier: power
+        carrier_in: gas
+        carrier_out: power
+        carrier_out_2:
+            heat: 0.8
+        constraints:
+            e_cap.max: 1300
+            e_eff: 0.405
+        costs:
+            monetary:
+                e_cap: 750
+                om_var: 0.004 # .4p/kWh for 4500 operating hours/year
+                export: file=export_power.csv
+
+##-DEMAND-##
+
+    demand_power:
+        name: 'Electrical demand'
+        parent: demand
+        carrier: power
+
+    unmet_demand_power:
+        name: 'Unmet electrical demand'
+        parent: unmet_demand
+        carrier: power
+
+    demand_heat:
+        name: 'Heat demand'
+        parent: demand
+        carrier: heat
+
+    unmet_demand_heat:
+        name: 'Unmet heat demand'
+        parent: unmet_demand
+        carrier: heat
+
+##-DISTRIBUTION-##
+
+    power_lines:
+        name: 'Electrical power distribution'
+        parent: transmission
+        carrier: power
+        constraints:
+            e_cap.max: 2000
+            e_eff: 0.98
+        costs_per_distance:
+            monetary:
+                e_cap: 0.01
+
+    heat_pipes:
+        name: 'District heat distribution'
+        parent: transmission
+        carrier: heat
+        constraints:
+            e_cap.max: 2000
+        constraints_per_distance:
+            e_loss: 0.025
+        costs_per_distance:
+            monetary:
+                e_cap: 0.3

@@ -123,18 +123,30 @@ When defining a technology, it must be given at least some constraints, that is,
 * ``s_cap.max(y)``: maximum storage capacity
 * ``s_loss(y, t)``: storage loss rate
 * ``r_area.max(y)``: maximum resource collector area
-* ``r_eff(y)``: resource conversion efficiency
+* ``r_eff(y)``: resource efficiency
 * ``r_cap.max(y)``: maximum resource to storage conversion capacity
-* ``e_eff(y, t)``: maximum storage to carrier conversion efficiency
-* ``e_cap.max(y)``: maximum installed storage to/from carrier conversion capacity
+* ``e_eff(y, t)``: resource/storage/carrier_in to carrier_out conversion efficiency
+* ``e_cap.max(y)``: maximum installed carrier conversion capacity, applied to carrier_out
 
 .. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`configuration` for details on this.
 
 Finally, each node tracks its costs (+ costs, - revenue), formulated in two constraints (more details in the :doc:`formulation` section):
 
 * ``cost_fixed``: construction and fixed operational and maintenance (O&M) costs
-* ``cost_op_var``: variable O&M and export costs (i.e., per produced output)
+* ``cost_var``: variable O&M and export costs (i.e., per produced output)
 
 .. Note:: Efficiencies, available resource, and costs can be defined to vary in time. Equally (and more likely) they can be given as single values.
+
+-------------------
+Linking locations
+-------------------
+Locations are linked together by transmission technologies. By consuming an energy carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
+
+.. figure:: images/nodes_network.*
+   :alt: Layout of linked locations
+
+   Schematic of location linking, including interaction of resource, nodes, and energy carriers. The dashed box defines the system under consideration. Resource flows (green) are lossless, whereas losses can occur along transmission links (black).
+
+Transmission links are considered by the system as nodes at each end of the link, with the same technology at each end. In this regard, the same nodal energy balance equations apply. Additionally, the user can utilise per-distance constraints and costs. For more information on available constraints/costs, see the :doc:`configuration` section.
 
 The next section is a brief tutorial. Following this, :doc:`formulation` details the constraints that actually implement all these formulations mathematically. The section following it, :doc:`configuration`, details how a model is configured, and how the various components outlined here are defined in a working model.

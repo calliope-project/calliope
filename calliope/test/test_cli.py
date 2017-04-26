@@ -21,7 +21,7 @@ class TestCLI:
     def test_run(self):
         runner = CliRunner()
         this_dir = os.path.dirname(__file__)
-        run_config = os.path.join(this_dir, '..', 'example_model', 'run.yaml')
+        run_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'run.yaml')
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.run, [run_config])
             assert result.exit_code == 0
@@ -31,7 +31,7 @@ class TestCLI:
     def test_generate(self):
         runner = CliRunner()
         this_dir = os.path.dirname(__file__)
-        run_config = os.path.join(this_dir, '..', 'example_model', 'run.yaml')
+        run_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'run.yaml')
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.generate, [run_config])
             assert result.exit_code == 0

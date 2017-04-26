@@ -21,7 +21,7 @@ solver: glpk
 # Ignored unless run via the 'calliope generate' tool
 
 parallel:
-    name: example-model
+    name: example-model-national
     environment: bsub  # Choices: bsub, qsub
     pre_run:  # Commands to run before executing model
     post_run:  # Commands to run after executing model

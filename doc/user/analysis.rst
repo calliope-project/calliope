@@ -53,7 +53,7 @@ Analyzing solutions
 
 Refer to the :ref:`API documentation for the analysis module<api_analysis>` for an overview of available analysis functionality.
 
-Refer to the :doc:`tutorial <tutorial>` for some basic analysis techniques.
+Refer to the :doc:`tutorials <tutorials>` for some basic analysis techniques.
 
 .. Note:: The built-in analysis and plotting functionality is still experimental. More documentation on it will be added in a future release.
 

@@ -117,9 +117,9 @@ A technology with the identifier ``tech_identifier`` is configured by a YAML blo
    tech_identifier:
        name:  # A descriptive name, e.g. "Offshore wind"
        parent:  # An abstract base technology, or a previously defined one
+       carrier: false # Energy carrier to produce/consume, for all except conversion
        stack_weight: 100  # Weight of this technology in the stack when plotting
        color: false  # HTML color code, or `false` to choose a random color
-       source_carrier: false # Carrier to consume, for conversion technologies
        group: false  # Make this a group for purposes of supply diversity analysis
        weight: 1.0 # Cost weighting in objective function
        constraints:
@@ -131,7 +131,54 @@ A technology with the identifier ``tech_identifier`` is configured by a YAML blo
        depreciation:
            # ... depreciation definitions ...
 
-Each technology **must** define a ``parent``, which can either be an abstract base technology such as ``supply``, or any other technology previously defined in the model. The technology inherits all settings from its parent, but overwrites anything it specifies again itself. See :ref:`config_parents_and_groups` for more details on this and on the function of the ``group:`` option.
+Each technology **must** define a ``parent`, which can either be an abstract base technology such as ``supply``, or any other technology previously defined in the model. The technology inherits all settings from its parent, but overwrites anything it specifies again itself. See :ref:`config_parents_and_groups` for more details on this and on the function of the ``group:`` option.
+
+Each technology **must** also define at least one of the ``carrier`` options. ``carrier`` implicitly defines ``carrier_in`` & ``carrier_out`` for storage and transmission technologies, ``carrier_in`` for demand technologies, and ``carrier_out`` for supply/supply_plus technologies. Supply and demand technologies can be defined using ``carrier_in``/``carrier_out`` instead, which will produce the same result. For conversion and conversion_plus, there are further options available:
+
+.. code-block:: yaml
+
+    tech_identifier:
+        primary_carrier: false # Setting the primary carrier_out to associate with costs & constraints, if multiple primary carriers are assigned
+        carrier_in: false # Primary energy carrier(s) to consume
+        carrier_in_2: false # Secondary energy carrier(s) to consume, conversion_plus only
+        carrier_in_3: false # Tertiary energy carrier(s) to consume, conversion_plus only
+        carrier_out: false # Primary energy carrier(s) to produce
+        carrier_out_2: false # Secondary energy carrier(s) to produce, conversion_plus only
+        carrier_out_3: false # Tertiary energy carrier(s) to produce, conversion_plus only
+
+If carriers are given at secondary or tertiary level, they are given in an indented list, with their consumption/production with respect to ``carrier_in``/``carrier_out``. For example:
+
+.. code-block:: yaml
+
+    tech_identifier_1:
+        carrier_in: 'primary_consumed_carrier'
+        carrier_in_2:
+            secondary_consumed_carrier: 0.8 # consumes 0.8 units of ``secondary_consumed_carrier`` for every 1 unit of ``primary_consumed_carrier``
+        carrier_in_3:
+            tertiary_consumed_carrier: 0.1 # consumes 0.1 units of ``tertiary_consumed_carrier`` for every 1 unit of ``primary_consumed_carrier``
+        carrier_out: 'primary_produced_carrier'
+        carrier_out_2:
+            secondary_produced_carrier: 0.5 # produces 0.5 units of ``secondary_produced_carrier`` for every 1 unit of ``primary_produced_carrier``
+        carrier_out_3:
+            tertiary_produced_carrier: 0.9 # produces 0.9 units of ``tertiary_produced_carrier`` for every 1 unit of ``primary_produced_carrier``
+
+Where multiple carriers are included in a carrier level, any of those carriers can meet the carrier level requirement. They are listed in the same indented level, for example:
+
+.. code-block:: yaml
+
+    tech_identifier_1:
+        primary_carrier: 'primary_produced_carrier' # ``primary_produced_carrier`` will be used to cost/constraint application
+        carrier_in:
+            primary_consumed_carrier: 1 # if chosen, will consume 1 unit of ``primary_consumed_carrier`` to meet the requirements of ``carrier_in``
+            primary_consumed_carrier_2: 0.5 # if chosen, will consume 0.5 units of ``primary_consumed_carrier_2`` to meet the requirements of ``carrier_in``
+        carrier_in_2:
+            secondary_consumed_carrier: 0.8 # if chosen, will consume 0.8 units of ``secondary_consumed_carrier`` for every 1 unit of ``carrier_in`` being consumed
+            secondary_consumed_carrier_2: 0.1 # if chosen, will consume 0.1 / 0.8 = 0.125 units of ``secondary_consumed_carrier_2`` for every 1 unit of ``carrier_in`` being consumed
+        carrier_out:
+            primary_produced_carrier: 1 # if chosen, will produce 1 unit of ``primary_produced_carrier`` for every 1 unit of ``carrier_out`` being produced
+            primary_produced_carrier_2: 0.8 # if chosen, will produce 0.8 units of ``primary_produced_carrier_2`` for every 1 unit of ``carrier_in`` being produced
+
+.. Note:: a ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers).
 
 ``stack_weight`` and ``color`` determine how the technology is shown in model outputs. The higher the ``stack_weight``, the lower a technology will be shown in stackplots.
 
@@ -286,4 +333,15 @@ Solver options
 
 Gurobi: Refer to the `Gurobi manual <http://www.gurobi.com/resources/documentation>`_, which contains a list of parameters. Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value).
 
-CPLEX: Refer to the `CPLEX documentation <http://www.ibm.com/support/docview.wss?uid=swg21503602>`_, which contains a list of parameters. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory").
+CPLEX: Refer to the `CPLEX parameter list <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/introListAlpha.html>`_. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory"). For example:
+
+.. code-block:: yaml
+
+    solver: cplex
+
+    solver_options:
+        mipgap: 0.01
+        mip_polishafter_absmipgap: 0.1
+        emphasis_mip: 1
+        mip_cuts: 2
+        mip_cuts_cliques: 3

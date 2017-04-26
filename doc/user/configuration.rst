@@ -50,6 +50,7 @@ A technology's identifier can be any alphanumeric string. The index of all techn
    my_tech:
       parent: 'supply'
       name: 'My test technology'
+      carrier_out: 'some_energy_carrier'
       constraints:
          e_cap.max: 1000  # kW
       costs:
@@ -62,6 +63,7 @@ A demand technology, with its demand data stored in a time series in the file ``
 
    my_demand_tech:
       parent: 'demand'
+      carrier_in: 'some_energy_carrier'
       constraints:
          r: 'file=demand.csv'
 
@@ -70,7 +72,7 @@ Technologies must always define a parent, and this can either be one of the pre-
 * ``supply``: Supplies energy to a carrier, has a positive resource.
 * ``supply_plus``: Supplies energy to a carrier, has a positive resource. Additional possible constraints, including efficiencies and storage, distinguish this from ``supply``.
 * ``demand``: Demands energy from a carrier, has a negative resource.
-* ``unmet_demand``: Supplies unlimited energy to a carrier with a very high cost, but does not get counted as a supply technology for analysis and grouping purposes. An ``unmet_demand`` technology for all relevant carriers should usually be included in a model to keep the solution feasible in all cases (see the :doc:`tutorial <tutorial>` for a practical example).
+* ``unmet_demand``: Supplies unlimited energy to a carrier with a very high cost, but does not get counted as a supply technology for analysis and grouping purposes. An ``unmet_demand`` technology for all relevant carriers should usually be included in a model to keep the solution feasible in all cases (see the :doc:`tutorials <tutorials>` for a practical example).
 * ``unmet_demand_as_supply_tech``: Works like ``unmet_demand`` but is a normal ``supply`` technology, so it does get counted as a supply technology for analysis and grouping purposes.
 * ``storage``: Stores energy.
 * ``transmission``: Transmits energy from one location to another.
@@ -140,6 +142,19 @@ Locations that are contained within a parent location have implicit loss-free an
 .. Warning::
 
    If a location contained within a parent location itself defines children, it is no longer included in the implicit free transmission between its siblings and parent location. In turn, it receives implicit free transmission with its own children.
+
+Transmission nodes
+------------------
+
+A location can also act as just a branch in a transmission network. This is relevant for locations where transmission links split into several lines, without any other technologies at those locations. In this case, the location definition becomes:
+
+.. code-block:: yaml
+
+    locations:
+          location1:
+              techs: ['transmission-tech']
+
+Where ``transmission-tech`` can refer to any previously defined ``transmission`` technology which passes through that location. Listing transmission technologies is not necessary for any other location type.
 
 .. _transmission_links:
 

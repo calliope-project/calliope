@@ -131,7 +131,7 @@ def new(path, debug):
     if debug:
         print(_get_version())
     # Copies the included example model
-    example_model = os.path.join(os.path.dirname(__file__), 'example_model')
+    example_model = os.path.join(os.path.dirname(__file__), 'example_models', 'national_scale')
     click.echo('Creating new model in: {}'.format(path))
     shutil.copytree(example_model, path)
 

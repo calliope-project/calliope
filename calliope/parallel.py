@@ -33,7 +33,7 @@ class Parallelizer(object):
         super(Parallelizer, self).__init__()
         if not config_run:
             config_run = os.path.join(os.path.dirname(__file__),
-                                      'example_model', 'run.yaml')
+                                      'example_models', 'national_scale', 'run.yaml')
         self.config_file = config_run
         self.config = utils.AttrDict.from_yaml(config_run)
         self.target_dir = target_dir
