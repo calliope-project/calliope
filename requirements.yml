@@ -1,8 +1,8 @@
 name: calliope
 
 channels:
-    - anaconda
     - conda-forge
+    - anaconda
 
 dependencies:
     - python=3.5

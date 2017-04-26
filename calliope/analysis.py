@@ -20,8 +20,6 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from . import core
-from . import utils
 from . import analysis_utils as au
 
 

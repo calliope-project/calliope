@@ -1,4 +1,4 @@
-|badge_travis| |badge_appveyor| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
+|badge_gitter| |badge_travis| |badge_appveyor| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
 
 -----
 
@@ -115,3 +115,7 @@ limitations under the License.
 .. |badge_appveyor|  image:: https://img.shields.io/travis/calliope-project/calliope/master.svg?style=flat-square&label=windows%20build
     :target: https://ci.appveyor.com/project/sjpfenninger/calliope
     :alt: Build status on Windows
+
+.. |badge_gitter|  image:: https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square
+    :target: https://gitter.im/calliope-project/calliope
+    :alt: Chat on Gitter
