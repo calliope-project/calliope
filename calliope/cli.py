@@ -124,7 +124,7 @@ def cli(ctx, version):
 @_debug
 def new(path, debug):
     """
-    Create new model at the given PATH, based on the included example model.
+    Create new model at the given PATH, based on the included national-scale example model.
     The directory must not yet exist, and intermediate directories will
     be created automatically.
     """

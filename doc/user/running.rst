@@ -62,7 +62,7 @@ The most basic way to run a model programmatically from within a Python interpre
    model = calliope.Model(config_run='/path/to/run_configuration.yaml')
    model.run()
 
-If ``config_run`` is not specified (e.g. ``model = Model()``), the built-in example model is used (see :doc:`example_model`).
+If ``config_run`` is not specified (e.g. ``model = Model()``), the built-in example model is used (see :doc:`example_models`).
 
 ``config_run`` can also take an :class:`~calliope.utils.AttrDict` object containing the configuration. Furthermore, ``Model()`` has an ``override`` parameter, which takes an ``AttrDict`` with settings that will override the given run settings.
 
@@ -71,3 +71,32 @@ After instantiating the ``Model`` object, and before calling the ``run()`` metho
 After the model has been solved, an xarray Dataset containing solution variables and aggregated statistics is accessible under the ``solution`` property on the model instance.
 
 The :doc:`API documentation <../api/api>` gives an overview of the available methods for programmatic access.
+
+---------------------------------------------
+Extracting results from a completed model run
+---------------------------------------------
+
+If running single runs via the command-line tool or using the parallel run functionality, results will be saved as either a single NetCDF file per model run or a set of CSV files per model run. These can then be read back into an interactive Python session for analysis -- see :doc:`analysis` -- or further processed with any other tool available to the modeller.
+
+When working with the in-memory ``solution`` object, which is an n-dimensional `xarray.Dataset <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_, the `xarray documentation <http://xarray.pydata.org/en/stable/>`_ should be consulted (this will be the case either in interactive runs, or after having read it back into memory from disk),
+
+It is easy to extract 2-dimensional slices from the solution by using xarray's ability to extract pandas DataFrames. See the :doc:`tutorials` for examples of how this is done.
+
+The easiest path to extracting data from a model without dealing with xarray, pandas, or other Python data analysis tools, is to set the ``output.format`` in the run configuration to ``csv``, which results in CSV files that can be read for example with common spreadsheet software.
+
+----------------------
+Debugging failing runs
+----------------------
+
+What will typically go wrong, in order of decreasing likelihood:
+
+   * The model is improperly defined or missing data. Calliope will attempt to diagnose some common errors and raise an appropriate error message.
+   * The model is consistent and properly defined but infeasible. Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
+   * There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
+
+Calliope provides some run configuration options to make it easier to determine the cause of the first two of these possibilities. See the :ref:`debugging options described in the configuration reference <debugging_runs_config>`.
+
+Python debugging
+----------------
+
+If using Calliope interactively in a Python session and/or developing custom constraints and analysis functionality, we recommend reading up on the `Python debugger <https://docs.python.org/3/library/pdb.html>`_ and (if using IPython or Jupyter Notebooks) making heavy use of the `%debug magic <https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug>`_.

@@ -63,6 +63,36 @@ Like custom constraint generator functions, custom functions that adjust time re
       function: my_custom_module.my_custom_function
       function_options: {...}
 
+---------
+Profiling
+---------
+
+To profile a Calliope run with the built-in national-scale example model, then visualize the results with snakeviz:
+
+.. code-block:: shell
+
+   make profile  # will dump profile output in the current directory
+   snakeviz calliope.profile  # launch snakeviz to visually examine profile
+
+
+Use ``mprof plot`` to plot memory use.
+
+Other options for visualizing:
+
+* Interactive visualization with `KCachegrind <https://kcachegrind.github.io/>`_ (on macOS, use QCachegrind, installed e.g. with ``brew install qcachegrind``)
+
+   .. code-block:: shell
+
+      pyprof2calltree -i calliope.profile -o calliope.calltree
+      kcachegrind calliope.calltree
+
+* Generate a call graph from the call tree via graphviz
+
+   .. code-block:: shell
+
+      # brew install gprof2dot
+      gprof2dot -f callgrind calliope.calltree | dot -Tsvg -o callgraph.svg
+
 -------------------------
 Checklist for new release
 -------------------------

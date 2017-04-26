@@ -48,7 +48,7 @@ User guide
    user/running
    user/analysis
    user/configuration_reference
-   user/example_model
+   user/example_models
    user/develop
 
 -----------------

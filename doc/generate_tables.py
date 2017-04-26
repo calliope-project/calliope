@@ -103,12 +103,13 @@ def process():
         f.write(depreciation)
 
     # Process the abstract base technologies
-    for tech in ['supply', 'demand', 'unmet_demand',
+    for tech in ['supply', 'supply_plus', 'demand', 'unmet_demand',
                  'unmet_demand_as_supply_tech', 'storage',
-                 'transmission', 'conversion']:
+                 'transmission', 'conversion', 'conversion_plus']:
         block = get_block(filename, tech + ':')
         with open('./user/includes/basetech_{}.yaml'.format(tech), 'w') as f:
             f.write(block)
+
 
 # Run the process function when exec'd -- this is bad style, yes
 process()

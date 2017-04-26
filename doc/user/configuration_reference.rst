@@ -178,7 +178,7 @@ Where multiple carriers are included in a carrier level, any of those carriers c
             primary_produced_carrier: 1 # if chosen, will produce 1 unit of ``primary_produced_carrier`` for every 1 unit of ``carrier_out`` being produced
             primary_produced_carrier_2: 0.8 # if chosen, will produce 0.8 units of ``primary_produced_carrier_2`` for every 1 unit of ``carrier_in`` being produced
 
-.. Note:: a ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers).
+.. Note:: A ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers).
 
 ``stack_weight`` and ``color`` determine how the technology is shown in model outputs. The higher the ``stack_weight``, the lower a technology will be shown in stackplots.
 
@@ -231,55 +231,73 @@ These technology depreciation settings apply when calculating levelized costs. T
 .. literalinclude:: includes/default_depreciation.yaml
    :language: yaml
 
+.. _abstract_base_tech_definitions:
+
 Abstract base technologies
 --------------------------
 
 This lists all pre-defined abstract base technologies and the defaults they provide. Note that it is not possible to define a technology with the same identifier as one of the abstract base technologies. In addition to providing default values for some options, which abstract base technology a user-defined technology inherits from determines how Calliope treats the technology internally.
 
-Supply and demand
-^^^^^^^^^^^^^^^^^
-
-``supply``:
+supply
+^^^^^^
 
 .. literalinclude:: includes/basetech_supply.yaml
    :language: yaml
 
-``demand``:
+supply_plus
+^^^^^^^^^^^
+
+.. literalinclude:: includes/basetech_supply_plus.yaml
+   :language: yaml
+
+demand
+^^^^^^
 
 .. literalinclude:: includes/basetech_demand.yaml
    :language: yaml
 
-Unmet demand
+unmet_demand
 ^^^^^^^^^^^^
-
-``unmet_demand``:
 
 .. literalinclude:: includes/basetech_unmet_demand.yaml
    :language: yaml
 
-``unmet_demand_as_supply_tech``:
+
+There is also the option to include unmet demand as a "true" supply technology by making use of ``unmet_demand_as_supply_tech``:
 
 .. literalinclude:: includes/basetech_unmet_demand_as_supply_tech.yaml
    :language: yaml
 
-Storage, transmission and conversion
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+storage
+^^^^^^^
 
-.. Warning:: The default values provided for ``r`` and ``e_con`` by ``storage``, ``transmission``, and ``conversion`` should not be overridden.
-
-``storage``:
+.. Warning:: The default values provided by ``storage`` for ``r`` and ``e_con`` should not be overridden.
 
 .. literalinclude:: includes/basetech_storage.yaml
    :language: yaml
 
-``transmission``:
+transmission
+^^^^^^^^^^^^
+
+.. Warning:: The default values provided by ``transmission`` for ``r`` and ``e_con`` should not be overridden.
 
 .. literalinclude:: includes/basetech_transmission.yaml
    :language: yaml
 
-``conversion``:
+conversion
+^^^^^^^^^^
+
+.. Warning:: The default values provided by ``conversion`` for ``r`` and ``e_con`` should not be overridden.
 
 .. literalinclude:: includes/basetech_conversion.yaml
+   :language: yaml
+
+conversion_plus
+^^^^^^^^^^^^^^^
+
+.. Warning:: The default values provided by ``conversion_plus`` for ``r`` and ``e_con`` should not be overridden.
+
+.. literalinclude:: includes/basetech_conversion_plus.yaml
    :language: yaml
 
 .. _config_reference_run:
@@ -306,6 +324,8 @@ Optional settings:
 * ``model_override``: Path to a YAML configuration file which contains additional overrides for the model configuration. If both this and ``override`` are specified, anything defined in ``override`` takes precedence over model configuration added in the ``model_override`` file.
 * ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
 
+.. _debugging_runs_config:
+
 Debugging failing runs
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -331,7 +351,15 @@ The following example debug block would keep temporary files, removing possibly 
 Solver options
 ^^^^^^^^^^^^^^
 
-Gurobi: Refer to the `Gurobi manual <http://www.gurobi.com/resources/documentation>`_, which contains a list of parameters. Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value).
+Gurobi: Refer to the `Gurobi manual <https://www.gurobi.com/documentation/>`_, which contains a list of parameters. Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value). For example:
+
+.. code-block:: yaml
+
+    solver: gurobi
+
+    solver_options:
+        Threads: 3
+        NumericFocus: 2
 
 CPLEX: Refer to the `CPLEX parameter list <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/introListAlpha.html>`_. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory"). For example:
 

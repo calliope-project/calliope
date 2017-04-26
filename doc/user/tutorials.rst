@@ -263,7 +263,7 @@ Let's now look at the first location definition:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :lines: 5-19
+   :lines: 5-15
 
 There are several things to note here:
 
@@ -274,7 +274,7 @@ The remaining location definitions look like this:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :lines: 21-55
+   :lines: 17-51
 
 ``X2`` and ``X3`` are very similar to ``X1``, except that they do not connect to the national grid, nor do they contain the ``chp`` technology.
 
@@ -319,7 +319,7 @@ The layout of the model directory, which also includes the time series data in C
          - techs.yaml
       - run.yaml
 
-A complete listing of these configuration files is available in :doc:`example_model`.
+A complete listing of these configuration files is available in :doc:`example_models`.
 
 Inside the ``data`` directory, time series are stored as CSV files (their location is configured inside ``model.yaml``). At a minimum, a model must always have a ``set_t.csv`` file which defines the model's timesteps. For more details on this and on time series data more generally, refer to :ref:`configuration_timeseries`.
 
@@ -343,7 +343,7 @@ To speed up model runs, the built-in model's run configuration also specifies a 
 
 The included time series is hourly for a full year. The ``subset_t`` setting runs the model over only a subset of five days.
 
-The full ``run.yaml`` file includes additional options, none of which are relevant for this tutorial. See the :ref:`full file listing <examplemodel_runsettings>` and the :doc:`section on the run configuration <run_configuration>` for more details on the available options.
+The full ``run.yaml`` file includes additional options, none of which are relevant for this tutorial. See the :ref:`full file listing <examplemodels_nationalscale_runsettings>` and the :doc:`section on the run configuration <run_configuration>` for more details on the available options.
 
 Plan vs. operate
 ================

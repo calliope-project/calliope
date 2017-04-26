@@ -14,13 +14,13 @@ To run a model, two things are needed: a *model definition* that defines such th
 
 Either of these files can have an arbitrary name, but it makes sense to call them something like ``run.yaml`` (for the run settings) and ``model.yaml`` (for the model definition).
 
-The remainder of this section deals with the model configuration, see :doc:`run_configuration` for the run configuration.
+The remainder of this section deals with the model configuration. See :doc:`run_configuration` for the run configuration.
 
-There are two ways by the model definition can be split into several files:
+The model definition can be split into several files in two ways:
 
 1. Model configuration files can can use an ``import`` statement to specify a list of paths to additional files to import (the imported files, in turn, may include further files, so arbitrary degrees of nested configurations are possible). The ``import`` statement can either give an absolute path or a path relative to the importing file. If a setting is defined both in the importing file and the imported file, the imported settings are overridden.
 
-2. The ``model`` setting in the run settings may either give a single file or a list of files, which will combined on model initialization. An example of this is:
+2. The ``model`` setting in the run settings may either give a single file or a list of files, which will be combined on model initialization. An example of this is:
 
 .. code-block:: yaml
 
@@ -31,7 +31,7 @@ There are two ways by the model definition can be split into several files:
 
 .. Note::
 
-   Calliope includes a command-line tool, ``calliope new``, which will create a new model at the given path, based on the built-in example model and its run configuration::
+   Calliope includes a command-line tool, ``calliope new``, which will create a new model at the given path, based on the built-in national-scale example model and its run configuration::
 
       calliope new my_new_model
 
@@ -234,9 +234,14 @@ The following settings cannot be overridden on a per-location basis:
 Using time series data
 ----------------------
 
-If a parameter is not explicit in time and space, it can be simply specified as a single value in the model definition (or, using location-specific overrides, be made spatially explicit).
+.. Note::
 
-Each model however must at a minimum specify all timesteps with a file called ``set_t.csv``. This must contain two columns (comma-separated), the first one being integer indices, and the second, ISO 8601 compatible timestamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``).
+   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific overrides, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource).
+
+Defining a model's time steps
+-----------------------------
+
+Irrespective of whether it actually uses time-varying parameters, a model must at specify its timesteps with a file called ``set_t.csv``. This must contain two columns (comma-separated), the first one being integer indices, and the second, ISO 8601 compatible timestamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``).
 
 For example, the first few lines of a file specifying hourly timesteps for the year 2005 would look like this:
 
@@ -250,12 +255,14 @@ For example, the first few lines of a file specifying hourly timesteps for the y
    5,2005-01-01 05:00:00
    6,2005-01-01 06:00:00
 
-Time series data can be used to specify the ``r`` and ``e_eff`` parameters for specific technologies. This can be done in two ways (using the example of ``r``):
+
+Defining time-varying parameters
+--------------------------------
+
+For parameters that vary in time, time series data can be read from CSV files. This can be done in two ways (using the example of ``r``):
 
 1. Specify ``r: file=filename.csv`` to pick the desired CSV file.
 2. Specify ``r: file``. In this case, the file name is automatically determined according to the format ``tech_param.csv`` (e.g., ``pv_r.csv`` for the parameter ``r`` of a technology with the identifier ``pv``).
-
-.. Note:: If ``e_eff`` is loaded as a time series from file, ``e_eff_ref`` (a static reference efficiency) has to be specified, which is needed for example to compute storage capacity if a storage time is given.
 
 Each CSV file must have integer indices in the first column which match the integer indices from ``set_t.csv``. The first row must be column names, while the rest of the cells are the actual (integer or floating point) data values:
 

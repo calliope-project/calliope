@@ -154,20 +154,20 @@ def group_fraction(model):
 
 def max_r_area_per_loc(model):
     """
-    r_area of all technologies requiring physical space cannot exceed the
+    ``r_area`` of all technologies requiring physical space cannot exceed the
     available area of a location. Available area defined for parent locations
     (in which there are locations defined as being 'within' it) will set the
     available area limit for the sum of all the family (parent + all desecendants).
 
-    To define, assign a value to `available_area` for a given location, e.g.
-    ``
-    locations:
-        r1:
-            techs: ['csp']
-            available_area: 100000
-    ``
-    To avoid including descendants in area limitation, `ignore_descendants`
-    can be specified for the location, in the same way as `available_area`.
+    To define, assign a value to ``available_area`` for a given location, e.g.::
+
+        locations:
+            r1:
+                techs: ['csp']
+                available_area: 100000
+
+    To avoid including descendants in area limitation, ``ignore_descendants``
+    can be specified for the location, in the same way as ``available_area``.
 
     """
     m = model.m

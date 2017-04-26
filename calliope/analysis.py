@@ -44,12 +44,14 @@ def plot_carrier_production(solution, carrier='power', subset=dict(),
     return plot_timeseries(solution, data, carrier=carrier, demand='demand_{}'.format(carrier), **kwargs)
 
 
-def plot_timeseries(solution, data, carrier='power', demand='demand_power',
-                    tech_types=['supply', 'supply_plus', 'conversion',
-                           'conversion_plus', 'storage', 'unmet_demand'],
-                    colormap=None, ticks=None,
-                    resample_options=None, resample_func=None,
-                    add_legend=True, ax=None):
+def plot_timeseries(
+        solution, data, carrier='power', demand='demand_power',
+        tech_types=[
+            'supply', 'supply_plus', 'conversion',
+            'conversion_plus', 'storage', 'unmet_demand'],
+        colormap=None, ticks=None,
+        resample_options=None, resample_func=None,
+        add_legend=True, ax=None):
     """
     Generate a stackplot of ``data`` for the given ``carrier``,
     plotting ``demand`` on top.
@@ -141,26 +143,32 @@ def plot_timeseries(solution, data, carrier='power', demand='demand_power',
     return ax
 
 
-def plot_installed_capacities(solution,
-                              tech_types=['supply', 'supply_plus', 'conversion',
-                                     'conversion_plus', 'storage'],
-                              unit_multiplier=1.0,
-                              unit_label='kW',
-                              **kwargs):
+def plot_installed_capacities(
+        solution,
+        tech_types=[
+            'supply', 'supply_plus', 'conversion',
+            'conversion_plus', 'storage'
+        ],
+        unit_multiplier=1.0,
+        unit_label='kW',
+        **kwargs):
     """
     Plot installed capacities (``e_cap``) with a bar plot.
 
     Parameters
     ----------
-    tech_types : list, default ['supply', 'supply_plus', 'conversion',
-                                'conversion_plus', 'storage']
-        Technology types to include in the plot.
-    unit_multiplier : float or int, default 1.0
+    solution : model solution xarray.Dataset
+    tech_types : list, optional
+        Technology types to include in the plot. Default is
+        ['supply', 'supply_plus', 'conversion', 'conversion_plus', 'storage']
+    unit_multiplier : float or int, optional
         Multiply installed capacities by this value for plotting.
-    unit_label : str, default 'kW'
-        Label for capacity values, adjust this when
-        changing ``unit_multiplier``.
-    **kwargs : are passed to ``pandas.DataFrame.plot()``
+        Defaults to 1.0
+    unit_label : str, optional
+        Label for capacity values. Default is 'kW', adjust this
+        when changing ``unit_multiplier``.
+    **kwargs : optional
+        are passed to ``pandas.DataFrame.plot()``
 
     """
     query_string = au._get_query_string(tech_types)

@@ -1,9 +1,12 @@
 
-================
-Model components
-================
+===========================
+Components to build a model
+===========================
 
-The following details the basic approach to modeling the energy system used in Calliope, as well as the main components and terminology.
+This section proves an overview of how a model is built using Calliope.
+
+Calliope allows a modeler to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base technologies, :ref:`which are described below <technology_types>`. Technologies can take a **resource** from outside of the modeled system and turn it into a specific energy **carrier** in the system. These technologies, together with the **locations** specified in the model, result in a set of **nodes**: the energy balance equations indexed over the set of technologies and locations.
+
 
 -----------
 Terminology
@@ -38,6 +41,8 @@ Most parameters, variables, and constraints are formulated with respect to at le
 
 In some cases, these index sets may have only a single member. For example, if only the power system is modeled, the set ``c`` (carriers) will have a single member, ``power``.
 
+.. _technology_types:
+
 ----------------
 Technology types
 ----------------
@@ -45,12 +50,14 @@ Technology types
 Each technology (that is, each member of the set ``y``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of seven abstract base technologies (see :ref:`configuration_techs` in the model configuration section for more details on this inheritance model):
 
 * Supply: Supplies energy from a resource to a carrier (a source) (base technology: ``supply``)
-* Supply_plus: A more feature_rich version of ``supply``. It can have storage of resource before conversion to carrier, can define an additional secondary resource, and can have several more intermediate loss factors (base technology: ``supply_plus``)
+* Supply_plus: A more feature rich version of ``supply``. It can have storage of resource before conversion to carrier, can define an additional secondary resource, and can have several more intermediate loss factors (base technology: ``supply_plus``)
 * Demand: Acts like supply but with a resource that is negative (a sink). Draws energy from a carrier to satisfy a resource demand (base technology: ``demand``)
 * Conversion: Converts energy from one carrier to another, can have neither resource nor storage associated with it (base technology: ``conversion``)
 * Conversion_plus: A more feature rich version of ``conversion``. There can be several carriers in, converted to several carriers out (base technology: ``conversion_plus``)
 * Storage: Can store energy of a specific carrier, cannot have any resource (base technology: ``storage``)
 * Transmission: Transports energy of a specific carrier from one location to another, can have neither resource nor storage (base technology: ``transmission``)
+
+The internal definition of these abstract base technologies is given in the :ref:`configuration reference <abstract_base_tech_definitions>`.
 
 ------------
 Cost classes
@@ -58,11 +65,16 @@ Cost classes
 
 Costs are modeled in Calliope via *cost classes*. By default, only one classes is defined: ``monetary``.
 
-Technologies can define costs for components (installed capacity), for operation & maintenance, and for export for any cost class. costs can be given as negative, to define a revenue source.
+Technologies can define costs for components (installed capacity), for operation & maintenance, and for export for any cost class. Costs can be given as negative values, which defines a revenue rather than a cost.
 
 The primary cost class, ``monetary``, is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one type of ``monetary`` cost, as it would be considered free otherwise. By default, any cost not specified is assumed to be zero.
 
 Only the ``monetary`` cost class is entered into the default objective function, but other cost classes can be defined for accounting purposes, e.g. ``emissions`` to account for greenhouse gas emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology (see the :doc:`model configuration section <configuration>` for more detail on this).
+
+Revenue
+-------
+
+It is possible to specify revenues for technologies simply by setting a negative cost value. For example, to consider a feed-in tariff for PV generation, it could be given a negative operational cost equal to the real operational cost minus the level of feed-in tariff received.
 
 --------------------------------------------------
 Putting technologies and locations together: Nodes
@@ -132,10 +144,10 @@ When defining a technology, it must be given at least some constraints, that is,
 
 Finally, each node tracks its costs (+ costs, - revenue), formulated in two constraints (more details in the :doc:`formulation` section):
 
-* ``cost_fixed``: construction and fixed operational and maintenance (O&M) costs
-* ``cost_var``: variable O&M and export costs (i.e., per produced output)
+* ``cost_fixed``: construction and fixed operational and maintenance (O&M) costs (i.e., costs per unit of installed capacity)
+* ``cost_var``: variable O&M and export costs (i.e., costs per produced unit of output)
 
-.. Note:: Efficiencies, available resource, and costs can be defined to vary in time. Equally (and more likely) they can be given as single values.
+.. Note:: Efficiencies, available resources, and costs can be defined to vary in time. Equally (and more likely) they can be given as single values. For more detail on time-varying versus constant values, see :ref:`the corresponding section <time_varying_vs_constant_parameters>` in the model formulation chapter.
 
 -------------------
 Linking locations

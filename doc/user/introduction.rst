@@ -29,14 +29,14 @@ Calliope was designed with the following goals in mind:
 * Make models easily modifiable, archiveable and auditable (e.g. in a Git repository), by using well-defined and human-readable text formats
 * Simplify the definition and deployment of large numbers of model runs to high-performance computing clusters
 * Able to run stand-alone from the command-line, but also provide an API for programmatic access and embedding in larger analyses
-* Be a first-class citizen of the Python world (installable with pip and documented and tested code)
-* Have a free and open-source code base
+* Be a first-class citizen of the Python world (installable with ``conda`` and ``pip``, with properly documented and tested code that mostly conforms to PEP8)
+* Have a free and open-source code base under a permissive license
 
 ---------------
 Acknowledgments
 ---------------
 
-Development is funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London, and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
+Initial development was partially funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
 
 .. _license:
 

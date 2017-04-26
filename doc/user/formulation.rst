@@ -5,23 +5,13 @@ Model formulation
 
 This section details the mathematical formulation of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
 
---------------------------------------
-Objective function (cost minimization)
---------------------------------------
+.. _time_varying_vs_constant_parameters:
 
-Provided by: :func:`calliope.constraints.objective.objective_cost_minimization`
+------------------------------------------
+Time-varying vs. constant model parameters
+------------------------------------------
 
-The default objective function minimizes cost:
-
-.. math::
-
-   min: z = \sum_y (weight(y) \times \sum_x cost(y, x, k=k_{m}))
-
-where :math:`k_{m}` is the monetary cost class.
-
-Alternative objective functions can be used by setting the ``objective`` in the model configuration (see :ref:`config_reference_model_wide`).
-
-`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
+Some model parameters which are defined over the set of time steps ``t`` can either given as time series or as constant values. If given as constant values, the same value is used for each time step ``t``. For details on how to define a parameter as time-varying and how to load time series data into it, see the :ref:`time series description in the model configuration section <configuration_timeseries>`.
 
 ------------------
 Decision variables
@@ -52,6 +42,24 @@ Costs
 * ``cost(y, x, k)``: total costs
 * ``cost_fixed(y, x, k)``: fixed operation costs
 * ``cost_var(y, x, k, t)``: variable operation costs
+
+--------------------------------------
+Objective function (cost minimization)
+--------------------------------------
+
+Provided by: :func:`calliope.constraints.objective.objective_cost_minimization`
+
+The default objective function minimizes cost:
+
+.. math::
+
+   min: z = \sum_y (weight(y) \times \sum_x cost(y, x, k=k_{m}))
+
+where :math:`k_{m}` is the monetary cost class.
+
+Alternative objective functions can be used by setting the ``objective`` in the model configuration (see :ref:`config_reference_model_wide`).
+
+`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
 
 -----------------
 Basic constraints
