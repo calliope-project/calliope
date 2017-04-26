@@ -236,7 +236,7 @@ These technology depreciation settings apply when calculating levelized costs. T
 Abstract base technologies
 --------------------------
 
-This lists all pre-defined abstract base technologies and the defaults they provide. Note that it is not possible to define a technology with the same identifier as one of the abstract base technologies. In addition to providing default values for some options, which abstract base technology a user-defined technology inherits from determines how Calliope treats the technology internally.
+This lists all pre-defined abstract base technologies and the defaults they provide. Note that it is not possible to define a technology with the same identifier as one of the abstract base technologies. In addition to providing default values for some options, which abstract base technology a user-defined technology inherits from determines how Calliope treats the technology internally. This internal treatment means that only a subset of available constraints are used for each of the abstract base technologies.
 
 supply
 ^^^^^^
@@ -244,17 +244,168 @@ supply
 .. literalinclude:: includes/basetech_supply.yaml
    :language: yaml
 
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints`:
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    carrier_out
+    group
+    x_map
+    export
+    constraints:
+        r
+        force_r
+        r_unit
+        r_area.min
+        r_area.max
+        r_area.equals
+        r_area_per_e_cap
+        e_prod
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+        export_cap
+    costs:
+        r_area
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        om_fuel
+        export
+    depreciation:
+        plant_life
+        interest
+    weight
+
 supply_plus
 ^^^^^^^^^^^
 
 .. literalinclude:: includes/basetech_supply_plus.yaml
    :language: yaml
 
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints`:
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    carrier_out
+    group
+    x_map
+    export
+    constraints:
+        r
+        force_r
+        r_unit
+        r_eff
+        r_area.min
+        r_area.max
+        r_area.equals
+        r_area_per_e_cap
+        r_cap.min
+        r_cap.max
+        r_cap.equals
+        r_cap_equals_e_cap
+        r_scale
+        r_scale_to_peak
+        allow_r2
+        r2_startup_only
+        r2_eff
+        r2_cap.min
+        r2_cap.max
+        r2_cap.equals
+        r2_cap_follow
+        r2_cap_follow_mode
+        s_init
+        s_cap.min
+        s_cap.max
+        s_cap.equals
+        c_rate
+        s_time.max
+        s_loss
+        e_prod
+        p_eff
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+        export_cap
+    costs:
+        s_cap
+        r_area
+        r_cap
+        r2_cap
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        om_fuel
+        om_r2
+        export
+    depreciation:
+        plant_life
+        interest
+    weight
+
 demand
 ^^^^^^
 
 .. literalinclude:: includes/basetech_demand.yaml
    :language: yaml
+
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints`:
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    carrier_in
+    group
+    x_map
+    export
+    constraints:
+        r
+        force_r
+        r_unit
+        r_area.min
+        r_area.max
+        r_area.equals
+        r_area_per_e_cap
+        e_con
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+    costs:
+        r_area
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        export
+    depreciation:
+        plant_life
+        interest
+    weight
 
 unmet_demand
 ^^^^^^^^^^^^
@@ -268,37 +419,187 @@ There is also the option to include unmet demand as a "true" supply technology b
 .. literalinclude:: includes/basetech_unmet_demand_as_supply_tech.yaml
    :language: yaml
 
+In either case, the additional available constraints are the same as found for the supply abstract base technology. However, it is generally not advised to edit any constraints pertaining to `unmet_demand`.
+
 storage
 ^^^^^^^
 
-.. Warning:: The default values provided by ``storage`` for ``r`` and ``e_con`` should not be overridden.
+.. Warning:: The default value provided by ``storage`` for `e_con`` should not be overridden.
 
 .. literalinclude:: includes/basetech_storage.yaml
    :language: yaml
 
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints` :
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    carrier
+    group
+    x_map
+    export
+    constraints:
+        e_prod
+        s_init
+        s_cap.min
+        s_cap.max
+        s_cap.equals
+        c_rate
+        s_time.max
+        s_loss
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+        export_cap
+    costs:
+        s_cap
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        export
+    depreciation:
+        plant_life
+        interest
+    weight
+
 transmission
 ^^^^^^^^^^^^
 
-.. Warning:: The default values provided by ``transmission`` for ``r`` and ``e_con`` should not be overridden.
+.. Warning:: The default value provided by ``transmission`` for``e_con`` should not be overridden.
 
 .. literalinclude:: includes/basetech_transmission.yaml
    :language: yaml
 
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints` :
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    carrier
+    group
+    x_map
+    export
+    constraints:
+        e_prod
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+        export_cap
+    costs:
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        export
+    costs_per_distance:
+        e_cap
+    constraints_per_distance:
+        e_loss
+    depreciation:
+        plant_life
+        interest
+    weight
+
 conversion
 ^^^^^^^^^^
-
-.. Warning:: The default values provided by ``conversion`` for ``r`` and ``e_con`` should not be overridden.
 
 .. literalinclude:: includes/basetech_conversion.yaml
    :language: yaml
 
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints` :
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    carrier_in
+    carrier_out
+    group
+    x_map
+    export
+    constraints:
+        e_prod
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+        export_cap
+    costs:
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        export
+    depreciation:
+        plant_life
+        interest
+    weight
+
+
 conversion_plus
 ^^^^^^^^^^^^^^^
 
-.. Warning:: The default values provided by ``conversion_plus`` for ``r`` and ``e_con`` should not be overridden.
-
 .. literalinclude:: includes/basetech_conversion_plus.yaml
    :language: yaml
+
+Available constraints are as follows, with full descriptions found above, in :ref:`config_reference_constraints` :
+
+.. code-block:: yaml
+
+    stack_weight
+    color
+    primary_carrier
+    carrier_in
+    carrier_in_2
+    carrier_in_3
+    carrier_out
+    carrier_out_2
+    carrier_out_3
+    group
+    x_map
+    export
+    constraints:
+        e_prod
+        e_eff
+        e_cap.min
+        e_cap.max
+        e_cap.equals
+        e_cap.total_max
+        e_cap.total_equals
+        e_cap_scale
+        e_cap_min_use
+        e_ramping
+        export_cap
+    costs:
+        e_cap
+        om_frac
+        om_fixed
+        om_var
+        export
+    depreciation:
+        plant_life
+        interest
+    weight
 
 .. _config_reference_run:
 
