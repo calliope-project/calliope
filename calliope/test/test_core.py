@@ -11,28 +11,28 @@ from .common import assert_almost_equal
 
 class TestInitialization:
     def test_model_initialization_default(self):
-        model = calliope.Model()
+        model = calliope.examples.NationalScale()
         assert hasattr(model, 'data')
         assert hasattr(model, 'config_run')
         assert hasattr(model, 'config_model')
         assert model.config_run.mode == 'plan'
 
     def test_model_initialization_follow_import_statements(self):
-        model = calliope.Model()
+        model = calliope.examples.NationalScale()
         assert 'techs' in model.config_model
 
     def test_model_initialization_follow_nested_import_statements(self):
-        model = calliope.Model()
+        model = calliope.examples.NationalScale()
         assert 'links' in model.config_model
 
     def test_model_initialization_override_dict(self):
         override = {'output.save': True}
         with pytest.raises(AssertionError):
-            calliope.Model(override=override)
+            calliope.examples.NationalScale(override=override)
 
     def test_model_initialization_override_attrdict(self):
         override = calliope.utils.AttrDict({'output': {'save': True}})
-        model = calliope.Model(override=override)
+        model = calliope.examples.NationalScale(override=override)
         assert model.config_run.output.save is True
 
     def test_model_initialization_simple_model(self):

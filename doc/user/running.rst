@@ -62,7 +62,7 @@ The most basic way to run a model programmatically from within a Python interpre
    model = calliope.Model(config_run='/path/to/run_configuration.yaml')
    model.run()
 
-If ``config_run`` is not specified (e.g. ``model = Model()``), the built-in example model is used (see :doc:`example_models`).
+If ``config_run`` is not specified (i.e. ``model = Model()``), an error is raised. See :doc:`example_models` for information on instantiating a simple example model without specifying a run configuration.
 
 ``config_run`` can also take an :class:`~calliope.utils.AttrDict` object containing the configuration. Furthermore, ``Model()`` has an ``override`` parameter, which takes an ``AttrDict`` with settings that will override the given run settings.
 

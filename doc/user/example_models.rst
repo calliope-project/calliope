@@ -1,13 +1,19 @@
 
-===========================
-The built-in example models
-===========================
+=======================
+Built-in example models
+=======================
 
 This section gives a listing of all the YAML configuration files included in the built-in example models. Refer to the :doc:`tutorials section <tutorials>` for a brief overview of how these parts together can provide a simple working model.
+
+The example models are accessible in the :mod:`calliope.examples` module. To create an instance of an example model, e.g.::
+
+   urban_model = calliope.examples.UrbanScale()
 
 ----------------------
 National-scale example
 ----------------------
+
+Available as :class:`calliope.examples.NationalScale`.
 
 Model settings
 --------------
@@ -55,6 +61,8 @@ Run settings
 -------------------
 Urban-scale example
 -------------------
+
+Available as :class:`calliope.examples.UrbanScale`.
 
 Model settings
 --------------

@@ -18,7 +18,7 @@ def verify_solution_integrity(model_solution, solution_from_disk, tempdir):
 class TestSave:
     @pytest.fixture(scope='module')
     def model(self):
-        model = calliope.Model()
+        model = calliope.examples.NationalScale()
         model.run()
         return model
 

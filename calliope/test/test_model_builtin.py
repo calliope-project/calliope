@@ -1,7 +1,7 @@
 import calliope
 
 
-class TestExampleModel:
+class TestNationalScaleExampleModel:
     def test_model_initialization_default(self):
-        model = calliope.Model()
+        model = calliope.examples.NationalScale()
         model.run()

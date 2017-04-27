@@ -9,16 +9,18 @@ Release History
 Major changes
 ~~~~~~~~~~~~~
 
-|new| Revised technology definitions and sets
+|new| Urban-scale example model, major revisions to the documentation to accommodate it, and a new ``calliope.examples`` module to hold multiple example models. In addition, the ``calliope new`` command now accepts a ``--template`` option to select a template other than the default national-scale example model, e.g.: ``calliope new my_urban_model --template=UrbanScale``.
 
-|new| Supply technologies split into two types: ``supply`` and ``supply_plus``
+|new| Allow technologies to generate revenue.
 
-|new| Allow technologies to generate revenue
+|changed| |backwards-incompatible| Revised technology definitions and internal definition of sets and subsets, in particular subsets of various technology types. Supply technologies are now split into two types: ``supply`` and ``supply_plus``. Most of the more advanced functionality of the original ``supply`` technology is now contained in ``supply_plus``, making it necessary to update model definitions accordingly. In addition to the existing ``conversion`` technology type, a new more complex ``conversion_plus`` was added.
 
 Other changes
 ~~~~~~~~~~~~~
 
+* |changed| |backwards-incompatible| Creating a ``Model()`` with no arguments now raises a ``ModelError`` rather than returning an instance of the built-in national-scale example model. Use the new ``calliope.examples`` module to access example models.
 * |changed| Removed SolutionModel class
+* |fixed| Other minor fixes
 
 0.4.1 (2017-01-12)
 ------------------

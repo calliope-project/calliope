@@ -28,9 +28,9 @@ Tutorial 1: national scale
 This example consists of two possible power supply technologies, a power demand at two locations, and a transmission technology linking the two. The diagram below gives an overview:
 
 .. figure:: images/example_overview_national.*
-   :alt: Overview of the built-in example model
+   :alt: Overview of the built-in urban-scale example model
 
-   Overview of the built-in example model
+   Overview of the built-in national-scale example model
 
 
 Supply-side technologies
@@ -43,7 +43,7 @@ The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example o
 .. figure:: images/node_supply.*
    :alt: Supply node
 
-   The layout of a supply node, in this case ``ccgt``, which has an infinite resource, a carrier conversion efficiency (``e_eff``), and a constraint on its maximum built ``e_cap`` (which puts an upper limit on ``e_{prod}``).
+   The layout of a supply node, in this case ``ccgt``, which has an infinite resource, a carrier conversion efficiency (:math:`e_eff`), and a constraint on its maximum built :math:`e_cap` (which puts an upper limit on :math:`e_{prod}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
@@ -104,7 +104,7 @@ Transmission technologies (like conversion technologies) look different than oth
 .. figure:: images/node_transmission.*
    :alt: Transmission node
 
-   A simple transmission node with an ``e_eff``.
+   A simple transmission node with an :math:`e_eff`.
 
 Locations
 =========
@@ -152,9 +152,9 @@ Tutorial 2: urban scale
 This example consists of two possible sources of electricity, one possible source of heat, and one possible source of simultaneous heat and electricity. There are three locations, each describing a building, with transmission links between them. The diagram below gives an overview:
 
 .. figure:: images/example_overview_urban.*
-   :alt: Overview of the built-in example model
+   :alt: Overview of the built-in urban-scale example model
 
-   Overview of the built-in example model
+   Overview of the built-in urban-scale example model
 
 Supply technologies
 ===================
@@ -166,7 +166,7 @@ The first two are ``national_gas`` and ``national_grid``, referring to the suppl
 .. figure:: images/node_supply.*
    :alt: Simple node
 
-   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (``e_eff``), and a constraint on its maximum built ``e_cap`` (which puts an upper limit on ``e_{prod}``).
+   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`e_eff`), and a constraint on its maximum built :math:`e_cap` (which puts an upper limit on :math:`e_{prod}`).
 
 The definition of these technologies in the example model's configuration looks as follows:
 
@@ -192,7 +192,7 @@ The first is ``boiler`` (natural gas boiler), which serves as an example of a si
 .. figure:: images/node_conversion.*
    :alt: Simple node
 
-   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (``e_eff``), and a constraint on its maximum built ``e_cap`` (which puts an upper limit on ``e_{prod}``).
+   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`e_eff`), and a constraint on its maximum built :math:`e_cap` (which puts an upper limit on :math:`e_{prod}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
@@ -238,7 +238,7 @@ In this district, electricity and heat can be transmitted between two locations.
 .. figure:: images/node_transmission.*
    :alt: Transmission node
 
-   A simple transmission node with an ``e_eff``.
+   A simple transmission node with an :math:`e_eff`.
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
@@ -282,13 +282,13 @@ The remaining location definitions look like this:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :lines: 58-59
+   :lines: 50-51
 
 For transmission technologies, the model also needs to know which top-level locations can be linked, and this is set up in the model configuration as follows:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :lines: 61-76
+   :lines: 53-68
 
 Revenue by export
 =================
@@ -301,9 +301,9 @@ The revenue from PV export varies depending on location, emulating the different
 Files that define the model
 ---------------------------
 
-The configuration definitions described above are in the YAML format, a simple human readable data serialization format, which is stored in text files with a .yaml (or .yml) extension. See :ref:`yaml_format` for details.
+For all Calliope models, including the examples discussed above, the model definitions in through YAML files, which are simple human-readable text files (YAML is a human readable data serialization format). They are stored with a ``.yaml`` (or ``.yml``) extension. See :ref:`yaml_format` for details.
 
-The layout of the model directory, which also includes the time series data in CSV format, is as follows (``+`` denotes directories, ``-`` files):
+Typically, we want to collect all files belonging to a model inside a model directory. In the national-scale example describe above, the layout of that directory, which also includes the time series data in CSV format, is as follows (``+`` denotes directories, ``-`` files):
 
 .. code-block:: text
 
@@ -319,7 +319,7 @@ The layout of the model directory, which also includes the time series data in C
          - techs.yaml
       - run.yaml
 
-A complete listing of these configuration files is available in :doc:`example_models`.
+The urban-scale example follows a similar layout. A complete listing of the files in all example models is available in :doc:`example_models`.
 
 Inside the ``data`` directory, time series are stored as CSV files (their location is configured inside ``model.yaml``). At a minimum, a model must always have a ``set_t.csv`` file which defines the model's timesteps. For more details on this and on time series data more generally, refer to :ref:`configuration_timeseries`.
 
@@ -329,13 +329,13 @@ The three files ``locations.yaml``, ``model.yaml``, and ``techs.yaml`` together 
 The run configuration
 ---------------------
 
-At its most basic, the run configuration simply specifies which model to run, which mode to run it in, and what solver to use. These three options are the required minimum. In the case of the example models, we also specify some output options. The output options only apply when the ``calliope run`` command-line tool is used to run the model (see below).
+At its most basic, the run configuration simply specifies which model to run, which mode to run it in, and what solver to use. These three options are the required minimum. In the case of the example models, we also specify some output options. The output options only apply when the ``calliope run`` command-line tool is used to run the model (see below). In the national-scale example:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/run.yaml
    :language: yaml
    :lines: 5-15
 
-To speed up model runs, the built-in model's run configuration also specifies a time subset:
+To speed up model runs, the national-scale example model's run configuration also specifies a time subset:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/run.yaml
    :language: yaml
@@ -343,7 +343,7 @@ To speed up model runs, the built-in model's run configuration also specifies a 
 
 The included time series is hourly for a full year. The ``subset_t`` setting runs the model over only a subset of five days.
 
-The full ``run.yaml`` file includes additional options, none of which are relevant for this tutorial. See the :ref:`full file listing <examplemodels_nationalscale_runsettings>` and the :doc:`section on the run configuration <run_configuration>` for more details on the available options.
+The full ``run.yaml`` file includes additional options, none of which are relevant for this tutorial. See the :ref:`full file listing <examplemodels_nationalscale_runsettings>` for the national-scale example and the :doc:`section on the run configuration <run_configuration>` for more details on the available options.
 
 Plan vs. operate
 ================
@@ -352,9 +352,9 @@ A Calliope model can either be run in planning mode (``mode: plan``) or operatio
 
 In operational mode, all ``max`` constraints (such as ``e_cap.max``) are treated as fixed rather than as upper bounds. The resulting, fully defined energy system is then operated with a receding horizon control approach. The results are returned in exactly the same format as for planning mode results.
 
-To specify a useful operational model, all locations will usually define overrides for options such as ``e_cap.max``, for all their allowed technologies.
+To specify a runnable operational model, capacities for all technologies at all locations would have to be defined. This can be done by specifying ``e_cap.equals``. In the absence of ``e_cap.equals``, ``e_cap.max`` is assumed to be fixed.
 
-For this tutorial, we are only using the planning mode.
+In this tutorial section, we are only demonstrating the planning mode.
 
 -------------------------------------
 Running a model and analyzing results
@@ -367,19 +367,23 @@ Running interactively
 
 The most straightforward way to run a Calliope model is to do so in an interactive Python session.
 
-An example which also demonstrates some of the analysis possibilities after running a model is given in the following Jupyter notebook. Note that you can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed):
+An example which also demonstrates some of the analysis possibilities after running a model is given in the following Jupyter notebook, based on the national-scale example model. Note that you can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed):
 
-:nbviewer_docs:`Calliope interactive example notebook <_static/notebooks/tutorial.ipynb>`
+:nbviewer_docs:`Calliope interactive national-scale example notebook <_static/notebooks/tutorial.ipynb>`
 
 Running with the command-line tool
 ==================================
 
-Another way to run a Calliope model is to use the command-line tool ``calliope run``. First, we create a new copy of the built-in example model, by using ``calliope new``::
+Another way to run a Calliope model is to use the command-line tool ``calliope run``. First, we create a new copy of the built-in national-scale example model, by using ``calliope new``::
 
    $ calliope new testmodel
+
+.. Note:: By default, ``calliope new`` uses the national-scale example model as a template. To use a different template, you can specify the example model to use, e.g.: ``--template=UrbanScale``.
 
 This creates a new directory, ``testmodel``, in the current working directory. We can now run this model::
 
    $ calliope run testmodel/run.yaml
 
-Because of the output options set in ``run.yaml``, model results will be stored as a set of CSV files in the directory ``Output``. Saving CSV files is an easy way to get results in a format suitable for further processing with other tools. In order to make use of Calliope's analysis functionality, results should be saved as a single NetCDF file instead, which comes with improved performance and handling. See :doc:`analysis` for more details, including the built-in functionality to read results from either CSV or NetCDF files, making them available for further analysis as described above (:ref:`tutorial_run_interactively`).
+Because of the output options set in ``run.yaml``, model results will be stored as a set of CSV files in the directory ``Output``. Saving CSV files is an easy way to get results in a format suitable for further processing with other tools. In order to make use of Calliope's analysis functionality, results should be saved as a single NetCDF file instead, which comes with improved performance and handling.
+
+See :doc:`running` for more on how to run a model and then retrieve results from it. See :doc:`analysis` for more details on analyzing results, including the built-in functionality to read results from either CSV or NetCDF files, making them available for further analysis as described above (:ref:`tutorial_run_interactively`).

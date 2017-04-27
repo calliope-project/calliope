@@ -9,3 +9,4 @@ from .parallel import Parallelizer
 from . import utils
 from . import read
 from . import analysis
+from . import examples

@@ -204,8 +204,9 @@ class Model(BaseModel):
         self.flush_option_cache()
         # Load run configuration
         if not config_run:
-            config_run = os.path.join(os.path.dirname(__file__),
-                                      'example_models', 'national_scale', 'run.yaml')
+            raise exceptions.ModelError(
+                'Must specify run configuration as either a path or an AttrDict.'
+            )
         if isinstance(config_run, str):
             # 1) config_run is a string, assume it's a path
             cr = utils.AttrDict.from_yaml(config_run)

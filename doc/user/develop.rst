@@ -49,6 +49,27 @@ The default cost-minimizing objective function provides a good example:
 
 See the source code of the :func:`~calliope.constraints.optional.ramping_rate` function for a more elaborate example.
 
+The process of including custom, optional constraints is as follows:
+
+First, create the source code (see e.g. the above example for the ``ramping_rate`` function) in a file, for example ``my_constraints.py``
+
+Then, assuming your custom constraint generator function is called ``my_first_custom_constraint`` and is defined in ``my_constraints.py``, you can tell Calliope to load it by adding it to the list of optional constraints in your model configuration as follows::
+
+  constraints:
+      - constraints.optional.ramping_rate
+      - my_constraints.my_first_custom_constraint
+
+This assumes that the file ``my_constraints.py`` is importable when the model is run. It must therefore either be in the directory from which the model is run, installed as a Python module (see `this document <https://python-packaging.readthedocs.io/en/latest/index.html>`_ on how to create importable and installable Python packages), or the Python import path has to be adjusted according to the `official Python documentation <https://docs.python.org/3/tutorial/modules.html#the-module-search-path>`_.
+
+Subsets
+-------
+
+Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.sets`, an overview of which is included here.
+
+.. include:: ../../calliope/sets.py
+   :start-after: ###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
+   :end-before: ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
+
 Time functions and masks
 ------------------------
 

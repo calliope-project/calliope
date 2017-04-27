@@ -7,62 +7,82 @@ sets.py
 
 Sets & sub-sets defined to reduce size of decision variables & constraints.
 
+The markers preceded with `###` are used to auto-include the set description
+in the documentation
+
 Sets are:
 
-Main sets & sub-sets:
-    m.y_demand: all demand sources
-        m.y_sd_r_area: if any r_area constraints are defined (shared)
-        m.y_sd_finite_r: if finite resource limit is defined (shared)
-    m.y_supply: all basic supply technologies
-        m.y_sd_r_area: if any r_area constraints are defined (shared)
-        m.y_sd_finite_r: if finite resource limit is defined (shared)
-    m.y_storage: specifically storage technologies
-    m.y_supply_plus: all supply+ technologies
-        m.y_sp_r_area: If any r_area constraints are defined
-        m.y_sp_finite_r: if finite resource limit is defined
-        m.y_sp_r2: if secondary resource is allowed
-    m.y_conversion: all basic conversion technologies
-    m.y_conversion_plus: all conversion+ technologies
-        m.y_cp_2out: secondary carrier(s) out
-        m.y_cp_3out: tertiary carrier(s) out
-        m.y_cp_2in: secondary carrier(s) in
-        m.y_cp_3in: tertiary carrier(s) in
-    m.y_transmission: all transmission technologies
-    m.y_unmet: dummy supply technologies to log
+###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
 
-    m.x_trans: all transmission locations
-    m.x_r: all locations which act as system sources/sinks
-    m.x_store: all locations in which storage is allowed
+Main sets & sub-sets
+====================
 
-Shared subsets:
-    m.y_finite_r: shared between y_demand, y_supply, and y_supply_plus. Contains:
-        m.y_sd_finite_r
-        m.y_sp_finite_r
-    m.y_r_area: shared between y_demand, y_supply, and y_supply_plus. Contains:
-        m.y_sd_r_area
-        m.y_sp_r_area
+Technologies:
 
-Meta-sets:
-    m.y: all technologies, includes:
-        m.y_demand
-        m.y_supply
-        m.y_storage
-        m.y_supply_plus
-        m.y_conversion
-        m.y_conversion_plus
-        m.y_transmission
-    m.y_sd: all basic supply & demand technologies, includes:
-        m.y_demand
-        m.y_supply
-    m.y_store: all technologies that have storage capabilities, includes:
-        m.y_storage
-        m.y_supply_plus
+* ``m.y_demand``: all demand sources
+    * ``m.y_sd_r_area``: if any r_area constraints are defined (shared)
+    * ``m.y_sd_finite_r``: if finite resource limit is defined (shared)
+* ``m.y_supply``: all basic supply technologies
+    * ``m.y_sd_r_area``: if any r_area constraints are defined (shared)
+    * ``m.y_sd_finite_r``: if finite resource limit is defined (shared)
+* ``m.y_storage``: specifically storage technologies
+* ``m.y_supply_plus``: all supply+ technologies
+    * ``m.y_sp_r_area``: If any r_area constraints are defined
+    * ``m.y_sp_finite_r``: if finite resource limit is defined
+    * ``m.y_sp_r2``: if secondary resource is allowed
+* ``m.y_conversion``: all basic conversion technologies
+* ``m.y_conversion_plus``: all conversion+ technologies
+    * ``m.y_cp_2out``: secondary carrier(s) out
+    * ``m.y_cp_3out``: tertiary carrier(s) out
+    * ``m.y_cp_2in``: secondary carrier(s) in
+    * ``m.y_cp_3in``: tertiary carrier(s) in
+* ``m.y_transmission``: all transmission technologies
+* ``m.y_unmet``: dummy supply technologies to log
 
-    m.x: all locations, includes:
-        m.x_trans
-        m.x_r
-        m.x_store
+Locations:
 
+* ``m.x_trans``: all transmission locations
+* ``m.x_r``: all locations which act as system sources/sinks
+* ``m.x_store``: all locations in which storage is allowed
+
+Shared subsets
+==============
+
+* ``m.y_finite_r``: shared between y_demand, y_supply, and y_supply_plus. Contains:
+    * ``m.y_sd_finite_r``
+    * ``m.y_sp_finite_r``
+* ``m.y_r_area``: shared between y_demand, y_supply, and y_supply_plus. Contains:
+    * ``m.y_sd_r_area``
+    * ``m.y_sp_r_area``
+
+Meta-sets
+=========
+
+Technologies:
+
+* ``m.y``: all technologies, includes:
+    * ``m.y_demand``
+    * ``m.y_supply``
+    * ``m.y_storage``
+    * ``m.y_supply_plus``
+    * ``m.y_conversion``
+    * ``m.y_conversion_plus``
+    * ``m.y_transmission``
+* ``m.y_sd``: all basic supply & demand technologies, includes:
+    * ``m.y_demand``
+    * ``m.y_supply``
+* ``m.y_store``: all technologies that have storage capabilities, includes:
+    * ``m.y_storage``
+    * ``m.y_supply_plus``
+
+Locations:
+
+* ``m.x``: all locations, includes:
+    * ``m.x_trans``
+    * ``m.x_r``
+    * ``m.x_store``
+
+###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 
 """
 

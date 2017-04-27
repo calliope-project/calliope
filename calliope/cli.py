@@ -21,6 +21,7 @@ import traceback
 import click
 
 from . import core
+from . import examples
 from . import _version
 from .parallel import Parallelizer
 
@@ -121,19 +122,21 @@ def cli(ctx, version):
 
 @cli.command(short_help='create model')
 @click.argument('path')
+@click.option('--template', type=str, default=None)
 @_debug
-def new(path, debug):
+def new(path, template, debug):
     """
-    Create new model at the given PATH, based on the included national-scale example model.
-    The directory must not yet exist, and intermediate directories will
-    be created automatically.
+    Create new model at the given ``path``, based on one of the built-in
+    example models. The target path must not yet exist. Intermediate
+    directories will be created automatically.
     """
     if debug:
         print(_get_version())
-    # Copies the included example model
-    example_model = os.path.join(os.path.dirname(__file__), 'example_models', 'national_scale')
-    click.echo('Creating new model in: {}'.format(path))
-    shutil.copytree(example_model, path)
+    if template is None:
+        template = 'NationalScale'
+    source_path = examples.PATHS[template]
+    click.echo('Copying {} template to target directory: {}'.format(template, path))
+    shutil.copytree(source_path, path)
 
 
 @cli.command(short_help='directly run single model')
