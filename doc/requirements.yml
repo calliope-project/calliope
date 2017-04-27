@@ -2,4 +2,5 @@ name: calliope-doc
 
 dependencies:
     - python=3.5
+    - sphinx>=1.5
     - numpydoc
