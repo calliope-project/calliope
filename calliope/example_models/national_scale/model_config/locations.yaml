@@ -3,11 +3,11 @@
 ##
 
 locations:
-    r1:
+    region1:
         techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
             demand_power:
-                x_map: 'r1: demand'
+                x_map: 'region1: demand'
                 constraints:
                     r: file=demand-1.csv
                     r_scale_to_peak: -40000
@@ -15,17 +15,17 @@ locations:
                 constraints:
                     e_cap.max: 30000 # increased to ensure no unmet_demand in first timestep
 
-    r2:
-        techs: ['demand_power', 'unmet_demand_power']
+    region2:
+        techs: ['demand_power', 'unmet_demand_power', 'battery']
         override:
             demand_power:
-                x_map: 'r2: demand'
+                x_map: 'region2: demand'
                 constraints:
                     r: file=demand-2.csv
                     r_scale_to_peak: -5000
 
-    csp1,csp2,csp3:
-        within: r1
+    region1-1,region1-2,region1-3:
+        within: region1
         techs: ['csp']
 
 ##
@@ -33,8 +33,8 @@ locations:
 ##
 
 links:
-    r1,r2:
-        hvac:
+    region1,region2:
+        ac_transmission:
             constraints:
                 e_cap.max: 10000
 
@@ -49,8 +49,8 @@ metadata:
     map_boundary: [-10, 35, 5, 45]
 
     location_coordinates:  # lat, lon coordinates
-        r1: [40, -2]
-        r2: [40, -8]
-        csp1: [41, -2]
-        csp2: [39, -1]
-        csp3: [39, -2]
+        region1: [40, -2]
+        region2: [40, -8]
+        region1-1: [41, -2]
+        region1-2: [39, -1]
+        region1-3: [39, -2]

@@ -686,3 +686,10 @@ a:hover tt {
   padding: 1px 4px 1px 4px;
   font-size: 0.9em;
 }
+
+.figure img {
+  justify-content: center;
+  text-align: center;
+  display: flex;
+  margin: 0 auto;
+}

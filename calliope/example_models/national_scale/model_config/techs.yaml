@@ -4,8 +4,9 @@
 
 techs:
 
-# Supply
-
+    ##
+    # Supply
+    ##
     ccgt:
         name: 'Combined cycle gas turbine'
         color: '#FDC97D'
@@ -46,8 +47,26 @@ techs:
             monetary:
                 interest: 0.12
 
-# Demand
-
+    ##
+    # Storage
+    ##
+    battery:
+        name: 'Battery storage'
+        color: '#DC5CE5'
+        parent: storage
+        carrier: power
+        constraints:
+            e_cap.max: 1000  # kW
+            s_cap.max: inf
+            c_rate: 4
+            e_eff: 0.95  # 0.95 * 0.95 = 0.9025 round trip efficiency
+            s_loss: 0  # No loss over time assumed
+        costs:
+            monetary:
+                s_cap: 200  # USD per kWh storage capacity
+    ##
+    # Demand
+    ##
     demand_power:
         name: 'Power demand'
         parent: demand
@@ -57,9 +76,10 @@ techs:
         parent: unmet_demand
         carrier: power
 
-# Transmission
-
-    hvac:
+    ##
+    # Transmission
+    ##
+    ac_transmission:
         name: 'AC power transmission'
         parent: transmission
         carrier: power

@@ -19,6 +19,7 @@ Other changes
 ~~~~~~~~~~~~~
 
 * |changed| |backwards-incompatible| Creating a ``Model()`` with no arguments now raises a ``ModelError`` rather than returning an instance of the built-in national-scale example model. Use the new ``calliope.examples`` module to access example models.
+* |changed| Improvements to the national-scale example model and its tutorial notebook
 * |changed| Removed SolutionModel class
 * |fixed| Other minor fixes
 

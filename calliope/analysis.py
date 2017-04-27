@@ -209,7 +209,7 @@ def plot_installed_capacities(
     return ax
 
 
-def plot_transmission(solution, tech='hvac', carrier='power',
+def plot_transmission(solution, tech='ac_transmission', carrier='power',
                       labels='utilization',
                       figsize=(15, 15), fontsize=9,
                       show_scale=True,
@@ -225,7 +225,7 @@ def plot_transmission(solution, tech='hvac', carrier='power',
     Parameters
     ----------
     solution : solution container
-    tech : str, default 'hvac'
+    tech : str, default 'ac_transmission'
         Which transmission technology to plot.
     carrier : str, default 'power'
         Which carrier to plot transmission for.

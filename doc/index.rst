@@ -16,7 +16,7 @@ This is the documentation for version |version|. See the `main project website <
 
 Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 
-A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `Pandas <http://pandas.pydata.org/>`_ data structures for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `xarray Datasets <http://xarray.pydata.org/en/stable/>`_ which in turn can easily be converted into `Pandas <http://pandas.pydata.org/>`_ data structures, for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
 
 Main features:
 
@@ -26,7 +26,7 @@ Main features:
 * Model specification in an easy-to-read and machine-processable YAML format
 * Able to run on computing clusters
 * Easily extensible in a modular way: custom constraint generator functions and custom time mask functions
-* Uses a state-of-the-art Python toolchain based on `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_ and `Pandas <http://pandas.pydata.org/>`_
+* Uses a state-of-the-art Python toolchain based on `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_, `xarray <http://xarray.pydata.org/>`_, and `Pandas <http://pandas.pydata.org/>`_
 * Freely available under the Apache 2.0 license
 
 ----------

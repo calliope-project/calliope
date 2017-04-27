@@ -25,13 +25,12 @@ The second part of the tutorial builds a model for part of a district network, e
 Tutorial 1: national scale
 --------------------------
 
-This example consists of two possible power supply technologies, a power demand at two locations, and a transmission technology linking the two. The diagram below gives an overview:
+This example consists of two possible power supply technologies, a power demand at two locations, the possibility for battery storage at one of the locations, and a transmission technology linking the two. The diagram below gives an overview:
 
 .. figure:: images/example_overview_national.*
    :alt: Overview of the built-in urban-scale example model
 
    Overview of the built-in national-scale example model
-
 
 Supply-side technologies
 ========================
@@ -43,13 +42,13 @@ The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example o
 .. figure:: images/node_supply.*
    :alt: Supply node
 
-   The layout of a supply node, in this case ``ccgt``, which has an infinite resource, a carrier conversion efficiency (:math:`e_eff`), and a constraint on its maximum built :math:`e_cap` (which puts an upper limit on :math:`e_{prod}`).
+   The layout of a supply node, in this case ``ccgt``, which has an infinite resource, a carrier conversion efficiency (:math:`e_{eff}`), and a constraint on its maximum built :math:`e_{cap}` (which puts an upper limit on :math:`e_{prod}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 9-22
+   :lines: 10-23
 
 There are a few things to note. First, ``ccgt`` defines a name, a color (given as an HTML color code), and a stack_weight. These are used by the built-in analysis tools when analyzing model results. Second, it specifies its parent, ``supply``, and its carrier_out, ``power``, thus setting itself up as a power supply technology. This is followed by the definition of constraints and costs (the only cost class used is monetary, but this is where other "costs", such as emissions, could be defined).
 
@@ -70,14 +69,22 @@ This definition in the example model's configuration is more verbose:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 23-47
+   :lines: 24-48
 
 Again, ``csp`` has the definitions for name, color, stack_weight, parent, and carrier_out. Its constraints are more numerous: it defines a maximum storage time (``s_time.max``), an hourly storage loss rate (``s_loss``), then specifies that its resource should be read from a file (more on that below). It also defines a carrier conversion efficiency of 0.4 and a parasitic efficiency of 0.9 (i.e., an internal loss of 0.1). Finally, the resource collector area and the installed carrier conversion capacity are constrained to a maximum.
 
 The costs are more numerous as well, and include monetary costs for all relevant components along the conversion from resource to carrier (power): storage capacity, resource collector area, resource conversion capacity, energy conversion capacity, and variable operational and maintenance costs. Finally, it also overrides the default value for the monetary interest rate.
 
 Storage technologies
-========================
+====================
+
+The second location allows a limited amount of battery storage to be deployed to better balance the system. This technology is defined as follows:
+
+.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+   :language: yaml
+   :lines: 53-66
+
+The contraints give a maximum installed generation capacity for battery storage together with a charge rate (C-rate) of 4, which in turn limits the storage capacity. In the case of a storage technology, ``e_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored energy over time -- in this case, we set this loss to zero.
 
 
 Other technologies
@@ -87,7 +94,7 @@ Three more technologies are needed for a simple model. First, a definition of po
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 51-58
+   :lines: 70-77
 
 Power demand is a technology like any other. We will associate an actual demand time series with the demand technology later. The parent of ``unmet_demand_power``, ``unmet_demand``, is a special kind of supply technology with an unlimited resource but very high cost. It allows a model to remain mathematically feasible even if insufficient supply is available to meet demand, and model results can easily be examined to verify whether there was any unmet demand. There is no requirement to include such a technology in a model, but it is useful to do so, since in its absence, an infeasible model would cause the solver to end with an error, returning no results for Calliope to analyze.
 
@@ -95,16 +102,16 @@ What remains to set up is a simple transmission technology:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 62-71
+   :lines: 82-91
 
-``hvac`` has an efficiency of 0.85, so a loss during transmission of 0.15, as well as some cost definitions.
+``ac_transmission`` has an efficiency of 0.85, so a loss during transmission of 0.15, as well as some cost definitions.
 
 Transmission technologies (like conversion technologies) look different than other nodes, as they link the carrier at one location to the carrier at another (or, in the case of conversion, one carrier to another at the same location). The following figure illustrates this for the example model's transmission technology:
 
 .. figure:: images/node_transmission.*
    :alt: Transmission node
 
-   A simple transmission node with an :math:`e_eff`.
+   A simple transmission node with an :math:`e_{eff}`.
 
 Locations
 =========
@@ -166,7 +173,7 @@ The first two are ``national_gas`` and ``national_grid``, referring to the suppl
 .. figure:: images/node_supply.*
    :alt: Simple node
 
-   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`e_eff`), and a constraint on its maximum built :math:`e_cap` (which puts an upper limit on :math:`e_{prod}`).
+   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`e_{eff}`), and a constraint on its maximum built :math:`e_{cap}` (which puts an upper limit on :math:`e_{prod}`).
 
 The definition of these technologies in the example model's configuration looks as follows:
 
@@ -192,7 +199,7 @@ The first is ``boiler`` (natural gas boiler), which serves as an example of a si
 .. figure:: images/node_conversion.*
    :alt: Simple node
 
-   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`e_eff`), and a constraint on its maximum built :math:`e_cap` (which puts an upper limit on :math:`e_{prod}`).
+   The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`e_{eff}`), and a constraint on its maximum built :math:`e_{cap}` (which puts an upper limit on :math:`e_{prod}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
@@ -238,7 +245,7 @@ In this district, electricity and heat can be transmitted between two locations.
 .. figure:: images/node_transmission.*
    :alt: Transmission node
 
-   A simple transmission node with an :math:`e_eff`.
+   A simple transmission node with an :math:`e_{eff}`.
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml

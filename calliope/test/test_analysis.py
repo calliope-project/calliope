@@ -4,7 +4,6 @@
 import pytest
 import tempfile
 
-from calliope import Model
 from calliope import examples
 from calliope.utils import AttrDict
 
