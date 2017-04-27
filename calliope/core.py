@@ -1765,32 +1765,50 @@ class Model(BaseModel):
         df.loc[:, 'color'] = df.index.map(lambda y: self.get_color(y))
         return df
 
-    def get_summary(self, sort_by='e_cap'):
+    def get_summary(self, sort_by='e_cap', carrier=None):
         sol = self.solution
 
         c_prod = sol['c_prod'].sum(dim='x')
         c_con = sol['c_con'].sum(dim='x')
         df = pd.DataFrame(index=sol.y, columns=['e_con', 'e_prod'])
-        for y in sol.y:
-            carrier_out = self.get_carrier(y.item(), direction='out', all_carriers=True)
-            carrier_in = self.get_carrier(y.item(), direction='in', all_carriers=True)
-            if isinstance(carrier_out, tuple): # conversion_plus
-                # for carrier_out, we take the primary_carrier
-                carrier_out = self.get_carrier(y.item(), direction='out',
-                                               primary=True)
-            if isinstance(carrier_in, tuple): # conversion_plus
-                # here we don't have a 'primary_carrier_in' value, so we just take the first in the list
-                carrier_in = list(carrier_in)[0]
-            df.loc[y.item(), 'e_prod'] = (c_prod.loc[dict(y=y, c=carrier_out)].item()
-                                          if carrier_out != 'resource' else np.nan)
-            df.loc[y.item(), 'e_con'] = (c_con.loc[dict(y=y, c=carrier_in)].item()
-                                         if carrier_in != 'resource' else np.nan)
-        df = df.astype(np.float32) # np.float needed to avoid divide by zero error
+
+        if carrier is not None:
+            # If a specific carrier is asked for, we only grab that one
+            df['e_prod'] = c_prod.loc[dict(c=carrier)]
+            df['e_con'] = c_con.loc[dict(c=carrier)]
+        else:
+            # If no specific carrier asked for, we intelligently pick
+            # the correct one for each technology
+            for y in sol.y:
+                carrier_out = self.get_carrier(
+                    y.item(), direction='out', all_carriers=True
+                )
+                carrier_in = self.get_carrier(
+                    y.item(), direction='in', all_carriers=True
+                )
+                if isinstance(carrier_out, tuple):  # conversion_plus
+                    # for carrier_out, we take the primary_carrier
+                    carrier_out = self.get_carrier(y.item(), direction='out',
+                                                   primary=True)
+                if isinstance(carrier_in, tuple):  # conversion_plus
+                    # here we don't have a 'primary_carrier_in' value,
+                    # so we just take the first in the list
+                    carrier_in = list(carrier_in)[0]
+
+                df.loc[y.item(), 'e_prod'] = (
+                    c_prod.loc[dict(y=y, c=carrier_out)].item()
+                    if carrier_out != 'resource' else np.nan
+                )
+                df.loc[y.item(), 'e_con'] = (
+                    c_con.loc[dict(y=y, c=carrier_in)].item()
+                    if carrier_in != 'resource' else np.nan
+                )
+        df = df.astype(np.float32)  # np.float needed to avoid divide by zero error
 
         # Total (over locations) capacity factors per carrier
         time_res_sum = self._get_time_res_sum()
         with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
-            cf = np.divide(df.loc[:,'e_prod'],
+            cf = np.divide(df.loc[:, 'e_prod'],
                            (sol['e_cap_net'].sum(dim='x') * time_res_sum))
         df['cf'] = cf
 
@@ -1799,7 +1817,7 @@ class Model(BaseModel):
             with np.errstate(divide='ignore', invalid='ignore'):  # don't warn about division by zero
                 df['levelized_cost_' + k] = np.divide(
                     sol['costs'].loc[dict(k=k)].sum(dim='x'),
-                    df.loc[:,'e_prod'])
+                    df.loc[:, 'e_prod'])
 
         # Add other carrier-independent stuff
         df['e_cap'] = sol['e_cap'].sum(dim='x')

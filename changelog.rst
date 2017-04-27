@@ -11,7 +11,9 @@ Major changes
 
 |new| Urban-scale example model, major revisions to the documentation to accommodate it, and a new ``calliope.examples`` module to hold multiple example models. In addition, the ``calliope new`` command now accepts a ``--template`` option to select a template other than the default national-scale example model, e.g.: ``calliope new my_urban_model --template=UrbanScale``.
 
-|new| Allow technologies to generate revenue.
+|new| Allow technologies to generate revenue (by specifying negative costs)
+
+|new| Allow technologies to export their carrier directly to outside the system boundary
 
 |changed| |backwards-incompatible| Revised technology definitions and internal definition of sets and subsets, in particular subsets of various technology types. Supply technologies are now split into two types: ``supply`` and ``supply_plus``. Most of the more advanced functionality of the original ``supply`` technology is now contained in ``supply_plus``, making it necessary to update model definitions accordingly. In addition to the existing ``conversion`` technology type, a new more complex ``conversion_plus`` was added.
 
