@@ -88,6 +88,9 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
               # 'sphinx.ext.autosummary',
               'numpydoc']
 
+# Ensure that cdnjs is used rather than the discontinued mathjax cdn
+mathjax_path = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
+
 numpydoc_show_class_members = False   # numpydoc: don't do autosummary
 
 nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
