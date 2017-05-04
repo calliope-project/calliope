@@ -9,6 +9,8 @@ Development takes place in the ``master`` branch. Stable versions are tagged off
 
 Tests are included and can be run with ``py.test`` from the project's root directory.
 
+See the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+
 --------------------------------
 Installing a development version
 --------------------------------

@@ -18,6 +18,8 @@ Calliope is a framework to develop energy system models, with a focus on flexibi
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `xarray Datasets <http://xarray.pydata.org/en/stable/>`_ which in turn can easily be converted into `Pandas <http://pandas.pydata.org/>`_ data structures, for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
 
+Calliope is developed in the open `on GitHub <https://github.com/calliope-project/calliope>`_ and contributions are very welcome (see the :doc:`user/develop`). See the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+
 Main features:
 
 * Generic technology definition allows modeling any mix of production, storage and consumption
@@ -61,6 +63,7 @@ Documents functions, classes and methods:
    :maxdepth: 1
 
    api/api
+   genindex
 
 ---------------
 Release history

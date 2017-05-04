@@ -129,16 +129,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
     return o
 
 
-class BaseModel(object):
-    """
-    Base model class.
-
-    """
-    def __init__(self):
-        super().__init__()
-
-
-class Model(BaseModel):
+class Model(object):
     """
     Calliope model.
 

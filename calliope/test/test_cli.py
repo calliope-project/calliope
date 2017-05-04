@@ -35,4 +35,4 @@ class TestCLI:
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.generate, [run_config])
             assert result.exit_code == 0
-            assert os.path.isfile(os.path.join(tempdir, 'runs', 'example-model', 'submit_array.sh'))
+            assert os.path.isfile(os.path.join(tempdir, 'runs', 'example-model-national', 'submit_array.sh'))
