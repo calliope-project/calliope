@@ -3,7 +3,7 @@
 Release History
 ===============
 
-0.5.0 (dev)
+0.5.0 (2017-05-04)
 -----------
 
 Major changes
