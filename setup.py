@@ -28,11 +28,11 @@ setup(
         "click >= 3.3",
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
-        "numpy >= 1.11",
+        "numpy >= 1.12",
         "pandas >= 0.19, < 0.20",
         "pyomo >= 5.0, < 5.1",
         "pyyaml >= 3.11",
-        "xarray >= 0.8.2",
+        "xarray >= 0.9.5, < 0.10",
     ],
     entry_points={
         'console_scripts': [
