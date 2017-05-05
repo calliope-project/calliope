@@ -3,8 +3,16 @@
 Release History
 ===============
 
-0.5.0 (2017-05-04)
+0.5.1 (dev)
 -----------
+
+Other changes
+~~~~~~~~~~~~~
+
+* |changed| Documentation improvements
+
+0.5.0 (2017-05-04)
+------------------
 
 Major changes
 ~~~~~~~~~~~~~

@@ -135,6 +135,13 @@ Create release
 * Commit with message "Release vXXXX", then add a "vXXXX" tag, push both to GitHub
 * Create a release through the GitHub web interface, using the same tag, titling it "Release vXXXX" (required for Zenodo to pull it in)
 * Upload new release to PyPI: ``make all-dist``
+* Update the conda-forge package:
+    * Fork `conda-forge/calliope-feedstock <https://github.com/conda-forge/calliope-feedstock>`_, and update ``recipe/meta.yaml`` with:
+        * Version number: ``{% set version = "XXXX" %}``
+        * MD5 of latest version from PyPI: ``{% set md5 = "XXXX" %}``
+        * Reset ``build: number: 0`` if it is not already at zero
+        * If necessary, carry over any changed requirements from ``requirements.yml`` or ``setup.py``
+    * Submit a pull request from an appropriately named branch in your fork (e.g. ``vXXXX``) to the `conda-forge/calliope-feedstock <https://github.com/conda-forge/calliope-feedstock>`_ repository
 
 Post-release
 ------------
