@@ -243,9 +243,6 @@ class Model(object):
         and store that information.
         """
         timeseries_constraint = ['r']
-        # These can be numeric, avoiding true/false constraints.
-        # No c_eff due to disagreement with non-timeseries constraint
-        # c_e_cap_gross_net_rule.
         allowed_timeseries_constraints = ['r_eff', 'r_scale', 'r2_eff', 's_loss',
                                           'e_prod', 'e_con', 'e_eff', 'p_eff',
                                           'e_cap_min_use', 'e_ramping',
@@ -357,23 +354,36 @@ class Model(object):
         Distance calculated using vincenty inverse formula (given in utils module).
         """
         # Check if metadata & links are loaded
-        if 'metadata' not in self.config_model or 'links' not in self.config_model:
-            return
-        elif self.config_model.links:
-            for link, v in self.config_model.links.items():
-                for trans, v2 in self.config_model.links[link].items():
-                    # for a given link and transmission type (e.g. 'hvac'),
-                    # check if distance is set.
-                    if 'distance' not in self.config_model.links[link][trans]:
-                        # Links are given as 'a, b',
-                        # so need to split them into individuals
-                        links = link.split(',')
-                        # Find distance using vincenty func & metadata of lat-long
-                        loc_coords = self.config_model.metadata.location_coordinates
-                        dist = utils.vincenty(getattr(loc_coords, links[0]),
-                                              getattr(loc_coords, links[1]))
-                        # update config_model
-                        self.config_model.links[link][trans]['distance'] = dist
+        if (not self.config_model.get('metadata', None)
+            or not self.config_model.get('links', None)):
+            return None
+
+        # We continue if both links and metadata are defined in config_model
+        link_tech = set() # fill with 'link.tech' strings
+        link_tech_distance = set() # fill with 'link.tech' strings if 'link.tech.distance' exists
+
+        for key in self.config_model.links.as_dict_flat().keys():
+            link_tech.update(['.'.join(key.split('.',2)[:2])]) # get only 'link.tech'
+            if 'distance' in key:
+                link_tech_distance(['.'.join(key.split('.',2)[:2])]) # get only 'link.tech'
+            # create set with 'link.tech' strings where 'link.tech.distance' does not exist
+            fill_distance = link_tech.difference(link_tech_distance)
+        for i in fill_distance:
+            # Links are given as 'a,b', so need to split them into individuals
+            locs = i.split('.')[0].split(',')
+            # Find distance using vincenty func & metadata of lat-long,
+            # ignoring curvature if metadata is given as x-y, not lat-long
+            loc_coords = self.config_model.metadata.location_coordinates
+            loc1 = getattr(loc_coords, locs[0])
+            loc2 = getattr(loc_coords, locs[1])
+            coordinate_system = self.config_model.metadata.get(
+                                        'coordinate_system', 'geographic')
+            if coordinate_system == 'geographic':
+                dist = utils.vincenty(loc1, loc2)
+            elif coordinate_system == 'cartesian':
+                dist = np.sqrt((loc1[0] - loc2[0])**2 + (loc1[1] - loc2[1])**2)
+            # update config_model
+            self.config_model.links.set_key(i+'.distance', dist)
 
     def get_t(self, timestamp, offset=0):
         """

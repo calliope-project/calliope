@@ -53,16 +53,29 @@ locations:
 links:
     X1,X2:
         power_lines:
-            distance: 0.5
+            constraints: # nothing to define, but model requires a key at this level of nesting
     X1,X3:
         power_lines:
-            distance: 0.6
+            constraints: # nothing to define, but model requires a key at this level of nesting
     X1,N1:
         heat_pipes:
-            distance: 0.25
+            constraints: # nothing to define, but model requires a key at this level of nesting
     N1,X2:
         heat_pipes:
-            distance: 0.25
+            constraints: # nothing to define, but model requires a key at this level of nesting
     N1,X3:
         heat_pipes:
-            distance: 0.35
+            constraints: # nothing to define, but model requires a key at this level of nesting
+
+metadata:
+    # default coord system is 'geographic', i.e. lat-lon. 'cartesian' allows x-y inputs
+    coordinate_system: cartesian
+
+    # lower left corner x, lower left corner y, upper right corner x, upper right corner y
+    map_boundary: [0, 0, 1, 1]
+
+    location_coordinates:  # lat, lon coordinates
+        X1: [2, 7]
+        X2: [8, 7]
+        X3: [5, 3]
+        N1: [5, 7]

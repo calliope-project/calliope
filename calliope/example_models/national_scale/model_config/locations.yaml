@@ -45,8 +45,10 @@ links:
 ##
 
 metadata:
-    # lower left corner lon, lower left corner lat, upper right corner lon, upper right corner lat
-    map_boundary: [-10, 35, 5, 45]
+    coordinate_system: geographic # default, i.e. lat-lon. 'cartesian' would allow x-y inputs
+
+    # lower left corner lat, lower left corner lon, upper right corner lat, upper right corner lon
+    map_boundary: [35, -10, 45, 5]
 
     location_coordinates:  # lat, lon coordinates
         region1: [40, -2]
