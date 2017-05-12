@@ -150,28 +150,39 @@ def plot_graph_on_map(config_model, G=None,
     import networkx as nx
     from calliope.lib import nx_pylab
 
+    coord_system = config_model.metadata.get('coordinate_system', 'geographic')
+
     # Set up basemap
     if not bounds:
         bounds = config_model.metadata.map_boundary
-    bounds_width = bounds[2] - bounds[0]  # lon --> width
-    bounds_height = bounds[3] - bounds[1]  # lat --> height
-    m = Basemap(projection='merc', ellps='WGS84',
-                llcrnrlon=bounds[0], llcrnrlat=bounds[1],
-                urcrnrlon=bounds[2], urcrnrlat=bounds[3],
-                lat_ts=bounds[1] + bounds_width / 2,
-                resolution=map_resolution,
-                suppress_ticks=True)
-
-    # Node positions
-    pos = config_model.metadata.location_coordinates
-    pos = {i: m(pos[i][1], pos[i][0]) for i in pos}  # Flip lat, lon to x, y!
+    bounds_width = bounds[3] - bounds[1]  # lon --> width
+    bounds_height = bounds[2] - bounds[0]  # lat --> height
 
     # Create plot
     if not ax:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, axisbg='w', frame_on=False)
-    m.drawmapboundary(fill_color=None, linewidth=0)
-    m.drawcoastlines(linewidth=0.2, color='#626262')
+
+    # Node positions
+    pos = config_model.metadata.location_coordinates
+    if coord_system=='geographic':
+        m = Basemap(projection='merc', ellps='WGS84',
+                llcrnrlon=bounds[1], llcrnrlat=bounds[0],
+                urcrnrlon=bounds[3], urcrnrlat=bounds[2],
+                lat_ts=bounds[1] + bounds_width / 2,
+                resolution=map_resolution,
+                suppress_ticks=True)
+        m.drawmapboundary(fill_color=None, linewidth=0)
+        m.drawcoastlines(linewidth=0.2, color='#626262')
+        pos = {i: m(pos[i][1], pos[i][0]) for i in pos} # Flip lat, lon to x, y!
+        # Adding node names just above node points
+        pos_offset = {i: (pos[i][0], pos[i][1]+20) for i in pos}
+    elif coord_system=='cartesian':
+        pos = {i: (pos[i][0], pos[i][1]) for i in pos} # No need to flip
+        # Adding node names just above node points
+        pos_offset = {i: (pos[i][0], pos[i][1]+0.2) for i in pos}
+        # m has to be defined as it is returned
+        m = None
 
     # Draw the graph
     if G:
@@ -193,11 +204,10 @@ def plot_graph_on_map(config_model, G=None,
                                               font_size=fontsize)
 
         # Adding node names just above node points
-        pos_offset = {i: (pos[i][0], pos[i][1]+20) for i in pos}
         nx.draw_networkx_labels(G, pos_offset, font_size=fontsize)
 
     # Add a map scale
-    if show_scale:
+    if show_scale and coord_system=='geographic':
         scale = m.drawmapscale(
             bounds[0] + bounds_width * scale_left_distance,
             bounds[1] + bounds_height * scale_bottom_distance,
@@ -207,7 +217,6 @@ def plot_graph_on_map(config_model, G=None,
             fillcolor1='w', fillcolor2='#555555',
             fontcolor='#555555', fontsize=fontsize
         )
-
     return ax, m
 
 
