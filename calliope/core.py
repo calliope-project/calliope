@@ -374,14 +374,18 @@ class Model(object):
             # Find distance using vincenty func & metadata of lat-long,
             # ignoring curvature if metadata is given as x-y, not lat-long
             loc_coords = self.config_model.metadata.location_coordinates
-            loc1 = getattr(loc_coords, locs[0])
-            loc2 = getattr(loc_coords, locs[1])
-            coordinate_system = self.config_model.metadata.get(
-                                        'coordinate_system', 'geographic')
-            if coordinate_system == 'geographic':
-                dist = utils.vincenty(loc1, loc2)
-            elif coordinate_system == 'cartesian':
-                dist = np.sqrt((loc1[0] - loc2[0])**2 + (loc1[1] - loc2[1])**2)
+            loc1 = getattr(loc_coords, locs[0]) # look for first location in a,b
+            loc2 = getattr(loc_coords, locs[1]) # look for second location in a,b
+            if all(['lat' in key or 'lon' in key for key in # geographic
+                   loc_coords.as_dict_flat().keys()]):
+                dist = utils.vincenty([loc1.lat, loc1.lon], [loc2.lat, loc2.lon])
+            elif all(['x' in key or 'y' in key for key in # cartesian
+                     loc_coords.as_dict_flat().keys()]):
+                dist = np.sqrt((loc1.x - loc2.x)**2 + (loc1.y - loc2.y)**2)
+            else:
+                raise KeyError('unidentified coordinate system. Expecting data '
+                       'in the format {lat: N, lon: M} or {x: N, y: M} for '
+                       'user coordinate values of N, M.')
             # update config_model
             self.config_model.links.set_key(i+'.distance', dist)
 

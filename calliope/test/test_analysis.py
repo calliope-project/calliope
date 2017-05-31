@@ -31,9 +31,11 @@ class TestModel:
                             constraints:
                                 r: -50
             metadata:
-                map_boundary: [-10, 35, 5, 45]
+                map_boundary:
+                    lower_left: {lat: 35, lon: -10}
+                    upper_right: {lat: 45, lon: 5}
                 location_coordinates:
-                    1: [40, -2]
+                    1: {lat: 40, lon: -2}
             links:
         """
         config_run = """

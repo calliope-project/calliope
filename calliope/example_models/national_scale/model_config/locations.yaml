@@ -45,14 +45,18 @@ links:
 ##
 
 metadata:
-    coordinate_system: geographic # default, i.e. lat-lon. 'cartesian' would allow x-y inputs
+    # map boundary defined by the lower left and upper right of the square
+    map_boundary:
+        lower_left:
+            lat: 35
+            lon: -10
+        upper_right:
+            lat: 45
+            lon: 5
 
-    # lower left corner lat, lower left corner lon, upper right corner lat, upper right corner lon
-    map_boundary: [35, -10, 45, 5]
-
-    location_coordinates:  # lat, lon coordinates
-        region1: [40, -2]
-        region2: [40, -8]
-        region1-1: [41, -2]
-        region1-2: [39, -1]
-        region1-3: [39, -2]
+    location_coordinates:  # lat, lon coordinates in a dictionary
+        region1: {lat: 40, lon: -2}
+        region2: {lat: 40, lon: -8}
+        region1-1: {lat: 41, lon: -2}
+        region1-2: {lat: 39, lon: -1}
+        region1-3: {lat: 39, lon: -2}
