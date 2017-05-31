@@ -150,13 +150,19 @@ def plot_graph_on_map(config_model, G=None,
     import networkx as nx
     from calliope.lib import nx_pylab
 
-    coord_system = config_model.metadata.get('coordinate_system', 'geographic')
-
+    if all(['lat' in i or 'lon' in i for i in
+            config_model.metadata.location_coordinates.as_dict_flat().keys()]):
+        coord_system = 'geographic'
+    elif all(['x' in x or 'y' in x for x in
+            config_model.metadata.location_coordinates.as_dict_flat().keys()]):
+        coord_system = 'cartesian'
+    else:
+        raise KeyError('unidentified coordinate system. Expecting data in '
+                       'the format {lat: N, lon: M} or {x: N, y: M} for user '
+                       'coordinate values of N, M.')
     # Set up basemap
     if not bounds:
         bounds = config_model.metadata.map_boundary
-    bounds_width = bounds[3] - bounds[1]  # lon --> width
-    bounds_height = bounds[2] - bounds[0]  # lat --> height
 
     # Create plot
     if not ax:
@@ -165,22 +171,26 @@ def plot_graph_on_map(config_model, G=None,
 
     # Node positions
     pos = config_model.metadata.location_coordinates
-    if coord_system=='geographic':
+    if coord_system == 'geographic':
+        bounds_width = bounds.upper_right.lon - bounds.lower_left.lon # lon --> width
+        bounds_height = bounds.upper_right.lat - bounds.lower_left.lat  # lat --> height
         m = Basemap(projection='merc', ellps='WGS84',
-                llcrnrlon=bounds[1], llcrnrlat=bounds[0],
-                urcrnrlon=bounds[3], urcrnrlat=bounds[2],
-                lat_ts=bounds[1] + bounds_width / 2,
+                llcrnrlon=bounds.lower_left.lon,
+                llcrnrlat=bounds.lower_left.lat,
+                urcrnrlon=bounds.upper_right.lon,
+                urcrnrlat=bounds.upper_right.lat,
+                lat_ts=bounds.lower_left.lat + bounds_width / 2,
                 resolution=map_resolution,
                 suppress_ticks=True)
         m.drawmapboundary(fill_color=None, linewidth=0)
         m.drawcoastlines(linewidth=0.2, color='#626262')
-        pos = {i: m(pos[i][1], pos[i][0]) for i in pos} # Flip lat, lon to x, y!
+        pos = {i: m(pos[i].lon, pos[i].lat) for i in pos} # translate lat, lon to basemap positions
         # Adding node names just above node points
-        pos_offset = {i: (pos[i][0], pos[i][1]+20) for i in pos}
-    elif coord_system=='cartesian':
-        pos = {i: (pos[i][0], pos[i][1]) for i in pos} # No need to flip
+        pos_offset = {i: (pos[i][0], pos[i][1] + 20) for i in pos}
+    elif coord_system == 'cartesian':
+        pos = {i: (pos[i].x, pos[i].y) for i in pos}
         # Adding node names just above node points
-        pos_offset = {i: (pos[i][0], pos[i][1]+0.2) for i in pos}
+        pos_offset = {i: (pos[i][0], pos[i][1] + 0.2) for i in pos}
         # m has to be defined as it is returned
         m = None
 
@@ -209,9 +219,9 @@ def plot_graph_on_map(config_model, G=None,
     # Add a map scale
     if show_scale and coord_system=='geographic':
         scale = m.drawmapscale(
-            bounds[0] + bounds_width * scale_left_distance,
-            bounds[1] + bounds_height * scale_bottom_distance,
-            bounds[0], bounds[1],
+            bounds.lower_left.lon + bounds_width * scale_left_distance,
+            bounds.lower_left.lat + bounds_height * scale_bottom_distance,
+            bounds.lower_left.lon, bounds.lower_left.lat,
             100,
             barstyle='simple', labelstyle='simple',
             fillcolor1='w', fillcolor2='#555555',

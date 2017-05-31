@@ -68,14 +68,16 @@ links:
             constraints: # nothing to define, but model requires a key at this level of nesting
 
 metadata:
-    # default coord system is 'geographic', i.e. lat-lon. 'cartesian' allows x-y inputs
-    coordinate_system: cartesian
-
-    # lower left corner x, lower left corner y, upper right corner x, upper right corner y
-    map_boundary: [0, 0, 1, 1]
-
-    location_coordinates:  # lat, lon coordinates
-        X1: [2, 7]
-        X2: [8, 7]
-        X3: [5, 3]
-        N1: [5, 7]
+    # metadata given in cartesian coordinates, not lat, lon.
+    map_boundary:
+        lower_left:
+            x: 0
+            y: 0
+        upper_right:
+            x: 1
+            y: 1
+    location_coordinates:
+        X1: {x: 2, y: 7}
+        X2: {x: 8, y: 7}
+        X3: {x: 5, y: 3}
+        N1: {x: 5, y: 7}
