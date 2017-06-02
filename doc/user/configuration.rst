@@ -200,6 +200,20 @@ Transmission links can also specify a distance, which transmission technologies 
             monetary:
                e_cap: 10  # cost per 100 units of distance
 
+.. Note::
+
+    Transmission links are bidirectional by default. To force unidirectionality for a given technology along a given link, you have to set the ``one_way`` constraint in the constraint definition of that technology, in that link:
+
+    .. code-block:: yaml
+
+        links:
+          location1,location2:
+             transmission-tech:
+                constraints:
+                    one_way: true
+
+    This will only allow tranmission from location1 to location2. To swap the direction, the link name must be inverted, i.e. ``location2,location1``.
+
 .. _overriding_tech_options:
 
 -----------------------------

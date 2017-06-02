@@ -147,5 +147,3 @@ class TestModel:
         # one_way forces a change in optimal solution, making it non-zero
         assert_almost_equal(sol.c_prod.loc[
             dict(y='heat_pipes:X2', c='heat', x='N1')], 2.6, 0.1)
-
-
