@@ -1,10 +1,33 @@
 #!/usr/bin/env python
 
+from pathlib import Path
 from setuptools import setup, find_packages
 
 
 # Sets the __version__ variable
 exec(open('calliope/_version.py').read())
+
+
+def get_subdirs(path, glob_string):
+    return [
+        i.relative_to(str(path) + '/')
+        for i in path.glob(glob_string) if i.is_dir()
+    ]
+
+
+def find_calliope_package_data():
+    """Returns a list of found directories with package data files"""
+    path = Path('./calliope')
+    package_data = ['config/*.yaml', 'test/common/*.yaml']
+    for example_dir in get_subdirs(path, 'example_models/*'):
+        package_data.append(str(example_dir) + '/*.yaml')
+    for data_dir in get_subdirs(path, 'example_models/*/*'):
+        package_data.append(str(data_dir) + '/*.csv')
+        package_data.append(str(data_dir) + '/*.yaml')
+    for test_case_dir in get_subdirs(path, 'test/common/*'):
+        package_data.append(str(test_case_dir) + '/*.csv')
+    return package_data
+
 
 setup(
     name='calliope',
@@ -13,17 +36,10 @@ setup(
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
     license='Apache 2.0',
-    url='http://www.callio.pe/',
+    url='https://www.callio.pe/',
     download_url='https://github.com/calliope-project/calliope/releases',
     packages=find_packages(),
-    package_data={'calliope': ['config/*.yaml',
-                               'example_models/national_scale/*.yaml',
-                               'example_models/national_scale/model_config/*.yaml',
-                               'example_models/national_scale/model_config/data/*.csv',
-                               'test/common/*.yaml',
-                               'test/common/t_1h/*.csv',
-                               'test/common/t_6h/*.csv',
-                               'test/common/t_erroneous/*.csv']},
+    package_data={'calliope': find_calliope_package_data()},
     install_requires=[
         "click >= 3.3",
         "netcdf4 >= 1.2.2",
