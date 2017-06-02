@@ -33,7 +33,7 @@ solver: glpk
 
 subset_y: []  # Subset of technologies
 subset_x: []  # Subset of locations
-subset_t: ['2005-01-01', '2005-01-05']  # Subset of timesteps
+subset_t: ['2005-01-01', '2005-01-02']  # Subset of timesteps
 
 ##
 # MODEL SETTINGS OVERRIDE

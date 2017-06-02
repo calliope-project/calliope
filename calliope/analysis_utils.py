@@ -167,7 +167,7 @@ def plot_graph_on_map(config_model, G=None,
     # Create plot
     if not ax:
         fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111, axisbg='w', frame_on=False)
+        ax = fig.add_subplot(111, facecolor='w', frame_on=False)
 
     # Node positions
     pos = config_model.metadata.location_coordinates

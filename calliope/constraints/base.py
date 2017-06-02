@@ -567,7 +567,7 @@ def node_constraints_operational(model):
             if c == primary_carrier and allow_c_prod is True:
                 c_prod_max = time_res.at[t] * m.e_cap[y, x] * p_eff
                 return c_prod <= c_prod_max
-            elif c in other_carriers:
+            elif c in other_carriers and model._locations.at[x, y] == 1:
                 return po.Constraint.Skip
             return c_prod == 0
 

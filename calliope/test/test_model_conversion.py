@@ -13,7 +13,7 @@ def create_and_run_model(override=""):
                         'demand_power', 'unmet_demand_power', 'demand_heat',
                         'demand_low_T', 'demand_V_low_T', 'supply_gas',
                         'unmet_demand_heat', 'unmet_demand_low_T',
-                        'unmet_demand_V_low_T',]
+                        'unmet_demand_V_low_T']
                 override:
                     ccgt:
                         constraints:
@@ -27,7 +27,12 @@ def create_and_run_model(override=""):
                     demand_heat:
                         constraints:
                             r: -6
-        links:
+            2:
+                techs: ['demand_low_T', 'unmet_demand_low_T']
+                override:
+                    demand_low_T:
+                        constraints:
+                            e_cap.max: 0
     """
     config_run = """
         mode: plan
@@ -55,12 +60,32 @@ class TestModel:
 
     def test_model_conversion_plus(self):
         override = """
-            override.techs.demand_low_T.constraints.r: -5
-            override.techs.demand_V_low_T.constraints.r: -5
+            override.locations.1.override.demand_low_T.constraints.r: -5
+            override.locations.1.override.demand_V_low_T.constraints.r: -5
         """
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
         sol = model.solution
         assert_almost_equal(sol.costs.sum(), 41.47, tolerance=0.001)
         assert_almost_equal(sol.c_prod.loc[
-            dict(y='test_conversion_plus', c='power')], 13.5, tolerance=0.01)
+            dict(y='test_conversion_plus', c='power', x='1')], 13.5, tolerance=0.01)
+        assert_almost_equal(sol.c_prod.loc[
+            dict(y='test_conversion_plus', c='power', x='2')], 0, tolerance=0.01)
+
+    def test_model_conversion_plus_leakage(self):
+        """
+        Check that non-primary carriers of conversion_plus techs aren't
+        erroneously producing in locations where they're not allowed
+        """
+        override = """
+            override.locations.2.override.demand_low_T.constraints:
+                                    r: -5
+                                    e_cap.max: 20
+        """
+        model = create_and_run_model(override)
+        assert str(model.results.solver.termination_condition) == 'optimal'
+        sol = model.solution
+        assert_almost_equal(sol.c_prod.loc[
+            dict(y='test_conversion_plus', c='low_T', x='2')], 0, tolerance=0.01)
+        assert_almost_equal(sol.c_prod.loc[
+            dict(y='unmet_demand_low_T', c='low_T', x='2')], 120, tolerance=0.01)
