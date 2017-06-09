@@ -116,6 +116,7 @@ def plot_timeseries(
         for y, columns in df_cp.iterrows():
             if carrier in columns.carrier_in or carrier in columns.carrier_out:
                 df = df.append(df_metadata.loc[y])
+        df.drop_duplicates(inplace=True)
     # Get tech stack and names
     stacked_techs = df_metadata.query('type in {}'.format(tech_types)).index.tolist()
     # Put stack in order according to stack_weights
