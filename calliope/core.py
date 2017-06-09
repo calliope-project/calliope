@@ -524,11 +524,14 @@ class Model(object):
         """
         if y in self._sets['y_conversion_plus']:
             if level:  # Either 2 or 3
-                return self.get_option(y + '_'.join('.carrier', direction, str(level)))
+                return self.get_option(y + '_'.join('.carrier',
+                                                    direction, str(level)))
+            primary_carrier, all_carriers = self.get_cp_carriers(y,
+                                                           direction=direction)
             if primary:
-                return self.get_cp_carriers(y, direction=direction)[0]
+                return primary_carrier
             if all_carriers:
-                return self.get_cp_carriers(y, direction=direction)[1]
+                return all_carriers
 
         carrier = self.get_option(
             y + '.carrier', default=y + '.carrier_' + direction
@@ -661,7 +664,6 @@ class Model(object):
                 raise e('primary_carrier must be set for conversion_plus technology '
                         '`{}` as carrier_out contains multiple carriers'.format(y))
             other_c.update(c.keys())
-            other_c.remove(primary_carrier)
         elif direction == 'out' and isinstance(c, str):
             other_c.update([c])
             primary_carrier = c
@@ -672,7 +674,11 @@ class Model(object):
         other_c.update(c_2.keys() if isinstance(c_2, dict) else [c_2])
         other_c.update(c_3.keys() if isinstance(c_3, dict) else [c_3])
         other_c.discard(False) # if there is no secondary or tertiary carrier, they return False
-        return [primary_carrier, tuple(other_c)]
+        if len(other_c) == 1: # only one value
+            other_c = str(list(other_c)[0])
+        else:
+            other_c = tuple(other_c)
+        return primary_carrier, other_c
 
     def scale_to_peak(self, df, peak, scale_time_res=True):
         """Returns the given dataframe scaled to the given peak value.

@@ -559,18 +559,17 @@ def node_constraints_operational(model):
         """
         allow_c_prod = get_constraint_param(model, 'e_prod', y, x, t)
         c_prod = m.c_prod[c, y, x, t]
+        if y in m.y_conversion_plus:  # Conversion techs with 2 or more output carriers
+            carriers_out = model.get_carrier(y, 'out', all_carriers=True)
+            if c not in carriers_out:
+                return c_prod == 0
+            if c in carriers_out and model._locations.at[x, y] == 0:
+                return c_prod == 0
+            else:
+                return po.Constraint.Skip
         if not allow_c_prod:
             return c_prod == 0
         p_eff = model.get_option(y + '.constraints.p_eff', x=x)
-        if y in m.y_conversion_plus:  # Conversion techs with 2 output carriers
-            primary_carrier, other_carriers = model.get_cp_carriers(y, x)
-            if c == primary_carrier and allow_c_prod is True:
-                c_prod_max = time_res.at[t] * m.e_cap[y, x] * p_eff
-                return c_prod <= c_prod_max
-            elif c in other_carriers and model._locations.at[x, y] == 1:
-                return po.Constraint.Skip
-            return c_prod == 0
-
         if c == model.get_option(y + '.carrier', default=y + '.carrier_out'):
             return c_prod <= time_res.at[t] * m.e_cap[y, x] * p_eff
         else:
@@ -578,23 +577,52 @@ def node_constraints_operational(model):
 
     def c_prod_min_rule(m, c, y, x, t):
         """
-        Set minimum carrier production. All technologies.
+        Set minimum carrier production. All technologies except conversion_plus
         """
         min_use = get_constraint_param(model, 'e_cap_min_use', y, x, t)
         allow_c_prod = get_constraint_param(model, 'e_prod', y, x, t)
         if not min_use or not allow_c_prod:
             return po.Constraint.NoConstraint
         if y in m.y_conversion_plus:  # Conversion techs with 2 output carriers
-            primary_carrier, other_carriers = model.get_cp_carriers(y, x)
-            if c == primary_carrier:
-                c_prod_max = time_res.at[t] * m.e_cap[y, x] * min_use
-                return m.c_prod[c, y, x, t] >= c_prod_max
             return po.Constraint.Skip
         elif c == model.get_option(y + '.carrier', default=y + '.carrier_out'):
             return (m.c_prod[c, y, x, t]
                     >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:
             return po.Constraint.Skip
+
+    def c_conversion_plus_prod_max_rule(m, y, x, t):
+        """
+        Set maximum carrier production. Conversion_plus technologies.
+        """
+        allow_c_prod = get_constraint_param(model, 'e_prod', y, x, t)
+        c_out = model.get_option(y + '.carrier_out')
+        e_eff = get_constraint_param(model, 'e_eff', y, x, t)
+        if isinstance(c_out, dict):
+            c_prod = sum(m.c_prod[c, y, x, t] for c in c_out.keys())
+        else:
+            c_prod = m.c_prod[c_out, y, x, t]
+        if not allow_c_prod:
+            return c_prod == 0
+        else:
+            return c_prod <= time_res.at[t] * m.e_cap[y, x]
+
+    def c_conversion_plus_prod_min_rule(m, y, x, t):
+        """
+        Set minimum carrier production. Conversion_plus technologies.
+        """
+        min_use = get_constraint_param(model, 'e_cap_min_use', y, x, t)
+        allow_c_prod = get_constraint_param(model, 'e_prod', y, x, t)
+        c_out = model.get_option(y + '.carrier_out')
+        if not min_use or not allow_c_prod:
+            return po.Constraint.NoConstraint
+        else:
+            c_prod_min = time_res.at[t] * m.e_cap[y, x] * min_use
+            if isinstance(c_out, dict):
+                c_prod = sum(m.c_prod[c, y, x, t] for c in c_out.keys())
+            else:
+                c_prod = m.c_prod[c_out, y, x, t]
+            return c_prod >= c_prod_min
 
     def c_con_max_rule(m, c, y, x, t):
         """
@@ -649,6 +677,10 @@ def node_constraints_operational(model):
         m.c, m.y, m.x, m.t, rule=c_prod_max_rule)
     m.c_prod_min = po.Constraint(
         m.c, m.y, m.x, m.t, rule=c_prod_min_rule)
+    m.c_conversion_plus_prod_max = po.Constraint(
+        m.y_conversion_plus, m.x, m.t, rule=c_conversion_plus_prod_max_rule)
+    m.c_conversion_plus_prod_min = po.Constraint(
+        m.y_conversion_plus, m.x, m.t, rule=c_conversion_plus_prod_min_rule)
     m.c_con_max = po.Constraint(
         m.c, m.y, m.x, m.t, rule=c_con_max_rule)
     m.c_s_max = po.Constraint(
