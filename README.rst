@@ -112,7 +112,7 @@ limitations under the License.
     :target: https://travis-ci.org/calliope-project/calliope
     :alt: Build status on Linux
 
-.. |badge_appveyor|  image:: https://img.shields.io/travis/calliope-project/calliope/master.svg?style=flat-square&label=windows%20build
+.. |badge_appveyor|  image:: https://img.shields.io/appveyor/ci/sjpfenninger/calliope/master.svg?style=flat-square&label=windows%20build
     :target: https://ci.appveyor.com/project/sjpfenninger/calliope
     :alt: Build status on Windows
 

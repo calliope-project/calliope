@@ -15,17 +15,19 @@ See the list of `open issues <https://github.com/calliope-project/calliope/issue
 Installing a development version
 --------------------------------
 
-First, with Anaconda installed, you can create a new Python 3.5 environment with all the supporting modules, including the free and open source GLPK solver. The easiest method is to download the latest `requirements.yml <https://github.com/calliope-project/calliope/blob/master/requirements.yml>`_ file, changing the environment name in the file from ``calliope``, if desired. Then create the environment::
+As when installing a stable version, using ``conda`` is recommended.
 
-    $ conda env create -f requirements.yml
-
-Within your environment, install Calliope with pip::
-
-   $ pip install -e git+https://github.com/calliope-project/calliope.git#egg=calliope
-
-Or, for a more easily modifiable local installation, first clone the repository to a location of your choosing, and then install via pip::
+First, clone the repository::
 
    $ git clone https://github.com/calliope-project/calliope
+
+Using Anaconda/conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
+
+   $ conda env create -f ./calliope/requirements.yml -n calliope_dev
+   $ source activate calliope_dev
+
+Then install Calliope itself with pip::
+
    $ pip install -e ./calliope
 
 ---------------------------

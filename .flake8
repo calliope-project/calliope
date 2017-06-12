@@ -1,0 +1,8 @@
+[flake8]
+ignore =
+    # E501: line too long
+    E501,
+    # D203: 1 blank line required before class docstring
+    D203,
+exclude = .git,__pycache__,dist,doc,calliope/lib
+max-complexity = 10

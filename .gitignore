@@ -6,3 +6,4 @@ dist/
 .cache
 mprofile_*
 profile_*
+*.profile
