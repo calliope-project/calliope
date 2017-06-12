@@ -5,8 +5,8 @@ sudo: false  # Use container-based infrastructure
 
 matrix:
   include:
-    - env:
-      - JOB_TYPE="lint"
+    # - env:
+    #   - JOB_TYPE="lint"
     - env:
       - JOB_TYPE="test"
 
