@@ -5,7 +5,7 @@ channels:
     - anaconda
 
 dependencies:
-    - python=3.5
+    - python=3.6
     - basemap
     - bottleneck
     - click
@@ -13,13 +13,13 @@ dependencies:
     - glpk=4.59  # 4.60 causes problems with current version of Pyomo
     - hdf5
     - libnetcdf
-    - matplotlib=2.0.0
+    - matplotlib=2
     - netcdf4
     - networkx
     - numexpr
     - numpy=1.12.1
-    - pandas=0.19.2
-    - pyomo=5.0
+    - pandas=0.20.2
+    - pyomo=5.2
     - pytest
     - pytest-cov
     - pyyaml

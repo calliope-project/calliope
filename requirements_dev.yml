@@ -1,10 +1,16 @@
+name: calliope
+
 channels:
-    - anaconda
     - conda-forge
+    - anaconda
 
 dependencies:
+    - flake8
+    - line_profiler
     - memory_profiler
+    - pylint
     - snakeviz
+    - twine
     - pip:
         - pyprof2calltree
         - gprof2dot

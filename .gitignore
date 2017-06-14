@@ -7,3 +7,4 @@ dist/
 mprofile_*
 profile_*
 *.profile
+_test
