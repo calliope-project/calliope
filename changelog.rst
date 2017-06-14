@@ -3,12 +3,18 @@
 Release History
 ===============
 
-0.5.1 (dev)
------------
+0.5.1 (2017-06-14)
+------------------
+
+|new| Better coordinate definitions in metadata. Location coordinates are now specified by a dictionary with either lat/lon (for geographic coordinates) or x/y (for generic Cartesian coordinates), e.g. ``{lat: 40, lon: -2}`` or ``{x: 0, y: 1}``. For geographic coordinates, the ``map_boundary`` definition for plotting was also updated in accordance. See the built-in example models for details.
+
+|new| Unidirectional transmission links are now possible. See the `documentation on transmission links <https://calliope.readthedocs.io/en/stable/user/configuration.html#transmission-links>`_.
 
 Other changes
 ~~~~~~~~~~~~~
 
+* |fixed| Missing urban-scale example model files are now included in the distribution
+* |fixed| Edge cases in ``conversion_plus`` constraints addressed
 * |changed| Documentation improvements
 
 0.5.0 (2017-05-04)

@@ -200,6 +200,10 @@ For consumption:
 
 Where ``x`` is either 2 (secondary carriers) or 3 (tertiary carriers).
 
+.. Warning::
+
+   The ``conversion_plus`` technology is still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior. It is also possible to use a combination of several regular ``conversion`` technologies to achieve some of the behaviors covered by ``conversion_plus``, but at the expense of model complexity.
+
 Supply_plus balance
 ^^^^^^^^^^^^^^^^^^^
 

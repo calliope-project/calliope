@@ -212,7 +212,7 @@ Transmission links can also specify a distance, which transmission technologies 
                 constraints:
                     one_way: true
 
-    This will only allow tranmission from location1 to location2. To swap the direction, the link name must be inverted, i.e. ``location2,location1``.
+    This will only allow transmission from ``location1`` to ``location2``. To swap the direction, the link name must be inverted, i.e. ``location2,location1``.
 
 .. _overriding_tech_options:
 

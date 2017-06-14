@@ -19,13 +19,14 @@ def find_calliope_package_data():
     """Returns a list of found directories with package data files"""
     path = Path('./calliope')
     package_data = ['config/*.yaml', 'test/common/*.yaml']
-    for example_dir in get_subdirs(path, 'example_models/*'):
-        package_data.append(str(example_dir) + '/*.yaml')
-    for data_dir in get_subdirs(path, 'example_models/*/*'):
-        package_data.append(str(data_dir) + '/*.csv')
-        package_data.append(str(data_dir) + '/*.yaml')
+    for subdir_level in ['*', '*/*', '*/*/*']:
+        for example_dir in get_subdirs(path, 'example_models/' + subdir_level):
+            package_data.append(str(example_dir) + '/*.csv')
+            package_data.append(str(example_dir) + '/*.yaml')
+            package_data.append(str(example_dir) + '/*.rst')
     for test_case_dir in get_subdirs(path, 'test/common/*'):
         package_data.append(str(test_case_dir) + '/*.csv')
+    print(package_data)
     return package_data
 
 
