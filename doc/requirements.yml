@@ -5,5 +5,6 @@ channels:
     - anaconda
 
 dependencies:
+    - python=3
     - sphinx>=1.5
     - numpydoc
