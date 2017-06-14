@@ -53,7 +53,7 @@ locations:
 links:
     X1,X2:
         power_lines:
-            constraints: # nothing to define, but model requires a key at this level of nesting
+            distance: 10
     X1,X3:
         power_lines:
             constraints: # nothing to define, but model requires a key at this level of nesting

@@ -17,7 +17,6 @@ class TestCLI:
             # Assert that `run.yaml` in the target dir exists
             assert os.path.isfile(os.path.join(tempdir, 'test', 'run.yaml'))
 
-    @pytest.mark.xfail(reason="Python 3.5.3 issue, possibly https://bugs.python.org/issue29519")
     def test_run(self):
         runner = CliRunner()
         this_dir = os.path.dirname(__file__)
@@ -27,7 +26,6 @@ class TestCLI:
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'Output', 'r.csv'))
 
-    @pytest.mark.xfail(reason="Python 3.5.3 issue, possibly https://bugs.python.org/issue29519")
     def test_generate(self):
         runner = CliRunner()
         this_dir = os.path.dirname(__file__)

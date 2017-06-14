@@ -363,9 +363,9 @@ class Model(object):
         link_tech_distance = set() # fill with 'link.tech' strings if 'link.tech.distance' exists
 
         for key in self.config_model.links.as_dict_flat().keys():
-            link_tech.update(['.'.join(key.split('.',2)[:2])]) # get only 'link.tech'
+            link_tech.update(['.'.join(key.split('.', 2)[:2])]) # get only 'link.tech'
             if 'distance' in key:
-                link_tech_distance(['.'.join(key.split('.',2)[:2])]) # get only 'link.tech'
+                link_tech_distance.update(['.'.join(key.split('.', 2)[:2])]) # get only 'link.tech'
             # create set with 'link.tech' strings where 'link.tech.distance' does not exist
             fill_distance = link_tech.difference(link_tech_distance)
         for i in fill_distance:
@@ -396,7 +396,7 @@ class Model(object):
 
         """
         idx = self.data['t'].to_index()
-        if isinstance(offset, pd.tslib.Timedelta):
+        if isinstance(offset, pd.Timedelta):
             loc = idx.get_loc(timestamp + offset)
         else:  # integer
             loc = idx.get_loc(timestamp) + offset
