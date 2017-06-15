@@ -46,7 +46,7 @@ setup(
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.12",
-        "pandas >= 0.20, < 0.21",
+        "pandas >= 0.19, < 0.20",
         "pyomo >= 5.2, < 5.3",
         "pyyaml >= 3.11",
         "xarray >= 0.9.5, < 0.10",

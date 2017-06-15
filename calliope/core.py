@@ -525,22 +525,23 @@ class Model(object):
         """
         if y in self._sets['y_conversion_plus']:
             if level:  # Either 2 or 3
-                return self.get_option(y + '_'.join('.carrier',
-                                                    direction, str(level)))
-            primary_carrier, all_carriers = self.get_cp_carriers(y,
-                                                           direction=direction)
+                return self.get_option(
+                    y + '_'.join('.carrier', direction, str(level))
+                )
+            primary_carrier, all_carriers = self.get_cp_carriers(
+                y, direction=direction)
             if primary:
                 return primary_carrier
             if all_carriers:
                 return all_carriers
-
-        carrier = self.get_option(
-            y + '.carrier', default=y + '.carrier_' + direction
-        )
-        if not carrier:  # no carrier_in/carrier_out defined
-            return 'resource'
         else:
-            return carrier
+            carrier = self.get_option(
+                y + '.carrier', default=y + '.carrier_' + direction
+            )
+            if not carrier:  # no carrier_in/carrier_out defined
+                return 'resource'
+            else:
+                return carrier
 
     def get_weight(self, y):
         return self.get_option(y + '.stack_weight')
