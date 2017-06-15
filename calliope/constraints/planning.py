@@ -13,6 +13,7 @@ import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 from . import base
 
+
 def node_constraints_build_total(model):
     """
 
@@ -52,7 +53,8 @@ def system_margin(model):
         if y in m.y_conversion_plus:
             return model.get_cp_carriers(y, x)[0]
         else:
-            return model.get_option(y + '.carrier', default= y + '.carrier_out')
+            return model.get_option(y + '.carrier', default=y + '.carrier_out')
+
     # Constraint rules
     def c_system_margin_rule(m, c):
         # If no margin defined for a carrier, use 0 (i.e. no margin)
@@ -62,9 +64,11 @@ def system_margin(model):
             return (sum(m.c_prod[c, y, x, t] for y in m.y if y not in m.y_demand
                         for x in m.x) * (1 + margin)
                     <= time_res.at[t] *
-                    sum((m.e_cap[y, x] / base.get_constraint_param(m, 'e_eff', y, x, t))
-                         for y in m.y if y not in m.y_demand
-                         for x in m.x if carrier(y, x) == c))
+                    sum(
+                        (m.e_cap[y, x] / base.get_constraint_param(model, 'e_eff', y, x, t))
+                        for y in m.y if y not in m.y_demand
+                        for x in m.x if carrier(y, x) == c)
+                    )
         else:
             return po.Constraint.NoConstraint
 

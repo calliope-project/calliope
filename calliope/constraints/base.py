@@ -440,7 +440,7 @@ def node_constraints_build(model):
         scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
         e_cap = model.get_option(y + '.constraints.e_cap.equals', x=x) * scale
         charge_rate = model.get_option(y + '.constraints.c_rate', x=x)
-        if e_cap and s_cap_equals and s_cap_equals * charge_rate != e_cap:
+        if e_cap and s_cap_equals and charge_rate and s_cap_equals * charge_rate != e_cap:
             raise exceptions.ModelError(
                 'e_cap.equals and s_cap.equals must '
                 'be equivalent when considering charge rate for {}:{}'

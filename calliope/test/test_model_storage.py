@@ -1,6 +1,9 @@
 import tempfile
 
+import pytest
+
 from calliope.utils import AttrDict
+from calliope.exceptions import ModelError
 from . import common
 from .common import assert_almost_equal, solver, solver_io
 
@@ -107,3 +110,32 @@ class TestModel:
                 sol2.e_cap.loc[dict(y='test_storage')].sum(dim='x'))
         assert (sol1.s_cap.loc[dict(y='test_storage')].sum(dim='x') >
                 sol2.s_cap.loc[dict(y='test_storage')].sum(dim='x'))
+
+    def test_model_c_rate_and_e_cap_and_s_cap_dontmatch(self):
+        override = """
+            override.techs.test_storage.constraints:
+                            c_rate: 0.006
+                            e_cap.equals: 0.6
+                            s_cap.equals: 1000
+        """
+        with pytest.raises(ModelError):
+            model = create_and_run_model(override)
+
+    def test_model_c_rate_and_e_cap_and_s_cap_match(self):
+        override = """
+            override.techs.test_storage.constraints:
+                            c_rate: 0.1
+                            e_cap.equals: 10
+                            s_cap.equals: 100
+        """
+        # Just make sure this raises no error
+        model = create_and_run_model(override)
+
+    def test_model_e_cap_and_s_cap_only(self):
+        override = """
+            override.techs.test_storage.constraints:
+                            e_cap.max: 0.6
+                            s_cap.max: 100
+        """
+        # Just make sure this raises no error
+        model = create_and_run_model(override)

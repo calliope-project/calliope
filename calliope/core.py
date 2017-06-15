@@ -355,17 +355,17 @@ class Model(object):
         """
         # Check if metadata & links are loaded
         if (not self.config_model.get('metadata', None)
-            or not self.config_model.get('links', None)):
+                or not self.config_model.get('links', None)):
             return None
 
         # We continue if both links and metadata are defined in config_model
-        link_tech = set() # fill with 'link.tech' strings
-        link_tech_distance = set() # fill with 'link.tech' strings if 'link.tech.distance' exists
+        link_tech = set()  # fill with 'link.tech' strings
+        link_tech_distance = set()  # fill with 'link.tech' strings if 'link.tech.distance' exists
 
         for key in self.config_model.links.as_dict_flat().keys():
-            link_tech.update(['.'.join(key.split('.', 2)[:2])]) # get only 'link.tech'
+            link_tech.update(['.'.join(key.split('.', 2)[:2])])  # get only 'link.tech'
             if 'distance' in key:
-                link_tech_distance.update(['.'.join(key.split('.', 2)[:2])]) # get only 'link.tech'
+                link_tech_distance.update(['.'.join(key.split('.', 2)[:2])])  # get only 'link.tech'
             # create set with 'link.tech' strings where 'link.tech.distance' does not exist
             fill_distance = link_tech.difference(link_tech_distance)
         for i in fill_distance:
@@ -374,20 +374,21 @@ class Model(object):
             # Find distance using vincenty func & metadata of lat-long,
             # ignoring curvature if metadata is given as x-y, not lat-long
             loc_coords = self.config_model.metadata.location_coordinates
-            loc1 = getattr(loc_coords, locs[0]) # look for first location in a,b
-            loc2 = getattr(loc_coords, locs[1]) # look for second location in a,b
-            if all(['lat' in key or 'lon' in key for key in # geographic
+            loc1 = getattr(loc_coords, locs[0])  # look for first location in a,b
+            loc2 = getattr(loc_coords, locs[1])  # look for second location in a,b
+            if all(['lat' in key or 'lon' in key for key in  # geographic
                    loc_coords.as_dict_flat().keys()]):
                 dist = utils.vincenty([loc1.lat, loc1.lon], [loc2.lat, loc2.lon])
-            elif all(['x' in key or 'y' in key for key in # cartesian
+            elif all(['x' in key or 'y' in key for key in  # cartesian
                      loc_coords.as_dict_flat().keys()]):
                 dist = np.sqrt((loc1.x - loc2.x)**2 + (loc1.y - loc2.y)**2)
             else:
-                raise KeyError('unidentified coordinate system. Expecting data '
-                       'in the format {lat: N, lon: M} or {x: N, y: M} for '
-                       'user coordinate values of N, M.')
+                raise KeyError(
+                    'unidentified coordinate system. Expecting data '
+                    'in the format {lat: N, lon: M} or {x: N, y: M} for '
+                    'user coordinate values of N, M.')
             # update config_model
-            self.config_model.links.set_key(i+'.distance', dist)
+            self.config_model.links.set_key(i + '.distance', dist)
 
     def get_t(self, timestamp, offset=0):
         """

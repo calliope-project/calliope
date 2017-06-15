@@ -6,11 +6,16 @@ Release History
 0.5.2 (dev)
 ------------------
 
+* |changed| Calliope now uses Python 3.6 by default. From Calliope 0.6.0 on, Python 3.6 will likely become the minimum required version.
+* |fixed| Fixed a bug in distance calculation if both lat/lon metadata and distances for links were specified.
+* |fixed| Fixed a bug in storage constraints when both ``s_cap`` and ``e_cap`` were constrained,
+but no ``c_rate`` was given.
+* |fixed| Fixed a bug in the system margin constraint.
 
 0.5.1 (2017-06-14)
 ------------------
 
-|new| Better coordinate definitions in metadata. Location coordinates are now specified by a dictionary with either lat/lon (for geographic coordinates) or x/y (for generic Cartesian coordinates), e.g. ``{lat: 40, lon: -2}`` or ``{x: 0, y: 1}``. For geographic coordinates, the ``map_boundary`` definition for plotting was also updated in accordance. See the built-in example models for details.
+|new| |backwards-incompatible| Better coordinate definitions in metadata. Location coordinates are now specified by a dictionary with either lat/lon (for geographic coordinates) or x/y (for generic Cartesian coordinates), e.g. ``{lat: 40, lon: -2}`` or ``{x: 0, y: 1}``. For geographic coordinates, the ``map_boundary`` definition for plotting was also updated in accordance. See the built-in example models for details.
 
 |new| Unidirectional transmission links are now possible. See the `documentation on transmission links <https://calliope.readthedocs.io/en/stable/user/configuration.html#transmission-links>`_.
 
