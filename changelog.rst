@@ -3,13 +3,12 @@
 Release History
 ===============
 
-0.5.2 (dev)
+0.5.2 (2017-06-16)
 ------------------
 
 * |changed| Calliope now uses Python 3.6 by default. From Calliope 0.6.0 on, Python 3.6 will likely become the minimum required version.
 * |fixed| Fixed a bug in distance calculation if both lat/lon metadata and distances for links were specified.
-* |fixed| Fixed a bug in storage constraints when both ``s_cap`` and ``e_cap`` were constrained,
-but no ``c_rate`` was given.
+* |fixed| Fixed a bug in storage constraints when both ``s_cap`` and ``e_cap`` were constrained but no ``c_rate`` was given.
 * |fixed| Fixed a bug in the system margin constraint.
 
 0.5.1 (2017-06-14)

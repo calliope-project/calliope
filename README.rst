@@ -32,7 +32,7 @@ Install Calliope and all dependencies with conda:
 
 .. code-block:: bash
 
-    $ conda create -c conda-forge -n calliope python=3.5 calliope
+    $ conda create -c conda-forge -n calliope python=3.6 calliope
 
 Calliope can be run from the command line:
 

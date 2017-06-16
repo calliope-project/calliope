@@ -11,7 +11,7 @@ Calliope has been tested on Linux, macOS, and Windows.
 
 Running Calliope requires four things:
 
-1. The Python programming language, version 3.5 or higher.
+1. The Python programming language, version 3.6 or higher.
 2. A number of Python add-on modules (see :ref:`below for the complete list <python_module_requirements>`).
 3. A solver: Calliope has been tested with `GLPK <https://www.gnu.org/software/glpk/>`_, `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_, and `Gurobi <http://www.gurobi.com/>`_. Any other solver that is compatible with Pyomo, which Calliope uses to construct its models, should work.
 4. The Calliope software itself.
@@ -22,9 +22,9 @@ Recommended installation method
 
 The easiest way to get a working Calliope installation is to use the free `Anaconda Python distribution <https://store.continuum.io/cshop/anaconda/>`_ and its package manager, ``conda``.
 
-With Anaconda installed, you can create a new Python 3.5 environment called "calliope" with all the necessary modules, including the free and open source GLPK solver, with the following command::
+With Anaconda installed, you can create a new Python 3.6 environment called "calliope" with all the necessary modules, including the free and open source GLPK solver, with the following command::
 
-   $ conda create -c conda-forge -n calliope python=3.5 calliope
+   $ conda create -c conda-forge -n calliope python=3.6 calliope
 
 To use Calliope, you need to activate the "calliope" environment each time. On Linux and macOS::
 
