@@ -781,18 +781,8 @@ class Model(object):
             _x = [i for i in _x if i in self.config_run.subset_x]
         self._sets['x'] = _x
 
-        # y: techs
-        sets_y = sets.init_set_y(self, _x)
-        self._sets = {**self._sets, **sets_y}
-
-        # x subsets
-        sets_x = sets.init_set_x(self)
-        self._sets = {**self._sets, **sets_x}
-        # c: carriers
-        sets_c = sets.init_set_c(self)
-        self._sets['c'] = sets_c
-
         # k: cost classes
+        # Moved earlier as it's now used in sets.init_set_y
         classes_c = [
             list(self.config_model.techs[k].costs.keys())
             for k in self.config_model.techs
@@ -806,6 +796,17 @@ class Model(object):
         )
         # Remove any duplicates by going from list to set and back
         self._sets['k'] = list(set(classes_c))
+
+        # y: techs
+        sets_y = sets.init_set_y(self, _x)
+        self._sets = {**self._sets, **sets_y}
+
+        # x subsets
+        sets_x = sets.init_set_x(self)
+        self._sets = {**self._sets, **sets_x}
+        # c: carriers
+        sets_c = sets.init_set_c(self)
+        self._sets['c'] = sets_c
 
         # Locations settings matrix and transmission technologies
         self._locations = locations.generate_location_matrix(
@@ -1254,6 +1255,9 @@ class Model(object):
         # Export locations
         m.x_export = po.Set(
             initialize=self._sets['x_export'], within=m.x, ordered=True)
+        # Binary purchase locations
+        m.x_purchase = po.Set(
+            initialize=self._sets['x_purchase'], within=m.x, ordered=True)
         # Cost classes
         m.k = po.Set(initialize=self._sets['k'], ordered=True)
 
@@ -1325,6 +1329,8 @@ class Model(object):
             initialize=self._sets['y_cp_3in'], within=m.y, ordered=True)
         # Technologies that allow export
         m.y_export = po.Set(initialize=self._sets['y_export'], within=m.y, ordered=True)
+        # Technologies that have a binary purchase variable
+        m.y_purchase = po.Set(initialize=self._sets['y_purchase'], within=m.y, ordered=True)
 
         # Timeseries
         for param in self.config_model.timeseries_constraints:
@@ -1375,6 +1381,7 @@ class Model(object):
                   constraints.base.node_constraints_build,
                   constraints.base.node_constraints_operational,
                   constraints.base.node_constraints_transmission,
+                  #constraints.base.purchase_constraint,
                   constraints.base.node_costs,
                   constraints.base.model_constraints]
         if self.mode == 'plan':

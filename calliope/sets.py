@@ -205,6 +205,12 @@ def init_set_y(model, _x):
     # subset of technologies allowing export
     _y_export = [y for y in _y
                  if any([model.get_option(y + '.export', x=x) for x in _x])]
+
+    # subset of technologies allowing export
+    _y_purchase = [y for y in _y
+                   if any([model.get_cost('purchase', y, k, x=x)
+                           for x in _x for k in model._sets['k']])
+                  ]
     sets = {
         'y': _y,
         'y_demand': _y_demand,
@@ -228,6 +234,7 @@ def init_set_y(model, _x):
         'techs_transmission': transmission_techs,
         'x_transmission': _x_trans,
         'y_export': _y_export,
+        'y_purchase': _y_purchase,
         'x_transmission_plus': _x
     }
 
@@ -258,13 +265,18 @@ def init_set_x(model):
     # All locations in which energy is exported
     _x_export = [x for x in model._sets['x'] if
                      set(model._sets['y_export']).intersection(locations[x].techs)]
+    # All locations in which a technology can be binary purchased
+    _x_purchase = [x for x in model._sets['x'] if
+                     set(model._sets['y_purchase']).intersection(locations[x].techs)]
+
 
     return {
         'x_r': _x_r,
         'x_store': _x_store,
         'x_demand': _x_demand,
         'x_conversion': _x_conversion,
-        'x_export': _x_export
+        'x_export': _x_export,
+        'x_purchase': _x_purchase
     }
 
 def init_set_c(model):

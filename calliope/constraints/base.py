@@ -106,6 +106,9 @@ def generate_variables(model):
     m.cost_fixed = po.Var(m.y, m.x, m.k, within=po.Reals)
     m.cost = po.Var(m.y, m.x, m.k, within=po.Reals)
 
+    # Binary/Integer variables
+    m.purchased = po.Var(m.y_purchase, m.x_purchase, within=po.Binary)
+
 
 def node_resource(model):
     m = model.m
@@ -350,7 +353,6 @@ def node_constraints_build(model):
     def get_var_constraint(model_var, y, var, x,
                            _equals=None, _max=None, _min=None,
                            scale=None):
-
         if not _equals:
             _equals = model.get_option(y + '.constraints.'
                                        + var + '.equals', x=x)
@@ -483,6 +485,10 @@ def node_constraints_build(model):
         # First check whether this tech is allowed at this location
         if not model._locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
+        if y in m.y_purchase and x in m.x_purchase:
+            purchased = m.purchased[y, x]
+        else:
+            purchased = 1
         e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
         if y in m.y_transmission:
             e_cap_equals = model._locations.get(
@@ -490,10 +496,51 @@ def node_constraints_build(model):
             e_cap_max = model._locations.get(
                 '_override.{}.constraints.e_cap.max'.format(y), {x: None})[x]
         else:
-            e_cap_max = None
-            e_cap_equals = None
-        return get_var_constraint(m.e_cap[y, x], y, 'e_cap', x, scale=e_cap_scale,
-                                  _max=e_cap_max, _equals=e_cap_equals)
+            e_cap_max = model.get_option(y + '.constraints.e_cap.max', x=x)
+            e_cap_equals = model.get_option(y + '.constraints.e_cap.equals', x=x)
+        if e_cap_equals:
+            if np.isinf(e_cap_equals):
+                e = exceptions.ModelError
+                raise e('Cannot use inf for equality constraint: '
+                        '{}.e_cap.equals.{}'.format(y, x))
+            else:
+                return m.e_cap[y, x] == e_cap_equals * e_cap_scale * purchased
+        if model.mode == 'operate' and y not in m.y_demand:
+            if np.isinf(e_cap_max):
+                e = exceptions.ModelError
+                raise e('Cannot use inf in operational mode, for value of '
+                        '{}.e_cap.max.{}'.format(y, x))
+            return m.e_cap[y, x] == e_cap_max * e_cap_scale * purchased
+        elif e_cap_max is None or np.isinf(e_cap_max):
+            return po.Constraint.Skip
+        else:
+            return m.e_cap[y, x] <= e_cap_max * e_cap_scale * purchased
+
+    def c_e_cap_min_rule(m, y, x):
+        """
+        Set minimum e_cap. All technologies.
+        """
+        # First check whether this tech is allowed at this location
+        if not model._locations.at[x, y] == 1:
+            return po.Constraint.Skip
+        if y in m.y_purchase and x in m.x_purchase:
+            purchased = m.purchased[y, x]
+        else:
+            purchased = 1
+        e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+        if y in m.y_transmission:
+            e_cap_equals = model._locations.get(
+                '_override.{}.constraints.e_cap.equals'.format(y), {x: None})[x]
+            e_cap_min = model._locations.get(
+                '_override.{}.constraints.e_cap.min'.format(y), {x: None})[x]
+        else:
+            e_cap_min = model.get_option(y + '.constraints.e_cap.min', x=x)
+            e_cap_equals = model.get_option(y + '.constraints.e_cap.equals', x=x)
+        if e_cap_equals or model.mode == 'operate' or not e_cap_min:
+            return po.Constraint.Skip
+        else:
+            return m.e_cap[y, x] >= e_cap_min * e_cap_scale * purchased
+
 
     def c_e_cap_storage_rule(m, y, x):
         """
@@ -538,6 +585,7 @@ def node_constraints_build(model):
     m.c_r_cap = po.Constraint(m.y_sp_finite_r, m.x_r, rule=c_r_cap_rule)
     m.c_r_area = po.Constraint(m.y_r_area, m.x_r, rule=c_r_area_rule)
     m.c_e_cap = po.Constraint(m.y, m.x, rule=c_e_cap_rule)
+    m.c_e_cap_min = po.Constraint(m.y, m.x, rule=c_e_cap_min_rule)
     m.c_e_cap_storage = po.Constraint(m.y_store, m.x_store, rule=c_e_cap_storage_rule)
     m.c_r2_cap = po.Constraint(m.y_sp_r2, m.x_r, rule=c_r2_cap_rule)
 
@@ -709,6 +757,30 @@ def node_constraints_transmission(model):
     m.c_transmission_capacity = po.Constraint(m.y_transmission, m.x_transmission,
                                               rule=c_trans_rule)
 
+#def purchase_constraint(model):
+#    m = model.m
+#    big_M = 1e8 # larger than the sum of any technology's production/consumption
+#
+#    ##
+#    # purchased
+#    # ^^^^^^^^^
+#    #
+#    # Switch on the binary variable :math:`purchased(y, x)` if there is any
+#    # finite :math:`c_prod(c, y, x, t)` or math:`c_con(c, y, x, t)`.
+#    # Applies to all techs.
+#    #
+#    # .. math::
+#    #
+#    #    $purchased(y, x) \greq \frac{\sum_{c, t}(c_prod(c, y, x, t) - c_con(c, y, x, t))}{big_M}
+#    ##
+#
+#    def purchase_rule(m, y, x):
+#        prod = (sum(m.c_prod[c, y, x, t] - m.c_con[c, y, x, t]
+#                    for c in m.c for t in m.t))
+#        return (prod / big_M <= m.purchased[y, x])
+#
+#    # Constraints
+#    m.c_purchased = po.Constraint(m.y_purchase, m.x_purchase, rule=purchase_rule)
 
 def node_costs(model):
 
@@ -777,10 +849,20 @@ def node_costs(model):
         else:
             cost_r2_cap = 0
 
+        if y in m.y_purchase and x in m.x_purchase:
+            if y in m.y_transmission:
+                cost_purchase = m.purchased[y, x] * (_cost('purchase', y, k, x)
+                                + _cost_per_distance('purchase', y, k, x)) / 2
+            else:
+                print(_cost('purchase', y, k, x))
+                cost_purchase = _cost('purchase', y, k, x) * m.purchased[y, x]
+        else:
+            cost_purchase = 0
+
         cost_con = (_depreciation_rate(y, k) *
             (sum(time_res * weights) / 8760) *
             (cost_s_cap + cost_r_cap + cost_r_area + cost_r2_cap +
-             cost_e_cap)
+             cost_e_cap + cost_purchase)
         )
         if _cost('om_fixed', y, k, x) < 0 and (y, x) not in m.c_e_cap.keys():
             raise exceptions.OptionNotSetError(

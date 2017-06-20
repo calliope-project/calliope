@@ -93,6 +93,7 @@ techs:
                 om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
                 om_r2: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
                 export: 0 # Cost of exporting excess energy (per kWh of ``export``). Usually used in the negative sense, as a subsidy.
+                purchase: 0 # Cost for purchasing a technology, triggers a binary variable for that technology to say that it has been purchased
         costs_per_distance:
             default:
                 e_cap: 0 # cost per unit distance per unit e_cap
