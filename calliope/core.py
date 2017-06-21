@@ -210,7 +210,7 @@ class Model(object):
             cr = config_run
             assert isinstance(cr, utils.AttrDict)
             # we have no filename so we just use current date/time
-            self.run_id = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            self.run_id = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
             # Use current working directory as config_run path
             self.config_run_path = os.getcwd()
         self.config_run = cr
