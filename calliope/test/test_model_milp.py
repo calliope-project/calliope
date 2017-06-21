@@ -14,7 +14,6 @@ def create_and_run_model(override=""):
                     ccgt:
                         constraints:
                             e_cap.max: 100
-                            e_cap.min: 20
                     demand_power:
                         x_map: '1: demand'
                         constraints:
@@ -60,3 +59,21 @@ class TestModel:
             sol2['costs'].loc[dict(k='monetary', y='ccgt')].sum() - cost_difference,
             tolerance=0.01)
         assert_almost_equal(model2.m.purchased['ccgt', '1'], 1, tolerance=0)
+
+    def test_purchase(self):
+        override1 = """
+            override.locations.1.override.ccgt.costs.monetary.purchase: 20
+            override.locations.1.override.ccgt.constraints.unit_cap.max: 5
+            override.locations.1.override.ccgt.constraints.e_cap_per_unit: 4
+        """
+        override2 = """
+            override.locations.1.override.ccgt.constraints.unit_cap.max: 2
+            override.locations.1.override.ccgt.constraints.e_cap_per_unit: 4
+        """
+        model1 = create_and_run_model(override1)
+        model2 = create_and_run_model(override2)
+        assert str(model1.results.solver.termination_condition) == 'optimal'
+        assert_almost_equal(model1.get_var('units').loc['1', 'ccgt'],
+                            3, tolerance=0.01)
+        assert str(model2.results.solver.termination_condition) == 'optimal'
+        assert model2.solution.e_cap.loc[dict(y='unmet_demand_power', x='1')] > 0

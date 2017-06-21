@@ -1246,7 +1246,7 @@ class Model(object):
         # Storage locations
         m.x_store = po.Set(
             initialize=self._sets['x_store'], within=m.x, ordered=True)
-        # Deman locations
+        # Demand locations
         m.x_demand = po.Set(
             initialize=self._sets['x_demand'], within=m.x, ordered=True)
         # Conversion locations
@@ -1255,6 +1255,9 @@ class Model(object):
         # Export locations
         m.x_export = po.Set(
             initialize=self._sets['x_export'], within=m.x, ordered=True)
+        # Locations that are associated with MILP variables
+        m.x_milp = po.Set(
+            initialize=self._sets['x_milp'], within=m.x, ordered=True)
         # Binary purchase locations
         m.x_purchase = po.Set(
             initialize=self._sets['x_purchase'], within=m.x, ordered=True)
@@ -1329,6 +1332,8 @@ class Model(object):
             initialize=self._sets['y_cp_3in'], within=m.y, ordered=True)
         # Technologies that allow export
         m.y_export = po.Set(initialize=self._sets['y_export'], within=m.y, ordered=True)
+        # Technologies that are associated with MILP variables
+        m.y_milp = po.Set(initialize=self._sets['y_milp'], within=m.y, ordered=True)
         # Technologies that have a binary purchase variable
         m.y_purchase = po.Set(initialize=self._sets['y_purchase'], within=m.y, ordered=True)
 
@@ -1377,11 +1382,11 @@ class Model(object):
 
         # 1. Required
         constr = [constraints.base.node_resource,
+                  constraints.base.unit_commitment,
                   constraints.base.node_energy_balance,
                   constraints.base.node_constraints_build,
                   constraints.base.node_constraints_operational,
                   constraints.base.node_constraints_transmission,
-                  #constraints.base.purchase_constraint,
                   constraints.base.node_costs,
                   constraints.base.model_constraints]
         if self.mode == 'plan':

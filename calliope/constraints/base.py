@@ -108,6 +108,8 @@ def generate_variables(model):
 
     # Binary/Integer variables
     m.purchased = po.Var(m.y_purchase, m.x_purchase, within=po.Binary)
+    m.units = po.Var(m.y_milp, m.x_milp, within=po.NonNegativeIntegers)
+    m.operating_units = po.Var(m.y_milp, m.x_milp, m.t, within=po.NonNegativeIntegers)
 
 
 def node_resource(model):
@@ -162,6 +164,27 @@ def node_resource(model):
     m.c_r_available = po.Constraint(m.y_finite_r, m.x_r, m.t,
                                     rule=r_available_rule)
 
+def unit_commitment(model):
+    m = model.m
+
+    def c_unit_commitment_rule(m, y, x, t):
+        # operating_units
+        # ^^^^^^^^^^^^^^^
+        #
+        # Constraining the number of integer units
+        # :math:`operating_units(y, x, t)` of a technology which
+        # can operate in a given timestep, based on maximum purchased units
+        # :math:`units(y, x)`
+        #
+        # .. math::
+        #
+        #   $operating_units(y, x, t) \leq units(y, x)
+        ##
+
+        return m.operating_units[y, x, t] <= m.units[y, x]
+
+    m.c_unit_commitment = po.Constraint(m.y_milp, m.x_milp, m.t,
+                                        rule=c_unit_commitment_rule)
 
 def node_energy_balance(model):
     m = model.m
@@ -396,7 +419,12 @@ def node_constraints_build(model):
         # incorporate timeseries resolution. Currently assumes that each
         # timestep is worth one unit of time.
         s_time_max = model.get_option(y + '.constraints.s_time.max', x=x)
-        s_cap_max = model.get_option(y + '.constraints.s_cap.max', x=x)
+        if y in m.y_milp and x in m.x_milp:
+            unit_cap = model.get_option(y + '.constraints.unit_cap.max', x=x)
+            s_cap_max = (unit_cap *
+                model.get_option(y + '.constraints.s_cap_per_unit', x=x))
+        else:
+            s_cap_max = model.get_option(y + '.constraints.s_cap.max', x=x)
         if not s_cap_max:
             s_cap_max = np.inf
         if not s_time_max:
@@ -438,9 +466,16 @@ def node_constraints_build(model):
         s_cap * charge rate = e_cap must hold. Otherwise, take the lowest capacity
         capacity defined by s_cap.max or e_cap.max / charge rate.
         """
-        s_cap_equals = model.get_option(y + '.constraints.s_cap.equals', x=x)
-        scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
-        e_cap = model.get_option(y + '.constraints.e_cap.equals', x=x) * scale
+        if y in m.y_milp and x in m.x_milp:
+            unit_cap_equals = model.get_option(y + '.constraints.unit_cap.equals', x=x)
+            s_cap_equals = (unit_cap_equals *
+                model.get_option(y + '.constraints.s_cap_per_unit', x=x))
+            e_cap = (unit_cap_equals *
+                model.get_option(y + '.constraints.e_cap_per_unit', x=x))
+        else:
+            s_cap_equals = model.get_option(y + '.constraints.s_cap.equals', x=x)
+            scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+            e_cap = model.get_option(y + '.constraints.e_cap.equals', x=x) * scale
         charge_rate = model.get_option(y + '.constraints.c_rate', x=x)
         if e_cap and s_cap_equals and charge_rate and s_cap_equals * charge_rate != e_cap:
             raise exceptions.ModelError(
@@ -449,7 +484,11 @@ def node_constraints_build(model):
                 .format(y, x)
             )
         if not e_cap:
-            e_cap = model.get_option(y + '.constraints.e_cap.max', x=x) * scale
+            if y in m.y_milp and x in m.x_milp:
+                e_cap = (model.get_option(y + '.constraints.unit_cap.max', x=x)
+                    * model.get_option(y + '.constraints.e_cap_per_unit', x=x))
+            else:
+                e_cap = model.get_option(y + '.constraints.e_cap.max', x=x) * scale
         if not s_cap_equals:
             s_cap_max = get_s_cap(y, x, e_cap, charge_rate)
             return get_var_constraint(m.s_cap[y, x], y, 's_cap', x, _max=s_cap_max)
@@ -485,11 +524,22 @@ def node_constraints_build(model):
         # First check whether this tech is allowed at this location
         if not model._locations.at[x, y] == 1:
             return m.e_cap[y, x] == 0
+
+        # Addition of binary variable describing whether a technology has been
+        # purchased or not
         if y in m.y_purchase and x in m.x_purchase:
             purchased = m.purchased[y, x]
         else:
             purchased = 1
-        e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+
+        # Addition of integer variable describing how many units of a technology
+        # have been purchased
+        if y in m.y_milp and x in m.x_milp:
+            return m.e_cap[y, x] == (m.units[y, x]
+                    * model.get_option(y + '.constraints.e_cap_per_unit', x=x))
+
+        # parameters for transmission technologies are stored in a different
+        # location to other technologies
         if y in m.y_transmission:
             e_cap_equals = model._locations.get(
                 '_override.{}.constraints.e_cap.equals'.format(y), {x: None})[x]
@@ -498,6 +548,10 @@ def node_constraints_build(model):
         else:
             e_cap_max = model.get_option(y + '.constraints.e_cap.max', x=x)
             e_cap_equals = model.get_option(y + '.constraints.e_cap.equals', x=x)
+
+        e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+
+        # e_cap.equals forces an equality constraint, which can't be infinite
         if e_cap_equals:
             if np.isinf(e_cap_equals):
                 e = exceptions.ModelError
@@ -505,12 +559,17 @@ def node_constraints_build(model):
                         '{}.e_cap.equals.{}'.format(y, x))
             else:
                 return m.e_cap[y, x] == e_cap_equals * e_cap_scale * purchased
+
+        # In operation mode, e_cap is forced to an equality constraint, even if
+        # e_cap.max is defined.
         if model.mode == 'operate' and y not in m.y_demand:
             if np.isinf(e_cap_max):
                 e = exceptions.ModelError
                 raise e('Cannot use inf in operational mode, for value of '
                         '{}.e_cap.max.{}'.format(y, x))
             return m.e_cap[y, x] == e_cap_max * e_cap_scale * purchased
+
+        # Infinite or undefined e_cap.max leads to an ignored constraint
         elif e_cap_max is None or np.isinf(e_cap_max):
             return po.Constraint.Skip
         else:
@@ -523,11 +582,21 @@ def node_constraints_build(model):
         # First check whether this tech is allowed at this location
         if not model._locations.at[x, y] == 1:
             return po.Constraint.Skip
+
+        # Addition of binary variable describing whether a technology has been
+        # purchased or not
         if y in m.y_purchase and x in m.x_purchase:
             purchased = m.purchased[y, x]
         else:
             purchased = 1
-        e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
+
+        # Addition of integer variable describing how many units of a technology
+        # have been purchased
+        if y in m.y_milp and x in m.x_milp:
+            return po.Constraint.Skip
+
+        # parameters for transmission technologies are stored in a different
+        # location to other technologies
         if y in m.y_transmission:
             e_cap_equals = model._locations.get(
                 '_override.{}.constraints.e_cap.equals'.format(y), {x: None})[x]
@@ -539,6 +608,7 @@ def node_constraints_build(model):
         if e_cap_equals or model.mode == 'operate' or not e_cap_min:
             return po.Constraint.Skip
         else:
+            e_cap_scale = model.get_option(y + '.constraints.e_cap_scale', x=x)
             return m.e_cap[y, x] >= e_cap_min * e_cap_scale * purchased
 
 
@@ -580,6 +650,23 @@ def node_constraints_build(model):
         else:  # If ``r2_cap_follow`` not set, set up standard constraints
             return get_var_constraint(m.r2_cap[y, x], y, 'r2_cap', x)
 
+    def c_unit_cap_rule(m, y, x):
+        # unit_cap
+        # ^^^^^^^^
+        #
+        # Constraining the number of integer purchased units of a technology
+        # :math:`units(y, x)` to be between the user-defined maximum
+        # :math:`unit_cap.max(y, x)` and minimum :math:`unit_cap.min(y, x)`, or
+        # equal to :math:`unit_cap.equals(y, x)`.
+        #
+        # .. math::
+        #
+        #   $if unit_cap.equals(y, x) then units(y, x) = unit_cap.equals(y, x) else
+        #   $unit_cap.min(y, x) \leq units(y, x) \leq unit_cap.min(y, x)
+        ##
+
+        return get_var_constraint(m.units[y, x], y, 'unit_cap', x)
+
     # Constraints
     m.c_s_cap = po.Constraint(m.y_store, m.x_store, rule=c_s_cap_rule)
     m.c_r_cap = po.Constraint(m.y_sp_finite_r, m.x_r, rule=c_r_cap_rule)
@@ -588,7 +675,7 @@ def node_constraints_build(model):
     m.c_e_cap_min = po.Constraint(m.y, m.x, rule=c_e_cap_min_rule)
     m.c_e_cap_storage = po.Constraint(m.y_store, m.x_store, rule=c_e_cap_storage_rule)
     m.c_r2_cap = po.Constraint(m.y_sp_r2, m.x_r, rule=c_r2_cap_rule)
-
+    m.c_unit_cap = po.Constraint(m.y_milp, m.x_milp, rule=c_unit_cap_rule)
 
 def node_constraints_operational(model):
     m = model.m
@@ -619,6 +706,10 @@ def node_constraints_operational(model):
             return c_prod == 0
         p_eff = model.get_option(y + '.constraints.p_eff', x=x)
         if c == model.get_option(y + '.carrier', default=y + '.carrier_out'):
+            if y in m.y_milp and x in m.x_milp:
+                e_cap = model.get_option(y + '.constraints.e_cap_per_unit', x=x)
+                return c_prod <= (time_res.at[t] * m.operating_units[y, x, t]
+                                  * e_cap * p_eff)
             return c_prod <= time_res.at[t] * m.e_cap[y, x] * p_eff
         else:
             return m.c_prod[c, y, x, t] == 0
@@ -634,6 +725,10 @@ def node_constraints_operational(model):
         if y in m.y_conversion_plus:  # Conversion techs with 2 output carriers
             return po.Constraint.Skip
         elif c == model.get_option(y + '.carrier', default=y + '.carrier_out'):
+            if y in m.y_milp and x in m.x_milp:
+                e_cap = model.get_option(y + '.constraints.e_cap_per_unit', x=x)
+                return m.c_prod[c, y, x, t] >=
+                    (time_res.at[t] * m.operating_units[y, x, t] * e_cap * min_use)
             return (m.c_prod[c, y, x, t]
                     >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:
@@ -653,6 +748,10 @@ def node_constraints_operational(model):
         if not allow_c_prod:
             return c_prod == 0
         else:
+            if y in m.y_milp and x in m.x_milp:
+                e_cap = model.get_option(y + '.constraints.e_cap_per_unit', x=x)
+                return c_prod <= (time_res.at[t] * m.operating_units[y, x, t]
+                                  * e_cap)
             return c_prod <= time_res.at[t] * m.e_cap[y, x]
 
     def c_conversion_plus_prod_min_rule(m, y, x, t):
@@ -670,6 +769,10 @@ def node_constraints_operational(model):
                 c_prod = sum(m.c_prod[c, y, x, t] for c in c_out.keys())
             else:
                 c_prod = m.c_prod[c_out, y, x, t]
+            if y in m.y_milp and x in m.x_milp:
+                e_cap = model.get_option(y + '.constraints.e_cap_per_unit', x=x)
+                return c_prod <= (time_res.at[t] * m.operating_units[y, x, t]
+                                  * e_cap * min_use)
             return c_prod >= c_prod_min
 
     def c_con_max_rule(m, c, y, x, t):
@@ -686,6 +789,10 @@ def node_constraints_operational(model):
                 return po.Constraint.Skip
         if (allow_c_con is True and
                 c == model.get_option(y + '.carrier', default=y + '.carrier_in')):
+            if y in m.y_milp and x in m.x_milp:
+                e_cap = model.get_option(y + '.constraints.e_cap_per_unit', x=x)
+                return m.c_con[c, y, x, t] >= (time_res.at[t] * e_cap * p_eff
+                                               * m.operating_units[y, x, t] * -1)
             return m.c_con[c, y, x, t] >= (-1 * time_res.at[t]
                                             * m.e_cap[y, x] * p_eff)
         else:
@@ -713,8 +820,8 @@ def node_constraints_operational(model):
         """
         if get_constraint_param(model, 'export_cap', y, x, t):
             return (m.export[y, x, t] <=
-                    get_constraint_param(model, 'export_cap', y, x, t))
-
+                    get_constraint_param(model, 'export_cap', y, x, t)
+                    * m.operating_units[y, x, t])
         else:
             return po.Constraint.Skip
 
@@ -756,31 +863,6 @@ def node_constraints_transmission(model):
     # Constraints
     m.c_transmission_capacity = po.Constraint(m.y_transmission, m.x_transmission,
                                               rule=c_trans_rule)
-
-#def purchase_constraint(model):
-#    m = model.m
-#    big_M = 1e8 # larger than the sum of any technology's production/consumption
-#
-#    ##
-#    # purchased
-#    # ^^^^^^^^^
-#    #
-#    # Switch on the binary variable :math:`purchased(y, x)` if there is any
-#    # finite :math:`c_prod(c, y, x, t)` or math:`c_con(c, y, x, t)`.
-#    # Applies to all techs.
-#    #
-#    # .. math::
-#    #
-#    #    $purchased(y, x) \greq \frac{\sum_{c, t}(c_prod(c, y, x, t) - c_con(c, y, x, t))}{big_M}
-#    ##
-#
-#    def purchase_rule(m, y, x):
-#        prod = (sum(m.c_prod[c, y, x, t] - m.c_con[c, y, x, t]
-#                    for c in m.c for t in m.t))
-#        return (prod / big_M <= m.purchased[y, x])
-#
-#    # Constraints
-#    m.c_purchased = po.Constraint(m.y_purchase, m.x_purchase, rule=purchase_rule)
 
 def node_costs(model):
 
@@ -854,8 +936,13 @@ def node_costs(model):
                 cost_purchase = m.purchased[y, x] * (_cost('purchase', y, k, x)
                                 + _cost_per_distance('purchase', y, k, x)) / 2
             else:
-                print(_cost('purchase', y, k, x))
                 cost_purchase = _cost('purchase', y, k, x) * m.purchased[y, x]
+        elif y in m.y_milp and x in m.x_milp:
+            if y in m.y_transmission:
+                cost_purchase = m.units[y, x] * (_cost('purchase', y, k, x)
+                                + _cost_per_distance('purchase', y, k, x)) / 2
+            else:
+                cost_purchase = _cost('purchase', y, k, x) * m.units[y, x]
         else:
             cost_purchase = 0
 

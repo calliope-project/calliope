@@ -206,10 +206,17 @@ def init_set_y(model, _x):
     _y_export = [y for y in _y
                  if any([model.get_option(y + '.export', x=x) for x in _x])]
 
-    # subset of technologies allowing export
-    _y_purchase = [y for y in _y
-                   if any([model.get_cost('purchase', y, k, x=x)
-                           for x in _x for k in model._sets['k']])
+    # subset of technologies associated with the model MILP functionality
+    _y_milp = [y for y in _y if
+               any([model.get_option(y + '.constraints.unit_cap.max', x=x) +
+                    model.get_option(y + '.constraints.unit_cap.equals', x=x) +
+                    model.get_option(y + '.constraints.unit_cap.min', x=x)
+                    for x in _x])
+                  ]
+    # subset of technologies associated with a binary purchase variable
+    _y_purchase = [y for y in _y if y not in _y_milp and
+                   any([model.get_cost('purchase', y, k, x=x)
+                        for x in _x for k in model._sets['k']])
                   ]
     sets = {
         'y': _y,
@@ -235,6 +242,7 @@ def init_set_y(model, _x):
         'x_transmission': _x_trans,
         'y_export': _y_export,
         'y_purchase': _y_purchase,
+        'y_milp': _y_milp,
         'x_transmission_plus': _x
     }
 
@@ -265,7 +273,10 @@ def init_set_x(model):
     # All locations in which energy is exported
     _x_export = [x for x in model._sets['x'] if
                      set(model._sets['y_export']).intersection(locations[x].techs)]
-    # All locations in which a technology can be binary purchased
+    # All locations with technologies associated with a MILP variable
+    _x_milp = [x for x in model._sets['x'] if
+                     set(model._sets['y_milp']).intersection(locations[x].techs)]
+    # All locations with technologies associated with a binary purchase variable
     _x_purchase = [x for x in model._sets['x'] if
                      set(model._sets['y_purchase']).intersection(locations[x].techs)]
 
@@ -276,7 +287,8 @@ def init_set_x(model):
         'x_demand': _x_demand,
         'x_conversion': _x_conversion,
         'x_export': _x_export,
-        'x_purchase': _x_purchase
+        'x_purchase': _x_purchase,
+        'x_milp': _x_milp
     }
 
 def init_set_c(model):
