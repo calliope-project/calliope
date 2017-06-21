@@ -36,7 +36,9 @@ def ramping_rate(model):
             if m.t.order_dict[t] == 0:
                 return po.Constraint.NoConstraint
             else:
-                carrier = model.get_option(y + '.carrier')
+                carrier = model.get_option(y + '.carrier', default=y + '.carrier_out')
+                if isinstance(carrier, dict): # conversion_plus technology
+                    carrier = model.get_carrier(y, 'out', primary=True)
                 diff = ((m.c_prod[carrier, y, x, t]
                          + m.c_con[carrier, y, x, t]) / time_res.at[t]
                         - (m.c_prod[carrier, y, x, model.prev_t(t)]
@@ -98,7 +100,9 @@ def group_fraction(model):
             raise ValueError('Invalid sign: {}'.format(sign))
 
     supply_techs = (model.get_group_members('supply') +
-                    model.get_group_members('conversion'))
+                    model.get_group_members('supply_plus') +
+                    model.get_group_members('conversion') +
+                    model.get_group_members('conversion_plus'))
 
     # Sets
     m.output_group = group_set('output')
@@ -157,7 +161,7 @@ def max_r_area_per_loc(model):
     ``r_area`` of all technologies requiring physical space cannot exceed the
     available area of a location. Available area defined for parent locations
     (in which there are locations defined as being 'within' it) will set the
-    available area limit for the sum of all the family (parent + all desecendants).
+    available area limit for the sum of all the family (parent + all descendants).
 
     To define, assign a value to ``available_area`` for a given location, e.g.::
 
@@ -167,7 +171,7 @@ def max_r_area_per_loc(model):
                 available_area: 100000
 
     To avoid including descendants in area limitation, ``ignore_descendants``
-    can be specified for the location, in the same way as ``available_area``.
+    can be specified as True for the location, at the same level as ``available_area``.
 
     """
     m = model.m

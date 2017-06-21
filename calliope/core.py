@@ -517,7 +517,7 @@ class Model(object):
             not top level, e.g. level=3 gives `carrier_out_3`
         primary: bool, optional, default = False
             give `primary carrier` for a given technology, which is a carrier in
-            `carrier_out` given ass `primary carrier` in the technology definition
+            `carrier_out` given as `primary carrier` in the technology definition
         all_carriers: bool, optional, default = False
             give all carriers for tech y and given direction. For conversion_plus
             technologies, this will give an array of carriers, if more than one
@@ -1644,7 +1644,7 @@ class Model(object):
         return c.fillna(0)
 
     def get_node_variables(self):
-        detail = ['s', 'r', 'r2', 'export']
+        detail = ['s', 'r', 'r2', 'export', 'operating_units']
         p = xr.Dataset()
         p['e'] = self.get_c_sum()
         for v in detail:
@@ -1666,6 +1666,21 @@ class Model(object):
 
         return self.get_var('e_cap') * p_eff
 
+    def get_purchased_units(self):
+        # Return either 'purchased' variable or 'units', depending on whether the
+        # technology is in 'y_purchased' or 'y_milp'. All other technologies
+        # return 1 if e_cap > 0
+        m = self.m
+        e_cap = self.get_var('e_cap')
+        all_units = (e_cap / e_cap).replace(np.nan, 0)
+        for v in ['units', 'purchased']:
+            try:
+                new_data = self.get_var(v)
+                all_units.ix[new_data.index, new_data.columns] = new_data
+            except exceptions.ModelError:
+                continue
+        return all_units
+
     def get_node_parameters(self):
         detail = ['e_cap', 's_cap', 'r_cap', 'r_area', 'r2_cap']
         result = xr.Dataset()
@@ -1675,6 +1690,7 @@ class Model(object):
             except exceptions.ModelError:
                 continue
         result['e_cap_net'] = self.get_e_cap_net()
+        result['purchased_units'] = self.get_purchased_units()
         return result
 
     def get_costs(self, t_subset=None):

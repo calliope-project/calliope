@@ -64,6 +64,7 @@ techs:
             s_cap.min: 0  # Minimum storage capacity (kWh)
             s_cap.max: 0  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
             s_cap.equals: false  # Specific storage capacity (kWh)
+            s_cap_per_unit: false # set the storage capacity of each integer unit of a technology perchased (kWh/unit)
             c_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
             s_time.max: 0  # Max storage time (full load hours). If both this and s_cap.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
             s_loss: 0  # Storage loss rate (per hour)
@@ -78,6 +79,7 @@ techs:
             e_cap.total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
             e_cap_scale: 1.0  # Scale all ``e_cap`` min/max/equals/total_max/total_equals constraints by this value
             e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
+            e_cap_per_unit: false # set the capacity of each integer unit of a technology perchased (kW/unit)
             e_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
             export_cap: false # Maximum allowed export for a technology, set to ``false`` to disable.
             unit_cap.min: false # Minimum number of integer units of a technology that can be purchased.

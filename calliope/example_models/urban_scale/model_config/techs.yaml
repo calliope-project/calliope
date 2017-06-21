@@ -36,14 +36,16 @@ techs:
         name: 'Solar photovoltaic power'
         color: '#99CB48'
         stack_weight: 100
-        parent: supply
+        parent: supply_plus
         export: true
         carrier_out: power
         constraints:
-            r: file  # Will look for `pv_r.csv` in data directory - already accounted for panel efficiency
-            e_eff: 0.85
+            r: file  # Will look for `pv_r.csv` in data directory - already accounted for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
+            p_eff: 0.85 # inverter losses
             e_cap.max: 250
             r_area.max: 1500
+            force_r: true
+            r_area_per_e_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
         costs:
             monetary:
                 e_cap: 1350

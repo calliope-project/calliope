@@ -727,8 +727,8 @@ def node_constraints_operational(model):
         elif c == model.get_option(y + '.carrier', default=y + '.carrier_out'):
             if y in m.y_milp and x in m.x_milp:
                 e_cap = model.get_option(y + '.constraints.e_cap_per_unit', x=x)
-                return m.c_prod[c, y, x, t] >=
-                    (time_res.at[t] * m.operating_units[y, x, t] * e_cap * min_use)
+                return (m.c_prod[c, y, x, t] >= time_res.at[t] *
+                    m.operating_units[y, x, t] * e_cap * min_use)
             return (m.c_prod[c, y, x, t]
                     >= time_res.at[t] * m.e_cap[y, x] * min_use)
         else:

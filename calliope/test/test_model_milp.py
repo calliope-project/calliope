@@ -60,7 +60,7 @@ class TestModel:
             tolerance=0.01)
         assert_almost_equal(model2.m.purchased['ccgt', '1'], 1, tolerance=0)
 
-    def test_purchase(self):
+    def test_milp(self):
         override1 = """
             override.locations.1.override.ccgt.costs.monetary.purchase: 20
             override.locations.1.override.ccgt.constraints.unit_cap.max: 5
