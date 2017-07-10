@@ -22,7 +22,7 @@ dependencies:
     - pyomo=5.2
     - pytest
     - pytest-cov
-    - pyyaml
+    - ruamel_yaml
     - scipy
     - seaborn  # Used in the example notebook
     - shapely  # For analysis_utils.plot_shapefile_polys

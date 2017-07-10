@@ -19,7 +19,7 @@ import importlib
 import sys
 
 import numpy as np
-import yaml
+import ruamel_yaml as yaml
 
 from . import exceptions
 
