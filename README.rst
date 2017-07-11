@@ -71,7 +71,7 @@ If you use Calliope, please cite the following paper:
 
 Stefan Pfenninger (2017). Dealing with multiple decades of hourly wind and PV time series in energy models: a comparison of methods to reduce time resolution and the planning implications of inter-annual variability. *Applied Energy*. `doi: 10.1016/j.apenergy.2017.03.051 <https://dx.doi.org/10.1016/j.apenergy.2017.03.051>`_
 
-All Calliope releases are archived on Zenodo and you can also refer to specific versions of Calliope with their Zenodo DOI. The most recent archived version is: |link-latest-doi|_
+All Calliope releases are archived on Zenodo, and can be referred to by the overall concept DOI `10.5281/zenodo.593292 <https://doi.org/10.5281/zenodo.593292>`_. Each version also has its own specific DOI `listed on Zenodo <https://doi.org/10.5281/zenodo.593292>`_.
 
 License
 -------

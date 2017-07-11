@@ -67,7 +67,7 @@ The following Python modules and their dependencies are required:
 * `Xarray <http://xarray.pydata.org/>`_
 * `NetCDF4 <https://github.com/Unidata/netcdf4-python>`_
 * `Numexpr <https://github.com/pydata/numexpr>`_
-* `PyYAML <http://pyyaml.org/>`_
+* `ruamel.yaml <https://yaml.readthedocs.io/en/latest/>`_
 * `Click <http://click.pocoo.org/>`_
 
 `Matplotlib <http://matplotlib.org/>`_ is optional but necessary to graphically display results.
