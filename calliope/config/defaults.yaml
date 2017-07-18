@@ -82,9 +82,9 @@ techs:
             e_cap_per_unit: false # set the capacity of each integer unit of a technology perchased (kW/unit)
             e_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
             export_cap: false # Maximum allowed export for a technology, set to ``false`` to disable.
-            unit_cap.min: false # Minimum number of integer units of a technology that can be purchased.
-            unit_cap.max: false # Maximum number of integer units of a technology that can be purchased.
-            unit_cap.equals: false # specific number of integer units of a technology to be purchased.
+            units.min: false # Minimum number of integer units of a technology that can be purchased.
+            units.max: false # Maximum number of integer units of a technology that can be purchased.
+            units.equals: false # specific number of integer units of a technology to be purchased.
         costs:
             default:  # These default are looked up for any value not defined for a specific cost class
                 s_cap: 0  # Cost of storage capacity (per kWh)

@@ -204,9 +204,8 @@ def max_r_area_per_loc(model):
         all_x = descendants + [x]
         r_area_sum = sum(m.r_area[y, _x] for y in m.y_r_area for _x in all_x if
                          model.get_option(y + '.constraints.r_area.max', x=_x)
-                         is not False)
+                         is not False and y not in m.y_demand)
         # r_area_sum will be ``0`` if either ``m.y_r_area`` or ``all_x`` are empty
-        if not isinstance(r_area_sum, int):
-            return (available_area >= r_area_sum)
+        return (r_area_sum <= available_area)
 
     m.c_available_r_area = po.Constraint(m.x, rule=c_available_r_area_rule)

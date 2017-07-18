@@ -1,0 +1,67 @@
+##
+# RUN SETTINGS
+##
+
+name: "Test run"  # Run name -- distinct from model name!
+
+model: 'model_config/model.yaml'
+
+output:  # Only used if run via the 'calliope run' command-line tool
+    format: csv  # Choices: netcdf, csv
+    path: 'Output'  # Will be created if it doesn't exist
+
+mode: plan  # Choices: plan, operate
+
+solver: glpk
+
+##
+# TIME RESOLUTION ADJUSTMENT
+##
+
+# time:
+#     resolution: 6  # Reduce rest of data to 6-hourly timesteps
+#     masks:  # Look for week where CSP output is minimal
+#         - function: mask_extreme_week
+#           options: {what: min, tech: csp}
+#
+
+##
+# SUBSETS
+##
+
+# Leave any of these empty to disable subsetting
+
+subset_y: []  # Subset of technologies
+subset_x: []  # Subset of locations
+subset_t: ['2005-07-01', '2005-07-02']  # Subset of timesteps
+
+##
+# MODEL SETTINGS OVERRIDE
+##
+
+# Override anything in the model configuration
+
+override:
+    techs:
+        chp:
+            constraints:
+                units.max: 4
+                e_cap_per_unit: 300
+                e_cap_min_use: 0.2
+            costs:
+                monetary:
+                    e_cap: 700
+                    purchase: 40000
+        boiler:
+            costs:
+                monetary:
+                    e_cap: 35
+                    purchase: 2000
+
+##
+# DEBUG OPTIONS
+##
+
+debug:
+    keep_temp_files: false  # Keep temporary files
+    symbolic_solver_labels: false # Use human-readable component labels? (slower)

@@ -21,7 +21,7 @@ Capacity
 --------
 
 * ``s_cap(y, x)``: installed storage capacity. Supply plus/Storage only
-* ``r_cap(y, x)``: installed resource <-> storage conversion capacity
+* ``r_cap(y, x)``: installed resource <-> storage/carrier_in conversion capacity
 * ``e_cap(y, x)``: installed storage <-> grid conversion capacity (gross)
 * ``r2_cap(y, x)``: installed secondary resource conversion capacity
 * ``r_area(y, x)``: resource collector area
@@ -30,7 +30,7 @@ Unit Commitment
 ---------------
 
 * ``r(y, x, t)``: resource <-> storage/carrier_in (+ production, - consumption)
-* ``r2(y, x, t)``: secondary resource -> storage (+ production)
+* ``r2(y, x, t)``: secondary resource -> storage/carrier_in (+ production)
 * ``c_prod(c, y, x, t)``: resource/storage/carrier_in -> carrier_out (+ production)
 * ``c_con(c, y, x, t)``: resource/storage/carrier_in <- carrier_out (- consumption)
 * ``s(y, x, t)``: total energy stored in device
@@ -42,6 +42,13 @@ Costs
 * ``cost(y, x, k)``: total costs
 * ``cost_fixed(y, x, k)``: fixed operation costs
 * ``cost_var(y, x, k, t)``: variable operation costs
+
+Binary/Integer variables
+------------------------
+
+* ``units(y, x)``: Number of integer installed technologies
+* ``purchased(y, x)``: Binary switch indicating whether a technology has been installed
+* ``operating_units(y, x, t)``: Binary switch indicating whether a technology that has been installed is operating
 
 --------------------------------------
 Objective function (cost minimization)
@@ -70,7 +77,7 @@ Node resource
 
 Provided by: :func:`calliope.constraints.base.node_resource`
 
-Defines constraint c_r_available:
+Defines constraint ``c_r_available``:
 
 .. math::
 
@@ -121,6 +128,19 @@ If that option is not set:
   r(y, x, t) \leq r_{avail}(y, x, t) \times r_{eff}(y, x, t)
 
 .. Note:: For all other technology types, defining a resource is irrelevant, so they are not constrained here.
+
+Unit commitment
+---------------
+
+Provided by: :func:`calliope.constraints.base.unit_commitment`
+
+Defines constraint ``c_unit_commitment``:
+
+.. math::
+
+   operating\_units(y, x, t) \leq units(y, x)
+
+.. Note:: This constraint only applies to technology-location sets which have ``units.max``, ``units.min``, or ``units.equals`` set in their constraints.
 
 Node energy balance
 -------------------
@@ -242,7 +262,7 @@ Where:
 
 
 Storage balance
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 Storage technologies balance energy charge, energy discharge, and energy stored:
 
 .. math::
@@ -289,6 +309,12 @@ If both :math:`e_{cap,max}(y, x)` and :math:`charge\_rate` are not given, :math:
 
 If ``y.constraints.s_time.max`` is true at location ``x``, then ``y.constraints.s_time.max`` and ``y.constraints.e_cap.max`` are used to to compute ``s_cap.max``. The minimum value of ``s_cap.max`` is taken, based on analysis of all possible time sets which meet the s_time.max value. This allows time-varying efficiency, :math:`e_{eff}(y, x, t)` to be accounted for.
 
+If the technology is constrained with integer constraints ``units.max/min/equals`` then the built storage capacity becomes:
+
+.. math::
+
+    s_{cap}(y, x) \leq units_{max}(y, x) \times s_{cap,per\_unit}
+
 ``c_r_cap``
 ^^^^^^^^^^^
 This constrains the built resource conversion capacity by:
@@ -322,6 +348,18 @@ If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) =
 
 If ``y.constraints.e_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
+If the technology is constrained with integer constraints ``units.max/min/equals`` then the carrier conversion capacity becomes:
+
+.. math::
+
+    e_{cap}(y, x) \leq units_{max}(y, x) \times e_{cap,per\_unit}
+
+If the technology is not constrained with integer constraints ``units.max/min/equals``, but does define a ``purchase`` cost then the carrier conversion capacity becomes:
+
+.. math::
+
+    e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_scale \times purchased(y, x)
+
 ``c_e_cap_storage``
 ^^^^^^^^^^^^^^^^^^^
 This constrains the carrier conversion capacity for storage technologies by:
@@ -333,6 +371,12 @@ Where :math:`e_{cap,max} = s_{cap}(y, x) * charge\_rate * e\_cap\_scale`
 
 ``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary.
 
+If the technology is constrained with integer constraints ``units.max/min/equals`` then the carrier conversion capacity for storage technologies becomes:
+
+.. math::
+
+    e_{cap}(y, x) \leq units_{max}(y, x) \times e_{cap,per\_unit}
+
 ``c_r2_cap``
 ^^^^^^^^^^^^
 This manages the secondary resource conversion capacity by:
@@ -343,6 +387,15 @@ This manages the secondary resource conversion capacity by:
 If ``y.constraints.r2_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
 There is an additional relevant option, ``y.constraints.r2_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``r_cap`` or ``e_cap``, and if set, sets ``c_r2_cap`` to track one of these, ie, :math:`r2_{cap,max} = r_{cap}(y, x)` (analogously for ``e_cap``), and also turns the constraint into an equality constraint.
+
+``c_units``
+^^^^^^^^^^^^
+This manages the maximum number of integer units by:
+
+.. math::
+  units_{cap}(y, x) \leq units_{max}(y, x)
+
+If ``y.constraints.units.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
 Node operational constraints
 ----------------------------
@@ -373,9 +426,20 @@ If ``e_cap_min_use`` is defined, the minimum output is constrained by:
 
 .. math::
 
-   c_{prod}(c, y, x, t) \geq time\_res(t) \times e_{cap}(y, x) \times e_{cap,minuse} \times p_{eff}(y, x, t)
+   c_{prod}(c, y, x, t) \geq time\_res(t) \times e_{cap}(y, x) \times e_{cap,minuse}
 
 These contraints are skipped for ``conversion_plus`` technologies if ``c`` is not the primary carrier.
+
+If the technology is constrained with integer constraints ``units.max/min/equals`` then `c_prod(c, y, x, t)` constraints become:
+
+.. math::
+
+     c_{prod}(c, y, x, t) \leq time\_res(t) \times operating\_units(y, x, t) \times e_{cap, per\_unit}(y, x) \times p_{eff}(y, x, t)
+
+.. math::
+
+     c_{prod}(c, y, x, t) \geq time\_res(t) \times operating\_units(y, x, t) \times e_{cap, per\_unit}(y, x) \times e_{cap,minuse}
+
 
 ``c_con``
 ^^^^^^^^^
@@ -383,11 +447,17 @@ For technologies which are not ``supply`` or ``supply_plus``, :math:`c_con(c, y,
 
 .. math::
 
-   c_{con}(c, y, x, t) \geq -1 \times timeres(t) \times e_{cap}(y, x)
+   c_{con}(c, y, x, t) \geq -1 \times time\_res(t) \times e_{cap}(y, x)
 
 and :math:`c_{con}(c, y, x, t) = 0` otherwise.
 
 This constraint is skipped for a ``conversion_plus`` and ``conversion`` technologies If ``c`` is a possible consumption carrier (primary, secondary, or tertiary).
+
+If the technology is constrained with integer constraints ``units.max/min/equals`` then `c_con(c, y, x, t)` constraints become:
+
+.. math::
+
+     c_{prod}(c, y, x, t) \geq-1 \times time\_res(t) \times operating\_units(y, x, t) \times e_{cap, per\_unit}(y, x) \times p_{eff}(y, x, t)
 
 ``s``
 ^^^^^
@@ -416,6 +486,12 @@ There is an additional check if ``y.constraints.r2_startup_only`` is true. In th
 .. math::
 
    export(y, x, t) \leq export_{cap}(y, x)
+
+If the technology is constrained with integer constraints ``units.max/min/equals`` then `export(y, x, t)` constraint becomes:
+
+.. math::
+
+     export(y, x, t) \leq export_{cap}(y, x) \times operating\_units(y, x, t)
 
 Transmission constraints
 ------------------------
@@ -470,10 +546,14 @@ Where
    & \times (cost_{s\_cap}(y, k) \times s_{cap}(y, x) \\
    & + cost_{r\_cap}(y, k) \times r_{cap}(y, x) \\
    & + cost_{r\_area}(y, k) \times r_{area}(y, x) \\
-   & + cost_{e\_cap}(y, k) \times e_{cap}(y, x)) \\
-   & + cost_{r2\_cap}(y, k) \times r2_{cap}(y, x))
+   & + cost_{e\_cap}(y, k) \times e_{cap}(y, x) \\
+   & + cost_{r2\_cap}(y, k) \times r2_{cap}(y, x) \\
+   & + cost_{purchase}(y, k) \times units(y, x) \\
+   & + cost_{purchase}(y, k) \times purchased(y, x))
 
 The costs are as defined in the model definition, e.g. :math:`cost_{r\_cap}(y, k)` corresponds to ``y.costs.k.r_cap``.
+
+.. Note:: purchase costs occur twice, but will only be applied once, depending on whether the technology constraints trigger an integer decision variable (``units(y, x)``) or a binary decision variable (``purchased(y, x)``).
 
 For transmission technologies, :math:`cost_{e\_cap}(y, k)` is computed differently, to include the per-distance costs:
 

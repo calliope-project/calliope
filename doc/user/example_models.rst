@@ -89,3 +89,37 @@ Run settings
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/run.yaml
    :language: yaml
+
+----------------------
+Mixed Integer Linear Programming (MILP) example
+----------------------
+
+Available as :class:`calliope.examples.MILP`.
+
+This example is based on the Urban scale example, calling a different run configuration which includes the necessary overrides for MILP functionality.
+
+Model settings
+--------------
+
+``model.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/model.yaml
+   :language: yaml
+
+``techs.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+   :language: yaml
+
+``locations.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
+   :language: yaml
+
+Run settings
+------------
+
+``run.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/run_milp.yaml
+   :language: yaml

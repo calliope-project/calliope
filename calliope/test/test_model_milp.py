@@ -63,11 +63,11 @@ class TestModel:
     def test_milp(self):
         override1 = """
             override.locations.1.override.ccgt.costs.monetary.purchase: 20
-            override.locations.1.override.ccgt.constraints.unit_cap.max: 5
+            override.locations.1.override.ccgt.constraints.units.max: 5
             override.locations.1.override.ccgt.constraints.e_cap_per_unit: 4
         """
         override2 = """
-            override.locations.1.override.ccgt.constraints.unit_cap.max: 2
+            override.locations.1.override.ccgt.constraints.units.max: 2
             override.locations.1.override.ccgt.constraints.e_cap_per_unit: 4
         """
         model1 = create_and_run_model(override1)

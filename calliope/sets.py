@@ -38,12 +38,19 @@ Technologies:
     * ``m.y_cp_3in``: tertiary carrier(s) in
 * ``m.y_transmission``: all transmission technologies
 * ``m.y_unmet``: dummy supply technologies to log
+* ``m.y_export``: all technologies allowing export of their carrier outside the system
+* ``m.y_purchase``: technology defining a 'purchase' cost, thus triggering an associated binary decision variable
+* ``m.y_milp``: technology defining a 'units' maximum, minimum, or equality, thus triggering an associated integer decision variable
 
 Locations:
 
-* ``m.x_trans``: all transmission locations
+* ``m.x_transmission``: all transmission locations
 * ``m.x_r``: all locations which act as system sources/sinks
+* ``m.x_conversion``: all locations in which there are conversion/conversion_plus technologies
 * ``m.x_store``: all locations in which storage is allowed
+* ``m.x_export``: locations allowing 'y_export' technologies to export outside the system
+* ``m.x_purchase``: locations associated with 'y_purchased' technologies
+* ``m.x_milp``: locations associated with 'y_milp' technologies
 
 Shared subsets
 ==============
@@ -68,9 +75,14 @@ Technologies:
     * ``m.y_conversion``
     * ``m.y_conversion_plus``
     * ``m.y_transmission``
+    * ``m.y_unmet``
+    * ``m.y_export``
+    * ``m.y_purchase``
+    * ``m.y_milp``
 * ``m.y_sd``: all basic supply & demand technologies, includes:
     * ``m.y_demand``
     * ``m.y_supply``
+    * ``m.y_unmet``
 * ``m.y_store``: all technologies that have storage capabilities, includes:
     * ``m.y_storage``
     * ``m.y_supply_plus``
@@ -78,9 +90,13 @@ Technologies:
 Locations:
 
 * ``m.x``: all locations, includes:
-    * ``m.x_trans``
+    * ``m.x_transmission``
     * ``m.x_r``
+    * ``m.x_conversion``
     * ``m.x_store``
+    * ``m.x_export``
+    * ``m.x_purchase``
+    * ``m.x_milp``
 
 ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 
@@ -208,9 +224,9 @@ def init_set_y(model, _x):
 
     # subset of technologies associated with the model MILP functionality
     _y_milp = [y for y in _y if
-               any([model.get_option(y + '.constraints.unit_cap.max', x=x) +
-                    model.get_option(y + '.constraints.unit_cap.equals', x=x) +
-                    model.get_option(y + '.constraints.unit_cap.min', x=x)
+               any([model.get_option(y + '.constraints.units.max', x=x) +
+                    model.get_option(y + '.constraints.units.equals', x=x) +
+                    model.get_option(y + '.constraints.units.min', x=x)
                     for x in _x])
                   ]
     # subset of technologies associated with a binary purchase variable

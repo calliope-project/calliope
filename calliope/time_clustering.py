@@ -50,7 +50,7 @@ def _get_timesteps_per_day(data):
 
 
 def reshape_for_clustering(data, tech=None):
-    y_coord = 'y_def_r'
+    y_coord = 'y_finite_r'
     y_values = list(data.attrs['_sets'][y_coord])
     timesteps_per_day = _get_timesteps_per_day(data)
     days = int(len(data.t) / timesteps_per_day)
@@ -70,7 +70,7 @@ def reshape_for_clustering(data, tech=None):
 
 
 def reshape_clustered(clustered, data, tech=None):
-    y_coord = 'y_def_r'
+    y_coord = 'y_finite_r'
     y_values = list(data.attrs['_sets'][y_coord])
     timesteps_per_day = _get_timesteps_per_day(data)
     days = clustered.shape[0]
@@ -147,7 +147,7 @@ def find_nearest_vector_index(array, value):
 
 
 def get_closest_days_from_clusters(data, mean_data, clusters):
-    subset_y = list(data.attrs['_sets']['y_def_r'])
+    subset_y = list(data.attrs['_sets']['y_finite_r'])
     dtindex = data['t'].to_index()
     ts_per_day = _get_timesteps_per_day(data)
     days = int(len(data['t']) / ts_per_day)

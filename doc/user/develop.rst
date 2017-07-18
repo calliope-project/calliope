@@ -26,6 +26,11 @@ Using Anaconda/conda, install all requirements, including the free and open sour
    $ conda env create -f ./calliope/requirements.yml -n calliope_dev
    $ source activate calliope_dev
 
+On Windows::
+
+   $ conda env create -f ./calliope/requirements.yml -n calliope_dev
+   $ activate calliope_dev
+
 Then install Calliope itself with pip::
 
    $ pip install -e ./calliope

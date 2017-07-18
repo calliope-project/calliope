@@ -981,10 +981,10 @@ class Model(object):
                 series = dataset['r'].loc[{'y': y, 'x': x}].to_pandas()
                 err_suffix = 'for tech: {}, at location: {}'.format(y, x)
                 if base_tech == 'demand':
-                    err = 'Demand resource must be <=0, ' + err_suffix
+                    err = 'Demand resource must be <=0 and not NaN, ' + err_suffix
                     assert (series <= 0).all(), err
                 elif base_tech == 'supply':
-                    err = 'Supply resource must be >=0, ' + err_suffix
+                    err = 'Supply resource must be >=0 and not NaN, ' + err_suffix
                     assert (series >= 0).all(), err
 
     def read_data(self):

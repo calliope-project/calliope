@@ -332,6 +332,18 @@ Calliope provides functionality to automatically adjust the resolution of time s
 
 .. _loading_optional_constraints:
 
+----------------------------------------------------------
+Running a Linear (LP) or Mixed Integer Linear (MILP) model
+----------------------------------------------------------
+
+Calliope is primarily an LP framework, but application of certain constraints will trigger binary or integer decision variables. When triggered, a MILP model will be created.
+
+By applying a ``purchase`` cost to a technology, that technology will have a binary variable associated with it, describing whether or not it has been "purchased".
+
+By applying ``units.max``,``units.min``, or ``units.equals`` to a technology, that technology will have a integer variable associated with it, describing how many of that technology have been "purchased". If a ``purchase`` cost has been applied to this same technology, the purchasing cost will be applied per unit.
+
+In both cases, there will be a time penalty, as linear programming solvers are less able to converge on solutions of problems which include binary or integer decision variables. But, the additional functionality can be useful. A purchasing cost allows for a cost curve of the form ``y = Mx + C`` to be applied to a technology, instead of the LP costs which are all of the form ``y = Mx``. Integer units also trigger per-timestep decision variables, which allow technologies to be "on" or "off" at each timestep.
+
 ----------------------------
 Loading optional constraints
 ----------------------------
