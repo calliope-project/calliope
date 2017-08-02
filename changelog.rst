@@ -3,8 +3,20 @@
 Release History
 ===============
 
-0.6.0 (dev)
-------------------
+0.5.3 (dev)
+-----------
+
+Major changes
+~~~~~~~~~~~~~
+
+* |new| Mixed integer linear progamming (MILP) capabilities, when using ``purchase`` cost and/or ``units.max/min/equals`` constraints. Integer/Binary decision variables will be applied to the relevant technology-location sets, avoiding unnecessary complexity by describing all technologies with these decision variables.
+
+Other changes
+~~~~~~~~~~~~~
+
+* |changed| YAML parser is now ruamel_yaml, not pyyaml. This allows scientific notation of numbers in YAML files.
+* |fixed| Description of PV technology in urban scale example model
+* |fixed| Optional ramping constraint using backward-incompatible deifnitions
 
 
 0.5.2 (2017-06-16)

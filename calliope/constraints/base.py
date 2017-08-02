@@ -699,9 +699,10 @@ def node_constraints_operational(model):
         c_prod = m.c_prod[c, y, x, t]
         if y in m.y_conversion_plus:  # Conversion techs with 2 or more output carriers
             carriers_out = model.get_carrier(y, 'out', all_carriers=True)
-            if c not in carriers_out:
-                return c_prod == 0
-            if c in carriers_out and model._locations.at[x, y] == 0:
+            if isinstance(carriers_out, str):
+                carriers_out = tuple([carriers_out])
+            if (c not in carriers_out) or (c in carriers_out and
+                                           model._locations.at[x, y] == 0):
                 return c_prod == 0
             else:
                 return po.Constraint.Skip
