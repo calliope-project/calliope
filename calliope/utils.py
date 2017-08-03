@@ -537,11 +537,11 @@ def cost_per_distance_getter(config_model):
 
 
 def depreciation_getter(option_getter_func):
-    def get_depreciation_rate(y, k):
+    def get_depreciation_rate(y, x, k):
         interest = option_getter_func(
             y + '.depreciation.interest.' + k,
-            default=y + '.depreciation.interest.default')
-        plant_life = option_getter_func(y + '.depreciation.plant_life')
+            default=y + '.depreciation.interest.default', x=x)
+        plant_life = option_getter_func(y + '.depreciation.plant_life', x=x)
         if interest == 0:
             dep = 1 / plant_life
         else:

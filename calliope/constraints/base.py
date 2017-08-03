@@ -9,6 +9,8 @@ Basic model constraints.
 
 """
 
+import warnings
+
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 import xarray as xr
@@ -17,6 +19,15 @@ from .. import exceptions
 from .. import transmission
 from .. import utils
 
+formatwarning_orig = warnings.formatwarning
+def _formatwarning(message, category, filename, lineno, line=None):
+    """Formats ModelWarnings as "Warning: message" without extra crud"""
+    if category == exceptions.ModelWarning:
+        return 'Warning: ' + str(message) + '\n'
+    else:
+        return formatwarning_orig(message, category, filename, lineno, line)
+
+warnings.formatwarning = _formatwarning
 
 def get_constraint_param(model, param_string, y, x, t):
     """
@@ -126,6 +137,15 @@ def node_resource(model):
     def r_available_rule(m, y, x, t):
         r_scale = model.get_option(y + '.constraints.r_scale', x=x)
         force_r = get_constraint_param(model, 'force_r', y, x, t)
+        resource = get_constraint_param(model, 'r', y, x, t)
+        if resource == np.inf and force_r is True:
+            w = exceptions.ModelWarning
+            message = ('`force_r: True` and `r: inf` are incompatible for {}:{}'
+                ' at {}. r_available constraint has been ignored. To avoid this'
+                ' message in future, set timeseries `r` at technology definition,'
+                ' even if you use location override.'.format(y, x, t))
+            warnings.warn(message, w)
+            return po.Constraint.Skip
 
         if y in m.y_sd:
             e_eff = get_constraint_param(model, 'e_eff', y, x, t)
@@ -136,10 +156,9 @@ def node_resource(model):
             c_con = sum(m.c_con[c, y, x, t] for c in m.c) * e_eff # demand techs
 
             if y in m.y_sd_r_area:
-                r_avail = (get_constraint_param(model, 'r', y, x, t) * r_scale
-                           * m.r_area[y, x])
+                r_avail = resource * r_scale * m.r_area[y, x]
             else:
-                r_avail = (get_constraint_param(model, 'r', y, x, t) * r_scale)
+                r_avail = get_constraint_param(model, 'r', y, x, t) * r_scale
 
             if force_r:
                 return c_prod + c_con == r_avail
@@ -150,10 +169,9 @@ def node_resource(model):
             r_eff = get_constraint_param(model, 'r_eff', y, x, t)
 
             if y in m.y_sp_r_area:
-                r_avail = (get_constraint_param(model, 'r', y, x, t) * r_scale
-                           * m.r_area[y, x] * r_eff)
+                r_avail = resource * r_scale * m.r_area[y, x] * r_eff
             else:
-                r_avail = get_constraint_param(model, 'r', y, x, t) * r_scale * r_eff
+                r_avail = resource * r_scale * r_eff
 
             if force_r:
                 return m.r[y, x, t] == r_avail
@@ -387,7 +405,7 @@ def node_constraints_build(model):
             _equals = scale * _equals
             _min = scale * _min
             _max = scale * _max
-        if _equals:
+        if _equals is not False and _equals is not None:
             if np.isinf(_equals):
                 e = exceptions.ModelError
                 raise e('Cannot use inf in operational mode, for value of '
@@ -883,8 +901,8 @@ def node_costs(model):
     cost_per_distance_getter = utils.cost_per_distance_getter(model.config_model)
 
     @utils.memoize
-    def _depreciation_rate(y, k):
-        return depreciation_getter(y, k)
+    def _depreciation_rate(y, x, k):
+        return depreciation_getter(y, x, k)
 
     @utils.memoize
     def _cost(cost, y, k, x=None):
@@ -955,7 +973,7 @@ def node_costs(model):
         else:
             cost_purchase = 0
 
-        cost_con = (_depreciation_rate(y, k) *
+        cost_con = (_depreciation_rate(y, x, k) *
             (sum(time_res * weights) / 8760) *
             (cost_s_cap + cost_r_cap + cost_r_area + cost_r2_cap +
              cost_e_cap + cost_purchase)

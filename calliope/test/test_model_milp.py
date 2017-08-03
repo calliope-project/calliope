@@ -53,7 +53,7 @@ class TestModel:
         sol2 = model2.solution
         time_res = model2.data['_time_res'].to_series()
         weights = model2.data['_weights'].to_series()
-        depreciation = depreciation_getter(model2.get_option)('ccgt', 'monetary')
+        depreciation = depreciation_getter(model2.get_option)('ccgt', '1', 'monetary')
         cost_difference = depreciation * (sum(time_res * weights) / 8760) * 20
         assert_almost_equal(sol1['costs'].loc[dict(k='monetary', y='ccgt')].sum(),
             sol2['costs'].loc[dict(k='monetary', y='ccgt')].sum() - cost_difference,
