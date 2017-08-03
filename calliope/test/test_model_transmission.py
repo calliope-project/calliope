@@ -136,14 +136,9 @@ class TestModel:
 
         # Usual urban scale model has non-zero transmission along each of these
         # links, one_way forces them to zero
-        assert_almost_equal(sol.c_prod.loc[
+        assert_almost_equal(sol.c_con.loc[
             dict(y='heat_pipes:N1', c='heat', x='X2')], 0, 0.1)
-        assert_almost_equal(sol.c_prod.loc[
+        assert_almost_equal(sol.c_con.loc[
             dict(y='heat_pipes:N1', c='heat', x='X3')], 0, 0.1)
-        assert_almost_equal(sol.c_prod.loc[
+        assert_almost_equal(sol.c_con.loc[
             dict(y='heat_pipes:X1', c='heat', x='N1')], 0, 0.1)
-
-        # Usual urban scale model has zero transmission along this link,
-        # one_way forces a change in optimal solution, making it non-zero
-        assert_almost_equal(sol.c_prod.loc[
-            dict(y='heat_pipes:X2', c='heat', x='N1')], 1.75, 0.01)

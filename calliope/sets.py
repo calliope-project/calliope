@@ -368,13 +368,15 @@ def init_y_trans(model):
                 for y in tree[x]:
                     # Allow the tech
                     model._locations.at[x, y] = 1
-                    # Add constraints if needed. Speficying one way transmission
-                    # leads to e_prod in the direction opposite to the defined
-                    # link being set to False. E.g. if 'a,b' is one way for tech
-                    # 'y' then y:a.constraints.e_prod @ x=b -> False
+                    # Add constraints if needed. Specifying one way transmission
+                    # leads to e_con in the direction of the link being set to
+                    # False. E.g. if 'a,b' is one way for transmission tech 'y'
+                    # then y:a.constraints.e_con @ x=b -> False. Here, this stops
+                    # transmission from b to a (no carrier can be consumed by the
+                    # tranmission technology at b).
                     for c in tree[x][y].keys_nested():
                         if c == 'constraints.one_way':
-                            colname = '_override.' + y + '.constraints.e_prod'
+                            colname = '_override.' + y + '.constraints.e_con'
                         else:
                             colname = '_override.' + y + '.' + c
                         if colname not in model._locations.columns:
@@ -383,6 +385,6 @@ def init_y_trans(model):
                                 and '{},{}'.format(y.split(':')[1], x) in
                                 model.config_model.links.keys()):
                             # set the option in model._locations and model.config_model.locations
-                            model.set_option(y + '.constraints.e_prod', False, x=x)
+                            model.set_option(y + '.constraints.e_con', False, x=x)
                         else:
                             model._locations.at[x, colname] = tree[x][y].get_key(c)

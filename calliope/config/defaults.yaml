@@ -116,6 +116,8 @@ techs:
             r: inf
     supply_plus:
         parent: defaults
+        constraints:
+            r: inf
     demand:
         parent: defaults
         constraints:
