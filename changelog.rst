@@ -21,6 +21,7 @@ Other changes
 * |fixed| Edge case timeseries resource combinations, where infinite resource sneaks into an incompatible constraint, are now flagged with a warning and ignored in that constraint (#61)
 * |fixed| e_cap.equals: 0 sets a technology to a capacity of zero, instead of ignoring the constraint (#63)
 * |fixed| depreciation_getter now changes with location overrides, instead of just checking the technology level constraints (#64)
+* |fixed| Time clustering now functions in models with time-varying costs (#66)
 
 0.5.2 (2017-06-16)
 ------------------

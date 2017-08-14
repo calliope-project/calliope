@@ -8,7 +8,6 @@ time_clustering.py
 Functions to cluster data along the time dimension.
 
 """
-
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -103,33 +102,36 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
     #                          for i in data.coords['t'].values])
 
     ds = {}
+    t_coords = ['{}-{}'.format(cid, t)
+                for cid in cluster_map
+                for t in range(timesteps_per_day)]
     data_vars_in_t = [v for v in _get_datavars(data)
                       if 't' in data[v].dims]
     for var in data_vars_in_t:
         data_arrays = []
         array = data[var]
         y_coord = _get_y_coord(array)
-
-        t_coords = ['{}-{}'.format(cid, t)
-                    for cid in cluster_map
-                    for t in range(timesteps_per_day)]
-
         # Check if this variable has any data
-        if len(data.coords[y_coord].values) == 0:
-            e = np.empty((0, len(t_coords), len(data.coords['x'].values)))
-            ds[var] = xr.DataArray(e, dims=[y_coord, 't', 'x'],
-                                   coords={'x': data.coords['x'].values,
-                                           't': t_coords})
+        if len(array.coords[y_coord].values) == 0:
+            if 'k' in array.coords: # time-varying cost
+                e = np.empty((0, len(array.k), len(t_coords), len(array.x)))
+                ds[var] = xr.DataArray(e, dims=[y_coord, 'k', 't', 'x'],
+                                       coords={'k': array.coords['k'].values,
+                                               'x': array.coords['x'].values,
+                                               't': t_coords})
+            else:
+                e = np.empty((0, len(t_coords), len(array.x)))
+                ds[var] = xr.DataArray(e, dims=[y_coord, 't', 'x'],
+                                       coords={'x': array.coords['x'].values,
+                                               't': t_coords})
         else:
             for cluster_id, cluster_members in cluster_map.items():
                 y_arrays = []
                 for y in data.coords[y_coord].values:
                     d = (array.loc[{'t': cluster_members, y_coord: y}]
-                              .to_pandas().groupby(lambda x: x.hour).mean()
-                              .to_xarray().to_array(dim='x').T
+                              .groupby('t.hour').mean(dim='t')
+                              .rename({'hour': 't'})
                          )
-                    d.coords[y_coord] = y
-                    d = d.rename({'index': 't'})
                     d.coords['t'] = [i for i in t_coords
                                      if i.startswith('{}-'.format(cluster_id))]
                     y_arrays.append(d)
@@ -142,8 +144,7 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
 
 
 def find_nearest_vector_index(array, value):
-    return np.array([np.linalg.norm(x + y + z + u)
-                     for (x, y, z, u) in array - value]).argmin()
+    return np.array([np.linalg.norm(sum(y)) for y in array - value]).argmin()
 
 
 def get_closest_days_from_clusters(data, mean_data, clusters):
@@ -239,7 +240,7 @@ def map_clusters_to_data(data, clusters, how):
                            .fillna(method='ffill'))
     new_data['_weights'] = xr.DataArray(weights, dims=['t'])
     new_data['_time_res'] = xr.DataArray(np.ones(len(new_data['t'])) * (24 / ts_per_day),
-                                         coords={'t': new_data['t']})
+                                         dims=['t'], coords={'t': new_data['t']})
 
     return new_data
 

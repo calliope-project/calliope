@@ -74,7 +74,7 @@ techs:
         carrier_out_2:
             heat: 0.8
         constraints:
-            e_cap.max: 1300
+            e_cap.max: 1500
             e_eff: 0.405
         costs:
             monetary:
