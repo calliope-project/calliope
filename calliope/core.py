@@ -1408,6 +1408,7 @@ class Model(object):
     def _log_time(self):
         self.run_times["end"] = time.time()
         self.run_times["runtime"] = int(time.time() - self.run_times["start"])
+        self.solution.attrs['run_time'] = self.run_times["runtime"]
         logging.info('Runtime: ' + str(self.run_times["runtime"]) + ' secs')
 
     def run(self, iterative_warmstart=True):
@@ -1590,6 +1591,8 @@ class Model(object):
         # Add model and run configuration
         self.solution.attrs['config_run'] = self.config_run
         self.solution.attrs['config_model'] = self.config_model
+        self.solution.attrs['calliope_version'] = __version__
+        # run_time is added in self._log_time()
 
     def load_solution(self):
         sol = self.get_node_variables()
@@ -2092,7 +2095,6 @@ class Model(object):
         ``self.config_run.output.path``
 
         """
-        sol = self.solution
         store_file = os.path.join(self.config_run.output.path, 'solution.nc')
         # Raise error if file exists already, to make sure we don't destroy
         # existing data
@@ -2108,16 +2110,18 @@ class Model(object):
             logging.warning(message)
             store_file = alt_file
 
+        # Shallow copy of dataset to allow metadata serialization
+        temp_solution = self.solution.copy(deep=False)
+
         # Metadata
         for k in ['config_model', 'config_run']:
             # Serialize config dicts to YAML strings
-            sol.attrs[k] = sol.attrs[k].to_yaml()
-        sol.attrs['run_time'] = self.run_times["runtime"]
-        sol.attrs['calliope_version'] = __version__
+            temp_solution.attrs[k] = temp_solution.attrs[k].to_yaml()
 
-        encoding = {k: {'zlib': True, 'complevel': 4} for k in self.solution.data_vars}
-        self.solution.to_netcdf(store_file, format='netCDF4', encoding=encoding)
-        self.solution.close()  # Force-close NetCDF file after writing
+        encoding = {k: {'zlib': True, 'complevel': 4} for k in temp_solution.data_vars}
+        temp_solution.to_netcdf(store_file, format='netCDF4', encoding=encoding)
+        temp_solution.close()  # Force-close NetCDF file after writing
+        del temp_solution  # Kill that shallow copy
 
         return store_file  # Return the path to the NetCDF file we used
 
@@ -2129,10 +2133,8 @@ class Model(object):
 
         # Metadata
         md = utils.AttrDict()
-        md['config_run'] = self.config_run
-        md['config_model'] = self.config_model
-        md['run_time'] = self.run_times["runtime"]
-        md['calliope_version'] = __version__
+        for k in ['config_model', 'config_run', 'run_time', 'calliope_version']:
+            md[k] = self.solution.attrs[k]
         md.to_yaml(os.path.join(self.config_run.output.path, 'metadata.yaml'))
 
         return self.config_run.output.path
