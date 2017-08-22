@@ -311,6 +311,10 @@ Tutorial 3: Mixed Integer Linear Programming
 --------------------------------------------
 This example is based on the :ref:`urban scale example model <urban_scale_example>`, but with an updated run configuration. This run configuration provides technology overrides which trigger binary and integer decision variables, creating a MILP model, rather than the conventional Calliope LP model.
 
+.. Warning::
+
+   Integer and Binary variables are still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
+
 Units
 =====
 
@@ -320,7 +324,7 @@ The capacity of a technology is a continuous decision variable, which can be wit
    :language: yaml
    :lines: 44-54
 
-A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of `e_cap_per_unit`. Any of ``e_cap.max``, ``e_cap.min``, or ``e_cap.equals`` are ignored, in favour of ``units.max``, ``units.min`, or ``units.equals``. A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating. In the LP model, ``e_cap_min_use`` would force the technology to operate at least at that proportion of its maximum capacity at each time step. In this model, the newly introduced ``e_cap_min_use`` of 0.2 will ensure that the output of the CHP is 20% of its maximum capacity in any time step that it has a finite output.
+A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of ``e_cap_per_unit``. Any of ``e_cap.max``, ``e_cap.min``, or ``e_cap.equals`` are ignored, in favour of ``units.max``, ``units.min``, or ``units.equals``. A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating. In the LP model, ``e_cap_min_use`` would force the technology to operate at least at that proportion of its maximum capacity at each time step. In this model, the newly introduced ``e_cap_min_use`` of 0.2 will ensure that the output of the CHP is 20% of its maximum capacity in any time step in which it has a finite output.
 
 Purchase cost
 =============

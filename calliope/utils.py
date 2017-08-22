@@ -535,6 +535,32 @@ def cost_per_distance_getter(config_model):
         return distance_cost
     return get_cost_per_distance
 
+def e_eff_per_distance_getter(config_model):
+    option_getter_func = option_getter(config_model)
+    def get_e_eff_per_distance(y, x):
+        e_loss = option_getter_func(y + '.constraints_per_distance.e_loss', x=x)
+        per_distance = option_getter_func(y + '.per_distance')
+        tech, x2 = y.split(':')
+        link = config_model.get_key(
+            'links.' + x + ',' + x2,
+            default=config_model['links'].get(x2 + ',' + x)
+        )
+        # link = None if no link exists
+        if not link or tech not in link.keys():
+            return 1.0
+        try:
+            distance = link.get_key(tech + '.distance')
+        except KeyError:
+            if e_loss > 0:
+                e = exceptions.OptionNotSetError
+                raise e('Distance must be defined for link: {} '
+                        'and transmission tech: {}, as e_loss per distance '
+                        'is defined'.format(x + ',' + x2, tech))
+            else:
+                return 1.0
+        return 1 - (e_loss * (distance / per_distance))
+    return get_e_eff_per_distance
+
 
 def depreciation_getter(option_getter_func):
     def get_depreciation_rate(y, x, k):

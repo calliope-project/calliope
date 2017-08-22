@@ -207,29 +207,10 @@ def unit_commitment(model):
 def node_energy_balance(model):
     m = model.m
     time_res = model.data['_time_res'].to_series()
-
-    def get_e_eff_per_distance(model, y, x):
-        e_loss = model.get_option(y + '.constraints_per_distance.e_loss', x=x)
-        per_distance = model.get_option(y + '.per_distance')
-        tech, x2 = y.split(':')
-        link = model.config_model.get_key(
-            'links.' + x + ',' + x2,
-            default=model.config_model['links'].get(x2 + ',' + x)
-        )
-        # link = None if no link exists
-        if not link or tech not in link.keys():
-            return 1.0
-        try:
-            distance = link.get_key(tech + '.distance')
-        except KeyError:
-            if e_loss > 0:
-                e = exceptions.OptionNotSetError
-                raise e('Distance must be defined for link: {} '
-                        'and transmission tech: {}, as e_loss per distance '
-                        'is defined'.format(x + ',' + x2, tech))
-            else:
-                return 1.0
-        return 1 - (e_loss * (distance / per_distance))
+    e_eff_per_distance_getter = utils.e_eff_per_distance_getter(model.config_model)
+    @utils.memoize
+    def _e_eff_per_distance(y, x):
+        return e_eff_per_distance_getter(y, x)
 
     def get_conversion_out(c_1, c_2, m, y, x, t):
         if isinstance(c_1, dict):
@@ -267,7 +248,7 @@ def node_energy_balance(model):
             return (m.c_prod[c, y, x, t]
                     == -1 * m.c_con[c, y_remote, x_remote, t]
                     * e_eff
-                    * get_e_eff_per_distance(model, y, x))
+                    * _e_eff_per_distance(y, x))
         else:
             return po.Constraint.NoConstraint
 

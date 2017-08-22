@@ -90,9 +90,9 @@ Run settings
 .. literalinclude:: ../../calliope/example_models/urban_scale/run.yaml
    :language: yaml
 
-----------------------
+-----------------------------------------------
 Mixed Integer Linear Programming (MILP) example
-----------------------
+-----------------------------------------------
 
 Available as :class:`calliope.examples.MILP`.
 

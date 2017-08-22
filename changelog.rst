@@ -3,13 +3,13 @@
 Release History
 ===============
 
-0.5.3 (dev)
------------
+0.5.3 (2017-08-22)
+------------------
 
 Major changes
 ~~~~~~~~~~~~~
 
-* |new| Mixed integer linear programming (MILP) capabilities, when using ``purchase`` cost and/or ``units.max/min/equals`` constraints. Integer/Binary decision variables will be applied to the relevant technology-location sets, avoiding unnecessary complexity by describing all technologies with these decision variables.
+* |new| (BETA) Mixed integer linear programming (MILP) capabilities, when using ``purchase`` cost and/or ``units.max/min/equals`` constraints. Integer/Binary decision variables will be applied to the relevant technology-location sets, avoiding unnecessary complexity by describing all technologies with these decision variables.
 
 Other changes
 ~~~~~~~~~~~~~
@@ -58,6 +58,8 @@ Major changes
 |new| Allow technologies to generate revenue (by specifying negative costs)
 
 |new| Allow technologies to export their carrier directly to outside the system boundary
+
+|new| Allow storage & supply_plus technologies to define a charge rate (c_rate), linking storage capacity (s_cap) with charge/discharge capacity (e_cap) by s_cap * c_rate => e_cap. As such, either s_cap.max & c_rate or e_cap.max & c_rate can be defined for a technology. The smallest of `s_cap.max * c_rate` and `e_cap.max` will be taken if all three are defined.
 
 |changed| |backwards-incompatible| Revised technology definitions and internal definition of sets and subsets, in particular subsets of various technology types. Supply technologies are now split into two types: ``supply`` and ``supply_plus``. Most of the more advanced functionality of the original ``supply`` technology is now contained in ``supply_plus``, making it necessary to update model definitions accordingly. In addition to the existing ``conversion`` technology type, a new more complex ``conversion_plus`` was added.
 
