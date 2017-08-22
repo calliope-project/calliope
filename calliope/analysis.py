@@ -255,12 +255,16 @@ def plot_transmission(solution, tech='ac_transmission', carrier='power',
     # Get annual power transmission between zones
     zones = sorted(list(solution.coords['x'].values))
     trans_tech = lambda x: '{}:{}'.format(tech, x)
+
     def get_annual_power_transmission(zone):
         try:
-            return (solution['e'].loc[dict(c=carrier, y=trans_tech(zone))]
-                                .sum(dim='t').to_pandas())
+            return (
+                solution['e'].loc[dict(c=carrier, y=trans_tech(zone))]
+                             .sum(dim='t').to_pandas()
+            )
         except KeyError:
             return 0
+
     df = pd.DataFrame({zone: get_annual_power_transmission(zone)
                       for zone in zones}, index=zones)
 
@@ -271,7 +275,7 @@ def plot_transmission(solution, tech='ac_transmission', carrier='power',
     # different when there is line loss (i.e. negative values will have a
     # larger absolute value than the positive value for the same transmission
     # line), which is why we take the recieving (positive) value.
-    df[df < df.max().max()*1e-10] = 0
+    df[df < df.max().max() * 1e-10] = 0
 
     # Create directed graph
     G = nx.from_numpy_matrix(df.as_matrix().T, create_using=nx.DiGraph())

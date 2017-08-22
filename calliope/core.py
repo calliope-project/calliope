@@ -1599,6 +1599,7 @@ class Model(object):
         sol = sol.merge(self.get_totals())
         sol = sol.merge(self.get_node_parameters())
         sol = sol.merge(self.get_costs().to_dataset(name='costs'))
+        sol = sol.merge(self.get_costs_per_timestep())
         self.solution = sol
         self.process_solution()
 
@@ -1714,6 +1715,9 @@ class Model(object):
             cost_variable = self.get_var('cost_var')[{'t': t_subset}].sum(dim='t')
 
             return cost_fixed + cost_variable
+
+    def get_costs_per_timestep(self):
+        return self.get_var('cost_var').to_dataset(name='costs_variable')
 
     def get_totals(self, t_subset=None, apply_weights=True):
         """Get total produced and consumed per technology and location."""

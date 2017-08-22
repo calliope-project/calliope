@@ -22,6 +22,8 @@ Other changes
 * |fixed| e_cap.equals: 0 sets a technology to a capacity of zero, instead of ignoring the constraint (#63)
 * |fixed| depreciation_getter now changes with location overrides, instead of just checking the technology level constraints (#64)
 * |fixed| Time clustering now functions in models with time-varying costs (#66)
+* |changed| Solution now includes time-varying costs (costs_variable)
+* |fixed| Saving to NetCDF does not affect in-memory solution (#62)
 
 0.5.2 (2017-06-16)
 ------------------
