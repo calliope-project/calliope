@@ -11,7 +11,7 @@ def create_and_run_model(override, iterative_warmstart=False,
     locations = """
         locations:
             1:
-                techs: ['ccgt', 'demand_power']
+                techs: ['ccgt', 'demand_power', 'unmet_demand_power']
                 override:
                     ccgt:
                         constraints:

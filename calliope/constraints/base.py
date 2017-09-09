@@ -132,7 +132,7 @@ def node_resource(model):
     # demand/supply tech instead, which means that `r` can only
     # be ALL negative or ALL positive for a given tech!
     # Ideally we have `elif po.value(m.r[y, x, t]) > 0:` instead of
-    # `elif y in m.y_supply or y in m.y_unmet_demand:` and `elif y in m.y_demand:`
+    # `elif y in m.y_supply or y in m.y_unmet:` and `elif y in m.y_demand:`
 
     def r_available_rule(m, y, x, t):
         r_scale = model.get_option(y + '.constraints.r_scale', x=x)
@@ -564,7 +564,7 @@ def node_constraints_build(model):
 
         # In operation mode, e_cap is forced to an equality constraint, even if
         # e_cap.max is defined.
-        if model.mode == 'operate' and y not in m.y_demand:
+        if model.mode == 'operate' and y not in m.y_demand and y not in m.y_unmet:
             if e_cap_max is None or np.isinf(e_cap_max) or np.isnan(e_cap_max):
                 e = exceptions.ModelError
                 raise e('Cannot use inf, NaN, or None in operational mode, '
