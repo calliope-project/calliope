@@ -178,6 +178,12 @@ class Model(object):
 
         # Read data and apply time resolution adjustments
         self.read_data()
+
+        # Need all other sets to be generated before creating loc_tech sets
+        # Create loc_tech sets
+        sets_loc_tech = sets.init_set_loc_tech(self)
+        self._sets = {**self._sets, **sets_loc_tech}
+
         self.mode = self.config_run.mode
         self.initialize_time()
 
@@ -502,7 +508,8 @@ class Model(object):
         except exceptions.OptionNotSetError:
             return y
 
-    def get_carrier(self, y, direction, level=None, primary=False, all_carriers=False):
+    def get_carrier(self, y, direction, x=None,
+                    level=None, primary=False, all_carriers=False):
         """
         Get the ``carrier_in`` or ``carrier_out`` of a technology in the model
 
@@ -512,6 +519,8 @@ class Model(object):
             technology
         direction: str, `in` or `out`
             For `carrier_in` and `carrier_out` repectively
+        x: str, default = None
+            location
         level: int; 2 or 3; optional, default = None
             for conversion_plus technologies, define the carrier level if
             not top level, e.g. level=3 gives `carrier_out_3`
@@ -526,17 +535,17 @@ class Model(object):
         if y in self._sets['y_conversion_plus']:
             if level:  # Either 2 or 3
                 return self.get_option(
-                    y + '_'.join('.carrier', direction, str(level))
+                    y + '_'.join('.carrier', direction, str(level)), x=x
                 )
             primary_carrier, all_carriers = self.get_cp_carriers(
-                y, direction=direction)
+                y, direction=direction, x=x)
             if primary:
                 return primary_carrier
             if all_carriers:
                 return all_carriers
         else:
             carrier = self.get_option(
-                y + '.carrier', default=y + '.carrier_' + direction
+                y + '.carrier', default=y + '.carrier_' + direction, x=x
             )
             if not carrier:  # no carrier_in/carrier_out defined
                 return 'resource'
@@ -1180,9 +1189,9 @@ class Model(object):
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
-        for y in self.m.y_store:
-            for x in self.m.x:
-                self.m.s_init[y, x] = s_init_initializer(self.m, y, x)
+        for loc_tech in self.m.loc_tech:
+            x, y = loc_tech.split(":", 1)
+            self.m.s_init[y, x] = s_init_initializer(self.m, y, x)
 
     def _set_t_end(self):
         # t_end is the timestep previous to t_start + horizon,
@@ -1235,107 +1244,36 @@ class Model(object):
         m.c = po.Set(initialize=self._sets['c'], ordered=True)
         # Locations
         m.x = po.Set(initialize=self._sets['x'], ordered=True)
-        # Locations with only transmission technologies defined
-        m.x_transmission = po.Set(
-            initialize=self._sets['x_transmission'], within=m.x, ordered=True)
-        # Locations which have transmission AND other technologies
-        m.x_transmission_plus = po.Set(
-            initialize=self._sets['x_transmission_plus'], within=m.x, ordered=True)
-        # Source/sink locations (i.e. have `r` defined)
-        m.x_r = po.Set(initialize=self._sets['x_r'], within=m.x, ordered=True)
-        # Storage locations
-        m.x_store = po.Set(
-            initialize=self._sets['x_store'], within=m.x, ordered=True)
-        # Demand locations
-        m.x_demand = po.Set(
-            initialize=self._sets['x_demand'], within=m.x, ordered=True)
-        # Conversion locations
-        m.x_conversion = po.Set(
-            initialize=self._sets['x_conversion'], within=m.x, ordered=True)
-        # Export locations
-        m.x_export = po.Set(
-            initialize=self._sets['x_export'], within=m.x, ordered=True)
-        # Locations that are associated with MILP variables
-        m.x_milp = po.Set(
-            initialize=self._sets['x_milp'], within=m.x, ordered=True)
-        # Binary purchase locations
-        m.x_purchase = po.Set(
-            initialize=self._sets['x_purchase'], within=m.x, ordered=True)
         # Cost classes
         m.k = po.Set(initialize=self._sets['k'], ordered=True)
-
-        #
-        # Technologies and various subsets of technologies
-        #
-
+        # Technologies
         m.y = po.Set(initialize=self._sets['y'], ordered=True)
-        # Supply technologies
-        m.y_supply = po.Set(
-            initialize=self._sets['y_supply'], within=m.y, ordered=True)
-        # Supply+ technologies
-        m.y_supply_plus = po.Set(
-            initialize=self._sets['y_supply_plus'], within=m.y, ordered=True)
-        # Storage only technologies
-        m.y_storage = po.Set(
-            initialize=self._sets['y_storage'], within=m.y, ordered=True)
-        # Transmission technologies
-        m.y_transmission = po.Set(
-            initialize=self._sets['y_transmission'], within=m.y, ordered=True)
-        # Conversion technologies
-        m.y_conversion = po.Set(
-            initialize=self._sets['y_conversion'], within=m.y, ordered=True)
-        # Conversion+ technologies
-        m.y_conversion_plus = po.Set(
-            initialize=self._sets['y_conversion_plus'], within=m.y, ordered=True)
-        # Demand sources
-        m.y_demand = po.Set(
-            initialize=self._sets['y_demand'], within=m.y, ordered=True)
-        # Technologies to deal with unmet demand
-        m.y_unmet = po.Set(
-            initialize=self._sets['y_unmet'], within=m.y, ordered=True)
-        # Supply/Demand sources
-        m.y_sd = po.Set(
-            initialize=self._sets['y_sd'], within=m.y, ordered=True)
-        # Technologies that contain storage
-        m.y_store = po.Set(
-            initialize=self._sets['y_store'], within=m.y, ordered=True)
-        # Technologies with a finite resource defined (timeseries or otherwise)
-        m.y_finite_r = po.Set(
-            initialize=self._sets['y_finite_r'], within=m.y, ordered=True)
-        # Supply+ technologies with a finite resource defined (timeseries or otherwise)
-        m.y_sp_finite_r = po.Set(
-            initialize=self._sets['y_sp_finite_r'], within=m.y_finite_r,
-            ordered=True)
-        # Supply/demand technologies with r_area constraints
-        m.y_sd_r_area = po.Set(
-            initialize=self._sets['y_sd_r_area'], within=m.y, ordered=True)
-        # Supply+ technologies with r_area constraints
-        m.y_sp_r_area = po.Set(
-            initialize=self._sets['y_sp_r_area'], within=m.y, ordered=True)
-        # All technologies with r_area constraints
-        m.y_r_area = po.Set(
-            initialize=self._sets['y_r_area'], within=m.y, ordered=True)
-        # Supply+ technologies that allow secondary resource
-        m.y_sp_r2 = po.Set(
-            initialize=self._sets['y_sp_r2'], within=m.y, ordered=True)
-        # Conversion+ technologies that allow secondary carrier_out
-        m.y_cp_2out = po.Set(
-            initialize=self._sets['y_cp_2out'], within=m.y, ordered=True)
-        # Conversion+ technologies that allow tertiary carrier_out
-        m.y_cp_3out = po.Set(
-            initialize=self._sets['y_cp_3out'], within=m.y, ordered=True)
-        # Conversion+ technologies that allow secondary carrier_in
-        m.y_cp_2in = po.Set(
-            initialize=self._sets['y_cp_2in'], within=m.y, ordered=True)
-        # Conversion+ technologies that allow tertiary carrier_in
-        m.y_cp_3in = po.Set(
-            initialize=self._sets['y_cp_3in'], within=m.y, ordered=True)
-        # Technologies that allow export
-        m.y_export = po.Set(initialize=self._sets['y_export'], within=m.y, ordered=True)
-        # Technologies that are associated with MILP variables
-        m.y_milp = po.Set(initialize=self._sets['y_milp'], within=m.y, ordered=True)
-        # Technologies that have a binary purchase variable
-        m.y_purchase = po.Set(initialize=self._sets['y_purchase'], within=m.y, ordered=True)
+
+        #
+        # loc_tech subsets
+        #
+
+        m.loc_tech = po.Set(initialize=self._sets["loc_tech"], ordered=True)
+        m.loc_tech_area = po.Set(initialize=self._sets["loc_tech_area"], ordered=True)
+        m.loc_tech_store = po.Set(initialize=self._sets["loc_tech_store"], ordered=True)
+        m.loc_tech_storage = po.Set(initialize=self._sets["loc_tech_storage"], ordered=True)
+        m.loc_tech_supply_plus_finite_r = po.Set(initialize=self._sets["loc_tech_supply_plus_finite_r"], ordered=True)
+        m.loc_tech_r2 = po.Set(initialize=self._sets["loc_tech_r2"], ordered=True)
+        m.loc_tech_export = po.Set(initialize=self._sets["loc_tech_export"], ordered=True)
+        m.loc_tech_purchase = po.Set(initialize=self._sets["loc_tech_purchase"], ordered=True)
+        m.loc_tech_milp = po.Set(initialize=self._sets["loc_tech_milp"], ordered=True)
+        m.loc_tech_transmission = po.Set(initialize=self._sets["loc_tech_transmission"], ordered=True)
+        m.loc_tech_finite_r = po.Set(initialize=self._sets["loc_tech_finite_r"], ordered=True)
+        m.loc_tech_demand = po.Set(initialize=self._sets["loc_tech_demand"], ordered=True)
+        m.loc_tech_supply = po.Set(initialize=self._sets["loc_tech_supply"], ordered=True)
+        m.loc_tech_supply_plus = po.Set(initialize=self._sets["loc_tech_supply_plus"], ordered=True)
+        m.loc_tech_conversion = po.Set(initialize=self._sets["loc_tech_conversion"], ordered=True)
+        m.loc_tech_conversion_plus = po.Set(initialize=self._sets["loc_tech_conversion_plus"], ordered=True)
+        m.loc_tech_unmet = po.Set(initialize=self._sets["loc_tech_unmet"], ordered=True)
+        m.loc_tech_2out = po.Set(initialize=self._sets["loc_tech_2out"], ordered=True)
+        m.loc_tech_3out = po.Set(initialize=self._sets["loc_tech_3out"], ordered=True)
+        m.loc_tech_2in = po.Set(initialize=self._sets["loc_tech_2in"], ordered=True)
+        m.loc_tech_3in = po.Set(initialize=self._sets["loc_tech_3in"], ordered=True)
 
         # Timeseries
         for param in self.config_model.timeseries_constraints:
@@ -1370,7 +1308,7 @@ class Model(object):
 
         s_init = self.data['s_init'].to_dataframe().to_dict()['s_init']
         s_init_initializer = lambda m, y, x: float(s_init[x, y])
-        m.s_init = po.Param(m.y_store, m.x, initialize=s_init_initializer,
+        m.s_init = po.Param(m.y, m.x, initialize=s_init_initializer,
                             mutable=True)
 
         #
@@ -1588,6 +1526,9 @@ class Model(object):
                              .merge(self.data['_time_res']
                                         .copy(deep=True)
                                         .to_dataset(name='time_res')))
+        # reorganise variable coordinates
+        self.solution = self.solution.transpose('y', 'techs', 'x', 'c', 'k',
+            't','cols_groups', 'cols_metadata', 'cols_shares', 'cols_summary')
         # Add model and run configuration
         self.solution.attrs['config_run'] = self.config_run
         self.solution.attrs['config_model'] = self.config_model
@@ -1623,19 +1564,35 @@ class Model(object):
             raise exceptions.ModelError('Variable {} inexistent.'.format(var))
         # Get dims
         if not dims:
-            dims = [i.name for i in var_container.index_set().set_tuple]
+            if var + '_index' == var_container.index_set().name:
+                dims = [i.name for i in var_container.index_set().set_tuple]
+            else:
+                dims = [var_container.index_set().name]
         # Make sure standard coordinate names are used
         if standardize_coords:
-            dims = [i.split('_')[0] for i in dims]
+            dims = ['loc_tech' if 'loc_tech' in i else i.split('_')[0] for i in dims]
         result = pd.DataFrame.from_dict(var_container.get_values(), orient='index')
         if result.empty:
             raise exceptions.ModelError('Variable {} has no data.'.format(var))
-        result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
-        result = result[0]  # Get the only column in the dataframe
-        # Unstack and sort by time axis
-        if len(dims) == 1:
+        if len(dims) > 1:
+            result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
+            result = result[0]  # Get the only column in the dataframe
+            # Unstack and sort by time axis
+            if 'loc_tech' in dims:
+                result = result.unstack(level='loc_tech')
+                y_x = result.columns.str.split(":", 1)
+                result.columns = pd.MultiIndex.from_arrays([[y[1] for y in y_x],
+                       [x[0] for x in y_x]], names=["y", "x"])
+                result = result.stack(['y', 'x'])
+        else:
+            result = result[0]
+            if 'loc_tech' in dims:
+                y_x = result.index.str.split(":", 1)
+                result.index = pd.MultiIndex.from_arrays([[y[1] for y in y_x],
+                       [x[0] for x in y_x]], names=["y", "x"])
+        if len(result.index.names) == 1:
             result = result.sort_index()
-        elif len(dims) == 2:
+        elif len(result.index.names) == 2:
             # if len(dims) is 2, we already have a well-formed DataFrame
             result = result.unstack(level=0)
             result = result.sort_index()

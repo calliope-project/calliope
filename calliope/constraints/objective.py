@@ -19,10 +19,12 @@ def objective_cost_minimization(model):
     """
     m = model.m
 
+    def get_y(loc_tech):
+        return loc_tech.split(":", 1)[1]
+
     def obj_rule(m):
-        return sum(model.get_option(y + '.weight') *
-                       sum(m.cost[y, x, 'monetary']
-                        for x in m.x) for y in m.y)
+        return sum(model.get_option(get_y(loc_tech) + '.weight') *
+                       m.cost[loc_tech, 'monetary'] for loc_tech in m.loc_tech)
 
     m.obj = po.Objective(sense=po.minimize, rule=obj_rule)
     m.obj.domain = po.Reals

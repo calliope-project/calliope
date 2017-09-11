@@ -388,3 +388,32 @@ def init_y_trans(model):
                             model.set_option(y + '.constraints.e_con', False, x=x)
                         else:
                             model._locations.at[x, colname] = tree[x][y].get_key(c)
+
+def init_set_loc_tech(model):
+    def create_loc_tech(tech):
+        return [":".join([x, y]) for x in model._sets["x"]
+        for y in model._sets[tech] if model._locations.at[x, y]]
+    return_dict = dict()
+    return_dict["loc_tech_area"] = create_loc_tech("y_r_area")
+    return_dict["loc_tech_store"] = create_loc_tech("y_store")
+    return_dict["loc_tech_storage"] = create_loc_tech("y_storage")
+    return_dict["loc_tech_supply_plus_finite_r"] = create_loc_tech("y_sp_finite_r")
+    return_dict["loc_tech"] = create_loc_tech("y")
+    return_dict["loc_tech_r2"] = create_loc_tech("y_sp_r2")
+    return_dict["loc_tech_export"] = create_loc_tech("y_export")
+    return_dict["loc_tech_purchase"] = create_loc_tech("y_purchase")
+    return_dict["loc_tech_milp"] = create_loc_tech("y_milp")
+    return_dict["loc_tech_transmission"] = create_loc_tech("y_transmission")
+    return_dict["loc_tech_finite_r"] = create_loc_tech("y_finite_r")
+    return_dict["loc_tech_demand"] = create_loc_tech('y_demand')
+    return_dict["loc_tech_supply"] = create_loc_tech('y_supply')
+    return_dict["loc_tech_supply_plus"] = create_loc_tech('y_supply_plus')
+    return_dict["loc_tech_conversion"] = create_loc_tech('y_conversion')
+    return_dict["loc_tech_conversion_plus"] = create_loc_tech('y_conversion_plus')
+    return_dict["loc_tech_unmet"] = create_loc_tech('y_unmet')
+    return_dict["loc_tech_2out"] = create_loc_tech('y_cp_2out')
+    return_dict["loc_tech_3out"] = create_loc_tech('y_cp_3out')
+    return_dict["loc_tech_2in"] = create_loc_tech('y_cp_2in')
+    return_dict["loc_tech_3in"] = create_loc_tech('y_cp_3in')
+
+    return return_dict

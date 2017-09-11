@@ -176,7 +176,7 @@ def plot_installed_capacities(
     md = solution.metadata.to_pandas()
     supply_cap = md.query(query_string).index.tolist()
 
-    df = solution['e_cap'].loc[dict(y=supply_cap)].to_pandas()
+    df = solution['e_cap'].loc[dict(y=supply_cap)].to_pandas().T
 
     weighted = md.stack_weight.sort_values(ascending=False).index.tolist()
     stacked_techs = [y for y in weighted if y in df.columns]
