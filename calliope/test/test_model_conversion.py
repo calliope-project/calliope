@@ -66,7 +66,7 @@ class TestModel:
         model = create_and_run_model(override)
         assert str(model.results.solver.termination_condition) == 'optimal'
         sol = model.solution
-        assert_almost_equal(sol.costs.sum(), 41.47, tolerance=0.1)
+        assert_almost_equal(sol.costs.sum(dim=['y', 'x', 'k']), 41.5, tolerance=0.1)
         assert_almost_equal(sol.c_prod.loc[
             dict(y='test_conversion_plus', c='power', x='1')], 13.5, tolerance=0.01)
         assert_almost_equal(sol.c_prod.loc[

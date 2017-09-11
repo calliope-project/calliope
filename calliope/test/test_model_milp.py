@@ -58,7 +58,7 @@ class TestModel:
         assert_almost_equal(sol1['costs'].loc[dict(k='monetary', y='ccgt')].sum(),
             sol2['costs'].loc[dict(k='monetary', y='ccgt')].sum() - cost_difference,
             tolerance=0.01)
-        assert_almost_equal(model2.m.purchased['ccgt', '1'], 1, tolerance=0)
+        assert sol2.purchased_units.loc[dict(x='1', y='ccgt')] == 1
 
     def test_milp(self):
         override1 = """

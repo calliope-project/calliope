@@ -49,25 +49,27 @@ def system_margin(model):
     m = model.m
     time_res = model.data['_time_res'].to_series()
 
-    def carrier(y, x):
-        if y in m.y_conversion_plus:
-            return model.get_cp_carriers(y, x)[0]
-        else:
-            return model.get_option(y + '.carrier', default=y + '.carrier_out')
+    def carrier(loc_tech):
+        x, y = get_y_x(loc_tech)
+        return model.get_carrier(y, 'out', x=x, primary=True)
 
+    def get_y_x(loc_tech):
+        return loc_tech.split(":", 1)
     # Constraint rules
     def c_system_margin_rule(m, c):
         # If no margin defined for a carrier, use 0 (i.e. no margin)
         margin = model.config_model.system_margin.get_key(c, default=0)
         if margin:
             t = model.t_max_demand[c]
-            return (sum(m.c_prod[c, y, x, t] for y in m.y if y not in m.y_demand
-                        for x in m.x) * (1 + margin)
+            return (sum(m.c_prod[c, loc_tech, t] for loc_tech in m.loc_tech if
+                        loc_tech not in m.loc_tech_demand) * (1 + margin)
                     <= time_res.at[t] *
                     sum(
-                        (m.e_cap[y, x] / base.get_constraint_param(model, 'e_eff', y, x, t))
-                        for y in m.y if y not in m.y_demand
-                        for x in m.x if carrier(y, x) == c)
+                        (m.e_cap[loc_tech] /
+                         base.get_constraint_param(model, 'e_eff',
+                            get_y_x(loc_tech)[1], get_y_x(loc_tech)[0], t))
+                         for loc_tech in m.loc_tech if loc_tech not in
+                         m.loc_tech_demand and carrier(loc_tech) == c)
                     )
         else:
             return po.Constraint.NoConstraint
