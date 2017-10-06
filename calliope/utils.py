@@ -19,7 +19,7 @@ import importlib
 import sys
 
 import numpy as np
-import ruamel_yaml as yaml
+import ruamel.yaml as yaml
 
 from . import exceptions
 
@@ -48,7 +48,7 @@ def _yaml_load(src):
     else:
         src_name = '<yaml string>'
     try:
-        return yaml.load(src)
+        return yaml.safe_load(src)
     except yaml.YAMLError:
         logging.error('Parser error when reading YAML from {}.'.format(src_name))
         raise
@@ -120,7 +120,7 @@ class AttrDict(dict):
             loaded = cls(_yaml_load(f))
         if resolve_imports and 'import' in loaded:
             for k in loaded['import']:
-                imported = cls.from_yaml(relative_path(k, f))
+                imported = cls.from_yaml(relative_path(f, k))
                 # loaded is added to imported (i.e. it takes precedence)
                 imported.union(loaded)
                 loaded = imported
@@ -390,7 +390,7 @@ class memoize_instancemethod(object):
         return res
 
 
-def relative_path(path, base_path_file):
+def relative_path(base_path_file, path):
     """
     If ``path`` is not absolute, it is interpreted as relative to the
     path of the given ``base_path_file``.

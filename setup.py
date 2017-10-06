@@ -48,7 +48,7 @@ setup(
         "numpy >= 1.12",
         "pandas >= 0.19, < 0.20",
         "pyomo >= 5.2, < 5.3",
-        "ruamel_yaml >= 0.11",
+        "ruamel.yaml <= 0.15",
         "xarray >= 0.9.5, < 0.10",
     ],
     entry_points={

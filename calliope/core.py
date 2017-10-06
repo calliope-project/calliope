@@ -93,7 +93,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
         cr.model = [cr.model]
 
     # Interpret relative config paths as relative to run.yaml
-    cr.model = [utils.relative_path(i, config_run_path) for i in cr.model]
+    cr.model = [utils.relative_path(config_run_path, i) for i in cr.model]
 
     # Load defaults from module path
     module_conf = os.path.join(os.path.dirname(__file__), 'config')
@@ -122,7 +122,7 @@ def get_model_config(cr, config_run_path, adjust_data_path=None,
                 new_o.data_path = os.path.join(adjust_data_path,
                                                new_o.data_path)
             else:
-                new_o.data_path = utils.relative_path(new_o.data_path, path)
+                new_o.data_path = utils.relative_path(path, new_o.data_path)
         # The input files are allowed to override defaults
         o.union(new_o, allow_override=True)
 
@@ -192,8 +192,9 @@ class Model(object):
         if 'data_path' in od.keys_nested():
             # If run_config overrides data_path, interpret it as
             # relative to the run_config file's path
-            od['data_path'] = utils.relative_path(od['data_path'],
-                                                  self.config_run_path)
+            od['data_path'] = utils.relative_path(
+                self.config_run_path, od['data_path']
+            )
         self.config_model.union(od, allow_override=True,
                                 allow_replacement=True)
 
@@ -230,8 +231,7 @@ class Model(object):
         # Override config_model settings if specified in config_run
         # 1) Via 'model_override', which is the path to a YAML file
         if 'model_override' in cr:
-            override_path = utils.relative_path(cr.model_override,
-                                                self.config_run_path)
+            override_path = utils.relative_path(self.config_run_path, cr.model_override)
             override_dict = utils.AttrDict.from_yaml(override_path)
             self.override_model_config(override_dict)
         # 2) Via 'override', which is an AttrDict
