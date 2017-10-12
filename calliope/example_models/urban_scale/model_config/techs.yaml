@@ -7,6 +7,7 @@ techs:
 ##-GRID SUPPLY-##
 
     supply_grid_power:
+        color: '#92c6ff'
         name: 'National grid import'
         parent: supply
         carrier: power
@@ -19,6 +20,7 @@ techs:
                 om_fuel: 0.1 # 10p/kWh electricity price #ppt
 
     supply_gas:
+        color: '#97f0aa'
         name: 'Natural gas import'
         parent: supply
         carrier: gas
@@ -34,7 +36,7 @@ techs:
 
     pv:
         name: 'Solar photovoltaic power'
-        color: '#99CB48'
+        color: '#fffea3'
         stack_weight: 100
         parent: supply_plus
         export: true
@@ -52,6 +54,7 @@ techs:
 # Conversion
 
     boiler:
+        color: '#ff9f9a'
         name: 'Natural gas boiler'
         stack_weight: 100
         parent: conversion
@@ -64,6 +67,7 @@ techs:
 # Conversion_plus
 
     chp:
+        color: '#d0bbff'
         name: 'Combined heat and power'
         stack_weight: 100
         parent: conversion_plus
@@ -85,6 +89,7 @@ techs:
 ##-DEMAND-##
 
     demand_power:
+        color: '#b0e0e6'
         name: 'Electrical demand'
         parent: demand
         carrier: power
@@ -95,6 +100,7 @@ techs:
         carrier: power
 
     demand_heat:
+        color: '#ff9f9a'
         name: 'Heat demand'
         parent: demand
         carrier: heat
@@ -107,6 +113,7 @@ techs:
 ##-DISTRIBUTION-##
 
     power_lines:
+        color: '#d0bbff'
         name: 'Electrical power distribution'
         parent: transmission
         carrier: power
@@ -115,9 +122,10 @@ techs:
             e_eff: 0.98
         costs_per_distance:
             monetary:
-                e_cap: 0.01
+                e_cap: 80
 
     heat_pipes:
+        color: '#ff9f9a'
         name: 'District heat distribution'
         parent: transmission
         carrier: heat
@@ -127,4 +135,4 @@ techs:
             e_loss: 0.025
         costs_per_distance:
             monetary:
-                e_cap: 0.3
+                e_cap: 500

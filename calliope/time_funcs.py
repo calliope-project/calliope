@@ -128,6 +128,14 @@ _RESAMPLE_METHODS = {
     '_time_res': 'sum',
     'r': 'sum',
     'e_eff': 'mean',
+    'r_eff': 'mean',
+    'r2_eff': 'mean',
+    's_loss': 'mean',
+    'p_eff': 'mean',
+    'export': 'mean',
+    'om_var': 'mean',
+    'om_fuel': 'mean',
+    'om_r2': 'mean',
 }
 
 

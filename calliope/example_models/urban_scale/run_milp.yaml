@@ -46,17 +46,18 @@ override:
         chp:
             constraints:
                 units.max: 4
-                e_cap_per_unit: 300
+                e_cap_per_unit: 100
                 e_cap_min_use: 0.2
             costs:
                 monetary:
                     e_cap: 700
-                    purchase: 40000
+                    purchase: 10000
         boiler:
             costs:
                 monetary:
                     e_cap: 35
                     purchase: 2000
+
 
 ##
 # DEBUG OPTIONS

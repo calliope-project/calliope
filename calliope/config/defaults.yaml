@@ -150,6 +150,7 @@ techs:
         constraints:
             e_con: true
             r: inf # not used but has to be defined as infinite to avoid issues
+            s_cap.max: inf
     transmission:
         parent: defaults
         per_distance: 1

@@ -185,7 +185,7 @@ def init_set_y(model, _x):
     _y_sd = _y_supply + _y_demand + _y_unmet
 
     # Subset of storage technologies
-    _y_store = [y for y in np.concatenate((_y_storage,_y_supply_plus)) if
+    _y_store = _y_storage + [y for y in _y_supply_plus if
                 any([model.get_option(y + '.constraints.s_cap.max', x=x) +
                      model.get_option(y + '.constraints.s_time.max', x=x) +
                      model.get_option(y + '.constraints.s_cap.equals', x=x) +
