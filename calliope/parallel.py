@@ -205,6 +205,14 @@ class Parallelizer(object):
         unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
         o.to_yaml(os.path.join(unified_config_file))
         c.model = 'model.yaml'
+
+        ## FIXME README: no longer have data_path_adjustment option
+        ## FIXME: README: now simply saving unified model.yaml without making changes to it
+        config_model = utils.AttrDict.from_yaml(c.model)
+        unified_config_file = os.path.join(out_dir, 'Runs', 'model.yaml')
+        config_model.to_yaml(os.path.join(unified_config_file))
+        c.model = 'model.yaml'
+
         # Always make sure we are saving outputs from iterations!
         c.set_key('output.save', True)
 

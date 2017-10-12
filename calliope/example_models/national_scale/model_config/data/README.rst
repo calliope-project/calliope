@@ -5,8 +5,8 @@ Data sources
 These data are not intended to represent a real energy system and are included for illustrative purposes only.
 
 
-``csp_r.csv``
--------------
+``csp_resource.csv``
+--------------------
 
 All three time series give heat output in kW per m2 solar field, based on free 2005 DNI data from `HelioClim <http://www.soda-is.com/eng/helioclim/index.html>`_ (HC3v2), processed with the CSP plant model described by [#gauche]_.
 

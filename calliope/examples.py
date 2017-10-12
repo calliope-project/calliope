@@ -14,39 +14,22 @@ import os
 from . import core
 
 
-PATHS = {
-    'NationalScale': os.path.join(os.path.dirname(__file__), 'example_models', 'national_scale'),
-    'UrbanScale': os.path.join(os.path.dirname(__file__), 'example_models', 'urban_scale')
+_PATHS = {
+    'national_scale': os.path.join(os.path.dirname(__file__), 'example_models', 'national_scale'),
+    'urban_scale': os.path.join(os.path.dirname(__file__), 'example_models', 'urban_scale')
 }
 
 
-class NationalScale(core.Model):
-    """
-    National-scale example model.
-
-    """
-
-    def __init__(self, override=None):
-        config_run = os.path.join(PATHS['NationalScale'], 'run.yaml')
-        super().__init__(config_run=config_run, override=override)
+def national_scale():
+    """Returns the built-in national-scale example model."""
+    return core.Model.from_yaml_file(os.path.join(_PATHS['national_scale'], 'run.yaml'))
 
 
-class UrbanScale(core.Model):
-    """
-    Urban-scale example model.
+def urban_scale():
+    """Returns the built-in urban-scale example model."""
+    return core.Model.from_yaml_file(os.path.join(_PATHS['urban_scale'], 'run.yaml'))
 
-    """
 
-    def __init__(self, override=None):
-        config_run = os.path.join(PATHS['UrbanScale'], 'run.yaml')
-        super().__init__(config_run=config_run, override=override)
-
-class MILP(core.Model):
-    """
-    Mixed Integer Linear Programming (MILP) functionality example model.
-
-    """
-
-    def __init__(self, override=None):
-        config_run = os.path.join(PATHS['UrbanScale'], 'run_milp.yaml')
-        super().__init__(config_run=config_run, override=override)
+def milp():
+    """Returns the built-in urban-scale example model with MILP constraints enabled."""
+    return core.Model.from_yaml_file(os.path.join(_PATHS['urban_scale'], 'run_milp.yaml'))

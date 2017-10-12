@@ -4,29 +4,42 @@
 
 locations:
     region1:
-        techs: ['demand_power', 'unmet_demand_power', 'ccgt']
-        override:
+        coordinates: {lat: 40, lon: -2}
+        techs:
+            unmet_demand_power:
             demand_power:
-                x_map: 'region1: demand'
                 constraints:
-                    r: file=demand-1.csv
-                    r_scale_to_peak: -40000
+                    resource: file=demand-1.csv:demand
+                    resource_scale_to_peak: -40000
             ccgt:
                 constraints:
-                    e_cap.max: 30000 # increased to ensure no unmet_demand in first timestep
+                    energy_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
 
     region2:
-        techs: ['demand_power', 'unmet_demand_power', 'battery']
-        override:
+        coordinates: {lat: 40, lon: -8}
+        techs:
+            unmet_demand_power:
             demand_power:
-                x_map: 'region2: demand'
                 constraints:
-                    r: file=demand-2.csv
-                    r_scale_to_peak: -5000
+                    resource: file=demand-2.csv:demand
+                    resource_scale_to_peak: -5000
+            battery:
 
-    region1-1,region1-2,region1-3:
+    region1-1:
+        coordinates: {lat: 41, lon: -2}
         within: region1
-        techs: ['csp']
+        techs:
+            csp:
+    region1-2:
+        coordinates: {lat: 39, lon: -1}
+        within: region1
+        techs:
+            csp:
+    region1-3:
+        coordinates: {lat: 39, lon: -2}
+        within: region1
+        techs:
+            csp:
 
 ##
 # TRANSMISSION CAPACITIES
@@ -37,26 +50,3 @@ links:
         ac_transmission:
             constraints:
                 e_cap.max: 10000
-
-
-
-##
-# METADATA
-##
-
-metadata:
-    # map boundary defined by the lower left and upper right of the square
-    map_boundary:
-        lower_left:
-            lat: 35
-            lon: -10
-        upper_right:
-            lat: 45
-            lon: 5
-
-    location_coordinates:  # lat, lon coordinates in a dictionary
-        region1: {lat: 40, lon: -2}
-        region2: {lat: 40, lon: -8}
-        region1-1: {lat: 41, lon: -2}
-        region1-2: {lat: 39, lon: -1}
-        region1-3: {lat: 39, lon: -2}

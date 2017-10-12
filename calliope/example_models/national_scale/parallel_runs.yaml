@@ -1,0 +1,29 @@
+# Name for the generated parallel set of runs
+name: nationalscale-parallel-runs
+
+##
+# Specify iterations to run
+##
+
+# Four example iterations: two different time periods, and also disallowing CCGT for each of them
+iterations:
+    - subset_time: ['2005-01-01', '2005-01-31']
+    - subset_time: ['2005-02-01', '2005-02-31']
+    - subset_time: ['2005-01-01', '2005-01-31']
+      override.locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+    - subset_time: ['2005-02-01', '2005-02-31']
+      override.locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+
+
+##
+# Configuration of the generated run scripts
+##
+
+environment: bsub  # Choices: bsub, qsub
+pre_run:  # Commands to run before executing model
+post_run:  # Commands to run after executing model
+
+resources:  # Resources to request from cluster controller
+    threads:  # Number of threads
+    wall_time:  # Run time (minutes)
+    memory:  # Working memory (MB)

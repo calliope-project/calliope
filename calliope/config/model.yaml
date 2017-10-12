@@ -1,0 +1,114 @@
+#
+# NB Parts of this file are automatically parsed and extracted for the configuration reference documentation.
+# See `doc/user/configuration_reference.rst` and `doc/generate_tables.py`, which populates
+# the `doc/user/includes` directory
+#
+
+##
+# Model-wide default settings
+##
+
+model:
+    name: null
+
+    mode: plan  # Choices: plan, operate
+
+    data_path:  null  # Path to time series data
+
+    startup_time: 12  # Length of startup period (hours)
+
+    opmode:  # Operation mode settings
+        horizon: 48  # Optimization period length (hours)
+        window: 24  # Operation period length (hours)
+
+    system_margin:  # Per-carrier system margins
+        power: 0
+
+    subset_tech: []  # Subset of technologies
+    subset_loc: []  # Subset of locations
+    subset_time: []  # Subset of timesteps as a list with two elements setting from and to, e.g. ['2005-01-01', '2005-01-05']
+
+
+
+##
+# Base technology groups
+##
+
+tech_groups:
+    supply:
+        required_constraints: [['e_cap_max', 'e_cap_equals']]  # FIXME for all tech_groups
+        allowed_constraints: ['r', 'r_unit', 'e_prod', 'e_eff']  # FIXME for all tech_groups
+        allowed_costs: []  # FIXME for all tech_groups
+        essentials:
+            parent: null
+        constraints:
+            r: inf
+            r_unit: power
+            e_prod: true
+    supply_plus:
+        required_constraints: [['e_cap_max', 'e_cap_equals']]
+        allowed_constraints: []
+        essentials:
+            parent: null
+        constraints:
+            r: inf
+            r_unit: power
+            r_eff: 1.0
+            e_prod: true
+    demand:
+        required_constraints: ['r', ['e_cap_max', 'e_cap_equals']]
+        allowed_constraints: []
+        essentials:
+            parent: null
+        constraints:
+            r_unit: power
+            force_r: true
+            e_con: true
+    unmet_demand:
+        required_constraints: []
+        allowed_constraints: []
+        essentials:
+            parent: null
+            stack_weight: 0
+            color: '#666666'
+        constraints:
+            r: inf
+            r_unit: power
+            e_cap_max: inf
+            e_prod: true
+        costs:
+            monetary:
+                om_var: 1.0e+9
+    storage:
+        required_constraints: [['e_cap_max', 'e_cap_equals', 's_cap_max', 's_cap_equals'], 'charge_rate']
+        allowed_constraints:
+        essentials:
+            parent: null
+        constraints:
+            e_prod: true
+            e_con: true
+            storage_cap_max: inf
+    transmission:
+        required_constraints: [['e_cap_max', 'e_cap_equals']]
+        allowed_constraints: []
+        essentials:
+                parent: null
+        constraints:
+            e_prod: true
+            e_con: true
+    conversion:
+        required_constraints: [['e_cap_max', 'e_cap_equals']]
+        allowed_constraints: []
+        essentials:
+            parent: null
+        constraints:
+            e_prod: true
+            e_con: true
+    conversion_plus:
+        required_constraints: [['e_cap_max', 'e_cap_equals']]
+        allowed_constraints: []
+        essentials:
+            parent: null
+        constraints:
+            e_prod: true
+            e_con: true

@@ -1,4 +1,4 @@
-name: "Urban-scale test run"  # Run name -- distinct from model name!
+name: "National-scale test run"  # Run name -- distinct from model name!
 
 model: 'model_config/model.yaml'
 
@@ -7,6 +7,9 @@ output:  # Only used if run via the 'calliope run' command-line tool
     path: 'Output'  # Will be created if it doesn't exist
 
 solver: glpk
+
+# Resample time resolution to 6-hourly
+time: {function: resample, function_options: {'resolution': '6H'}}
 
 ##
 # MODEL SETTINGS OVERRIDE

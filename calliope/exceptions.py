@@ -9,6 +9,8 @@ Exceptions and Warnings.
 
 """
 
+import warnings
+
 
 class ModelError(Exception):
     """
@@ -30,3 +32,7 @@ class ModelWarning(Warning):
 
     """
     pass
+
+
+def warn(message, _class=ModelWarning):
+    warnings.warn(message, _class)

@@ -2,137 +2,146 @@
 # TECHNOLOGY DEFINITIONS
 ##
 
+tech_groups:
+    supply_power_plus:
+        essentials:
+            parent: supply_plus
+            carrier: power
+
+
 techs:
 
 ##-GRID SUPPLY-##
 
     supply_grid_power:
-        color: '#92c6ff'
-        name: 'National grid import'
-        parent: supply
-        carrier: power
+        essentials:
+            name: 'National grid import'
+            parent: supply
+            carrier: power
         constraints:
-            r: inf
-            e_cap.max: 2000
+            resource: inf
+            energy_cap_max: 2000
         costs:
             monetary:
-                e_cap: 15
-                om_fuel: 0.1 # 10p/kWh electricity price #ppt
+                energy_cap: 15
+                om_con: 0.1 # 10p/kWh electricity price #ppt
 
     supply_gas:
-        color: '#97f0aa'
-        name: 'Natural gas import'
-        parent: supply
-        carrier: gas
+        essentials:
+            name: 'Natural gas import'
+            parent: supply
+            carrier: gas
         constraints:
-            r: inf
-            e_cap.max: 2000
+            resource: inf
+            energy_cap_max: 2000
         costs:
             monetary:
-                e_cap: 1
-                om_fuel: 0.025 # 2.5p/kWh gas price #ppt
+                energy_cap: 1
+                om_con: 0.025 # 2.5p/kWh gas price #ppt
 
 ##-Renewables-##
 
     pv:
-        name: 'Solar photovoltaic power'
-        color: '#fffea3'
-        stack_weight: 100
-        parent: supply_plus
-        export: true
-        carrier_out: power
+        essentials:
+            name: 'Solar photovoltaic power'
+            color: '#99CB48'
+            stack_weight: 100
+            parent: supply_power_plus
         constraints:
-            r: file  # Will look for `pv_r.csv` in data directory - already accounted for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
-            p_eff: 0.85 # inverter losses
-            e_cap.max: 250
-            r_area.max: 1500
-            force_r: true
-            r_area_per_e_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
+            export_carrier: power
+            resource: file=pv_resource.csv  # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
+            parasitic_eff: 0.85 # inverter losses
+            energy_cap_max: 250
+            resource_area_max: 1500
+            force_resource: true
+            resource_area_per_energy_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
         costs:
             monetary:
-                e_cap: 1350
+                energy_cap: 1350
 # Conversion
 
     boiler:
-        color: '#ff9f9a'
-        name: 'Natural gas boiler'
-        stack_weight: 100
-        parent: conversion
-        carrier_out: heat
-        carrier_in: gas
+        essentials:
+            name: 'Natural gas boiler'
+            stack_weight: 100
+            parent: conversion
+            carrier_out: heat
+            carrier_in: gas
         constraints:
-            e_cap.max: 600
-            e_eff: 0.85
+            energy_cap_max: 600
+            energy_eff: 0.85
 
 # Conversion_plus
 
     chp:
-        color: '#d0bbff'
-        name: 'Combined heat and power'
-        stack_weight: 100
-        parent: conversion_plus
-        export: true
-        primary_carrier: power
-        carrier_in: gas
-        carrier_out: power
-        carrier_out_2:
-            heat: 0.8
+        essentials:
+            name: 'Combined heat and power'
+            stack_weight: 100
+            parent: conversion_plus
+            primary_carrier: power
+            carrier_in: gas
+            carrier_out: power
         constraints:
-            e_cap.max: 1500
-            e_eff: 0.405
+            export_carrier: power
+            energy_cap_max: 1500
+            energy_eff: 0.405
+            carrier_ratios:
+                carrier_out_2:
+                    heat: 0.8
         costs:
             monetary:
-                e_cap: 750
-                om_var: 0.004 # .4p/kWh for 4500 operating hours/year
+                energy_cap: 750
+                om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
                 export: file=export_power.csv
 
 ##-DEMAND-##
 
     demand_power:
-        color: '#b0e0e6'
-        name: 'Electrical demand'
-        parent: demand
-        carrier: power
+        essentials:
+            name: 'Electrical demand'
+            parent: demand
+            carrier: power
 
     unmet_demand_power:
-        name: 'Unmet electrical demand'
-        parent: unmet_demand
-        carrier: power
+        essentials:
+            name: 'Unmet electrical demand'
+            parent: unmet_demand
+            carrier: power
 
     demand_heat:
-        color: '#ff9f9a'
-        name: 'Heat demand'
-        parent: demand
-        carrier: heat
+        essentials:
+            name: 'Heat demand'
+            parent: demand
+            carrier: heat
 
     unmet_demand_heat:
-        name: 'Unmet heat demand'
-        parent: unmet_demand
-        carrier: heat
+        essentials:
+            name: 'Unmet heat demand'
+            parent: unmet_demand
+            carrier: heat
 
 ##-DISTRIBUTION-##
 
     power_lines:
-        color: '#d0bbff'
-        name: 'Electrical power distribution'
-        parent: transmission
-        carrier: power
+        essentials:
+            name: 'Electrical power distribution'
+            parent: transmission
+            carrier: power
         constraints:
-            e_cap.max: 2000
-            e_eff: 0.98
-        costs_per_distance:
+            energy_cap_max: 2000
+            energy_eff: 0.98
+        costs:
             monetary:
-                e_cap: 80
+                energy_cap_per_distance: 0.01
 
     heat_pipes:
-        color: '#ff9f9a'
-        name: 'District heat distribution'
-        parent: transmission
-        carrier: heat
+        essentials:
+            name: 'District heat distribution'
+            parent: transmission
+            carrier: heat
         constraints:
-            e_cap.max: 2000
-        constraints_per_distance:
-            e_loss: 0.025
-        costs_per_distance:
+            energy_cap_max: 2000
+            energy_loss_per_distance: 0.025
+        costs:
             monetary:
-                e_cap: 500
+                energy_cap_per_distance: 0.3
