@@ -1,3 +1,15 @@
+"""
+Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+preprocess_data.py
+~~~~~~~~~~~~~~~~~~
+
+Functionality to build the model-internal data array and process
+time-varying parameters.
+
+"""
+
 import os
 
 import xarray as xr

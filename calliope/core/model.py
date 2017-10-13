@@ -22,6 +22,19 @@ class Model(object):
 
     """
     def __init__(self, config):
+        """
+        Returns a new Model from either the path to a run configuration file
+        or a dict containing 'run' and 'model' keys fully specifying the
+        model.
+
+        Parameters
+        ----------
+        config : str or dict or AttrDict
+            If str, must be the path to a run configuration file.
+            If dict or AttrDict, must contain two top-level keys, model and run,
+            specifying the model and run configuration respectively.
+
+        """
         if isinstance(config, str):
             model_run, debug_data = preprocess_model.model_run_from_yaml(config)
         elif isinstance(config, dict):

@@ -58,30 +58,32 @@ def model_run_from_yaml(run_config_path, run_config_override=None):
 
     config_model = process_config(config_run)
 
-    return generate_model_run(config_run, config_model)
+    model_run = generate_model_run(config_run, config_model)
+    return model_run
 
 
-def model_run_from_dicts(run_config_dict, model_config_dict):
+def model_run_from_dict(config):
     """
     Generate processed ModelRun configuration from
     run and model config dictionaries.
 
     Parameters
     ----------
-    run_config_dict : dict or AttrDict
-    model_config_dict : dict or AttrDict
+    config : dict or AttrDict
+        Must contain a 'run' and a 'model' key at the top level
 
     """
-    config_run = utils.AttrDict(run_config_dict)
+    config_run = utils.AttrDict(config['run'])
     config_run.config_run_path = None
 
     # If we have no run name we just use current date/time
     if 'name' not in config_run:
-        config_run.name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+        config_run['name'] = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
 
-    config_model = process_config(model_config_dict, is_model_config=True)
+    config_model = process_config(config['model'], is_model_config=True)
 
-    return generate_model_run(config_run, config_model)
+    model_run = generate_model_run(config_run, config_model)
+    return model_run
 
 
 def process_config(config, is_model_config=False):
@@ -237,6 +239,17 @@ def process_techs(config_model):
     return result, debug_comments
 
 
+def process_tech_groups(config_model, techs):
+    tech_groups = utils.AttrDict()
+    for group in config_model.tech_groups.keys():
+        members = set(
+            k for k, v in techs.items()
+            if group in v.inheritance
+        )
+        tech_groups[group] = sorted(list(members))
+    return tech_groups
+
+
 def generate_model_run(config_run, config_model):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -286,26 +299,29 @@ def generate_model_run(config_run, config_model):
     model_run['techs'], debug_techs = process_techs(config_model)
     debug_comments.set_key('model_run.techs', debug_techs)
 
-    # 4) Fully populate locations
+    # 4) Fully populate tech_groups
+    model_run['tech_groups'] = process_tech_groups(config_model, model_run['techs'])
+
+    # 5) Fully populate locations
     model_run['locations'], debug_locs = locations.process_locations(
         config_model, model_run['techs']
     )
     debug_comments.set_key('model_run.locations', debug_locs)
 
-    # 5) Initialize sets
+    # 6) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     model_run['sets'] = all_sets
 
-    # 6) Grab additional relevant bits from run and model config
+    # 7) Grab additional relevant bits from run and model config
     model_run['run'] = config_run
     model_run['model'] = config_model['model']
 
-    # 7) Final sense-checking
+    # 8) Final sense-checking
     final_check_comments = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
 
-    # 8) Build a debug data dict with comments and the original configs
+    # 9) Build a debug data dict with comments and the original configs
     debug_data = utils.AttrDict({
         'comments': debug_comments,
         'config_model': config_model,
