@@ -17,55 +17,76 @@ import numpy as np
 import pandas as pd
 
 from .. import utils
+from .. _version import __version__
+
 
 def build_model_data(model_run):
-    data = xr.Dataset()
-    data.coords.update(add_sets(model_run))
+    data = xr.Dataset(
+        coords=add_sets(model_run),
+        attrs=add_attributes(model_run)
+    )
+    # data.attrs = add_attributes(model_run)
+
+    # data.coords.update(sets)
+
+    # data = xr.DataArray(data=[], coords=add_sets(model_run)).to_dataset()
+
     data.merge(constraints_to_dataset(model_run), inplace=True)
     data.merge(costs_to_dataset(model_run), inplace=True)
 
-    data = add_time_dimension(data)
+    add_time_dimension(data, model_run)
 
     data.merge(carriers_to_dataset(model_run), inplace=True)
     data.merge(distance_to_dataset(model_run), inplace=True)
     data.merge(essentials_to_dataset(model_run), inplace=True)
 
-    data.attrs = add_attributes(model_run)
-
     return data
 
+
 def apply_time_clustering(model_data_original):
-    ## Not yet implemented
+    # FIXME: Not yet implemented
     return model_data_original
+
+
+def add_sets(model_run):
+    coords = dict()
+    for key, value in model_run.sets.items():
+        if value:
+            coords[key] = list(value)  # turn set into list
+    return coords
+
 
 def constraints_to_dataset(model_run):
     """
     Extract all constraints from the processed dictionary (model.model_run) and
     return an xarray Dataset with all the constraints as DataArray variables and
     model sets as Dataset dimensions.
+
     Parameters
     ----------
     model_run : utils.AttrDict
         processed Calliope model_run dict
+
     Returns
     -------
     data : xarray Dataset
+
     """
     data = xr.Dataset()
     # find all constraints which are actually defined in the yaml file
     relevant_constraints = set(i.split('.constraints.')[1]
                                for i in model_run.locations.as_dict_flat().keys()
-                               if '.constraints.' in i
-                               and '.carrier_ratios.'not in i)
+                               if '.constraints.' in i and
+                               '.carrier_ratios.'not in i)
     for constraint in relevant_constraints:
         constraint_array = []
         for loc_tech in model_run.sets['loc_techs']:
             loc, tech = loc_tech.split(':', 1)
             # for transmission technologies, we also need to go into link nesting
-            if ':' in tech: # i.e. transmission technologies
+            if ':' in tech:  # i.e. transmission technologies
                 tech, link = tech.split(':')
                 loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
-            else: # all other technologies
+            else:  # all other technologies
                 loc_tech_dict = model_run.locations[loc].techs[tech]
             constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
             # inf is assumed to be string on import, so we need to np.inf it
@@ -76,23 +97,28 @@ def constraints_to_dataset(model_run):
         # once we've looped through all technology & location combinations, add the array to the dataset
         data.merge(xr.DataArray(constraint_array,
                                 dims=['loc_techs'],
-                                coords=[('loc_techs',
-                                         model_run.sets['loc_techs'])])
-                                .to_dataset(name=constraint), inplace=True)
+                                # coords=[('loc_techs',
+                                #          model_run.sets['loc_techs'])]
+                                )
+                     .to_dataset(name=constraint), inplace=True)
     return data
+
 
 def costs_to_dataset(model_run):
     """
     Extract all costs from the processed dictionary (model.model_run) and
     return an xarray Dataset with all the costs as DataArray variables. Variable
     names will be prepended with `cost_` to differentiate from other constraints
+
     Parameters
     ----------
     model_run : utils.AttrDict
         processed Calliope model_run dict
+
     Returns
     -------
     data : xarray Dataset
+
     """
     data = xr.Dataset()
     # find all cost classes and associated costs which are actually defined in the processed.yaml file
@@ -102,15 +128,15 @@ def costs_to_dataset(model_run):
     cost_classes = model_run.sets['costs']
     # loop over unique costs, cost classes and technology & location combinations
     for cost in set(costs):
-        cost_class_dict = {i:[] for i in cost_classes}
+        cost_class_dict = {i: [] for i in cost_classes}
         for cost_class in cost_classes:
             for loc_tech in model_run.sets['loc_techs']:
                 loc, tech = loc_tech.split(':', 1)
-                 # for transmission technologies, we also need to go into link nesting
-                if ':' in tech: # i.e. transmission technologies
+                # for transmission technologies, we also need to go into link nesting
+                if ':' in tech:  # i.e. transmission technologies
                     tech, link = tech.split(':')
                     loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
-                else: # all other technologies
+                else:  # all other technologies
                     loc_tech_dict = model_run.locations[loc].techs[tech]
                 cost_dict = loc_tech_dict.get_key('costs.' + cost_class, None)
                 # inf is assumed to be string on import, so need to np.inf it
@@ -121,47 +147,55 @@ def costs_to_dataset(model_run):
         # combinations, add the array to the dataset. All cost based DataArrays
         # are prepended with 'cost_'
         data.merge(xr.DataArray([value for value in cost_class_dict.values()],
-                                dims=['costs', 'loc_techs',],
-                                coords=[('costs', model_run.sets['costs']),
-                                        ('loc_techs', model_run.sets['loc_techs'])])
-                                .to_dataset(name='cost_' + cost), inplace=True)
+                                dims=['costs', 'loc_techs'],
+                                # coords=[('costs', model_run.sets['costs']),
+                                #         ('loc_techs', model_run.sets['loc_techs'])]
+                                )
+                     .to_dataset(name='cost_' + cost), inplace=True)
     return data
+
 
 def carriers_to_dataset(model_run):
     """
     Extract carrier information from the processed dictionary (model.model_run)
     and return an xarray Dataset with DataArray variables describing carrier_in,
     carrier_out, and carrier_ratio (for conversion plus technologies) information.
+
     Parameters
     ----------
     model_run : utils.AttrDict
         processed Calliope model_run dict
+
     Returns
     -------
     data : xarray Dataset
+
     """
     # relevant carriers are all those defined in the model
-    relevant_carriers = ['resource'] + model_run.sets['carriers']
+    # relevant_carriers = model_run.sets['resources']
+    # FIXME REMOVE THIS HACK
+    relevant_carriers = list(set(['resource']) | model_run.sets['carriers'])
     # carrier tiers are all levels of carrier defined in the model
     # as conversion_plus technologies can have secondary and tertiary carriers in/out
-    carrier_tiers = set(key.split('.carrier_')[1]
+    carrier_tiers = list(set(key.split('.carrier_')[1]
                         for key in model_run.techs.as_dict_flat().keys()
-                        if '.carrier_' in key)
-    carriers = xr.DataArray(np.zeros((len(model_run.sets['techs']),
-                                      len(relevant_carriers),
-                                      len(carrier_tiers))),
-                                dims=['techs', 'resources', 'carrier_tiers'],
-                                coords=[('techs', model_run.sets['techs']),
-                                        ('resources', list(relevant_carriers)),
-                                        ('carrier_tiers', list(carrier_tiers))])
+                        if '.carrier_' in key))
+    loc_tech_carriers = xr.DataArray(
+        np.zeros((len(model_run.sets['techs']),
+                  len(relevant_carriers),
+                  len(carrier_tiers))),
+                            dims=['techs', 'resources', 'carrier_tiers'],
+                            coords=[('techs', list(model_run.sets['techs'])),
+                                    ('resources', list(relevant_carriers)),
+                                    ('carrier_tiers', list(carrier_tiers))])
     # for every technology, 1 is given if that carrier is in/out
     for tech in model_run.sets['techs']:
         # we need the location inspecific name for tranmission technologies
         _tech = tech.split(':')[0] if ':' in tech else tech
         for i in carrier_tiers:
             _carriers = model_run.techs[_tech].essentials.get('carrier_' + i, [])
-            carriers.loc[dict(techs=tech, resources=_carriers, carrier_tier=i)] = 1
-    data = carriers.to_dataset(name='carriers')
+            loc_tech_carriers.loc[dict(techs=tech, resources=_carriers, carrier_tiers=i)] = 1
+    data = loc_tech_carriers.to_dataset(name='loc_tech_carriers')
     # Following only added if conversion_plus technologies are defined:
     if model_run.sets['loc_techs_conversion_plus']:
         # conversion ratios are the floating point numbers used to compare one
@@ -169,12 +203,12 @@ def carriers_to_dataset(model_run):
         carrier_ratios = xr.DataArray(
             np.zeros((len(model_run.sets['loc_techs_conversion_plus']),
                       len(relevant_carriers), len(carrier_tiers))),
-            dims=['loc_techs_conversion_plus', 'carrier_resource', 'carrier_tier'],
+            dims=['loc_techs_conversion_plus', 'resources', 'carrier_tiers'],
             coords=[('loc_techs_conversion_plus',
-                        model_run.sets['loc_techs_conversion_plus']),
-                    ('carrier_resource', list(relevant_carriers)),
-                    ('carrier_tier', list(carrier_tiers))]
-            )
+                     list(model_run.sets['loc_techs_conversion_plus'])),
+                    ('resources', list(relevant_carriers)),
+                    ('carrier_tiers', list(carrier_tiers))]
+        )
         for loc_tech in model_run.sets['loc_techs_conversion_plus']:
             loc, tech = loc_tech.split(':', 1)
             for i in carrier_tiers:
@@ -189,6 +223,7 @@ def carriers_to_dataset(model_run):
         data.merge(carrier_ratios.to_dataset(name='carrier_ratios'), inplace=True)
     return data
 
+
 def distance_to_dataset(model_run):
     """
     Extract distance and coordinate information from the processed dictionary
@@ -199,11 +234,12 @@ def distance_to_dataset(model_run):
     ----------
     model_run : utils.AttrDict
         processed Calliope model_run dict
+
     Returns
     -------
     data : xarray Dataset
-    """
 
+    """
     # for every transmission technology, we extract distance information, if it
     # is available
     distance = []
@@ -233,12 +269,13 @@ def distance_to_dataset(model_run):
                                 coordinate[coordinate_dims[1]]])
     if data_coord:
         data.merge(xr.DataArray(coordinates,
-                              dims=['locs', 'coordinates'],
-                              coords=[('locs', model_run.sets.loc),
-                                      ('coordinate', coordinate_dims)])
+                                dims=['locs', 'coordinates'],
+                                coords=[('locs', model_run.sets.loc),
+                                        ('coordinate', coordinate_dims)])
                      .to_dataset(name='coordinates')
                    )
     return data
+
 
 def essentials_to_dataset(model_run):
     """
@@ -250,11 +287,12 @@ def essentials_to_dataset(model_run):
     ----------
     model_run : utils.AttrDict
         processed Calliope model_run dict
+
     Returns
     -------
     data : xarray Dataset
-    """
 
+    """
     # for every technology, we extract location inspecific information
     information = ['essentials.color', 'inheritance', 'essentials.stack_weight']
     data = xr.Dataset()
@@ -262,48 +300,67 @@ def essentials_to_dataset(model_run):
         name = info.split('.')[1] if '.' in info else info
         data_info = []
         for tech in model_run.sets['techs']:
-            if tech in model_run.sets['tech_transmission']:
+            if tech in model_run.sets['techs_transmission']:
                 tech = tech.split(':')[0]
             data_info.append(model_run.techs[tech].get_key(info))
-        data.append(xr.DataArray(data, dims=['techs']).to_dataset(name=name))
+        data.merge(xr.DataArray(data, dims=['techs']).to_dataset(name=name))
 
     return data
 
-def add_sets(model_run):
-    coords = dict()
-    for key, value in model_run.sets.items():
-        if value:
-            coords[key] = value
-    return coords
 
-# TODO? Warn on overriding a value from model_run.model with something from
-#  model_run.run
 def add_attributes(model_run):
-    attr_dict = model_run.model
-    attr_dict.update(model_run.run)
+    attr_dict = utils.AttrDict()
+    attr_dict['model'] = model_run.model.copy()
+    attr_dict['run'] = model_run.run.copy()
+
+    # Some keys are killed right away
+    for k in ['model.time', 'model.data_path', 'run.config_run_path', 'run.model']:
+        try:
+            attr_dict.del_key(k)
+        except KeyError:
+            pass
+
+    # Now we flatten the AttrDict into a dict
+    attr_dict = attr_dict.as_dict(flat=True)
+
+    # Anything empty or None in the flattened dict is also killed
+    for k in list(attr_dict.keys()):
+        if not attr_dict[k]:
+            del attr_dict[k]
+
+    attr_dict['calliope_version'] = __version__
+
     return attr_dict
 
-def add_time_dimension(data):
+
+def add_time_dimension(data, model_run):
     """
     Once all constraints and costs have been loaded into the model dataset, any
     timeseries data is loaded from file and substituted into the model dataset
+
     Parameters:
     -----------
     data : xarray Dataset
         A data structure which has already gone through `constraints_to_dataset`,
         `costs_to_dataset`, and `add_attributes`
+
     Returns:
     --------
     data : xarray Dataset
         A data structure with an additional time dimension to the input dataset,
         with all relevant `file=` entries replaced with data from file.
+
     """
-    data_path = data.data_path
-    set_t = pd.read_csv(os.path.join(data_path, 'time_set.csv'),
-                        header=None, index_col=1, parse_dates=[1])
-    if data.subset_time:
-        time_slice = (data.subset_time[0] if len(data.subset_time) == 1
-                      else slice(data.subset_time[0], data.subset_time[1]))
+    data_path = model_run.model.data_path
+    set_t = pd.read_csv(
+        os.path.join(data_path, 'time_set.csv'),
+        header=None, index_col=1, parse_dates=[1], squeeze=True
+    )
+    subset_time_config = model_run.model.subset_time
+    time_slice = None
+    if subset_time_config:
+        time_slice = (subset_time_config[0] if len(subset_time_config) == 1
+                      else slice(subset_time_config[0], subset_time_config[1]))
     subset_time = set_t[time_slice] if time_slice else set_t
 
     # Initialise DataFrames and Datasets
@@ -311,8 +368,8 @@ def add_time_dimension(data):
     cost_data = pd.DataFrame()
     # search through every constraint/cost for use of 'file'
     for variable in data.data_vars:
-        if (data[variable].dtype.kind == 'U'
-            and any(data[variable].to_dataframe().stack().str.contains('file='))):
+        if (data[variable].dtype.kind == 'U' and
+                any(data[variable].to_dataframe().stack().str.contains('file='))):
             _data = data[variable].to_dataframe()
         else:
             continue
@@ -342,18 +399,21 @@ def add_time_dimension(data):
         df['filename'], df['column'] = filenames.str.split(':', 1).str
         for file in set(df.filename):
             d_path = os.path.join(data_path, file.split('file=')[1])
-            cols = set(df[df.filename==file].column)
+            cols = set(df[df.filename == file].column)
             data_from_csv = pd.read_csv(d_path, usecols=cols)
+            # Apply time subset
+            data_from_csv = data_from_csv.loc[subset_time.values, :]
             for col in cols:
                 col_df = df[(df.filename == file) & (df.column == col)]
-                if len(variable_data.index.levels) == 3: # cost
+                if len(variable_data.index.levels) == 3:  # cost
                     timeseries_data.loc[dict(loc_techs=col_df.index.get_level_values('loc_techs'),
                                              costs=col_df.index.get_level_values('costs'))] = data_from_csv[col].values
-                else: # constraints
+                else:  # constraints
                     timeseries_data.loc[dict(loc_techs=col_df.index.get_level_values('loc_techs'))] = data_from_csv[col].values
         for variable in timeseries_data['variable']:
             data[variable.item()] = timeseries_data.loc[dict(variable=variable)].drop('variable')
-    return data
+    return None
+
 
 ## Not yet updated from calliope 0.5.3 to next gen.
 def initialize_time(data):

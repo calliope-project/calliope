@@ -41,6 +41,7 @@ tech_groups:
         allowed_costs: []  # FIXME for all tech_groups
         essentials:
             parent: null
+            stack_weight: 0
         constraints:
             resource: inf
             resource_unit: power
@@ -50,6 +51,7 @@ tech_groups:
         allowed_constraints: []
         essentials:
             parent: null
+            stack_weight: 0
         constraints:
             resource: inf
             resource_unit: power
@@ -60,6 +62,7 @@ tech_groups:
         allowed_constraints: []
         essentials:
             parent: null
+            stack_weight: 0
         constraints:
             resource_unit: power
             force_resource: true
@@ -84,6 +87,7 @@ tech_groups:
         allowed_constraints:
         essentials:
             parent: null
+            stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
@@ -93,6 +97,7 @@ tech_groups:
         allowed_constraints: []
         essentials:
                 parent: null
+                stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
@@ -101,6 +106,7 @@ tech_groups:
         allowed_constraints: []
         essentials:
             parent: null
+            stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
@@ -109,6 +115,7 @@ tech_groups:
         allowed_constraints: []
         essentials:
             parent: null
+            stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
