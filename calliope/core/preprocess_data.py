@@ -37,7 +37,7 @@ def build_model_data(model_run):
     add_time_dimension(data, model_run)
 
     data.merge(carriers_to_dataset(model_run), inplace=True)
-    data.merge(distance_to_dataset(model_run), inplace=True)
+    data.merge(locations_to_dataset(model_run), inplace=True)
     data.merge(essentials_to_dataset(model_run), inplace=True)
 
     return data
@@ -52,7 +52,7 @@ def add_sets(model_run):
     coords = dict()
     for key, value in model_run.sets.items():
         if value:
-            coords[key] = list(value)  # turn set into list
+            coords[key] = value  # turn set into list
     return coords
 
 
@@ -96,11 +96,10 @@ def constraints_to_dataset(model_run):
             constraint_array.append(constraint_value)
         # once we've looped through all technology & location combinations, add the array to the dataset
         data.merge(xr.DataArray(constraint_array,
-                                dims=['loc_techs'],
-                                # coords=[('loc_techs',
-                                #          model_run.sets['loc_techs'])]
+                                dims=['loc_techs']
                                 )
-                     .to_dataset(name=constraint), inplace=True)
+                     .to_dataset(name=constraint), inplace=True
+        )
     return data
 
 
@@ -147,9 +146,7 @@ def costs_to_dataset(model_run):
         # combinations, add the array to the dataset. All cost based DataArrays
         # are prepended with 'cost_'
         data.merge(xr.DataArray([value for value in cost_class_dict.values()],
-                                dims=['costs', 'loc_techs'],
-                                # coords=[('costs', model_run.sets['costs']),
-                                #         ('loc_techs', model_run.sets['loc_techs'])]
+                                dims=['costs', 'loc_techs']
                                 )
                      .to_dataset(name='cost_' + cost), inplace=True)
     return data
@@ -171,22 +168,15 @@ def carriers_to_dataset(model_run):
     data : xarray Dataset
 
     """
-    # relevant carriers are all those defined in the model
-    # relevant_carriers = model_run.sets['resources']
-    # FIXME REMOVE THIS HACK
-    relevant_carriers = list(set(['resource']) | model_run.sets['carriers'])
-    # carrier tiers are all levels of carrier defined in the model
-    # as conversion_plus technologies can have secondary and tertiary carriers in/out
-    carrier_tiers = list(set(key.split('.carrier_')[1]
-                        for key in model_run.techs.as_dict_flat().keys()
-                        if '.carrier_' in key))
+    carrier_tiers = model_run.sets['carrier_tiers']
     loc_tech_carriers = xr.DataArray(
         np.zeros((len(model_run.sets['techs']),
-                  len(relevant_carriers),
+                  len(model_run.sets['resources']),
                   len(carrier_tiers))),
                             dims=['techs', 'resources', 'carrier_tiers'],
                             coords=[('techs', list(model_run.sets['techs'])),
-                                    ('resources', list(relevant_carriers)),
+                                    ('resources',
+                                        list(model_run.sets['resources'])),
                                     ('carrier_tiers', list(carrier_tiers))])
     # for every technology, 1 is given if that carrier is in/out
     for tech in model_run.sets['techs']:
@@ -202,11 +192,13 @@ def carriers_to_dataset(model_run):
         # carrier_in/_out value with another carrier_in/_out value
         carrier_ratios = xr.DataArray(
             np.zeros((len(model_run.sets['loc_techs_conversion_plus']),
-                      len(relevant_carriers), len(carrier_tiers))),
+                      len(model_run.sets['resources']),
+                      len(carrier_tiers)
+            )),
             dims=['loc_techs_conversion_plus', 'resources', 'carrier_tiers'],
             coords=[('loc_techs_conversion_plus',
-                     list(model_run.sets['loc_techs_conversion_plus'])),
-                    ('resources', list(relevant_carriers)),
+                        list(model_run.sets['loc_techs_conversion_plus'])),
+                    ('resources', list(model_run.sets['resources'])),
                     ('carrier_tiers', list(carrier_tiers))]
         )
         for loc_tech in model_run.sets['loc_techs_conversion_plus']:
@@ -223,12 +215,11 @@ def carriers_to_dataset(model_run):
         data.merge(carrier_ratios.to_dataset(name='carrier_ratios'), inplace=True)
     return data
 
-
-def distance_to_dataset(model_run):
+def locations_to_dataset(model_run):
     """
-    Extract distance and coordinate information from the processed dictionary
+    Extract location specific information from the processed dictionary
     (model.model_run) and return an xarray Dataset with DataArray variables
-    describing distance and coordinate information.
+    describing distance, coordinate and available area information.
 
     Parameters
     ----------
@@ -251,28 +242,37 @@ def distance_to_dataset(model_run):
     data = (xr.DataArray(distance, dims=['loc_techs_transmission'])
               .to_dataset(name='distance'))
 
+
+    available_area = [model_run.locations[loc].get('available_area', np.nan)
+        for loc in model_run.sets['locs']]
+
+    data.merge(xr.DataArray(available_area,
+                              dims=['locs'])
+                     .to_dataset(name='available_area'), inplace=True)
     # Coordinates are defined per location:
     coordinates = []
     coordinate_dims = []
     for loc in model_run.sets['locs']:
         coordinate = model_run.locations[loc].get('coordinates', None)
         if not coordinate:
-            data_coord = None
+            data_coord = False
             # either all coordinates exist, or none of them,
             # so no point looking for coordinates after this
             break
         else:
-            data_coord = []
+            data_coord = True
             if not coordinate_dims:
                 coordinate_dims = list(coordinate.keys())
             coordinates.append([coordinate[coordinate_dims[0]],
                                 coordinate[coordinate_dims[1]]])
+
     if data_coord:
         data.merge(xr.DataArray(coordinates,
                                 dims=['locs', 'coordinates'],
-                                coords=[('locs', model_run.sets.loc),
+                                coords=[('locs', model_run.sets.locs),
                                         ('coordinate', coordinate_dims)])
-                     .to_dataset(name='coordinates')
+                     .to_dataset(name='loc_coordinates'),
+                     inplace=True
                    )
     return data
 
@@ -294,17 +294,25 @@ def essentials_to_dataset(model_run):
 
     """
     # for every technology, we extract location inspecific information
-    information = ['essentials.color', 'inheritance', 'essentials.stack_weight']
+    information = ['essentials.color', 'essentials.stack_weight']
     data = xr.Dataset()
     for info in information:
-        name = info.split('.')[1] if '.' in info else info
+        name = info.split('.')[1]
         data_info = []
         for tech in model_run.sets['techs']:
             if tech in model_run.sets['techs_transmission']:
                 tech = tech.split(':')[0]
             data_info.append(model_run.techs[tech].get_key(info))
-        data.merge(xr.DataArray(data, dims=['techs']).to_dataset(name=name))
-
+        data.merge(xr.DataArray(data_info, dims=['techs']).to_dataset(name=name),
+                   inplace=True)
+    data_info = []
+    for tech in model_run.sets['techs']:
+        if tech in model_run.sets['techs_transmission']:
+            tech = tech.split(':')[0]
+        inheritance = model_run.techs[tech].get_key('inheritance')
+        data_info.append('.'.join(inheritance))
+    data.merge(xr.DataArray(data_info, dims=['techs']).to_dataset(name='inheritance'),
+                   inplace=True)
     return data
 
 
@@ -414,16 +422,12 @@ def add_time_dimension(data, model_run):
             data[variable.item()] = timeseries_data.loc[dict(variable=variable)].drop('variable')
     return None
 
-
-## Not yet updated from calliope 0.5.3 to next gen.
-def initialize_time(data):
+## Not currently implemented as time_funcs and time_clustering will fail
+def initialize_time(data_original, model_run):
     # Carry y_ subset sets over to data for easier data analysis
-    time_config = model_run.run.get('time', False)
+    time_config = model_run.run.get('time', None)
     if not time_config:
         return None  # Nothing more to do here
-    else:
-        # For analysis purposes, keep old data around
-        data_original = data.copy(deep=True)
     ##
     # Process masking and get list of timesteps to keep at high res
     ##
@@ -436,12 +440,12 @@ def initialize_time(data):
                                           builtin_module='time_masks')
             mask_kwargs = entry.get_key('options', default={})
             masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
-        model_run.masks = masks
+        data.attrs['masks'] = masks
         # Concatenate the DatetimeIndexes by using dummy Series
         chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                      for m in masks.values()]).index
         # timesteps: a list of timesteps NOT picked by masks
-        timesteps = pd.Index(data.t.values).difference(chosen_timesteps)
+        timesteps = pd.Index(data.timesteps.values).difference(chosen_timesteps)
     else:
         timesteps = None
     ##
@@ -451,15 +455,16 @@ def initialize_time(data):
         func = utils.plugin_load(
             time_config.function, builtin_module='time_funcs')
         func_kwargs = time_config.get('function_options', {})
-        self.data = func(data=self.data, timesteps=timesteps, **func_kwargs)
-        self._sets['t'] = self.data['t'].to_index()
+        data = func(data=data_original, timesteps=timesteps, **func_kwargs)
+
+        ## Removed while operational mode is inexistant
         # Raise error if we've made adjustments incompatible
         # with operational mode
-        if self.mode == 'operate':
-            opmode_safe = self.data.attrs.get('opmode_safe', False)
-            if opmode_safe:
-                self.data.attrs['time_res'] = self.get_timeres()
-            else:
-                msg = 'Time settings incompatible with operational mode'
-                raise exceptions.ModelError(msg)
+        # if data.model.mode == 'operate':
+        #     opmode_safe = data.attrs.get('opmode_safe', False)
+        #     if opmode_safe:
+        #         data.attrs['time_resolution'] = self.get_timeres()
+        #     else:
+        #         msg = 'Time settings incompatible with operational mode'
+        #         raise exceptions.ModelError(msg)
     return None

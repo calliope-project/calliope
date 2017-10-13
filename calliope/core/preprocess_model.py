@@ -48,6 +48,10 @@ def model_run_from_yaml(run_config_path, run_config_override=None):
     # If we have no run name we use the run config file name without extension
     if 'name' not in config_run:
         config_run.name = os.path.splitext(os.path.basename(run_config_path))[0]
+        debug_comments.set_key(
+            'config_run.name', 'From run configuration filename'
+        )
+
 
     # If passed in, config_run is overridden with any additional overrides...
     if run_config_override:
@@ -55,6 +59,10 @@ def model_run_from_yaml(run_config_path, run_config_override=None):
         config_run.union(
             run_config_override, allow_override=True, allow_replacement=True
         )
+        for overrides in run_config_override.as_dict_flat().keys():
+            debug_comments.set_key(
+                overrides, 'From model initialisation overrides'
+            )
 
     config_model = process_config(config_run)
 
@@ -79,6 +87,9 @@ def model_run_from_dict(config):
     # If we have no run name we just use current date/time
     if 'name' not in config_run:
         config_run['name'] = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+        debug_comments.set_key(
+            'config_run.name', 'Defaulted to current datetime'
+        )
 
     config_model = process_config(config['model'], is_model_config=True)
 
@@ -151,29 +162,29 @@ def process_config(config, is_model_config=False):
 
 
 def get_parents(tech_id, model_config):
-        """
-        Returns the full inheritance tree from which ``tech`` descends,
-        ending with its base technology group.
+    """
+    Returns the full inheritance tree from which ``tech`` descends,
+    ending with its base technology group.
 
-        To get the base technology group,
-        use ``get_parents(...)[-1]``.
+    To get the base technology group,
+    use ``get_parents(...)[-1]``.
 
-        Parameters
-        ----------
-        tech : str
-        model_config : AttrDict
+    Parameters
+    ----------
+    tech : str
+    model_config : AttrDict
 
-        """
+    """
 
-        tech = model_config.techs[tech_id].essentials.parent
-        parents = [tech]
+    tech = model_config.techs[tech_id].essentials.parent
+    parents = [tech]
 
-        while True:
-            tech = model_config.tech_groups[tech].essentials.parent
-            if tech is None:
-                break  # We have reached the top of the chain
-            parents.append(tech)
-        return parents
+    while True:
+        tech = model_config.tech_groups[tech].essentials.parent
+        if tech is None:
+            break  # We have reached the top of the chain
+        parents.append(tech)
+    return parents
 
 
 def process_techs(config_model):
@@ -209,31 +220,50 @@ def process_techs(config_model):
         for k in keys_to_add:
             tech_result[k] = config_model.tech_groups[tech_result.inheritance[-1]].get(k, [])
 
-        # If necessary, populate carrier_in and carrier_out in essentials
-        if tech_result.inheritance[-1] in ['supply', 'supply_plus']:
-            if 'carrier_in' not in tech_result.essentials:
+        # If necessary, populate carrier_in and carrier_out in essentials, but
+        # also break on missing carrier data
+        if 'carrier_in' not in tech_result.essentials:
+            if tech_result.inheritance[-1] in ['supply', 'supply_plus']:
                 tech_result.essentials.carrier_in = 'resource'
-            if 'carrier_out' not in tech_result.essentials:
-                tech_result.essentials.carrier_out = tech_result.essentials.carrier
+            elif tech_result.inheritance[-1] in ['demand', 'transmission',
+                                                 'storage']:
+                try:
+                    tech_result.essentials.carrier_in = \
+                        tech_result.essentials.carrier
+                    debug_comments.set_key(
+                        '{}.essentials.carrier_in', 'From run configuration filename'
+                    )
+                except KeyError:
+                    exceptions.ModelError('`carrier` or `carrier_in` must be '
+                        'defined for {}'.format(tech_id))
+            else:
+                exceptions.ModelError('`carrier_in` must be '
+                    'defined for {}'.format(tech_id))
 
-        if tech_result.inheritance[-1] == 'demand':
-            if 'carrier_in' not in tech_result.essentials:
-                tech_result.essentials.carrier_in = tech_result.essentials.carrier
-            if 'carrier_out' not in tech_result.essentials:
+        if 'carrier_out' not in tech_result.essentials:
+            if tech_result.inheritance[-1] == 'demand':
                 tech_result.essentials.carrier_out = 'resource'
-
-        if tech_result.inheritance[-1] == 'transmission':
-            if 'carrier_in' not in tech_result.essentials:
-                tech_result.essentials.carrier_in = tech_result.essentials.carrier
-            if 'carrier_out' not in tech_result.essentials:
-                tech_result.essentials.carrier_out = tech_result.essentials.carrier
+            elif tech_result.inheritance[-1] in ['supply', 'supply_plus',
+                                                 'transmission', 'storage']:
+                try:
+                    tech_result.essentials.carrier_out = \
+                        tech_result.essentials.carrier
+                except KeyError:
+                    exceptions.ModelError('`carrier` or `carrier_out` must be '
+                        'defined for {}'.format(tech_id))
+            else:
+                exceptions.ModelError('`carrier_out` must be '
+                    'defined for {}'.format(tech_id))
 
         # If necessary, pick a color for the tech, cycling through
         # the hardcoded default palette
         if not tech_result.essentials.get_key('color', None):
             color = _DEFAULT_PALETTE[next(default_palette_cycler)]
             tech_result.essentials.color = color
-
+            debug_comments.set_key(
+                    '{}.essentials.color'.format(tech_id),
+                    'From Calliope default palette'
+                )
         result[tech_id] = tech_result
 
     return result, debug_comments
@@ -311,6 +341,7 @@ def generate_model_run(config_run, config_model):
     # 6) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
+    all_sets = utils.AttrDict({k:list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
 
     # 7) Grab additional relevant bits from run and model config

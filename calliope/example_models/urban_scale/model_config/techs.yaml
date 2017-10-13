@@ -81,6 +81,7 @@ techs:
             primary_carrier: power
             carrier_in: gas
             carrier_out: power
+            carrier_out_2: heat
         constraints:
             export_carrier: power
             energy_cap_max: 1500

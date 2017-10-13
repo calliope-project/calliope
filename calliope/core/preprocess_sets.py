@@ -48,10 +48,10 @@ Subsets based on active constraints
 * loc_techs_export
 * loc_techs_purchase
 * loc_techs_milp
-* loc_techs_2out
-* loc_techs_3out
-* loc_techs_2in
-* loc_techs_3in
+* loc_techs_out_2
+* loc_techs_out_3
+* loc_techs_in_2
+* loc_techs_in_3
 
 ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 
@@ -78,9 +78,15 @@ def generate_simple_sets(model_run):
     flat_techs = model_run.techs.as_dict(flat=True)
     flat_locations = model_run.locations.as_dict(flat=True)
 
-    sets.carriers = set(
+    sets.resources = set(
         v for k, v in flat_techs.items()
-        if '.carrier' in k) - set(['resource'])
+        if '.carrier' in k)
+
+    sets.carriers = sets.resources - set(['resource'])
+
+    sets.carrier_tiers = set(key.split('.carrier_')[1]
+        for key in flat_techs.keys()
+        if '.carrier_' in key)
 
     sets.costs = set(
         k.split('costs.')[-1].split('.')[0]
@@ -288,25 +294,25 @@ def generate_loc_tech_sets(model_run, simple_sets):
     ##
 
     # `conversion_plus` technologies with secondary carrier(s) out
-    sets.loc_techs_2out = set(
+    sets.loc_techs_out_2 = set(
         k for k in sets.loc_techs_conversion_plus
         if 'carrier_out_2' in loc_techs_config[k].constraints.get_key('carrier_ratios', {})
     )
 
     # `conversion_plus` technologies with  tertiary carrier(s) out
-    sets.loc_techs_3out = set(
+    sets.loc_techs_out_3 = set(
         k for k in sets.loc_techs_conversion_plus
         if 'carrier_out_3' in loc_techs_config[k].constraints.get_key('carrier_ratios', {})
     )
 
     # `conversion_plus` technologies with  secondary carrier(s) in
-    sets.loc_techs_2in = set(
+    sets.loc_techs_in_2 = set(
         k for k in sets.loc_techs_conversion_plus
         if 'carrier_in_2' in loc_techs_config[k].constraints.get_key('carrier_ratios', {})
     )
 
     # `conversion_plus` technologies with  tertiary carrier(s) in
-    sets.loc_techs_3in = set(
+    sets.loc_techs_in_3 = set(
         k for k in sets.loc_techs_conversion_plus
         if 'carrier_in_3' in loc_techs_config[k].constraints.get_key('carrier_ratios', {})
     )
