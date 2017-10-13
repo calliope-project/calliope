@@ -4,168 +4,98 @@
 # the `doc/user/includes` directory
 #
 
-#
-# GENERAL MODEL SETTINGS
-#
 
-# General parameters
-startup_time: 12  # Length of startup period (hours)
+# default_location:
+#     transmission_node: false # true only if no techs are defined (including complete ommission of the `techs` key). Automatically added during processing if not defined by user.
+#     coordinates: {x: 0, y: 0}  # The location's x-y coordinates for distance calculations and plotting. Also possible: {lat: ..., lon: ...}
+#     available_area: 0  # This location's available land area (required if constraining technology deployment by area).
+#     techs: None  # A list of technologies, optionally with location-specific settings overriding the technology's global settings.
 
-# Operation mode settings
-opmode:
-    horizon: 48  # Optimization period length (hours)
-    window: 24  # Operation period length (hours)
 
-# Per-carrier system margins
-system_margin:
-    power: 0
+# default_link:
+#     techs:
+#         default:
+#             distance: 0
+#             constraints:
+#                 one_way: false  # FIXME needs description
 
-#
-# TECH DEFAULTS
-#
 
-techs:
-    defaults:
-        stack_weight: 100
-        color: false  # If no color is defined, a random one will be chosen
-        primary_carrier: false # used for setting the primary carrier_out to associate with costs & constraints (if multiple primary carriers are assigned)
-        carrier_in: false # Defaults to false, allows technologies to define primary carrier(s) to consume
-        carrier_in_2: false # Defaults to false, allows technologies to define secondary carrier(s) to consume
-        carrier_in_3: false # Defaults to false, allows technologies to define tertiary carrier(s) to consume
-        carrier_out: false # Defaults to false, allows conversion technologies to define primary carrier(s) to produce
-        carrier_out_2: false # Defaults to false, allows conversion technologies to define secondary carrier(s) to produce
-        carrier_out_3: false # Defaults to false, allows conversion technologies to define tertiary carrier(s) to produce
-        group: false
-        x_map: null
-        export: null
-        constraints:
-            force_r: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
-            r_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
-            r_eff: 1.0  # Resource to/from storage conversion efficiency
-            r_area.min: 0  # Minimum installed collector area (m\ :sup:`2`)
-            r_area.max: false  # Maximum installed collector area (m\ :sup:`2`), set to false by default in order to disable this constraint and force r_area to 1
-            r_area.equals: false  # Specific installed collector area (m\ :sup:`2`)
-            r_area_per_e_cap: false  # If set, forces ``r_area`` to follow ``e_cap`` with the given numerical ration (e.g. setting to 1.5 means that ``r_area == 1.5 * e_cap``)
-            r_cap.min: 0  # Minimum installed resource to/from storage conversion capacity (kW)
-            r_cap.max: inf  # Maximum installed resource to/from storage conversion capacity (kW)
-            r_cap.equals: false  # Specific installed resource to/from storage conversion capacity (kW)
-            r_cap_equals_e_cap: false  # If true, r_cap is forced to equal e_cap
-            r_scale: 1.0  # Scale resource by this value
-            r_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
-            allow_r2: false  # Allow secondary resource
-            r2_startup_only: false  # Allow secondary resource during startup_time only (only has an effect if ``allow_r2`` is ``true``)
-            r2_eff: 1.0  # Secondary resource to/from storage conversion efficiency
-            r2_cap.min: 0  # Minimum installed secondary resource to storage conversion capacity (kW)
-            r2_cap.max: inf  # Maximum installed secondary resource to storage conversion capacity (kW)
-            r2_cap.equals: 0  # Specific installed secondary resource to storage conversion capacity (kW)
-            r2_cap_follow:  false  # Can be set to ``e_cap`` or ``r_cap`` to set ``r2_cap.max`` to the respective value (in which case, any given ``r2_cap.max`` is ignored). ``false`` to disable
-            r2_cap_follow_mode: 'max'  # Can be set to `max` or `equals` to specifiy which ``r2_cap`` constraint is specific by the variable given in ``r2_cap_follow``
-            s_init: 0  # Initial storage level (kWh)
-            s_cap.min: 0  # Minimum storage capacity (kWh)
-            s_cap.max: 0  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
-            s_cap.equals: false  # Specific storage capacity (kWh)
-            s_cap_per_unit: false # set the storage capacity of each integer unit of a technology perchased (kWh/unit)
-            c_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
-            s_time.max: 0  # Max storage time (full load hours). If both this and s_cap.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
-            s_loss: 0  # Storage loss rate (per hour)
-            e_prod: true  # Allow this technology to supply energy to the carrier
-            e_con: false  # Allow this technology to consume energy from the carrier
-            p_eff: 1.0  # Plant parasitic efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
-            e_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
-            e_cap.min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
-            e_cap.max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
-            e_cap.equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
-            e_cap.total_max: inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
-            e_cap.total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
-            e_cap_scale: 1.0  # Scale all ``e_cap`` min/max/equals/total_max/total_equals constraints by this value
-            e_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
-            e_cap_per_unit: false # set the capacity of each integer unit of a technology perchased (kW/unit)
-            e_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
-            export_cap: false # Maximum allowed export for a technology, set to ``false`` to disable.
-            units.min: false # Minimum number of integer units of a technology that can be purchased.
-            units.max: false # Maximum number of integer units of a technology that can be purchased.
-            units.equals: false # specific number of integer units of a technology to be purchased.
-        costs:
-            default:  # These default are looked up for any value not defined for a specific cost class
-                s_cap: 0  # Cost of storage capacity (per kWh)
-                r_area: 0  # Cost of resource collector area (per m\ :sup:`2`)
-                r_cap: 0  # Cost of resource conversion capacity (per kW)
-                r2_cap: 0  # Cost of secondary resource conversion capacity (per kW)
-                e_cap: 0  # Cost of carrier conversion capacity (per kW gross)
-                om_frac: 0  # Yearly O&M costs (fraction of total investment)
-                om_fixed: 0  # Yearly O&M costs (per kW of ``e_cap``)
-                om_var: 0  # Variable O&M costs (per kWh of ``es_prod``)
-                om_fuel: 0  # Fuel costs (per kWh of ``r`` used)
-                om_r2: 0  # Fuel costs for secondary resource (per kWh of ``rb`` used)
-                export: 0 # Cost of exporting excess energy (per kWh of ``export``). Usually used in the negative sense, as a subsidy.
-                purchase: 0 # Cost for purchasing a technology, triggers a binary variable for that technology to say that it has been purchased
-        costs_per_distance:
-            default:
-                e_cap: 0 # cost per unit distance per unit e_cap
-        constraints_per_distance:
-            e_loss: 0 # Energy loss during transmission, per unit distance. Set as value between 0 (no loss) and 1 (all energy lost)
-        depreciation:
-            plant_life: 25  # Lifetime of a plant (years)
-            interest:
-                default: 0  # Default interest rate if not specified for a cost class ``k``
-                monetary: 0.10  # Interest rate for the ``monetary`` cost class
-        weight: 1.0  # Cost weight in objective function (higher: relatively more expensive)
-    supply:
-        parent: defaults
-        constraints:
-            r: inf
-    supply_plus:
-        parent: defaults
-        constraints:
-            r: inf
-    demand:
-        parent: defaults
-        constraints:
-            r: 0
-            force_r: true
-            e_cap.max: inf
-            e_prod: false
-            e_con: true
-    unmet_demand:  # Unmet demand that is not child of 'supply' so doesn't get grouped with it
-        stack_weight: 0
-        color: '#666666'
-        parent: defaults
-        constraints:
-            r: inf
-            e_cap.max: inf
-        costs:
-            monetary:
-                om_var: 1.0e+9
-    unmet_demand_as_supply_tech:  # Unmet demand that IS a child of 'supply' so gets treated like a regular supply technology for grouping purposes
-        stack_weight: 0
-        color: '#666666'
-        parent: supply
-        constraints:
-            e_cap.max: inf
-        costs:
-            monetary:
-                om_var: 1.0e+9
-    storage:
-        parent: defaults
-        constraints:
-            e_con: true
-            r: inf # not used but has to be defined as infinite to avoid issues
-            s_cap.max: inf
-    transmission:
-        parent: defaults
-        per_distance: 1
-        constraints:
-            e_cap.max: inf
-            e_con: true
-            r: inf # not used but has to be defined as infinite to avoid issues
-    conversion:
-        parent: defaults
-        constraints:
-            e_con: true
-            r: inf # not used but has to be defined as infinite to avoid issues
-    conversion_plus:
-        parent: defaults
-        constraints:
-            e_con: true
-            r: inf # not used but has to be defined as infinite to avoid issues
-
+default_tech:
+    # FIXME: weight is gone, so no longer needs to be dealt with in objective function
+    essentials:
+        # FIXME: parent is null by defualt, forcing a check for each tech to define one
+        parent: null  # Parent tech_group. Must always be defined
+        name: 'Default technology'  # Name of tech, used for plotting and analysis
+        # FIXME: x_map no longer exists
+        stack_weight: 100  # Used to set the vertical ordering of technologies when plotting system-wide output
+        color: false  # Color to use when plotting results. If not defined, a random one will be chosen
+        primary_carrier: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
+        carrier_in: false  # Defaults to false, allows technologies to define primary carrier(s) to consume
+        carrier_in_2: false  # Defaults to false, allows technologies to define secondary carrier(s) to consume
+        carrier_in_3: false  # Defaults to false, allows technologies to define tertiary carrier(s) to consume
+        carrier_out: false  # Defaults to false, allows conversion technologies to define primary carrier(s) to produce
+        carrier_out_2: false  # Defaults to false, allows conversion technologies to define secondary carrier(s) to produce
+        carrier_out_3: false  # Defaults to false, allows conversion technologies to define tertiary carrier(s) to produce
+        # FIXME: carrier_out ratios are now in constraints
+    constraints:
+        # FIXME: lifetime has changed names and moved into constraints, and is null by default, forcing a check for techs to define it
+        lifetime: null  # Lifetime of a plant (years). Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
+        carrier_ratios: {}  # FIXME this is new and needs a sensible description
+        force_resource: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
+        resource_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
+        resource_eff: 1.0  # Resource to/from storage conversion efficiency
+        resource_area_min: 0  # Minimum installed collector area (m\ :sup:`2`)
+        resource_area_max: false  # Maximum installed collector area (m\ :sup:`2`), set to false by default in order to disable this constraint and force r_area to 1
+        resource_area_equals: false  # Specific installed collector area (m\ :sup:`2`)
+        resource_area_per_energy_cap: false  # If set, forces ``r_area`` to follow ``energy_cap`` with the given numerical ration (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
+        resource_cap_min: 0  # Minimum installed resource to/from storage conversion capacity (kW)
+        resource_cap_max: inf  # Maximum installed resource to/from storage conversion capacity (kW)
+        resource_cap_equals: false  # Specific installed resource to/from storage conversion capacity (kW)
+        resource_cap_equals_energy_cap: false  # If true, r_cap is forced to equal energy_cap
+        resource_scale: 1.0  # Scale resource by this value
+        resource_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
+        storage_init: 0  # Initial storage level (kWh)
+        storage_cap_min: 0  # Minimum storage capacity (kWh)
+        storage_cap_max: 0  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
+        storage_cap_equals: false  # Specific storage capacity (kWh)
+        storage_cap_per_unit: false # set the storage capacity of each integer unit of a technology perchased (kWh/unit)
+        charge_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
+        storage_time_max: 0  # Max storage time (full load hours). If both this and s_cap.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
+        storage_loss: 0  # Storage loss rate (per hour)
+        energy_prod: false  # Allow this technology to supply energy to the carrier
+        energy_con: false  # Allow this technology to consume energy from the carrier
+        parasitic_eff: 1.0  # Plant parasitic efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
+        energy_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
+        energy_cap_min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
+        energy_cap_max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
+        energy_cap_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
+        energy_cap_total_max: inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
+        energy_cap_total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
+        energy_cap_scale: 1.0  # Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
+        energy_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
+        energy_cap_per_unit: false  # set the capacity of each integer unit of a technology perchased (kW/unit)
+        energy_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
+        # FIXME: per_distance is no longer in separate top-level thing
+        energy_loss_per_distance: 0 # Energy loss during transmission, per unit distance. Set as value between 0 (no loss) and 1 (all energy lost)
+        export_cap: inf  # Maximum allowed export for a technology.
+        export_carrier: null  # FIXME needs description
+        units_min: false  # Minimum number of integer units of a technology that can be purchased.
+        units_max: false  # Maximum number of integer units of a technology that can be purchased.
+        units_equals: false  # Specific number of integer units of a technology to be purchased.
+    costs:
+        default:  # These costs are used for any value not defined for a given cost class
+            # FIXME: interest_rate has moved here from its own separate top-level thing
+            interest_rate: 0  # Interest rate used when computing levelized costs (fractional, 0.05 means 5%)
+            storage_cap: 0  # Cost of storage capacity (per kWh)
+            resource_area: 0  # Cost of resource collector area (per m\ :sup:`2`)
+            resource_cap: 0  # Cost of resource conversion capacity (per kW)
+            energy_cap: 0  # Cost of carrier conversion capacity (per kW gross)
+            # FIXME: per_distance is no longer in separate top-level thing
+            energy_cap_per_distance: 0  # Cost per unit distance per unit e_cap
+            om_annual_investment_fraction: 0  # Yearly O&M costs (fraction of total investment)
+            om_annual: 0  # Yearly O&M costs (per kW of ``energy_cap``)
+            # FIXME om_fuel is now om_con and will also be applied to techs that consume a carrier
+            om_prod:  # Fuel costs (per unit of consumption, whether that is a resource or the primary input carrier)
+            om_con: 0  # Variable O&M costs (per kWh of ``es_prod``)
+            export: 0  # Cost of exporting excess energy (per kWh of ``export``). Usually used in the negative sense, as a subsidy.
+            purchase: 0  # Cost for purchasing a technology, triggers a binary variable for that technology to say that it has been purchased

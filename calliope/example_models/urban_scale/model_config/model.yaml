@@ -16,7 +16,7 @@ model:
 
     # Optional constraint functions to enable
     constraints:
-    - constraints.optional.max_r_area_per_loc
+    - constraints.optional.max_resource_area_per_loc
 
     # Model-wide settings for the system margin constraint
     system_margin:

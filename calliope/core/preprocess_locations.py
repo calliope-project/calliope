@@ -11,6 +11,7 @@ Functions to deal with locations and their configuration.
 
 import math
 
+from ..exceptions import ModelError, warn
 from .. import utils
 
 
@@ -42,7 +43,18 @@ def process_locations(model_config, modelrun_techs):
     # These keys are removed from the constructed `locations` dict after
     # merging across the inheritance chain, as they are contained in the
     # `techs` dict
-    keys_to_kill = ['essentials', 'allowed_constraints', 'required_constraints']
+    keys_to_kill = [
+        'essentials', 'allowed_constraints', 'allowed_costs',
+        'required_constraints'
+    ]
+
+    # Parameters which can vary through time and thus may be a CSV file
+    time_varying = [
+        'resource', 'resource_eff', 'storage_loss',
+        'energy_prod', 'energy_con', 'energy_eff', 'parasitic_eff',
+        'energy_cap_min_use', 'energy_ramping',
+        'om_con', 'om_prod', 'export'
+    ]
 
     locations_comments = utils.AttrDict()
 
@@ -122,7 +134,30 @@ def process_locations(model_config, modelrun_techs):
             # These are dealt with in process_techs(),
             # we do not want them here
             for k in keys_to_kill:
-                del tech_settings[k]
+                try:
+                    del tech_settings[k]
+                except KeyError:
+                    pass
+
+            # Resolve columns in filename if necessary
+            file_configs = [
+                i for i in tech_settings.keys_nested()
+                if (isinstance(tech_settings.get_key(i), str) and
+                    'file=' in tech_settings.get_key(i))
+            ]
+            for config_key in file_configs:
+                if config_key.split('.')[-1] not in time_varying:
+                    # Allow any custom settings that end with _time_varying
+                    # FIXME add this to docs
+                    if config_key.endswith('_time_varying'):
+                        warn('Using custom constraint '
+                             '{} with time-varying data.'.format(config_key))
+                    else:
+                        raise ModelError('`file=` not alllowed in {}'.format(config_key))
+                config_value = tech_settings.get_key(config_key, '')
+                if ':' not in config_value:
+                    config_value = '{}:{}'.format(config_value, loc_name)
+                    tech_settings.set_key(config_key, config_value)
 
             # Now merge the tech settings into the location-specific
             # tech dict
@@ -153,7 +188,10 @@ def process_locations(model_config, modelrun_techs):
                 # These are dealt with in process_techs(),
                 # we do not want them here
                 for k in keys_to_kill:
-                    del tech_settings[k]
+                    try:
+                        del tech_settings[k]
+                    except KeyError:
+                        pass
 
                 processed_transmission_techs[tech_name] = tech_settings
             else:

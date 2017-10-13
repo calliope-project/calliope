@@ -25,9 +25,9 @@ locations:
                         export: -0.0491 # FIT return for PV export
             supply_gas:
             demand_power:
-                constraints.r: file=demand_power.csv
+                constraints.resource: file=demand_power.csv
             demand_heat:
-                constraints.r: file=demand_heat.csv
+                constraints.resource: file=demand_heat.csv
             unmet_demand_power:
             unmet_demand_heat:
         available_area: 1300

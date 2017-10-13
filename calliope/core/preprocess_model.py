@@ -203,8 +203,9 @@ def process_techs(config_model):
         tech_result.essentials.union(tech_config.essentials, allow_override=True)
 
         # Add allowed_constraints and required_constraints from base tech
-        tech_result['allowed_constraints'] = config_model.tech_groups[tech_result.inheritance[-1]].allowed_constraints
-        tech_result['required_constraints'] = config_model.tech_groups[tech_result.inheritance[-1]].required_constraints
+        keys_to_add = ['required_constraints', 'allowed_constraints', 'allowed_costs']
+        for k in keys_to_add:
+            tech_result[k] = config_model.tech_groups[tech_result.inheritance[-1]].get(k, [])
 
         # If necessary, populate carrier_in and carrier_out in essentials
         if tech_result.inheritance[-1] in ['supply', 'supply_plus']:
