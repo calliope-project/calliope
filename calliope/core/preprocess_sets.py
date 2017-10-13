@@ -141,7 +141,7 @@ def _check_finite_resource(loc_techs_config, k):
             )
 
 
-def generate_loc_techs_sets(model_run, simple_sets):
+def generate_loc_tech_sets(model_run, simple_sets):
     """
     Generate loc-tech sets for a given pre-processed ``model_run``
 
