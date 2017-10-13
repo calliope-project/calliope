@@ -22,14 +22,14 @@ _PATHS = {
 
 def national_scale():
     """Returns the built-in national-scale example model."""
-    return core.Model.from_yaml_file(os.path.join(_PATHS['national_scale'], 'run.yaml'))
+    return core.Model(os.path.join(_PATHS['national_scale'], 'run.yaml'))
 
 
 def urban_scale():
     """Returns the built-in urban-scale example model."""
-    return core.Model.from_yaml_file(os.path.join(_PATHS['urban_scale'], 'run.yaml'))
+    return core.Model(os.path.join(_PATHS['urban_scale'], 'run.yaml'))
 
 
 def milp():
     """Returns the built-in urban-scale example model with MILP constraints enabled."""
-    return core.Model.from_yaml_file(os.path.join(_PATHS['urban_scale'], 'run_milp.yaml'))
+    return core.Model(os.path.join(_PATHS['urban_scale'], 'run_milp.yaml'))
