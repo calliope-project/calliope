@@ -184,12 +184,14 @@ def generate_loc_tech_sets(model_run, simple_sets):
     ##
 
     # Only loc-tech combinations that actually exist
-    sets.loc_techs = set(concat_with_colon([
+    sets.loc_techs_non_transmission = set(concat_with_colon([
         (l, t) for l, t in product(
             simple_sets.locs,
             simple_sets.techs_non_transmission)
         if model_run.get_key('locations.{}.techs.{}'.format(l, t), None)
     ]))
+
+    sets.loc_techs = sets.loc_techs_non_transmission | sets.loc_techs_transmission
 
     # A dict of non-transmission tech config objects
     # to make parsing for set membership easier
@@ -197,7 +199,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k: model_run.get_key(
             'locations.{}.techs.{}'.format(*k.split(':'))
         )
-        for k in sets.loc_techs
+        for k in sets.loc_techs_non_transmission
     }
 
     ##
@@ -208,7 +210,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
             'storage', 'demand', 'supply', 'supply_plus',
             'unmet_demand', 'conversion', 'conversion_plus']:
         tech_set = set(
-            k for k in sets.loc_techs
+            k for k in sets.loc_techs_non_transmission
             if model_run.techs[k.split(':')[1]].essentials.parent == group
         )
         sets['loc_techs_{}'.format(group)] = tech_set
@@ -219,7 +221,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     # Technologies that specify resource_area constraints
     sets.loc_techs_area = set(
-        k for k in sets.loc_techs
+        k for k in sets.loc_techs_non_transmission
         if any('.resource_area' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
@@ -246,14 +248,14 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     # Technologies that allow export
     sets.loc_techs_export = set(
-        k for k in sets.loc_techs
+        k for k in sets.loc_techs_non_transmission
         if 'export_carrier' in loc_techs_config[k].constraints
     )
 
     # Technologies that allow purchasing discrete units
     # NB: includes transmission techs!
     loc_techs_purchase = set(
-        k for k in sets.loc_techs
+        k for k in sets.loc_techs_non_transmission
         if any('.purchase' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
@@ -268,7 +270,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     # Technologies with MILP constraints
     loc_techs_milp = set(
-        k for k in sets.loc_techs
+        k for k in sets.loc_techs_non_transmission
         if any('.units_' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
