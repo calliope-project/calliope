@@ -37,8 +37,8 @@ def build_model_data(model_run):
     add_time_dimension(data, model_run)
 
     data.merge(carriers_to_dataset(model_run), inplace=True)
-    data.merge(locations_to_dataset(model_run), inplace=True)
-    data.merge(essentials_to_dataset(model_run), inplace=True)
+    data.merge(location_specific_to_dataset(model_run), inplace=True)
+    data.merge(tech_specific_to_dataset(model_run), inplace=True)
 
     return data
 
@@ -215,7 +215,7 @@ def carriers_to_dataset(model_run):
         data.merge(carrier_ratios.to_dataset(name='carrier_ratios'), inplace=True)
     return data
 
-def locations_to_dataset(model_run):
+def location_specific_to_dataset(model_run):
     """
     Extract location specific information from the processed dictionary
     (model.model_run) and return an xarray Dataset with DataArray variables
@@ -277,7 +277,7 @@ def locations_to_dataset(model_run):
     return data
 
 
-def essentials_to_dataset(model_run):
+def tech_specific_to_dataset(model_run):
     """
     Extract technology (location inspecific) information from the processed dictionary
     (model.model_run) and return an xarray Dataset with DataArray variables
@@ -295,26 +295,22 @@ def essentials_to_dataset(model_run):
     """
     # for every technology, we extract location inspecific information
     information = ['essentials.color', 'essentials.stack_weight']
-    data = xr.Dataset()
-    for info in information:
-        name = info.split('.')[1]
-        data_info = []
-        for tech in model_run.sets['techs']:
-            if tech in model_run.sets['techs_transmission']:
-                tech = tech.split(':')[0]
-            data_info.append(model_run.techs[tech].get_key(info))
-        data.merge(xr.DataArray(data_info, dims=['techs']).to_dataset(name=name),
-                   inplace=True)
-    data_info = []
+    data_dict = {'color':{'dims':['techs'], 'data':[]},
+                 'stack_weight':{'dims':['techs'], 'data':[]},
+                 'inheritance':{'dims':['techs'], 'data':[]}}
+
     for tech in model_run.sets['techs']:
         if tech in model_run.sets['techs_transmission']:
             tech = tech.split(':')[0]
-        inheritance = model_run.techs[tech].get_key('inheritance')
-        data_info.append('.'.join(inheritance))
-    data.merge(xr.DataArray(data_info, dims=['techs']).to_dataset(name='inheritance'),
-                   inplace=True)
-    return data
+        data_dict['color']['data'].append(model_run.techs[tech].get_key(
+            'essentials.color'))
+        data_dict['stack_weight']['data'].append(model_run.techs[tech].get_key(
+            'essentials.stack_weight'))
+        data_dict['inheritance']['data'].append('.'.join(
+            model_run.techs[tech].get_key('inheritance')))
+    data = xr.Dataset.from_dict(data_dict)
 
+    return data
 
 def add_attributes(model_run):
     attr_dict = utils.AttrDict()
