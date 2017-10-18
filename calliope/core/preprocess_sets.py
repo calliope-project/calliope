@@ -113,6 +113,16 @@ def generate_simple_sets(model_run):
 
     sets.techs = sets.techs_non_transmission | sets.techs_transmission
 
+    # this extracts location coordinate information
+    coordinates = set(
+        k.split('.')[-1] for k in flat_locations.keys()
+        if '.coordinates.' in k)
+
+    # TODO there should then be a check in preprocess checks which makes sure
+    # that if coordinates is set, it is set for *every* location
+    if coordinates:
+        sets.coordinates = coordinates
+
     # `timesteps` set is only built later, when processing time series
     # input data
     sets.timesteps = set()
@@ -133,18 +143,6 @@ def concat_with_colon(iterable):
 
     """
     return [':'.join(i) for i in iterable]
-
-
-def _check_finite_resource(loc_techs_config, k):
-    """
-    Check in loc_techs_config (AttrDict) whether `k` (str) has
-    specified a finite `resource`.
-
-    """
-    return ('resource' in loc_techs_config[k].constraints and
-            (isinstance(loc_techs_config[k].constraints.resource, str) or
-                not np.isinf(loc_techs_config[k].constraints.resource))
-            )
 
 
 def generate_loc_tech_sets(model_run, simple_sets):
@@ -228,7 +226,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Technologies that specify resource_area constraints
     sets.loc_techs_area = set(
         k for k in sets.loc_techs_non_transmission
-        if any('.resource_area' in i
+        if any('resource_area' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
 
@@ -236,20 +234,20 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # and `storage` groups
     sets.loc_techs_store = set(
         k for k in sets.loc_techs_supply_plus
-        if any('.storage_' in i
+        if any('storage_' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     ) | sets.loc_techs_storage
 
-    # `supply` or `demand` technologies that specify a finite resource
+    # technologies that specify a finite resource
     sets.loc_techs_finite_resource = set(
-        k for k in (sets.loc_techs_supply | sets.loc_techs_demand)
-        if _check_finite_resource(loc_techs_config, k)
+        k for k in sets.loc_techs_non_transmission
+        if loc_techs_config[k].constraints.get('resource') and
+        not (loc_techs_config[k].constraints.get('resource') in ['inf', np.inf])
     )
 
     # `supply_plus` technologies that specify a finite resource
-    sets.loc_techs_supply_plus_finite_resource = set(
-        k for k in sets.loc_techs_supply_plus
-        if _check_finite_resource(loc_techs_config, k)
+    sets.loc_techs_supply_plus_finite_resource = (
+        sets.loc_techs_finite_resource.intersection(sets.loc_techs_supply_plus)
     )
 
     # Technologies that allow export
@@ -263,13 +261,15 @@ def generate_loc_tech_sets(model_run, simple_sets):
     loc_techs_purchase = set(
         k for k in sets.loc_techs_non_transmission
         if any('.purchase' in i
-               for i in loc_techs_config[k].constraints.keys_nested())
+               for i in loc_techs_config[k].get(
+                   'costs', utils.AttrDict()).keys_nested())
     )
 
     transmission_purchase = set(
         k for k in sets.loc_techs_transmission
         if any('.purchase' in i
-               for i in loc_techs_transmission_config[k].constraints.keys_nested())
+               for i in loc_techs_transmission_config[k].get(
+                   'costs', utils.AttrDict()).keys_nested())
     )
 
     sets.loc_techs_purchase = loc_techs_purchase | transmission_purchase
@@ -277,18 +277,63 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Technologies with MILP constraints
     loc_techs_milp = set(
         k for k in sets.loc_techs_non_transmission
-        if any('.units_' in i
+        if any('units_' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
 
     transmission_milp = set(
         k for k in sets.loc_techs_transmission
-        if any('.units_' in i
+        if any('units_' in i
                for i in loc_techs_transmission_config[k].constraints.keys_nested())
     )
 
     sets.loc_techs_milp = loc_techs_milp | transmission_milp
 
+    ##
+    # Sets based on specific costs being active
+    # NB includes transmission techs
+    ##
+
+    loc_techs_costs = set(
+        k for k in sets.loc_techs_non_transmission
+        if any('costs' in i
+               for i in loc_techs_config[k].keys())
+    )
+
+    loc_techs_transmission_costs = set(
+        k for k in sets.loc_techs_transmission
+        if any('costs' in i
+               for i in loc_techs_transmission_config[k].keys())
+    )
+
+    # Any capacity or fixed annual costs
+    loc_techs_investment_costs = set(
+        k for k in loc_techs_costs
+        if any('_cap' in i or '.purchase' in i
+               for i in loc_techs_config[k].costs.keys_nested())
+    )
+    loc_techs_transmission_investment_costs = set(
+        k for k in loc_techs_transmission_costs
+        if any('_cap' in i or '.purchase' in i
+               for i in loc_techs_transmission_config[k].costs.keys_nested())
+    )
+
+    # Any operation and maintenance or export costs
+    loc_techs_om_costs = set(
+        k for k in loc_techs_costs
+        if any('om_' in i or '.export' in i
+               for i in loc_techs_config[k].costs.keys_nested())
+    )
+    loc_techs_transmission_om_costs = set(
+        k for k in loc_techs_transmission_costs
+        if any('om_' in i or '.export' in i
+               for i in loc_techs_transmission_config[k].costs.keys_nested())
+    )
+
+    sets.loc_techs_costs = loc_techs_costs | loc_techs_transmission_costs
+    sets.loc_techs_investment_costs = (loc_techs_investment_costs |
+        loc_techs_transmission_investment_costs)
+    sets.loc_techs_om_costs = loc_techs_om_costs | loc_techs_transmission_om_costs
     ##
     # Subsets of `conversion_plus` technologies
     ##
