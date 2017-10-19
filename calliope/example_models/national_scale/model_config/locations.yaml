@@ -25,18 +25,11 @@ locations:
                     resource_scale_to_peak: -5000
             battery:
 
-    region1-1:
-        coordinates: {lat: 41, lon: -2}
-        within: region1
-        techs:
-            csp:
-    region1-2:
-        coordinates: {lat: 39, lon: -1}
-        within: region1
-        techs:
-            csp:
-    region1-3:
-        coordinates: {lat: 39, lon: -2}
+    region1-1.coordinates: {lat: 41, lon: -2}
+    region1-2.coordinates: {lat: 39, lon: -1}
+    region1-3.coordinates: {lat: 39, lon: -2}
+
+    region1-1, region1-2, region1-3:
         within: region1
         techs:
             csp:

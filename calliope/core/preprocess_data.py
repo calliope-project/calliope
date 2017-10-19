@@ -302,7 +302,7 @@ def location_specific_to_dataset(model_run):
     # Coordinates are defined per location, but may not be defined at all for
     # the model
     if 'coordinates' in model_run.sets:
-        data_dict['loc_coordinates'] = dict(dims=['locs', 'coordiantes'], data=[])
+        data_dict['loc_coordinates'] = dict(dims=['locs', 'coordinates'], data=[])
         for loc in model_run.sets['locs']:
             data_dict['loc_coordinates']['data'].append([
                 model_run.locations[loc].coordinates[coordinate]

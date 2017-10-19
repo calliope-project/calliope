@@ -215,7 +215,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
             'unmet_demand', 'conversion', 'conversion_plus']:
         tech_set = set(
             k for k in sets.loc_techs_non_transmission
-            if model_run.techs[k.split(':')[1]].essentials.parent == group
+            if model_run.techs[k.split(':')[1]].inheritance[-1] == group
         )
         sets['loc_techs_{}'.format(group)] = tech_set
 
