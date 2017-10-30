@@ -511,27 +511,35 @@ def node_constraints_build(model):
 
     def c_r_cap_rule(m, loc_tech):
         y, x = get_y_x(loc_tech)
+        return get_var_constraint(m.r_cap[loc_tech], y, 'r_cap', x)
+
+    def c_r_cap_equals_e_cap_rule(m, loc_tech):
+        y, x = get_y_x(loc_tech)
         if model.get_option(y + '.constraints.r_cap_equals_e_cap', x=x):
             return m.r_cap[loc_tech] == m.e_cap[loc_tech]
         else:
-            return get_var_constraint(m.r_cap[loc_tech], y, 'r_cap', x)
+            return po.Constraint.Skip
 
     def c_r_area_rule(m, loc_tech):
         """
         Set maximum r_area. Supply_plus techs only.
         """
         y, x = get_y_x(loc_tech)
+        e_cap_max = model.get_option(y + '.constraints.e_cap.max', x=x)
+        if e_cap_max == 0:
+            # If a technology has no e_cap here, we force r_area to zero,
+            # so as not to accrue spurious costs
+            return m.r_area[loc_tech] == 0
+        else:
+            return get_var_constraint(m.r_area[loc_tech], y, 'r_area', x)
+
+    def c_r_area_per_e_cap_rule(m, loc_tech):
+        y, x = get_y_x(loc_tech)
         area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap', x=x)
         if area_per_cap:
             return m.r_area[loc_tech] == m.e_cap[loc_tech] * area_per_cap
         else:
-            e_cap_max = model.get_option(y + '.constraints.e_cap.max', x=x)
-            if e_cap_max == 0:
-                # If a technology has no e_cap here, we force r_area to zero,
-                # so as not to accrue spurious costs
-                return m.r_area[loc_tech] == 0
-            else:
-                return get_var_constraint(m.r_area[loc_tech], y, 'r_area', x)
+            return po.Constraint.Skip
 
     def c_e_cap_rule(m, loc_tech):
         """
@@ -695,7 +703,10 @@ def node_constraints_build(model):
     # Constraints
     m.c_s_cap = po.Constraint(m.loc_tech_store, rule=c_s_cap_rule)
     m.c_r_cap = po.Constraint(m.loc_tech_supply_plus_finite_r, rule=c_r_cap_rule)
+    m.c_r_cap_equals_e_cap = po.Constraint(m.loc_tech_supply_plus_finite_r,
+        rule=c_r_cap_equals_e_cap_rule)
     m.c_r_area = po.Constraint(m.loc_tech_area, rule=c_r_area_rule)
+    m.c_r_area_per_e_cap = po.Constraint(m.loc_tech_area, rule=c_r_area_per_e_cap_rule)
     m.c_e_cap = po.Constraint(m.loc_tech, rule=c_e_cap_rule)
     m.c_e_cap_min = po.Constraint(m.loc_tech, rule=c_e_cap_min_rule)
     m.c_e_cap_storage = po.Constraint(m.loc_tech_store, rule=c_e_cap_storage_rule)

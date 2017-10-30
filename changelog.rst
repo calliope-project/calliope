@@ -3,6 +3,26 @@
 Release History
 ===============
 
+0.5.4 dev
+---------
+
+Major changes
+~~~~~~~~~~~~~
+* |fixed| `r_area_per_e_cap` and `r_cap_equals_e_cap` constraints have been separated from r_area and r_cap constraints to ensure that user specified `r_area.max` and `r_cap.max` constraints are observed.
+
+* |changed| technologies and location subsets are now communicated with the solver as a combined location:technology subset, to reduce the problem size, by ignoring technologies at locations in which they have not been allowed. This has shown drastic improvements in Pyomo preprocessing time and memory consumption for certain models.
+
+Other changes
+~~~~~~~~~~~~~
+
+* |fixed| Allow plotting carrier production using `calliope.analysis.plot_carrier_production` if that carrier does not have an associated demand technology (previously would raise an exception).
+* |fixed| Define time clustering method (sum/mean) for more constraints that can be time varying. Previously only included `r` and `e_eff`.
+* |changed| storage technologies default `s_cap.max` to `inf`, not 0 and are automatically included in the `loc_tech_store` subset. This ensures relevant constraints are not ignored by storage technologies.
+* |changed| Some values in the urban scale MILP example were updated to provide results that would show the functionality more clearly
+* |changed| technologies have set colours in the urban scale example model, as random colours were often hideous.
+* |changed| ruamel.yaml, not ruamel_yaml, is now used for parsing YAML files.
+* |fixed| e_cap constraints for unmet_demand technologies are ignored in operational mode. Capacities are fixed for all other technologies, which previously raised an exception, as a fixed infinite capacity is not physically allowable.
+
 0.5.3 (2017-08-22)
 ------------------
 

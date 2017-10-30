@@ -135,9 +135,10 @@ def plot_timeseries(
         au.stack_plot(plot_df, stacked_techs, colormap=colormap,
                       alpha=0.9, ticks=ticks, legend=None, names=names,
                       ax=ax)
-    ax.plot(plot_df[demand].index,
-            plot_df[demand] * -1,
-            color='red', lw=1.5, ls='--', label=df.at[demand, 'name'])
+    if demand in plot_df.columns:
+        ax.plot(plot_df[demand].index,
+                plot_df[demand] * -1,
+                color='red', lw=1.5, ls='--', label=df.at[demand, 'name'])
     # Add legend here rather than in stack_plot so we get demand too
     if add_legend:
         au.legend_outside_ax(ax, where='right')
