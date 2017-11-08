@@ -43,6 +43,11 @@ def read_netcdf(path):
 
     _check(path, solution)
 
+    # FIXME make sure stack_weights are integers - not the best place for
+    # this fix
+    solution.metadata.loc[dict(cols_metadata='stack_weight')] = \
+        solution.metadata.loc[dict(cols_metadata='stack_weight')].astype(int)
+
     return solution
 
 

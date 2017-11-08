@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.5.4 dev
----------
+0.5.4 (dev)
+-----------
 
 Major changes
 ~~~~~~~~~~~~~
@@ -22,6 +22,7 @@ Other changes
 * |changed| technologies have set colours in the urban scale example model, as random colours were often hideous.
 * |changed| ruamel.yaml, not ruamel_yaml, is now used for parsing YAML files.
 * |fixed| e_cap constraints for unmet_demand technologies are ignored in operational mode. Capacities are fixed for all other technologies, which previously raised an exception, as a fixed infinite capacity is not physically allowable.
+* |fixed| stack_weights were strings rather than numeric datatypes on reading NetCDF solution files.
 
 0.5.3 (2017-08-22)
 ------------------
