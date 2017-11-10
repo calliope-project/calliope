@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.5.4 (dev)
------------
+0.5.4 (2017-11-10)
+------------------
 
 Major changes
 ~~~~~~~~~~~~~
@@ -23,7 +23,6 @@ Other changes
 * |changed| ruamel.yaml, not ruamel_yaml, is now used for parsing YAML files.
 * |fixed| e_cap constraints for unmet_demand technologies are ignored in operational mode. Capacities are fixed for all other technologies, which previously raised an exception, as a fixed infinite capacity is not physically allowable.
 * |fixed| stack_weights were strings rather than numeric datatypes on reading NetCDF solution files.
-* |fixed| On using `subset_x` in the config_run, links to unused locations are removed. If technologies were only at locations that are unused in `subset_x`, then they are also removed from the relevant Calliope sets.
 
 0.5.3 (2017-08-22)
 ------------------
