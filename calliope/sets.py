@@ -118,6 +118,8 @@ def init_set_y(model, _x):
     # (not yet added to main `y` set here)
     links = model.config_model.get_key('links', None)
     if links:
+        links = {k:v for k, v in model.config_model.links.items() if
+            len(set(k.split(",")).difference(_x)) == 0}
         _y_trans = transmission.get_transmission_techs(links)
         transmission_techs = list(set([list(v.keys())[0]
                                   for k, v in links.items()]))
@@ -126,7 +128,8 @@ def init_set_y(model, _x):
             locs = link.split(',')
             _x_trans.add(locs[0])
             _x_trans.add(locs[1])
-        _x_trans = list(_x_trans)
+        # Avoid adding in locations that may have been removed by use of "subset_x"
+        _x_trans = list(_x_trans.intersection(_x))
     else:
         _y_trans = []
         _x_trans = []
@@ -134,9 +137,13 @@ def init_set_y(model, _x):
 
     _y = set()
     _x = _x.copy()
+
     for k, v in model.config_model.locations.items():
+        if k not in _x:
+            continue
         if 'techs' in v.keys():
-            if set(v.techs).intersection(transmission_techs): # transmission nodes have only tranmission techs in techs list
+            # transmission nodes have only transmission techs in techs list
+            if set(v.techs).intersection(transmission_techs) and k in _x:
                 _x.remove(k)
             else:
                 for y in v.techs:
@@ -358,8 +365,10 @@ def init_y_trans(model):
             model._locations[y] = 0
 
         # Create representation of location-tech links
+        links = {k:v for k, v in model.config_model.links.items() if
+            len(set(k.split(",")).difference(model._sets['x_transmission'])) == 0}
         tree = transmission.explode_transmission_tree(
-            model.config_model.links, model._sets['x_transmission']
+            links, model._sets['x_transmission']
         )
 
         # Populate locations matrix with allowed techs and overrides

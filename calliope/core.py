@@ -1883,6 +1883,10 @@ class Model(object):
 
         df = pd.DataFrame(s, columns=['members'])
 
+        for tech in df:
+            if (tech in self.config_model.techs.keys()
+                and tech not in self._sets['y']):
+                df.drop(tech)
         # Forcing booleans to strings so that groups table has
         # uniform datatypes
         gg = lambda y: str(self.get_option(
