@@ -514,6 +514,10 @@ def node_constraints_build(model):
         return get_var_constraint(m.r_cap[loc_tech], y, 'r_cap', x)
 
     def c_r_cap_equals_e_cap_rule(m, loc_tech):
+        """
+        Set r_cap to equal e_cap if `r_cap_equals_e_cap` has been used, without
+        removing the r_cap.max constraint which is given in c_r_cap_rule.
+        """
         y, x = get_y_x(loc_tech)
         if model.get_option(y + '.constraints.r_cap_equals_e_cap', x=x):
             return m.r_cap[loc_tech] == m.e_cap[loc_tech]
@@ -526,7 +530,8 @@ def node_constraints_build(model):
         """
         y, x = get_y_x(loc_tech)
         e_cap_max = model.get_option(y + '.constraints.e_cap.max', x=x)
-        if e_cap_max == 0:
+        e_cap_equals = model.get_option(y + '.constraints.e_cap.equals', x=x)
+        if e_cap_max == 0 and e_cap_equals == 0:
             # If a technology has no e_cap here, we force r_area to zero,
             # so as not to accrue spurious costs
             return m.r_area[loc_tech] == 0
@@ -534,6 +539,10 @@ def node_constraints_build(model):
             return get_var_constraint(m.r_area[loc_tech], y, 'r_area', x)
 
     def c_r_area_per_e_cap_rule(m, loc_tech):
+        """
+        Set r_area to equal e_cap if `r_area_per_e_cap` has been used, without
+        removing the r_area.max constraint which is given in c_r_area_rule.
+        """
         y, x = get_y_x(loc_tech)
         area_per_cap = model.get_option(y + '.constraints.r_area_per_e_cap', x=x)
         if area_per_cap:
