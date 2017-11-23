@@ -45,13 +45,14 @@ def model_run_from_yaml(run_config_path, run_config_override=None):
     config_run = utils.AttrDict.from_yaml(run_config_path)
     config_run.config_run_path = run_config_path
 
+    debug_comments = utils.AttrDict()
+
     # If we have no run name we use the run config file name without extension
     if 'name' not in config_run:
         config_run.name = os.path.splitext(os.path.basename(run_config_path))[0]
         debug_comments.set_key(
             'config_run.name', 'From run configuration filename'
         )
-
 
     # If passed in, config_run is overridden with any additional overrides...
     if run_config_override:
@@ -66,7 +67,7 @@ def model_run_from_yaml(run_config_path, run_config_override=None):
 
     config_model = process_config(config_run)
 
-    model_run = generate_model_run(config_run, config_model)
+    model_run = generate_model_run(config_run, config_model, debug_comments)
     return model_run
 
 
@@ -84,6 +85,8 @@ def model_run_from_dict(config):
     config_run = utils.AttrDict(config['run'])
     config_run.config_run_path = None
 
+    debug_comments = utils.AttrDict()
+
     # If we have no run name we just use current date/time
     if 'name' not in config_run:
         config_run['name'] = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
@@ -93,8 +96,33 @@ def model_run_from_dict(config):
 
     config_model = process_config(config['model'], is_model_config=True)
 
-    model_run = generate_model_run(config_run, config_model)
+    model_run = generate_model_run(config_run, config_model, debug_comments)
     return model_run
+
+
+def print_warnings_and_raise_errors(warnings=None, errors=None):
+    """
+    Print warnings and raise ModelError from errors.
+
+    Params
+    ------
+    warnings : list, optional
+    errors : list, optional
+
+    """
+    if warnings:
+        exceptions.warn(
+            'Possible issues found during pre-processing:\n' +
+            '\n'.join(warnings)
+        )
+
+    if errors:
+        raise exceptions.ModelError(
+            'Errors during pre-processing:\n' +
+            '\n'.join(errors)
+        )
+
+    return None
 
 
 def process_config(config, is_model_config=False):
@@ -192,6 +220,7 @@ def process_techs(config_model):
     default_palette_cycler = itertools.cycle(range(len(_DEFAULT_PALETTE)))
 
     result = utils.AttrDict()
+    errors = []
     debug_comments = utils.AttrDict()
 
     for tech_id, tech_config in config_model.techs.items():
@@ -199,6 +228,13 @@ def process_techs(config_model):
 
         # Add inheritance chain
         tech_result.inheritance = get_parents(tech_id, config_model)
+
+        # CHECK: A tech's parent must lead to one of the built-in tech_groups
+        builtin_tech_groups = checks.defaults_model.tech_groups.keys()
+        if tech_result.inheritance[-1] not in builtin_tech_groups:
+            errors.append(
+                'tech {} must inherit from a built-in tech group'.format(tech_id)
+            )
 
         # Process inheritance
         tech_result.essentials = utils.AttrDict()
@@ -223,7 +259,7 @@ def process_techs(config_model):
         # If necessary, populate carrier_in and carrier_out in essentials, but
         # also break on missing carrier data
         if 'carrier_in' not in tech_result.essentials:
-            if tech_result.inheritance[-1] in ['supply', 'supply_plus']:
+            if tech_result.inheritance[-1] in ['supply', 'supply_plus', 'unmet_demand']:
                 tech_result.essentials.carrier_in = 'resource'
             elif tech_result.inheritance[-1] in ['demand', 'transmission',
                                                  'storage']:
@@ -234,26 +270,28 @@ def process_techs(config_model):
                         '{}.essentials.carrier_in', 'From run configuration filename'
                     )
                 except KeyError:
-                    exceptions.ModelError('`carrier` or `carrier_in` must be '
+                    errors.append('`carrier` or `carrier_in` must be '
                         'defined for {}'.format(tech_id))
             else:
-                exceptions.ModelError('`carrier_in` must be '
-                    'defined for {}'.format(tech_id))
+                errors.append(
+                    '`carrier_in` must be defined for {}'.format(tech_id)
+                )
 
         if 'carrier_out' not in tech_result.essentials:
             if tech_result.inheritance[-1] == 'demand':
                 tech_result.essentials.carrier_out = 'resource'
-            elif tech_result.inheritance[-1] in ['supply', 'supply_plus',
+            elif tech_result.inheritance[-1] in ['supply', 'supply_plus', 'unmet_demand',
                                                  'transmission', 'storage']:
                 try:
                     tech_result.essentials.carrier_out = \
                         tech_result.essentials.carrier
                 except KeyError:
-                    exceptions.ModelError('`carrier` or `carrier_out` must be '
+                    errors.append('`carrier` or `carrier_out` must be '
                         'defined for {}'.format(tech_id))
             else:
-                exceptions.ModelError('`carrier_out` must be '
-                    'defined for {}'.format(tech_id))
+                errors.append(
+                    '`carrier_out` must be defined for {}'.format(tech_id)
+                )
 
         # If necessary, pick a color for the tech, cycling through
         # the hardcoded default palette
@@ -261,12 +299,11 @@ def process_techs(config_model):
             color = _DEFAULT_PALETTE[next(default_palette_cycler)]
             tech_result.essentials.color = color
             debug_comments.set_key(
-                    '{}.essentials.color'.format(tech_id),
-                    'From Calliope default palette'
-                )
+                '{}.essentials.color'.format(tech_id),
+                'From Calliope default palette')
         result[tech_id] = tech_result
 
-    return result, debug_comments
+    return result, debug_comments, errors
 
 
 def process_tech_groups(config_model, techs):
@@ -280,7 +317,7 @@ def process_tech_groups(config_model, techs):
     return tech_groups
 
 
-def generate_model_run(config_run, config_model):
+def generate_model_run(config_run, config_model, debug_comments=None):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
@@ -292,7 +329,8 @@ def generate_model_run(config_run, config_model):
 
     """
     model_run = utils.AttrDict()
-    debug_comments = utils.AttrDict()
+    if debug_comments is None:
+        debug_comments = utils.AttrDict()
 
     # README CHANGED: if run_config overrides data_path, it is no longer
     # interpreted as relative to the run_config file's path
@@ -322,12 +360,15 @@ def generate_model_run(config_run, config_model):
                 'config_model.{}'.format(k),
                 'Overridden via `override` in run configuration.')
 
-    # 2) Initial sense-checking
-    checks.check_initial(config_model, config_run)
+    # 2) Initial checks on model and run configs
+    warnings, errors = checks.check_initial(config_model, config_run)
+    print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 3) Fully populate techs
-    model_run['techs'], debug_techs = process_techs(config_model)
+    # Raises ModelError if necessary
+    model_run['techs'], debug_techs, errors = process_techs(config_model)
     debug_comments.set_key('model_run.techs', debug_techs)
+    print_warnings_and_raise_errors(errors=errors)
 
     # 4) Fully populate tech_groups
     model_run['tech_groups'] = process_tech_groups(config_model, model_run['techs'])
@@ -341,7 +382,7 @@ def generate_model_run(config_run, config_model):
     # 6) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
-    all_sets = utils.AttrDict({k:list(v) for k, v in all_sets.items()})
+    all_sets = utils.AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
 
     # 7) Grab additional relevant bits from run and model config
@@ -349,8 +390,9 @@ def generate_model_run(config_run, config_model):
     model_run['model'] = config_model['model']
 
     # 8) Final sense-checking
-    final_check_comments = checks.check_final(model_run)
+    final_check_comments, warnings, errors = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
+    print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
     debug_data = utils.AttrDict({

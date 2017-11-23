@@ -12,21 +12,26 @@ Checks for model consistency and possible errors during preprocessing.
 import os
 
 from .. import utils
-from .. import exceptions
+
+
+_defaults_files = {
+    k: os.path.join(os.path.dirname(__file__), '..', 'config', k + '.yaml')
+    for k in ['run', 'model', 'defaults']
+}
+
+defaults = utils.AttrDict.from_yaml(_defaults_files['defaults'])
+
+defaults_model = utils.AttrDict.from_yaml(_defaults_files['model'])
+
+defaults_run = utils.AttrDict.from_yaml(_defaults_files['run'])
+# Hardcode additional keys into allowed defaults:
+# Auto-generated string to run_config file's path
+defaults_run['config_run_path'] = None
 
 
 def _check_config_run(config_run):
     errors = []
     warnings = []
-
-    defaults_run_file = os.path.join(
-        os.path.dirname(__file__), '..', 'config', 'run.yaml'
-    )
-    defaults_run = utils.AttrDict.from_yaml(defaults_run_file)
-
-    # Hardcode additional keys into allowed defaults:
-    # Auto-generated string to run_config file's path
-    defaults_run['config_run_path'] = None
 
     for k in config_run.keys_nested():
         if k not in defaults_run.keys_nested():
@@ -37,12 +42,16 @@ def _check_config_run(config_run):
     return errors, warnings
 
 
+def _get_all_carriers(config):
+    return ([config.get_key('carrier', '')] +
+            list(config.get_key('carrier_in', '')) +
+            list(config.get_key('carrier_out', ''))
+            )
+
+
 def _check_config_model(config_model):
     errors = []
     warnings = []
-
-    defaults_file = os.path.join(os.path.dirname(__file__), '..', 'config', 'defaults.yaml')
-    defaults = utils.AttrDict.from_yaml(defaults_file)
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
     # are allowed as carrier tiers
@@ -67,7 +76,9 @@ def _check_config_model(config_model):
             'the same name exist: {}'.format(name_overlap)
         )
 
-    # All user-defined tech and tech_groups must define a parent
+    # Checks for techs and tech_groups:
+    # * All user-defined tech and tech_groups must specify a parent
+    # * No carrier may be called 'resource'
     default_tech_groups = list(config_model.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
         if tg_name in default_tech_groups:
@@ -77,6 +88,11 @@ def _check_config_model(config_model):
                 'tech_group {} does not define '
                 '`essentials.parent`'.format(tg_name)
             )
+        if 'resource' in _get_all_carriers(tg_config):
+            errors.append(
+                'No carrier called `resource` may '
+                'be defined (tech_group: {})'.format(tg_name)
+            )
 
     for t_name, t_config in config_model.techs.items():
         if not t_config.get_key('essentials.parent'):
@@ -84,35 +100,42 @@ def _check_config_model(config_model):
                 'tech {} does not define '
                 '`essentials.parent`'.format(t_name)
             )
+        if 'resource' in _get_all_carriers(t_config):
+            errors.append(
+                'No carrier called `resource` may '
+                'be defined (tech: {})'.format(t_name)
+            )
 
-    # A tech's parent must lead to one of the built-in tech_groups
-    # FIXME implement
-
-    # No carrier may be called 'resource'
-    # FIXME implement
-
-    # Either all locations or no location have coordinates
-    # FIXME implement
+    # Either all locations or no locations must have coordinates
+    all_locs = list(config_model.locations.keys())
+    locs_with_coords = [
+        k for k in config_model.locations.keys()
+        if 'coordinates' in config_model.locations[k]
+    ]
+    if len(locs_with_coords) != 0 and len(all_locs) != len(locs_with_coords):
+        errors.append(
+            'Either all or no locations must have `coordinates` defined'
+        )
 
     # If locations have coordinates, they must all be either lat/lon or x/y
-    # FIXME build a set of all *.coordinates.* subkeys and test whether len() == 2?
-    # if all(['lat' in key or 'lon' in key for key in
-    #            loc_coords.as_dict_flat().keys()]):
-    # elif all(['x' in key or 'y' in key for key in
-    #              loc_coords.as_dict_flat().keys()]):
-    # else:
-    #     errors.append(
-    #             'Unidentified coordinate system. Expecting data '
-    #             'in the format {lat: N, lon: M} or {x: N, y: M} for '
-    #             'user coordinate values of N, M.'
-    #           )
+    first_loc = list(config_model.locations.keys())[0]
+    coord_keys = sorted(list(config_model.locations[first_loc].coordinates.keys()))
+    if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
+        errors.append(
+            'Unidentified coordinate system. All locations must either'
+            'use the format {lat: N, lon: M} or {x: N, y: M}.'
+        )
+    for loc_id, loc_config in config_model.locations.items():
+        if sorted(list(loc_config.coordinates.keys())) != coord_keys:
+            errors.append('All locations must use the same coordinate format.')
+            break
 
     return errors, warnings
 
 
 def check_initial(config_model, config_run):
     """
-    Perform initial consistency checks of model and run config dicts.
+    Perform initial checks of model and run config dicts.
 
     May stop and raise ModelError on serious issues, or print
     warnings for possible problems that do not prevent the model run
@@ -125,33 +148,22 @@ def check_initial(config_model, config_run):
     errors = errors_run + errors_model
     warnings = warnings_run + warnings_model
 
-    if warnings:
-        exceptions.warn(
-            'Possible issues found during pre-processing:\n' +
-            '\n'.join(warnings)
-        )
-
-    if errors:
-        raise exceptions.ModelError(
-            'Errors during pre-processing:\n'
-            '\n'.join(errors)
-        )
-
-    return None
+    return warnings, errors
 
 
 def check_final(model_run):
     """
-    Perform final consistency checks of the completely built model_run.
+    Perform final checks of the completely built model_run.
 
-    At this stage, comments are added to debug output, but no errors
-    are raised.
+    This may:
+    * add comments to debug output;
+    * stop and raise ModelError on serious issues;
+    * print warnings for possible problems that do not prevent the run from
+      continuing.
 
     """
+    warnings, errors = [], []
     comments = utils.AttrDict()
-
-    defaults_file = os.path.join(os.path.dirname(__file__), '..', 'config', 'defaults.yaml')
-    defaults = utils.AttrDict.from_yaml(defaults_file)
 
     # FIXME: Confirm that all techs specify essentials
     # At this point, `essensials` from model_config have been added directly
@@ -176,4 +188,5 @@ def check_final(model_run):
 
     # FIXME: make sure comments is at the the base level:
     # i.e. comments must be comments.model_run.xxxxx....
-    return comments
+
+    return comments, warnings, errors
