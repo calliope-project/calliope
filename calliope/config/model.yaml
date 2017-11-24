@@ -24,8 +24,6 @@ model:
     system_margin:  # Per-carrier system margins
         power: 0
 
-    subset_tech: []  # Subset of technologies
-    subset_loc: []  # Subset of locations
     subset_time: []  # Subset of timesteps as a list with two elements setting from and to, e.g. ['2005-01-01', '2005-01-05']
 
 
@@ -36,9 +34,9 @@ model:
 
 tech_groups:
     supply:
-        required_constraints: [['energy_cap_max', 'energy_cap_equals']]  # FIXME for all tech_groups
-        allowed_constraints: ['resource', 'resource_unit', 'energy_prod', 'energy_eff']  # FIXME for all tech_groups
-        allowed_costs: []  # FIXME for all tech_groups
+        required_constraints: ['resource', ['energy_cap_max', 'energy_cap_equals']]
+        allowed_constraints: ['energy_prod', lifetime', 'resource', 'force_resource', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_loss_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase']
         essentials:
             parent: null
             stack_weight: 0
@@ -48,7 +46,8 @@ tech_groups:
             energy_prod: true
     supply_plus:
         required_constraints: [['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: []
+        allowed_constraints: ['energy_prod', 'lifetime', 'resource', 'force_resource', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'parasitic_eff', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_loss_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals', 'storage_init', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss']
+        allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase']
         essentials:
             parent: null
             stack_weight: 0
@@ -58,8 +57,9 @@ tech_groups:
             resource_eff: 1.0
             energy_prod: true
     demand:
-        required_constraints: ['resource', ['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: []
+        required_constraints: ['resource']
+        allowed_constraints: ['energy_con', 'resource', 'force_resource', 'resource_unit', 'resource_scale', 'resource_scale_to_peak']
+        allowed_costs: []
         essentials:
             parent: null
             stack_weight: 0
@@ -69,7 +69,8 @@ tech_groups:
             energy_con: true
     unmet_demand:
         required_constraints: []
-        allowed_constraints: []
+        allowed_constraints: ['energy_prod', 'energy_cap_max', 'energy_prod', 'resource', 'resource_unit']
+        allowed_costs: ['om_prod']
         essentials:
             parent: null
             stack_weight: 0
@@ -81,20 +82,22 @@ tech_groups:
             energy_prod: true
         costs:
             monetary:
-                om_var: 1.0e+9
+                om_prod: 1.0e+9
     storage:
         required_constraints: [['energy_cap_max', 'energy_cap_equals', 'storage_cap_max', 'storage_cap_equals'], 'charge_rate']
-        allowed_constraints:
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'parasitic_eff', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'storage_init', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'storage_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase']
         essentials:
             parent: null
             stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
-            storagenergy_cap_max: inf
+            storage_cap_max: inf
     transmission:
         required_constraints: [['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: []
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_con', 'energy_prod', 'energy_loss_per_distance', 'energy_eff']
+        allowed_costs: ['interest_rate', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase']
         essentials:
                 parent: null
                 stack_weight: 0
@@ -103,7 +106,8 @@ tech_groups:
             energy_con: true
     conversion:
         required_constraints: [['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: []
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_loss_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase']
         essentials:
             parent: null
             stack_weight: 0
@@ -112,7 +116,8 @@ tech_groups:
             energy_con: true
     conversion_plus:
         required_constraints: [['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: []
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'carrier_ratios', 'resource', 'force_resource', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_loss_per_distance', 'export_cap', 'export_carrier', 'storage_init', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss']
+        allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase']
         essentials:
             parent: null
             stack_weight: 0

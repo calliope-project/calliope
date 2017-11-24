@@ -256,7 +256,7 @@ def process_techs(config_model):
         for k in keys_to_add:
             tech_result[k] = config_model.tech_groups[tech_result.inheritance[-1]].get(k, [])
 
-        # If necessary, populate carrier_in and carrier_out in essentials, but
+        # CHECK: If necessary, populate carrier_in and carrier_out in essentials, but
         # also break on missing carrier data
         if 'carrier_in' not in tech_result.essentials:
             if tech_result.inheritance[-1] in ['supply', 'supply_plus', 'unmet_demand']:

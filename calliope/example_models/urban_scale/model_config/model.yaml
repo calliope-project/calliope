@@ -24,7 +24,4 @@ model:
         heat: 0
         cooling: 0
 
-    # Optionally subset some of the model dimensions to reduce problem size or for debugging
-    subset_tech: []  # Subset of technologies
-    subset_loc: []  # Subset of locations
     subset_time: ['2005-07-01', '2005-07-02']  # Subset of timesteps

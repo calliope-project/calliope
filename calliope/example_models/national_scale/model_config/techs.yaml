@@ -22,7 +22,7 @@ techs:
             monetary:
                 interest_rate: 0.15
                 energy_cap: 750  # USD per kW
-                om_in: 0.02  # USD per kWh
+                om_con: 0.02  # USD per kWh
     csp:
         essentials:
             name: 'Concentrating solar power'
@@ -31,7 +31,6 @@ techs:
             parent: supply_plus
             carrier_out: power
         constraints:
-            use_storage_time: true
             storage_time_max: 24
             storage_loss: 0.002
             resource: file=csp_resource.csv
@@ -46,7 +45,7 @@ techs:
                 resource_area: 200
                 resource_cap: 200
                 energy_cap: 1000
-                om_out: 0.002
+                om_prod: 0.002
 
     ##
     # Storage
@@ -95,4 +94,4 @@ techs:
             monetary:
                 interest_rate: 0.15
                 energy_cap: 200
-                om_out: 0.002
+                om_prod: 0.002

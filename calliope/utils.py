@@ -12,6 +12,7 @@ of regular dict) used for managing model configuration.
 
 from contextlib import contextmanager
 from io import StringIO
+from copy import deepcopy
 import functools
 import logging
 import os
@@ -497,3 +498,13 @@ def vincenty(coord1, coord2):
     D = b * A * (sigma - deltaSigma)
 
     return round(D)
+
+
+def flatten_list(nested):
+    l = deepcopy(nested)
+    while l:
+        sublist = l.pop(0)
+        if isinstance(sublist, list):
+            l = sublist + l
+        else:
+            yield sublist

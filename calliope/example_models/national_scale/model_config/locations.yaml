@@ -42,4 +42,4 @@ links:
     region1,region2:
         ac_transmission:
             constraints:
-                e_cap.max: 10000
+                energy_cap_max: 10000

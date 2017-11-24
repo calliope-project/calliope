@@ -41,7 +41,7 @@ locations:
                 constraints:
                     energy_cap_max: 50 # changing tariff structure below 50kW
                 costs.monetary:
-                        om_fixed: -80.5 # reimbursement per kWp from FIT
+                        om_annual: -80.5 # reimbursement per kWp from FIT
             supply_gas:
             demand_power:
                 constraints.resource: file=demand_power.csv

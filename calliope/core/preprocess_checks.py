@@ -43,10 +43,10 @@ def _check_config_run(config_run):
 
 
 def _get_all_carriers(config):
-    return ([config.get_key('carrier', '')] +
-            list(config.get_key('carrier_in', '')) +
-            list(config.get_key('carrier_out', ''))
-            )
+    return set([config.get_key('carrier', '')] + [
+        config.get_key('carrier_{}'.format(k), '')
+        for k in ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
+    ])
 
 
 def _check_config_model(config_model):
@@ -106,30 +106,6 @@ def _check_config_model(config_model):
                 'be defined (tech: {})'.format(t_name)
             )
 
-    # Either all locations or no locations must have coordinates
-    all_locs = list(config_model.locations.keys())
-    locs_with_coords = [
-        k for k in config_model.locations.keys()
-        if 'coordinates' in config_model.locations[k]
-    ]
-    if len(locs_with_coords) != 0 and len(all_locs) != len(locs_with_coords):
-        errors.append(
-            'Either all or no locations must have `coordinates` defined'
-        )
-
-    # If locations have coordinates, they must all be either lat/lon or x/y
-    first_loc = list(config_model.locations.keys())[0]
-    coord_keys = sorted(list(config_model.locations[first_loc].coordinates.keys()))
-    if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
-        errors.append(
-            'Unidentified coordinate system. All locations must either'
-            'use the format {lat: N, lon: M} or {x: N, y: M}.'
-        )
-    for loc_id, loc_config in config_model.locations.items():
-        if sorted(list(loc_config.coordinates.keys())) != coord_keys:
-            errors.append('All locations must use the same coordinate format.')
-            break
-
     return errors, warnings
 
 
@@ -137,9 +113,13 @@ def check_initial(config_model, config_run):
     """
     Perform initial checks of model and run config dicts.
 
-    May stop and raise ModelError on serious issues, or print
-    warnings for possible problems that do not prevent the model run
-    from continuing.
+    Returns
+    -------
+    warnings : list
+        possible problems that do not prevent the model run
+        from continuing
+    errors : list
+        serious issues that should raise a ModelError
 
     """
     errors_run, warnings_run = _check_config_run(config_run)
@@ -151,42 +131,144 @@ def check_initial(config_model, config_run):
     return warnings, errors
 
 
+def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comments):
+    required = model_run.techs[tech_id].required_constraints
+    allowed = model_run.techs[tech_id].allowed_constraints
+    allowed_costs = model_run.techs[tech_id].allowed_costs
+    all_defaults =  list(defaults.default_tech.constraints.keys())
+
+    # Error if required constraints are not defined
+    for r in required:
+        # If it's a string, it must be defined
+        single_ok = isinstance(r, str) and r in tech_config.constraints
+        # If it's a list of strings, one of them must be defined
+        multiple_ok = (
+            isinstance(r, list) and
+            any([i in tech_config.constraints for i in r])
+        )
+        if not single_ok and not multiple_ok:
+            errors.append(
+                '`{}` at `{}` fails to define '
+                'all required constraints: {}'.format(tech_id, loc_id, required)
+            )
+            # print('{} -- {}-{}: {}, {}'.format(r, loc_id, tech_id, single_ok, multiple_ok))
+
+    # Flatten required list and gather remaining unallowed constraints
+    required_f = utils.flatten_list(required)
+    remaining = set(tech_config.constraints) - set(required_f) - set(allowed)
+
+    # Error if something is defined that's not allowed, but is in defaults
+    # Warn if something is defined that's not allowed, but is not in defaults
+    # (it could be a misspelling)
+    for k in remaining:
+        if k in all_defaults:
+            errors.append(
+                '`{}` at `{}` defines non-allowed '
+                'constraint `{}`'.format(tech_id, loc_id, k)
+            )
+        else:
+            warnings.append(
+                '`{}` at `{}` defines unrecognised '
+                'constraint `{}` - possibly a misspelling?'.format(tech_id, loc_id, k)
+            )
+
+    # Error if an `export` statement does not match the given carrier_outs
+    if 'export' in tech_config.constraints:
+        export = tech_config.constraints.export
+        if export not in [tech_config.essentials.get_key(k) for k in ['carrier_out', 'carrier_out_2', 'carrier_out_3']]:
+            errors.append(
+                '`{}` at `{}` is attempting to export a carrier '
+                'not given as an output carrier: `{}`'.format(tech_id, loc_id, export)
+            )
+
+    # Error if non-allowed costs are defined
+    for cost_class in tech_config.get_key('costs', {}):
+        for k in tech_config.costs[cost_class]:
+            if k not in allowed_costs:
+                errors.append(
+                    '`{}` at `{}` defines non-allowed '
+                    '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
+                )
+
+    # Error if a constraint is loaded from file that must not be
+    allowed_from_file = defaults['file_allowed']
+    for k, v in tech_config.as_dict_flat().items():
+        if 'file=' in str(v):
+            constraint_name = k.split('.')[-1]
+            if constraint_name not in allowed_from_file:
+                errors.append(
+                    '`{}` at `{}` is trying to load `{}` from file, '
+                    'which is not allowed'.format(tech_id, loc_id, constraint_name)
+                )
+
+    return None
+
+
 def check_final(model_run):
     """
     Perform final checks of the completely built model_run.
 
-    This may:
-    * add comments to debug output;
-    * stop and raise ModelError on serious issues;
-    * print warnings for possible problems that do not prevent the run from
-      continuing.
+    Returns
+    -------
+    comments : AttrDict
+        debug output
+    warnings : list
+        possible problems that do not prevent the model run
+        from continuing
+    errors : list
+        serious issues that should raise a ModelError
 
     """
     warnings, errors = [], []
     comments = utils.AttrDict()
 
-    # FIXME: Confirm that all techs specify essentials
-    # At this point, `essensials` from model_config have been added directly
-    # to the top level of each tech key in model_run.techs
+    # Go through all loc-tech combinations and check validity
+    for loc_id, loc_config in model_run.locations.items():
+        if 'techs' in loc_config:
+            for tech_id, tech_config in loc_config.techs.items():
+                _check_tech(
+                    model_run, tech_id, tech_config, loc_id,
+                    warnings, errors, comments
+                )
 
-    # FIXME: Check that all techs have a carrier (might have been inherited)
+        if 'links' in loc_config:
+            for link_id, link_config in loc_config.links.items():
+                for tech_id, tech_config in link_config.techs.items():
+                    _check_tech(
+                        model_run, tech_id, tech_config,
+                        'link {}:{}'.format(loc_id, link_id),
+                        warnings, errors, comments
+                    )
 
-    # FIXME: Confirm that all required constraints are defined for each tech
+    # Either all locations or no locations must have coordinates
+    all_locs = list(model_run.locations.keys())
+    locs_with_coords = [
+        k for k in model_run.locations.keys()
+        if 'coordinates' in model_run.locations[k]
+    ]
+    if len(locs_with_coords) != 0 and len(all_locs) != len(locs_with_coords):
+        errors.append(
+            'Either all or no locations must have `coordinates` defined'
+        )
 
-    # FIXME If something is defined that's not allowed, but is in defaults:
-    # error
-
-    # FIXME: if something defined that's not allowed, but is not in defaults:
-    # warn (it could be a mis-spelling)
-
-    # All `export` statements must be equal to one of the carrier_outs
-    # FIXME (pared down version of old self.check_and_set_export())
+    # If locations have coordinates, they must all be either lat/lon or x/y
+    first_loc = list(model_run.locations.keys())[0]
+    coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
+    if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
+        errors.append(
+            'Unidentified coordinate system. All locations must either'
+            'use the format {lat: N, lon: M} or {x: N, y: M}.'
+        )
+    for loc_id, loc_config in model_run.locations.items():
+        if sorted(list(loc_config.coordinates.keys())) != coord_keys:
+            errors.append('All locations must use the same coordinate format.')
+            break
 
     # FIXME: check that constraints are consistent with desired mode:
     # planning or operational
-    # if operational, warn but turn _max constraints into _equals constraints
-
-    # FIXME: make sure comments is at the the base level:
-    # i.e. comments must be comments.model_run.xxxxx....
+    # if operational, print a single warning, and
+    # turn _max constraints into _equals constraints with added comments
+    # make sure `comments` is at the the base level:
+    # i.e. comments.model_run.xxxxx....
 
     return comments, warnings, errors

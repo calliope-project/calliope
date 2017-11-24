@@ -185,6 +185,12 @@ def process_locations(model_config, modelrun_techs):
                     allow_override=True
                 )
 
+                # Add link-specific constraint overrides
+                tech_settings.union(
+                    links_in[link][tech_name],
+                    allow_override=True
+                )
+
                 # These are dealt with in process_techs(),
                 # we do not want them here
                 for k in keys_to_kill:

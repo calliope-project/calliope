@@ -19,6 +19,8 @@
 #             constraints:
 #                 one_way: false  # FIXME needs description
 
+# List of constraints allowed to specify "file="
+file_allowed: ['resource', 'resource_eff', 'parasitic_eff', 'energy_eff', 'storage_loss', 'energy_ramping', 'energy_prod', 'energy_con', 'force_resource', 'om_prod', 'om_con', 'export']
 
 default_tech:
     # FIXME: weight is gone, so no longer needs to be dealt with in objective function
@@ -41,6 +43,7 @@ default_tech:
         # FIXME: lifetime has changed names and moved into constraints, and is null by default, forcing a check for techs to define it
         lifetime: null  # Lifetime of a plant (years). Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
         carrier_ratios: {}  # FIXME this is new and needs a sensible description
+        resource: 0  # Maximum available resourceo or reference to a file with time series data
         force_resource: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
         resource_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
         resource_eff: 1.0  # Resource to/from storage conversion efficiency
