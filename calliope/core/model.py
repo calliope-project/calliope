@@ -59,7 +59,7 @@ class Model(object):
 
         # After applying the random seed, time clustering can take place
         self.model_data = preprocess_data.apply_time_clustering(
-            self._model_data_original)
+            self._model_data_original, model_run)
 
     def save_debug_data(self, path):
         """

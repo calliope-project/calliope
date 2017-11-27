@@ -12,6 +12,7 @@ Checks for model consistency and possible errors during preprocessing.
 import os
 
 from .. import utils
+from .. import exceptions
 
 
 _defaults_files = {
@@ -27,6 +28,30 @@ defaults_run = utils.AttrDict.from_yaml(_defaults_files['run'])
 # Hardcode additional keys into allowed defaults:
 # Auto-generated string to run_config file's path
 defaults_run['config_run_path'] = None
+
+def print_warnings_and_raise_errors(warnings=None, errors=None):
+    """
+    Print warnings and raise ModelError from errors.
+
+    Params
+    ------
+    warnings : list, optional
+    errors : list, optional
+
+    """
+    if warnings:
+        exceptions.warn(
+            'Possible issues found during pre-processing:\n' +
+            '\n'.join(warnings)
+        )
+
+    if errors:
+        raise exceptions.ModelError(
+            'Errors during pre-processing:\n' +
+            '\n'.join(errors)
+        )
+
+    return None
 
 
 def _check_config_run(config_run):
@@ -270,5 +295,18 @@ def check_final(model_run):
     # turn _max constraints into _equals constraints with added comments
     # make sure `comments` is at the the base level:
     # i.e. comments.model_run.xxxxx....
+
+    return comments, warnings, errors
+
+def check_model_data(model_data):
+    # FIXME: verify timestep consistency a la verification in get_timeres of
+    # old calliope
+
+    # FIXME: raise error with time clustering if it no longer fits with opmode
+    # a la last section of initialize_time in old calliope
+
+    comments = None
+    warnings = None
+    errors = None
 
     return comments, warnings, errors

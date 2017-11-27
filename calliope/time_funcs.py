@@ -13,7 +13,6 @@ import logging
 
 import pandas as pd
 import xarray as xr
-from xarray.ufuncs import fabs  # pylint: disable=no-name-in-module
 
 from . import utils
 from . import time_clustering
@@ -21,21 +20,39 @@ from . import time_clustering
 
 def normalized_copy(data):
     """
-    Return a copy of data, with the absolute taken and normalized to 0-1.
+    Normalize timeseries data, using the maximum across all regions and timesteps.
 
-    The maximum across all regions and timesteps is used to normalize.
+    Parameters
+    ----------
+    data : xarray Dataset
+        Dataset with all non-time dependent variables removed
 
+    Returns
+    -------
+    ds : xarray Dataset
+        Copy of `data`, with the absolute taken and normalized to 0-1
     """
     ds = data.copy(deep=True)  # Work off a copy
-    data_vars_in_t = [v for v in time_clustering._get_datavars(data)
-                      if 't' in data[v].dims]
-    for var in data_vars_in_t:
-        for y in ds.coords['y'].values:
-            # Get max across all regions to normalize against
-            norm_max = fabs(ds[var].loc[{'y': y}]).max()
-            for x in ds.coords['x'].values:
-                df = ds[var].loc[{'x': x, 'y': y}]
-                ds[var].loc[{'x': x, 'y': y}] = fabs(df) / norm_max
+
+    for var in ds.data_vars:
+        # Each DataArray is indexed over a different subset of loc_techs,
+        # so we find it in the list of dimensions
+        loc_tech_dim = [i for i in ds[var].dims if 'loc_techs' in i][0]
+
+        # For each technology, get the loc_techs which are relevant
+        loc_tech_subsets = [
+            utils.get_loc_techs(ds[loc_tech_dim].values, tech)
+            for tech in set(i.split(':', 1)[1] for i in ds[loc_tech_dim].values)
+        ]
+        # remove empty lists within the _techs list
+        loc_tech_subsets = [i for i in loc_tech_subsets if i]
+
+        # For each technology, divide all values by the maximum absolute value
+        for loc_tech in loc_tech_subsets:
+            ds[var].loc[{loc_tech_dim: loc_tech}] = abs(
+                ds[var].loc[{loc_tech_dim: loc_tech}] /
+                abs(ds[var].loc[{loc_tech_dim: loc_tech}]).max()
+            )
     return ds
 
 
@@ -43,7 +60,7 @@ def _copy_non_t_vars(data0, data1):
     """Copies non-t-indexed variables from data0 into data1, then
     returns data1"""
     non_t_vars = [v for v in data0.data_vars
-                  if 't' not in data0[v].dims]
+                  if 'time' not in data0[v].dims]
     # Manually copy over variables not in `t`. If we don't do this,
     # these vars get polluted with a superfluous `t` dimension
     for v in non_t_vars:
@@ -52,10 +69,10 @@ def _copy_non_t_vars(data0, data1):
 
 
 def _combine_datasets(data0, data1):
-    """Concatenates data0 and data1 along the t dimension"""
-    data_new = xr.concat([data0, data1], dim='t')
+    """Concatenates data0 and data1 along the time dimension"""
+    data_new = xr.concat([data0, data1], dim='time')
     # Ensure time dimension is ordered
-    data_new = data_new.loc[{'t': data_new.t.to_pandas().index.sort_values()}]
+    data_new = data_new.loc[{'time': data_new.time.to_pandas().index.sort_values()}]
 
     return data_new
 
@@ -87,7 +104,14 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     if timesteps is None:
         data_to_cluster = data
     else:
-        data_to_cluster = data.loc[{'t': timesteps}]
+        data_to_cluster = data.loc[{'time': timesteps}]
+
+    # remove all variables that are not indexed over time
+    data_to_cluster = data_to_cluster.drop(
+        [i for i in data.variables if 'time' not in data[i].dims]
+    )
+    for dim in data_to_cluster.dims:
+        data_to_cluster[dim] = data[dim]
 
     if normalize:
         data_normalized = normalized_copy(data_to_cluster)
@@ -108,71 +132,63 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     else:
         # Drop timesteps from old data
         data_new = _copy_non_t_vars(data, data_new)
-        data_new = _combine_datasets(data.drop(timesteps, dim='t'), data_new)
+        data_new = _combine_datasets(data.drop(timesteps, dim='time'), data_new)
         data_new = _copy_non_t_vars(data, data_new)
 
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
     data_vars_in_t = [v for v in time_clustering._get_datavars(data)
-                      if 't' in data[v].dims]
+                      if 'time' in data[v].dims]
     for var in data_vars_in_t:
-        scale_to_match_mean = (data[var].mean(dim='t') / data_new[var].mean(dim='t')).fillna(0)
+        scale_to_match_mean = (data[var].mean(dim='time') /
+            data_new[var].mean(dim='time')).fillna(0)
         data_new_scaled[var] = data_new[var] * scale_to_match_mean
 
     return data_new_scaled
 
-
-_RESAMPLE_METHODS = {
-    '_weights': 'mean',
-    '_time_res': 'sum',
-    'r': 'sum',
-    'e_eff': 'mean',
-    'r_eff': 'mean',
-    'r2_eff': 'mean',
-    's_loss': 'mean',
-    'p_eff': 'mean',
-    'export': 'mean',
-    'om_var': 'mean',
-    'om_fuel': 'mean',
-    'om_r2': 'mean',
-}
-
-
 def resample(data, timesteps, resolution):
     data_new = data.copy(deep=True)
     if timesteps is not None:
-        data_new = data_new.loc[{'t': timesteps}]
+        data_new = data_new.loc[{'time': timesteps}]
 
     # First create a new resampled dataset of the correct size by
     # using first-resample, which should be a quick way to achieve this
-    data_rs = data_new.resample(resolution, dim='t', how='first')
+    data_rs = data_new.resample(resolution, dim='time', how='first')
 
     timestep_vars = [v for v in data_new.data_vars
-                     if 't' in data_new[v].dims]
+                     if 'time' in data_new[v].dims]
 
-    # Resampling adds spurious `t` dimension to non-t vars, correct that
+    # Resampling adds spurious `time` dimension to non-time vars, correct that
     for v in data_rs.data_vars:
         if v not in timestep_vars:
             data_rs[v] = data[v]
 
     for var in timestep_vars:
-        if var in _RESAMPLE_METHODS:
-            how = _RESAMPLE_METHODS[var]
-            data_rs[var] = data_new[var].resample(resolution, dim='t', how=how)
+        if var in ['time_resolution', 'resource']:
+            data_rs[var] = data_new[var].resample(
+                resolution, dim='time', how='sum'
+            )
         else:
-            # If we don't know how to resample a var, we drop it
-            logging.error('Dropping {} because it has no resampling method.'.format(var))
-            data_rs = data_rs.drop(var)
+            try:
+                data_rs[var] = data_new[var].resample(
+                    resolution, dim='time', how='mean'
+                )
+            except TypeError:
+                # If the var has a datatype of strings, it can't be resampled
+                logging.error('Dropping {} because it has a {} data type when '
+                              'integer or float is expected for timeseries '
+                              'resampling.'.format(var, data_rs[var].dtype))
+                data_rs = data_rs.drop(var)
 
     # Get rid of the filled-in NaN timestamps
-    data_rs = data_rs.dropna(dim='t', how='all')
+    data_rs = data_rs.dropna(dim='time', how='all')
     data_rs.attrs['opmode_safe'] = True  # Resampling still permits operational mode
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
         data_rs = _copy_non_t_vars(data, data_rs)
-        data_rs = _combine_datasets(data.drop(timesteps, dim='t'), data_rs)
+        data_rs = _combine_datasets(data.drop(timesteps, dim='time'), data_rs)
         data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
         data_rs.attrs['opmode_safe'] = False
@@ -210,10 +226,10 @@ def drop(data, timesteps, padding=None):
         timesteps = pd.concat([pd.Series(0, index=i) for i in dt_indices]).index
 
     # 'Distribute weight' of the dropped timesteps onto the remaining ones
-    dropped_weight = data._weights.loc[{'t': timesteps}].sum()
+    dropped_weight = data.timestep_weights.loc[{'time': timesteps}].sum()
 
-    data = data.drop(timesteps, dim='t')
+    data = data.drop(timesteps, dim='time')
 
-    data['_weights'] = data['_weights'] + (dropped_weight / len(data['_weights']))
+    data['timestep_weights'] = data['timestep_weights'] + (dropped_weight / len(data['timestep_weights']))
 
     return data

@@ -100,31 +100,6 @@ def model_run_from_dict(config):
     return model_run
 
 
-def print_warnings_and_raise_errors(warnings=None, errors=None):
-    """
-    Print warnings and raise ModelError from errors.
-
-    Params
-    ------
-    warnings : list, optional
-    errors : list, optional
-
-    """
-    if warnings:
-        exceptions.warn(
-            'Possible issues found during pre-processing:\n' +
-            '\n'.join(warnings)
-        )
-
-    if errors:
-        raise exceptions.ModelError(
-            'Errors during pre-processing:\n' +
-            '\n'.join(errors)
-        )
-
-    return None
-
-
 def process_config(config, is_model_config=False):
     """
     Generate processed Model configuration from
@@ -362,13 +337,13 @@ def generate_model_run(config_run, config_model, debug_comments=None):
 
     # 2) Initial checks on model and run configs
     warnings, errors = checks.check_initial(config_model, config_run)
-    print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 3) Fully populate techs
     # Raises ModelError if necessary
     model_run['techs'], debug_techs, errors = process_techs(config_model)
     debug_comments.set_key('model_run.techs', debug_techs)
-    print_warnings_and_raise_errors(errors=errors)
+    checks.print_warnings_and_raise_errors(errors=errors)
 
     # 4) Fully populate tech_groups
     model_run['tech_groups'] = process_tech_groups(config_model, model_run['techs'])
@@ -392,7 +367,7 @@ def generate_model_run(config_run, config_model, debug_comments=None):
     # 8) Final sense-checking
     final_check_comments, warnings, errors = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
-    print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
     debug_data = utils.AttrDict({

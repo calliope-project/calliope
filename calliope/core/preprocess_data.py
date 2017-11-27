@@ -18,9 +18,36 @@ import pandas as pd
 
 from .. import utils
 from .. _version import __version__
+from . import preprocess_checks as checks
 
+def build_model_data(model_run, debug=False):
+    """
+    Take a Calliope model_run and convert it into an xarray Dataset, ready for
+    constraint generation. Timeseries data is also extracted from file at this
+    point, and the time dimension added to the data
 
-def build_model_data(model_run):
+    Parameters
+    ----------
+    model_run : calliope.utils.AttrDict
+        preprocessed model_run dictionary, as produced by
+        Calliope.core.preprocess_model
+    debug : bool, default = False
+        Used to debug steps within build_model_data, particularly before/after
+        time dimension addition. If True, more information is returned
+
+    Returns
+    -------
+    data : xarray Dataset
+        Dataset with optimisation parameters as variables, optimisation sets as
+        coordinates, and other information in attributes.
+    data_dict : dict, only returned if debug = True
+        dictionary of parameters, prior to time dimension addition. Used here to
+        populate the Dataset (using `from_dict()`)
+    data_pre_time : xarray Dataset, only returned if debug = True
+        Dataset, prior to time dimension addition, with optimisation parameters
+        as variables, optimisation sets as coordinates, and other information
+        in attributes.
+    """
     # We build up a dictionary of the data, then convert it to an xarray Dataset
     # before applying time dimensions
     data = xr.Dataset(
@@ -36,18 +63,31 @@ def build_model_data(model_run):
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
+    if debug:
+        data_pre_time = data.copy(deep=True)
+
     add_time_dimension(data, model_run)
 
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset
     data.merge(carriers_to_dataset(model_run), inplace=True)
 
+    if debug:
+        data_pre_time.merge(carriers_to_dataset(model_run), inplace=True)
+        return data, data_dict, data_pre_time
+    else:
+        return data
+
+
+def apply_time_clustering(model_data_original, model_run):
+
+    data = resample_time(model_data_original, model_run)
+
+    # Final checking of the data
+    final_check_comments, warnings, errors = checks.check_model_data(data)
+    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+
     return data
-
-
-def apply_time_clustering(model_data_original):
-    # FIXME: Not yet implemented
-    return model_data_original
 
 
 def add_sets(model_run):
@@ -381,6 +421,8 @@ def add_time_dimension(data, model_run):
     data : xarray Dataset
         A data structure which has already gone through `constraints_to_dataset`,
         `costs_to_dataset`, and `add_attributes`
+    model_run : calliope.utils.AttrDict
+        Calliope model_run dictionary
 
     Returns:
     --------
@@ -389,6 +431,7 @@ def add_time_dimension(data, model_run):
         with all relevant `file=` entries replaced with data from file.
 
     """
+
     data_path = model_run.model.data_path
     set_t = pd.read_csv(
         os.path.join(data_path, 'time_set.csv'),
@@ -401,22 +444,26 @@ def add_time_dimension(data, model_run):
                       else slice(subset_time_config[0], subset_time_config[1]))
     subset_time = set_t[time_slice] if time_slice else set_t
 
-    # search through every constraint/cost for use of 'file'
+        # search through every constraint/cost for use of 'file'
     for variable in data.data_vars:
         if (data[variable].dtype.kind == 'U' and
                 any(data[variable].to_dataframe().stack().str.contains('file='))):
-            # convert to a Pandas Series to do file search
+            # convert to a Pandas Series to do 'string contains' search
             data_df = data[variable].to_dataframe().stack()
         else:
             continue
-
+        # get a list of all the uses of 'file=' for this variable
         filenames = data_df[data_df.str.contains('file=')]
         filenames_df = pd.DataFrame()
+
+        # remove 'file=' and split filename and location column (seperated by colon)
         filenames_df['filename'], filenames_df['column'] = \
-            filenames.str.split(':', 1).str
+            filenames.str.replace('file=', '').str.split(':', 1).str
+
         # store all the information about variables which will need to be given
         # over all timesteps, including those which are duplicates
         all_data = data_df[data_df != 'nan']
+        nan_data = data_df.drop(all_data.index)
         # create an empty pandas DataFrame
         timeseries_df = pd.DataFrame(index=all_data.index,
                                      columns=[i for i in subset_time.index])
@@ -428,35 +475,72 @@ def add_time_dimension(data, model_run):
         # create xarray DataArray from DataFrame with the correct dimensions
         timeseries_dataarray = (timeseries_df.stack(dropna=False).unstack(level=-2)
                                           .to_xarray().to_array())
+
         # Each DataArray in model_data could exist over a different subset of
         # loc_techs (e.g. loc_techs_finite_resource), so we extract which one it
         # is for this particular DataArray, for later indexing
         loc_techs = [d for d in timeseries_dataarray.dims if 'loc_tech' in d][0]
-
+        # To avoid opening files more than once, we extract all required
+        # information from a file, then apply it to the variable
         for file in set(filenames_df.filename):
-            d_path = os.path.join(data_path, file.split('file=')[1])
-            cols = set(filenames_df[filenames_df.filename == file].column)
-            data_from_csv = pd.read_csv(d_path, usecols=cols)
+            file_path = os.path.join(data_path, file)
+            # For the given file, get all the relevant columns
+            columns = set(filenames_df[filenames_df.filename == file].column)
+            # load all relevant columns from csv
+            data_from_csv = pd.read_csv(file_path, usecols=columns)
             # Apply time subset
             data_from_csv = data_from_csv.loc[subset_time.values, :]
-            for col in cols:
+            # Apply each column of data to all relevant coordinates
+            for col in columns:
                 col_df = filenames_df[(filenames_df.filename == file) &
                                    (filenames_df.column == col)]
+                # coordinates are taken from those which refer to 'file=' in input Dataset
                 loc_dict = {loc_techs:col_df.index.get_level_values(loc_techs)}
+                # Account for the additional dimension for cost variables
                 if 'costs' in timeseries_dataarray.dims:  # cost
                     loc_dict.update({'costs':col_df.index.get_level_values('costs')})
+                # Populate temporary DataArray with data from file
                 timeseries_dataarray.loc[loc_dict] = data_from_csv[col].values
-        for variable in timeseries_dataarray['variable']:
-            data[variable.item()] = timeseries_dataarray.loc[dict(variable=variable)].drop('variable')
+        # assign correct dtype (might be string/object accidentally)
+        if all(np.where(
+            ((timeseries_dataarray=='True') | (timeseries_dataarray=='False'))
+            )):
+            # Turn to bool
+            timeseries_dataarray.loc[dict()] = timeseries_dataarray == 'True'
+            timeseries_dataarray = timeseries_dataarray.astype(np.bool, copy=False)
+        else:
+            try:
+                timeseries_dataarray = timeseries_dataarray.astype(np.float, copy=False)
+            except:
+                None
+        data[timeseries_dataarray['variable'].item()] = (
+            timeseries_dataarray.squeeze('variable')
+                                .reset_coords('variable', drop=True)
+        )
+
+        # Add time_resolution and timestep_weight variables
+        if 'time' in data.dims:
+            seconds = (subset_time.index[0] - subset_time.index[1]).total_seconds()
+            hours = abs(seconds) / 3600
+            data['time_resolution'] = xr.DataArray(
+                    np.ones(len(subset_time))*hours,
+                    dims=['time']
+            )
+
+            data['timestep_weights'] = xr.DataArray(
+                    np.ones(len(subset_time)),
+                    dims=['time']
+            )
+
     return None
 
-
-## Not currently implemented as time_funcs and time_clustering will fail
-def initialize_time(data_original, model_run):
+def resample_time(data_original, model_run):
     # Carry y_ subset sets over to data for easier data analysis
-    time_config = model_run.run.get('time', None)
+    time_config = model_run.model.get('time', None)
     if not time_config:
-        return None  # Nothing more to do here
+        return data_original  # Nothing more to do here
+    else:
+        data = data_original.copy(deep=True)
     ##
     # Process masking and get list of timesteps to keep at high res
     ##
@@ -474,7 +558,7 @@ def initialize_time(data_original, model_run):
         chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                      for m in masks.values()]).index
         # timesteps: a list of timesteps NOT picked by masks
-        timesteps = pd.Index(data.timesteps.values).difference(chosen_timesteps)
+        timesteps = pd.Index(data.time.values).difference(chosen_timesteps)
     else:
         timesteps = None
     ##
@@ -484,7 +568,7 @@ def initialize_time(data_original, model_run):
         func = utils.plugin_load(
             time_config.function, builtin_module='time_funcs')
         func_kwargs = time_config.get('function_options', {})
-        data = func(data=data_original, timesteps=timesteps, **func_kwargs)
+        data = func(data=data, timesteps=timesteps, **func_kwargs)
 
         ## Removed while operational mode is inexistant
         # Raise error if we've made adjustments incompatible
@@ -496,4 +580,4 @@ def initialize_time(data_original, model_run):
         #     else:
         #         msg = 'Time settings incompatible with operational mode'
         #         raise exceptions.ModelError(msg)
-    return None
+    return data

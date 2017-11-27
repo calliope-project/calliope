@@ -61,13 +61,9 @@ links:
             distance: 10
     X1,X3:
         power_lines:
-            constraints: # nothing to define, but model requires a key at this level of nesting
     X1,N1:
         heat_pipes:
-            constraints: # nothing to define, but model requires a key at this level of nesting
     N1,X2:
         heat_pipes:
-            constraints: # nothing to define, but model requires a key at this level of nesting
     N1,X3:
         heat_pipes:
-            constraints: # nothing to define, but model requires a key at this level of nesting
