@@ -927,6 +927,10 @@ class Model(object):
                 option,
                 index=self._sets['t'], columns=self._sets['x']
             )
+            if option != float('inf'):
+                # Add all numeric (whether timeseries or not) to the timeseries
+                # subset, to ensure they end up in the Pyomo Param
+                self._sets['y_' + param + '_timeseries'].add(y)
             self.debug.data_sources.set_key(k, 'model_config')
 
         # Apply x_map if necessary
