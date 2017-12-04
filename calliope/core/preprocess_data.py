@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from .. import utils
+from .. import exceptions
 from .. _version import __version__
 from . import preprocess_checks as checks
 
@@ -80,8 +81,79 @@ def build_model_data(model_run, debug=False):
 
 
 def apply_time_clustering(model_data_original, model_run):
+    """
+    Take a Calliope model_data post time dimension addition, prior to any time
+    clustering, and apply relevant time clustering/masking techniques.
+    See doi: 10.1016/j.apenergy.2017.03.051 for applications.
 
-    data = resample_time(model_data_original, model_run)
+    Techniques include:
+    - Clustering timeseries into a selected number of 'representative' days.
+        Days with similar profiles and daily magnitude are grouped together and
+        represented by one 'representative' day with a greater weight per time
+        step.
+    - Masking timeseries, leading to variable timestep length
+        Only certain parts of the input are shown at full resolution, with other
+        periods being clustered together into a single timestep.
+        E.g. Keep high resolution in the week with greatest wind power variability,
+        smooth all other timesteps to 12H
+    - Timestep resampling
+        Used to reduce problem size by reducing resolution of all timeseries data.
+        E.g. resample from 1H to 6H timesteps
+
+
+    Parameters
+    ----------
+    model_data_original : xarray Dataset
+        Preprocessed Calliope model_data, as produced using
+        `calliope.core.preprocess_data.build_model_data`
+        and found in model._model_data_original
+    model_run : bool
+        preprocessed model_run dictionary, as produced by
+        Calliope.core.preprocess_model
+
+    Returns
+    -------
+    data : xarray Dataset
+        Dataset with optimisation parameters as variables, optimisation sets as
+        coordinates, and other information in attributes. Time dimension has
+        been updated as per user-defined clustering techniques (from model_run)
+    """
+
+    # Carry y_ subset sets over to data for easier data analysis
+    time_config = model_run.model.get('time', None)
+    if not time_config:
+        return model_data_original  # Nothing more to do here
+    else:
+        data = model_data_original.copy(deep=True)
+    ##
+    # Process masking and get list of timesteps to keep at high res
+    ##
+    if 'masks' in time_config:
+        masks = {}
+        # time.masks is a list of {'function': .., 'options': ..} dicts
+        for entry in time_config.masks:
+            entry = utils.AttrDict(entry)
+            mask_func = utils.plugin_load(entry.function,
+                                          builtin_module='time_masks')
+            mask_kwargs = entry.get_key('options', default={})
+            masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
+        data.attrs['masks'] = masks
+        # Concatenate the DatetimeIndexes by using dummy Series
+        chosen_timesteps = pd.concat([pd.Series(0, index=m)
+                                     for m in masks.values()]).index
+        # timesteps: a list of timesteps NOT picked by masks
+        timesteps = pd.Index(data.time.values).difference(chosen_timesteps)
+    else:
+        timesteps = None
+    ##
+    # Process function, apply resolution adjustments
+    ##
+    if 'function' in time_config:
+        func = utils.plugin_load(
+            time_config.function, builtin_module='time_funcs')
+        func_kwargs = time_config.get('function_options', {})
+        data = func(data=data, timesteps=timesteps, **func_kwargs)
+
 
     # Final checking of the data
     final_check_comments, warnings, errors = checks.check_model_data(data)
@@ -353,9 +425,9 @@ def location_specific_to_dataset(model_run):
 
 def tech_specific_to_dataset(model_run):
     """
-    Extract technology (location inspecific) information from the processed dictionary
-    (model.model_run) and return an xarray Dataset with DataArray variables
-    describing color, inheritance chain and stack_weight information.
+    Extract technology (location inspecific) information from the processed
+    dictionary (model.model_run) and return an xarray Dataset with DataArray
+    variables describing color, inheritance chain and stack_weight information.
 
     Parameters
     ----------
@@ -433,64 +505,84 @@ def add_time_dimension(data, model_run):
     """
 
     data_path = model_run.model.data_path
-    set_t = pd.read_csv(
-        os.path.join(data_path, 'time_set.csv'),
-        header=None, index_col=1, parse_dates=[1], squeeze=True
-    )
+
+    # 1) Get DatetimeIndex from file
+    time_set = pd.read_csv(os.path.join(data_path, 'time_set.csv'),
+        header=None, index_col=1, squeeze=True)
+    try:
+        time_set.index = pd.to_datetime(time_set.index,
+            errors='raise', format="%Y-%m-%d %H:%M:%S")
+    except ValueError as VE:
+        e = exceptions.ModelError
+        raise e("Incorrect datetime format used in time_set.csv, expecting "
+                "`YYYY-MM-DD hh:mm:ss`, got `{}` instead"
+                "".format(VE.args[0].split("'")[1]))
+
+    # 2) Apply time subsetting, if supplied in model_run
     subset_time_config = model_run.model.subset_time
     time_slice = None
     if subset_time_config:
         time_slice = (subset_time_config[0] if len(subset_time_config) == 1
                       else slice(subset_time_config[0], subset_time_config[1]))
-    subset_time = set_t[time_slice] if time_slice else set_t
+    subset_time = time_set[time_slice] if time_slice else time_set
 
-        # search through every constraint/cost for use of 'file'
+    # 3) Search through every constraint/cost for use of 'file'
     for variable in data.data_vars:
-        if (data[variable].dtype.kind == 'U' and
-                any(data[variable].to_dataframe().stack().str.contains('file='))):
-            # convert to a Pandas Series to do 'string contains' search
-            data_df = data[variable].to_dataframe().stack()
-        else:
+        # 3.1) If 'file=' in variable, it will give the variable a string data type
+        if data[variable].dtype.kind != 'U':
             continue
-        # get a list of all the uses of 'file=' for this variable
-        filenames = data_df[data_df.str.contains('file=')]
-        filenames_df = pd.DataFrame()
 
-        # remove 'file=' and split filename and location column (seperated by colon)
+        # 3.2) convert to a Pandas Series to do 'string contains' search
+        data_df = data[variable].to_dataframe().stack()
+
+        # 3.3) get a Series of all the uses of 'file=' for this variable
+        filenames = data_df[data_df.str.contains('file=')]
+
+        # 3.4) If no use of 'file=' then we can be on our way
+        if filenames.empty:
+            continue
+
+        # 3.5) remove 'file=' and split filename and location column (seperated by colon)
+        filenames_df = pd.DataFrame()
         filenames_df['filename'], filenames_df['column'] = \
             filenames.str.replace('file=', '').str.split(':', 1).str
 
-        # store all the information about variables which will need to be given
-        # over all timesteps, including those which are duplicates
+        # 3.6) store all the information about variables which will need to be
+        # given over all timesteps, including those which are duplicates
         all_data = data_df[data_df != 'nan']
         nan_data = data_df.drop(all_data.index)
-        # create an empty pandas DataFrame
+
+        # 3.7) create an empty pandas DataFrame
         timeseries_df = pd.DataFrame(index=all_data.index,
                                      columns=[i for i in subset_time.index])
-        # fill in values that are just duplicates, not actually from file
+
+        # 3.8) fill in values that are just duplicates, not actually from file
         if any(all_data.drop(filenames.index)):
             timeseries_df.loc[all_data.drop(filenames.index).index] = \
                 np.vstack(all_data.drop(filenames.index).values)
         timeseries_df.columns.name = 'time'
-        # create xarray DataArray from DataFrame with the correct dimensions
-        timeseries_dataarray = (timeseries_df.stack(dropna=False).unstack(level=-2)
-                                          .to_xarray().to_array())
 
-        # Each DataArray in model_data could exist over a different subset of
-        # loc_techs (e.g. loc_techs_finite_resource), so we extract which one it
-        # is for this particular DataArray, for later indexing
+        # 3.9) create xarray DataArray from DataFrame with the correct dimensions
+        timeseries_dataarray = (timeseries_df.stack(dropna=False)
+                                             .unstack(level=-2)
+                                             .to_xarray().to_array())
+
+        # 3.10) Each DataArray in model_data could exist over a different
+        # subset of loc_techs (e.g. loc_techs_finite_resource), so we extract
+        # which one it is for this particular DataArray, for later indexing
         loc_techs = [d for d in timeseries_dataarray.dims if 'loc_tech' in d][0]
-        # To avoid opening files more than once, we extract all required
+
+        # 3.11) To avoid opening files more than once, we extract all required
         # information from a file, then apply it to the variable
         for file in set(filenames_df.filename):
             file_path = os.path.join(data_path, file)
-            # For the given file, get all the relevant columns
+            # 3.11.1) For the given file, get all the relevant columns
             columns = set(filenames_df[filenames_df.filename == file].column)
-            # load all relevant columns from csv
+            # 3.11.2) load all relevant columns from csv
             data_from_csv = pd.read_csv(file_path, usecols=columns)
-            # Apply time subset
+            # 3.11.3) Apply time subset
             data_from_csv = data_from_csv.loc[subset_time.values, :]
-            # Apply each column of data to all relevant coordinates
+            # 3.11.4) Apply each column of data to all relevant coordinates
             for col in columns:
                 col_df = filenames_df[(filenames_df.filename == file) &
                                    (filenames_df.column == col)]
@@ -501,7 +593,8 @@ def add_time_dimension(data, model_run):
                     loc_dict.update({'costs':col_df.index.get_level_values('costs')})
                 # Populate temporary DataArray with data from file
                 timeseries_dataarray.loc[loc_dict] = data_from_csv[col].values
-        # assign correct dtype (might be string/object accidentally)
+
+        # 3.12) assign correct dtype (might be string/object accidentally)
         if all(np.where(
             ((timeseries_dataarray=='True') | (timeseries_dataarray=='False'))
             )):
@@ -518,66 +611,18 @@ def add_time_dimension(data, model_run):
                                 .reset_coords('variable', drop=True)
         )
 
-        # Add time_resolution and timestep_weight variables
-        if 'time' in data.dims:
-            seconds = (subset_time.index[0] - subset_time.index[1]).total_seconds()
-            hours = abs(seconds) / 3600
-            data['time_resolution'] = xr.DataArray(
-                    np.ones(len(subset_time))*hours,
-                    dims=['time']
-            )
+    # 4) Add time_resolution and timestep_weight variables
+    if 'time' in data.dims:
+        seconds = (subset_time.index[0] - subset_time.index[1]).total_seconds()
+        hours = abs(seconds) / 3600
+        data['time_resolution'] = xr.DataArray(
+                np.ones(len(subset_time))*hours,
+                dims=['time']
+        )
 
-            data['timestep_weights'] = xr.DataArray(
-                    np.ones(len(subset_time)),
-                    dims=['time']
-            )
+        data['timestep_weights'] = xr.DataArray(
+                np.ones(len(subset_time)),
+                dims=['time']
+        )
 
     return None
-
-def resample_time(data_original, model_run):
-    # Carry y_ subset sets over to data for easier data analysis
-    time_config = model_run.model.get('time', None)
-    if not time_config:
-        return data_original  # Nothing more to do here
-    else:
-        data = data_original.copy(deep=True)
-    ##
-    # Process masking and get list of timesteps to keep at high res
-    ##
-    if 'masks' in time_config:
-        masks = {}
-        # time.masks is a list of {'function': .., 'options': ..} dicts
-        for entry in time_config.masks:
-            entry = utils.AttrDict(entry)
-            mask_func = utils.plugin_load(entry.function,
-                                          builtin_module='time_masks')
-            mask_kwargs = entry.get_key('options', default={})
-            masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
-        data.attrs['masks'] = masks
-        # Concatenate the DatetimeIndexes by using dummy Series
-        chosen_timesteps = pd.concat([pd.Series(0, index=m)
-                                     for m in masks.values()]).index
-        # timesteps: a list of timesteps NOT picked by masks
-        timesteps = pd.Index(data.time.values).difference(chosen_timesteps)
-    else:
-        timesteps = None
-    ##
-    # Process function, apply resolution adjustments
-    ##
-    if 'function' in time_config:
-        func = utils.plugin_load(
-            time_config.function, builtin_module='time_funcs')
-        func_kwargs = time_config.get('function_options', {})
-        data = func(data=data, timesteps=timesteps, **func_kwargs)
-
-        ## Removed while operational mode is inexistant
-        # Raise error if we've made adjustments incompatible
-        # with operational mode
-        # if data.model.mode == 'operate':
-        #     opmode_safe = data.attrs.get('opmode_safe', False)
-        #     if opmode_safe:
-        #         data.attrs['time_resolution'] = self.get_timeres()
-        #     else:
-        #         msg = 'Time settings incompatible with operational mode'
-        #         raise exceptions.ModelError(msg)
-    return data

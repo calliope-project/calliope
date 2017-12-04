@@ -305,6 +305,14 @@ def check_model_data(model_data):
     # FIXME: raise error with time clustering if it no longer fits with opmode
     # a la last section of initialize_time in old calliope
 
+    # if data.model.mode == 'operate':
+    #     opmode_safe = data.attrs.get('opmode_safe', False)
+    #     if opmode_safe:
+    #         data.attrs['time_resolution'] = self.get_timeres()
+    #     else:
+    #         msg = 'Time settings incompatible with operational mode'
+    #         raise exceptions.ModelError(msg)
+
     comments = None
     warnings = None
     errors = None
