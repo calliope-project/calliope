@@ -504,125 +504,69 @@ def add_time_dimension(data, model_run):
 
     """
 
-    data_path = model_run.model.data_path
-
-    # 1) Get DatetimeIndex from file
-    time_set = pd.read_csv(os.path.join(data_path, 'time_set.csv'),
-        header=None, index_col=1, squeeze=True)
-    try:
-        time_set.index = pd.to_datetime(time_set.index,
-            errors='raise', format="%Y-%m-%d %H:%M:%S")
-    except ValueError as VE:
-        e = exceptions.ModelError
-        raise e("Incorrect datetime format used in time_set.csv, expecting "
-                "`YYYY-MM-DD hh:mm:ss`, got `{}` instead"
-                "".format(VE.args[0].split("'")[1]))
-
-    # 2) Apply time subsetting, if supplied in model_run
-    subset_time_config = model_run.model.subset_time
-    time_slice = None
-    if subset_time_config:
-        time_slice = (subset_time_config[0] if len(subset_time_config) == 1
-                      else slice(subset_time_config[0], subset_time_config[1]))
-    subset_time = time_set[time_slice] if time_slice else time_set
-
-    # 3) Search through every constraint/cost for use of 'file'
+    # Search through every constraint/cost for use of '='
     for variable in data.data_vars:
-        # 3.1) If 'file=' in variable, it will give the variable a string data type
+        # 1) If '=' in variable, it will give the variable a string data type
         if data[variable].dtype.kind != 'U':
             continue
 
-        # 3.2) convert to a Pandas Series to do 'string contains' search
-        data_df = data[variable].to_dataframe().stack()
+        # 2) convert to a Pandas Series to do 'string contains' search
+        data_series = data[variable].to_series()
 
-        # 3.3) get a Series of all the uses of 'file=' for this variable
-        filenames = data_df[data_df.str.contains('file=')]
+        # 3) get a Series of all the uses of 'file=' for this variable
+        filenames = data_series[data_series.str.contains('=')]
 
-        # 3.4) If no use of 'file=' then we can be on our way
+        # 4) If no use of 'file=' then we can be on our way
         if filenames.empty:
             continue
 
-        # 3.5) remove 'file=' and split filename and location column (seperated by colon)
-        filenames_df = pd.DataFrame()
-        filenames_df['filename'], filenames_df['column'] = \
-            filenames.str.replace('file=', '').str.split(':', 1).str
+        # 5) remove all before '=' and split filename and location column
+        filenames = filenames.str.split('=').str[1].str.rsplit(':', 1)
 
-        # 3.6) store all the information about variables which will need to be
-        # given over all timesteps, including those which are duplicates
-        all_data = data_df[data_df != 'nan']
-        nan_data = data_df.drop(all_data.index)
+        # 6) Get all timeseries data from dataframes stored in model_run
+        timeseries_data = [model_run.timeseries_data[file].loc[:, column].values
+                           for (file, column) in filenames.values]
 
-        # 3.7) create an empty pandas DataFrame
-        timeseries_df = pd.DataFrame(index=all_data.index,
-                                     columns=[i for i in subset_time.index])
+        timeseries_data_series = pd.DataFrame(index=filenames.index,
+                                              columns=data.timesteps.values,
+                                              data=timeseries_data).stack()
+        timeseries_data_series.index.rename('timesteps', -1, inplace=True)
 
-        # 3.8) fill in values that are just duplicates, not actually from file
-        if any(all_data.drop(filenames.index)):
-            timeseries_df.loc[all_data.drop(filenames.index).index] = \
-                np.vstack(all_data.drop(filenames.index).values)
-        timeseries_df.columns.name = 'time'
+        # 7) Add time dimension to the relevent DataArray and update the '='
+        # dimensions with the time varying data (static data is just duplicated
+        # at each timestep)
+        timeseries_data_array = xr.broadcast(data[variable], data.timesteps)[0].copy()
 
-        # 3.9) create xarray DataArray from DataFrame with the correct dimensions
-        timeseries_dataarray = (timeseries_df.stack(dropna=False)
-                                             .unstack(level=-2)
-                                             .to_xarray().to_array())
+        timeseries_data_array.loc[
+            xr.DataArray.from_series(timeseries_data_series).coords
+        ] = xr.DataArray.from_series(timeseries_data_series).values
 
-        # 3.10) Each DataArray in model_data could exist over a different
-        # subset of loc_techs (e.g. loc_techs_finite_resource), so we extract
-        # which one it is for this particular DataArray, for later indexing
-        loc_techs = [d for d in timeseries_dataarray.dims if 'loc_tech' in d][0]
-
-        # 3.11) To avoid opening files more than once, we extract all required
-        # information from a file, then apply it to the variable
-        for file in set(filenames_df.filename):
-            file_path = os.path.join(data_path, file)
-            # 3.11.1) For the given file, get all the relevant columns
-            columns = set(filenames_df[filenames_df.filename == file].column)
-            # 3.11.2) load all relevant columns from csv
-            data_from_csv = pd.read_csv(file_path, usecols=columns)
-            # 3.11.3) Apply time subset
-            data_from_csv = data_from_csv.loc[subset_time.values, :]
-            # 3.11.4) Apply each column of data to all relevant coordinates
-            for col in columns:
-                col_df = filenames_df[(filenames_df.filename == file) &
-                                   (filenames_df.column == col)]
-                # coordinates are taken from those which refer to 'file=' in input Dataset
-                loc_dict = {loc_techs:col_df.index.get_level_values(loc_techs)}
-                # Account for the additional dimension for cost variables
-                if 'costs' in timeseries_dataarray.dims:  # cost
-                    loc_dict.update({'costs':col_df.index.get_level_values('costs')})
-                # Populate temporary DataArray with data from file
-                timeseries_dataarray.loc[loc_dict] = data_from_csv[col].values
-
-        # 3.12) assign correct dtype (might be string/object accidentally)
+        # 8) assign correct dtype (might be string/object accidentally)
         if all(np.where(
-            ((timeseries_dataarray=='True') | (timeseries_dataarray=='False'))
+            ((timeseries_data_array=='True') | (timeseries_data_array=='False'))
             )):
             # Turn to bool
-            timeseries_dataarray.loc[dict()] = timeseries_dataarray == 'True'
-            timeseries_dataarray = timeseries_dataarray.astype(np.bool, copy=False)
+            timeseries_data_array.loc[dict()] = timeseries_data_array == 'True'
+            timeseries_data_array = timeseries_data_array.astype(np.bool, copy=False)
         else:
             try:
-                timeseries_dataarray = timeseries_dataarray.astype(np.float, copy=False)
+                timeseries_data_array = timeseries_data_array.astype(np.float, copy=False)
             except:
                 None
-        data[timeseries_dataarray['variable'].item()] = (
-            timeseries_dataarray.squeeze('variable')
-                                .reset_coords('variable', drop=True)
-        )
+        data[variable] = timeseries_data_array
 
-    # 4) Add time_resolution and timestep_weight variables
-    if 'time' in data.dims:
-        seconds = (subset_time.index[0] - subset_time.index[1]).total_seconds()
-        hours = abs(seconds) / 3600
-        data['time_resolution'] = xr.DataArray(
-                np.ones(len(subset_time))*hours,
-                dims=['time']
-        )
+    # Add time_resolution and timestep_weight variables
+    parsed_timesteps = pd.to_datetime(data.timesteps)
+    seconds = (parsed_timesteps[0] - parsed_timesteps[1]).total_seconds()
+    hours = abs(seconds) / 3600
+    data['timestep_resolution'] = xr.DataArray(
+            np.ones(len(data.timesteps))*hours,
+            dims=['timesteps']
+    )
 
-        data['timestep_weights'] = xr.DataArray(
-                np.ones(len(subset_time)),
-                dims=['time']
-        )
+    data['timestep_weights'] = xr.DataArray(
+            np.ones(len(data.timesteps)),
+            dims=['timesteps']
+    )
 
     return None

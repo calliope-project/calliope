@@ -29,7 +29,7 @@ def _get_array(data, var, tech, **kwargs):
                                     "{} don't exist for parameter {}".format(
                                         tech, unusable_dims, var.name))
     arr = utils.split_loc_techs(data[var].copy()).loc[subset]
-    arr = arr.mean(dim=[i for i in arr.dims if i is not 'time']).to_pandas()
+    arr = arr.mean(dim=[i for i in arr.dims if i is not 'timesteps']).to_pandas()
     return arr
 
 

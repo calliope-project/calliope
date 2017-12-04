@@ -60,7 +60,7 @@ def _copy_non_t_vars(data0, data1):
     """Copies non-t-indexed variables from data0 into data1, then
     returns data1"""
     non_t_vars = [v for v in data0.data_vars
-                  if 'time' not in data0[v].dims]
+                  if 'timesteps' not in data0[v].dims]
     # Manually copy over variables not in `t`. If we don't do this,
     # these vars get polluted with a superfluous `t` dimension
     for v in non_t_vars:
@@ -70,9 +70,11 @@ def _copy_non_t_vars(data0, data1):
 
 def _combine_datasets(data0, data1):
     """Concatenates data0 and data1 along the time dimension"""
-    data_new = xr.concat([data0, data1], dim='time')
+    data_new = xr.concat([data0, data1], dim='timesteps')
     # Ensure time dimension is ordered
-    data_new = data_new.loc[{'time': data_new.time.to_pandas().index.sort_values()}]
+    data_new = data_new.loc[
+        {'timesteps': data_new.timesteps.to_pandas().index.sort_values()}
+    ]
 
     return data_new
 
@@ -104,11 +106,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     if timesteps is None:
         data_to_cluster = data
     else:
-        data_to_cluster = data.loc[{'time': timesteps}]
+        data_to_cluster = data.loc[{'timesteps': timesteps}]
 
     # remove all variables that are not indexed over time
     data_to_cluster = data_to_cluster.drop(
-        [i for i in data.variables if 'time' not in data[i].dims]
+        [i for i in data.variables if 'timesteps' not in data[i].dims]
     )
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
@@ -132,17 +134,17 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     else:
         # Drop timesteps from old data
         data_new = _copy_non_t_vars(data, data_new)
-        data_new = _combine_datasets(data.drop(timesteps, dim='time'), data_new)
+        data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
         data_new = _copy_non_t_vars(data, data_new)
 
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
     data_vars_in_t = [v for v in time_clustering._get_datavars(data)
-                      if 'time' in data[v].dims]
+                      if 'timesteps' in data[v].dims]
     for var in data_vars_in_t:
-        scale_to_match_mean = (data[var].mean(dim='time') /
-            data_new[var].mean(dim='time')).fillna(0)
+        scale_to_match_mean = (data[var].mean(dim='timesteps') /
+            data_new[var].mean(dim='timesteps')).fillna(0)
         data_new_scaled[var] = data_new[var] * scale_to_match_mean
 
     return data_new_scaled
@@ -150,11 +152,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
 def resample(data, timesteps, resolution):
     data_new = data.copy(deep=True)
     if timesteps is not None:
-        data_new = data_new.loc[{'time': timesteps}]
+        data_new = data_new.loc[{'timesteps': timesteps}]
 
     # First create a new resampled dataset of the correct size by
     # using first-resample, which should be a quick way to achieve this
-    data_rs = data_new.resample(resolution, dim='time', how='first')
+    data_rs = data_new.resample(resolution, dim='timesteps', how='first')
 
     timestep_vars = [v for v in data_new.data_vars
                      if 'time' in data_new[v].dims]
@@ -167,12 +169,12 @@ def resample(data, timesteps, resolution):
     for var in timestep_vars:
         if var in ['time_resolution', 'resource']:
             data_rs[var] = data_new[var].resample(
-                resolution, dim='time', how='sum'
+                resolution, dim='timesteps', how='sum'
             )
         else:
             try:
                 data_rs[var] = data_new[var].resample(
-                    resolution, dim='time', how='mean'
+                    resolution, dim='timesteps', how='mean'
                 )
             except TypeError:
                 # If the var has a datatype of strings, it can't be resampled
@@ -182,13 +184,13 @@ def resample(data, timesteps, resolution):
                 data_rs = data_rs.drop(var)
 
     # Get rid of the filled-in NaN timestamps
-    data_rs = data_rs.dropna(dim='time', how='all')
+    data_rs = data_rs.dropna(dim='timesteps', how='all')
     data_rs.attrs['opmode_safe'] = True  # Resampling still permits operational mode
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
         data_rs = _copy_non_t_vars(data, data_rs)
-        data_rs = _combine_datasets(data.drop(timesteps, dim='time'), data_rs)
+        data_rs = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_rs)
         data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
         data_rs.attrs['opmode_safe'] = False
@@ -226,9 +228,9 @@ def drop(data, timesteps, padding=None):
         timesteps = pd.concat([pd.Series(0, index=i) for i in dt_indices]).index
 
     # 'Distribute weight' of the dropped timesteps onto the remaining ones
-    dropped_weight = data.timestep_weights.loc[{'time': timesteps}].sum()
+    dropped_weight = data.timestep_weights.loc[{'timesteps': timesteps}].sum()
 
-    data = data.drop(timesteps, dim='time')
+    data = data.drop(timesteps, dim='timesteps')
 
     data['timestep_weights'] = data['timestep_weights'] + (dropped_weight / len(data['timestep_weights']))
 
