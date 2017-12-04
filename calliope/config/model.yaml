@@ -13,7 +13,11 @@ model:
 
     mode: plan  # Choices: plan, operate
 
-    data_path:  null  # Path to time series data
+    timeseries_data_path:  null  # Path to time series data
+
+    timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
+
+    timeseries_data:  null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
 
     startup_time: 12  # Length of startup period (hours)
 

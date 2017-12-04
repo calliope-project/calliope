@@ -14,6 +14,7 @@ import datetime
 import os
 import itertools
 
+import pandas as pd
 import seaborn as sns
 
 from .. import exceptions
@@ -139,10 +140,10 @@ def process_config(config, is_model_config=False):
 
         config_model_dict = utils.AttrDict.from_yaml(config.model)
 
-        # Interpret data_path as relative to `path`  (i.e the currently
+        # Interpret timeseries_data_path as relative to `path`  (i.e the currently
         # open model config file)
-        config_model_dict.model.data_path = utils.relative_path(
-            config.model, config_model_dict.model.data_path
+        config_model_dict.model.timeseries_data_path = utils.relative_path(
+            config.model, config_model_dict.model.timeseries_data_path
         )
 
     # Check whether the model config attempts to override any of the
@@ -292,6 +293,65 @@ def process_tech_groups(config_model, techs):
     return tech_groups
 
 
+def process_timeseries_data(config_model, model_run):
+    if config_model.model.timeseries_data is None:
+        timeseries_data = utils.AttrDict()
+    else:
+        timeseries_data = config_model.model.timeseries_data
+
+    if 'timeseries_data_path' in config_model.model:
+        dtformat = config_model.model.get_key(
+            'timeseries_dateformat', None)
+
+        # Generate the set of all files we want to read from file
+        flattened_config = model_run.locations.as_dict_flat()
+        csv_files = set([
+            v.split('=')[1].rsplit(':', 1)[0]
+            for v in flattened_config.values() if 'file=' in str(v)
+        ])
+
+        for f in csv_files:
+            f_path = os.path.join(config_model.model.timeseries_data_path, f)
+            parser = lambda x: datetime.datetime.strptime(x, dtformat)
+            try:
+                df = pd.read_csv(
+                    f_path, index_col=0, parse_dates=True, date_parser=parser
+                )
+            except ValueError as e:
+                raise exceptions.ModelError(
+                    "Incorrect datetime format used in {}, expecting "
+                    "`{}`, got `{}` instead"
+                    "".format(f, dtformat, e.args[0].split("'")[1]))
+            timeseries_data[f] = df
+
+    # Apply time subsetting, if supplied in model_run
+    subset_time_config = config_model.model.subset_time
+    if subset_time_config is not None:
+        if isinstance(subset_time_config, list):
+            if len(subset_time_config) == 2:
+                time_slice = slice(subset_time_config[0], subset_time_config[1])
+            else:
+                raise exceptions.ModelError(
+                    'Invalid subset_time value: {}'.format(subset_time_config)
+                )
+        else:
+            time_slice = str(subset_time_config)
+        for k in timeseries_data.keys():
+            timeseries_data[k] = timeseries_data[k].loc[time_slice, :]
+
+    # Ensure all timeseries have the same index
+    # FIXME: this error message could be improved with more detail
+    indices = [df.index for df in timeseries_data.values()]
+    first_index = indices[0]
+    for i in indices[1:]:
+        if not first_index.equals(i):
+            raise exceptions.ModelError(
+                'All time series indices must have the same values.'
+            )
+
+    return timeseries_data
+
+
 def generate_model_run(config_run, config_model, debug_comments=None):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -354,22 +414,26 @@ def generate_model_run(config_run, config_model, debug_comments=None):
     )
     debug_comments.set_key('model_run.locations', debug_locs)
 
-    # 6) Initialize sets
+    # 6) Fully populate timeseries data
+    # Raises ModelErrors if there are problems with timeseries data at this stage
+    model_run['timeseries_data'] = process_timeseries_data(config_model, model_run)
+
+    # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     all_sets = utils.AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
 
-    # 7) Grab additional relevant bits from run and model config
+    # 8) Grab additional relevant bits from run and model config
     model_run['run'] = config_run
     model_run['model'] = config_model['model']
 
-    # 8) Final sense-checking
+    # 9) Final sense-checking
     final_check_comments, warnings, errors = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
     checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
-    # 9) Build a debug data dict with comments and the original configs
+    # 10) Build a debug data dict with comments and the original configs
     debug_data = utils.AttrDict({
         'comments': debug_comments,
         'config_model': config_model,

@@ -8,7 +8,7 @@ model:
     name: National-scale example model
 
     # Time series data path - can either be a path relative to this file, or an absolute path
-    data_path: 'data'
+    timeseries_data_path: 'data'
 
     # Optional: specify a custom objective function
     # objective:

@@ -25,6 +25,16 @@ def national_scale():
     return core.Model(os.path.join(_PATHS['national_scale'], 'run.yaml'))
 
 
+def time_clustering():
+    """Returns the built-in national-scale example model with time clustering."""
+    return core.Model(os.path.join(_PATHS['national_scale'], 'run_time_clustering.yaml'))
+
+
+def time_resampling():
+    """Returns the built-in national-scale example model with time resampling."""
+    return core.Model(os.path.join(_PATHS['national_scale'], 'run_time_resampling.yaml'))
+
+
 def urban_scale():
     """Returns the built-in urban-scale example model."""
     return core.Model(os.path.join(_PATHS['urban_scale'], 'run.yaml'))
