@@ -2,8 +2,8 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-time_masks.py
-~~~~~~~~~~~~~
+masks.py
+~~~~~~~~
 
 Functions to pick timesteps from data given certain criteria.
 
@@ -11,8 +11,9 @@ Functions to pick timesteps from data given certain criteria.
 
 import pandas as pd
 
-from . import time_funcs
-from . import utils
+from calliope.core.time import funcs
+from calliope.core.util.loc_tech import split_loc_techs
+from calliope import exceptions
 
 
 def _get_array(data, var, tech, **kwargs):
@@ -28,7 +29,7 @@ def _get_array(data, var, tech, **kwargs):
                                     "technology {}, but dimension(s) "
                                     "{} don't exist for parameter {}".format(
                                         tech, unusable_dims, var.name))
-    arr = utils.split_loc_techs(data[var].copy()).loc[subset]
+    arr = split_loc_techs(data[var].copy()).loc[subset]
     arr = arr.mean(dim=[i for i in arr.dims if i is not 'timesteps']).to_pandas()
     return arr
 
@@ -106,7 +107,7 @@ def extreme(data, tech, var='resource', how='max',
         timesteps given.
     normalize : bool, optional
         If True (default), data is normalized
-        using :func:`~calliope.time_funcs.normalized_copy`.
+        using :func:`~calliope.core.time.funcs.normalized_copy`.
     kwargs : dict, optional
         Dimensions of the selected var over which to index. Any remaining
         dimensions will be flattened by mean
@@ -121,7 +122,7 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
                  length='1D', n=1, groupby_length=None,
                  padding=None, normalize=True, **kwargs):
     if normalize:
-        data_n = time_funcs.normalized_copy(data)
+        data_n = funcs.normalized_copy(data)
     else:
         data_n = data
     arr0 = _get_array(data_n, var, tech0, **kwargs)

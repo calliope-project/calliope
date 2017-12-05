@@ -17,109 +17,35 @@ import itertools
 import pandas as pd
 import seaborn as sns
 
-from .. import exceptions
-from .. import utils
-from . import preprocess_locations as locations
-from . import preprocess_sets as sets
-from . import preprocess_checks as checks
+import calliope
+from calliope import exceptions
+from calliope.core.attrdict import AttrDict
+from calliope.core.util.tools import relative_path
+from calliope.core.preprocess import locations, sets, checks
 
 
 _DEFAULT_PALETTE = sns.color_palette('cubehelix', 10).as_hex()
 
 
-def model_run_from_yaml(run_config_path, run_config_override=None):
+def apply_overrides(config, override_file=None, override_dict=None):
     """
-    Generate processed ModelRun configuration from a YAML run configuration file.
-
-    Parameters
-    ----------
-    run_config_path : str
-        Path to YAML file with run configuration.
-    override : AttrDict, optional
-        Provide any additional options or override options from
-        ``config_run`` by passing an AttrDict of the form
-        ``{'model_settings': 'foo.yaml'}``. Any option possible in
-        ``run.yaml`` can be specified in the dict, inluding ``override.``
-        options.
-
-    """
-    config_run = utils.AttrDict.from_yaml(run_config_path)
-    config_run.config_run_path = run_config_path
-
-    debug_comments = utils.AttrDict()
-
-    # If we have no run name we use the run config file name without extension
-    if 'name' not in config_run:
-        config_run.name = os.path.splitext(os.path.basename(run_config_path))[0]
-        debug_comments.set_key(
-            'config_run.name', 'From run configuration filename'
-        )
-
-    # If passed in, config_run is overridden with any additional overrides...
-    if run_config_override:
-        assert isinstance(run_config_override, utils.AttrDict)
-        config_run.union(
-            run_config_override, allow_override=True, allow_replacement=True
-        )
-        for overrides in run_config_override.as_dict_flat().keys():
-            debug_comments.set_key(
-                overrides, 'From model initialisation overrides'
-            )
-
-    config_model = process_config(config_run)
-
-    model_run = generate_model_run(config_run, config_model, debug_comments)
-    return model_run
-
-
-def model_run_from_dict(config):
-    """
-    Generate processed ModelRun configuration from
-    run and model config dictionaries.
-
-    Parameters
-    ----------
-    config : dict or AttrDict
-        Must contain a 'run' and a 'model' key at the top level
-
-    """
-    config_run = utils.AttrDict(config['run'])
-    config_run.config_run_path = None
-
-    debug_comments = utils.AttrDict()
-
-    # If we have no run name we just use current date/time
-    if 'name' not in config_run:
-        config_run['name'] = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
-        debug_comments.set_key(
-            'config_run.name', 'Defaulted to current datetime'
-        )
-
-    config_model = process_config(config['model'], is_model_config=True)
-
-    model_run = generate_model_run(config_run, config_model, debug_comments)
-    return model_run
-
-
-def process_config(config, is_model_config=False):
-    """
-    Generate processed Model configuration from
-    a run config dictionary or model config dictionary.
+    Generate processed Model configuration, applying any overrides.
 
     Parameters
     ----------
     config : AttrDict
-        a run or model configuration AttrDict
-    is_model_config : bool, optional
-        if True, ``config`` is a model_config, else a run_config
+        a model configuration AttrDict
+    override_file : str, optional
+    override_dict : dict or AttrDict, optional
 
     """
+    debug_comments = AttrDict()
 
     base_model_config_file = os.path.join(
-        os.path.dirname(__file__),
-        '..', 'config', 'model.yaml'
+        os.path.dirname(calliope.__file__),
+        'config', 'model.yaml'
     )
-    config_model = utils.AttrDict.from_yaml(base_model_config_file)
+    config_model = AttrDict.from_yaml(base_model_config_file)
 
     default_tech_groups = list(config_model.tech_groups.keys())
 
@@ -132,26 +58,17 @@ def process_config(config, is_model_config=False):
     # that for parallel runs, data_path relative to the currently
     # open model config file always works
 
-    if not is_model_config:
-        # Interpret relative config paths as relative to run.yaml
-        config.model = utils.relative_path(
-            config.config_run_path, config.model
-        )
-
-        config_model_dict = utils.AttrDict.from_yaml(config.model)
-
-        # Interpret timeseries_data_path as relative to `path`  (i.e the currently
-        # open model config file)
-        config_model_dict.model.timeseries_data_path = utils.relative_path(
-            config.model, config_model_dict.model.timeseries_data_path
-        )
+    # Interpret timeseries_data_path as relative
+    config.model.timeseries_data_path = relative_path(
+        config.config_path, config.model.timeseries_data_path
+    )
 
     # Check whether the model config attempts to override any of the
     # base technology groups
-    if 'tech_groups' in config_model_dict:
+    if 'tech_groups' in config:
         overridden_groups = (
             set(default_tech_groups) &
-            set(config_model_dict.tech_groups.keys())
+            set(config.tech_groups.keys())
         )
         if overridden_groups:
             raise exceptions.ModelError(
@@ -160,9 +77,40 @@ def process_config(config, is_model_config=False):
             )
 
     # The input files are allowed to override other model defaults
-    config_model.union(config_model_dict, allow_override=True)
+    config_model.union(config, allow_override=True)
 
-    return config_model
+    # Apply overrides via 'override_file', which containis the path to a YAML file
+    if override_file:
+        override_file_path, override_group = override_file.split(':')
+        try:
+            override_from_file = AttrDict.from_yaml(override_file_path)[override_group]
+        except KeyError:
+            raise exceptions.ModelError(
+                'Override group `{}` does not exist in file `{}`.'.format(
+                    override_group, override_file_path
+                )
+            )
+        config_model.union(
+            override_from_file, allow_override=True, allow_replacement=True
+        )
+        for k, v in override_from_file.as_dict_flat().items():
+            debug_comments.set_key(
+                '{}'.format(k),
+                'Overridden via override: {}'.format(override_file))
+
+    # Apply overrides via 'override', which is an AttrDict
+    if override_dict:
+        if not isinstance(override_dict, AttrDict):
+            override_dict = AttrDict(override_dict)
+        config_model.union(
+            override_dict, allow_override=True, allow_replacement=True
+        )
+        for k, v in override_dict.as_dict_flat().items():
+            debug_comments.set_key(
+                '{}'.format(k),
+                'Overridden via override dictionary.')
+
+    return config_model, debug_comments
 
 
 def get_parents(tech_id, model_config):
@@ -195,12 +143,12 @@ def process_techs(config_model):
 
     default_palette_cycler = itertools.cycle(range(len(_DEFAULT_PALETTE)))
 
-    result = utils.AttrDict()
+    result = AttrDict()
     errors = []
-    debug_comments = utils.AttrDict()
+    debug_comments = AttrDict()
 
     for tech_id, tech_config in config_model.techs.items():
-        tech_result = utils.AttrDict()
+        tech_result = AttrDict()
 
         # Add inheritance chain
         tech_result.inheritance = get_parents(tech_id, config_model)
@@ -213,7 +161,7 @@ def process_techs(config_model):
             )
 
         # Process inheritance
-        tech_result.essentials = utils.AttrDict()
+        tech_result.essentials = AttrDict()
         for parent in reversed(tech_result.inheritance):
             # Does the parent group have model-wide settings?
             parent_essentials = config_model.tech_groups[parent].essentials
@@ -283,7 +231,7 @@ def process_techs(config_model):
 
 
 def process_tech_groups(config_model, techs):
-    tech_groups = utils.AttrDict()
+    tech_groups = AttrDict()
     for group in config_model.tech_groups.keys():
         members = set(
             k for k, v in techs.items()
@@ -295,13 +243,12 @@ def process_tech_groups(config_model, techs):
 
 def process_timeseries_data(config_model, model_run):
     if config_model.model.timeseries_data is None:
-        timeseries_data = utils.AttrDict()
+        timeseries_data = AttrDict()
     else:
         timeseries_data = config_model.model.timeseries_data
 
     if 'timeseries_data_path' in config_model.model:
-        dtformat = config_model.model.get_key(
-            'timeseries_dateformat', None)
+        dtformat = config_model.model['timeseries_dateformat']
 
         # Generate the set of all files we want to read from file
         flattened_config = model_run.locations.as_dict_flat()
@@ -310,19 +257,19 @@ def process_timeseries_data(config_model, model_run):
             for v in flattened_config.values() if 'file=' in str(v)
         ])
 
-        for f in csv_files:
-            f_path = os.path.join(config_model.model.timeseries_data_path, f)
+        for file in csv_files:
+            file_path = os.path.join(config_model.model.timeseries_data_path, file)
             parser = lambda x: datetime.datetime.strptime(x, dtformat)
             try:
                 df = pd.read_csv(
-                    f_path, index_col=0, parse_dates=True, date_parser=parser
+                    file_path, index_col=0, parse_dates=True, date_parser=parser
                 )
             except ValueError as e:
                 raise exceptions.ModelError(
                     "Incorrect datetime format used in {}, expecting "
                     "`{}`, got `{}` instead"
-                    "".format(f, dtformat, e.args[0].split("'")[1]))
-            timeseries_data[f] = df
+                    "".format(file, dtformat, e.args[0].split("'")[1]))
+            timeseries_data[file] = df
 
     # Apply time subsetting, if supplied in model_run
     subset_time_config = config_model.model.subset_time
@@ -340,19 +287,17 @@ def process_timeseries_data(config_model, model_run):
             timeseries_data[k] = timeseries_data[k].loc[time_slice, :]
 
     # Ensure all timeseries have the same index
-    # FIXME: this error message could be improved with more detail
-    indices = [df.index for df in timeseries_data.values()]
-    first_index = indices[0]
-    for i in indices[1:]:
-        if not first_index.equals(i):
-            raise exceptions.ModelError(
-                'All time series indices must have the same values.'
-            )
+    indices = [(file, df.index) for file, df in timeseries_data.items()]
+    first_file, first_index = indices[0]
+    for file, idx in indices[1:]:
+        if not first_index.equals(idx):
+            raise exceptions.ModelError('Time series indices do not match '
+                'between {} and {}'.format(first_file, file))
 
     return timeseries_data
 
 
-def generate_model_run(config_run, config_model, debug_comments=None):
+def generate_model_run(config, debug_comments):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
@@ -363,81 +308,50 @@ def generate_model_run(config_run, config_model, debug_comments=None):
     config_model : AttrDict
 
     """
-    model_run = utils.AttrDict()
-    if debug_comments is None:
-        debug_comments = utils.AttrDict()
+    model_run = AttrDict()
 
-    # README CHANGED: if run_config overrides data_path, it is no longer
-    # interpreted as relative to the run_config file's path
-
-    # 1) Apply any initiall overrides to config_model
-    # 1.a) Via 'model_override', which is the path to a YAML file
-    if 'model_override' in config_run:
-        override_path = utils.relative_path(
-            config_run.config_run_path, config_run.model_override
-        )
-        override_dict = utils.AttrDict.from_yaml(override_path)
-        config_model.union(
-            override_dict, allow_override=True, allow_replacement=True
-        )
-        for k, v in override_dict.as_dict_flat():
-            debug_comments.set_key(
-                'config_model.{}'.format(k),
-                'Overridden via `model_override: {}`'.format(override_path))
-
-    # 1.b) Via 'override', which is an AttrDict
-    if ('override' in config_run and isinstance(config_run.override, utils.AttrDict)):
-        config_model.union(
-            config_run.override, allow_override=True, allow_replacement=True
-        )
-        for k, v in override_dict.as_dict_flat():
-            debug_comments.set_key(
-                'config_model.{}'.format(k),
-                'Overridden via `override` in run configuration.')
-
-    # 2) Initial checks on model and run configs
-    warnings, errors = checks.check_initial(config_model, config_run)
+    # 1) Initial checks on model configuration
+    warnings, errors = checks.check_initial(config)
     checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
-    # 3) Fully populate techs
+    # 2) Fully populate techs
     # Raises ModelError if necessary
-    model_run['techs'], debug_techs, errors = process_techs(config_model)
+    model_run['techs'], debug_techs, errors = process_techs(config)
     debug_comments.set_key('model_run.techs', debug_techs)
     checks.print_warnings_and_raise_errors(errors=errors)
 
-    # 4) Fully populate tech_groups
-    model_run['tech_groups'] = process_tech_groups(config_model, model_run['techs'])
+    # 3) Fully populate tech_groups
+    model_run['tech_groups'] = process_tech_groups(config, model_run['techs'])
 
-    # 5) Fully populate locations
+    # 4) Fully populate locations
     model_run['locations'], debug_locs = locations.process_locations(
-        config_model, model_run['techs']
+        config, model_run['techs']
     )
     debug_comments.set_key('model_run.locations', debug_locs)
 
-    # 6) Fully populate timeseries data
+    # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
-    model_run['timeseries_data'] = process_timeseries_data(config_model, model_run)
+    model_run['timeseries_data'] = process_timeseries_data(config, model_run)
 
-    # 7) Initialize sets
+    # 6) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
-    all_sets = utils.AttrDict({k: list(v) for k, v in all_sets.items()})
+    all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
 
-    # 8) Grab additional relevant bits from run and model config
-    model_run['run'] = config_run
-    model_run['model'] = config_model['model']
+    # 7) Grab additional relevant bits from run and model config
+    model_run['run'] = config['run']
+    model_run['model'] = config['model']
 
-    # 9) Final sense-checking
+    # 8) Final sense-checking
     final_check_comments, warnings, errors = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
     checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
-    # 10) Build a debug data dict with comments and the original configs
-    debug_data = utils.AttrDict({
+    # 9) Build a debug data dict with comments and the original configs
+    debug_data = AttrDict({
         'comments': debug_comments,
-        'config_model': config_model,
-        'config_run': config_run
+        'config_initial': config,
     })
 
     return model_run, debug_data

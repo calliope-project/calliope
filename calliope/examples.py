@@ -11,7 +11,7 @@ Example models.
 
 import os
 
-from . import core
+from calliope.core.model import Model
 
 
 _PATHS = {
@@ -22,24 +22,33 @@ _PATHS = {
 
 def national_scale():
     """Returns the built-in national-scale example model."""
-    return core.Model(os.path.join(_PATHS['national_scale'], 'run.yaml'))
+    return Model(os.path.join(_PATHS['national_scale'], 'model.yaml'))
 
 
 def time_clustering():
     """Returns the built-in national-scale example model with time clustering."""
-    return core.Model(os.path.join(_PATHS['national_scale'], 'run_time_clustering.yaml'))
+    return Model(
+        os.path.join(_PATHS['national_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_clustering')
+    )
 
 
 def time_resampling():
     """Returns the built-in national-scale example model with time resampling."""
-    return core.Model(os.path.join(_PATHS['national_scale'], 'run_time_resampling.yaml'))
+    return Model(
+        os.path.join(_PATHS['national_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_resampling')
+    )
 
 
 def urban_scale():
     """Returns the built-in urban-scale example model."""
-    return core.Model(os.path.join(_PATHS['urban_scale'], 'run.yaml'))
+    return Model(os.path.join(_PATHS['urban_scale'], 'model.yaml'))
 
 
 def milp():
     """Returns the built-in urban-scale example model with MILP constraints enabled."""
-    return core.Model(os.path.join(_PATHS['urban_scale'], 'run_milp.yaml'))
+    return Model(
+        os.path.join(_PATHS['urban_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:milp')
+    )

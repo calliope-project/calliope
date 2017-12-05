@@ -10,16 +10,15 @@ time-varying parameters.
 
 """
 
-import os
-
 import xarray as xr
 import numpy as np
 import pandas as pd
 
-from .. import utils
-from .. import exceptions
-from .. _version import __version__
-from . import preprocess_checks as checks
+from calliope.core.attrdict import AttrDict
+from calliope.core.util.tools import plugin_load
+from calliope._version import __version__
+from calliope.core.preprocess import checks
+
 
 def build_model_data(model_run, debug=False):
     """
@@ -29,7 +28,7 @@ def build_model_data(model_run, debug=False):
 
     Parameters
     ----------
-    model_run : calliope.utils.AttrDict
+    model_run : AttrDict
         preprocessed model_run dictionary, as produced by
         Calliope.core.preprocess_model
     debug : bool, default = False
@@ -132,9 +131,8 @@ def apply_time_clustering(model_data_original, model_run):
         masks = {}
         # time.masks is a list of {'function': .., 'options': ..} dicts
         for entry in time_config.masks:
-            entry = utils.AttrDict(entry)
-            mask_func = utils.plugin_load(entry.function,
-                                          builtin_module='time_masks')
+            entry = AttrDict(entry)
+            mask_func = plugin_load(entry.function, builtin_module='calliope.core.time.masks')
             mask_kwargs = entry.get_key('options', default={})
             masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
         data.attrs['masks'] = masks
@@ -149,8 +147,8 @@ def apply_time_clustering(model_data_original, model_run):
     # Process function, apply resolution adjustments
     ##
     if 'function' in time_config:
-        func = utils.plugin_load(
-            time_config.function, builtin_module='time_funcs')
+        func = plugin_load(
+            time_config.function, builtin_module='calliope.core.time.funcs')
         func_kwargs = time_config.get('function_options', {})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
 
@@ -178,7 +176,7 @@ def constraints_to_dataset(model_run):
 
     Parameters
     ----------
-    model_run : utils.AttrDict
+    model_run : AttrDict
         processed Calliope model_run dict
 
     Returns
@@ -245,7 +243,7 @@ def costs_to_dataset(model_run):
 
     Parameters
     ----------
-    model_run : utils.AttrDict
+    model_run : AttrDict
         processed Calliope model_run dict
 
     Returns
@@ -303,7 +301,7 @@ def carriers_to_dataset(model_run):
 
     Parameters
     ----------
-    model_run : utils.AttrDict
+    model_run : AttrDict
         processed Calliope model_run dict
 
     Returns
@@ -383,7 +381,7 @@ def location_specific_to_dataset(model_run):
 
     Parameters
     ----------
-    model_run : utils.AttrDict
+    model_run : AttrDict
         processed Calliope model_run dict
 
     Returns
@@ -431,7 +429,7 @@ def tech_specific_to_dataset(model_run):
 
     Parameters
     ----------
-    model_run : utils.AttrDict
+    model_run : AttrDict
         processed Calliope model_run dict
 
     Returns
@@ -459,7 +457,7 @@ def tech_specific_to_dataset(model_run):
 
 
 def add_attributes(model_run):
-    attr_dict = utils.AttrDict()
+    attr_dict = AttrDict()
     attr_dict['model'] = model_run.model.copy()
     attr_dict['run'] = model_run.run.copy()
 
@@ -494,7 +492,7 @@ def add_time_dimension(data, model_run):
     data : xarray Dataset
         A data structure which has already gone through `constraints_to_dataset`,
         `costs_to_dataset`, and `add_attributes`
-    model_run : calliope.utils.AttrDict
+    model_run : AttrDict
         Calliope model_run dictionary
 
     Returns:

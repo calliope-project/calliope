@@ -8,16 +8,26 @@
 # Model-wide default settings
 ##
 
+run:
+    solver: glpk
+    solver_options: null  # FIXME document
+    solver_io:  # FIXME check what options exist here (lp, file?)
+    save_logs: null  # former debug options: keep_temp_files and symbolic_solver_labels
+    # echo_solver_log: true  # FIXME: should always be true now
+    save_netcdf: null
+    save_csv: null
+    random_seed: null  # Specify a seed for random number generator used during clustering
+
 model:
     name: null
 
     mode: plan  # Choices: plan, operate
 
-    timeseries_data_path:  null  # Path to time series data
+    timeseries_data_path: null  # Path to time series data
 
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
 
-    timeseries_data:  null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
+    timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
 
     startup_time: 12  # Length of startup period (hours)
 
@@ -120,7 +130,7 @@ tech_groups:
             energy_con: true
     conversion_plus:
         required_constraints: [['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'carrier_ratios', 'resource', 'force_resource', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_loss_per_distance', 'export_cap', 'export_carrier', 'storage_init', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss']
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'carrier_ratios', 'resource', 'force_resource', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_total_max', 'energy_cap_total_equals', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_loss_per_distance', 'export_cap', 'export_carrier', 'storage_init', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss', 'units_min', 'units_max', 'units_equals']
         allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase']
         essentials:
             parent: null

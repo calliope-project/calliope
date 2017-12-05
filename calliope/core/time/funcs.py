@@ -2,8 +2,8 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-time_funcs.py
-~~~~~~~~~~~~~
+funcs.py
+~~~~~~~~
 
 Functions to process time series data.
 
@@ -14,8 +14,9 @@ import logging
 import pandas as pd
 import xarray as xr
 
-from . import utils
-from . import time_clustering
+from calliope.core.util.tools import plugin_load
+from calliope.core.util.loc_tech import get_loc_techs
+from calliope.core.time import clustering
 
 
 def normalized_copy(data):
@@ -41,7 +42,7 @@ def normalized_copy(data):
 
         # For each technology, get the loc_techs which are relevant
         loc_tech_subsets = [
-            utils.get_loc_techs(ds[loc_tech_dim].values, tech)
+            get_loc_techs(ds[loc_tech_dim].values, tech)
             for tech in set(i.split(':', 1)[1] for i in ds[loc_tech_dim].values)
         ]
         # remove empty lists within the _techs list
@@ -93,7 +94,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
         How to map clusters to data. 'mean' or 'closest'.
     normalize : bool, optional
         If True (default), data is normalized before clustering is applied,
-        using :func:`~calliope.time_funcs.normalized_copy`.
+        using :func:`~calliope.core.time.funcs.normalized_copy`.
     **kwargs : optional
         Arguments passed to clustering_func.
 
@@ -121,12 +122,12 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
         data_normalized = data_to_cluster
 
     # Get function from `clustering_func` string
-    func = utils.plugin_load(clustering_func, builtin_module='time_clustering')
+    func = plugin_load(clustering_func, builtin_module='calliope.core.time.clustering')
 
     result = func(data_normalized, **kwargs)
     clusters = result[0]  # Ignore other stuff returned
 
-    data_new = time_clustering.map_clusters_to_data(data_to_cluster, clusters,
+    data_new = clustering.map_clusters_to_data(data_to_cluster, clusters,
                                                     how=how)
 
     if timesteps is None:
@@ -140,7 +141,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
-    data_vars_in_t = [v for v in time_clustering._get_datavars(data)
+    data_vars_in_t = [v for v in clustering._get_datavars(data)
                       if 'timesteps' in data[v].dims]
     for var in data_vars_in_t:
         scale_to_match_mean = (data[var].mean(dim='timesteps') /
@@ -205,7 +206,7 @@ def drop(data, timesteps, padding=None):
 
     """
     if padding:
-        ts_per_day = time_clustering._get_timesteps_per_day(data)
+        ts_per_day = clustering._get_timesteps_per_day(data)
         freq = '{}H'.format(24 / ts_per_day)
 
         # Series of 1 where timesteps 'exist' and 0 where they don't

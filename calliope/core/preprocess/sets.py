@@ -61,7 +61,7 @@ from itertools import product
 
 import numpy as np
 
-from .. import utils
+from calliope.core.attrdict import AttrDict
 
 
 def generate_simple_sets(model_run):
@@ -73,7 +73,7 @@ def generate_simple_sets(model_run):
     model_run : AttrDict
 
     """
-    sets = utils.AttrDict()
+    sets = AttrDict()
 
     flat_techs = model_run.techs.as_dict(flat=True)
     flat_locations = model_run.locations.as_dict(flat=True)
@@ -158,7 +158,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         Simple sets returned by ``generate_simple_sets(model_run)``.
 
     """
-    sets = utils.AttrDict()
+    sets = AttrDict()
 
     ##
     # First deal with transmission techs, which can show up only in
@@ -264,14 +264,14 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k for k in sets.loc_techs_non_transmission
         if any('.purchase' in i
                for i in loc_techs_config[k].get(
-                   'costs', utils.AttrDict()).keys_nested())
+                   'costs', AttrDict()).keys_nested())
     )
 
     transmission_purchase = set(
         k for k in sets.loc_techs_transmission
         if any('.purchase' in i
                for i in loc_techs_transmission_config[k].get(
-                   'costs', utils.AttrDict()).keys_nested())
+                   'costs', AttrDict()).keys_nested())
     )
 
     sets.loc_techs_purchase = loc_techs_purchase | transmission_purchase

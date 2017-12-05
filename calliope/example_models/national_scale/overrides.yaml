@@ -1,0 +1,36 @@
+##
+# Overrides for different example model configuratiions
+##
+
+profiling:
+    model.name: 'National-scale example model (profiling run)'
+    model.subset_time: ['2005-01-01', '2005-01-15']
+    run.solver: glpk
+
+time_resampling:
+    model.name: 'National-scale example model with time resampling'
+    model.subset_time: null  # No time subsetting
+    # Resample time resolution to 6-hourly
+    model.time: {function: resample, function_options: {'resolution': '6H'}}
+
+time_clustering:
+    run.random_seed: 23
+    model.name: 'National-scale example model with time clustering'
+    model.subset_time: null  # No time subsetting
+    # Resample time resolution to 6-hourly
+    model.time: {function: resample, function_options: {'resolution': '6H'}}
+
+##
+# Overrides for parallel runs
+##
+
+run1:
+    model.subset_time: ['2005-01-01', '2005-01-31']
+run2:
+    model.subset_time: ['2005-02-01', '2005-02-31']
+run3:
+    model.subset_time: ['2005-01-01', '2005-01-31']
+    locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+run4:
+    subset_time: ['2005-02-01', '2005-02-31']
+    locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT

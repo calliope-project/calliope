@@ -2,8 +2,8 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-time_clustering.py
-~~~~~~~~~~~~~~~~~~
+clustering.py
+~~~~~~~~~~~~~
 
 Functions to cluster data along the time dimension.
 
@@ -24,8 +24,9 @@ import scipy.cluster.vq as vq
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
 
-from . import exceptions
-from . import utils
+from calliope import exceptions
+from calliope.core.util.loc_tech import get_loc_techs
+
 
 def _get_datavars(data):
     return [var for var in data.data_vars if not var.startswith('_')]
@@ -37,6 +38,7 @@ def _get_timesteps_per_day(data):
         assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
         timesteps_per_day = int(timesteps_per_day)
     return timesteps_per_day
+
 
 def _stack_data(data):
     """
@@ -52,6 +54,7 @@ def _stack_data(data):
         raise e("Cannot conduct time clustering with variable {} as it has no "
         "non-time dimensions.".format(data.name))
     return stacked_var
+
 
 def reshape_for_clustering(data, loc_techs=None, variables=None):
     """
@@ -227,7 +230,7 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
             )
             for tech in var_techs:
                 relevent_loc_techs = (
-                    utils.get_loc_techs(data[loc_tech_dim].values, tech)
+                    get_loc_techs(data[loc_tech_dim].values, tech)
                 )
                 d = (array.loc[{'timesteps': cluster_members,
                                 loc_tech_dim: relevent_loc_techs}]

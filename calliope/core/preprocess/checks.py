@@ -11,23 +11,19 @@ Checks for model consistency and possible errors during preprocessing.
 
 import os
 
-from .. import utils
-from .. import exceptions
+import calliope
+from calliope.core.attrdict import AttrDict
+from calliope.core.util.tools import flatten_list
+from calliope import exceptions
 
 
 _defaults_files = {
-    k: os.path.join(os.path.dirname(__file__), '..', 'config', k + '.yaml')
-    for k in ['run', 'model', 'defaults']
+    k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
+    for k in ['model', 'defaults']
 }
+defaults = AttrDict.from_yaml(_defaults_files['defaults'])
+defaults_model = AttrDict.from_yaml(_defaults_files['model'])
 
-defaults = utils.AttrDict.from_yaml(_defaults_files['defaults'])
-
-defaults_model = utils.AttrDict.from_yaml(_defaults_files['model'])
-
-defaults_run = utils.AttrDict.from_yaml(_defaults_files['run'])
-# Hardcode additional keys into allowed defaults:
-# Auto-generated string to run_config file's path
-defaults_run['config_run_path'] = None
 
 def print_warnings_and_raise_errors(warnings=None, errors=None):
     """
@@ -54,19 +50,6 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
     return None
 
 
-def _check_config_run(config_run):
-    errors = []
-    warnings = []
-
-    for k in config_run.keys_nested():
-        if k not in defaults_run.keys_nested():
-            warnings.append(
-                'Unrecognized setting in run configuration: {}'.format(k)
-            )
-
-    return errors, warnings
-
-
 def _get_all_carriers(config):
     return set([config.get_key('carrier', '')] + [
         config.get_key('carrier_{}'.format(k), '')
@@ -74,9 +57,28 @@ def _get_all_carriers(config):
     ])
 
 
-def _check_config_model(config_model):
+def check_initial(config_model):
+    """
+    Perform initial checks of model and run config dicts.
+
+    Returns
+    -------
+    warnings : list
+        possible problems that do not prevent the model run
+        from continuing
+    errors : list
+        serious issues that should raise a ModelError
+
+    """
     errors = []
     warnings = []
+
+    # Check run configuration
+    for k in config_model['run'].keys_nested():
+        if k not in defaults_model['run'].keys_nested():
+            warnings.append(
+                'Unrecognized setting in run configuration: {}'.format(k)
+            )
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
     # are allowed as carrier tiers
@@ -134,33 +136,11 @@ def _check_config_model(config_model):
     return errors, warnings
 
 
-def check_initial(config_model, config_run):
-    """
-    Perform initial checks of model and run config dicts.
-
-    Returns
-    -------
-    warnings : list
-        possible problems that do not prevent the model run
-        from continuing
-    errors : list
-        serious issues that should raise a ModelError
-
-    """
-    errors_run, warnings_run = _check_config_run(config_run)
-    errors_model, warnings_model = _check_config_model(config_model)
-
-    errors = errors_run + errors_model
-    warnings = warnings_run + warnings_model
-
-    return warnings, errors
-
-
 def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comments):
     required = model_run.techs[tech_id].required_constraints
     allowed = model_run.techs[tech_id].allowed_constraints
     allowed_costs = model_run.techs[tech_id].allowed_costs
-    all_defaults =  list(defaults.default_tech.constraints.keys())
+    all_defaults = list(defaults.default_tech.constraints.keys())
 
     # Error if required constraints are not defined
     for r in required:
@@ -179,7 +159,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
             # print('{} -- {}-{}: {}, {}'.format(r, loc_id, tech_id, single_ok, multiple_ok))
 
     # Flatten required list and gather remaining unallowed constraints
-    required_f = utils.flatten_list(required)
+    required_f = flatten_list(required)
     remaining = set(tech_config.constraints) - set(required_f) - set(allowed)
 
     # Error if something is defined that's not allowed, but is in defaults
@@ -245,7 +225,7 @@ def check_final(model_run):
 
     """
     warnings, errors = [], []
-    comments = utils.AttrDict()
+    comments = AttrDict()
 
     # Go through all loc-tech combinations and check validity
     for loc_id, loc_config in model_run.locations.items():

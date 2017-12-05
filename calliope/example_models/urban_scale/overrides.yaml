@@ -1,0 +1,21 @@
+##
+# Overrides for different example model configuratiions
+##
+
+milp:
+    model.name: 'Urban-scale example model with MILP'
+    techs:
+        chp:
+            constraints:
+                units_max: 4
+                energy_cap_per_unit: 300
+                energy_cap_min_use: 0.2
+            costs:
+                monetary:
+                    energy_cap: 700
+                    purchase: 40000
+        boiler:
+            costs:
+                monetary:
+                    energy_cap: 35
+                    purchase: 2000

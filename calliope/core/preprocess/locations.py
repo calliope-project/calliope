@@ -11,8 +11,9 @@ Functions to deal with locations and their configuration.
 
 import math
 
-from ..exceptions import ModelError, warn
-from .. import utils
+from calliope.exceptions import ModelError, warn
+from calliope.core.attrdict import AttrDict
+from calliope.core.util.gis import vincenty
 
 
 def process_locations(model_config, modelrun_techs):
@@ -56,12 +57,12 @@ def process_locations(model_config, modelrun_techs):
         'om_con', 'om_prod', 'export'
     ]
 
-    locations_comments = utils.AttrDict()
+    locations_comments = AttrDict()
 
     ##
     # Expand compressed `loc1,loc2,loc3,loc4: ...` definitions
     ##
-    locations = utils.AttrDict()
+    locations = AttrDict()
     for key in locations_in:
         if ('--' in key) or (',' in key):
             key_locs = explode_locations(key)
@@ -106,13 +107,13 @@ def process_locations(model_config, modelrun_techs):
 
         for tech_name in loc.techs:
             if not isinstance(locations[loc_name].techs[tech_name], dict):
-                locations[loc_name].techs[tech_name] = utils.AttrDict()
+                locations[loc_name].techs[tech_name] = AttrDict()
 
             # Starting at top of the inheritance chain, for each level,
             # check if the level has location-specific group settings
             # and keep merging together the settings, overwriting as we
             # go along.
-            tech_settings = utils.AttrDict()
+            tech_settings = AttrDict()
             for parent in reversed(modelrun_techs[tech_name].inheritance):
                 # Does the parent group have model-wide settings?
                 tech_settings.union(tech_groups_in[parent], allow_override=True)
@@ -166,13 +167,13 @@ def process_locations(model_config, modelrun_techs):
             )
 
     # Generate all transmission links
-    processed_links = utils.AttrDict()
-    processed_transmission_techs = utils.AttrDict()
+    processed_links = AttrDict()
+    processed_transmission_techs = AttrDict()
     for link in links_in:
         loc_from, loc_to = link.split(',')
         for tech_name in links_in[link]:
             if tech_name not in processed_transmission_techs:
-                tech_settings = utils.AttrDict()
+                tech_settings = AttrDict()
                 # Combine model-wide settings from all parent groups
                 for parent in reversed(modelrun_techs[tech_name].inheritance):
                     tech_settings.union(
@@ -214,7 +215,7 @@ def process_locations(model_config, modelrun_techs):
                     loc1 = locations[loc_from].coordinates
                     loc2 = locations[loc_to].coordinates
                     if 'lat' in locations[loc_from].coordinates:
-                        distance = utils.vincenty(
+                        distance = vincenty(
                             [loc1.lat, loc1.lon], [loc2.lat, loc2.lon]
                         )
                     else:

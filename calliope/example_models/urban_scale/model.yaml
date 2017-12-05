@@ -1,6 +1,6 @@
 import:  # Import other files from paths relative to this file, or absolute paths
-    - 'techs.yaml'
-    - 'locations.yaml'
+    - 'model_config/techs.yaml'
+    - 'model_config/locations.yaml'
 
 model:
     mode: plan  # Choices: plan, operate
@@ -9,7 +9,7 @@ model:
     name: Urban-scale example model
 
     # Time series data path - can either be a path relative to this file, or an absolute path
-    timeseries_data_path: 'data'
+    timeseries_data_path: 'timeseries_data'
 
     # Optional: specify a custom objective function
     # objective:
@@ -25,3 +25,6 @@ model:
         cooling: 0
 
     subset_time: ['2005-07-01', '2005-07-02']  # Subset of timesteps
+
+run:
+    solver: glpk
