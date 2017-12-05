@@ -16,7 +16,7 @@ from calliope.core.preprocess import generate_model_run, apply_overrides, build_
 from calliope.core.attrdict import AttrDict
 
 
-def model_run_from_yaml(model_file, override_file=None):
+def model_run_from_yaml(model_file, override_file=None, override_dict=None):
     """
     Generate processed ModelRun configuration from a YAML run configuration file.
 
@@ -27,13 +27,14 @@ def model_run_from_yaml(model_file, override_file=None):
     override_file : str, optional
         Path to YAML file with model configuration overrides and the override
         group to use, separated by ':', e.g. 'overrides.yaml:group1'.
+    override_dict : dict or AttrDict, optional
 
     """
     config = AttrDict.from_yaml(model_file)
     config.config_path = model_file
 
     config_with_overrides, debug_comments = apply_overrides(
-        config, override_file=override_file
+        config, override_file=override_file, override_dict=override_dict
     )
 
     return generate_model_run(config_with_overrides, debug_comments)
@@ -87,16 +88,15 @@ class Model(object):
             # expected input is a string pointing to a YAML file of the run
             # configuration or a dict/AttrDict in which the run and model
             # configurations are defined
-            raise ValueError('input configuration must either be a string or a '
-                             'dictionary')
+            raise ValueError(
+                'Input configuration must either be a string or a dictionary.'
+            )
 
         self._model_run = model_run
         self._debug_data = debug_data
 
         self._model_data_original = build_model_data(model_run)
 
-        # FIXME: name of _modelrun
-        # FIXME: add random_seed to example run.yaml files
         random_seed = self._model_run.get_key('run.random_seed', None)
         if random_seed:
             np.random.seed(seed=random_seed)

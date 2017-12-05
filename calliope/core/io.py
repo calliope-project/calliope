@@ -2,10 +2,10 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-read.py
+io.py
 ~~~~~~~
 
-Functions to read saved model results.
+Functions to read and save model results.
 
 """
 
@@ -16,7 +16,7 @@ import os
 import pandas as pd
 import xarray as xr
 
-from .utils import AttrDict
+from calliope.core.attrdict import AttrDict
 
 
 REQUIRED_TABLES = ['capacity_factor', 'levelized_cost',

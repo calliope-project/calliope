@@ -9,7 +9,7 @@ profiling:
 
 time_resampling:
     model.name: 'National-scale example model with time resampling'
-    model.subset_time: null  # No time subsetting
+    model.subset_time: '2005-01'
     # Resample time resolution to 6-hourly
     model.time: {function: resample, function_options: {'resolution': '6H'}}
 

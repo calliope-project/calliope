@@ -81,7 +81,7 @@ def apply_overrides(config, override_file=None, override_dict=None):
 
     # Apply overrides via 'override_file', which contains the path to a YAML file
     if override_file:
-        # Due to the use of `path_to_file\file.yaml:override` we have to split
+        # Due to the possible occurrance of `C:\path_to_file\file.yaml:override` we have to split
         # override_file into `path_to_file`, `file.yaml` and `override` before
         # merging `path_to_file` and `file.yaml` back together
 

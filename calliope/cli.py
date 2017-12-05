@@ -20,10 +20,8 @@ import traceback
 
 import click
 
-from . import core
-from . import examples
-from . import _version
-from .parallel import Parallelizer
+from calliope import Model, examples, _time_format
+from calliope._version import __version__
 
 
 _debug = click.option(
@@ -49,7 +47,7 @@ _profile_filename = click.option(
 
 logging.basicConfig(stream=sys.stderr,
                     format='[%(asctime)s] %(levelname)-8s %(message)s',
-                    datefmt=core._time_format)
+                    datefmt=_time_format)
 logger = logging.getLogger()
 
 
@@ -99,13 +97,13 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
 def print_end_time(start_time, msg='complete'):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
-    tend = end_time.strftime(core._time_format)
+    tend = end_time.strftime(_time_format)
     print('\nCalliope run {}. '
           'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
 
 def _get_version():
-    return 'Version {}'.format(_version.__version__)
+    return 'Version {}'.format(__version__)
 
 
 @click.group(invoke_without_command=True)
@@ -120,7 +118,7 @@ def cli(ctx, version):
         print(_get_version())
 
 
-@cli.command(short_help='create model')
+@cli.command(short_help='Create model.')
 @click.argument('path')
 @click.option('--template', type=str, default=None)
 @_debug
@@ -133,70 +131,80 @@ def new(path, template, debug):
     if debug:
         print(_get_version())
     if template is None:
-        template = 'NationalScale'
+        template = 'national_scale'
     source_path = examples.PATHS[template]
     click.echo('Copying {} template to target directory: {}'.format(template, path))
     shutil.copytree(source_path, path)
 
 
-@cli.command(short_help='directly run single model')
-@click.argument('run_config')
+@cli.command(short_help='Run a model.')
+@click.argument('config_file')
+@click.option('--override_file')
+@click.option('--save_netcdf')
+@click.option('--save_csv')
+@click.option('--save_logs')
 @_debug
 @_pdb
 @_profile
 @_profile_filename
-def run(run_config, debug, pdb, profile, profile_filename):
-    """Execute the given RUN_CONFIG run configuration file."""
+def run(config_file, override_file, save_netcdf, save_csv, save_logs,
+        debug, pdb, profile, profile_filename):
+    """Execute the given model."""
     if debug:
         print(_get_version())
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
-        tstart = start_time.strftime(core._time_format)
+        tstart = start_time.strftime(_time_format)
         print('Calliope run starting at {}\n'.format(tstart))
-        model = core.Model(config_run=run_config)
-        model.verbose = True  # Enables some print calls inside Model
-        model_name = model.config_model.get_key('name', default='None')
-        run_name = model.config_run.get_key('name', default='None')
+        override_dict = {
+            'run.save_netcdf': save_netcdf,
+            'run.save_csv': save_csv,
+            'run.save_logs': save_logs
+        }
+        model = Model(
+            config_file, override_file=override_file, override_dict=override_dict
+        )
+        # FIXME if not profile: check if model._model_run.run specifies at least one save option
+        # model.verbose = True  # Enables some print calls inside Model  # FIXME re-implement or kill
+        model_name = model._model_run.get_key('model.name', default='None')
         print('Model name:   {}'.format(model_name))
-        print('Run name:     {}'.format(run_name))
-        num_techs = (len(model.config_model.techs)
-                     - len(core.get_default_techs()))
-        msize = '{x} locations, {y} technologies, {t} timesteps'.format(
-            x=len(model._sets['x']),
-            y=num_techs,
-            t=len(model._sets['t']))
+        msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
+            locs=len(model._model_run.sets['locs']),
+            techs=(
+                len(model._model_run.sets['techs_non_transmission']) +
+                len(model._model_run.sets['techs_transmission_names'])
+            ),
+            times=len(model._model_run.sets['timesteps']))
         print('Model size:   {}\n'.format(msize))
-        if not profile:
-            model.config_run.set_key('output.save', True)  # Always save output
-        model.run()
+        # model.run()
         print_end_time(start_time)
 
 
-@cli.command(short_help='generate parallel runs')
-@click.argument('run_config')
-@click.argument('path', default='runs')
-@click.option('--silent', is_flag=True, default=False,
-              help='Be less verbose.')
-@_debug
-@_pdb
-def generate(run_config, path, silent, debug, pdb):
-    """
-    Generate parallel runs based on the given RUN_CONFIG configuration
-    file, saving them in the given PATH, which is a path to a
-    directory that must not yet exist (PATH defaults to 'runs'
-    if not specified).
-    """
-    if debug:
-        print(_get_version())
-    logging.captureWarnings(True)
-    with format_exceptions(debug, pdb):
-        parallelizer = Parallelizer(target_dir=path, config_run=run_config)
-        if not silent and 'name' not in parallelizer.config.parallel:
-            click.echo('`' + run_config +
-                       '` does not specify a `parallel.name`' +
-                       'and was skipped.')
-            return
-        click.echo('Generating runs from config '
-                   '`{}` inside `{}`'.format(run_config, path))
-        parallelizer.generate_runs()
+# @cli.command(short_help='generate parallel runs')
+# @click.argument('run_config')
+# @click.argument('path', default='runs')
+# @click.option('--silent', is_flag=True, default=False,
+#               help='Be less verbose.')
+# @_debug
+# @_pdb
+# def generate(run_config, path, silent, debug, pdb):
+#     """
+#     Generate parallel runs based on the given RUN_CONFIG configuration
+#     file, saving them in the given PATH, which is a path to a
+#     directory that must not yet exist (PATH defaults to 'runs'
+#     if not specified).
+#     """
+#     if debug:
+#         print(_get_version())
+#     logging.captureWarnings(True)
+#     with format_exceptions(debug, pdb):
+#         parallelizer = Parallelizer(target_dir=path, config_run=run_config)
+#         if not silent and 'name' not in parallelizer.config.parallel:
+#             click.echo('`' + run_config +
+#                        '` does not specify a `parallel.name`' +
+#                        'and was skipped.')
+#             return
+#         click.echo('Generating runs from config '
+#                    '`{}` inside `{}`'.format(run_config, path))
+#         parallelizer.generate_runs()
