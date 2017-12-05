@@ -28,26 +28,14 @@ from calliope import exceptions
 from calliope.core.util.loc_tech import get_loc_techs
 
 
-def _get_datavars(data):
-    return [var for var in data.data_vars if not var.startswith('_')]
-
-
-def _get_timesteps_per_day(data):
-    timesteps_per_day = data.attrs['timestep_resolution'] * 24
-    if isinstance(timesteps_per_day, float):
-        assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
-        timesteps_per_day = int(timesteps_per_day)
-    return timesteps_per_day
-
-
 def _stack_data(data):
     """
     Stack all non-time dimensions of an xarray DataArray
     """
-    non_time_dims = list(set(data.dims).difference(['time']))
+    non_time_dims = list(set(data.dims).difference(['timesteps']))
     if len(non_time_dims) >= 1:
         stacked_var = data.stack(
-            stacked=[i for i in data.dims if i is not 'time']
+            stacked=[i for i in data.dims if i is not 'timesteps']
         )
     else:
         e = exceptions.ModelError
@@ -77,7 +65,7 @@ def reshape_for_clustering(data, loc_techs=None, variables=None):
         converted to zeros
     """
     # to create an array with days as rows, we need to get timesteps per day
-    timesteps_per_day = _get_timesteps_per_day(data)
+    timesteps_per_day = data.attrs['_timesteps_per_day']
     days = int(len(data.timesteps) / timesteps_per_day)
 
     reshaped_data = np.array([[] for i in range(days)])
@@ -138,7 +126,7 @@ def reshape_clustered(clustered, data, loc_techs=None, variables=None):
         variable of interest.
     """
 
-    timesteps_per_day = _get_timesteps_per_day(data)
+    timesteps_per_day = data.attrs['_timesteps_per_day']
     clusters = clustered.shape[0]
 
     # if 'variables' is given then we will loop over that, otherwise we loop over
@@ -254,7 +242,7 @@ def find_nearest_vector_index(array, value):
 def get_closest_days_from_clusters(data, mean_data, clusters):
 
     dtindex = data['timesteps'].to_index()
-    ts_per_day = _get_timesteps_per_day(data)
+    ts_per_day = data.attrs['_timesteps_per_day']
     days = int(len(data['timesteps']) / ts_per_day)
 
     chosen_days = {}
@@ -303,7 +291,7 @@ def map_clusters_to_data(data, clusters, how):
     # FIXME hardcoded time intervals ('1H', '1D')
 
     # Get all timesteps, not just the first per day
-    ts_per_day = _get_timesteps_per_day(data)
+    ts_per_day = data.attrs['_timesteps_per_day']
     idx = clusters.index
     new_idx = _hourly_from_daily_index(idx)
     clusters_timeseries = (clusters.reindex(new_idx)
@@ -324,7 +312,7 @@ def map_clusters_to_data(data, clusters, how):
             )
             for ts in timestamps], ignore_index=True
         )
-        new_data.coords['time'] = new_t_coord.as_matrix()
+        new_data.coords['timesteps'] = new_t_coord.as_matrix()
 
         # Generate weights
         # weight of each timestep = number of timesteps in this timestep's cluster
@@ -352,7 +340,6 @@ def map_clusters_to_data(data, clusters, how):
                                                 * (24 / ts_per_day),
                                                 dims=['timesteps'],
                                                 coords={'timesteps': new_data['timesteps']})
-    del new_data.attrs['timestep_resolution']
     return new_data
 
 
@@ -371,7 +358,7 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
     centroids
 
     """
-    timesteps_per_day = _get_timesteps_per_day(data)
+    timesteps_per_day = data.attrs['_timesteps_per_day']
 
     if timesteps is not None:
         data = data.loc[{'timesteps': timesteps}]
@@ -428,7 +415,7 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
 
     # Make sure clusters are a pd.Series with a datetime index
     if clusters is not None:
-        timesteps_per_day = _get_timesteps_per_day(data)
+        timesteps_per_day = data.attrs['_timesteps_per_day']
         timesteps = data.coords['timesteps'].values  # All timesteps
 
         clusters = pd.Series(clusters, index=timesteps[::timesteps_per_day])

@@ -110,9 +110,10 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
         data_to_cluster = data.loc[{'timesteps': timesteps}]
 
     # remove all variables that are not indexed over time
-    data_to_cluster = data_to_cluster.drop(
-        [i for i in data.variables if 'timesteps' not in data[i].dims]
-    )
+    data_to_cluster = data_to_cluster.drop([
+        i for i in data.variables
+        if 'timesteps' not in data[i].dims or 'timestep_' in i
+    ])
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
 
@@ -141,14 +142,17 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
-    data_vars_in_t = [v for v in clustering._get_datavars(data)
-                      if 'timesteps' in data[v].dims]
+    data_vars_in_t = [
+        v for v in data_new.data_vars
+        if 'timesteps' in data_new[v].dims and
+        'timestep_' not in v]
     for var in data_vars_in_t:
         scale_to_match_mean = (data[var].mean(dim='timesteps') /
             data_new[var].mean(dim='timesteps')).fillna(0)
         data_new_scaled[var] = data_new[var] * scale_to_match_mean
 
     return data_new_scaled
+
 
 def resample(data, timesteps, resolution):
     data_new = data.copy(deep=True)
@@ -160,7 +164,7 @@ def resample(data, timesteps, resolution):
     data_rs = data_new.resample(resolution, dim='timesteps', how='first')
 
     timestep_vars = [v for v in data_new.data_vars
-                     if 'time' in data_new[v].dims]
+                     if 'timesteps' in data_new[v].dims]
 
     # Resampling adds spurious `time` dimension to non-time vars, correct that
     for v in data_rs.data_vars:
@@ -206,7 +210,7 @@ def drop(data, timesteps, padding=None):
 
     """
     if padding:
-        ts_per_day = clustering._get_timesteps_per_day(data)
+        ts_per_day = data.attrs['_timesteps_per_day']
         freq = '{}H'.format(24 / ts_per_day)
 
         # Series of 1 where timesteps 'exist' and 0 where they don't

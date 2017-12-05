@@ -14,6 +14,7 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
+from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
 from calliope._version import __version__
@@ -124,6 +125,17 @@ def apply_time_clustering(model_data_original, model_run):
         return model_data_original  # Nothing more to do here
     else:
         data = model_data_original.copy(deep=True)
+
+    # Add temporary 'timesteps per day' attribute
+    timestep_resolution = data['timestep_resolution'].values[0]
+    if not np.all(data['timestep_resolution'] == timestep_resolution):
+        raise exceptions.ModelError('For clustering, timestep resolution must be uniform. ')
+    timesteps_per_day = 24 / timestep_resolution
+    if isinstance(timesteps_per_day, float):
+        assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
+        timesteps_per_day = int(timesteps_per_day)
+    data.attrs['_timesteps_per_day'] = timesteps_per_day
+
     ##
     # Process masking and get list of timesteps to keep at high res
     ##
@@ -143,6 +155,7 @@ def apply_time_clustering(model_data_original, model_run):
         timesteps = pd.Index(data.time.values).difference(chosen_timesteps)
     else:
         timesteps = None
+
     ##
     # Process function, apply resolution adjustments
     ##
@@ -152,10 +165,15 @@ def apply_time_clustering(model_data_original, model_run):
         func_kwargs = time_config.get('function_options', {})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
 
-
     # Final checking of the data
     final_check_comments, warnings, errors = checks.check_model_data(data)
     checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+
+    # Temporary timesteps per day attribute is no longer needed
+    try:
+        del data.attrs['_timesteps_per_day']
+    except KeyError:
+        pass
 
     return data
 
@@ -502,6 +520,7 @@ def add_time_dimension(data, model_run):
         with all relevant `file=` entries replaced with data from file.
 
     """
+    data['timesteps'] = pd.to_datetime(data.timesteps)
 
     # Search through every constraint/cost for use of '='
     for variable in data.data_vars:
@@ -555,11 +574,15 @@ def add_time_dimension(data, model_run):
         data[variable] = timeseries_data_array
 
     # Add time_resolution and timestep_weight variables
-    parsed_timesteps = pd.to_datetime(data.timesteps)
-    seconds = (parsed_timesteps[0] - parsed_timesteps[1]).total_seconds()
-    hours = abs(seconds) / 3600
+    # parsed_timesteps = pd.to_datetime(data.timesteps)
+    seconds = abs(
+        pd.to_datetime(data.timesteps.values[0]) -
+        pd.to_datetime(data.timesteps.values[1])
+    ).total_seconds()
+    hours = seconds / 3600
+
     data['timestep_resolution'] = xr.DataArray(
-            np.ones(len(data.timesteps))*hours,
+            np.ones(len(data.timesteps)) * hours,
             dims=['timesteps']
     )
 
