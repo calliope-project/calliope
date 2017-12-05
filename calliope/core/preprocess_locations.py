@@ -31,7 +31,7 @@ def process_locations(model_config, modelrun_techs):
 
     Returns
     -------
-    locations: AttrDict
+    locations : AttrDict
     locations_comments : AttrDict
 
     """
@@ -205,7 +205,8 @@ def process_locations(model_config, modelrun_techs):
                 tech_settings = processed_transmission_techs[tech_name]
 
             # Process distance, if any per_distance constraints exist
-            if any('per_distance' in i for i in tech_settings.keys_nested(subkeys_as='list')):
+            if any('per_distance' in i
+                   for i in tech_settings.keys_nested(subkeys_as='list')):
                 # If no distance was given, we calculate it from coordinates
                 if 'distance' not in tech_settings:
                     # Simple check - earlier sense-checking already ensures
@@ -217,7 +218,9 @@ def process_locations(model_config, modelrun_techs):
                             [loc1.lat, loc1.lon], [loc2.lat, loc2.lon]
                         )
                     else:
-                        distance = math.sqrt((loc1.x - loc2.x)**2 + (loc1.y - loc2.y)**2)
+                        distance = math.sqrt(
+                            (loc1.x - loc2.x)**2 + (loc1.y - loc2.y)**2
+                        )
 
                     tech_settings.distance = distance
                     locations_comments.set_key(
@@ -251,7 +254,8 @@ def process_locations(model_config, modelrun_techs):
 
 
 def explode_locations(k):
-    """Expands the given key ``k``. ``k``s of the form ``'1--3'`` or
+    """
+    Expands the given key ``k``. ``k``s of the form ``'1--3'`` or
     ``'1,2,3'`` are both expanded into the list ``['1', '2', '3']``.
 
     Can deal with any combination, e.g. ``'1--3,6,9--11,a'`` results in::

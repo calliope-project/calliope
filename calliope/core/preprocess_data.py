@@ -464,7 +464,8 @@ def add_attributes(model_run):
     attr_dict['run'] = model_run.run.copy()
 
     # Some keys are killed right away
-    for k in ['model.time', 'model.data_path', 'run.config_run_path', 'run.model']:
+    for k in ['model.time', 'model.data_path', 'model.timeseries_data_path',
+              'run.config_run_path', 'run.model']:
         try:
             attr_dict.del_key(k)
         except KeyError:
