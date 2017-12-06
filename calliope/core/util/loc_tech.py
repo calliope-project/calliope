@@ -92,3 +92,17 @@ def split_loc_techs(data_var):
             data_var_series.stack(non_loc_tech_dims)
         )
     return updated_data_var
+
+
+def get_all_carriers(config, direction='both'):
+    if direction == 'both':
+        carrier_list = ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
+    elif direction == 'in':
+        carrier_list = ['in', 'in_2', 'in_3']
+    elif direction == 'out':
+        carrier_list = ['out', 'out_2', 'out_3']
+
+    return set([config.get_key('carrier', '')] + [
+        config.get_key('carrier_{}'.format(k), '')
+        for k in carrier_list
+    ]) - set([''])

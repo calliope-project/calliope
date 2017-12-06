@@ -44,7 +44,9 @@ Subsets based on active constraints
 * loc_techs_area
 * loc_techs_store
 * loc_techs_finite_resource
-* loc_techs_supply_plus_finite_resource
+* loc_techs_finite_resource_supply
+* loc_techs_finite_resource_demand
+* loc_techs_finite_resource_supply_plus
 * loc_techs_export
 * loc_techs_purchase
 * loc_techs_milp
@@ -52,6 +54,12 @@ Subsets based on active constraints
 * loc_techs_out_3
 * loc_techs_in_2
 * loc_techs_in_3
+
+Subsets that include carrier
+
+* loc_tech_carriers_prod
+* loc_tech_carriers_con
+* loc_tech_carriers_conversion_plus
 
 ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 
@@ -62,6 +70,7 @@ from itertools import product
 import numpy as np
 
 from calliope.core.attrdict import AttrDict
+from calliope.core.util.loc_tech import get_all_carriers
 
 
 def generate_simple_sets(model_run):
@@ -208,6 +217,8 @@ def generate_loc_tech_sets(model_run, simple_sets):
         for k in sets.loc_techs_non_transmission
     }
 
+    loc_techs_all_config = {**loc_techs_config, **loc_techs_transmission_config}
+
     ##
     # Sets based on membership in abstract base technology groups
     ##
@@ -220,6 +231,12 @@ def generate_loc_tech_sets(model_run, simple_sets):
             if model_run.techs[k.split(':')[1]].inheritance[-1] == group
         )
         sets['loc_techs_{}'.format(group)] = tech_set
+
+    sets.loc_techs_non_conversion = set(
+        k for k in sets.loc_techs_non_transmission
+        if k not in sets.loc_techs_conversion or
+        k not in sets.loc_techs_conversion_plus
+    )
 
     ##
     # Sets based on specific constraints being active
@@ -247,8 +264,18 @@ def generate_loc_tech_sets(model_run, simple_sets):
         not (loc_techs_config[k].constraints.get('resource') in ['inf', np.inf])
     )
 
+    # `supply` technologies that specify a finite resource
+    sets.loc_techs_finite_resource_supply = (
+        sets.loc_techs_finite_resource.intersection(sets.loc_techs_supply)
+    )
+
+    # `demand` technologies that specify a finite resource
+    sets.loc_techs_finite_resource_demand = (
+        sets.loc_techs_finite_resource.intersection(sets.loc_techs_demand)
+    )
+
     # `supply_plus` technologies that specify a finite resource
-    sets.loc_techs_supply_plus_finite_resource = (
+    sets.loc_techs_finite_resource_supply_plus = (
         sets.loc_techs_finite_resource.intersection(sets.loc_techs_supply_plus)
     )
 
@@ -336,6 +363,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     sets.loc_techs_investment_costs = (loc_techs_investment_costs |
         loc_techs_transmission_investment_costs)
     sets.loc_techs_om_costs = loc_techs_om_costs | loc_techs_transmission_om_costs
+
     ##
     # Subsets of `conversion_plus` technologies
     ##
@@ -362,6 +390,32 @@ def generate_loc_tech_sets(model_run, simple_sets):
     sets.loc_techs_in_3 = set(
         k for k in sets.loc_techs_conversion_plus if 'carrier_in_3' in
         loc_techs_config[k].constraints.get_key('carrier_ratios', {})
+    )
+
+    ##
+    # `loc_tech_carrier` sets
+    ##
+
+    # loc_tech_carriers for all technologies that have energy_prod=True
+    sets.loc_tech_carriers_prod = set(
+        '{}:{}'.format(k, carrier)
+        for k in sets.loc_techs
+        if loc_techs_all_config[k].constraints.get_key('energy_prod', False)
+        for carrier in get_all_carriers(model_run.techs[k.split(':')[1]].essentials, direction='out')
+    )
+
+    # loc_tech_carriers for all technologies that have energy_con=True
+    sets.loc_tech_carriers_con = set(
+        '{}:{}'.format(k, carrier)
+        for k in sets.loc_techs
+        if loc_techs_all_config[k].constraints.get_key('energy_con', False)
+        for carrier in get_all_carriers(model_run.techs[k.split(':')[1]].essentials, direction='in')
+    )
+
+    # loc_tech_carriers for `conversion_plus` technologies
+    sets.loc_tech_carriers_conversion_plus = set(
+        k for k in sets.loc_tech_carriers_con | sets.loc_tech_carriers_prod
+        if k.rsplit(':', 1)[1] in sets.loc_techs_conversion_plus
     )
 
     return sets

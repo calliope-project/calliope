@@ -14,6 +14,7 @@ import os
 import calliope
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
+from calliope.core.util.loc_tech import get_all_carriers
 from calliope import exceptions
 
 
@@ -48,13 +49,6 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
         )
 
     return None
-
-
-def _get_all_carriers(config):
-    return set([config.get_key('carrier', '')] + [
-        config.get_key('carrier_{}'.format(k), '')
-        for k in ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
-    ])
 
 
 def check_initial(config_model):
@@ -115,7 +109,7 @@ def check_initial(config_model):
                 'tech_group {} does not define '
                 '`essentials.parent`'.format(tg_name)
             )
-        if 'resource' in _get_all_carriers(tg_config):
+        if 'resource' in get_all_carriers(tg_config):
             errors.append(
                 'No carrier called `resource` may '
                 'be defined (tech_group: {})'.format(tg_name)
@@ -127,7 +121,7 @@ def check_initial(config_model):
                 'tech {} does not define '
                 '`essentials.parent`'.format(t_name)
             )
-        if 'resource' in _get_all_carriers(t_config):
+        if 'resource' in get_all_carriers(t_config):
             errors.append(
                 'No carrier called `resource` may '
                 'be defined (tech: {})'.format(t_name)
@@ -281,6 +275,8 @@ def check_final(model_run):
 def check_model_data(model_data):
     # FIXME: verify timestep consistency a la verification in get_timeres of
     # old calliope
+
+    # FIXME: ensure that no loc-tech specifies infinite resource and force_resource=True
 
     # FIXME: raise error with time clustering if it no longer fits with opmode
     # a la last section of initialize_time in old calliope
