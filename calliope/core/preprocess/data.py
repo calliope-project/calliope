@@ -10,6 +10,8 @@ time-varying parameters.
 
 """
 
+import json
+
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -551,6 +553,8 @@ def add_attributes(model_run):
             del attr_dict[k]
 
     attr_dict['calliope_version'] = __version__
+
+    attr_dict['defaults'] = json.dumps(checks.defaults.default_tech.as_dict())
 
     return attr_dict
 
