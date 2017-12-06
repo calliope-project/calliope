@@ -20,35 +20,38 @@ _PATHS = {
 }
 
 
-def national_scale():
+def national_scale(*args, **kwargs):
     """Returns the built-in national-scale example model."""
-    return Model(os.path.join(_PATHS['national_scale'], 'model.yaml'))
+    return Model(os.path.join(_PATHS['national_scale'], 'model.yaml'), *args, **kwargs)
 
 
-def time_clustering():
+def time_clustering(*args, **kwargs):
     """Returns the built-in national-scale example model with time clustering."""
     return Model(
         os.path.join(_PATHS['national_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_clustering')
+        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_clustering'),
+        *args, **kwargs
     )
 
 
-def time_resampling():
+def time_resampling(*args, **kwargs):
     """Returns the built-in national-scale example model with time resampling."""
     return Model(
         os.path.join(_PATHS['national_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_resampling')
+        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_resampling'),
+        *args, **kwargs
     )
 
 
-def urban_scale():
+def urban_scale(*args, **kwargs):
     """Returns the built-in urban-scale example model."""
-    return Model(os.path.join(_PATHS['urban_scale'], 'model.yaml'))
+    return Model(os.path.join(_PATHS['urban_scale'], 'model.yaml'), *args, **kwargs)
 
 
-def milp():
+def milp(*args, **kwargs):
     """Returns the built-in urban-scale example model with MILP constraints enabled."""
     return Model(
         os.path.join(_PATHS['urban_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:milp')
+        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:milp'),
+        *args, **kwargs
     )
