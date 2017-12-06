@@ -57,7 +57,7 @@ default_tech:
         resource_cap_equals_energy_cap: false  # If true, r_cap is forced to equal energy_cap
         resource_scale: 1.0  # Scale resource by this value
         resource_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
-        storage_init: 0  # Initial storage level (kWh)
+        storage_initial: 0  # Initial storage level (kWh)
         storage_cap_min: 0  # Minimum storage capacity (kWh)
         storage_cap_max: 0  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
         storage_cap_equals: false  # Specific storage capacity (kWh)

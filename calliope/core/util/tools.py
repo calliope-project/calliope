@@ -92,7 +92,7 @@ def relative_path(base_path_file, path):
     return path
 
 
-def _load_function(source):
+def load_function(source):
     """
     Returns a function from a module, given a source string of the form:
 
@@ -112,13 +112,13 @@ def _load_function(source):
 
 def plugin_load(name, builtin_module):
     try:  # First try importing as a third-party module
-        func = _load_function(name)
+        func = load_function(name)
     except ValueError:
         # ValueError raised if we got a string without '.',
         # which implies a builtin function,
         # so we attempt to load from the given module
         func_string = builtin_module + '.' + name
-        func = _load_function(func_string)
+        func = load_function(func_string)
     return func
 
 

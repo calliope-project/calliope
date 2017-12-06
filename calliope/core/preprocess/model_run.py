@@ -27,6 +27,33 @@ from calliope.core.preprocess import locations, sets, checks
 _DEFAULT_PALETTE = sns.color_palette('cubehelix', 10).as_hex()
 
 
+def combine_overrides(override_file_path, override_groups):
+    if ',' in override_groups:
+        overrides = override_groups.split(',')
+    else:
+        overrides = [override_groups]
+
+    override = AttrDict()
+    for group in overrides:
+        try:
+            override_group_from_file = AttrDict.from_yaml(override_file_path)[group]
+        except KeyError:
+            raise exceptions.ModelError(
+                'Override group `{}` does not exist in file `{}`.'.format(
+                    group, override_file_path
+                )
+            )
+        try:
+            override.union(override_group_from_file, allow_override=False)
+        except KeyError as e:
+            raise exceptions.ModelError(
+                str(e)[1:-1] + '. Already specified but defined again in '
+                'override group `{}`.'.format(group)
+            )
+
+    return override
+
+
 def apply_overrides(config, override_file=None, override_dict=None):
     """
     Generate processed Model configuration, applying any overrides.
@@ -86,16 +113,11 @@ def apply_overrides(config, override_file=None, override_dict=None):
         # merging `path_to_file` and `file.yaml` back together
 
         path_to_file, override_file_with_group = os.path.split(override_file)
-        override_file, override_group = override_file_with_group.split(':')
+        override_file, override_groups = override_file_with_group.split(':')
         override_file_path = os.path.join(path_to_file, override_file)
-        try:
-            override_from_file = AttrDict.from_yaml(override_file_path)[override_group]
-        except KeyError:
-            raise exceptions.ModelError(
-                'Override group `{}` does not exist in file `{}`.'.format(
-                    override_group, override_file_path
-                )
-            )
+
+        override_from_file = combine_overrides(override_file_path, override_groups)
+
         config_model.union(
             override_from_file, allow_override=True, allow_replacement=True
         )

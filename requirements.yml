@@ -26,4 +26,4 @@ dependencies:
     - scipy
     - seaborn  # Used in the example notebook
     - shapely  # For analysis_utils.plot_shapefile_polys
-    - xarray=0.10.0
+    - xarray=0.10

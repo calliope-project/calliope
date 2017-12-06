@@ -14,9 +14,9 @@ model:
     # Optional: specify a custom objective function
     # objective:
 
-    # Optional constraint functions to enable
-    constraints:
-    - constraints.optional.ramping_rate
+    # # Optional constraint functions to enable
+    # constraints:
+    # - constraints.optional.ramping_rate
 
     # Model-wide settings for the system margin constraint
     system_margin:
