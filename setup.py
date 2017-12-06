@@ -46,10 +46,10 @@ setup(
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.12",
-        "pandas >= 0.19, < 0.20",
-        "pyomo >= 5.2, < 5.3",
+        "pandas >= 0.21, < 0.22",
+        "pyomo >= 5.3, < 5.4",
         "ruamel.yaml <= 0.15",
-        "xarray >= 0.9.5, < 0.10",
+        "xarray >= 0.10.0, < 0.11",
     ],
     entry_points={
         'console_scripts': [

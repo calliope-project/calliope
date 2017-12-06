@@ -18,12 +18,12 @@ dependencies:
     - networkx
     - numexpr
     - numpy=1.12.1
-    - pandas=0.19
-    - pyomo=5.2
+    - pandas=0.21
+    - pyomo=5.4
     - pytest
     - pytest-cov
     - ruamel.yaml<=0.15
     - scipy
     - seaborn  # Used in the example notebook
     - shapely  # For analysis_utils.plot_shapefile_polys
-    - xarray=0.9.5
+    - xarray=0.10.0
