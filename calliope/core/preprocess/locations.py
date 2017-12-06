@@ -228,11 +228,11 @@ def process_locations(model_config, modelrun_techs):
                 # FIXME these are hardcoded for now
                 if 'energy_eff_per_distance' in tech_settings.constraints:
                     distance_energy_eff = (
-                        tech_settings.distance *
-                        tech_settings.constraints.energy_eff_per_distance
+                        tech_settings.constraints.energy_eff_per_distance **
+                        tech_settings.distance
                     )
                     tech_settings.constraints.energy_eff = (
-                        tech_settings.constraints.energy_eff *
+                        tech_settings.constraints.get_key('energy_eff', 1.0) *
                         distance_energy_eff
                     )
                     del tech_settings.constraints['energy_eff_per_distance']
@@ -248,10 +248,10 @@ def process_locations(model_config, modelrun_techs):
                             tech_settings.distance
                         )
                         tech_settings.costs[k.split('.')[0]].energy_cap = (
-                            tech_settings.costs[k.split('.')[0]].energy_cap +
+                            tech_settings.costs[k.split('.')[0]].get_key('energy_cap', 0) +
                             energy_cap_costs_per_distance
                         )
-                        tech_settings.costs.del_key('k')
+                        tech_settings.costs.del_key(k)
                         locations_comments.set_key(
                             '{}.links.{}.techs.{}.costs.{}'.format(loc_from, loc_to, tech_name, k),
                             'Includes value computed from energy_cap_per_distance'

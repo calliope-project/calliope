@@ -142,7 +142,7 @@ techs:
             carrier: heat
         constraints:
             energy_cap_max: 2000
-            energy_loss_per_distance: 0.025
+            energy_eff_per_distance: 0.975
         costs:
             monetary:
                 energy_cap_per_distance: 0.3

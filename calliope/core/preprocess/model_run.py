@@ -106,6 +106,9 @@ def apply_overrides(config, override_file=None, override_dict=None):
     # The input files are allowed to override other model defaults
     config_model.union(config, allow_override=True)
 
+    # FIXME: if applying an override that doesn't exist in model, should warn
+    # the user about possible mis-spelling
+
     # Apply overrides via 'override_file', which contains the path to a YAML file
     if override_file:
         # Due to the possible occurrance of `C:\path_to_file\file.yaml:override` we have to split
