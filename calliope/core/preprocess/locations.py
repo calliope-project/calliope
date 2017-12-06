@@ -14,6 +14,7 @@ import math
 from calliope.exceptions import ModelError, warn
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.gis import vincenty
+from calliope.core.preprocess.checks import defaults
 
 
 def process_locations(model_config, modelrun_techs):
@@ -49,13 +50,7 @@ def process_locations(model_config, modelrun_techs):
         'required_constraints'
     ]
 
-    # Parameters which can vary through time and thus may be a CSV file
-    time_varying = [
-        'resource', 'resource_eff', 'storage_loss',
-        'energy_prod', 'energy_con', 'energy_eff', 'parasitic_eff',
-        'energy_cap_min_use', 'energy_ramping',
-        'om_con', 'om_prod', 'export'
-    ]
+    allowed_from_file = defaults['file_allowed']
 
     locations_comments = AttrDict()
 
@@ -147,7 +142,7 @@ def process_locations(model_config, modelrun_techs):
                     'file=' in tech_settings.get_key(i))
             ]
             for config_key in file_configs:
-                if config_key.split('.')[-1] not in time_varying:
+                if config_key.split('.')[-1] not in allowed_from_file:
                     # Allow any custom settings that end with _time_varying
                     # FIXME add this to docs
                     if config_key.endswith('_time_varying'):
@@ -228,6 +223,39 @@ def process_locations(model_config, modelrun_techs):
                         '{}.links.{}.techs.{}.distance'.format(loc_from, loc_to, tech_name),
                         'Distance automatically computed from coordinates'
                     )
+
+                # Add per-distance values to their not-per-distance cousins
+                # FIXME these are hardcoded for now
+                if 'energy_eff_per_distance' in tech_settings.constraints:
+                    distance_energy_eff = (
+                        tech_settings.distance *
+                        tech_settings.constraints.energy_eff_per_distance
+                    )
+                    tech_settings.constraints.energy_eff = (
+                        tech_settings.constraints.energy_eff *
+                        distance_energy_eff
+                    )
+                    del tech_settings.constraints['energy_eff_per_distance']
+                    locations_comments.set_key(
+                        '{}.links.{}.techs.{}.constraints.energy_eff'.format(loc_from, loc_to, tech_name),
+                        'Includes value computed from energy_eff_per_distance'
+                    )
+
+                for k in tech_settings.costs.keys_nested(subkeys_as='list'):
+                    if 'energy_cap_per_distance' in k:
+                        energy_cap_costs_per_distance = (
+                            tech_settings.costs.get_key(k) *
+                            tech_settings.distance
+                        )
+                        tech_settings.costs[k.split('.')[0]].energy_cap = (
+                            tech_settings.costs[k.split('.')[0]].energy_cap +
+                            energy_cap_costs_per_distance
+                        )
+                        tech_settings.costs.del_key('k')
+                        locations_comments.set_key(
+                            '{}.links.{}.techs.{}.costs.{}'.format(loc_from, loc_to, tech_name, k),
+                            'Includes value computed from energy_cap_per_distance'
+                        )
 
         processed_links.set_key(
             '{}.links.{}.techs.{}'.format(loc_from, loc_to, tech_name),

@@ -69,6 +69,7 @@ default_tech:
         energy_con: false  # Allow this technology to consume energy from the carrier
         parasitic_eff: 1.0  # Plant parasitic efficiency (additional losses as energy gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption)
         energy_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
+        energy_eff_per_distance: 1.0 # Energy transmission efficiency, per unit distance. Set as value between 1.0 (no loss) and 0 (all energy lost)
         energy_cap_min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
@@ -79,7 +80,6 @@ default_tech:
         energy_cap_per_unit: false  # set the capacity of each integer unit of a technology perchased (kW/unit)
         energy_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
         # FIXME: per_distance is no longer in separate top-level thing
-        energy_loss_per_distance: 0 # Energy loss during transmission, per unit distance. Set as value between 0 (no loss) and 1 (all energy lost)
         export_cap: inf  # Maximum allowed export for a technology.
         export_carrier: null  # FIXME needs description
         units_min: false  # Minimum number of integer units of a technology that can be purchased.
