@@ -468,6 +468,7 @@ def location_specific_to_dataset(model_run):
     # is available
     data_dict = dict()
     data_dict['distance'] = dict(dims='loc_techs_transmission', data=[])
+    data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission', data=[])
     for loc_tech in model_run.sets['loc_techs_transmission']:
         loc, tech, link = loc_tech.split(':')
         data_dict['distance']['data'].append(
@@ -475,6 +476,7 @@ def location_specific_to_dataset(model_run):
                 'distance', np.nan
                 )
             )
+        data_dict['lookup_remotes']['data'].append(':'.join([link, tech, loc]))
     data_dict['available_area'] = dict(dims='locs', data=[])
     data_dict['available_area']['data'] = [
         model_run.locations[loc].get('available_area', np.nan)

@@ -1,5 +1,7 @@
 module Variables
+export initialize_decision_variables
 
+using JuMP
 function initialize_decision_variables(backend_model, sets)
     """
     Decision variables are undefined at model initialization, the purpose of the
@@ -47,13 +49,13 @@ function initialize_decision_variables(backend_model, sets)
     @variable(backend_model, energy_cap[loc_techs=sets["loc_techs"]] >= 0);
 
     # Dispatch
-    @variable(backend_model, carrier_prod[loc_techs=sets["loc_techs_carrier_prod"],
+    @variable(backend_model, carrier_prod[loc_techs=sets["loc_tech_carriers_prod"],
         carriers=sets["carriers"], timesteps=sets["timesteps"]] >= 0);
-    @variable(backend_model, carrier_con[loc_techs=sets["loc_techs_carrier_con"],
+    @variable(backend_model, carrier_con[loc_techs=sets["loc_tech_carriers_con"],
         carriers=sets["carriers"], timesteps=sets["timesteps"]] <= 0);
 
     # Costs
-    @variable(backend_model, cost[loc_techs=sets["loc_techs_cost"],
+    @variable(backend_model, cost[loc_techs=sets["loc_techs_costs"],
         costs=sets["costs"]]);
 
     #
