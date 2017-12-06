@@ -328,67 +328,122 @@ def carriers_to_dataset(model_run):
 
     """
     carrier_tiers = model_run.sets['carrier_tiers']
-    loc_tech_carriers = xr.DataArray(
-        np.zeros((len(model_run.sets['techs']),
-                  len(model_run.sets['resources']),
-                  len(carrier_tiers))),
-                            dims=['techs', 'resources', 'carrier_tiers'],
-                            coords=[('techs', list(model_run.sets['techs'])),
-                                    ('resources',
-                                        list(model_run.sets['resources'])),
-                                    ('carrier_tiers', list(carrier_tiers))])
-    # for every technology, 1 is given if that carrier is in/out
-    for tech in model_run.sets['techs']:
-        # we need the location inspecific name for tranmission technologies
-        _tech = tech.split(':')[0] if ':' in tech else tech
-        for i in carrier_tiers:
-            # create a list of carriers for the given technology that fits the
-            # current carrier_tier. This will be one value for all but
-            # conversion_plus technologies
-            relevant_carriers = model_run.techs[_tech].essentials.get(
-                'carrier_' + i, [])
-            # find the location of the information in the xr DataArray and
-            # replace with 1 (i.e. True, that carrier is active at that
-            # carrier_tier for that technology)
-            loc_tech_carriers.loc[dict(techs=tech, resources=relevant_carriers,
-                                       carrier_tiers=i)] = 1
-    data = loc_tech_carriers.to_dataset(name='loc_tech_carriers')
+
+    # Get the string name for a loc_tech which includes the carrier associated
+    # with that technology (for non_conversion technologies)
+    lookup_loc_tech_carriers_dict = dict(dims=['loc_techs_non_conversion'])
+
+    data = []
+    for loc_tech in model_run.sets['loc_techs_non_conversion']:
+        # For any non-conversion technology, there is only one carrier (either
+        # produced or consumed)
+        loc_tech_carrier = list(set(
+            i for i in
+            model_run.sets['loc_tech_carriers_prod'] +
+            model_run.sets['loc_tech_carriers_con']
+            if loc_tech == i.rsplit(":", 1)[0]
+        ))
+        if len(loc_tech_carrier) > 1:
+            raise exceptions.ModelError("More than one carrier associated with"
+            " non-conversion location:technology `{}`".format(loc_tech))
+        else:
+            data.append(loc_tech_carrier[0])
+    lookup_loc_tech_carriers_dict['data'] = data
+    lookup_loc_tech_carriers = xr.DataArray.from_dict(lookup_loc_tech_carriers_dict)
+    dataset = lookup_loc_tech_carriers.to_dataset(name='lookup_loc_tech_carriers')
+
+    # Following only added if conversion technologies are defined:
+    if model_run.sets['loc_techs_conversion']:
+        # Get the string name for a loc_tech which includes the carriers in and out
+        # associated with that technology (for conversion technologies)
+        lookup_loc_tech_carriers_conversion = (
+            xr.DataArray(np.empty((len(model_run.sets['loc_techs_conversion']),
+                                   len(carrier_tiers)), dtype=np.object),
+                        dims=['loc_techs_conversion', 'carrier_tiers'],
+                        coords=[('loc_techs_conversion',
+                                list(model_run.sets['loc_techs_conversion'])),
+                                ('carrier_tiers', list(carrier_tiers))]
+            )
+        )
+        for loc_tech in model_run.sets['loc_techs_conversion']:
+            # For any non-conversion technology, there are only two carriers
+            # (one produced and one consumed)
+            loc_tech_carrier_in = [
+                i for i in
+                model_run.sets['loc_tech_carriers_con']
+                if loc_tech == i.rsplit(":", 1)[0]
+            ]
+
+            loc_tech_carrier_out = [
+                i for i in
+                model_run.sets['loc_tech_carriers_prod']
+                if loc_tech == i.rsplit(":", 1)[0]
+            ]
+            if len(loc_tech_carrier_in) > 1 or len(loc_tech_carrier_out) > 1:
+                raise exceptions.ModelError("More than one carrier in or out "
+                "associated with conversion location:technology `{}`".format(loc_tech))
+            else:
+                lookup_loc_tech_carriers_conversion.loc[
+                    dict(loc_techs_conversion=loc_tech, carrier_tiers=["in", "out"])
+                ] = [loc_tech_carrier_in[0],  loc_tech_carrier_out[0]]
+        dataset.merge(lookup_loc_tech_carriers_conversion
+            .to_dataset(name="lookup_loc_tech_carriers_conversion"), inplace=True)
 
     # Following only added if conversion_plus technologies are defined:
     if model_run.sets['loc_techs_conversion_plus']:
-        # conversion ratios are the floating point numbers used to compare one
-        # carrier_in/_out value with another carrier_in/_out value
-        carrier_ratios = xr.DataArray(
-            np.zeros((len(model_run.sets['loc_techs_conversion_plus']),
-                      len(model_run.sets['resources']),
-                      len(carrier_tiers)
-            )),
-            dims=['loc_techs_conversion_plus', 'resources', 'carrier_tiers'],
-            coords=[('loc_techs_conversion_plus',
-                        list(model_run.sets['loc_techs_conversion_plus'])),
-                    ('resources', list(model_run.sets['resources'])),
-                    ('carrier_tiers', list(carrier_tiers))]
+        # Get the string name for a loc_tech which includes all the carriers in
+        # and out associated with that technology (for conversion_plus technologies)
+        lookup_loc_tech_carriers_conversion_plus = (
+            xr.DataArray(np.empty((len(model_run.sets['loc_techs_conversion_plus']),
+                                   len(model_run.sets['resources']),
+                                   len(carrier_tiers)), dtype=np.object),
+                         dims=['loc_techs_conversion_plus', 'resources', 'carrier_tiers'],
+                         coords=[('loc_techs_conversion_plus',
+                                  list(model_run.sets['loc_techs_conversion_plus'])),
+                                 ('resources', list(model_run.sets['resources'])),
+                                 ('carrier_tiers', list(carrier_tiers))]
+            )
         )
         for loc_tech in model_run.sets['loc_techs_conversion_plus']:
-            loc, tech = loc_tech.split(':', 1)
-            for i in carrier_tiers:
-                relevant_carriers = model_run.techs[tech].essentials.get(
-                    'carrier_' + i, [])
-                # listify 'relevant_carriers' if not already a list
-                if isinstance(relevant_carriers, str):
-                    relevant_carriers = [relevant_carriers]
-                # for the relevant carriers at this carrier tier, get the ratio
-                # of input/output against the primary input/output carrier
-                carrier_ratio = [model_run.locations[loc].techs[tech].constraints
-                               .get_key('carrier_ratios.carrier_' + i + '.' + j, 1)
-                      for j in relevant_carriers]
+            _tech = loc_tech.split(':', 1)[1]
+            for carrier_tier in carrier_tiers:
+                # create a list of carriers for the given technology that fits
+                # the current carrier_tier.
+                relevant_carriers = model_run.techs[_tech].essentials.get(
+                    'carrier_' + carrier_tier, [])
+                if relevant_carriers and isinstance(relevant_carriers, list):
+                    loc_tech_carriers = [loc_tech + ":" + i for i in relevant_carriers]
+                elif relevant_carriers:
+                    loc_tech_carriers = loc_tech + ":" + relevant_carriers
+                lookup_loc_tech_carriers_conversion_plus.loc[
+                    dict(loc_techs_conversion_plus=loc_tech,
+                         resources=relevant_carriers, carrier_tiers=carrier_tier)
+                ] = loc_tech_carriers
+
+        # carrier ratios are the floating point numbers used to compare one
+        # carrier_in/_out value with another carrier_in/_out value
+        carrier_ratios = xr.DataArray(
+            np.zeros((len(model_run.sets['loc_tech_carriers_conversion_plus']),
+                      len(carrier_tiers))),
+            dims=['loc_tech_carriers_conversion_plus', 'carrier_tiers'],
+            coords=[('loc_tech_carriers_conversion_plus',
+                     list(model_run.sets['loc_tech_carriers_conversion_plus'])),
+                    ('carrier_tiers', list(carrier_tiers))]
+        )
+        for loc_tech_carrier in model_run.sets['loc_tech_carriers_conversion_plus']:
+            loc, tech, carrier = loc_tech_carrier.split(':')
+            for carrier_tier in carrier_tiers:
+                carrier_ratio = (model_run.locations[loc].techs[tech].constraints
+                    .get_key('carrier_ratios.carrier_' + carrier_tier + '.' + carrier, 1))
                 # find the location of the information in the xr DataArray and
                 # replace with the carrier_ratio
-                carrier_ratios.loc[dict(loc_techs_conversion_plus=loc_tech,
-                                        resources=relevant_carriers,
+                carrier_ratios.loc[dict(loc_tech_carriers_conversion_plus=loc_tech_carrier,
                                         carrier_tiers=i)] = carrier_ratio
-        data.merge(carrier_ratios.to_dataset(name='carrier_ratios'), inplace=True)
-    return data
+        dataset.merge(lookup_loc_tech_carriers_conversion_plus.to_dataset(
+            name='lookup_loc_tech_carriers_conversion_plus'), inplace=True)
+        dataset.merge(
+            carrier_ratios.to_dataset(name='carrier_ratios'), inplace=True)
+    return dataset
 
 
 def location_specific_to_dataset(model_run):

@@ -44,13 +44,13 @@ function initialize_decision_variables(backend_model, sets)
     #
 
     # Capacity
-    @variable(backend_model, energy_cap[loc_techs=sets["loc_techs_prod"]] >= 0);
+    @variable(backend_model, energy_cap[loc_techs=sets["loc_techs"]] >= 0);
 
     # Dispatch
-    @variable(backend_model, carrier_prod[carriers=sets["carriers"],
-        loc_techs=sets["loc_techs_prod"], timesteps=sets["timesteps"]] >= 0);
-    @variable(backend_model, carrier_con[carriers=sets["carriers"],
-        loc_techs=sets["loc_techs_con"], timesteps=sets["timesteps"]] <= 0);
+    @variable(backend_model, carrier_prod[loc_techs=sets["loc_techs_carrier_prod"],
+        carriers=sets["carriers"], timesteps=sets["timesteps"]] >= 0);
+    @variable(backend_model, carrier_con[loc_techs=sets["loc_techs_carrier_con"],
+        carriers=sets["carriers"], timesteps=sets["timesteps"]] <= 0);
 
     # Costs
     @variable(backend_model, cost[loc_techs=sets["loc_techs_cost"],
@@ -60,14 +60,14 @@ function initialize_decision_variables(backend_model, sets)
     ## Conditionally assigned variables
     #
 
-    if "loc_techs_area" in keys(sets)
+    if haskey(sets, "loc_techs_area")
         # Capacity
         @variable(backend_model,
             resource_area[loc_techs=sets["loc_techs_area"]] >= 0
         );
     end
 
-    if "loc_techs_store" in keys(sets)
+    if haskey(sets, "loc_techs_store")
         # Capacity
         @variable(backend_model,
             storage_cap[loc_techs=sets["loc_techs_store"]] >= 0
@@ -80,7 +80,7 @@ function initialize_decision_variables(backend_model, sets)
         );
     end
 
-    if "loc_techs_finite_resource" in keys(sets)
+    if haskey(sets, "loc_techs_finite_resource")
         # Capacity
         @variable(backend_model,
             resource_cap[loc_techs=sets["loc_techs_finite_resource"]] >= 0
@@ -93,7 +93,7 @@ function initialize_decision_variables(backend_model, sets)
         );
     end
 
-    if "loc_techs_export" in keys(sets)
+    if haskey(sets, "loc_techs_export")
         # Dispatch
         @variable(backend_model,
             carrier_export[loc_techs=["loc_techs_export"],
@@ -102,7 +102,7 @@ function initialize_decision_variables(backend_model, sets)
         );
     end
 
-    if "loc_techs_variable_costs" in keys(sets)
+    if haskey(sets, "loc_techs_variable_costs")
         # Costs
         @variable(backend_model,
             cost_om[loc_techs=sets["loc_techs_variable_costs"],
@@ -111,7 +111,7 @@ function initialize_decision_variables(backend_model, sets)
             ]
         );
     end
-    if "loc_techs_investment_costs" in keys(sets)
+    if haskey(sets, "loc_techs_investment_costs")
         # Costs
         @variable(backend_model,
             cost_investment[loc_techs=sets["loc_techs_investment_costs"],
@@ -121,14 +121,14 @@ function initialize_decision_variables(backend_model, sets)
     end
 
     # Binary/Integer variables
-    if "loc_techs_purchase" in keys(sets)
+    if haskey(sets, "loc_techs_purchase")
         # Capacity
         @variable(backend_model,
             purchased[loc_techs=sets["loc_techs_purchase"]], Bin
         );
     end
 
-    if "loc_techs_milp" in keys(sets)
+    if haskey(sets, "loc_techs_milp")
         # Capacity
         @variable(backend_model,
             units[loc_techs=sets["loc_techs_milp"]] >=0, Int

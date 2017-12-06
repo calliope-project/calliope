@@ -44,40 +44,6 @@ function timesliced_variable(var, timestep)
 end
 
 
-function get_carrier(loc_tech, carrier_tier)
-    """
-    returns the carrier in/out of the given loc_tech as a string, if a
-    conversion_plus technology, it might return a Dict() including the
-    carrier_ratios
-
-    Parameters
-    ----------
-    loc_tech : string
-        From the variables available in the loaded Dataset
-    carrier_tier : one of ["in", "out", "in_2", "out_2", "in_3", "out_3"]
-        these refer to the suffix of the carrier (i.e. "carrier_" + carrier_tier)
-    Returns
-    -------
-    string or Dict()
-    """
-    tech = split(loc_tech, ":")[2]
-    carriers = sets["resources"][
-        find(parameters["loc_tech_carriers"][
-            Axis{:carrier_tiers}(carrier_tier), Axis{:techs}(tech)]
-            )
-        ]
-    if loc_tech in sets["loc_techs_conversion_plus"]
-        carrier_dict = Dict(i =>
-            parameters["carrier_ratios"][carrier_tier, i, loc_tech]
-            for i in carriers)
-
-        return carrier_dict
-    else
-        return carriers[1] # Julia is 1 indexed
-    end
-end
-
-
 function build_constraint(constraint_sets, constraint_name)
     """
     create a constraint object, indexed over the given sets.
@@ -109,7 +75,7 @@ function build_constraint(constraint_sets, constraint_name)
     # Loop through to populate the previously built empty constraint object
     for i in CartesianRange(size(temporary_constraint))
         idx = [item for item in i.I]
-        temporary_constraint[i] = temporary_constraint_rule(m,
+        temporary_constraint[i] = temporary_constraint_rule(backend_model,
             (sets[constraint_sets[constr]][idx[constr]] for constr in 1:length(constraint_sets))
         )
     end

@@ -234,7 +234,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     sets.loc_techs_non_conversion = set(
         k for k in sets.loc_techs_non_transmission
-        if k not in sets.loc_techs_conversion or
+        if k not in sets.loc_techs_conversion and
         k not in sets.loc_techs_conversion_plus
     )
 
