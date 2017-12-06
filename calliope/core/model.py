@@ -15,6 +15,14 @@ from calliope.core import debug
 from calliope.core.preprocess import generate_model_run, apply_overrides, build_model_data, apply_time_clustering
 from calliope.core.attrdict import AttrDict
 
+from calliope.backend.pyomo import run as run_pyomo
+# from calliope.backend.julia import run as run_julia
+
+BACKEND_RUNNERS = {
+    'pyomo': run_pyomo,
+    # 'julia': run_julia
+}
+
 
 def model_run_from_yaml(model_file, override_file=None, override_dict=None):
     """
@@ -101,7 +109,7 @@ class Model(object):
         if random_seed:
             np.random.seed(seed=random_seed)
 
-        # After applying the random seed, time clustering can take place
+        # After setting the random seed, time clustering can take place
         self.model_data = apply_time_clustering(
             self._model_data_original, model_run)
 
@@ -112,3 +120,8 @@ class Model(object):
 
         """
         debug.save_debug_data(self._model_run, self._debug_data, path)
+
+    def run(self):
+        """Run the model with the chosen backend"""
+        backend = self.model_data.attrs['run.backend']
+        self.solution = BACKEND_RUNNERS[backend](self.model_data)
