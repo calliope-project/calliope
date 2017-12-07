@@ -52,6 +52,8 @@ def process_locations(model_config, modelrun_techs):
 
     allowed_from_file = defaults['file_allowed']
 
+    warnings = []
+    errors = []
     locations_comments = AttrDict()
 
     ##
@@ -65,11 +67,6 @@ def process_locations(model_config, modelrun_techs):
                 _set_loc_key(locations, subkey, locations_in[key].copy())
         else:
             _set_loc_key(locations, key, locations_in[key].copy())
-
-    ##
-    # For each location, set its level based on `within: ...`
-    ##
-    locations = set_location_levels(locations)
 
     ##
     # Process technologies
@@ -154,6 +151,8 @@ def process_locations(model_config, modelrun_techs):
                 if ':' not in config_value:
                     config_value = '{}:{}'.format(config_value, loc_name)
                     tech_settings.set_key(config_key, config_value)
+
+            tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
 
             # Now merge the tech settings into the location-specific
             # tech dict
@@ -257,6 +256,8 @@ def process_locations(model_config, modelrun_techs):
                             'Includes value computed from energy_cap_per_distance'
                         )
 
+        tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
+
         processed_links.set_key(
             '{}.links.{}.techs.{}'.format(loc_from, loc_to, tech_name),
             tech_settings
@@ -279,7 +280,7 @@ def process_locations(model_config, modelrun_techs):
 
     locations.union(processed_links, allow_override=True)
 
-    return locations, locations_comments
+    return locations, locations_comments, warnings, errors
 
 
 def explode_locations(k):
@@ -311,28 +312,6 @@ def explode_locations(k):
     return finalkeys
 
 
-def set_location_levels(locations):
-    locset = set(locations.keys())
-
-    curr_lvl = 0
-
-    for l in tuple(locset):
-        if 'within' not in locations[l] or locations[l].within is None:
-            locations[l].level = curr_lvl
-            locset.remove(l)
-
-    while len(locset) > 0:
-        curr_lvl += 1
-        to_subtract = set()
-        for l in tuple(locset):
-            if locations[l].within not in locset:
-                locations[l].level = curr_lvl
-                to_subtract.add(l)
-        locset = locset - to_subtract
-
-    return locations
-
-
 def _set_loc_key(d, k, value):
     """Set key ``k`` in ``d`` to ``value```."""
     if k in d:
@@ -342,3 +321,39 @@ def _set_loc_key(d, k, value):
             raise KeyError('Problem at location {}: {}'.format(k, str(e)))
     else:
         d[k] = value
+
+
+def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
+    cost_classes = tech_config.get('costs', {}).keys()
+    for cost in cost_classes:
+        plant_life = tech_config.constraints.get_key('lifetime', 0)
+        if plant_life == 0:
+            if (any(['_cap' in i for i in tech_config.costs[cost].keys()])  or
+                    any(['_area' in i for i in tech_config.costs[cost].keys()])):
+                errors.append(
+                    'Must specify a lifetime when specifying '
+                    'fixed `{}` costs for `{}`'.format(cost, tech_id)
+                )
+            continue
+
+        interest = tech_config.costs[cost].get_key('interest_rate', 0)
+
+        if interest == 0:
+            warnings.append(
+                '{} does not specify an interest rate for {} - '
+                'setting interest rate to zero.'.format(tech_id, cost)
+            )
+            dep = 1 / plant_life
+        else:
+            dep = (
+                (interest * (1 + interest) ** plant_life) /
+                (((1 + interest) ** plant_life) - 1)
+            )
+
+        tech_config.costs[cost]['depreciation_rate'] = dep
+        try:
+            del tech_config.costs[cost]['interest_rate']
+        except KeyError:
+            pass
+
+    return tech_config

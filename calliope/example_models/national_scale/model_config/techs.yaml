@@ -18,6 +18,7 @@ techs:
             resource: inf
             energy_eff: 0.5
             energy_cap_max: 40000  # kW
+            lifetime: 25
         costs:
             monetary:
                 interest_rate: 0.15
@@ -38,6 +39,7 @@ techs:
             parasitic_eff: 0.9
             resource_area_max: inf
             energy_cap_max: 10000
+            lifetime: 25
         costs:
             monetary:
                 interest_rate: 0.12
@@ -62,6 +64,7 @@ techs:
             charge_rate: 4
             energy_eff: 0.95  # 0.95 * 0.95 = 0.9025 round trip efficiency
             storage_loss: 0  # No loss over time assumed
+            lifetime: 25
         costs:
             monetary:
                 interest_rate: 0.15
@@ -90,8 +93,20 @@ techs:
             carrier: power
         constraints:
             energy_eff: 0.85
+            lifetime: 25
         costs:
             monetary:
                 interest_rate: 0.15
                 energy_cap: 200
                 om_prod: 0.002
+    free_transmission:
+        essentials:
+            name: 'Local power transmission'
+            parent: transmission
+            carrier: power
+        constraints:
+            energy_cap_max: inf
+            energy_eff: 1.0
+        costs:
+            monetary:
+                om_prod: 0

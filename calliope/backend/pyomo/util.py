@@ -55,5 +55,12 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
 
 @memoize
 def get_loc_tech(loc_tech_carrier):
-
     return loc_tech_carrier.rsplit(':', 1)[0]
+
+
+@memoize
+def get_timestep_weight(backend_model):
+    model_data_dict = backend_model.__calliope_model_data__
+    time_res_sum = sum(model_data_dict['data']['timestep_resolution'].values())
+    weights_sum = sum(model_data_dict['data']['timestep_weights'].values())
+    return (time_res_sum * weights_sum) / 8760

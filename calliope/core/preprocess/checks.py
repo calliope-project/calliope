@@ -293,6 +293,8 @@ def check_model_data(model_data):
     #         msg = 'Time settings incompatible with operational mode'
     #         raise exceptions.ModelError(msg)
 
+    # FIXME ensure that if a tech has negative costs, there is a max cap defined
+
     comments = None
     warnings = None
     errors = None

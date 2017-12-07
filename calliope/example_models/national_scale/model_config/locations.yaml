@@ -30,7 +30,6 @@ locations:
     region1-3.coordinates: {lat: 39, lon: -2}
 
     region1-1, region1-2, region1-3:
-        within: region1
         techs:
             csp:
 
@@ -43,3 +42,9 @@ links:
         ac_transmission:
             constraints:
                 energy_cap_max: 10000
+    region1,region1-1:
+        free_transmission:
+    region1,region1-2:
+        free_transmission:
+    region1,region1-3:
+        free_transmission:

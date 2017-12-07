@@ -85,11 +85,11 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
     resource_scale = param_getter(backend_model, 'resource_scale', loc_tech)
     force_resource = param_getter(backend_model, 'force_resource', loc_tech)
+    loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
 
     if energy_eff == 0:
         return backend_model.carrier_prod[loc_tech_carrier, timestep] == 0
     else:
-        loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff
 
     if loc_tech in backend_model.loc_techs_area:

@@ -355,10 +355,11 @@ def generate_model_run(config, debug_comments):
     model_run['tech_groups'] = process_tech_groups(config, model_run['techs'])
 
     # 4) Fully populate locations
-    model_run['locations'], debug_locs = locations.process_locations(
+    model_run['locations'], debug_locs, warnings, errors = locations.process_locations(
         config, model_run['techs']
     )
     debug_comments.set_key('model_run.locations', debug_locs)
+    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage

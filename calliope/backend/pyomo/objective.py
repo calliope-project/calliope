@@ -19,7 +19,7 @@ def cost_minimization(backend_model):
     """
     def obj_rule(backend_model):
         return sum(
-            backend_model.cost[loc_tech, 'monetary']
+            backend_model.cost['monetary', loc_tech]
             for loc_tech in backend_model.loc_techs_cost
         )
 
