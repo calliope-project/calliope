@@ -61,15 +61,7 @@ def generate_model(model_data):
     # Constraints
     constraints_to_add = [
         'energy_balance.load_energy_balance_constraints',
-        # 'base.unit_commitment',
-        # 'base.node_energy_balance',
-        # 'base.node_constraints_build',
-        # 'base.node_constraints_operational',
-        # 'base.node_constraints_transmission',
-        # 'base.node_costs',
-        # 'base.model_constraints',
-        # 'planning.system_margin',
-        # 'planning.node_constraints_build_total'
+        'capacity.load_capacity_constraints'
     ]
 
     for c in constraints_to_add:

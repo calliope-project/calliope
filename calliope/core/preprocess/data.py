@@ -66,6 +66,8 @@ def build_model_data(model_run, debug=False):
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
+    data.merge(carriers_to_dataset(model_run), inplace=True)
+
     if debug:
         data_pre_time = data.copy(deep=True)
 
@@ -73,10 +75,8 @@ def build_model_data(model_run, debug=False):
 
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset
-    data.merge(carriers_to_dataset(model_run), inplace=True)
 
     if debug:
-        data_pre_time.merge(carriers_to_dataset(model_run), inplace=True)
         return data, data_dict, data_pre_time
     else:
         return data
@@ -121,10 +121,22 @@ def apply_time_clustering(model_data_original, model_run):
         been updated as per user-defined clustering techniques (from model_run)
     """
 
+    def _reorganise_dataset_dimensions(dataset):
+        # Reorganise the Dataset dimensions to be alphabetical *except*
+        # `timesteps`, which must always come last in any DataArray's dimensions
+        new_dims = (
+            sorted(list(set(dataset.coords.keys()) - set(['timesteps'])))
+        ) + ['timesteps']
+
+        updated_dataset = dataset.transpose(*new_dims).reindex(
+            {k:dataset[k] for k in new_dims})
+
+        return updated_dataset
+
     # Carry y_ subset sets over to data for easier data analysis
     time_config = model_run.model.get('time', None)
     if not time_config:
-        return model_data_original  # Nothing more to do here
+        return _reorganise_dataset_dimensions(model_data_original)  # Nothing more to do here
     else:
         data = model_data_original.copy(deep=True)
 
@@ -177,7 +189,7 @@ def apply_time_clustering(model_data_original, model_run):
     except KeyError:
         pass
 
-    return data
+    return _reorganise_dataset_dimensions(data)
 
 
 def add_sets(model_run):
@@ -331,9 +343,24 @@ def carriers_to_dataset(model_run):
     """
     carrier_tiers = model_run.sets['carrier_tiers']
 
+    # get the technologies associated with a certain loc_carrier
+    lookup_loc_carriers_dict = dict(dims=['loc_carriers'])
+    data = []
+    for loc_carrier in model_run.sets['loc_carriers']:
+        loc_tech_carrier = list(set(
+            i for i in
+            model_run.sets['loc_tech_carriers_prod'] +
+            model_run.sets['loc_tech_carriers_con']
+            if loc_carrier == i.split(":", 1)[0] + ":" + i.rsplit(":", 1)[1]
+        ))
+        data.append(",".join(loc_tech_carrier))
+    lookup_loc_carriers_dict['data'] = data
+    lookup_loc_carriers = xr.DataArray.from_dict(lookup_loc_carriers_dict)
+    dataset = lookup_loc_carriers.to_dataset(name='lookup_loc_carriers')
+
     # Get the string name for a loc_tech which includes the carrier associated
     # with that technology (for non_conversion technologies)
-    lookup_loc_tech_carriers_dict = dict(dims=['loc_techs_non_conversion'])
+    lookup_loc_techs_dict = dict(dims=['loc_techs_non_conversion'])
 
     data = []
     for loc_tech in model_run.sets['loc_techs_non_conversion']:
@@ -350,15 +377,15 @@ def carriers_to_dataset(model_run):
             " non-conversion location:technology `{}`".format(loc_tech))
         else:
             data.append(loc_tech_carrier[0])
-    lookup_loc_tech_carriers_dict['data'] = data
-    lookup_loc_tech_carriers = xr.DataArray.from_dict(lookup_loc_tech_carriers_dict)
-    dataset = lookup_loc_tech_carriers.to_dataset(name='lookup_loc_tech_carriers')
+    lookup_loc_techs_dict['data'] = data
+    lookup_loc_techs = xr.DataArray.from_dict(lookup_loc_techs_dict)
+    dataset.merge(lookup_loc_techs.to_dataset(name='lookup_loc_techs'), inplace=True)
 
     # Following only added if conversion technologies are defined:
     if model_run.sets['loc_techs_conversion']:
         # Get the string name for a loc_tech which includes the carriers in and out
         # associated with that technology (for conversion technologies)
-        lookup_loc_tech_carriers_conversion = (
+        lookup_loc_techs_conversion = (
             xr.DataArray(np.empty((len(model_run.sets['loc_techs_conversion']),
                                    len(carrier_tiers)), dtype=np.object),
                         dims=['loc_techs_conversion', 'carrier_tiers'],
@@ -385,17 +412,17 @@ def carriers_to_dataset(model_run):
                 raise exceptions.ModelError("More than one carrier in or out "
                 "associated with conversion location:technology `{}`".format(loc_tech))
             else:
-                lookup_loc_tech_carriers_conversion.loc[
+                lookup_loc_techs_conversion.loc[
                     dict(loc_techs_conversion=loc_tech, carrier_tiers=["in", "out"])
                 ] = [loc_tech_carrier_in[0],  loc_tech_carrier_out[0]]
-        dataset.merge(lookup_loc_tech_carriers_conversion
-            .to_dataset(name="lookup_loc_tech_carriers_conversion"), inplace=True)
+        dataset.merge(lookup_loc_techs_conversion
+            .to_dataset(name="lookup_loc_techs_conversion"), inplace=True)
 
     # Following only added if conversion_plus technologies are defined:
     if model_run.sets['loc_techs_conversion_plus']:
         # Get the string name for a loc_tech which includes all the carriers in
         # and out associated with that technology (for conversion_plus technologies)
-        lookup_loc_tech_carriers_conversion_plus = (
+        lookup_loc_techs_conversion_plus = (
             xr.DataArray(np.empty((len(model_run.sets['loc_techs_conversion_plus']),
                                    len(model_run.sets['resources']),
                                    len(carrier_tiers)), dtype=np.object),
@@ -417,7 +444,7 @@ def carriers_to_dataset(model_run):
                     loc_tech_carriers = [loc_tech + ":" + i for i in relevant_carriers]
                 elif relevant_carriers:
                     loc_tech_carriers = loc_tech + ":" + relevant_carriers
-                lookup_loc_tech_carriers_conversion_plus.loc[
+                lookup_loc_techs_conversion_plus.loc[
                     dict(loc_techs_conversion_plus=loc_tech,
                          resources=relevant_carriers, carrier_tiers=carrier_tier)
                 ] = loc_tech_carriers
@@ -440,9 +467,9 @@ def carriers_to_dataset(model_run):
                 # find the location of the information in the xr DataArray and
                 # replace with the carrier_ratio
                 carrier_ratios.loc[dict(loc_tech_carriers_conversion_plus=loc_tech_carrier,
-                                        carrier_tiers=i)] = carrier_ratio
-        dataset.merge(lookup_loc_tech_carriers_conversion_plus.to_dataset(
-            name='lookup_loc_tech_carriers_conversion_plus'), inplace=True)
+                                        carrier_tiers=carrier_tier)] = carrier_ratio
+        dataset.merge(lookup_loc_techs_conversion_plus.to_dataset(
+            name='lookup_loc_techs_conversion_plus'), inplace=True)
         dataset.merge(
             carrier_ratios.to_dataset(name='carrier_ratios'), inplace=True)
     return dataset

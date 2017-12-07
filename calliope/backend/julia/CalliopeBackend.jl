@@ -33,37 +33,39 @@ function build_julia_model(path_to_dataset)
     backend_model = JuMP.Model();
 
     #
-    ## Sets and Parameters
+    ## Sets
     #
-    global sets, parameters
     sets = Dict()
-    parameters = Dict()
     dimensions = [NCDatasets.nc_inq_dimname(dataset.ncid, i)
                   for i in NCDatasets.nc_inq_dimids(dataset.ncid, false)]
     for var in keys(dataset)
         if var in dimensions
             sets[var] = dataset[var][:]
-        else
-            parameters[var] = get_variable(dataset, var)
         end
     end
+    model_dict = Dict("backend_model"=>backend_model,
+                      "dataset"=>dataset,
+                      "defaults"=>JSON.parse(dataset.attrib["defaults"]),
+                      "sets"=>sets)
 
     #
     ## Variables
     #
-    initialize_decision_variables(backend_model, sets);
+    initialize_decision_variables(model_dict);
 
     #
     ## Constraints
     #
 
     constraints = merge(
-        load_constraints.load_capacity_constraints(dataset, sets, parameters, backend_model),
-        load_constraints.load_costs_constraints(dataset, sets, parameters, backend_model),
-        load_constraints.load_dispatch_constraints(dataset, sets, parameters, backend_model),
-        load_constraints.load_energy_balance_constraints(dataset, sets, parameters, backend_model),
-        load_constraints.load_milp_constraints(dataset, sets, parameters, backend_model),
-        load_constraints.load_network_constraints(dataset, sets, parameters, backend_model)
+        load_constraints.load_capacity_constraints(model_dict),
+        load_constraints.load_costs_constraints(model_dict),
+        load_constraints.load_dispatch_constraints(model_dict),
+        load_constraints.load_energy_balance_constraints(model_dict),
+        load_constraints.load_milp_constraints(model_dict),
+        load_constraints.load_network_constraints(model_dict)
     )
+
+    return backend_model
 end
 end

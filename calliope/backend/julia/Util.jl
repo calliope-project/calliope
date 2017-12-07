@@ -16,15 +16,16 @@ function get_variable(dataset, var::String)
     -------
     AxisArray
     """
+    var_dimnames = NCDatasets.dimnames(dataset[var])
     var_out = AxisArray(dataset[var][:],
         Tuple([AxisArrays.Axis{Symbol(i)}(dataset[i][:])
-            for i in NCDatasets.dimnames(dataset[var])]))
+            for i in var_dimnames]))
 
     return var_out
 end
 
 
-function param_getter(dataset, var, dimensions)
+function param_getter(model_dict, var, dimensions)
     """
     returns an AxisArray of the given variable, indexed over all dimensions
     except timesteps, in order to remove timesteps from a possible timeseries
@@ -42,10 +43,11 @@ function param_getter(dataset, var, dimensions)
     """
 
     if var not in dataset
-        return default[var]
+        return model_dict["defaults"][var]
     else
         var_dimnames = NCDatasets.dimnames(dataset[var])
         if "timesteps" in var_dimnames
+            dimensions["timesteps"] = DateTime(dimensions["timesteps"])
             loc = CartesianIndex(Tuple(find(sets[i] .== dimensions[i]) for i in var_dimnames))
             return dataset[var][loc]
         else

@@ -87,20 +87,20 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     force_resource = param_getter(backend_model, 'force_resource', loc_tech)
 
     if energy_eff == 0:
-        carrier_prod = 0
+        return backend_model.carrier_prod[loc_tech_carrier, timestep] == 0
     else:
         loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff
 
     if loc_tech in backend_model.loc_techs_area:
-        resource_avail = resource * resource_scale * backend_model.resource_area[loc_tech]
+        available_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
-        resource_avail = resource * resource_scale
+        available_resource = resource * resource_scale
 
     if force_resource:
-        return carrier_prod == resource_avail
+        return carrier_prod == available_resource
     else:
-        return carrier_prod <= resource_avail
+        return carrier_prod <= available_resource
 
 
 def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
@@ -132,14 +132,14 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
     force_resource = param_getter(backend_model, 'force_resource', loc_tech)
 
     if loc_tech in backend_model.loc_techs_area:
-        resource_avail = resource * resource_scale * backend_model.resource_area[loc_tech] * resource_eff
+        available_resource = resource * resource_scale * backend_model.resource_area[loc_tech] * resource_eff
     else:
-        resource_avail = resource * resource_scale * resource_eff
+        available_resource = resource * resource_scale * resource_eff
 
     if force_resource:
-        return backend_model.resource[loc_tech, timestep] == resource_avail
+        return backend_model.resource[loc_tech, timestep] == available_resource
     else:
-        return backend_model.resource[loc_tech, timestep] <= resource_avail
+        return backend_model.resource[loc_tech, timestep] <= available_resource
 
 
 def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):

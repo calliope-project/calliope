@@ -270,6 +270,10 @@ def check_final(model_run):
     # make sure `comments` is at the the base level:
     # i.e. comments.model_run.xxxxx....
 
+    # FIXME: check that any storage/supply_plus technologies correctly define
+    # energy_cap, storage_cap, and charge_rate so as not to clash with each other
+    # given that energy_cap = storage_cap * charge_rate
+
     return comments, warnings, errors
 
 def check_model_data(model_data):
