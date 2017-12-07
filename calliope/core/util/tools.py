@@ -4,21 +4,16 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-from contextlib import contextmanager
-from io import StringIO
 from copy import deepcopy
-
 import datetime
 import functools
+import importlib
 import logging
 import os
-import importlib
 import sys
 
 
-# This used to be a custom function, but as of Python 3.2 we can use
-# the built-in lru_cache for simplicity
-memoize = functools.lru_cache(maxsize=512)
+memoize = functools.lru_cache(maxsize=2048)
 
 
 class memoize_instancemethod(object):

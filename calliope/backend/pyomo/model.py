@@ -47,7 +47,9 @@ def generate_model(model_data):
         'dims': {k: model_data[k].dims for k in model_data.data_vars},
         'sets': list(model_data.coords)
     }
-    # FIXME must ensure here that dims are in the right order
+    # Dims in the dict's keys are ordered as in model_data, which is enforced
+    # in model_data generation such that timesteps are always last and the
+    # remainder of dims are in alphabetic order
     backend_model.__calliope_model_data__ = model_data_dict
     backend_model.__calliope_defaults__ = json.loads(model_data.attrs['defaults'])
 

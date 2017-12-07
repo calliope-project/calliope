@@ -60,6 +60,8 @@ Subsets that include carrier
 * loc_tech_carriers_prod
 * loc_tech_carriers_con
 * loc_tech_carriers_conversion_plus
+* loc_tech_carriers_export
+* loc_carriers
 
 ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 
@@ -412,10 +414,23 @@ def generate_loc_tech_sets(model_run, simple_sets):
         for carrier in get_all_carriers(model_run.techs[k.split(':')[1]].essentials, direction='in')
     )
 
+    # loc_tech_carriers for all technologies that have export
+    sets.loc_tech_carriers_export = set(
+        '{}:{}'.format(k, loc_techs_all_config[k].constraints.export_carrier)
+        for k in sets.loc_techs
+        if loc_techs_all_config[k].constraints.get_key('export_carrier', False)
+    )
+
     # loc_tech_carriers for `conversion_plus` technologies
     sets.loc_tech_carriers_conversion_plus = set(
         k for k in sets.loc_tech_carriers_con | sets.loc_tech_carriers_prod
         if k.rsplit(':', 1)[1] in sets.loc_techs_conversion_plus
+    )
+
+    # loc_carrier combinations that exist with either a con or prod tech
+    sets.loc_carriers = set(
+        '{}:{}'.format(k.split(':')[0], k.rsplit(':')[-1])
+        for k in sets.loc_tech_carriers_prod | sets.loc_tech_carriers_con
     )
 
     return sets
