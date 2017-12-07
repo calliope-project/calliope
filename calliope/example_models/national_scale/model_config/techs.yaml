@@ -21,7 +21,7 @@ techs:
             lifetime: 25
         costs:
             monetary:
-                interest_rate: 0.15
+                interest_rate: 0.10
                 energy_cap: 750  # USD per kW
                 om_con: 0.02  # USD per kWh
     csp:
@@ -42,7 +42,7 @@ techs:
             lifetime: 25
         costs:
             monetary:
-                interest_rate: 0.12
+                interest_rate: 0.10
                 storage_cap: 50
                 resource_area: 200
                 resource_cap: 200
@@ -67,7 +67,7 @@ techs:
             lifetime: 25
         costs:
             monetary:
-                interest_rate: 0.15
+                interest_rate: 0.10
                 storage_cap: 200  # USD per kWh storage capacity
     ##
     # Demand
@@ -96,7 +96,7 @@ techs:
             lifetime: 25
         costs:
             monetary:
-                interest_rate: 0.15
+                interest_rate: 0.10
                 energy_cap: 200
                 om_prod: 0.002
     free_transmission:

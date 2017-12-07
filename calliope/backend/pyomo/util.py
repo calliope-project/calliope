@@ -4,6 +4,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -65,9 +66,9 @@ def get_loc_tech(loc_tech_carrier):
 @memoize
 def get_timestep_weight(backend_model):
     model_data_dict = backend_model.__calliope_model_data__
-    time_res_sum = sum(model_data_dict['data']['timestep_resolution'].values())
-    weights_sum = sum(model_data_dict['data']['timestep_weights'].values())
-    return (time_res_sum * weights_sum) / 8760
+    time_res = list(model_data_dict['data']['timestep_resolution'].values())
+    weights = list(model_data_dict['data']['timestep_weights'].values())
+    return sum(np.multiply(time_res, weights)) / 8760
 
 
 def get_var(backend_model, var, dims=None):
