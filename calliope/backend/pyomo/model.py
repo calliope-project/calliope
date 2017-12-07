@@ -43,7 +43,9 @@ def generate_model(model_data):
 
     # "Parameters"
     model_data_dict = {
-        'data': {k: model_data[k].to_series().to_dict() for k in model_data.data_vars},
+        'data': {k:
+            model_data[k].to_series().dropna().replace('inf', np.inf).to_dict()
+            for k in model_data.data_vars},
         'dims': {k: model_data[k].dims for k in model_data.data_vars},
         'sets': list(model_data.coords)
     }
@@ -61,7 +63,8 @@ def generate_model(model_data):
     # Constraints
     constraints_to_add = [
         'energy_balance.load_energy_balance_constraints',
-        'capacity.load_capacity_constraints'
+        'capacity.load_capacity_constraints',
+        'dispatch.load_dispatch_constraints'
     ]
 
     for c in constraints_to_add:

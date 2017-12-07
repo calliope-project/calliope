@@ -7,13 +7,14 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 from calliope.core.util.tools import memoize
 
 
+#FIXME: change to get_param
 @memoize
 def param_getter(backend_model, var, dims):
     try:
-        return backend_model.__calliope_model_data__[var][dims]
+        return backend_model.__calliope_model_data__['data'][var][dims]
     except KeyError:  # Try without time dimension, which is always last
         try:
-            return backend_model.__calliope_model_data__[var][dims[:-1]]
+            return backend_model.__calliope_model_data__['data'][var][dims[:-1]]
         except KeyError:  # Static default value
             return backend_model.__calliope_defaults__[var]
 
@@ -50,3 +51,9 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
         loc_tech_carriers_con,
         loc_tech_carriers_export
     )
+
+
+@memoize
+def get_loc_tech(loc_tech_carrier):
+
+    return loc_tech_carrier.rsplit(':', 1)[0]

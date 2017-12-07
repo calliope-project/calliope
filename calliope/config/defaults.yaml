@@ -52,7 +52,7 @@ default_tech:
         resource_area_equals: false  # Specific installed collector area (m\ :sup:`2`)
         resource_area_per_energy_cap: false  # If set, forces ``r_area`` to follow ``energy_cap`` with the given numerical ration (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
         resource_cap_min: 0  # Minimum installed resource to/from storage conversion capacity (kW)
-        resource_cap_max: inf  # Maximum installed resource to/from storage conversion capacity (kW)
+        resource_cap_max: .inf  # Maximum installed resource to/from storage conversion capacity (kW)
         resource_cap_equals: false  # Specific installed resource to/from storage conversion capacity (kW)
         resource_cap_equals_energy_cap: false  # If true, r_cap is forced to equal energy_cap
         resource_scale: 1.0  # Scale resource by this value
@@ -73,14 +73,14 @@ default_tech:
         energy_cap_min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
-        energy_cap_total_max: inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
+        energy_cap_total_max: .inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
         energy_cap_total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
         energy_cap_scale: 1.0  # Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
         energy_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
         energy_cap_per_unit: false  # set the capacity of each integer unit of a technology perchased (kW/unit)
         energy_ramping: false  # Ramping rate (fraction of installed capacity per hour), set to ``false`` to disable ramping constraints (only has an effect if the optional ramping constraints are loaded)
         # FIXME: per_distance is no longer in separate top-level thing
-        export_cap: inf  # Maximum allowed export for a technology.
+        export_cap: .inf  # Maximum allowed export for a technology.
         export_carrier: null  # FIXME needs description
         units_min: false  # Minimum number of integer units of a technology that can be purchased.
         units_max: false  # Maximum number of integer units of a technology that can be purchased.
