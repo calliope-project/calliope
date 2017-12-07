@@ -26,22 +26,24 @@ def get_previous_timestep(backend_model, timestep):
 
 @memoize
 def get_loc_tech_carriers(backend_model, loc_carrier):
-    sets = backend_model.__calliope_model_data__['sets']
 
-    loc_tech_carriers = [
-        i.split(',') for i in
-        backend_model.__calliope_model_data__['data']['lookup_loc_carriers']
-    ]
+    lookup = backend_model.__calliope_model_data__['data']['lookup_loc_carriers']
+    loc_tech_carriers = lookup[loc_carrier].split(',')
 
     loc_tech_carriers_prod = [
-        i for i in loc_tech_carriers if i in sets['loc_tech_carriers_prod']
+        i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_prod
     ]
     loc_tech_carriers_con = [
-        i for i in loc_tech_carriers if i in sets['loc_tech_carriers_con']
+        i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_con
     ]
-    loc_tech_carriers_export = [
-        i for i in loc_tech_carriers if i in sets['loc_tech_carriers_export']
-    ]
+
+    if hasattr(backend_model, 'loc_tech_carriers_export'):
+        loc_tech_carriers_export = [
+            i for i in loc_tech_carriers
+            if i in backend_model.loc_tech_carriers_export
+        ]
+    else:
+        loc_tech_carriers_export = []
 
     return (
         loc_tech_carriers_prod,

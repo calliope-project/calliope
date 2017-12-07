@@ -21,7 +21,7 @@ def initialize_decision_variables(backend_model):
     backend_model.energy_cap = po.Var(backend_model.loc_techs, within=po.NonNegativeReals)
     backend_model.carrier_prod = po.Var(backend_model.loc_tech_carriers_prod, backend_model.timesteps, within=po.NonNegativeReals)
     backend_model.carrier_con = po.Var(backend_model.loc_tech_carriers_con, backend_model.timesteps, within=po.NegativeReals)
-    backend_model.cost = po.Var(backend_model.loc_techs_costs, backend_model.costs, within=po.Reals)
+    backend_model.cost = po.Var(backend_model.loc_techs_cost, backend_model.costs, within=po.Reals)
 
     ##
     # Conditionally assigned variables
@@ -41,11 +41,11 @@ def initialize_decision_variables(backend_model):
     if 'loc_techs_export' in model_data_dict['sets']:
         backend_model.carrier_export = po.Var(backend_model.loc_techs_export, backend_model.timesteps, within=po.NonNegativeReals)
 
-    if 'loc_techs_variable_costs' in model_data_dict['sets']:
-        backend_model.cost_var = po.Var(backend_model.loc_techs_variable_costs, backend_model.costs, backend_model.timesteps, within=po.Reals)
+    if 'loc_techs_om_cost' in model_data_dict['sets']:
+        backend_model.cost_var = po.Var(backend_model.loc_techs_om_cost, backend_model.costs, backend_model.timesteps, within=po.Reals)
 
-    if 'loc_techs_investment_costs' in model_data_dict['sets']:
-        backend_model.cost_investment = po.Var(backend_model.loc_techs_investment_costs, backend_model.costs, within=po.Reals)
+    if 'loc_techs_investment_cost' in model_data_dict['sets']:
+        backend_model.cost_investment = po.Var(backend_model.loc_techs_investment_cost, backend_model.costs, within=po.Reals)
 
     if 'loc_techs_purchase' in model_data_dict['sets']:
         backend_model.purchased = po.Var(backend_model.loc_techs_purchase, within=po.Binary)

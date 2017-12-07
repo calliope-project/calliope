@@ -291,9 +291,9 @@ def costs_to_dataset(model_run):
         return the set of loc_techs over which the given cost should be built
         """
         if '_cap' in cost or 'interest_rate' in cost or 'purchase' in cost:
-            return 'loc_techs_investment_costs'
+            return 'loc_techs_investment_cost'
         elif 'om_' in cost or 'export' in cost:
-            return 'loc_techs_om_costs'
+            return 'loc_techs_om_cost'
         else:
             return 'loc_techs'
 

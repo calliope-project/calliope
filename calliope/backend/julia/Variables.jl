@@ -55,7 +55,7 @@ function initialize_decision_variables(backend_model, sets)
         carriers=sets["carriers"], timesteps=sets["timesteps"]] <= 0);
 
     # Costs
-    @variable(backend_model, cost[loc_techs=sets["loc_techs_costs"],
+    @variable(backend_model, cost[loc_techs=sets["loc_techs_cost"],
         costs=sets["costs"]]);
 
     #

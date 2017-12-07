@@ -50,6 +50,9 @@ Subsets based on active constraints
 * loc_techs_export
 * loc_techs_purchase
 * loc_techs_milp
+* loc_techs_cost
+* loc_techs_investment_cost
+* loc_techs_om_cost
 * loc_techs_out_2
 * loc_techs_out_3
 * loc_techs_in_2
@@ -361,10 +364,11 @@ def generate_loc_tech_sets(model_run, simple_sets):
                for i in loc_techs_transmission_config[k].costs.keys_nested())
     )
 
-    sets.loc_techs_costs = loc_techs_costs | loc_techs_transmission_costs
-    sets.loc_techs_investment_costs = (loc_techs_investment_costs |
+    sets.loc_techs_cost = loc_techs_costs | loc_techs_transmission_costs
+    sets.loc_techs_investment_cost = (
+        loc_techs_investment_costs |
         loc_techs_transmission_investment_costs)
-    sets.loc_techs_om_costs = loc_techs_om_costs | loc_techs_transmission_om_costs
+    sets.loc_techs_om_cost = loc_techs_om_costs | loc_techs_transmission_om_costs
 
     ##
     # Subsets of `conversion_plus` technologies
