@@ -98,7 +98,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
          cost_resource_area + cost_of_purchase)
     )
 
-    # Tranmission technologies exist at two locations, thus their cost is divided by 2
+    # Transmission technologies exist at two locations, thus their cost is divided by 2
     if loc_tech in backend_model.loc_techs_transmission:
             cost_con = cost_con / 2
 
