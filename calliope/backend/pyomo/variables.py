@@ -18,10 +18,10 @@ def initialize_decision_variables(backend_model):
     # Variables which are always assigned
     ##
 
-    backend_model.energy_cap = po.Var(backend_model.loc_techs_prod, within=po.NonNegativeReals)
-    backend_model.carrier_prod = po.Var(backend_model.loc_techs_carrier_prod, backend_model.timesteps, within=po.NonNegativeReals)
-    backend_model.carrier_con = po.Var(backend_model.loc_techs_carrier_con, backend_model.timesteps, within=po.NegativeReals)
-    backend_model.cost = po.Var(backend_model.loc_techs_cost, backend_model.costs, within=po.Reals)
+    backend_model.energy_cap = po.Var(backend_model.loc_techs, within=po.NonNegativeReals)
+    backend_model.carrier_prod = po.Var(backend_model.loc_tech_carriers_prod, backend_model.timesteps, within=po.NonNegativeReals)
+    backend_model.carrier_con = po.Var(backend_model.loc_tech_carriers_con, backend_model.timesteps, within=po.NegativeReals)
+    backend_model.cost = po.Var(backend_model.loc_techs_costs, backend_model.costs, within=po.Reals)
 
     ##
     # Conditionally assigned variables

@@ -21,7 +21,7 @@ class ModelError(Exception):
     pass
 
 
-class OptionNotSetError(ModelError):
+class BackendError(Exception):
     pass
 
 

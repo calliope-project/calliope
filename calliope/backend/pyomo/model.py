@@ -1,6 +1,25 @@
+"""
+Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
+Licensed under the Apache 2.0 License (see LICENSE file).
+
+"""
+
+import json
+
+import numpy as np
+import pandas as pd
+
 import pyomo.core as po  # pylint: disable=import-error
+from pyomo.opt import SolverFactory  # pylint: disable=import-error
+
+# pyomo.environ is needed for pyomo solver plugins
+import pyomo.environ  # pylint: disable=unused-import,import-error
+
+# TempfileManager is required to set log directory
+from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.core.util.tools import load_function
+from calliope import exceptions
 
 
 def generate_model(model_data):
@@ -12,9 +31,13 @@ def generate_model(model_data):
 
     # Sets
     for coord in list(model_data.coords):
+        set_data = list(model_data.coords[coord].data)
+        # Ensure that time steps are pandas.Timestamp objects
+        if isinstance(set_data[0], np.datetime64):
+            set_data = pd.to_datetime(set_data)
         setattr(
-            model_data, coord,
-            po.Set(initialize=list(model_data.coords[coord].data), ordered=True)
+            backend_model, coord,
+            po.Set(initialize=set_data, ordered=True)
         )
 
     # "Parameters"
@@ -25,6 +48,7 @@ def generate_model(model_data):
     }
     # FIXME must ensure here that dims are in the right order
     backend_model.__calliope_model_data__ = model_data_dict
+    backend_model.__calliope_defaults__ = json.loads(model_data.attrs['defaults'])
 
     # Variables
     load_function(
@@ -64,3 +88,48 @@ def generate_model(model_data):
     # delattr(backend_model, '__calliope_model_data__')
 
     return backend_model
+
+
+def solve_model(backend_model, solver,
+                solver_io=None, solver_options=None, save_logs=False):
+
+    opt = SolverFactory(solver, solver_io=solver_io)
+    # if solver_io:
+    #     opt = SolverFactory(solver, solver_io=solver_io)
+    # else:
+    #     opt = SolverFactory(solver)
+
+    if solver_options:
+        for k, v in solver_options.items():
+            opt.options[k] = v
+
+    if save_logs:
+        solve_kwargs = {
+            'symbolic_solver_labels': True,
+            'keepfiles': True
+        }
+        # FIXME: check whether dir exists and is a dir
+        TempfileManager.tempdir = save_logs  # Sets log output dir
+    else:
+        solve_kwargs = {}
+
+    results = opt.solve(backend_model, tee=True, **solve_kwargs)
+    return results
+
+
+def load_results(backend_model, results):
+    """Load results into model instance for access via model variables."""
+    not_optimal = (
+        results['Solver'][0]['Termination condition'].key != 'optimal'
+    )
+    this_result = backend_model.solutions.load_from(results)
+
+    if this_result is False or not_optimal:
+        # logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
+        # logging.critical(results.Problem)
+        # logging.critical(results.Solver)
+        if not_optimal:
+            message = 'Model solution was non-optimal.'
+        else:
+            message = 'Could not load results into model instance.'
+        raise exceptions.BackendError(message)

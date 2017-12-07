@@ -20,7 +20,7 @@ def cost_minimization(backend_model):
     def obj_rule(backend_model):
         return sum(
             backend_model.cost[loc_tech, 'monetary']
-            for loc_tech in backend_model.loc_techs_cost
+            for loc_tech in backend_model.loc_techs_costs
         )
 
     backend_model.obj = po.Objective(sense=po.minimize, rule=obj_rule)
