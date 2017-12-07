@@ -5,6 +5,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import json
+from contextlib import redirect_stdout, redirect_stderr
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.core.util.tools import load_function
+from calliope.core.util.tools import load_function, LogWriter
 from calliope import exceptions
 
 
@@ -94,10 +95,6 @@ def solve_model(backend_model, solver,
                 solver_io=None, solver_options=None, save_logs=False):
 
     opt = SolverFactory(solver, solver_io=solver_io)
-    # if solver_io:
-    #     opt = SolverFactory(solver, solver_io=solver_io)
-    # else:
-    #     opt = SolverFactory(solver)
 
     if solver_options:
         for k, v in solver_options.items():
@@ -113,7 +110,10 @@ def solve_model(backend_model, solver,
     else:
         solve_kwargs = {}
 
-    results = opt.solve(backend_model, tee=True, **solve_kwargs)
+    with redirect_stdout(LogWriter('info', strip=True)):
+        with redirect_stderr(LogWriter('error', strip=True)):
+            results = opt.solve(backend_model, tee=True, **solve_kwargs)
+
     return results
 
 

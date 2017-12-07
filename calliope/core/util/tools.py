@@ -8,32 +8,12 @@ from contextlib import contextmanager
 from io import StringIO
 from copy import deepcopy
 
+import datetime
 import functools
+import logging
 import os
 import importlib
 import sys
-
-
-@contextmanager
-def capture_output():
-    """
-    Capture stdout and stderr output of a wrapped function::
-
-        with capture_output() as out:
-            # do things that create stdout or stderr output
-
-    Returns a list with the captured strings: ``[stderr, stdout]``
-
-    """
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        out = [StringIO(), StringIO()]
-        sys.stdout, sys.stderr = out
-        yield out
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
-        out[0] = out[0].getvalue()
-        out[1] = out[1].getvalue()
 
 
 # This used to be a custom function, but as of Python 3.2 we can use
@@ -130,3 +110,30 @@ def flatten_list(nested):
             l = sublist + l
         else:
             yield sublist
+
+
+def log_time(timings, identifier, comment=None, level='info', time_since_start=False):
+    if comment is None:
+        comment = identifier
+
+    timings[identifier] = now = datetime.datetime.now()
+
+    getattr(logging, level)('[{}] {}'.format(now, comment))
+    if time_since_start:
+        time_diff = now - timings['model_creation']
+        getattr(logging, level)('[{}] Time since start: {}'.format(now, time_diff))
+
+
+class LogWriter:
+    def __init__(self, level, strip=False):
+        self.level = level
+        self.strip = strip
+
+    def write(self, message):
+        if message != '\n':
+            if self.strip:
+                message = message.strip()
+            getattr(logging, self.level)(message)
+
+    def flush(self):
+        pass
