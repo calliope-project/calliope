@@ -130,4 +130,4 @@ class Model(object):
     def run(self):
         """Run the model with the chosen backend"""
         backend = self.model_data.attrs['run.backend']
-        self.solution = BACKEND_RUNNERS[backend](self.model_data, self.timings)
+        self.results, self.backend_model = BACKEND_RUNNERS[backend](self.model_data, self.timings)

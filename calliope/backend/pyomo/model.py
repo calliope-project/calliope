@@ -4,11 +4,13 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+import os
 import json
 from contextlib import redirect_stdout, redirect_stderr
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 import pyomo.core as po  # pylint: disable=import-error
 from pyomo.opt import SolverFactory  # pylint: disable=import-error
@@ -19,6 +21,7 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
+from calliope.backend.pyomo.util import get_var
 from calliope.core.util.tools import load_function, LogWriter
 from calliope import exceptions
 
@@ -103,7 +106,7 @@ def solve_model(backend_model, solver,
             'symbolic_solver_labels': True,
             'keepfiles': True
         }
-        # FIXME: check whether dir exists and is a dir
+        os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
     else:
         solve_kwargs = {}
@@ -122,12 +125,21 @@ def load_results(backend_model, results):
     )
     this_result = backend_model.solutions.load_from(results)
 
-    if this_result is False or not_optimal:
-        # logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
-        # logging.critical(results.Problem)
-        # logging.critical(results.Solver)
-        if not_optimal:
-            message = 'Model solution was non-optimal.'
-        else:
-            message = 'Could not load results into model instance.'
-        raise exceptions.BackendError(message)
+    # FIXME -- what to do here?
+    # if this_result is False or not_optimal:
+    #     # logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
+    #     # logging.critical(results.Problem)
+    #     # logging.critical(results.Solver)
+    #     if not_optimal:
+    #         message = 'Model solution was non-optimal.'
+    #     else:
+    #         message = 'Could not load results into model instance.'
+    #     raise exceptions.BackendError(message)
+
+
+def get_result_array(backend_model):
+    all_variables = {
+        i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
+        if isinstance(i, po.base.var.IndexedVar)
+    }
+    return xr.Dataset(all_variables)
