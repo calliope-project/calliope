@@ -56,21 +56,35 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
         backend_model.cost[cost, loc_tech] == cost_investment + cost_var
     )
 
-
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     model_data_dict = backend_model.__calliope_model_data__
 
-    cost_energy_cap = param_getter(backend_model, 'cost_energy_cap', (cost, loc_tech))
-    cost_storage_cap = param_getter(backend_model, 'cost_storage_cap', (cost, loc_tech))
-    cost_resource_cap = param_getter(backend_model, 'cost_resource_cap', (cost, loc_tech))
-    cost_resource_area = param_getter(backend_model, 'cost_resource_area', (cost, loc_tech))
-    cost_purchase = param_getter(backend_model, 'cost_purchase', (cost, loc_tech))
+    def _get_investment_cost(capacity_decision_variable, calliope_set):
+        """
+        Conditionally add investment costs, if the relevant set of technologies
+        exists. Both inputs are strings.
+        """
+        if hasattr(backend_model, calliope_set) and loc_tech in getattr(backend_model, calliope_set):
+            _cost = (getattr(backend_model, capacity_decision_variable)[loc_tech] *
+                param_getter(backend_model, 'cost_' + capacity_decision_variable, (cost, loc_tech)))
+            return _cost
+        else: return 0
+
+    cost_energy_cap = (backend_model.energy_cap[loc_tech]
+        * param_getter(backend_model, 'cost_energy_cap', (cost, loc_tech)))
+
+    cost_storage_cap = _get_investment_cost('storage_cap', 'loc_techs_store')
+    cost_resource_cap = _get_investment_cost('resource_cap', 'loc_techs_supply_plus')
+    cost_resource_area = _get_investment_cost('resource_area', 'loc_techs_area')
+
     cost_om_annual_investment_fraction = param_getter(backend_model, 'cost_om_annual_investment_fraction', (cost, loc_tech))
     cost_om_annual = param_getter(backend_model, 'cost_om_annual', (cost, loc_tech))
 
     if hasattr(backend_model, 'loc_techs_purchase') and loc_tech in backend_model.loc_techs_purchase:
+        cost_purchase = param_getter(backend_model, 'cost_purchase', (cost, loc_tech))
         cost_of_purchase = backend_model.purchased[loc_tech] * cost_purchase
     elif hasattr(backend_model, 'loc_techs_milp') and loc_tech in backend_model.loc_techs_milp:
+        cost_purchase = param_getter(backend_model, 'cost_purchase', (cost, loc_tech))
         cost_of_purchase = backend_model.units[loc_tech] * cost_purchase
     else:
         cost_of_purchase = 0

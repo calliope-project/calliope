@@ -10,7 +10,6 @@ locations:
             demand_power:
                 constraints:
                     resource: file=demand-1.csv:demand
-                    resource_scale_to_peak: -40000
             ccgt:
                 constraints:
                     energy_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
@@ -22,7 +21,6 @@ locations:
             demand_power:
                 constraints:
                     resource: file=demand-2.csv:demand
-                    resource_scale_to_peak: -5000
             battery:
 
     region1-1.coordinates: {lat: 41, lon: -2}

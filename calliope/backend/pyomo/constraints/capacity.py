@@ -2,17 +2,17 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-energy_balance.py
+capacity.py
 ~~~~~~~~~~~~~~~~~
 
-Energy balance constraints.
+Capacity constraints for technologies (output, resource, area, and storage).
 
 """
 
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import param_getter, get_previous_timestep
+from calliope.backend.pyomo.util import param_getter
 from calliope import exceptions
 
 

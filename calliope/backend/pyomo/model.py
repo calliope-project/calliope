@@ -68,6 +68,7 @@ def generate_model(model_data):
         'energy_balance.load_energy_balance_constraints',
         'capacity.load_capacity_constraints',
         'dispatch.load_dispatch_constraints',
+        'network.load_network_constraints',
         'costs.load_cost_constraints'
     ]
 

@@ -59,7 +59,7 @@ default_tech:
         resource_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
         storage_initial: 0  # Initial storage level (kWh)
         storage_cap_min: 0  # Minimum storage capacity (kWh)
-        storage_cap_max: 0  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
+        storage_cap_max: .inf  # Maximum storage capacity (kWh). If both this and s_time.max are set to non-zero values, the minimum resulting constraint of either s_time.max or s_cap.max is applied.
         storage_cap_equals: false  # Specific storage capacity (kWh)
         storage_cap_per_unit: false # set the storage capacity of each integer unit of a technology perchased (kWh/unit)
         charge_rate: false # Charge rate (0 to 1) defining maximum charge/discharge (kW) for a given maximum storage capacity (kWh)
@@ -71,7 +71,7 @@ default_tech:
         energy_eff: 1.0  # Storage to/from carrier conversion efficiency. Can be set to ``file`` or ``file:`` or to a single numerical value
         energy_eff_per_distance: 1.0 # Energy transmission efficiency, per unit distance. Set as value between 1.0 (no loss) and 0 (all energy lost)
         energy_cap_min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
-        energy_cap_max: 0  # Maximum installed storage to/from carrier conversion capacity (kW), per location
+        energy_cap_max: .inf  # Maximum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_total_max: .inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
         energy_cap_total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide

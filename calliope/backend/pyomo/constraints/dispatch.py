@@ -2,19 +2,17 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-energy_balance.py
+dispatch.py
 ~~~~~~~~~~~~~~~~~
 
-Energy balance constraints.
+Energy dispatch constraints, limiting production/consumption to the capacities
+of the technologies
 
 """
 
 import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
 
-from calliope.backend.pyomo.util import param_getter, get_previous_timestep, get_loc_tech
-from calliope import exceptions
-
+from calliope.backend.pyomo.util import param_getter, get_loc_tech
 
 
 def load_dispatch_constraints(backend_model):
