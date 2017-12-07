@@ -195,68 +195,11 @@ def process_locations(model_config, modelrun_techs):
                     except KeyError:
                         pass
 
+                tech_settings = process_per_distance_constraints(tech_name, tech_settings, locations, locations_comments, loc_from, loc_to)
+                tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
                 processed_transmission_techs[tech_name] = tech_settings
             else:
                 tech_settings = processed_transmission_techs[tech_name]
-
-            # Process distance, if any per_distance constraints exist
-            if any('per_distance' in i
-                   for i in tech_settings.keys_nested(subkeys_as='list')):
-                # If no distance was given, we calculate it from coordinates
-                if 'distance' not in tech_settings:
-                    # Simple check - earlier sense-checking already ensures
-                    # that all locations have either lat/lon or x/y coords
-                    loc1 = locations[loc_from].coordinates
-                    loc2 = locations[loc_to].coordinates
-                    if 'lat' in locations[loc_from].coordinates:
-                        distance = vincenty(
-                            [loc1.lat, loc1.lon], [loc2.lat, loc2.lon]
-                        )
-                    else:
-                        distance = math.sqrt(
-                            (loc1.x - loc2.x)**2 + (loc1.y - loc2.y)**2
-                        )
-
-                    tech_settings.distance = distance
-                    locations_comments.set_key(
-                        '{}.links.{}.techs.{}.distance'.format(loc_from, loc_to, tech_name),
-                        'Distance automatically computed from coordinates'
-                    )
-
-                # Add per-distance values to their not-per-distance cousins
-                # FIXME these are hardcoded for now
-                if 'energy_eff_per_distance' in tech_settings.constraints:
-                    distance_energy_eff = (
-                        tech_settings.constraints.energy_eff_per_distance **
-                        tech_settings.distance
-                    )
-                    tech_settings.constraints.energy_eff = (
-                        tech_settings.constraints.get_key('energy_eff', 1.0) *
-                        distance_energy_eff
-                    )
-                    del tech_settings.constraints['energy_eff_per_distance']
-                    locations_comments.set_key(
-                        '{}.links.{}.techs.{}.constraints.energy_eff'.format(loc_from, loc_to, tech_name),
-                        'Includes value computed from energy_eff_per_distance'
-                    )
-
-                for k in tech_settings.costs.keys_nested(subkeys_as='list'):
-                    if 'energy_cap_per_distance' in k:
-                        energy_cap_costs_per_distance = (
-                            tech_settings.costs.get_key(k) *
-                            tech_settings.distance
-                        )
-                        tech_settings.costs[k.split('.')[0]].energy_cap = (
-                            tech_settings.costs[k.split('.')[0]].get_key('energy_cap', 0) +
-                            energy_cap_costs_per_distance
-                        )
-                        tech_settings.costs.del_key(k)
-                        locations_comments.set_key(
-                            '{}.links.{}.techs.{}.costs.{}'.format(loc_from, loc_to, tech_name, k),
-                            'Includes value computed from energy_cap_per_distance'
-                        )
-
-        tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
 
         processed_links.set_key(
             '{}.links.{}.techs.{}'.format(loc_from, loc_to, tech_name),
@@ -280,7 +223,7 @@ def process_locations(model_config, modelrun_techs):
 
     locations.union(processed_links, allow_override=True)
 
-    return locations, locations_comments, warnings, errors
+    return locations, locations_comments, list(set(warnings)), list(set(errors))
 
 
 def explode_locations(k):
@@ -323,6 +266,67 @@ def _set_loc_key(d, k, value):
         d[k] = value
 
 
+def process_per_distance_constraints(tech_name, tech_settings, locations, locations_comments, loc_from, loc_to):
+    # Process distance, if any per_distance constraints exist
+    if any('per_distance' in i
+           for i in tech_settings.keys_nested(subkeys_as='list')):
+        # If no distance was given, we calculate it from coordinates
+        if 'distance' not in tech_settings:
+            # Simple check - earlier sense-checking already ensures
+            # that all locations have either lat/lon or x/y coords
+            loc1 = locations[loc_from].coordinates
+            loc2 = locations[loc_to].coordinates
+            if 'lat' in locations[loc_from].coordinates:
+                distance = vincenty(
+                    [loc1.lat, loc1.lon], [loc2.lat, loc2.lon]
+                )
+            else:
+                distance = math.sqrt(
+                    (loc1.x - loc2.x)**2 + (loc1.y - loc2.y)**2
+                )
+
+            tech_settings.distance = distance
+            locations_comments.set_key(
+                '{}.links.{}.techs.{}.distance'.format(loc_from, loc_to, tech_name),
+                'Distance automatically computed from coordinates'
+            )
+
+        # Add per-distance values to their not-per-distance cousins
+        # FIXME these are hardcoded for now
+        if 'energy_eff_per_distance' in tech_settings.constraints:
+            distance_energy_eff = (
+                tech_settings.constraints.energy_eff_per_distance **
+                tech_settings.distance
+            )
+            tech_settings.constraints.energy_eff = (
+                tech_settings.constraints.get_key('energy_eff', 1.0) *
+                distance_energy_eff
+            )
+            del tech_settings.constraints['energy_eff_per_distance']
+            locations_comments.set_key(
+                '{}.links.{}.techs.{}.constraints.energy_eff'.format(loc_from, loc_to, tech_name),
+                'Includes value computed from energy_eff_per_distance'
+            )
+
+        for k in tech_settings.costs.keys_nested(subkeys_as='list'):
+            if 'energy_cap_per_distance' in k:
+                energy_cap_costs_per_distance = (
+                    tech_settings.costs.get_key(k) *
+                    tech_settings.distance
+                )
+                tech_settings.costs[k.split('.')[0]].energy_cap = (
+                    tech_settings.costs[k.split('.')[0]].get_key('energy_cap', 0) +
+                    energy_cap_costs_per_distance
+                )
+                tech_settings.costs.del_key(k)
+                locations_comments.set_key(
+                    '{}.links.{}.techs.{}.costs.{}'.format(loc_from, loc_to, tech_name, k),
+                    'Includes value computed from energy_cap_per_distance'
+                )
+
+    return tech_settings
+
+
 def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
     cost_classes = tech_config.get('costs', {}).keys()
     for cost in cost_classes:
@@ -343,6 +347,8 @@ def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
                 '{} does not specify an interest rate for {} - '
                 'setting interest rate to zero.'.format(tech_id, cost)
             )
+            print(tech_id)
+            print(tech_config)
             dep = 1 / plant_life
         else:
             dep = (

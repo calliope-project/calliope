@@ -19,7 +19,7 @@ dependencies:
     - numexpr
     - numpy=1.12.1
     - pandas=0.21
-    - pyomo=5.3
+    - pyomo=5.2
     - pytest
     - pytest-cov
     - ruamel.yaml<=0.15

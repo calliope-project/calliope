@@ -21,8 +21,10 @@ techs:
         constraints:
             resource: inf
             energy_cap_max: 2000
+            lifetime: 25
         costs:
             monetary:
+                interest_rate: 0.10
                 energy_cap: 15
                 om_con: 0.1 # 10p/kWh electricity price #ppt
 
@@ -34,8 +36,10 @@ techs:
         constraints:
             resource: inf
             energy_cap_max: 2000
+            lifetime: 25
         costs:
             monetary:
+                interest_rate: 0.10
                 energy_cap: 1
                 om_con: 0.025 # 2.5p/kWh gas price #ppt
 
@@ -55,8 +59,10 @@ techs:
             resource_area_max: 1500
             force_resource: true
             resource_area_per_energy_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
+            lifetime: 25
         costs:
             monetary:
+                interest_rate: 0.10
                 energy_cap: 1350
 # Conversion
 
@@ -70,6 +76,10 @@ techs:
         constraints:
             energy_cap_max: 600
             energy_eff: 0.85
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
 
 # Conversion_plus
 
@@ -89,8 +99,10 @@ techs:
             carrier_ratios:
                 carrier_out_2:
                     heat: 0.8
+            lifetime: 25
         costs:
             monetary:
+                interest_rate: 0.10
                 energy_cap: 750
                 om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
                 export: file=export_power.csv
@@ -131,8 +143,10 @@ techs:
         constraints:
             energy_cap_max: 2000
             energy_eff: 0.98
+            lifetime: 25
         costs:
             monetary:
+                interest_rate: 0.10
                 energy_cap_per_distance: 0.01
 
     heat_pipes:
@@ -143,6 +157,8 @@ techs:
         constraints:
             energy_cap_max: 2000
             energy_eff_per_distance: 0.975
+            lifetime: 25
         costs:
             monetary:
+                interest_rate: 0.10
                 energy_cap_per_distance: 0.3
