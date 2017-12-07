@@ -97,6 +97,43 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     )
 
 
-def cost_var_constraint_rule(backend_model, cost, loc_tech_om_cost, timestep):
-    return po.Constraint.NoConstraint
-    # backend_model.cost_var = po.Var(backend_model.loc_techs_om_cost, backend_model.costs, backend_model.timesteps, within=po.Reals)
+def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
+    model_data_dict = backend_model.__calliope_model_data__
+
+    cost_om_prod = param_getter(backend_model, 'cost_om_prod', (cost, loc_tech, timestep))
+    cost_om_con = param_getter(backend_model, 'cost_om_con', (cost, loc_tech, timestep))
+    weight = model_data_dict['data']['timestep_weights'][timestep]
+
+    if hasattr(backend_model, 'loc_techs_export') and loc_tech in backend_model.loc_techs_export:
+        export = backend_model.export[loc_tech, timestep]
+        cost_export = param_getter(backend_model, 'cost_export', (cost, loc_tech, timestep)) * export
+    else:
+        export = 0
+        cost_export = 0
+
+    loc_tech_carrier = model_data_dict['data']['lookup_loc_techs'][loc_tech]
+
+    if cost_om_prod:
+        cost_prod = cost_om_prod * weight * backend_model.carrier_prod[loc_tech_carrier, timestep]
+    else:
+        cost_prod = 0
+
+    if hasattr(backend_model, 'loc_techs_supply_plus') and loc_tech in backend_model.loc_techs_supply_plus and cost_om_con:
+        resource_eff = param_getter(backend_model, 'resource_eff', (cost, loc_tech, timestep))
+        if resource_eff > 0:  # In case resource_eff is zero, to avoid an infinite value
+            # Dividing by r_eff here so we get the actual r used, not the r
+            # moved into storage...
+            cost_con = cost_om_con * weight * (backend_model.resource[loc_tech, timestep] / resource_eff)
+        else:
+            cost_con = 0
+    elif hasattr(backend_model, 'loc_techs_supply') and  loc_tech in backend_model.loc_techs_supply and cost_om_con:
+        energy_eff = param_getter(backend_model, 'energy_eff', (cost, loc_tech, timestep))
+        if energy_eff > 0:  # in case energy_eff is zero, to avoid an infinite value
+            cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff)
+        else:
+            cost_con = 0
+    else:
+        cost_con = 0
+
+    return (backend_model.cost_var[cost, loc_tech, timestep] ==
+            cost_prod + cost_con + cost_export)
