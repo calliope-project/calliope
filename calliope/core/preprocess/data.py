@@ -21,6 +21,7 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
 from calliope._version import __version__
 from calliope.core.preprocess import checks
+from calliope.core.util.loc_tech import reorganise_dataset_dimensions
 
 
 def build_model_data(model_run, debug=False):
@@ -121,22 +122,10 @@ def apply_time_clustering(model_data_original, model_run):
         been updated as per user-defined clustering techniques (from model_run)
     """
 
-    def _reorganise_dataset_dimensions(dataset):
-        # Reorganise the Dataset dimensions to be alphabetical *except*
-        # `timesteps`, which must always come last in any DataArray's dimensions
-        new_dims = (
-            sorted(list(set(dataset.coords.keys()) - set(['timesteps'])))
-        ) + ['timesteps']
-
-        updated_dataset = dataset.transpose(*new_dims).reindex(
-            {k:dataset[k] for k in new_dims})
-
-        return updated_dataset
-
     # Carry y_ subset sets over to data for easier data analysis
     time_config = model_run.model.get('time', None)
     if not time_config:
-        return _reorganise_dataset_dimensions(model_data_original)  # Nothing more to do here
+        return reorganise_dataset_dimensions(model_data_original)  # Nothing more to do here
     else:
         data = model_data_original.copy(deep=True)
 

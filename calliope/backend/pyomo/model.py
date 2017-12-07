@@ -23,6 +23,7 @@ from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var
 from calliope.core.util.tools import load_function, LogWriter
+from calliope.core.util.loc_tech import reorganise_dataset_dimensions
 from calliope import exceptions
 
 
@@ -143,4 +144,4 @@ def get_result_array(backend_model):
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
         if isinstance(i, po.base.var.IndexedVar)
     }
-    return xr.Dataset(all_variables)
+    return reorganise_dataset_dimensions(xr.Dataset(all_variables))

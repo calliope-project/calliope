@@ -106,3 +106,16 @@ def get_all_carriers(config, direction='both'):
         config.get_key('carrier_{}'.format(k), '')
         for k in carrier_list
     ]) - set([''])
+
+
+def reorganise_dataset_dimensions(dataset):
+    # Reorganise the Dataset dimensions to be alphabetical *except*
+    # `timesteps`, which must always come last in any DataArray's dimensions
+    new_dims = (
+        sorted(list(set(dataset.coords.keys()) - set(['timesteps'])))
+    ) + ['timesteps']
+
+    updated_dataset = dataset.transpose(*new_dims).reindex(
+        {k:dataset[k] for k in new_dims})
+
+    return updated_dataset
