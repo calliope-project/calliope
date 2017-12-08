@@ -15,6 +15,7 @@ from calliope.core import debug
 from calliope.core.preprocess import generate_model_run, apply_overrides, build_model_data, apply_time_clustering
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import log_time
+from calliope.core.util.dataset import split_loc_techs
 
 from calliope.backend.pyomo import run as run_pyomo
 # from calliope.backend.julia import run as run_julia
@@ -137,7 +138,7 @@ class Model(object):
 
         """
         backend = self._model_data.attrs['run.backend']
-        results, self.backend_model = BACKEND_RUNNERS[backend](self._model_data, self.timings)
+        results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self.timings)
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = True
@@ -145,3 +146,13 @@ class Model(object):
         self._model_data = self._model_data.merge(results)
 
         self.results = self._model_data.filter_by_attrs(is_result=True)
+
+    def get_formatted_array(self, var):
+        """
+        Return an xr.DataArray with locs, techs, and carriers as separated
+        dimensions. Can be used to view input/output as in calliope < v0.6.0
+        """
+        if var not in self._model_data.data_vars:
+            raise KeyError("Variable {} not in Model data".format(var))
+
+        return split_loc_techs(self._model_data[var])

@@ -56,8 +56,8 @@ def get_loc_techs(loc_techs, tech=None, loc=None):
 
 def split_loc_techs(data_var):
     """
-    Get a DataArray with locations and technologies split into seperate
-    coordinates.
+    Get a DataArray with locations technologies, and possibly carriers
+    split into separate coordinates.
 
     Parameters
     ----------
@@ -69,11 +69,11 @@ def split_loc_techs(data_var):
     updated_data_var : xarray DataArray
     """
 
-    # Find the loc_techs or loc_tech_carriers dimension
+    # Separately find the loc_techs(_carriers) dimension and all other dimensions
     loc_tech_dim = [i for i in data_var.dims if 'loc_tech' in i]
     non_loc_tech_dims = list(set(data_var.dims).difference(loc_tech_dim))
 
-    if not loc_tech_dim or not loc_tech_carrier_dims:
+    if not loc_tech_dim:
         return data_var
 
     elif len(loc_tech_dim) > 1:
@@ -82,18 +82,25 @@ def split_loc_techs(data_var):
                 "for DataArray {}".format(data_var.name))
     else:
         loc_tech_dim = loc_tech_dim[0]
+        # xr.Datarray -> pd.Series allows for string operations
         data_var_df = data_var.to_series().unstack(non_loc_tech_dims)
         index_list = data_var_df.index.str.split('::').tolist()
 
+        # carrier_prod, carrier_con, and carrier_export will return an index_list
+        # of size 3, all others will be an index list of size 2
         possible_names = ['locs', 'techs', 'carriers']
-        names = [possible_names[i] for i in index_list[0]]
+        names = [possible_names[i] for i in range(len(index_list[0]))]
 
-        multi_index_list = pd.MultiIndex.from_tuples(index_list, names=names)
+        data_var_df.index = pd.MultiIndex.from_tuples(index_list, names=names)
 
+        # If there were no other dimensions other than loc_techs(_carriers) then
+        # nothing was unstacked on creating data_var_df, so nothing is stacked now
         if isinstance(data_var_df, pd.Series):
             data_var_series = data_var_df
         else:
             data_var_series = data_var_df.stack(non_loc_tech_dims)
+
+        # New pd.Series has locs, techs (& carriers) as separated MultiIndex levels
         updated_data_var = xr.DataArray.from_series(data_var_series)
 
     return updated_data_var
