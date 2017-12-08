@@ -29,8 +29,10 @@ def read_netcdf(path):
 
 
 def save_netcdf(model_data, path):
-    #FIXME
-    return None
+    encoding = {k: {'zlib': True, 'complevel': 4} for k in model_data.data_vars}
+
+    model_data.to_netcdf(path, format='netCDF4', encoding=encoding)
+    model_data.close()  # Force-close NetCDF file after writing
 
 
 def save_csv(model_data, path):

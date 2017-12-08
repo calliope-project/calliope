@@ -77,9 +77,7 @@ def read_netcdf(path):
 
     """
     model_data = io.read_netcdf(path)
-    return None  # FIXME
-    # FIXME: rewrite Model.__init__ so it can run without a config -- break out most functioanlity into a separate func,
-    # and either manually set the ._model_data object afterwards or allow the constructor to take model_data
+    return Model(config=None, model_data=model_data)
 
 
 class Model(object):
@@ -87,7 +85,7 @@ class Model(object):
     A Calliope Model.
 
     """
-    def __init__(self, config, *args, **kwargs):
+    def __init__(self, config, model_data=None, *args, **kwargs):
         """
         Returns a new Model from either the path to a run configuration file
         or a dict containing 'run' and 'model' keys fully specifying the
@@ -99,14 +97,21 @@ class Model(object):
             If str, must be the path to a run configuration file.
             If dict or AttrDict, must contain two top-level keys, model and run,
             specifying the model and run configuration respectively.
+        model_data : Dataset, optional
+            Create a Model instance from a fully built model_data Dataset.
+            Only used if `config` is explicitly set to None.
 
         """
         self._timings = {}
         log_time(self._timings, 'model_creation')
         if isinstance(config, str):
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
+            self._init_from_model_run(model_run, debug_data)
         elif isinstance(config, dict):
             model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
+            self._init_from_model_run(model_run, debug_data)
+        elif model_data is not None and config is None:
+            self._init_from_model_data(model_data)
         else:
             # expected input is a string pointing to a YAML file of the run
             # configuration or a dict/AttrDict in which the run and model
@@ -115,6 +120,7 @@ class Model(object):
                 'Input configuration must either be a string or a dictionary.'
             )
 
+    def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run
         self._debug_data = debug_data
         log_time(self._timings, 'model_run_creation')
@@ -134,6 +140,17 @@ class Model(object):
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = False
         self.inputs = self._model_data.filter_by_attrs(is_result=False)
+
+    def _init_from_model_data(self, model_data):
+        self._model_run = None
+        self._debug_data = None
+        self._model_data = model_data
+        self.inputs = self._model_data.filter_by_attrs(is_result=False)
+
+        results = self._model_data.filter_by_attrs(is_result=True)
+        if len(results.data_vars) > 0:
+            self.results = results
+        log_time(self._timings, 'model_data_loaded', time_since_start=True)
 
     def save_debug_data(self, path):
         """
