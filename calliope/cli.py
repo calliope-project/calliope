@@ -155,18 +155,19 @@ def run(config_file, override_file, save_netcdf, save_csv, save_logs,
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
+        if save_csv is None and save_netcdf is None:
+            print(
+                '!!!\nWARNING: Neither save_csv nor save_netcdf have been '
+                'specified. Model will run without saving results!\n!!!\n'
+            )
         tstart = start_time.strftime(_time_format)
         print('Calliope run starting at {}\n'.format(tstart))
         override_dict = {
-            'run.save_netcdf': save_netcdf,
-            'run.save_csv': save_csv,
             'run.save_logs': save_logs
         }
         model = Model(
             config_file, override_file=override_file, override_dict=override_dict
         )
-        # FIXME if not profile: check if model._model_run.run specifies at least one save option
-        # model.verbose = True  # Enables some print calls inside Model  # FIXME re-implement or kill
         model_name = model._model_run.get_key('model.name', default='None')
         print('Model name:   {}'.format(model_name))
         msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
@@ -177,34 +178,12 @@ def run(config_file, override_file, save_netcdf, save_csv, save_logs,
             ),
             times=len(model._model_run.sets['timesteps']))
         print('Model size:   {}\n'.format(msize))
-        # model.run()
+        print('Starting model run...')
+        model.run()
+        if save_csv:
+            print('Saving CSV results to directory: {}'.format(save_csv))
+            model.to_csv(save_csv)
+        if save_netcdf:
+            print('Saving NetCDF results to file: {}'.format(save_netcdf))
+            model.to_netcdf(save_netcdf)
         print_end_time(start_time)
-
-
-# @cli.command(short_help='generate parallel runs')
-# @click.argument('run_config')
-# @click.argument('path', default='runs')
-# @click.option('--silent', is_flag=True, default=False,
-#               help='Be less verbose.')
-# @_debug
-# @_pdb
-# def generate(run_config, path, silent, debug, pdb):
-#     """
-#     Generate parallel runs based on the given RUN_CONFIG configuration
-#     file, saving them in the given PATH, which is a path to a
-#     directory that must not yet exist (PATH defaults to 'runs'
-#     if not specified).
-#     """
-#     if debug:
-#         print(_get_version())
-#     logging.captureWarnings(True)
-#     with format_exceptions(debug, pdb):
-#         parallelizer = Parallelizer(target_dir=path, config_run=run_config)
-#         if not silent and 'name' not in parallelizer.config.parallel:
-#             click.echo('`' + run_config +
-#                        '` does not specify a `parallel.name`' +
-#                        'and was skipped.')
-#             return
-#         click.echo('Generating runs from config '
-#                    '`{}` inside `{}`'.format(run_config, path))
-#         parallelizer.generate_runs()

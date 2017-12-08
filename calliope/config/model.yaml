@@ -14,8 +14,6 @@ run:
     solver_options: null  # FIXME document
     solver_io: null  # FIXME check what options exist here (lp, file?)
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
-    save_netcdf: null  # Path to which to save a single NetCDF results file
-    save_csv: null  # Directory into which to save a set of CSV results files
     random_seed: null  # Seed for random number generator used during clustering
 
 model:
