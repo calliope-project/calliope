@@ -6,16 +6,12 @@ channels:
 
 dependencies:
     - python=3.6
-    - basemap
     - bottleneck
     - click
-    - descartes  # For analysis_utils.plot_shapefile_polys
     - glpk=4.61
     - hdf5
     - libnetcdf
-    - matplotlib=2
     - netcdf4
-    - networkx
     - numexpr
     - numpy=1.12.1
     - pandas=0.21
@@ -24,6 +20,4 @@ dependencies:
     - pytest-cov
     - ruamel.yaml<=0.15
     - scipy
-    - seaborn  # Used in the example notebook
-    - shapely  # For analysis_utils.plot_shapefile_polys
     - xarray=0.10

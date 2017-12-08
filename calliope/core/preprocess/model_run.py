@@ -15,7 +15,6 @@ import os
 import itertools
 
 import pandas as pd
-import seaborn as sns
 
 import calliope
 from calliope import exceptions
@@ -24,7 +23,11 @@ from calliope.core.util.tools import relative_path
 from calliope.core.preprocess import locations, sets, checks
 
 
-_DEFAULT_PALETTE = sns.color_palette('cubehelix', 10).as_hex()
+# Output of: sns.color_palette('cubehelix', 10).as_hex()
+_DEFAULT_PALETTE = [
+    '#19122b', '#17344c', '#185b48', '#3c7632', '#7e7a36',
+    '#bc7967', '#d486af', '#caa9e7', '#c2d2f3', '#d6f0ef'
+]
 
 
 def combine_overrides(override_file_path, override_groups):
