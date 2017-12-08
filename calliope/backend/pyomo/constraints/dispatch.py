@@ -152,7 +152,7 @@ def resource_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
 
-    return backend_model.resource[loc_tech, timestep] <= (
+    return backend_model.resource_con[loc_tech, timestep] <= (
         timestep_resolution * backend_model.resource_cap[loc_tech])
 
 

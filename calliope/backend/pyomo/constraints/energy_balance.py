@@ -137,9 +137,9 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
         available_resource = resource * resource_scale * resource_eff
 
     if force_resource:
-        return backend_model.resource[loc_tech, timestep] == available_resource
+        return backend_model.resource_con[loc_tech, timestep] == available_resource
     else:
-        return backend_model.resource[loc_tech, timestep] <= available_resource
+        return backend_model.resource_con[loc_tech, timestep] <= available_resource
 
 
 def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
@@ -175,11 +175,11 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 
     # A) Case where no storage allowed
     if loc_tech not in backend_model.loc_techs_store:
-        return backend_model.resource[loc_tech, timestep] == carrier_prod
+        return backend_model.resource_con[loc_tech, timestep] == carrier_prod
 
     # B) Case where storage is allowed
     else:
-        resource = backend_model.resource[loc_tech, timestep]
+        resource = backend_model.resource_con[loc_tech, timestep]
         if backend_model.timesteps.order_dict[timestep] == 0:
             storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
         else:

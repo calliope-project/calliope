@@ -36,7 +36,7 @@ def initialize_decision_variables(backend_model):
 
     if 'loc_techs_finite_resource' in model_data_dict['sets']:
         backend_model.resource_cap = po.Var(backend_model.loc_techs_finite_resource, within=po.NonNegativeReals)
-        backend_model.resource = po.Var(backend_model.loc_techs_finite_resource, backend_model.timesteps, within=po.Reals)
+        backend_model.resource_con = po.Var(backend_model.loc_techs_finite_resource, backend_model.timesteps, within=po.Reals)
 
     if 'loc_techs_export' in model_data_dict['sets']:
         backend_model.carrier_export = po.Var(backend_model.loc_techs_export, backend_model.timesteps, within=po.NonNegativeReals)

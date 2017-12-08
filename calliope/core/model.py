@@ -115,9 +115,13 @@ class Model(object):
             np.random.seed(seed=random_seed)
 
         # After setting the random seed, time clustering can take place
-        self.model_data = apply_time_clustering(
+        self._model_data = apply_time_clustering(
             self._model_data_original, model_run)
         log_time(self.timings, 'model_data_creation', time_since_start=True)
+
+        for var in self._model_data.data_vars:
+            self._model_data[var].attrs['is_result'] = False
+        self.inputs = self._model_data.filter_by_attrs(is_result=False)
 
     def save_debug_data(self, path):
         """
@@ -128,6 +132,16 @@ class Model(object):
         debug.save_debug_data(self._model_run, self._debug_data, path)
 
     def run(self):
-        """Run the model with the chosen backend"""
-        backend = self.model_data.attrs['run.backend']
-        self.results, self.backend_model = BACKEND_RUNNERS[backend](self.model_data, self.timings)
+        """
+        Run the model.
+
+        """
+        backend = self._model_data.attrs['run.backend']
+        results, self.backend_model = BACKEND_RUNNERS[backend](self._model_data, self.timings)
+
+        for var in results.data_vars:
+            results[var].attrs['is_result'] = True
+
+        self._model_data = self._model_data.merge(results)
+
+        self.results = self._model_data.filter_by_attrs(is_result=True)
