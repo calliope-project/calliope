@@ -54,7 +54,7 @@ def get_loc_techs(loc_techs, tech=None, loc=None):
     return relevant_loc_techs
 
 
-def split_loc_techs(data_var):
+def split_loc_techs(data_var, as_='DataArray'):
     """
     Get a DataArray with locations technologies, and possibly carriers
     split into separate coordinates.
@@ -63,10 +63,13 @@ def split_loc_techs(data_var):
     ----------
     data_var : xarray DataArray
         Variable from Calliope model_data, to split loc_techs dimension
+    as_ : string
+        'DataArray' to return xarray DataArray or 'Series' to return pandas
+        Series with dimensions as a MultiIndex
 
     Returns
     -------
-    updated_data_var : xarray DataArray
+    updated_data_var : xarray DataArray of pandas Series
     """
 
     # Separately find the loc_techs(_carriers) dimension and all other dimensions
@@ -74,41 +77,58 @@ def split_loc_techs(data_var):
     non_loc_tech_dims = list(set(data_var.dims).difference(loc_tech_dim))
 
     if not loc_tech_dim:
-        return data_var
+        if as_ == 'Series':
+            return data_var.to_series()
+        elif as_ == 'DataArray':
+            return data_var
+        else:
+            raise ValueError('`as_` must be `DataArray` or `Series`, '
+                             'but `{}` given'.format(as_))
 
     elif len(loc_tech_dim) > 1:
         e = exceptions.ModelError
         raise e("Cannot split loc_techs or loc_techs_carrier dimension "
                 "for DataArray {}".format(data_var.name))
+
+    loc_tech_dim = loc_tech_dim[0]
+    # xr.Datarray -> pd.Series allows for string operations
+    data_var_df = data_var.to_series().unstack(non_loc_tech_dims)
+    index_list = data_var_df.index.str.split('::').tolist()
+
+    # carrier_prod, carrier_con, and carrier_export will return an index_list
+    # of size 3, all others will be an index list of size 2
+    possible_names = ['locs', 'techs', 'carriers']
+    names = [possible_names[i] for i in range(len(index_list[0]))]
+
+    data_var_df.index = pd.MultiIndex.from_tuples(index_list, names=names)
+
+    # If there were no other dimensions other than loc_techs(_carriers) then
+    # nothing was unstacked on creating data_var_df, so nothing is stacked now
+    if isinstance(data_var_df, pd.Series):
+        data_var_series = data_var_df
     else:
-        loc_tech_dim = loc_tech_dim[0]
-        # xr.Datarray -> pd.Series allows for string operations
-        data_var_df = data_var.to_series().unstack(non_loc_tech_dims)
-        index_list = data_var_df.index.str.split('::').tolist()
+        data_var_series = data_var_df.stack(non_loc_tech_dims)
 
-        # carrier_prod, carrier_con, and carrier_export will return an index_list
-        # of size 3, all others will be an index list of size 2
-        possible_names = ['locs', 'techs', 'carriers']
-        names = [possible_names[i] for i in range(len(index_list[0]))]
+    if as_ == "Series":
+        return data_var_series
 
-        data_var_df.index = pd.MultiIndex.from_tuples(index_list, names=names)
-
-        # If there were no other dimensions other than loc_techs(_carriers) then
-        # nothing was unstacked on creating data_var_df, so nothing is stacked now
-        if isinstance(data_var_df, pd.Series):
-            data_var_series = data_var_df
-        else:
-            data_var_series = data_var_df.stack(non_loc_tech_dims)
-
-        # New pd.Series has locs, techs (& carriers) as separated MultiIndex levels
+    elif as_ == "DataArray":
         updated_data_var = xr.DataArray.from_series(data_var_series)
+        updated_data_var.attrs = data_var.attrs
 
-    return updated_data_var
+        return updated_data_var
+
+    else:
+        raise ValueError('`as_` must be `DataArray` or `Series`, '
+                         'but `{}` given'.format(as_))
 
 
 def reorganise_dataset_dimensions(dataset):
-    # Reorganise the Dataset dimensions to be alphabetical *except*
-    # `timesteps`, which must always come last in any DataArray's dimensions
+    """
+    Reorganise the Dataset dimensions to be alphabetical *except*
+    `timesteps`, which must always come last in any DataArray's dimensions
+    """
+
     new_dims = (
         sorted(list(set(dataset.coords.keys()) - set(['timesteps'])))
     ) + ['timesteps']

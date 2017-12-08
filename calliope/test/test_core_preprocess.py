@@ -143,6 +143,27 @@ class TestDataset:
         Timesteps must be consistent?
         """
 
+    def unassigned_sets(self):
+        """
+        Check that all sets in which there are possible loc:techs are assigned
+        and have been filled
+        """
+
+    def negative_cost_unassigned_cap(self):
+        """
+        Any negative cost associated with a capacity (e.g. cost_energy_cap) must
+        be applied to a capacity iff the upper bound of that capacity has been defined
+        """
+
+    def missing_array(self):
+        """
+        Check that the dataset includes all arrays *required* for a model to function
+        """
+
+    def missing_attrs(self):
+        """
+        Check that the dataset includes all attributes *required* for a model to function
+        """
 
 class TestUtil():
     def concat_iterable_ensures_same_length_iterables(self):
@@ -152,5 +173,5 @@ class TestUtil():
 
     def concat_iterable_check_concatenators(self):
         """
-        Contatenators be one shorter than the length of each iterable
+        Contatenators should be one shorter than the length of each iterable
         """

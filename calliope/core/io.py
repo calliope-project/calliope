@@ -34,6 +34,8 @@ def save_netcdf(model_data, path):
 
 
 def save_csv(model_data, path):
+    os.makedirs(path, exist_ok=False)
+
     for var in model_data.data_vars:
         in_out = 'results' if model_data[var].attrs['is_result'] else 'inputs'
         out_path = os.path.join(path, '{}_{}.csv'.format(in_out, var))
