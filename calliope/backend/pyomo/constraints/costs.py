@@ -133,15 +133,15 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
         cost_prod = 0
 
     if hasattr(backend_model, 'loc_techs_supply_plus') and loc_tech in backend_model.loc_techs_supply_plus and cost_om_con:
-        resource_eff = param_getter(backend_model, 'resource_eff', (cost, loc_tech, timestep))
+        resource_eff = param_getter(backend_model, 'resource_eff', (loc_tech, timestep))
         if resource_eff > 0:  # In case resource_eff is zero, to avoid an infinite value
             # Dividing by r_eff here so we get the actual r used, not the r
             # moved into storage...
             cost_con = cost_om_con * weight * (backend_model.resource[loc_tech, timestep] / resource_eff)
         else:
             cost_con = 0
-    elif hasattr(backend_model, 'loc_techs_supply') and  loc_tech in backend_model.loc_techs_supply and cost_om_con:
-        energy_eff = param_getter(backend_model, 'energy_eff', (cost, loc_tech, timestep))
+    elif hasattr(backend_model, 'loc_techs_supply') and loc_tech in backend_model.loc_techs_supply and cost_om_con:
+        energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
         if energy_eff > 0:  # in case energy_eff is zero, to avoid an infinite value
             cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff)
         else:
