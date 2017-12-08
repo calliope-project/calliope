@@ -12,7 +12,7 @@ of the technologies
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import param_getter, get_loc_tech
+from calliope.backend.pyomo.util import get_param, get_loc_tech
 
 
 def load_dispatch_constraints(backend_model):
@@ -59,8 +59,8 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
     loc_tech = get_loc_tech(loc_tech_carrier)
     sets = backend_model.__calliope_model_data__['sets']
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
-    timestep_resolution = param_getter(backend_model, 'timestep_resolution', timestep)
-    parasitic_eff = param_getter(backend_model, 'parasitic_eff', (loc_tech, timestep))
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
+    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
     #if ('loc_tech_conversion_plus' in model_dict
     #     and loc_tech in backend_model.loc_tech_conversion_plus):
     #    carriers_out = model.get_carrier(y, 'out', all_carriers=True)
@@ -73,7 +73,7 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
     #        return po.Constraint.Skip
 
     if 'loc_tech_milp' in sets and loc_tech in backend_model.loc_tech_milp:
-        energy_cap = param_getter(backend_model, 'energy_cap_per_unit', loc_tech)
+        energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
         return carrier_prod <= (
             backend_model.operating_units[loc_tech, timestep] *
             timestep_resolution * energy_cap * parasitic_eff
@@ -91,8 +91,8 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
     loc_tech = get_loc_tech(loc_tech_carrier)
     sets = backend_model.__calliope_model_data__['sets']
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
-    timestep_resolution = param_getter(backend_model, 'timestep_resolution', timestep)
-    min_use = param_getter(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
+    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
 
     if not min_use:
         return po.Constraint.NoConstraint
@@ -100,7 +100,7 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
         and loc_tech in backend_model.loc_tech_conversion_plus):
         return po.Constraint.Skip
     if 'loc_tech_milp' in sets and loc_tech in backend_model.loc_tech_milp:
-        energy_cap = param_getter(backend_model, 'energy_cap_per_unit', loc_tech)
+        energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
         return carrier_prod >= (
             backend_model.operating_units[loc_tech, timestep] *
             timestep_resolution * energy_cap * min_use
@@ -118,9 +118,9 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
     loc_tech = get_loc_tech(loc_tech_carrier)
     sets = backend_model.__calliope_model_data__['sets']
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
-    timestep_resolution = param_getter(backend_model, 'timestep_resolution', timestep)
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
     # FIXME: should parasitc efficiency be here?
-    parasitic_eff = param_getter(backend_model, 'parasitic_eff', (loc_tech, timestep))
+    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
 
     # FIXME: conversion_plus
     #if ('loc_tech_conversion_plus' in model_dict
@@ -135,7 +135,7 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
     #        return po.Constraint.Skip
 
     if 'loc_tech_milp' in sets and loc_tech in backend_model.loc_tech_milp:
-        energy_cap = param_getter(backend_model, 'energy_cap_per_unit', loc_tech)
+        energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
         return carrier_con >= (-1 *
             backend_model.operating_units[loc_tech, timestep] *
             timestep_resolution * energy_cap * parasitic_eff
@@ -150,7 +150,7 @@ def resource_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set maximum resource supply. Supply_plus techs only.
     """
-    timestep_resolution = param_getter(backend_model, 'timestep_resolution', timestep)
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
 
     return backend_model.resource[loc_tech, timestep] <= (
         timestep_resolution * backend_model.resource_cap[loc_tech])
@@ -177,7 +177,7 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     else:
         operating_units = 1
 
-    export_cap = param_getter(backend_model, 'export_cap', loc_tech)
+    export_cap = get_param(backend_model, 'export_cap', loc_tech)
     if export_cap:
         return (backend_model.export[loc_tech_carrier, timestep] <=
                 export_cap * operating_units)

@@ -36,7 +36,7 @@
 class TestModelRun:
     def override_base_technology_groups(self):
         """
-        Test that base technology are not being overriden by any user input 
+        Test that base technology are not being overriden by any user input
         """
 
     def undefined_carriers(self):
@@ -48,40 +48,41 @@ class TestModelRun:
         """
         If subset_time is a list, it must have two entries (start_time, end_time)
         If subset_time is not a list, it should successfully subset on the given
-        string/integer 
+        string/integer
         """
 
     def incorrect_date_format(self):
         """
-        Test the date parser catches a different date format from file than 
-        user input/default (inc. if it is just one line of a file that is incorrect) 
+        Test the date parser catches a different date format from file than
+        user input/default (inc. if it is just one line of a file that is incorrect)
         """
-    
+
     def inconsistent_time_indeces(self):
         """
         Test that, including after any time subsetting, the indeces of all time
         varying input data are consistent with each other
         """
-    
+
     def empty_key_on_explode(self):
         """
-        On exploding locations (from ``'1--3'`` or ``'1,2,3'`` to 
+        On exploding locations (from ``'1--3'`` or ``'1,2,3'`` to
         ``['1', '2', '3']``), raise error on the resulting list being empty
         """
-    
+
     def key_clash_on_set_loc_key(self):
         """
         Raise error on attempted overwrite of information regarding a recently
         exploded location
         """
 
+
 class TestChecks:
     def unknown_carrier_tier(self):
         """
-        User can only use 'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3', 
-        'out_3', 'ratios'] 
+        User can only use 'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3',
+        'out_3', 'ratios']
         """
-    
+
     def name_overlap(self):
         """
         No tech_groups/techs may have the same identifier as the built-in groups
@@ -91,7 +92,7 @@ class TestChecks:
         """
         All technologies and technology groups must specify a parent
         """
-    
+
     def resource_as_carrier(self):
         """
         No carrier in technology or technology group can be called `resource`
@@ -99,7 +100,7 @@ class TestChecks:
 
     def missing_required_constraints(self):
         """
-        A technology within an abstract base technology must define a subset of 
+        A technology within an abstract base technology must define a subset of
         hardcoded constraints in order to function
         """
 
@@ -119,7 +120,7 @@ class TestChecks:
 
     def exporting_unspecified_carrier(self):
         """
-        User can only define an export carrier if it is defined in 
+        User can only define an export carrier if it is defined in
         ['carrier_out', 'carrier_out_2', 'carrier_out_3']
         """
 
@@ -135,9 +136,21 @@ class TestChecks:
         defined, they must be in the same coordinate system (lat/lon or x/y)
         """
 
+
 class TestDataset:
     def inconsistent_timesteps(self):
         """
-        Timesteps must be consistent? 
+        Timesteps must be consistent?
         """
-        
+
+
+class TestUtil():
+    def concat_iterable_ensures_same_length_iterables(self):
+        """
+        All iterables must have the same length
+        """
+
+    def concat_iterable_check_concatenators(self):
+        """
+        Contatenators be one shorter than the length of each iterable
+        """

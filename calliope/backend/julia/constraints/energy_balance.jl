@@ -94,16 +94,16 @@ function resource_availability_constraint_rule(backend_model, set_indices, model
     loc_tech, timestep = set_indices
 
     @expression(backend_model, available_resource,
-        param_getter(model_dict, "resource",
+        get_param(model_dict, "resource",
             Dict("loc_techs_finite_resource"=>loc_tech, "timestep"=>timestep)),
-        param_getter(model_dict, "resource_scale",
+        get_param(model_dict, "resource_scale",
             Dict("loc_techs_supply_plus"=>loc_tech, "timestep"=>timestep)) *
-        param_getter(model_dict, "resource_eff",
+        get_param(model_dict, "resource_eff",
             Dict("loc_techs_supply_plus"=>loc_tech, "timestep"=>timestep)),
     )
 
     if loc_tech in model_dict["sets"]["loc_techs_area"]
-        m.available_resource *= param_getter(model_dict, "resource_area",
+        m.available_resource *= get_param(model_dict, "resource_area",
                                              Dict("loc_techs_area"=>loc_tech))
     end
 

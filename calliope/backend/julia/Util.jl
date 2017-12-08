@@ -25,7 +25,7 @@ function get_variable(dataset, var::String)
 end
 
 
-function param_getter(model_dict, var, dimensions)
+function get_param(model_dict, var, dimensions)
     """
     returns an AxisArray of the given variable, indexed over all dimensions
     except timesteps, in order to remove timesteps from a possible timeseries

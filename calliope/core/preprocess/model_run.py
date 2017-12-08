@@ -400,13 +400,13 @@ def generate_model_run(config, debug_comments):
 #    # TODO:
 #    # incorporate timeseries resolution. Currently assumes that each
 #    # timestep is worth one unit of time.
-#    storage_time_max = param_getter(backend_model, 'storage_time_max', (loc_tech))
+#    storage_time_max = get_param(backend_model, 'storage_time_max', (loc_tech))
 #    if loc_tech in model_data_dict['sets']['loc_tech_milp']:
-#        units = param_getter(backend_model, 'units_max', (loc_tech))
+#        units = get_param(backend_model, 'units_max', (loc_tech))
 #        storage_cap_max = (units *
-#            param_getter(backend_model, 'storage_cap_per_unit', (loc_tech)))
+#            get_param(backend_model, 'storage_cap_per_unit', (loc_tech)))
 #    else:
-#        storage_cap_max = param_getter(backend_model, 'storage_cap_max', (loc_tech))
+#        storage_cap_max = get_param(backend_model, 'storage_cap_max', (loc_tech))
 #    if not storage_cap_max:
 #        storage_cap_max = np.inf
 #    if not storage_time_max:
@@ -418,7 +418,7 @@ def generate_model_run(config, debug_comments):
 #    elif energy_cap and charge_rate:
 #        energy_cap = min(energy_cap, storage_cap_max * charge_rate)
 #
-#    storage_loss = param_getter(backend_model, 'storage_loss', (loc_tech)))
+#    storage_loss = get_param(backend_model, 'storage_loss', (loc_tech)))
 #    energy_eff = model.data.loc[dict(y=y, x=x)].get('energy_eff',
 #                            model.get_option(y+ '.constraints.energy_eff', x=x))
 #    try:

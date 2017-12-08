@@ -12,7 +12,7 @@ Capacity constraints for technologies (output, resource, area, and storage).
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import param_getter
+from calliope.backend.pyomo.util import get_param
 from calliope import exceptions
 
 
@@ -72,11 +72,11 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
     decision_variable = getattr(backend_model, parameter)
 
     if not _equals:
-        _equals = param_getter(backend_model, parameter + '_equals', loc_tech)
+        _equals = get_param(backend_model, parameter + '_equals', loc_tech)
     if not _max:
-        _max = param_getter(backend_model, parameter + '_max', loc_tech)
+        _max = get_param(backend_model, parameter + '_max', loc_tech)
     if not _min:
-        _min = param_getter(backend_model, parameter + '_min', loc_tech)
+        _min = get_param(backend_model, parameter + '_min', loc_tech)
     if scale:
         _equals = scale * _equals
         _min = scale * _min
@@ -117,28 +117,28 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
     # either be energy_cap_equals or units_equals * energy_cap_per_unit. Similarly for
     # storage_cap_equals
     #if loc_tech in backend_model.loc_tech_milp:
-    #    units_equals = param_getter(backend_model, 'units_equals', loc_tech)
+    #    units_equals = get_param(backend_model, 'units_equals', loc_tech)
     #    storage_cap_equals = (units_equals *
-    #        param_getter(backend_model, 'storage_cap_per_unit', loc_tech))
+    #        get_param(backend_model, 'storage_cap_per_unit', loc_tech))
     #    energy_cap_equals = (units_equals *
-    #        param_getter(backend_model, 'energy_cap_per_unit', loc_tech))
+    #        get_param(backend_model, 'energy_cap_per_unit', loc_tech))
 
-    storage_cap_equals = param_getter(backend_model, 'storage_cap_equals', loc_tech)
-    scale = param_getter(backend_model, 'energy_cap_scale', loc_tech)
-    energy_cap_equals = (scale * param_getter(backend_model, 'energy_cap_equals', loc_tech))
+    storage_cap_equals = get_param(backend_model, 'storage_cap_equals', loc_tech)
+    scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
+    energy_cap_equals = (scale * get_param(backend_model, 'energy_cap_equals', loc_tech))
 
-    charge_rate = param_getter(backend_model, 'charge_rate', loc_tech)
+    charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
 
     # FIXME?: energy_cap_max could be already dealt with in preprocessing, to
     # either be energy_cap_max or units_max * energy_cap_per_unit. Similarly for
     # storage_cap_max
     if not energy_cap_equals:
         #if loc_tech in backend_model.loc_tech_milp:
-        #    energy_cap = (param_getter(backend_model, 'units_max', loc_tech)
-        #        * param_getter(backend_model, 'energy_cap_per_unit', loc_tech))
-        energy_cap = scale * param_getter(backend_model, 'energy_cap_max', loc_tech)
+        #    energy_cap = (get_param(backend_model, 'units_max', loc_tech)
+        #        * get_param(backend_model, 'energy_cap_per_unit', loc_tech))
+        energy_cap = scale * get_param(backend_model, 'energy_cap_max', loc_tech)
     if not storage_cap_equals:
-        storage_cap_max = param_getter(backend_model, 'storage_cap_max', loc_tech)
+        storage_cap_max = get_param(backend_model, 'storage_cap_max', loc_tech)
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _max=storage_cap_max)
     else:
@@ -152,8 +152,8 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
     based on their use of `charge_rate`
     """
 
-    energy_cap_scale = param_getter(backend_model, 'energy_cap_scale', loc_tech)
-    charge_rate = param_getter(backend_model, 'charge_rate', loc_tech)
+    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
+    charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
 
     if charge_rate:
         return backend_model.energy_cap[loc_tech] <= (
@@ -168,7 +168,7 @@ def resource_capacity_constraint_rule(backend_model, loc_tech):
 
 
 def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, loc_tech):
-    if param_getter(backend_model, 'resource_cap_equals_energy_cap', loc_tech):
+    if get_param(backend_model, 'resource_cap_equals_energy_cap', loc_tech):
         return backend_model.resource_cap[loc_tech] == backend_model.energy_cap[loc_tech]
     else:
         return po.Constraint.Skip
@@ -179,8 +179,8 @@ def resource_area_constraint_rule(backend_model, loc_tech):
     Set maximum resource_area.
     """
 
-    energy_cap_max = param_getter(backend_model, 'energy_cap_max', loc_tech)
-    area_per_energy_cap = param_getter(backend_model, 'resource_area_per_energy_cap', loc_tech)
+    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
+    area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
     if energy_cap_max == 0 and not area_per_energy_cap:
         # If a technology has no energy_cap here, we force resource_area to zero,
@@ -191,7 +191,7 @@ def resource_area_constraint_rule(backend_model, loc_tech):
 
 
 def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
-    area_per_energy_cap = param_getter(backend_model, 'resource_area_per_energy_cap', loc_tech)
+    area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
     if area_per_energy_cap:
         return (backend_model.resource_area[loc_tech] ==
                     backend_model.energy_cap[loc_tech] * area_per_energy_cap)
@@ -217,12 +217,12 @@ def energy_capacity_constraint_rule(backend_model, loc_tech):
     if 'loc_tech_milp' in sets and loc_tech in backend_model.loc_techs_milp:
         return backend_model.energy_cap[loc_tech] == (
             backend_model.units[loc_tech] *
-            param_getter(backend_model, 'energy_cap_per_unit', loc_tech)
+            get_param(backend_model, 'energy_cap_per_unit', loc_tech)
         )
 
-    energy_cap_max = param_getter(backend_model, 'energy_cap_max', loc_tech)
-    energy_cap_equals = param_getter(backend_model, 'energy_cap_equals', loc_tech)
-    energy_cap_scale = param_getter(backend_model, 'energy_cap_scale', loc_tech)
+    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
+    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
+    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
 
     # energy_cap_equals forces an equality constraint, which cannot be infinite
     # FIXME? move to preprocessing check?
@@ -272,13 +272,13 @@ def energy_capacity_min_constraint_rule(backend_model, loc_tech):
     if 'loc_tech_milp' in sets and loc_tech in backend_model.loc_techs_milp:
         return po.Constraint.Skip
 
-    energy_cap_min = param_getter(backend_model, 'energy_cap_min', loc_tech)
-    energy_cap_equals = param_getter(backend_model, 'energy_cap_equals', loc_tech)
+    energy_cap_min = get_param(backend_model, 'energy_cap_min', loc_tech)
+    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
 
     if energy_cap_equals or not energy_cap_min:
         return po.Constraint.Skip
     else:
-        energy_cap_scale = param_getter(backend_model, 'energy_cap_scale', loc_tech)
+        energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
         return backend_model.energy_cap[loc_tech] >= (
             energy_cap_min * energy_cap_scale * purchased
         )

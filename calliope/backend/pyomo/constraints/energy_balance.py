@@ -12,7 +12,7 @@ Energy balance constraints.
 import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import \
-    param_getter, \
+    get_param, \
     get_previous_timestep, \
     get_loc_tech_carriers
 
@@ -81,10 +81,10 @@ def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
 def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    resource = param_getter(backend_model, 'resource', (loc_tech, timestep))
-    energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
-    resource_scale = param_getter(backend_model, 'resource_scale', loc_tech)
-    force_resource = param_getter(backend_model, 'force_resource', loc_tech)
+    resource = get_param(backend_model, 'resource', (loc_tech, timestep))
+    energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
+    resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
+    force_resource = get_param(backend_model, 'force_resource', loc_tech)
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
 
     if energy_eff == 0:
@@ -106,10 +106,10 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    resource = param_getter(backend_model, 'resource', (loc_tech, timestep))
-    energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
-    resource_scale = param_getter(backend_model, 'resource_scale', loc_tech)
-    force_resource = param_getter(backend_model, 'force_resource', loc_tech)
+    resource = get_param(backend_model, 'resource', (loc_tech, timestep))
+    energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
+    resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
+    force_resource = get_param(backend_model, 'force_resource', loc_tech)
 
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
@@ -126,10 +126,10 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
 
 
 def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
-    resource = param_getter(backend_model, 'resource', (loc_tech, timestep))
-    resource_eff = param_getter(backend_model, 'resource_eff', (loc_tech, timestep))
-    resource_scale = param_getter(backend_model, 'resource_scale', loc_tech)
-    force_resource = param_getter(backend_model, 'force_resource', loc_tech)
+    resource = get_param(backend_model, 'resource', (loc_tech, timestep))
+    resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
+    resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
+    force_resource = get_param(backend_model, 'force_resource', loc_tech)
 
     if loc_tech in backend_model.loc_techs_area:
         available_resource = resource * resource_scale * backend_model.resource_area[loc_tech] * resource_eff
@@ -145,7 +145,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
 def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
+    energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
     remote_loc_tech = model_data_dict['lookup_remotes'][loc_tech]
     remote_loc_tech_carrier = model_data_dict['lookup_loc_techs'][remote_loc_tech]
@@ -163,8 +163,8 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
 def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
-    parasitic_eff = param_getter(backend_model, 'parasitic_eff', (loc_tech, timestep))
+    energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
+    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
     total_eff = energy_eff * parasitic_eff
 
     if total_eff == 0:
@@ -181,9 +181,9 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     else:
         resource = backend_model.resource[loc_tech, timestep]
         if backend_model.timesteps.order_dict[timestep] == 0:
-            storage_previous_step = param_getter(backend_model, 'storage_initial', loc_tech)
+            storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
         else:
-            storage_loss = param_getter(backend_model, 'storage_loss', loc_tech)
+            storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
             previous_step = get_previous_timestep(backend_model, timestep)
             time_resolution = model_data_dict['timestep_resolution'][previous_step]
             storage_previous_step = (
@@ -200,7 +200,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
+    energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
     if energy_eff == 0:
         carrier_prod = 0
@@ -211,9 +211,9 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
     if backend_model.timesteps.order_dict[timestep] == 0:
-        storage_previous_step = param_getter(backend_model, 'storage_initial', loc_tech)
+        storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
     else:
-        storage_loss = param_getter(backend_model, 'storage_loss', loc_tech)
+        storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
         previous_step = get_previous_timestep(backend_model, timestep)
         time_resolution = model_data_dict['timestep_resolution'][previous_step]
         storage_previous_step = (

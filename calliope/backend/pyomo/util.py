@@ -14,9 +14,8 @@ from calliope.core.util.tools import memoize
 from calliope import exceptions
 
 
-#FIXME: change to get_param
 @memoize
-def param_getter(backend_model, var, dims):
+def get_param(backend_model, var, dims):
     """
     Params
     ------
