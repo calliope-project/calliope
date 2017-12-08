@@ -11,7 +11,7 @@ Implements the core Model class.
 
 import numpy as np
 
-from calliope.core import debug
+from calliope.core import debug, io
 from calliope.core.preprocess import generate_model_run, apply_overrides, build_model_data, apply_time_clustering
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import log_time
@@ -71,6 +71,17 @@ def model_run_from_dict(config_dict, override_dict=None):
     return generate_model_run(config_with_overrides, debug_comments)
 
 
+def read_netcdf(path):
+    """
+    Return a Model object reconstructed from model data in a NetCDF file.
+
+    """
+    model_data = io.read_netcdf(path)
+    return None  # FIXME
+    # FIXME: rewrite Model.__init__ so it can run without a config -- break out most functioanlity into a separate func,
+    # and either manually set the ._model_data object afterwards or allow the constructor to take model_data
+
+
 class Model(object):
     """
     A Calliope Model.
@@ -90,8 +101,8 @@ class Model(object):
             specifying the model and run configuration respectively.
 
         """
-        self.timings = {}
-        log_time(self.timings, 'model_creation')
+        self._timings = {}
+        log_time(self._timings, 'model_creation')
         if isinstance(config, str):
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
         elif isinstance(config, dict):
@@ -106,10 +117,10 @@ class Model(object):
 
         self._model_run = model_run
         self._debug_data = debug_data
-        log_time(self.timings, 'model_run_creation')
+        log_time(self._timings, 'model_run_creation')
 
         self._model_data_original = build_model_data(model_run)
-        log_time(self.timings, 'model_data_original_creation')
+        log_time(self._timings, 'model_data_original_creation')
 
         random_seed = self._model_run.get_key('run.random_seed', None)
         if random_seed:
@@ -118,7 +129,7 @@ class Model(object):
         # After setting the random seed, time clustering can take place
         self._model_data = apply_time_clustering(
             self._model_data_original, model_run)
-        log_time(self.timings, 'model_data_creation', time_since_start=True)
+        log_time(self._timings, 'model_data_creation', time_since_start=True)
 
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = False
@@ -138,10 +149,12 @@ class Model(object):
 
         """
         backend = self._model_data.attrs['run.backend']
-        results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self.timings)
+        results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self._timings)
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = True
+
+        # FIXME: possibly add some summary tables to results
 
         self._model_data = self._model_data.merge(results)
 
@@ -149,10 +162,27 @@ class Model(object):
 
     def get_formatted_array(self, var):
         """
-        Return an xr.DataArray with locs, techs, and carriers as separated
-        dimensions. Can be used to view input/output as in calliope < v0.6.0
+        Return an xr.DataArray with locs, techs, and carriers as separate
+        dimensions. Can be used to view input/output as in calliope < v0.6.0.
+
         """
         if var not in self._model_data.data_vars:
             raise KeyError("Variable {} not in Model data".format(var))
 
         return split_loc_techs(self._model_data[var])
+
+    def to_netcdf(self, path):
+        """
+        Save complete model data (inputs and, if available, results)
+        to a  NetCDF file at the given path.
+
+        """
+        io.save_netcdf(self._model_data, path)
+
+    def to_csv(self, path):
+        """
+        Save complete model data (inputs and, if available, results)
+        as a set of CSV files to the given path.
+
+        """
+        io.save_csv(self._model_data, path)
