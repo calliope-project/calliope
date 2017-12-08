@@ -25,7 +25,7 @@ from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
 
 from calliope import exceptions
-from calliope.core.util.loc_tech import get_loc_techs
+from calliope.core.util.dataset import get_loc_techs
 
 
 def _stack_data(data):

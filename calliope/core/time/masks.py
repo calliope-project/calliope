@@ -12,7 +12,7 @@ Functions to pick timesteps from data given certain criteria.
 import pandas as pd
 
 from calliope.core.time import funcs
-from calliope.core.util.loc_tech import split_loc_techs
+from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
 
 
@@ -53,7 +53,7 @@ def _concat_indices(indices):
 
 def _get_minmax_timestamps(series, length, n, how='max', padding=None):
     # Get the max/min timestamps
-    group = series.groupby(pd.TimeGrouper(length)).mean()
+    group = series.groupby(pd.Grouper(freq=length)).mean()
     timesteps = []
     for _ in range(n):
         if how == 'max':
@@ -137,7 +137,7 @@ def _extreme(arr, how='max',
              padding=None):
 
     if groupby_length:
-        groupby = pd.TimeGrouper(groupby_length)
+        groupby = pd.Grouper(freq=groupby_length)
         group_indices = []
         grouping = arr.groupby(groupby)
         for k in grouping.groups.keys():

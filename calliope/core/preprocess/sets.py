@@ -75,7 +75,7 @@ from itertools import product
 import numpy as np
 
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers, split_loc_techs_transmission
+from calliope.core.preprocess.util import get_all_carriers, split_loc_techs_transmission, concat_iterable
 
 
 def generate_simple_sets(model_run):
@@ -146,21 +146,6 @@ def generate_simple_sets(model_run):
     return sets
 
 
-def concat_with_colon(iterable):
-    """
-    Take an interable containing iterables of strings,
-    return a list of strings concatenating inner iterables with '::'.
-
-    E.g.:
-    ``
-    result = concat_with_colon([('x', 'y', 'z'), ('1', '2')])
-    result == ['x:y:z', '1:2']
-    ``
-
-    """
-    return ['::'.join(i) for i in iterable]
-
-
 def generate_loc_tech_sets(model_run, simple_sets):
     """
     Generate loc-tech sets for a given pre-processed ``model_run``
@@ -180,7 +165,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     ##
 
     # All `tech:loc` expanded transmission technologies
-    sets.loc_techs_transmission = set(concat_with_colon([
+    sets.loc_techs_transmission = set(concat_iterable([
         (i, u, j) for i, j, u in product(  # (loc, loc, tech) product
             simple_sets.locs,
             simple_sets.locs,
@@ -188,7 +173,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         if model_run.get_key(
             'locations.{}.links.{}.techs.{}'.format(i, j, u), None
         )
-    ]))
+    ], ['::', ':']))
 
     # A dict of transmission tech config objects
     # to make parsing for set membership easier
@@ -205,12 +190,12 @@ def generate_loc_tech_sets(model_run, simple_sets):
     ##
 
     # Only loc-tech combinations that actually exist
-    sets.loc_techs_non_transmission = set(concat_with_colon([
+    sets.loc_techs_non_transmission = set(concat_iterable([
         (l, t) for l, t in product(
             simple_sets.locs,
             simple_sets.techs_non_transmission)
         if model_run.get_key('locations.{}.techs.{}'.format(l, t), None)
-    ]))
+    ], ['::']))
 
     sets.loc_techs = sets.loc_techs_non_transmission | sets.loc_techs_transmission
 
@@ -408,7 +393,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         '{}::{}'.format(k, carrier)
         for k in sets.loc_techs
         if loc_techs_all_config[k].constraints.get_key('energy_prod', False)
-        for carrier in get_all_carriers(model_run.techs[k.split('::')[1]].essentials, direction='out')
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='out')
     )
 
     # loc_tech_carriers for all technologies that have energy_con=True
@@ -416,7 +401,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         '{}::{}'.format(k, carrier)
         for k in sets.loc_techs
         if loc_techs_all_config[k].constraints.get_key('energy_con', False)
-        for carrier in get_all_carriers(model_run.techs[k.split('::')[1]].essentials, direction='in')
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='in')
     )
 
     # loc_tech_carriers for all technologies that have export

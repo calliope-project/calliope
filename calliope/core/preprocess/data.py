@@ -22,6 +22,7 @@ from calliope.core.util.tools import plugin_load
 from calliope._version import __version__
 from calliope.core.preprocess import checks
 from calliope.core.util.dataset import reorganise_dataset_dimensions
+from calliope.core.preprocess.util import split_loc_techs_transmission, concat_iterable
 
 
 def build_model_data(model_run, debug=False):
@@ -178,7 +179,7 @@ def apply_time_clustering(model_data_original, model_run):
     except KeyError:
         pass
 
-    return _reorganise_dataset_dimensions(data)
+    return reorganise_dataset_dimensions(data)
 
 
 def add_sets(model_run):
@@ -483,21 +484,27 @@ def location_specific_to_dataset(model_run):
     # for every transmission technology, we extract distance information, if it
     # is available
     data_dict = dict()
-    data_dict['distance'] = dict(dims='loc_techs_transmission', data=[])
-    data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission', data=[])
-    for loc_tech in model_run.sets['loc_techs_transmission']:
-        loc, tech, link = loc_tech.split(':')
-        data_dict['distance']['data'].append(
-            model_run.locations[loc].links[link].techs[tech].get(
-                'distance', np.nan
-                )
-            )
-        data_dict['lookup_remotes']['data'].append('::'.join([link, tech, loc]))
-    data_dict['available_area'] = dict(dims='locs', data=[])
-    data_dict['available_area']['data'] = [
+
+    data_dict['distance'] = dict(dims='loc_techs_transmission', data=[
+        model_run.get_key(
+            'locations.{loc_from}.links.{loc_to}.techs.{tech}.distance'
+            .format(**split_loc_techs_transmission(loc_tech)), np.nan)
+        for loc_tech in model_run.sets['loc_techs_transmission']
+    ])
+    k = split_loc_techs_transmission
+    data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission',
+        data=concat_iterable([(k['loc_to'], k['tech'], k['loc_from'])
+            for k in [split_loc_techs_transmission(loc_tech)
+                for loc_tech in model_run.sets['loc_techs_transmission']
+            ]
+        ], ['::', ':'])
+    )
+
+    data_dict['available_area'] = dict(dims='locs', data=[
         model_run.locations[loc].get('available_area', np.nan)
         for loc in model_run.sets['locs']
-    ]
+    ])
+
     # remove this dictionary element if nothing is defined in it
     if set(data_dict['available_area']['data']) == {np.nan}:
         del data_dict['available_area']

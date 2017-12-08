@@ -15,7 +15,7 @@ import pandas as pd
 import xarray as xr
 
 from calliope.core.util.tools import plugin_load
-from calliope.core.util.loc_tech import get_loc_techs
+from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
 
 

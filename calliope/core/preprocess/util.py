@@ -7,6 +7,27 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 import numpy as np
 
 
+def concat_iterable(iterable, concatenators):
+    """
+    Take an interable containing iterables of strings,
+    return a list of strings concatenating inner iterables with '::'.
+
+    E.g.:
+    ``
+    result = concat_iterable([('x', 'y', 'z'), ('1', '2', '3')], [':'])
+    result == ['x:y:z', '1:2:3']
+    ``
+
+    """
+    concatenators += ['']
+    string_iter_len = len(iterable[0])
+    assert string_iter_len == len(concatenators)
+
+    return [''.join([string_iter[i] + concatenators[i]
+        for i in range(string_iter_len)])
+        for string_iter in iterable]
+
+
 def get_all_carriers(config, direction='both'):
     if direction == 'both':
         carrier_list = ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
@@ -19,6 +40,7 @@ def get_all_carriers(config, direction='both'):
         config.get_key('carrier_{}'.format(k), '')
         for k in carrier_list
     ]) - set([''])
+
 
 
 def split_loc_techs_transmission(transmission_string):
