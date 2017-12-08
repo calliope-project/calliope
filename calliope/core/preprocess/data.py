@@ -21,7 +21,7 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
 from calliope._version import __version__
 from calliope.core.preprocess import checks
-from calliope.core.util.loc_tech import reorganise_dataset_dimensions
+from calliope.core.util.dataset import reorganise_dataset_dimensions
 
 
 def build_model_data(model_run, debug=False):

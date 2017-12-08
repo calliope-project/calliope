@@ -4,6 +4,8 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -32,6 +34,7 @@ def param_getter(backend_model, var, dims):
             else:
                 return backend_model.__calliope_model_data__['data'][var][dims[0]]
         except KeyError:  # Static default value
+            logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
             return backend_model.__calliope_defaults__[var]
 
 

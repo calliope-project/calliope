@@ -132,7 +132,7 @@ def new(path, template, debug):
         print(_get_version())
     if template is None:
         template = 'national_scale'
-    source_path = examples.PATHS[template]
+    source_path = examples._PATHS[template]
     click.echo('Copying {} template to target directory: {}'.format(template, path))
     shutil.copytree(source_path, path)
 
