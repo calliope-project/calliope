@@ -13,7 +13,7 @@ import math
 
 from calliope.exceptions import ModelError, warn
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.gis import vincenty
+from calliope.core.preprocess.util import vincenty
 from calliope.core.preprocess.checks import defaults
 
 
