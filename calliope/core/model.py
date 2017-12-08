@@ -16,6 +16,7 @@ from calliope.core.preprocess import generate_model_run, apply_overrides, build_
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import split_loc_techs
+from calliope import exceptions
 
 from calliope.backend.pyomo import run as run_pyomo
 # from calliope.backend.julia import run as run_julia
@@ -160,11 +161,19 @@ class Model(object):
         """
         debug.save_debug_data(self._model_run, self._debug_data, path)
 
-    def run(self):
+    def run(self, force_rerun=False):
         """
-        Run the model.
+        Run the model. if force_rerun is True, any existing results will be
+        overwritten.
 
         """
+
+        if hasattr(self, 'results') and not force_rerun:
+            raise exceptions.ModelError(
+                'This model object already has results, set force_rerun to True'
+                ' to force the results to be overwritten with a new run.'
+            )
+
         backend = self._model_data.attrs['run.backend']
         results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self._timings)
 
