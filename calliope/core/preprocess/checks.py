@@ -14,7 +14,7 @@ import os
 import calliope
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
-from calliope.core.util.loc_tech import get_all_carriers
+from calliope.core.preprocess.util import get_all_carriers
 from calliope import exceptions
 
 

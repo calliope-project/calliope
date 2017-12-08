@@ -146,7 +146,7 @@ def process_locations(model_config, modelrun_techs):
                         warn('Using custom constraint '
                              '{} with time-varying data.'.format(config_key))
                     else:
-                        raise ModelError('`file=` not alllowed in {}'.format(config_key))
+                        raise ModelError('`file=` not allowed in {}'.format(config_key))
                 config_value = tech_settings.get_key(config_key, '')
                 if ':' not in config_value:
                     config_value = '{}:{}'.format(config_value, loc_name)

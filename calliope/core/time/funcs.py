@@ -43,7 +43,7 @@ def normalized_copy(data):
         # For each technology, get the loc_techs which are relevant
         loc_tech_subsets = [
             get_loc_techs(ds[loc_tech_dim].values, tech)
-            for tech in set(i.split(':', 1)[1] for i in ds[loc_tech_dim].values)
+            for tech in set(i.split('::')[1] for i in ds[loc_tech_dim].values)
         ]
         # remove empty lists within the _techs list
         loc_tech_subsets = [i for i in loc_tech_subsets if i]

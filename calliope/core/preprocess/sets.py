@@ -75,7 +75,7 @@ from itertools import product
 import numpy as np
 
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.loc_tech import get_all_carriers
+from calliope.core.preprocess.util import get_all_carriers, split_loc_techs_transmission
 
 
 def generate_simple_sets(model_run):
@@ -149,7 +149,7 @@ def generate_simple_sets(model_run):
 def concat_with_colon(iterable):
     """
     Take an interable containing iterables of strings,
-    return a list of strings concatenating inner iterables with ':'.
+    return a list of strings concatenating inner iterables with '::'.
 
     E.g.:
     ``
@@ -158,7 +158,7 @@ def concat_with_colon(iterable):
     ``
 
     """
-    return [':'.join(i) for i in iterable]
+    return ['::'.join(i) for i in iterable]
 
 
 def generate_loc_tech_sets(model_run, simple_sets):
@@ -194,7 +194,8 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # to make parsing for set membership easier
     loc_techs_transmission_config = {
         k: model_run.get_key(
-            'locations.{0}.links.{2}.techs.{1}'.format(*k.split(':'))
+            'locations.{loc_from}.links.{loc_to}.techs.{tech}'
+            .format(**split_loc_techs_transmission(k))
         )
         for k in sets.loc_techs_transmission
     }
@@ -217,7 +218,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # to make parsing for set membership easier
     loc_techs_config = {
         k: model_run.get_key(
-            'locations.{}.techs.{}'.format(*k.split(':'))
+            'locations.{}.techs.{}'.format(*k.split('::'))
         )
         for k in sets.loc_techs_non_transmission
     }
@@ -233,7 +234,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
             'unmet_demand', 'conversion', 'conversion_plus']:
         tech_set = set(
             k for k in sets.loc_techs_non_transmission
-            if model_run.techs[k.split(':')[1]].inheritance[-1] == group
+            if model_run.techs[k.split('::')[1]].inheritance[-1] == group
         )
         sets['loc_techs_{}'.format(group)] = tech_set
 
@@ -404,23 +405,23 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     # loc_tech_carriers for all technologies that have energy_prod=True
     sets.loc_tech_carriers_prod = set(
-        '{}:{}'.format(k, carrier)
+        '{}::{}'.format(k, carrier)
         for k in sets.loc_techs
         if loc_techs_all_config[k].constraints.get_key('energy_prod', False)
-        for carrier in get_all_carriers(model_run.techs[k.split(':')[1]].essentials, direction='out')
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1]].essentials, direction='out')
     )
 
     # loc_tech_carriers for all technologies that have energy_con=True
     sets.loc_tech_carriers_con = set(
-        '{}:{}'.format(k, carrier)
+        '{}::{}'.format(k, carrier)
         for k in sets.loc_techs
         if loc_techs_all_config[k].constraints.get_key('energy_con', False)
-        for carrier in get_all_carriers(model_run.techs[k.split(':')[1]].essentials, direction='in')
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1]].essentials, direction='in')
     )
 
     # loc_tech_carriers for all technologies that have export
     sets.loc_tech_carriers_export = set(
-        '{}:{}'.format(k, loc_techs_all_config[k].constraints.export_carrier)
+        '{}::{}'.format(k, loc_techs_all_config[k].constraints.export_carrier)
         for k in sets.loc_techs
         if loc_techs_all_config[k].constraints.get_key('export_carrier', False)
     )
@@ -428,12 +429,12 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # loc_tech_carriers for `conversion_plus` technologies
     sets.loc_tech_carriers_conversion_plus = set(
         k for k in sets.loc_tech_carriers_con | sets.loc_tech_carriers_prod
-        if k.rsplit(':', 1)[1] in sets.loc_techs_conversion_plus
+        if k.rsplit('::')[1] in sets.loc_techs_conversion_plus
     )
 
     # loc_carrier combinations that exist with either a con or prod tech
     sets.loc_carriers = set(
-        '{}:{}'.format(k.split(':')[0], k.rsplit(':')[-1])
+        '{0}::{2}'.format(*k.split('::'))
         for k in sets.loc_tech_carriers_prod | sets.loc_tech_carriers_con
     )
 

@@ -32,23 +32,21 @@ def get_loc_techs(loc_techs, tech=None, loc=None):
 
     # If both are strings, there is only one loc:tech possibility to look for
     if (isinstance(tech, str) and isinstance(loc, str)
-        and ':'.join([loc, tech]) in loc_techs):
-        relevant_loc_techs = [':'.join([loc, tech])]
+        and '::'.join([loc, tech]) in loc_techs):
+        relevant_loc_techs = ['::'.join([loc, tech])]
 
     tech = [tech] if tech is not None and isinstance(tech, str) else tech
     loc = [loc] if loc is not None and isinstance(loc, str) else loc
 
     if tech and not loc:
-        relevant_loc_techs = [i for i in loc_techs if i.split(':', 1)[1] in tech]
+        relevant_loc_techs = [i for i in loc_techs if i.split('::')[1] in tech]
     elif loc and not tech:
-        relevant_loc_techs = [i for i in loc_techs if i.split(':', 1)[0] in loc]
+        relevant_loc_techs = [i for i in loc_techs if i.split('::')[0] in loc]
     elif loc and tech:
-        loc_techs_set = set(
-            (i.split(':')[0], i.split(':')[1]) for i in loc_techs
-        )
+        loc_techs_set = set(tuple(i.split('::')) for i in loc_techs)
         possible_loc_techs = set((l, t) for l in loc for t in tech)
         relevant_loc_techs = [
-            ':'.join(i) for i in possible_loc_techs.intersection(loc_techs_set)
+            '::'.join(i) for i in possible_loc_techs.intersection(loc_techs_set)
         ]
     else:
         relevant_loc_techs = [None]
@@ -71,41 +69,34 @@ def split_loc_techs(data_var):
     updated_data_var : xarray DataArray
     """
 
-    # Find the loc_techs dimension
-    loc_tech_dim = [i for i in data_var.dims if 'loc_techs' in i]
+    # Find the loc_techs or loc_tech_carriers dimension
+    loc_tech_dim = [i for i in data_var.dims if 'loc_tech' in i]
     non_loc_tech_dims = list(set(data_var.dims).difference(loc_tech_dim))
-    if not loc_tech_dim:
+
+    if not loc_tech_dim or not loc_tech_carrier_dims:
         return data_var
 
     elif len(loc_tech_dim) > 1:
         e = exceptions.ModelError
-        raise e("Cannot split loc_techs dimension "
+        raise e("Cannot split loc_techs or loc_techs_carrier dimension "
                 "for DataArray {}".format(data_var.name))
     else:
         loc_tech_dim = loc_tech_dim[0]
-        data_var_series = data_var.to_series().unstack(non_loc_tech_dims)
-        data_var_series.index = pd.MultiIndex.from_tuples(
-           data_var_series.index.str.split(':', 1).tolist(),
-           names=['locs', 'techs']
-        )
-        updated_data_var = xr.DataArray.from_series(
-            data_var_series.stack(non_loc_tech_dims)
-        )
+        data_var_df = data_var.to_series().unstack(non_loc_tech_dims)
+        index_list = data_var_df.index.str.split('::').tolist()
+
+        possible_names = ['locs', 'techs', 'carriers']
+        names = [possible_names[i] for i in index_list[0]]
+
+        multi_index_list = pd.MultiIndex.from_tuples(index_list, names=names)
+
+        if isinstance(data_var_df, pd.Series):
+            data_var_series = data_var_df
+        else:
+            data_var_series = data_var_df.stack(non_loc_tech_dims)
+        updated_data_var = xr.DataArray.from_series(data_var_series)
+
     return updated_data_var
-
-
-def get_all_carriers(config, direction='both'):
-    if direction == 'both':
-        carrier_list = ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
-    elif direction == 'in':
-        carrier_list = ['in', 'in_2', 'in_3']
-    elif direction == 'out':
-        carrier_list = ['out', 'out_2', 'out_3']
-
-    return set([config.get_key('carrier', '')] + [
-        config.get_key('carrier_{}'.format(k), '')
-        for k in carrier_list
-    ]) - set([''])
 
 
 def reorganise_dataset_dimensions(dataset):

@@ -71,7 +71,7 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
 
 @memoize
 def get_loc_tech(loc_tech_carrier):
-    return loc_tech_carrier.rsplit(':', 1)[0]
+    return loc_tech_carrier.rsplit('::', 1)[0]
 
 
 @memoize

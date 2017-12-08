@@ -214,7 +214,7 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
         for cluster_id, cluster_members in cluster_map.items():
             loc_tech_arrays = []
             var_techs = set(
-                i.split(':', 1)[1] for i in data[var][loc_tech_dim].values
+                i.split('::')[1] for i in data[var][loc_tech_dim].values
             )
             for tech in var_techs:
                 relevent_loc_techs = (

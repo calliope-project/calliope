@@ -238,7 +238,7 @@ def constraints_to_dataset(model_run):
     for constraint in relevant_constraints:
         data_dict[constraint]=dict(dims=_get_set(constraint), data=[])
         for loc_tech in model_run.sets[_get_set(constraint)]:
-            loc, tech = loc_tech.split(':', 1)
+            loc, tech = loc_tech.split('::', 1)
             # for transmission technologies, we also need to go into link nesting
             if ':' in tech:  # i.e. transmission technologies
                 tech, link = tech.split(':')
@@ -297,7 +297,7 @@ def costs_to_dataset(model_run):
         for cost_class in cost_classes:
             cost_class_array = []
             for loc_tech in model_run.sets[_get_set(cost)]:
-                loc, tech = loc_tech.split(':', 1)
+                loc, tech = loc_tech.split('::', 1)
                 # for transmission technologies, we also need to go into link nesting
                 if ':' in tech:  # i.e. transmission technologies
                     tech, link = tech.split(':')
@@ -340,7 +340,7 @@ def carriers_to_dataset(model_run):
             i for i in
             model_run.sets['loc_tech_carriers_prod'] +
             model_run.sets['loc_tech_carriers_con']
-            if loc_carrier == i.split(":", 1)[0] + ":" + i.rsplit(":", 1)[1]
+            if loc_carrier == i.split("::", 1)[0] + "::" + i.rsplit("::", 1)[1]
         ))
         data.append(",".join(loc_tech_carrier))
     lookup_loc_carriers_dict['data'] = data
@@ -359,7 +359,7 @@ def carriers_to_dataset(model_run):
             i for i in
             model_run.sets['loc_tech_carriers_prod'] +
             model_run.sets['loc_tech_carriers_con']
-            if loc_tech == i.rsplit(":", 1)[0]
+            if loc_tech == i.rsplit("::", 1)[0]
         ))
         if len(loc_tech_carrier) > 1:
             raise exceptions.ModelError("More than one carrier associated with"
@@ -389,13 +389,13 @@ def carriers_to_dataset(model_run):
             loc_tech_carrier_in = [
                 i for i in
                 model_run.sets['loc_tech_carriers_con']
-                if loc_tech == i.rsplit(":", 1)[0]
+                if loc_tech == i.rsplit("::", 1)[0]
             ]
 
             loc_tech_carrier_out = [
                 i for i in
                 model_run.sets['loc_tech_carriers_prod']
-                if loc_tech == i.rsplit(":", 1)[0]
+                if loc_tech == i.rsplit("::", 1)[0]
             ]
             if len(loc_tech_carrier_in) > 1 or len(loc_tech_carrier_out) > 1:
                 raise exceptions.ModelError("More than one carrier in or out "
@@ -423,16 +423,16 @@ def carriers_to_dataset(model_run):
             )
         )
         for loc_tech in model_run.sets['loc_techs_conversion_plus']:
-            _tech = loc_tech.split(':', 1)[1]
+            _tech = loc_tech.split('::', 1)[1]
             for carrier_tier in carrier_tiers:
                 # create a list of carriers for the given technology that fits
                 # the current carrier_tier.
                 relevant_carriers = model_run.techs[_tech].essentials.get(
                     'carrier_' + carrier_tier, [])
                 if relevant_carriers and isinstance(relevant_carriers, list):
-                    loc_tech_carriers = [loc_tech + ":" + i for i in relevant_carriers]
+                    loc_tech_carriers = [loc_tech + "::" + i for i in relevant_carriers]
                 elif relevant_carriers:
-                    loc_tech_carriers = loc_tech + ":" + relevant_carriers
+                    loc_tech_carriers = loc_tech + "::" + relevant_carriers
                 lookup_loc_techs_conversion_plus.loc[
                     dict(loc_techs_conversion_plus=loc_tech,
                          resources=relevant_carriers, carrier_tiers=carrier_tier)
@@ -449,7 +449,7 @@ def carriers_to_dataset(model_run):
                     ('carrier_tiers', list(carrier_tiers))]
         )
         for loc_tech_carrier in model_run.sets['loc_tech_carriers_conversion_plus']:
-            loc, tech, carrier = loc_tech_carrier.split(':')
+            loc, tech, carrier = loc_tech_carrier.split('::')
             for carrier_tier in carrier_tiers:
                 carrier_ratio = (model_run.locations[loc].techs[tech].constraints
                     .get_key('carrier_ratios.carrier_' + carrier_tier + '.' + carrier, 1))
@@ -492,7 +492,7 @@ def location_specific_to_dataset(model_run):
                 'distance', np.nan
                 )
             )
-        data_dict['lookup_remotes']['data'].append(':'.join([link, tech, loc]))
+        data_dict['lookup_remotes']['data'].append('::'.join([link, tech, loc]))
     data_dict['available_area'] = dict(dims='locs', data=[])
     data_dict['available_area']['data'] = [
         model_run.locations[loc].get('available_area', np.nan)
