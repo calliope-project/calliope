@@ -12,37 +12,22 @@ run:
     backend: pyomo
     solver: glpk
     solver_options: null  # FIXME document
-    solver_io:  # FIXME check what options exist here (lp, file?)
-    save_logs: null  # former debug options: keep_temp_files and symbolic_solver_labels
-    # echo_solver_log: true  # FIXME: should always be true now
-    save_netcdf: null
-    save_csv: null
-    random_seed: null  # Specify a seed for random number generator used during clustering
+    solver_io: null  # FIXME check what options exist here (lp, file?)
+    save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
+    save_netcdf: null  # Path to which to save a single NetCDF results file
+    save_csv: null  # Directory into which to save a set of CSV results files
+    random_seed: null  # Seed for random number generator used during clustering
 
 model:
     name: null
-
     mode: plan  # Choices: plan, operation
-
     timeseries_data_path: null  # Path to time series data
-
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
-
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
-
-    startup_time: 12  # Length of startup period (hours)
-
-    # operation_mode:  # Operation mode settings
-    #     horizon: 48  # Optimization period length (hours)
-    #     window: 24  # Operation period length (hours)
-
+    subset_time: []  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
+    objective: 'cost_minimization'
     system_margin:  # Per-carrier system margins
         power: 0
-
-    subset_time: []  # Subset of timesteps as a list with two elements setting from and to, e.g. ['2005-01-01', '2005-01-05']
-
-    objective: 'cost_minimization'
-
 
 ##
 # Base technology groups
