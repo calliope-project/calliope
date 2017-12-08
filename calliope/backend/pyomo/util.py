@@ -15,11 +15,22 @@ from calliope import exceptions
 #FIXME: change to get_param
 @memoize
 def param_getter(backend_model, var, dims):
+    """
+    Params
+    ------
+    backend_model : Pyomo model instance
+    var : str
+    dims : single value or tuple
+
+    """
     try:
         return backend_model.__calliope_model_data__['data'][var][dims]
     except KeyError:  # Try without time dimension, which is always last
         try:
-            return backend_model.__calliope_model_data__['data'][var][dims[:-1]]
+            if len(dims) > 2:
+                return backend_model.__calliope_model_data__['data'][var][dims[:-1]]
+            else:
+                return backend_model.__calliope_model_data__['data'][var][dims[0]]
         except KeyError:  # Static default value
             return backend_model.__calliope_defaults__[var]
 

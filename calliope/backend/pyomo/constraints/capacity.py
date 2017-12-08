@@ -50,7 +50,6 @@ def load_capacity_constraints(backend_model):
                 rule=resource_area_constraint_rule
         )
 
-    if 'loc_techs_area' in sets:
         backend_model.resource_area_per_energy_capacity_constraint = po.Constraint(
                 backend_model.loc_techs_area,
                 rule=resource_area_per_energy_capacity_constraint_rule
@@ -102,6 +101,7 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
             return po.Constraint.NoConstraint
         else:
             return (_min, decision_variable[loc_tech], _max)
+
 
 def storage_capacity_constraint_rule(backend_model, loc_tech):
     """

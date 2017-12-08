@@ -201,16 +201,14 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     energy_eff = param_getter(backend_model, 'energy_eff', (loc_tech, timestep))
-    parasitic_eff = param_getter(backend_model, 'parasitic_eff', (loc_tech, timestep))
-    total_eff = energy_eff * parasitic_eff
 
-    if total_eff == 0:
+    if energy_eff == 0:
         carrier_prod = 0
     else:
         loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
-        carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / total_eff
+        carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff
 
-    carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * total_eff
+    carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
     if backend_model.timesteps.order_dict[timestep] == 0:
         storage_previous_step = param_getter(backend_model, 'storage_initial', loc_tech)

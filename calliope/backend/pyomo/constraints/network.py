@@ -17,8 +17,8 @@ def load_network_constraints(backend_model):
 
     if 'loc_techs_transmission' in sets:
         backend_model.symmetric_transmission_constraint = po.Constraint(
-                backend_model.loc_techs_transmission,
-                rule=symmetric_transmission_constraint_rule
+            backend_model.loc_techs_transmission,
+            rule=symmetric_transmission_constraint_rule
         )
 
 
