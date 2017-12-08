@@ -138,16 +138,16 @@ class Model(object):
         log_time(self._timings, 'model_data_creation', time_since_start=True)
 
         for var in self._model_data.data_vars:
-            self._model_data[var].attrs['is_result'] = False
-        self.inputs = self._model_data.filter_by_attrs(is_result=False)
+            self._model_data[var].attrs['is_result'] = 0
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
 
     def _init_from_model_data(self, model_data):
         self._model_run = None
         self._debug_data = None
         self._model_data = model_data
-        self.inputs = self._model_data.filter_by_attrs(is_result=False)
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
 
-        results = self._model_data.filter_by_attrs(is_result=True)
+        results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
             self.results = results
         log_time(self._timings, 'model_data_loaded', time_since_start=True)
@@ -169,13 +169,13 @@ class Model(object):
         results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self._timings)
 
         for var in results.data_vars:
-            results[var].attrs['is_result'] = True
+            results[var].attrs['is_result'] = 1
 
         # FIXME: possibly add some summary tables to results
 
         self._model_data = self._model_data.merge(results)
 
-        self.results = self._model_data.filter_by_attrs(is_result=True)
+        self.results = self._model_data.filter_by_attrs(is_result=1)
 
     def get_formatted_array(self, var):
         """
