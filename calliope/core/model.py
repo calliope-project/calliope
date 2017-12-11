@@ -10,6 +10,7 @@ Implements the core Model class.
 """
 
 import numpy as np
+import calliope.analysis.plotting as plot
 
 from calliope.core import debug, io
 from calliope.core.preprocess import generate_model_run, apply_overrides, build_model_data, apply_time_clustering
@@ -212,3 +213,40 @@ class Model(object):
 
         """
         io.save_csv(self._model_data, path)
+
+    def plot(self, plot_type, plot_var=None, **kwargs):
+        """
+        plot data for input/output
+
+        Parameters
+        ----------
+        plot_type : string; 'timeseries', 'capacity', or 'transmission'
+            timeseries = data plotted against the time axis, must be data in
+                the time domain
+            capacity = data plotted per location on x-axis and per technology
+                in a stacked bar. Can be any data input, provided array is only
+                indexed over locations and technologies after selecting and summing
+                over other dimensions (using loc=dict(...) and sum_dims=[...])
+            transmission = data plotted based on coordinates.
+                If coordinates are `lat`, `lon` then a map is used, otherwise
+                cartesian scatter is used.
+        plot_var : string
+            variable from input/result xarray Dataset to plot. If `carrier_prod`
+            or `carrier_con` given, sum of both will be plotted
+        kwargs:
+            loc = dictionary by which data is selected for timeseries/capacity
+                plot types (keys any of ['timeseries', 'locs', 'techs', 'carriers'])
+            sum_dims = list of dimension names to sum plot_var.
+            squeeze = bool stating whether to squeeze out dimensions containing
+                only single values
+        """
+        if plot_type == 'timeseries':
+            if plot_var in ['carrier_prod', 'carrier_con']:
+                plot_var = 'carrier'
+            plot.plot_timeseries(self, timeseries_type=plot_var, **kwargs)
+
+        elif plot_type == 'capacity':
+            plot.plot_capacity(self, cap_type=plot_var, **kwargs)
+
+        elif plot_type == 'transmission':
+            plot.plot_transmission(self, **kwargs)

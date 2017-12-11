@@ -125,7 +125,7 @@ def generate_simple_sets(model_run):
                 techs_transmission.add('{}:{}'.format(tech_name, link_name))
     sets.techs_transmission = techs_transmission
 
-    sets.techs = sets.techs_non_transmission | sets.techs_transmission
+    sets.techs = sets.techs_non_transmission | sets.techs_transmission_names
 
     # this extracts location coordinate information
     coordinates = set(

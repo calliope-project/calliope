@@ -539,19 +539,22 @@ def tech_specific_to_dataset(model_run):
     """
     # for every technology, we extract location inspecific information
     information = ['essentials.color', 'essentials.stack_weight']
-    data_dict = {'color':{'dims':['techs'], 'data':[]},
-                 'stack_weight':{'dims':['techs'], 'data':[]},
-                 'inheritance':{'dims':['techs'], 'data':[]}}
+    data_dict = {'colors':{'dims':['techs'], 'data':[]},
+                 'stack_weights':{'dims':['techs'], 'data':[]},
+                 'inheritance':{'dims':['techs'], 'data':[]},
+                 'names':{'dims':['techs'], 'data':[]}}
 
     for tech in model_run.sets['techs']:
         if tech in model_run.sets['techs_transmission']:
             tech = tech.split(':')[0]
-        data_dict['color']['data'].append(model_run.techs[tech].get_key(
+        data_dict['colors']['data'].append(model_run.techs[tech].get_key(
             'essentials.color'))
-        data_dict['stack_weight']['data'].append(model_run.techs[tech].get_key(
+        data_dict['stack_weights']['data'].append(model_run.techs[tech].get_key(
             'essentials.stack_weight'))
         data_dict['inheritance']['data'].append('.'.join(
             model_run.techs[tech].get_key('inheritance')))
+        data_dict['names']['data'].append(model_run.techs[tech].get_key(
+            'essentials.name'))
 
     return data_dict
 
