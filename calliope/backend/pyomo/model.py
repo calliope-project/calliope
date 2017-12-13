@@ -24,7 +24,6 @@ from pyutilib.services import TempfileManager  # pylint: disable=import-error
 from calliope.backend.pyomo.util import get_var
 from calliope.core.util.tools import load_function, LogWriter
 from calliope.core.util.dataset import reorganise_dataset_dimensions
-from calliope import exceptions
 
 
 def generate_model(model_data):
@@ -72,6 +71,17 @@ def generate_model(model_data):
         'network.load_network_constraints',
         'costs.load_cost_constraints'
     ]
+
+    if hasattr(backend_model, 'loc_techs_conversion'):
+        constraints_to_add.append('conversion.load_conversion_constraints')
+
+    if hasattr(backend_model, 'loc_techs_conversion_plus'):
+        constraints_to_add.append('conversion_plus.load_conversion_plus_constraints')
+
+    # Export comes last as it can add to the cost expression, this could be
+    # overwritten if it doesn't come last
+    if hasattr(backend_model, 'loc_techs_export'):
+        constraints_to_add.append('export.load_export_constraints')
 
     for c in constraints_to_add:
         load_function(

@@ -37,3 +37,11 @@ class TestNationalScaleExampleModelSenseChecks:
         assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
 
         assert float(model.results.cost.sum()) == approx(38997.3544)
+
+
+class TestUrbanScaleExampleModelSenseChecks:
+    def test_urbanscale_example_results(self):
+        model = calliope.examples.urban_scale(
+            override_dict={'model.subset_time': '2005-01-01'}
+        )
+        model.run()

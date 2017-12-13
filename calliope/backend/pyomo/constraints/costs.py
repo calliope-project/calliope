@@ -13,7 +13,8 @@ import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import \
     get_param, \
-    get_timestep_weight
+    get_timestep_weight, \
+    loc_tech_is_in
 
 
 def load_cost_constraints(backend_model):
@@ -33,6 +34,13 @@ def load_cost_constraints(backend_model):
         )
 
     if 'loc_techs_om_cost' in model_data_dict['sets']:
+        backend_model.cost_var_rhs = po.Expression(
+            backend_model.costs,
+            backend_model.loc_techs_om_cost,
+            backend_model.timesteps,
+            initialize=0.0
+        )
+
         backend_model.cost_var_constraint = po.Constraint(
             backend_model.costs,
             backend_model.loc_techs_om_cost,
@@ -64,7 +72,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
         Conditionally add investment costs, if the relevant set of technologies
         exists. Both inputs are strings.
         """
-        if hasattr(backend_model, calliope_set) and loc_tech in getattr(backend_model, calliope_set):
+        if loc_tech_is_in(backend_model, loc_tech, calliope_set):
             _cost = (getattr(backend_model, capacity_decision_variable)[loc_tech] *
                 get_param(backend_model, 'cost_' + capacity_decision_variable, (cost, loc_tech)))
             return _cost
@@ -80,10 +88,10 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_om_annual_investment_fraction = get_param(backend_model, 'cost_om_annual_investment_fraction', (cost, loc_tech))
     cost_om_annual = get_param(backend_model, 'cost_om_annual', (cost, loc_tech))
 
-    if hasattr(backend_model, 'loc_techs_purchase') and loc_tech in backend_model.loc_techs_purchase:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_purchase'):
         cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
         cost_of_purchase = backend_model.purchased[loc_tech] * cost_purchase
-    elif hasattr(backend_model, 'loc_techs_milp') and loc_tech in backend_model.loc_techs_milp:
+    elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp'):
         cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
         cost_of_purchase = backend_model.units[loc_tech] * cost_purchase
     else:
@@ -112,18 +120,16 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
 
 
 def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
+
+    if (loc_tech_is_in(backend_model, loc_tech, 'loc_techs_conversion') or
+        loc_tech_is_in(backend_model, loc_tech, 'loc_techs_conversion_plus')):
+        return po.Constraint.Skip
+
     model_data_dict = backend_model.__calliope_model_data__
 
     cost_om_prod = get_param(backend_model, 'cost_om_prod', (cost, loc_tech, timestep))
     cost_om_con = get_param(backend_model, 'cost_om_con', (cost, loc_tech, timestep))
     weight = model_data_dict['data']['timestep_weights'][timestep]
-
-    if hasattr(backend_model, 'loc_techs_export') and loc_tech in backend_model.loc_techs_export:
-        export = backend_model.export[loc_tech, timestep]
-        cost_export = get_param(backend_model, 'cost_export', (cost, loc_tech, timestep)) * export
-    else:
-        export = 0
-        cost_export = 0
 
     loc_tech_carrier = model_data_dict['data']['lookup_loc_techs'][loc_tech]
 
@@ -132,7 +138,7 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
     else:
         cost_prod = 0
 
-    if hasattr(backend_model, 'loc_techs_supply_plus') and loc_tech in backend_model.loc_techs_supply_plus and cost_om_con:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and cost_om_con:
         resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
         if resource_eff > 0:  # In case resource_eff is zero, to avoid an infinite value
             # Dividing by r_eff here so we get the actual r used, not the r
@@ -140,7 +146,7 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
             cost_con = cost_om_con * weight * (backend_model.resource_con[loc_tech, timestep] / resource_eff)
         else:
             cost_con = 0
-    elif hasattr(backend_model, 'loc_techs_supply') and loc_tech in backend_model.loc_techs_supply and cost_om_con:
+    elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and cost_om_con:
         energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
         if energy_eff > 0:  # in case energy_eff is zero, to avoid an infinite value
             cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff)
@@ -149,5 +155,6 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
     else:
         cost_con = 0
 
+    backend_model.cost_var_rhs[cost, loc_tech, timestep].expr = cost_prod + cost_con
     return (backend_model.cost_var[cost, loc_tech, timestep] ==
-            cost_prod + cost_con + cost_export)
+            backend_model.cost_var_rhs[cost, loc_tech, timestep])

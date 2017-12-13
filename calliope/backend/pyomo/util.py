@@ -47,7 +47,7 @@ def get_previous_timestep(backend_model, timestep):
 def get_loc_tech_carriers(backend_model, loc_carrier):
 
     lookup = backend_model.__calliope_model_data__['data']['lookup_loc_carriers']
-    loc_tech_carriers = lookup[loc_carrier].split(',')
+    loc_tech_carriers = split_comma_list(lookup[loc_carrier])
 
     loc_tech_carriers_prod = [
         i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_prod
@@ -82,6 +82,26 @@ def get_timestep_weight(backend_model):
     time_res = list(model_data_dict['data']['timestep_resolution'].values())
     weights = list(model_data_dict['data']['timestep_weights'].values())
     return sum(np.multiply(time_res, weights)) / 8760
+
+
+@memoize
+def split_comma_list(comma_list):
+    """
+    Take a comma deliminated string and split it into a list of strings
+    """
+    return comma_list.split(',')
+
+
+@memoize
+def get_conversion_plus_io(backend_model, tier):
+    """
+    from a carrier_tier, return the primary tier (of `in`, `out`) and
+    corresponding decision variable (`carrier_con` and `carrier_prod`, respectively)
+    """
+    if 'out' in tier:
+        return 'out', backend_model.carrier_prod
+    elif 'in' in tier:
+        return 'in', backend_model.carrier_con
 
 
 def get_var(backend_model, var, dims=None):
@@ -129,3 +149,21 @@ def get_var(backend_model, var, dims=None):
         result = xr.DataArray.from_series(result)
 
     return result
+
+
+@memoize
+def loc_tech_is_in(backend_model, loc_tech, model_set):
+    """
+    Check if set exists and if loc_tech is in the set
+
+    Parameters
+    ----------
+    loc_tech : string
+    model_set : string
+    """
+
+    if hasattr(backend_model, model_set) and (
+        loc_tech in getattr(backend_model, model_set)):
+        return True
+    else:
+        return False

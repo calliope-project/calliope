@@ -22,6 +22,8 @@
 # List of constraints allowed to specify "file="
 file_allowed: ['resource', 'resource_eff', 'parasitic_eff', 'energy_eff', 'storage_loss', 'energy_ramping', 'energy_prod', 'energy_con', 'force_resource', 'om_prod', 'om_con', 'export']
 
+default_location:
+    available_area: null
 default_tech:
     # FIXME: weight is gone, so no longer needs to be dealt with in objective function
     essentials:

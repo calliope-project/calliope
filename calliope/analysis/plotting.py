@@ -246,6 +246,7 @@ def plot_transmission(model, mapbox_access_token=None):
     else:
         h_coord, v_coord = ('x', 'y')
         scatter_type = 'scatter'
+        layout_dict = dict()
 
     mid_edge_scatter_dict = {
         'type': scatter_type,
@@ -305,7 +306,7 @@ def plot_transmission(model, mapbox_access_token=None):
     data.append(node_scatter_dict)
 
     layout_dict.update(dict(
-        title='National Scale Model',
+        title=model._model_data.attrs['model.name'],
         autosize=True,
         hovermode='closest',
         showlegend=True,

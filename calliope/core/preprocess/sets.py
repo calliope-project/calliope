@@ -346,16 +346,23 @@ def generate_loc_tech_sets(model_run, simple_sets):
                for i in loc_techs_transmission_config[k].costs.keys_nested())
     )
 
-    # Any operation and maintenance or export costs
+    # Any operation and maintenance
     loc_techs_om_costs = set(
         k for k in loc_techs_costs
-        if any('om_' in i or '.export' in i
+        if any('om_' in i
                for i in loc_techs_config[k].costs.keys_nested())
     )
     loc_techs_transmission_om_costs = set(
         k for k in loc_techs_transmission_costs
-        if any('om_' in i or '.export' in i
+        if any('om_' in i
                for i in loc_techs_transmission_config[k].costs.keys_nested())
+    )
+
+    # Any export costs
+    sets.loc_techs_costs_export = set(
+        k for k in loc_techs_costs
+        if any('export' in i
+               for i in loc_techs_config[k].costs.keys_nested())
     )
 
     sets.loc_techs_cost = loc_techs_costs | loc_techs_transmission_costs
@@ -363,6 +370,15 @@ def generate_loc_tech_sets(model_run, simple_sets):
         loc_techs_investment_costs |
         loc_techs_transmission_investment_costs)
     sets.loc_techs_om_cost = loc_techs_om_costs | loc_techs_transmission_om_costs
+
+    ##
+    # Subsets of costs for different abstract base technologies
+    ##
+
+    sets.loc_techs_om_cost_conversion = loc_techs_om_costs.intersection(sets.loc_techs_conversion)
+    sets.loc_techs_om_cost_conversion_plus = loc_techs_om_costs.intersection(sets.loc_techs_conversion_plus)
+    sets.loc_techs_om_cost_supply = loc_techs_om_costs.intersection(sets.loc_techs_supply)
+    sets.loc_techs_om_cost_supply_plus = loc_techs_om_costs.intersection(sets.loc_techs_supply_plus)
 
     ##
     # Subsets of `conversion_plus` technologies
@@ -422,7 +438,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # loc_tech_carriers for `conversion_plus` technologies
     sets.loc_tech_carriers_conversion_plus = set(
         k for k in sets.loc_tech_carriers_con | sets.loc_tech_carriers_prod
-        if k.rsplit('::')[1] in sets.loc_techs_conversion_plus
+        if k.rsplit('::', 1)[0] in sets.loc_techs_conversion_plus
     )
 
     # loc_carrier combinations that exist with either a con or prod tech

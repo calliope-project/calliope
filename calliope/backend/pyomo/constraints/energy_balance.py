@@ -20,6 +20,11 @@ from calliope.backend.pyomo.util import \
 def load_energy_balance_constraints(backend_model):
     model_data_dict = backend_model.__calliope_model_data__
 
+    backend_model.system_balance = po.Expression(
+        backend_model.loc_carriers, backend_model.timesteps,
+        initialize=0.0
+    )
+
     backend_model.system_balance_constraint = po.Constraint(
         backend_model.loc_carriers, backend_model.timesteps,
         rule=system_balance_constraint_rule
@@ -66,13 +71,12 @@ def load_energy_balance_constraints(backend_model):
 def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
-    balance = (
+    backend_model.system_balance[loc_carrier, timestep].expr += (
         sum(backend_model.carrier_prod[loc_tech_carrier, timestep] for loc_tech_carrier in prod) +
-        sum(backend_model.carrier_con[loc_tech_carrier, timestep] for loc_tech_carrier in con) -
-        sum(backend_model.export[loc_tech_carrier, timestep] for loc_tech_carrier in export)
+        sum(backend_model.carrier_con[loc_tech_carrier, timestep] for loc_tech_carrier in con)
     )
 
-    return balance == 0
+    return backend_model.system_balance[loc_carrier, timestep] == 0
 
 
 # FIXME: add export_balance_constraint_rule
@@ -162,6 +166,7 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
 
 def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
+    sets = backend_model.__calliope_model_data__['sets']
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
@@ -174,7 +179,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / total_eff
 
     # A) Case where no storage allowed
-    if loc_tech not in backend_model.loc_techs_store:
+    if 'loc_techs_store' not in sets or loc_tech not in backend_model.loc_techs_store:
         return backend_model.resource_con[loc_tech, timestep] == carrier_prod
 
     # B) Case where storage is allowed

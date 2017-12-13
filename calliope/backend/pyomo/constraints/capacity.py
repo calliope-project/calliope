@@ -12,7 +12,7 @@ Capacity constraints for technologies (output, resource, area, and storage).
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import get_param
+from calliope.backend.pyomo.util import get_param, split_comma_list
 from calliope import exceptions
 
 
@@ -54,6 +54,12 @@ def load_capacity_constraints(backend_model):
                 backend_model.loc_techs_area,
                 rule=resource_area_per_energy_capacity_constraint_rule
         )
+
+        backend_model.resource_area_capacity_per_loc_constraint = po.Constraint(
+            backend_model.locs,
+            rule=resource_area_capacity_per_loc_constraint_rule
+        )
+
 
     backend_model.energy_capacity_constraint = po.Constraint(
             backend_model.loc_techs,
@@ -198,6 +204,19 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
     else:
         return po.Constraint.Skip
 
+def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
+    available_area = get_param(backend_model, 'available_area', loc)
+    model_data_dict = backend_model.__calliope_model_data__['data']
+
+    if available_area:
+        loc_techs = split_comma_list(model_data_dict['lookup_loc_techs_area'][loc])
+
+        return (
+            sum(backend_model.resource_area[loc_tech] for loc_tech in loc_techs)
+            <= available_area
+        )
+    else:
+        return po.Constraint.NoConstraint
 
 def energy_capacity_constraint_rule(backend_model, loc_tech):
     """

@@ -39,7 +39,7 @@ def initialize_decision_variables(backend_model):
         backend_model.resource_con = po.Var(backend_model.loc_techs_finite_resource, backend_model.timesteps, within=po.Reals)
 
     if 'loc_techs_export' in model_data_dict['sets']:
-        backend_model.carrier_export = po.Var(backend_model.loc_techs_export, backend_model.timesteps, within=po.NonNegativeReals)
+        backend_model.carrier_export = po.Var(backend_model.loc_tech_carriers_export, backend_model.timesteps, within=po.NonNegativeReals)
 
     if 'loc_techs_om_cost' in model_data_dict['sets']:
         backend_model.cost_var = po.Var(backend_model.costs, backend_model.loc_techs_om_cost, backend_model.timesteps, within=po.Reals)
