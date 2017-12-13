@@ -47,6 +47,7 @@ Subsets based on active constraints
 * loc_techs_finite_resource_supply
 * loc_techs_finite_resource_demand
 * loc_techs_finite_resource_supply_plus
+* loc_techs_ramping
 * loc_techs_export
 * loc_techs_purchase
 * loc_techs_milp
@@ -57,6 +58,7 @@ Subsets based on active constraints
 * loc_techs_out_3
 * loc_techs_in_2
 * loc_techs_in_3
+
 
 Subsets that include carrier
 
@@ -268,6 +270,12 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # `supply_plus` technologies that specify a finite resource
     sets.loc_techs_finite_resource_supply_plus = (
         sets.loc_techs_finite_resource.intersection(sets.loc_techs_supply_plus)
+    )
+
+    # Technologies that define ramping constraints
+    sets.loc_techs_ramping = set(
+        k for k in sets.loc_techs_non_transmission
+        if 'energy_ramping' in loc_techs_config[k].constraints
     )
 
     # Technologies that allow export

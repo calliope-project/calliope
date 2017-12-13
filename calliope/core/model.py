@@ -13,8 +13,7 @@ import numpy as np
 import calliope.analysis.plotting as plot
 
 from calliope.core import debug, io
-from calliope.core.preprocess import generate_model_run, apply_overrides, build_model_data, apply_time_clustering
-from calliope.core.attrdict import AttrDict
+from calliope.core.preprocess import model_run_from_yaml, model_run_from_dict, build_model_data, apply_time_clustering
 from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
@@ -26,51 +25,6 @@ BACKEND_RUNNERS = {
     'pyomo': run_pyomo,
     # 'julia': run_julia
 }
-
-
-def model_run_from_yaml(model_file, override_file=None, override_dict=None):
-    """
-    Generate processed ModelRun configuration from a YAML run configuration file.
-
-    Parameters
-    ----------
-    model_file : str
-        Path to YAML file with model configuration.
-    override_file : str, optional
-        Path to YAML file with model configuration overrides and the override
-        group to use, separated by ':', e.g. 'overrides.yaml:group1'.
-    override_dict : dict or AttrDict, optional
-
-    """
-    config = AttrDict.from_yaml(model_file)
-    config.config_path = model_file
-
-    config_with_overrides, debug_comments = apply_overrides(
-        config, override_file=override_file, override_dict=override_dict
-    )
-
-    return generate_model_run(config_with_overrides, debug_comments)
-
-
-def model_run_from_dict(config_dict, override_dict=None):
-    """
-    Generate processed ModelRun configuration from
-    run and model config dictionaries.
-
-    Parameters
-    ----------
-    config_dict : dict or AttrDict
-    override_dict : dict or AttrDict, optional
-
-    """
-    config = config_dict
-    config.config_path = None
-
-    config_with_overrides, debug_comments = apply_overrides(
-        config, override_dict=override_dict
-    )
-
-    return generate_model_run(config_with_overrides, debug_comments)
 
 
 def read_netcdf(path):
@@ -201,7 +155,7 @@ class Model(object):
     def to_netcdf(self, path):
         """
         Save complete model data (inputs and, if available, results)
-        to a  NetCDF file at the given path.
+        to a NetCDF file at the given path.
 
         """
         io.save_netcdf(self._model_data, path)
@@ -239,6 +193,7 @@ class Model(object):
             sum_dims = list of dimension names to sum plot_var.
             squeeze = bool stating whether to squeeze out dimensions containing
                 only single values
+
         """
         if plot_type == 'timeseries':
             if plot_var in ['carrier_prod', 'carrier_con']:

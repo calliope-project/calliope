@@ -30,6 +30,52 @@ _DEFAULT_PALETTE = [
 ]
 
 
+def model_run_from_yaml(model_file, override_file=None, override_dict=None):
+    """
+    Generate processed ModelRun configuration from a
+    YAML model configuration file.
+
+    Parameters
+    ----------
+    model_file : str
+        Path to YAML file with model configuration.
+    override_file : str, optional
+        Path to YAML file with model configuration overrides and the override
+        group to use, separated by ':', e.g. 'overrides.yaml:group1'.
+    override_dict : dict or AttrDict, optional
+
+    """
+    config = AttrDict.from_yaml(model_file)
+    config.config_path = model_file
+
+    config_with_overrides, debug_comments = apply_overrides(
+        config, override_file=override_file, override_dict=override_dict
+    )
+
+    return generate_model_run(config_with_overrides, debug_comments)
+
+
+def model_run_from_dict(config_dict, override_dict=None):
+    """
+    Generate processed ModelRun configuration from a
+    model configuration dictionary.
+
+    Parameters
+    ----------
+    config_dict : dict or AttrDict
+    override_dict : dict or AttrDict, optional
+
+    """
+    config = config_dict
+    config.config_path = None
+
+    config_with_overrides, debug_comments = apply_overrides(
+        config, override_dict=override_dict
+    )
+
+    return generate_model_run(config_with_overrides, debug_comments)
+
+
 def combine_overrides(override_file_path, override_groups):
     if ',' in override_groups:
         overrides = override_groups.split(',')

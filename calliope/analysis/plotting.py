@@ -2,14 +2,12 @@
 Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-analysis.py
+plotting.py
 ~~~~~~~~~~~
 
-Functionality to analyze model results.
+Functionality to plot model data.
 
 """
-
-import logging
 
 import pandas as pd
 import xarray as xr
@@ -17,6 +15,7 @@ import plotly.offline as pltly
 import plotly.graph_objs as go
 
 from calliope import exceptions
+
 
 def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
                     sum_dims='locs', squeeze=True):
@@ -47,8 +46,10 @@ def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
         array_flow = array_flow.sum(sum_dims)
 
     if squeeze:
-        dims_to_squeeze = [i for i in array_flow.dims
-            if len(array_flow[i]) == 1 and i is not 'techs']
+        dims_to_squeeze = [
+            i for i in array_flow.dims
+            if len(array_flow[i]) == 1 and i is not 'techs'
+        ]
         array_flow = array_flow.squeeze(dims_to_squeeze)
 
     if 'timesteps' not in array_flow.dims:
@@ -61,7 +62,7 @@ def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
     names = model._model_data.names
     timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
-    layout=dict(barmode='relative', title=title, yaxis=dict(title=y_axis_title))
+    layout = dict(barmode='relative', title=title, yaxis=dict(title=y_axis_title))
 
     for tech in model._model_data.techs.values:
         tech_dict = dict(techs=tech)
@@ -100,13 +101,17 @@ def plot_capacity(model, cap_type='energy_cap', loc=dict(),
         array_cap = array_cap.sum(sum_dims)
 
     if squeeze:
-        dims_to_squeeze = [i for i in array_cap.dims
-            if len(array_cap[i]) == 1 and i is not 'techs']
+        dims_to_squeeze = [
+            i for i in array_cap.dims
+            if len(array_cap[i]) == 1 and i is not 'techs'
+        ]
         array_cap = array_cap.squeeze(dims_to_squeeze)
 
     if len(array_cap.dims) > 2:
-        raise exceptions.ModelError('Cannot use capacity plotting with {} as '
-            'dimensions'.format(array_cap.dims))
+        raise exceptions.ModelError(
+            'Cannot use capacity plotting with {} as '
+            'dimensions'.format(array_cap.dims)
+        )
     if 'techs' not in array_cap.dims:
         raise exceptions.ModelError(
             'Cannot plot capacity without `techs` in dimensions'
@@ -116,10 +121,10 @@ def plot_capacity(model, cap_type='energy_cap', loc=dict(),
     colors = model._model_data.colors
     names = model._model_data.names
 
-    layout=dict(barmode='relative',
-                title='Installed {}'.format(cap_type),
-                yaxis=dict(title=y_axis_title), xaxis=dict(title='Location'),
-                showlegend=True)
+    layout = dict(barmode='relative',
+                  title='Installed {}'.format(cap_type),
+                  yaxis=dict(title=y_axis_title), xaxis=dict(title='Location'),
+                  showlegend=True)
 
     for tech in model._model_data.techs.values:
         tech_dict = dict(techs=tech)
@@ -143,7 +148,7 @@ def plot_transmission(model, mapbox_access_token=None):
     names = model._model_data.names
 
     def _get_data(var, sum_dims=None):
-        var_da = model.get_formatted_array(var).rename({'locs':'locs_to'})
+        var_da = model.get_formatted_array(var).rename({'locs': 'locs_to'})
 
         if sum_dims:
             var_da = var_da.sum(dim=sum_dims)
@@ -214,28 +219,28 @@ def plot_transmission(model, mapbox_access_token=None):
         else:
             scatter_type = 'scattergeo'
             layout_dict = dict(
-                geo = dict(
+                geo=dict(
                     scope='world',
                     projection=dict(type='mercator', scale=1),
-                    showland = True,
+                    showland=True,
                     showcountries=True,
                     showsubunits=True,
                     showocean=True,
                     showrivers=True,
                     showlakes=True,
-                    lonaxis = dict(range=[
-                        coordinates.loc[dict(coordinates='lon')].min().item()-1,
-                        coordinates.loc[dict(coordinates='lon')].max().item()+1]),
-                    lataxis = dict(range=[
-                        coordinates.loc[dict(coordinates='lat')].min().item()-1,
-                        coordinates.loc[dict(coordinates='lat')].max().item()+1]),
+                    lonaxis=dict(range=[
+                        coordinates.loc[dict(coordinates='lon')].min().item() - 1,
+                        coordinates.loc[dict(coordinates='lon')].max().item() + 1]),
+                    lataxis=dict(range=[
+                        coordinates.loc[dict(coordinates='lat')].min().item() - 1,
+                        coordinates.loc[dict(coordinates='lat')].max().item() + 1]),
                     resolution=50,
-                    landcolor = "rgba(240, 240, 240, 0.8)",
+                    landcolor="rgba(240, 240, 240, 0.8)",
                     oceancolor='#aec6cf',
-                    subunitcolor = "blue",
-                    countrycolor = "green",
-                    countrywidth = 0.5,
-                    subunitwidth = 0.5,
+                    subunitcolo="blue",
+                    countrycolor="green",
+                    countrywidth=0.5,
+                    subunitwidth=0.5,
                 )
             )
     else:
@@ -280,7 +285,7 @@ def plot_transmission(model, mapbox_access_token=None):
                 'name': names.loc[dict(techs=tech)].item(),
                 'line': {'color': colors.loc[dict(techs=tech)].item()}
             }})
-            showlegend=False
+            showlegend = False
         data.append(per_tech_mid_edge_dict)
 
     node_scatter_dict = {
@@ -289,12 +294,12 @@ def plot_transmission(model, mapbox_access_token=None):
         v_coord: [coordinates.loc[dict(locs=loc, coordinates=v_coord)].item()
                   for loc in coordinates.locs],
         'text': [loc.item() for loc in coordinates.locs],
-        'name':'Locations',
+        'name': 'Locations',
         'type': scatter_type,
         'legendgroup': 'locations',
         'mode': 'markers',
         'hoverinfo': 'text',
-        'marker': {'symbol':'square', 'size':10}
+        'marker': {'symbol': 'square', 'size': 10}
     }
 
     data.append(node_scatter_dict)
