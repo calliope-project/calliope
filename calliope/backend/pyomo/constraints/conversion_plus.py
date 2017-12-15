@@ -21,48 +21,57 @@ def load_conversion_plus_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     backend_model.balance_conversion_plus_primary_constraint = po.Constraint(
-        backend_model.loc_techs_conversion_plus, backend_model.timesteps,
+        backend_model.loc_techs_balance_conversion_plus_primary_constraint,
+        backend_model.timesteps,
         rule=balance_conversion_plus_primary_constraint_rule
     )
 
     backend_model.carrier_production_max_conversion_plus_constraint = po.Constraint(
-        backend_model.loc_techs_conversion_plus, backend_model.timesteps,
+        backend_model.loc_techs_carrier_production_max_conversion_plus_constraint,
+        backend_model.timesteps,
         rule=carrier_production_max_conversion_plus_constraint_rule
     )
-    backend_model.carrier_production_min_conversion_plus_constraint = po.Constraint(
-        backend_model.loc_techs_conversion_plus, backend_model.timesteps,
-        rule=carrier_production_min_conversion_plus_constraint_rule
-    )
 
-    if hasattr(backend_model, 'loc_techs_om_cost_conversion_plus'):
+    if 'carrier_production_min_conversion_plus_constraint' in sets:
+        backend_model.carrier_production_min_conversion_plus_constraint = po.Constraint(
+            backend_model.loc_techs_carrier_production_min_conversion_plus_constraint,
+            backend_model.timesteps,
+            rule=carrier_production_min_conversion_plus_constraint_rule
+        )
+
+    if 'loc_techs_cost_var_conversion_plus_constraint' in sets:
         backend_model.cost_var_conversion_plus_constraint = po.Constraint(
-            backend_model.costs, backend_model.loc_techs_om_cost_conversion_plus,
+            backend_model.costs, backend_model.loc_techs_cost_var_conversion_plus_constraint,
             backend_model.timesteps,
             rule=cost_var_conversion_plus_constraint_rule
         )
 
-    if 'loc_techs_in_2' in sets:
+    if 'loc_techs_balance_conversion_plus_in_2_constraint' in sets:
         backend_model.balance_conversion_plus_in_2_constraint = po.Constraint(
-            backend_model.loc_techs_in_2, backend_model.timesteps,
-            rule=call_rule('in_2')
+            ['in_2'], backend_model.loc_techs_balance_conversion_plus_in_2_constraint,
+            backend_model.timesteps,
+            rule=balance_conversion_plus_tiers_constraint_rule
         )
 #
-    if 'loc_techs_in_3' in sets:
+    if 'loc_techs_balance_conversion_plus_in_3_constraint' in sets:
         backend_model.balance_conversion_plus_in_3_constraint = po.Constraint(
-            backend_model.loc_techs_in_3, backend_model.timesteps,
-            rule=call_rule('in_3')
+            ['in_3'], backend_model.loc_techs_balance_conversion_plus_in_3_constraint,
+            backend_model.timesteps,
+            rule=balance_conversion_plus_tiers_constraint_rule
         )
 #
-    if 'loc_techs_out_2' in sets:
+    if 'loc_techs_balance_conversion_plus_out_2_constraint' in sets:
         backend_model.balance_conversion_plus_out_2_constraint = po.Constraint(
-            backend_model.loc_techs_out_2, backend_model.timesteps,
-            rule=call_rule('out_2')
+            ['out_2'], backend_model.loc_techs_balance_conversion_plus_out_2_constraint,
+            backend_model.timesteps,
+            rule=balance_conversion_plus_tiers_constraint_rule
         )
 #
-    if 'loc_techs_out_3' in sets:
+    if 'loc_techs_balance_conversion_plus_out_3_constraint' in sets:
         backend_model.balance_conversion_plus_out_3_constraint = po.Constraint(
-            backend_model.loc_techs_out_3, backend_model.timesteps,
-            rule=call_rule('out_3')
+            ['out_3'], backend_model.loc_techs_balance_conversion_plus_out_3_constraint,
+            backend_model.timesteps,
+            rule=balance_conversion_plus_tiers_constraint_rule
         )
 
 
@@ -110,20 +119,16 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
     timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
 
-    if not min_use:
-        return po.Constraint.NoConstraint
+    loc_tech_carriers_out = split_comma_list(get_param(
+        backend_model, 'lookup_loc_techs_conversion_plus', ('out', loc_tech)
+    ))
 
-    else:
-        loc_tech_carriers_out = split_comma_list(get_param(
-            backend_model, 'lookup_loc_techs_conversion_plus', ('out', loc_tech)
-        ))
+    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
+                for loc_tech_carrier in loc_tech_carriers_out)
 
-        carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
-                    for loc_tech_carrier in loc_tech_carriers_out)
-
-        return carrier_prod >= (
-            timestep_resolution * backend_model.energy_cap[loc_tech] * min_use
-        )
+    return carrier_prod >= (
+        timestep_resolution * backend_model.energy_cap[loc_tech] * min_use
+    )
 
 
 def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, timestep):
@@ -159,27 +164,23 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
             backend_model.cost_var_rhs[cost, loc_tech, timestep])
 
 
-def call_rule(tier):
+def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech, timestep):
 
-    def balance_conversion_plus_tiers_constraint_rule(backend_model, loc_tech, timestep):
+    primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
 
-        primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
+    loc_tech_carriers_1 = split_comma_list(get_param(
+        backend_model, 'lookup_loc_techs_conversion_plus', (primary_tier, loc_tech)
+    ))
+    loc_tech_carriers_2 = split_comma_list(get_param(
+        backend_model, 'lookup_loc_techs_conversion_plus', (tier, loc_tech)
+    ))
 
-        loc_tech_carriers_1 = split_comma_list(get_param(
-            backend_model, 'lookup_loc_techs_conversion_plus', (primary_tier, loc_tech)
-        ))
-        loc_tech_carriers_2 = split_comma_list(get_param(
-            backend_model, 'lookup_loc_techs_conversion_plus', (tier, loc_tech)
-        ))
+    c_1 = sum(decision_variable[loc_tech_carrier, timestep]
+        / get_param(backend_model, 'carrier_ratios', (primary_tier, loc_tech_carrier))
+        for loc_tech_carrier in loc_tech_carriers_1)
+    c_2 = sum(decision_variable[loc_tech_carrier, timestep]
+        / get_param(backend_model, 'carrier_ratios', (tier, loc_tech_carrier))
+        for loc_tech_carrier in loc_tech_carriers_2)
+    c_min = get_param(backend_model, 'carrier_ratios_min', (tier))
 
-        c_1 = sum(decision_variable[loc_tech_carrier, timestep]
-            / get_param(backend_model, 'carrier_ratios', (primary_tier, loc_tech_carrier))
-            for loc_tech_carrier in loc_tech_carriers_1)
-        c_2 = sum(decision_variable[loc_tech_carrier, timestep]
-            / get_param(backend_model, 'carrier_ratios', (tier, loc_tech_carrier))
-            for loc_tech_carrier in loc_tech_carriers_2)
-        c_min = get_param(backend_model, 'carrier_ratios_min', (tier))
-
-        return c_1 * c_min == c_2
-
-    return balance_conversion_plus_tiers_constraint_rule
+    return c_1 * c_min == c_2

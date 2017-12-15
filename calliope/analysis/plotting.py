@@ -15,6 +15,7 @@ import plotly.offline as pltly
 import plotly.graph_objs as go
 
 from calliope import exceptions
+from calliope.analysis.util import get_zoom
 
 
 def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
@@ -147,6 +148,8 @@ def plot_transmission(model, mapbox_access_token=None):
     colors = model._model_data.colors
     names = model._model_data.names
 
+    plot_width = 1000
+
     def _get_data(var, sum_dims=None):
         var_da = model.get_formatted_array(var).rename({'locs': 'locs_to'})
 
@@ -196,6 +199,16 @@ def plot_transmission(model, mapbox_access_token=None):
 
         return filled_list
 
+    def _get_centre(coordinates):
+        """
+        Get centre of a map based on given lat and lon coordinates
+        """
+        centre = (coordinates.max(dim='locs') + coordinates.min(dim='locs')) / 2
+
+        return dict(lat=centre.loc[dict(coordinates='lat')].item(),
+                    lon=centre.loc[dict(coordinates='lon')].item())
+
+
     energy_cap = _get_data('energy_cap')
     carrier_prod = _get_data('carrier_prod', sum_dims=['timesteps', 'carriers'])
     carrier_con = _get_data('carrier_con', sum_dims=['timesteps', 'carriers'])
@@ -208,11 +221,8 @@ def plot_transmission(model, mapbox_access_token=None):
             layout_dict = dict(
                 mapbox=dict(
                     accesstoken=mapbox_access_token,
-                    center=dict(
-                        lat=coordinates.loc[dict(coordinates='lat')].mean().item(),
-                        lon=coordinates.loc[dict(coordinates='lon')].mean().item()
-                    ),
-                    zoom=4,
+                    center=_get_centre(coordinates),
+                    zoom=get_zoom(coordinates, plot_width),
                     style='light'
                 )
             )
@@ -237,7 +247,7 @@ def plot_transmission(model, mapbox_access_token=None):
                     resolution=50,
                     landcolor="rgba(240, 240, 240, 0.8)",
                     oceancolor='#aec6cf',
-                    subunitcolo="blue",
+                    subunitcolor="blue",
                     countrycolor="green",
                     countrywidth=0.5,
                     subunitwidth=0.5,
@@ -300,16 +310,18 @@ def plot_transmission(model, mapbox_access_token=None):
         'legendgroup': 'locations',
         'mode': 'markers',
         'hoverinfo': 'text',
-        'marker': {'symbol': 'square', 'size': 10}
+        'marker': {'symbol': 'square', 'size': 8, 'color': 'grey'}
     }
 
     data.append(node_scatter_dict)
 
     layout_dict.update(dict(
+        width=plot_width,
         title=model._model_data.attrs['model.name'],
         autosize=True,
         hovermode='closest',
         showlegend=True,
+        legend=dict(orientation='h', y=1.01)
     ))
 
     fig = go.Figure(data=data, layout=layout_dict)

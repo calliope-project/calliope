@@ -58,7 +58,7 @@ def lookup_loc_carriers(model_run):
             i for i in
             model_run.sets['loc_tech_carriers_prod'] +
             model_run.sets['loc_tech_carriers_con']
-            if loc_carrier == i.split("::", 1)[0] + "::" + i.rsplit("::", 1)[1]
+            if loc_carrier == '{0}::{2}'.format(*i.split("::"))
         ))
         data.append(",".join(loc_tech_carrier))
     lookup_loc_carriers_dict['data'] = data

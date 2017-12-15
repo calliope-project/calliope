@@ -18,52 +18,61 @@ from calliope.backend.pyomo.util import \
 
 
 def load_energy_balance_constraints(backend_model):
-    model_data_dict = backend_model.__calliope_model_data__
+    sets = backend_model.__calliope_model_data__['sets']
 
-    backend_model.system_balance = po.Expression(
-        backend_model.loc_carriers, backend_model.timesteps,
-        initialize=0.0
-    )
 
-    backend_model.system_balance_constraint = po.Constraint(
-        backend_model.loc_carriers, backend_model.timesteps,
-        rule=system_balance_constraint_rule
-    )
+    if 'loc_carriers_system_balance_constraint' in sets:
+        backend_model.system_balance = po.Expression(
+            backend_model.loc_carriers_system_balance_constraint,
+            backend_model.timesteps,
+            initialize=0.0
+        )
 
-    # FIXME: add export_balance_constraint
+        backend_model.system_balance_constraint = po.Constraint(
+            backend_model.loc_carriers_system_balance_constraint,
+            backend_model.timesteps,
+            rule=system_balance_constraint_rule
+        )
 
-    if 'loc_techs_finite_resource_supply' in model_data_dict['sets']:
+    if 'loc_techs_balance_supply_constraint' in sets:
         backend_model.balance_supply_constraint = po.Constraint(
-            backend_model.loc_techs_finite_resource_supply, backend_model.timesteps,
+            backend_model.loc_techs_balance_supply_constraint,
+            backend_model.timesteps,
             rule=balance_supply_constraint_rule
         )
 
-    if 'loc_techs_finite_resource_demand' in model_data_dict['sets']:
+    if 'loc_techs_balance_demand_constraint' in sets:
         backend_model.balance_demand_constraint = po.Constraint(
-            backend_model.loc_techs_finite_resource_demand, backend_model.timesteps,
+            backend_model.loc_techs_balance_demand_constraint,
+            backend_model.timesteps,
             rule=balance_demand_constraint_rule
         )
 
-    if 'loc_techs_transmission' in model_data_dict['sets']:
+    if 'loc_techs_balance_transmission_constraint' in sets:
         backend_model.balance_transmission_constraint = po.Constraint(
-            backend_model.loc_techs_transmission, backend_model.timesteps,
+            backend_model.loc_techs_balance_transmission_constraint,
+            backend_model.timesteps,
             rule=balance_transmission_constraint_rule
         )
 
-    if 'loc_techs_supply_plus' in model_data_dict['sets']:
+    if 'loc_techs_resource_availability_supply_plus_constraint' in sets:
         backend_model.balance_supply_plus_constraint = po.Constraint(
-            backend_model.loc_techs_supply_plus, backend_model.timesteps,
+            backend_model.loc_techs_resource_availability_supply_plus_constraint,
+            backend_model.timesteps,
             rule=balance_supply_plus_constraint_rule
         )
 
+    if 'loc_techs_balance_supply_plus_constraint' in sets:
         backend_model.resource_availability_supply_plus_constraint = po.Constraint(
-            backend_model.loc_techs_finite_resource_supply_plus, backend_model.timesteps,
+            backend_model.loc_techs_balance_supply_plus_constraint,
+            backend_model.timesteps,
             rule=resource_availability_supply_plus_constraint_rule
         )
 
-    if 'loc_techs_storage' in model_data_dict['sets']:
+    if 'loc_techs_balance_storage_constraint' in sets:
         backend_model.balance_storage_constraint = po.Constraint(
-            backend_model.loc_techs_storage, backend_model.timesteps,
+            backend_model.loc_techs_balance_storage_constraint,
+            backend_model.timesteps,
             rule=balance_storage_constraint_rule
         )
 
@@ -71,7 +80,7 @@ def load_energy_balance_constraints(backend_model):
 def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
-    backend_model.system_balance[loc_carrier, timestep].expr += (
+    backend_model.system_balance[loc_carrier, timestep].expr = (
         sum(backend_model.carrier_prod[loc_tech_carrier, timestep] for loc_tech_carrier in prod) +
         sum(backend_model.carrier_con[loc_tech_carrier, timestep] for loc_tech_carrier in con)
     )
@@ -119,7 +128,7 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
     if loc_tech in backend_model.loc_techs_area:
-        r_avail = resource * resource_scale * backend_model.r_area[loc_tech]
+        r_avail = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
         r_avail = resource * resource_scale
 

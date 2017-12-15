@@ -18,32 +18,39 @@ from calliope.backend.pyomo.util import \
 
 
 def load_cost_constraints(backend_model):
-    model_data_dict = backend_model.__calliope_model_data__
+    sets = backend_model.__calliope_model_data__['sets']
 
-    backend_model.cost_constraint = po.Constraint(
-        backend_model.costs,
-        backend_model.loc_techs_cost,
-        rule=cost_constraint_rule
-    )
+    if 'loc_techs_cost_constraint' in sets:
+        backend_model.cost_constraint = po.Constraint(
+            backend_model.costs,
+            backend_model.loc_techs_cost,
+            rule=cost_constraint_rule
+        )
 
-    if 'loc_techs_investment_cost' in model_data_dict['sets']:
+    if 'loc_techs_cost_investment_constraint' in sets:
+        backend_model.cost_investment_rhs = po.Expression(
+            backend_model.costs,
+            backend_model.loc_techs_cost_investment_constraint,
+            initialize=0.0
+        )
+
         backend_model.cost_investment_constraint = po.Constraint(
             backend_model.costs,
-            backend_model.loc_techs_investment_cost,
+            backend_model.loc_techs_cost_investment_constraint,
             rule=cost_investment_constraint_rule
         )
 
-    if 'loc_techs_om_cost' in model_data_dict['sets']:
+    if 'loc_techs_cost_var_constraint' in sets:
         backend_model.cost_var_rhs = po.Expression(
             backend_model.costs,
-            backend_model.loc_techs_om_cost,
+            backend_model.loc_techs_cost_var_constraint,
             backend_model.timesteps,
             initialize=0.0
         )
 
         backend_model.cost_var_constraint = po.Constraint(
             backend_model.costs,
-            backend_model.loc_techs_om_cost,
+            backend_model.loc_techs_cost_var_constraint,
             backend_model.timesteps,
             rule=cost_var_constraint_rule
         )
@@ -56,13 +63,15 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
         cost_investment = 0
 
     if loc_tech in backend_model.loc_techs_om_cost:
-        cost_var = sum(backend_model.cost_var[cost, loc_tech, timestep] for timestep in backend_model.timesteps)
+        cost_var = sum(backend_model.cost_var[cost, loc_tech, timestep]
+                       for timestep in backend_model.timesteps)
     else:
         cost_var = 0
 
     return (
         backend_model.cost[cost, loc_tech] == cost_investment + cost_var
     )
+
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     model_data_dict = backend_model.__calliope_model_data__
@@ -88,22 +97,13 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_om_annual_investment_fraction = get_param(backend_model, 'cost_om_annual_investment_fraction', (cost, loc_tech))
     cost_om_annual = get_param(backend_model, 'cost_om_annual', (cost, loc_tech))
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_purchase'):
-        cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
-        cost_of_purchase = backend_model.purchased[loc_tech] * cost_purchase
-    elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp'):
-        cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
-        cost_of_purchase = backend_model.units[loc_tech] * cost_purchase
-    else:
-        cost_of_purchase = 0
-
     ts_weight = get_timestep_weight(backend_model)
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
 
     cost_con = (
         depreciation_rate * ts_weight *
         (cost_energy_cap + cost_storage_cap + cost_resource_cap +
-         cost_resource_area + cost_of_purchase)
+         cost_resource_area)
     )
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
@@ -113,9 +113,13 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_fractional_om = cost_om_annual_investment_fraction * cost_con
     cost_fixed_om = cost_om_annual * backend_model.energy_cap[loc_tech] * ts_weight
 
+    backend_model.cost_investment_rhs[cost, loc_tech].expr = (
+        cost_fractional_om + cost_fixed_om + cost_con
+    )
+
     return (
         backend_model.cost_investment[cost, loc_tech] ==
-        cost_fractional_om + cost_fixed_om + cost_con
+        backend_model.cost_investment_rhs[cost, loc_tech]
     )
 
 

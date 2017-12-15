@@ -14,9 +14,7 @@ import json
 
 import xarray as xr
 import numpy as np
-import pandas as pd
 
-from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.core.preprocess import checks
@@ -68,6 +66,7 @@ def build_model_data(model_run, debug=False):
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
+
     add_lookup_arrays(data, model_run)
 
     if debug:
@@ -88,7 +87,10 @@ def add_sets(model_run):
     coords = dict()
     for key, value in model_run.sets.items():
         if value:
-            coords[key] = value  # turn set into list
+            coords[key] = value
+    for key, value in model_run.constraint_sets.items():
+        if value:
+            coords[key] = value
     return coords
 
 

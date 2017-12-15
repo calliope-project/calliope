@@ -103,6 +103,10 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     data_new_scaled : xarray.Dataset
 
     """
+
+    # Save all coordinates, to ensure they can be added back in after clustering
+    data_coords = data.copy().coords
+    del data_coords['timesteps']
     # Only apply clustering function on subset of masked timesteps
     if timesteps is None:
         data_to_cluster = data
@@ -114,6 +118,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
         i for i in data.variables
         if 'timesteps' not in data[i].dims or 'timestep_' in i
     ])
+
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
 
@@ -138,6 +143,10 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
         data_new = _copy_non_t_vars(data, data_new)
         data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
         data_new = _copy_non_t_vars(data, data_new)
+
+    # It's now safe to add the original coordiantes back in (preserving all the
+    # loc_tech sets that aren't used to index a variable in the DataArray)
+    data_new.update(data_coords)
 
     # Scale the new/combined data so that the mean for each (x, y, variable)
     # combination matches that from the original data

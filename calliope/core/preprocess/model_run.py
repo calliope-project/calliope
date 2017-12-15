@@ -20,7 +20,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.core.preprocess import locations, sets, checks
+from calliope.core.preprocess import locations, sets, checks, constraint_sets
 
 
 # Output of: sns.color_palette('cubehelix', 10).as_hex()
@@ -419,6 +419,7 @@ def generate_model_run(config, debug_comments):
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
+    model_run['constraint_sets'] = constraint_sets.generate_constraint_sets(model_run)
 
     # 7) Grab additional relevant bits from run and model config
     model_run['run'] = config['run']

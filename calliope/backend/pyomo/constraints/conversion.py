@@ -19,13 +19,13 @@ def load_conversion_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     backend_model.balance_conversion_constraint = po.Constraint(
-        backend_model.loc_techs_conversion, backend_model.timesteps,
+        backend_model.loc_techs_balance_conversion_constraint, backend_model.timesteps,
         rule=balance_conversion_constraint_rule
     )
 
-    if hasattr(backend_model, 'loc_techs_om_cost_conversion'):
+    if 'loc_techs_cost_var_conversion_constraint' in sets:
         backend_model.cost_var_conversion_constraint = po.Constraint(
-            backend_model.costs, backend_model.loc_techs_om_cost_conversion,
+            backend_model.costs, backend_model.loc_techs_cost_var_conversion_constraint,
             backend_model.timesteps,
             rule=cost_var_conversion_constraint_rule
         )

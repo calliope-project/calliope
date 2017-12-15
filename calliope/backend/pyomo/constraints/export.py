@@ -19,24 +19,32 @@ from calliope.backend.pyomo.util import \
 
 
 def load_export_constraints(backend_model):
-    model_data_dict = backend_model.__calliope_model_data__
+    sets = backend_model.__calliope_model_data__['sets']
 
-    for loc_carrier, timestep in backend_model.loc_carriers * backend_model.timesteps:
-        update_system_balance_constraint(backend_model, loc_carrier, timestep)
+    if 'loc_carriers_update_system_balance_constraint' in sets:
+        for loc_carrier, timestep in (
+            backend_model.loc_carriers_update_system_balance_constraint
+            * backend_model.timesteps):
+            update_system_balance_constraint(backend_model, loc_carrier, timestep)
 
-    backend_model.export_balance_constraint = po.Constraint(
-        backend_model.loc_tech_carriers_export, backend_model.timesteps,
-        rule=export_balance_constraint_rule
-    )
+    if 'loc_tech_carriers_export_balance_constraint' in sets:
+        backend_model.export_balance_constraint = po.Constraint(
+            backend_model.loc_tech_carriers_export_balance_constraint,
+            backend_model.timesteps,
+            rule=export_balance_constraint_rule
+        )
 
-    for cost, loc_tech, timestep in (backend_model.costs *
-        backend_model.loc_techs_costs_export * backend_model.timesteps):
-        update_costs_var_constraint(backend_model, cost, loc_tech, timestep)
+    if 'loc_techs_update_costs_var_constraint' in sets:
+        for cost, loc_tech, timestep in (backend_model.costs
+            * backend_model.loc_techs_update_costs_var_constraint
+            * backend_model.timesteps):
+            update_costs_var_constraint(backend_model, cost, loc_tech, timestep)
 
-    backend_model.export_max_constraint = po.Constraint(
-        backend_model.loc_tech_carriers_export, backend_model.timesteps,
-        rule=export_max_constraint_rule
-    )
+    if 'loc_tech_carriers_export_max_constraint' in sets:
+        backend_model.export_max_constraint = po.Constraint(
+            backend_model.loc_tech_carriers_export_max_constraint, backend_model.timesteps,
+            rule=export_max_constraint_rule
+        )
 
 
 def update_system_balance_constraint(backend_model, loc_carrier, timestep):

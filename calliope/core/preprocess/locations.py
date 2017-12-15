@@ -323,6 +323,20 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
                     '{}.links.{}.techs.{}.costs.{}'.format(loc_from, loc_to, tech_name, k),
                     'Includes value computed from energy_cap_per_distance'
                 )
+            elif 'purchase_per_distance' in k:
+                purchase_costs_per_distance = (
+                    tech_settings.costs.get_key(k) *
+                    tech_settings.distance
+                )
+                tech_settings.costs[k.split('.')[0]].purchase = (
+                    tech_settings.costs[k.split('.')[0]].get_key('purchase', 0) +
+                    purchase_costs_per_distance
+                )
+                tech_settings.costs.del_key(k)
+                locations_comments.set_key(
+                    '{}.links.{}.techs.{}.costs.{}'.format(loc_from, loc_to, tech_name, k),
+                    'Includes value computed from purchase_per_distance'
+                )
 
     return tech_settings
 
@@ -347,8 +361,6 @@ def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
                 '{} does not specify an interest rate for {} - '
                 'setting interest rate to zero.'.format(tech_id, cost)
             )
-            print(tech_id)
-            print(tech_config)
             dep = 1 / plant_life
         else:
             dep = (

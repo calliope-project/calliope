@@ -22,7 +22,7 @@ model:
     timeseries_data_path: null  # Path to time series data
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
-    subset_time: []  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
+    subset_time: null  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
     objective: 'cost_minimization'
     system_margin:  # Per-carrier system margins
         power: 0
@@ -57,7 +57,7 @@ tech_groups:
             energy_prod: true
     demand:
         required_constraints: ['resource']
-        allowed_constraints: ['energy_con', 'resource', 'force_resource', 'resource_unit', 'resource_scale', 'resource_scale_to_peak']
+        allowed_constraints: ['energy_con', 'resource', 'force_resource', 'resource_unit', 'resource_scale', 'resource_scale_to_peak', 'resource_area_equals']
         allowed_costs: []
         essentials:
             parent: null
@@ -95,8 +95,8 @@ tech_groups:
             storage_cap_max: inf
     transmission:
         required_constraints: [['energy_cap_max', 'energy_cap_equals']]
-        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_con', 'energy_prod', 'energy_eff_per_distance', 'energy_eff']
-        allowed_costs: ['interest_rate', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'depreciation_rate']
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_con', 'energy_prod', 'energy_eff_per_distance', 'energy_eff', 'one_way']
+        allowed_costs: ['interest_rate', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'purchase_per_distance', 'depreciation_rate']
         essentials:
                 parent: null
                 stack_weight: 0
