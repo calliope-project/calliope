@@ -52,21 +52,21 @@ def load_conversion_plus_constraints(backend_model):
             backend_model.timesteps,
             rule=balance_conversion_plus_tiers_constraint_rule
         )
-#
+
     if 'loc_techs_balance_conversion_plus_in_3_constraint' in sets:
         backend_model.balance_conversion_plus_in_3_constraint = po.Constraint(
             ['in_3'], backend_model.loc_techs_balance_conversion_plus_in_3_constraint,
             backend_model.timesteps,
             rule=balance_conversion_plus_tiers_constraint_rule
         )
-#
+
     if 'loc_techs_balance_conversion_plus_out_2_constraint' in sets:
         backend_model.balance_conversion_plus_out_2_constraint = po.Constraint(
             ['out_2'], backend_model.loc_techs_balance_conversion_plus_out_2_constraint,
             backend_model.timesteps,
             rule=balance_conversion_plus_tiers_constraint_rule
         )
-#
+
     if 'loc_techs_balance_conversion_plus_out_3_constraint' in sets:
         backend_model.balance_conversion_plus_out_3_constraint = po.Constraint(
             ['out_3'], backend_model.loc_techs_balance_conversion_plus_out_3_constraint,
@@ -76,6 +76,9 @@ def load_conversion_plus_constraints(backend_model):
 
 
 def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Balance energy carrier consumption and production for carrier_in and carrier_out
+    """
     model_dict_data = backend_model.__calliope_model_data__['data']
 
     loc_tech_carriers_out = split_comma_list(get_param(
@@ -99,7 +102,7 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
 
 def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_tech, timestep):
     """
-    Set maximum carrier production. All technologies.
+    Set maximum conversion_plus carrier production.
     """
     timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
     loc_tech_carriers_out = split_comma_list(get_param(
@@ -114,7 +117,7 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
 
 def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_tech, timestep):
     """
-    Set maximum carrier production. All technologies.
+    Set minimum conversion_plus carrier production.
     """
     timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
@@ -132,6 +135,9 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
 
 
 def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, timestep):
+    """
+    Add time-varying conversion_plus technology costs
+    """
     model_data_dict = backend_model.__calliope_model_data__
     weight = model_data_dict['data']['timestep_weights'][timestep]
 
@@ -165,7 +171,10 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
 
 
 def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech, timestep):
-
+    """
+    Force all carrier_in_2/carrier_in_3 and carrier_out_2/carrier_out_3 to follow
+    carrier_in and carrier_out (respectively).
+    """
     primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
 
     loc_tech_carriers_1 = split_comma_list(get_param(

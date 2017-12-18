@@ -143,7 +143,6 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
     Set an additional energy capacity constraint on storage technologies,
     based on their use of `charge_rate`
     """
-
     energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
     charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
 
@@ -153,18 +152,24 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
 
 
 def resource_capacity_constraint_rule(backend_model, loc_tech):
+    """
+    Add upper and lower bounds for resource_cap
+    """
     return get_capacity_constraint(backend_model, 'resource_cap', loc_tech)
 
 
 def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, loc_tech):
+    """
+    Add equality constraint for resource_cap to equal energy_cap, for any technologies
+    which have defined resource_cap_equals_energy_cap
+    """
     return backend_model.resource_cap[loc_tech] == backend_model.energy_cap[loc_tech]
 
 
 def resource_area_constraint_rule(backend_model, loc_tech):
     """
-    Set maximum resource_area.
+    Set upper and lower bounds for resource_area.
     """
-
     energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
@@ -177,6 +182,10 @@ def resource_area_constraint_rule(backend_model, loc_tech):
 
 
 def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
+    """
+    Add equality constraint for resource_area to equal a percentage of energy_cap,
+    for any technologies which have defined resource_area_per_energy_cap
+    """
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
     return (backend_model.resource_area[loc_tech] ==
@@ -184,6 +193,10 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
 
 
 def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
+    """
+    Set upper bound on use of area for all locations which have `available_area`
+    constraint set. Does not consider resource_area applied to demand technologies
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
     available_area = model_data_dict['available_area'][loc]
 
@@ -196,4 +209,7 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
 
 
 def energy_capacity_constraint_rule(backend_model, loc_tech):
+    """
+    Set upper and lower bounds for energy_cap.
+    """
     return get_capacity_constraint(backend_model, 'energy_cap', loc_tech)

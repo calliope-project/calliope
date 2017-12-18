@@ -81,12 +81,9 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
     )
 
 
-# FIXME: should this be only built over demand? All other technologies have an
-# energy balance constraint forcing carrier_con to be a function of carrier_prod
-# (so are limited by the carrier_production_max_constraint_rule).
 def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
-    Set maximum carrier consumption. All technologies.
+    Set maximum carrier consumption for demand, storage, and transmission techs
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
@@ -99,7 +96,7 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
 
 def resource_max_constraint_rule(backend_model, loc_tech, timestep):
     """
-    Set maximum resource supply. Supply_plus techs only.
+    Set maximum resource consumed by supply_plus techs
     """
     timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
 

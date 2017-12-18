@@ -28,6 +28,7 @@ def load_cost_constraints(backend_model):
         )
 
     if 'loc_techs_cost_investment_constraint' in sets:
+        # Right-hand side expression can be later updated by MILP investment costs
         backend_model.cost_investment_rhs = po.Expression(
             backend_model.costs,
             backend_model.loc_techs_cost_investment_constraint,
@@ -41,13 +42,16 @@ def load_cost_constraints(backend_model):
         )
 
     if 'loc_techs_cost_var_constraint' in sets:
+        # Right-hand side expression can be later updated by export costs/revenue
         backend_model.cost_var_rhs = po.Expression(
             backend_model.costs,
-            backend_model.loc_techs_cost_var_constraint,
+            backend_model.loc_techs_om_cost,
             backend_model.timesteps,
             initialize=0.0
         )
 
+        # Constraint is built over a different loc_techs set to expression, as
+        # it is updated in conversion.py and conversion_plus.py constraints
         backend_model.cost_var_constraint = po.Constraint(
             backend_model.costs,
             backend_model.loc_techs_cost_var_constraint,
@@ -57,6 +61,9 @@ def load_cost_constraints(backend_model):
 
 
 def cost_constraint_rule(backend_model, cost, loc_tech):
+    """
+    Combine investment and time varying costs into one cost per technology
+    """
     if loc_tech in backend_model.loc_techs_investment_cost:
         cost_investment = backend_model.cost_investment[cost, loc_tech]
     else:
@@ -74,6 +81,9 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
 
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
+    """
+    Calculate costs from capacity decision variables
+    """
     model_data_dict = backend_model.__calliope_model_data__
 
     def _get_investment_cost(capacity_decision_variable, calliope_set):
@@ -124,11 +134,9 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
 
 
 def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
-
-    if (loc_tech_is_in(backend_model, loc_tech, 'loc_techs_conversion') or
-        loc_tech_is_in(backend_model, loc_tech, 'loc_techs_conversion_plus')):
-        return po.Constraint.Skip
-
+    """
+    Calculate costs from time-varying decision variables
+    """
     model_data_dict = backend_model.__calliope_model_data__
 
     cost_om_prod = get_param(backend_model, 'cost_om_prod', (cost, loc_tech, timestep))

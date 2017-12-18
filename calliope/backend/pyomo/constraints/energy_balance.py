@@ -78,6 +78,10 @@ def load_energy_balance_constraints(backend_model):
 
 
 def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
+    """
+    System balance ensures that, within each location, the production and
+    consumption of each carrier is balanced.
+    """
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
     backend_model.system_balance[loc_carrier, timestep].expr = (
@@ -88,10 +92,10 @@ def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
     return backend_model.system_balance[loc_carrier, timestep] == 0
 
 
-# FIXME: add export_balance_constraint_rule
-
-
 def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Limit production from supply techs to their available resource
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
@@ -117,6 +121,9 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
 
 def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Limit consumption from demand techs to their required resource
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
@@ -128,17 +135,20 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
     if loc_tech in backend_model.loc_techs_area:
-        r_avail = resource * resource_scale * backend_model.resource_area[loc_tech]
+        required_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
-        r_avail = resource * resource_scale
+        required_resource = resource * resource_scale
 
     if force_resource:
-        return carrier_con == r_avail
+        return carrier_con == required_resource
     else:
-        return carrier_con >= r_avail
+        return carrier_con >= required_resource
 
 
 def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Limit production from supply_plus techs to their available resource
+    """
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
     resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
@@ -156,6 +166,9 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
 
 
 def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Balance carrier production and consumption of transmission technologies
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
@@ -174,6 +187,10 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
 
 
 def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Balance carrier production and resource consumption of supply_plus technologies
+    alongside any use of resource storage
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
     sets = backend_model.__calliope_model_data__['sets']
 
@@ -212,6 +229,10 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 
 
 def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Balance carrier production and consumption of storage technologies,
+    alongside any use of the stored volume
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))

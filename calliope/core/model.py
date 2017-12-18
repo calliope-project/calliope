@@ -10,7 +10,8 @@ Implements the core Model class.
 """
 
 import numpy as np
-import calliope.analysis.plotting as plot
+
+from calliope.analysis import plotting as plot
 
 from calliope.core import debug, io
 from calliope.core.preprocess import model_run_from_yaml, model_run_from_dict, build_model_data, apply_time_clustering

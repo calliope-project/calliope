@@ -48,6 +48,9 @@ def load_export_constraints(backend_model):
 
 
 def update_system_balance_constraint(backend_model, loc_carrier, timestep):
+    """
+    Update system balance constraint (from energy_balance.py) to include export
+    """
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
     backend_model.system_balance[loc_carrier, timestep].expr += -1 * (
@@ -59,15 +62,19 @@ def update_system_balance_constraint(backend_model, loc_carrier, timestep):
 
 
 def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
-    # Ensuring no technology can 'pass' its export capability to another
-    # technology with the same carrier_out,
-    # by limiting its export to the capacity of its production
+    """
+    Ensure no technology can 'pass' its export capability to another technology
+    with the same carrier_out, by limiting its export to the capacity of its production
+    """
 
     return (backend_model.carrier_prod[loc_tech_carrier, timestep] >=
             backend_model.carrier_export[loc_tech_carrier, timestep])
 
 
 def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
+    """
+    Update time varying cost constraint (from costs.py) to include export
+    """
     model_data_dict = backend_model.__calliope_model_data__
 
     loc_tech_carrier = model_data_dict['data']['lookup_loc_techs_export'][(loc_tech)]
