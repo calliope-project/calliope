@@ -12,13 +12,12 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import scipy.cluster.vq as vq
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
+from sklearn import cluster as sk_cluster
 
 from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
-
 
 def _stack_data(data):
     """
@@ -335,7 +334,7 @@ def map_clusters_to_data(data, clusters, how):
     return new_data
 
 
-def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
+def get_clusters_kmeans(data, tech=None, timesteps=None, k=None):
     """
     Parameters
     ----------
@@ -359,20 +358,60 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=5):
 
     X = reshape_for_clustering(data, tech)
 
-    centroids, distortion = vq.kmeans(X, k)
+    if not k:
+        k = hartigan_n_clusters(X)
+        exceptions.warn('Used Hartigan rule to get {} kmeans clusters'.format(k))
+    clustered_data = sk_cluster.KMeans(k).fit(X)
 
     # Determine the cluster membership of each day
-    day_clusters = vq.vq(X, centroids)[0]
+    day_clusters = clustered_data.labels_
 
     # Create mapping of timesteps to clusters
     clusters = pd.Series(day_clusters, index=timesteps[::timesteps_per_day])
 
     # Reshape centroids
-    centroids = reshape_clustered(centroids, data, tech)
+    centroids = reshape_clustered(clustered_data.cluster_centers_, data, tech)
 
-    return clusters, centroids
+    # Get inertia, for e.g. checking clustering with Hartigan's rule
+    inertia = clustered_data.inertia_
+
+    return clusters, centroids, inertia
 
 
+def hartigan_n_clusters(X, threshhold=10):
+    """
+    Try clustering using an sklearn.cluster method, for several cluster sizes.
+    Using Hartigan's rule, we will return the number of clusters after which
+    the benefit of clustering is low.
+    """
+    def _H_rule(inertia, inertia_plus_one, n_clusters, len_input):
+        # see http://www.dcs.bbk.ac.uk/~mirkin/papers/00357_07-216RR_mirkin.pdf
+        return ((inertia / inertia_plus_one) - 1) * (len_input - n_clusters - 1)
+
+    len_input = len(X)
+    n_clusters = 1
+    HK = threshhold + 1
+
+    while n_clusters <= len_input and HK > threshhold:
+
+        kmeans = sk_cluster.KMeans(n_clusters=n_clusters).fit(X)
+        kmeans_plus_one = sk_cluster.KMeans(n_clusters=n_clusters + 1).fit(X)
+
+        inertia = kmeans.inertia_
+        inertia_plus_one = kmeans_plus_one.inertia_
+
+        HK = _H_rule(inertia, inertia_plus_one, n_clusters, len_input)
+
+        n_clusters += 1
+
+    if HK > threshhold: # i.e. we went to the limit where n_clusters = len_input
+        exceptions.warn("Based on thresshold, number of clusters = number of dates")
+        return len_input
+    else:
+        return n_clusters - 1
+
+# TODO get hierarchical clusters using scikitlearn too
+# TODO change scipy for scikitlearn in Calliope requirements
 def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
     """
     Parameters

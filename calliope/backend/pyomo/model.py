@@ -5,7 +5,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import os
-import json
+import ruamel.yaml
 from contextlib import redirect_stdout, redirect_stderr
 
 import numpy as np
@@ -56,7 +56,8 @@ def generate_model(model_data):
     # in model_data generation such that timesteps are always last and the
     # remainder of dims are in alphabetic order
     backend_model.__calliope_model_data__ = model_data_dict
-    backend_model.__calliope_defaults__ = json.loads(model_data.attrs['defaults'])
+    backend_model.__calliope_defaults__ = ruamel.yaml.load(model_data.attrs['defaults'],
+        Loader=ruamel.yaml.Loader)
 
     # Variables
     load_function(

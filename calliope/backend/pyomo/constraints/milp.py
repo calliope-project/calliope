@@ -61,16 +61,18 @@ def load_milp_constraints(backend_model):
         )
 
     if 'loc_techs_update_costs_investment_units_constraint' in sets:
-        for loc_tech, timestep in (
-            backend_model.loc_techs_update_costs_investment_units_constraint):
+        for loc_tech, cost in (
+            backend_model.loc_techs_update_costs_investment_units_constraint
+            * backend_model.costs):
 
-            update_costs_investment_units_constraint(backend_model, loc_tech, timestep)
+            update_costs_investment_units_constraint(backend_model, cost, loc_tech,)
 
     if 'loc_techs_update_costs_investment_purchase_constraint' in sets:
-        for loc_tech, timestep in (
-            backend_model.loc_techs_update_costs_investment_purchase_constraint):
+        for loc_tech, cost in (
+            backend_model.loc_techs_update_costs_investment_purchase_constraint
+            * backend_model.costs):
 
-            update_costs_investment_purchase_constraint(backend_model, loc_tech, timestep)
+            update_costs_investment_purchase_constraint(backend_model, cost, loc_tech,)
 
     if 'loc_techs_energy_capacity_max_purchase_constraint' in sets:
         backend_model.energy_capacity_max_purchase_constraint = po.Constraint(
@@ -117,6 +119,7 @@ def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier,
         timestep_resolution * energy_cap * parasitic_eff
     )
 
+
 def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set maximum carrier production of conversion_plus MILP techs
@@ -128,12 +131,13 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, l
     ))
 
     carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
-                 for loc_tech_carrier in loc_tech_carriers_out)
+                       for loc_tech_carrier in loc_tech_carriers_out)
 
     return carrier_prod <= (
         backend_model.operating_units[loc_tech, timestep] *
         timestep_resolution * energy_cap
     )
+
 
 def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
@@ -205,7 +209,6 @@ def energy_capacity_min_purchase_constraint_rule(backend_model, loc_tech):
     binary purchase variable
     """
     energy_cap_min = get_param(backend_model, 'energy_cap_min', loc_tech)
-    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
 
     energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
     return backend_model.energy_cap[loc_tech] >= (
@@ -267,7 +270,9 @@ def update_costs_investment_units_constraint(backend_model, cost, loc_tech):
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
 
     cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
-    cost_of_purchase = backend_model.units[loc_tech] * cost_purchase
+    cost_of_purchase = (
+        backend_model.units[loc_tech] * cost_purchase * ts_weight * depreciation_rate
+    )
 
     backend_model.investment_rhs[cost, loc_tech].expr += cost_of_purchase
 
@@ -283,7 +288,9 @@ def update_costs_investment_purchase_constraint(backend_model, cost, loc_tech):
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
 
     cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
-    cost_of_purchase = backend_model.purchased[loc_tech] * cost_purchase
+    cost_of_purchase = (
+        backend_model.purchased[loc_tech] * cost_purchase * ts_weight * depreciation_rate
+    )
 
     backend_model.investment_rhs[cost, loc_tech].expr += cost_of_purchase
 

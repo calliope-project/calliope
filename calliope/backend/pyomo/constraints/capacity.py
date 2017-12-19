@@ -130,7 +130,7 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
     elif storage_cap_max:
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _max=storage_cap_max)
-    if energy_cap_max and charge_rate:
+    elif energy_cap_max and charge_rate:
         storage_cap_max = energy_cap_max * scale / charge_rate
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _max=storage_cap_max)

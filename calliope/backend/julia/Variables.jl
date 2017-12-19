@@ -2,7 +2,7 @@ module Variables
 export initialize_decision_variables
 
 using JuMP
-function initialize_decision_variables(backend_model, sets)
+function initialize_decision_variables(model_dict)
     """
     Decision variables are undefined at model initialization, the purpose of the
     optimisation is to find the values that the decision variables should take,
@@ -41,22 +41,36 @@ function initialize_decision_variables(backend_model, sets)
         technology are committed in a given timestep, at a given location
 
     """
+    backend_model = model_dict["backend_model"]
+    sets = model_dict["sets"]
+    variable_dict = Dict()
     #
     ## Variables which are always assigned
     #
 
     # Capacity
-    @variable(backend_model, energy_cap[loc_techs=sets["loc_techs"]] >= 0);
+    variable_dict["energy_cap"] = @variable(
+        backend_model,
+        energy_cap[loc_techs=sets["loc_techs"]] >= 0
+    );
 
     # Dispatch
-    @variable(backend_model, carrier_prod[loc_techs=sets["loc_tech_carriers_prod"],
-        carriers=sets["carriers"], timesteps=sets["timesteps"]] >= 0);
-    @variable(backend_model, carrier_con[loc_techs=sets["loc_tech_carriers_con"],
-        carriers=sets["carriers"], timesteps=sets["timesteps"]] <= 0);
+    variable_dict["carrier_prod"] = @variable(
+        backend_model,
+        carrier_prod[loc_tech_carriers=sets["loc_tech_carriers_prod"],
+                     timesteps=sets["timesteps"]] >= 0
+    );
+    variable_dict["carrier_con"] = @variable(
+        backend_model,
+        carrier_con[loc_tech_carriers=sets["loc_tech_carriers_con"],
+                    timesteps=sets["timesteps"]] <= 0
+    );
 
     # Costs
-    @variable(backend_model, cost[loc_techs=sets["loc_techs_cost"],
-        costs=sets["costs"]]);
+    variable_dict["cost"] = @variable(
+        backend_model,
+        cost[costs=sets["costs"], loc_techs=sets["loc_techs_cost"]]
+    );
 
     #
     ## Conditionally assigned variables
@@ -64,84 +78,97 @@ function initialize_decision_variables(backend_model, sets)
 
     if haskey(sets, "loc_techs_area")
         # Capacity
-        @variable(backend_model,
+        variable_dict["resource_area"] = @variable(
+            backend_model,
             resource_area[loc_techs=sets["loc_techs_area"]] >= 0
         );
     end
 
     if haskey(sets, "loc_techs_store")
         # Capacity
-        @variable(backend_model,
+        variable_dict["storage_cap"] = @variable(
+            backend_model,
             storage_cap[loc_techs=sets["loc_techs_store"]] >= 0
         );
         # Dispatch
-        @variable(backend_model,
+        variable_dict["storage"] = @variable(
+            backend_model,
             storage[loc_techs=sets["loc_techs_store"],
-                timesteps=sets["timesteps"]
-            ] >= 0
+                    timesteps=sets["timesteps"]] >= 0
+        );
+    end
+
+    if haskey(sets, "loc_techs_finite_resource_supply_plus")
+        # Capacity
+        variable_dict["resource_cap"] = @variable(
+            backend_model,
+            resource_cap[loc_techs=sets["loc_techs_finite_resource_supply_plus"]] >= 0
         );
     end
 
     if haskey(sets, "loc_techs_finite_resource")
-        # Capacity
-        @variable(backend_model,
-            resource_cap[loc_techs=sets["loc_techs_finite_resource"]] >= 0
-        );
         # Dispatch
-        @variable(backend_model,
-            resource[loc_techs=sets["loc_techs_finite_resource"],
-                timesteps=sets["timesteps"]
-            ]
+        variable_dict["resource_con"] = @variable(
+            backend_model,
+            resource_con[loc_techs=sets["loc_techs_finite_resource"],
+                         timesteps=sets["timesteps"]]
         );
     end
 
     if haskey(sets, "loc_techs_export")
         # Dispatch
-        @variable(backend_model,
-            carrier_export[loc_techs=["loc_techs_export"],
-                timesteps=sets["timesteps"]
-            ] >= 0
+        variable_dict["carrier_export"] = @variable(
+            backend_model,
+            carrier_export[loc_tech_carriers=sets["loc_tech_carriers_export"],
+                           timesteps=sets["timesteps"]] >= 0
         );
     end
 
-    if haskey(sets, "loc_techs_variable_costs")
+    if haskey(sets, "loc_techs_om_cost")
         # Costs
-        @variable(backend_model,
-            cost_om[loc_techs=sets["loc_techs_variable_costs"],
-                timesteps=sets["timesteps"],
-                costs=sets["costs"]
-            ]
+        variable_dict["cost_var"] = @variable(
+            backend_model,
+            cost_var[costs=sets["costs"], loc_techs=sets["loc_techs_om_cost"],
+                     timesteps=sets["timesteps"]]
         );
     end
-    if haskey(sets, "loc_techs_investment_costs")
+
+    if haskey(sets, "loc_techs_investment_cost")
         # Costs
-        @variable(backend_model,
-            cost_investment[loc_techs=sets["loc_techs_investment_costs"],
-                costs=sets["costs"]
-            ]
+        variable_dict["cost_investment"] = @variable(
+            backend_model,
+            cost_investment[costs=sets["costs"],
+                            loc_techs=sets["loc_techs_investment_cost"]]
         );
     end
 
     # Binary/Integer variables
     if haskey(sets, "loc_techs_purchase")
         # Capacity
-        @variable(backend_model,
-            purchased[loc_techs=sets["loc_techs_purchase"]], Bin
+        variable_dict["purchased"] = @variable(
+            backend_model,
+            purchased[loc_techs=sets["loc_techs_purchase"]],
+            Bin
         );
     end
 
     if haskey(sets, "loc_techs_milp")
         # Capacity
-        @variable(backend_model,
-            units[loc_techs=sets["loc_techs_milp"]] >=0, Int
+        variable_dict["units"] = @variable(
+            backend_model,
+            units[loc_techs=sets["loc_techs_milp"]] >= 0,
+            Int
         );
         # Dispatch
-        @variable(backend_model,
+        variable_dict["operating_units"] = @variable(
+            backend_model,
             operating_units[loc_techs=sets["loc_techs_milp"],
-                timesteps=sets["timesteps"]
-            ] >=0, Int
+                            timesteps=sets["timesteps"]] >= 0,
+            Int
         );
     end
+
+    return variable_dict
 end
 
 end

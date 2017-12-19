@@ -208,11 +208,15 @@ def plot_transmission(model, mapbox_access_token=None):
         return dict(lat=centre.loc[dict(coordinates='lat')].item(),
                     lon=centre.loc[dict(coordinates='lon')].item())
 
-
-    energy_cap = _get_data('energy_cap')
-    carrier_prod = _get_data('carrier_prod', sum_dims=['timesteps', 'carriers'])
-    carrier_con = _get_data('carrier_con', sum_dims=['timesteps', 'carriers'])
-    energy_flow = carrier_con.fillna(0) + carrier_prod.fillna(0)
+    if hasattr(model, 'results'):
+        energy_cap = _get_data('energy_cap')
+        carrier_prod = _get_data('carrier_prod', sum_dims=['timesteps', 'carriers'])
+        carrier_con = _get_data('carrier_con', sum_dims=['timesteps', 'carriers'])
+        energy_flow = carrier_con.fillna(0) + carrier_prod.fillna(0)
+    else:
+        energy_cap = _get_data('energy_cap_max')
+        energy_flow = energy_cap.copy()
+        energy_flow.loc[dict([])] = 0
 
     if sorted(coordinates.coordinates.values) == ['lat', 'lon']:
         h_coord, v_coord = ('lat', 'lon')

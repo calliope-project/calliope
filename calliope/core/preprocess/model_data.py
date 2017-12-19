@@ -10,7 +10,7 @@ time-varying parameters.
 
 """
 
-import json
+import ruamel.yaml
 
 import xarray as xr
 import numpy as np
@@ -383,7 +383,7 @@ def add_attributes(model_run):
 
     default_tech_dict = checks.defaults.default_tech.as_dict()
     default_location_dict = checks.defaults.default_location.as_dict()
-    attr_dict['defaults'] = json.dumps({
+    attr_dict['defaults'] = ruamel.yaml.dump({
         **default_tech_dict['constraints'],
         **{'cost_{}'.format(k): v for k, v in default_tech_dict['costs']['default'].items()},
         **default_location_dict
