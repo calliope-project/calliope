@@ -43,7 +43,7 @@ function update_system_balance_constraint(model_dict, loc_carrier, timestep)
     system_balance = model_dict["expressions"]["system_balance"]
     sets = model_dict["sets"]
     prod, con, exporting = get_loc_tech_carriers(model_dict, loc_carrier)
-    print(exporting, model_dict["backend_model"][:carrier_export])
+
     append!(system_balance[loc_carrier, timestep],
         -1 * sum(model_dict["variables"]["carrier_export"][loc_tech_carrier, timestep]
                  for loc_tech_carrier in exporting)

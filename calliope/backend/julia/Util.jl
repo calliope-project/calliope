@@ -70,7 +70,6 @@ function get_param(model_dict, param, non_time_indices, timestep=nothing)
         end
 
         if length(param_index) == length(non_time_indices)
-            #print(axes[1], "\n")
             if axes[1] == "timesteps"
                 unshift!(param_index, findin(sets["timesteps"], [timestep])[1])
             end

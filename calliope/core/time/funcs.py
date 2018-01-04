@@ -134,7 +134,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     clusters = result[0]  # Ignore other stuff returned
 
     data_new = clustering.map_clusters_to_data(data_to_cluster, clusters,
-                                                    how=how)
+                                               how=how)
 
     if timesteps is None:
         data_new = _copy_non_t_vars(data, data_new)

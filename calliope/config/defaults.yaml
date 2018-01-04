@@ -100,7 +100,7 @@ default_tech:
             om_annual_investment_fraction: 0  # Yearly O&M costs (fraction of total investment)
             om_annual: 0  # Yearly O&M costs (per kW of ``energy_cap``)
             # FIXME om_fuel is now om_con and will also be applied to techs that consume a carrier
-            om_prod:  # Fuel costs (per unit of consumption, whether that is a resource or the primary input carrier)
+            om_prod: 0  # Fuel costs (per unit of consumption, whether that is a resource or the primary input carrier)
             om_con: 0  # Variable O&M costs (per kWh of ``es_prod``)
             export: 0  # Cost of exporting excess energy (per kWh of ``export``). Usually used in the negative sense, as a subsidy.
             purchase: 0  # Cost for purchasing a technology, triggers a binary variable for that technology to say that it has been purchased

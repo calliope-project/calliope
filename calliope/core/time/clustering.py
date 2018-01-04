@@ -71,7 +71,7 @@ def reshape_for_clustering(data, loc_techs=None, variables=None):
         if loc_techs:
             loc_tech_dim = [i for i in data[var].dims if 'loc_techs' in i][0]
             relevent_loc_techs = list(
-                set(temp_data[loc_tech_dim]).intersection(loc_techs)
+                set(temp_data[loc_tech_dim].values).intersection(loc_techs)
             )
             temp_data = temp_data.loc[{loc_tech_dim: relevent_loc_techs}]
 
@@ -80,7 +80,7 @@ def reshape_for_clustering(data, loc_techs=None, variables=None):
         # reshape the array to split days and timesteps within days, now we have
         # one row of data per day
         reshaped_data = np.concatenate((reshaped_data,
-            stacked_var.values.reshape(days,
+            stacked_var.T.values.reshape(days,
                 timesteps_per_day * len(stacked_var.stacked)
             )), axis=1
         )
@@ -135,7 +135,7 @@ def reshape_clustered(clustered, data, loc_techs=None, variables=None):
         if loc_techs:
             loc_tech_dim = [i for i in data[var].dims if 'loc_techs' in i][0]
             relevent_loc_techs = list(
-                set(temp_data[loc_tech_dim]).intersection(loc_techs)
+                set(temp_data[loc_tech_dim].values).intersection(loc_techs)
             )
             temp_data = temp_data.loc[{loc_tech_dim: relevent_loc_techs}]
 
@@ -156,8 +156,8 @@ def reshape_clustered(clustered, data, loc_techs=None, variables=None):
 
         # store information in dictionary, for later conversion to Dataset
         reshaped_data[var] = {
-            'data':clustered[:, data_range].reshape(reshaped_dims),
-            'dims':['clusters', 'timesteps'] + list(non_time_dims)
+            'data': clustered[:, data_range].reshape(reshaped_dims),
+            'dims': ['clusters', 'timesteps'] + list(non_time_dims)
         }
 
         previous_last_column = last_column
@@ -327,10 +327,11 @@ def map_clusters_to_data(data, clusters, how):
     weights = (value_counts.reindex(_hourly_from_daily_index(value_counts.index))
                            .fillna(method='ffill'))
     new_data['timestep_weights'] = xr.DataArray(weights, dims=['timesteps'])
-    new_data['timestep_resolution'] = xr.DataArray(np.ones(len(new_data['timesteps']))
-                                                * (24 / ts_per_day),
-                                                dims=['timesteps'],
-                                                coords={'timesteps': new_data['timesteps']})
+    new_data['timestep_resolution'] = (
+        xr.DataArray(np.ones(len(new_data['timesteps'])) * (24 / ts_per_day),
+                     dims=['timesteps'],
+                     coords={'timesteps': new_data['timesteps']})
+    )
     return new_data
 
 
@@ -404,11 +405,12 @@ def hartigan_n_clusters(X, threshhold=10):
 
         n_clusters += 1
 
-    if HK > threshhold: # i.e. we went to the limit where n_clusters = len_input
+    if HK > threshhold:  # i.e. we went to the limit where n_clusters = len_input
         exceptions.warn("Based on thresshold, number of clusters = number of dates")
         return len_input
     else:
         return n_clusters - 1
+
 
 # TODO get hierarchical clusters using scikitlearn too
 # TODO change scipy for scikitlearn in Calliope requirements
