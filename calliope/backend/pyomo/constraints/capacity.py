@@ -84,15 +84,15 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
         _equals = scale * _equals
         _min = scale * _min
         _max = scale * _max
-    if _equals is not False and _equals is not None:
-        if np.isinf(_equals):
+    if po.value(_equals) is not False and po.value(_equals) is not None:
+        if np.isinf(po.value(_equals)):
             e = exceptions.ModelError
             raise e('Cannot use inf for {}_equals for loc:tech `{}`'.format(parameter, loc_tech))
         return decision_variable[loc_tech] == _equals
     else:
-        if np.isinf(_max):
+        if np.isinf(po.value(_max)):
             _max = None  # to disable upper bound
-        if _min == 0 and _max is None:
+        if po.value(_min) == 0 and po.value(_max) is None:
             return po.Constraint.NoConstraint
         else:
             return (_min, decision_variable[loc_tech], _max)
@@ -120,17 +120,17 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
     # FIXME: working out storage_cap_max or storage_cap_equals from e_cap_max/_equals
     # should be done in preprocessing, not here.
 
-    if storage_cap_equals:
+    if po.value(storage_cap_equals):
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _equals=storage_cap_equals)
-    elif energy_cap_equals and charge_rate:
+    elif po.value(energy_cap_equals) and po.value(charge_rate):
         storage_cap_equals = energy_cap_equals * scale / charge_rate
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _equals=storage_cap_equals)
-    elif storage_cap_max:
+    elif po.value(storage_cap_max):
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _max=storage_cap_max)
-    elif energy_cap_max and charge_rate:
+    elif po.value(energy_cap_max) and po.value(charge_rate):
         storage_cap_max = energy_cap_max * scale / charge_rate
         return get_capacity_constraint(backend_model, 'storage_cap',
                                         loc_tech, _max=storage_cap_max)
@@ -173,7 +173,7 @@ def resource_area_constraint_rule(backend_model, loc_tech):
     energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
-    if energy_cap_max == 0 and not area_per_energy_cap:
+    if po.value(energy_cap_max) == 0 and not po.value(area_per_energy_cap):
         # If a technology has no energy_cap here, we force resource_area to zero,
         # so as not to accrue spurious costs
         return backend_model.resource_area[loc_tech] == 0

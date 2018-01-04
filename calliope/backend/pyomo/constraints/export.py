@@ -103,7 +103,7 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
         operating_units = 1
 
     export_cap = get_param(backend_model, 'export_cap', loc_tech)
-    if export_cap:
+    if po.value(export_cap):
         return (backend_model.carrier_export[loc_tech_carrier, timestep] <=
                 export_cap * operating_units)
     else:
