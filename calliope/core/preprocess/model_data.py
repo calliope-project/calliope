@@ -236,6 +236,7 @@ def carriers_to_dataset(model_run):
 
     """
     carrier_tiers = model_run.sets['carrier_tiers']
+    loc_tech_dict = {k: [] for k in model_run.sets['loc_techs_conversion_plus']}
     data_dict = dict()
 
     if model_run.sets['loc_techs_conversion_plus']:
@@ -244,8 +245,9 @@ def carriers_to_dataset(model_run):
         data_dict['carrier_ratios'] = dict(
             dims=['carrier_tiers', 'loc_tech_carriers_conversion_plus'], data=[]
         )
-        data_dict['carrier_ratios_min'] = dict(dims=['carrier_tiers'], data=[])
-
+        data_dict['carrier_ratios_min'] = dict(
+            dims=['carrier_tiers', 'loc_techs_conversion_plus'], data=[]
+        )
         for carrier_tier in carrier_tiers:
             data = []
             for loc_tech_carrier in model_run.sets['loc_tech_carriers_conversion_plus']:
@@ -255,11 +257,12 @@ def carriers_to_dataset(model_run):
                         'carrier_ratios.carrier_' + carrier_tier + '.' + carrier, 1
                     )
                 )
-                # find the location of the information in the xr DataArray and
-                # replace with the carrier_ratio
                 data.append(carrier_ratio)
+                loc_tech_dict[loc + '::' + tech].append(carrier_ratio)
             data_dict['carrier_ratios']['data'].append(data)
-            data_dict['carrier_ratios_min']['data'].append(min(data))
+            data_dict['carrier_ratios_min']['data'].append(
+                [min(i) for i in loc_tech_dict.values()]
+            )
 
     return data_dict
 

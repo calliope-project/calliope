@@ -53,6 +53,7 @@ def constraint_exists(model_run, loc_tech, search_entry):
         )
     return model_run.get_key(search_string, None)
 
+
 def get_all_carriers(config, direction='both'):
     if direction == 'both':
         carrier_list = ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
@@ -65,7 +66,6 @@ def get_all_carriers(config, direction='both'):
         config.get_key('carrier_{}'.format(k), '')
         for k in carrier_list
     ]) - set([''])
-
 
 
 def split_loc_techs_transmission(transmission_string):

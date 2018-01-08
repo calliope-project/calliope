@@ -17,6 +17,8 @@ from calliope.core.util.tools import flatten_list
 from calliope.core.preprocess.util import get_all_carriers
 from calliope import exceptions
 
+import numpy as np
+
 
 _defaults_files = {
     k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
@@ -277,10 +279,39 @@ def check_final(model_run):
     return comments, warnings, errors
 
 def check_model_data(model_data):
+    """
+    Perform final checks of the completely built xarray Dataset `model_data`.
+
+    Returns
+    -------
+    comments : AttrDict
+        debug output
+    warnings : list
+        possible problems that do not prevent the model run
+        from continuing
+    errors : list
+        serious issues that should raise a ModelError
+
+    """
+    warnings, errors = [], []
+    comments = AttrDict()
     # FIXME: verify timestep consistency a la verification in get_timeres of
     # old calliope
 
-    # FIXME: ensure that no loc-tech specifies infinite resource and force_resource=True
+    # Ensure that no loc-tech specifies infinite resource and force_resource=True
+    if "force_resource" in model_data.data_vars:
+        relevant_loc_techs = [
+            i.loc_techs.item() for i in model_data.force_resource if i.item() is True
+        ]
+        forced_resource = model_data.resource.loc[
+            dict(loc_techs_finite_resource=relevant_loc_techs)
+        ]
+        conflict = forced_resource.where(forced_resource == np.inf).to_pandas().dropna()
+        if conflict.values:
+            errors.append(
+                'loc_tech(s) {} cannot have `force_resource` set as infinite '
+                'resource values are given'.format(', '.join(conflict.index))
+            )
 
     # FIXME: raise error with time clustering if it no longer fits with opmode
     # a la last section of initialize_time in old calliope
@@ -293,10 +324,32 @@ def check_model_data(model_data):
     #         msg = 'Time settings incompatible with operational mode'
     #         raise exceptions.ModelError(msg)
 
-    # FIXME ensure that if a tech has negative costs, there is a max cap defined
-
-    comments = None
-    warnings = None
-    errors = None
+    # Ensure that if a tech has negative costs, there is a max cap defined
+    # FIXME doesn't consider capapcity being set by a linked constraint e.g.
+    # `resource_cap_per_energy_cap`.
+    relevant_caps = [
+        i for i in ['energy_cap', 'storage_cap', 'resource_cap', 'resource_area']
+        if 'cost_' + i in model_data.data_vars
+    ]
+    for cap in relevant_caps:
+        relevant_loc_techs = (model_data['cost_' + cap]
+                              .where(model_data['cost_' + cap] < 0)
+                              .to_pandas().dropna().index)
+        cap_max = cap + '_max'
+        cap_equals = cap + '_equals'
+        for loc_tech in relevant_loc_techs:
+            try:
+                cap_val = model_data[cap_max][loc_tech].item()
+            except KeyError:
+                try:
+                    cap_val = model_data[cap_equals][loc_tech].item()
+                except KeyError:
+                    cap_val = np.nan
+            if np.isinf(cap_val) or np.isnan(cap_val):
+                errors.append(
+                    'loc_tech {} cannot have a negative cost_{} as the '
+                    'corresponding capacity constraint is not set'
+                    .format(loc_tech, cap)
+                )
 
     return comments, warnings, errors

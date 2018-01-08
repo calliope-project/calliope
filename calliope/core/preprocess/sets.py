@@ -387,25 +387,25 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # `conversion_plus` technologies with secondary carrier(s) out
     sets.loc_techs_out_2 = set(
         k for k in sets.loc_techs_conversion_plus if 'carrier_out_2' in
-        loc_techs_config[k].constraints.get_key('carrier_ratios', {})
+        model_run.techs[k.split('::')[1].split(':')[0]].essentials
     )
 
     # `conversion_plus` technologies with tertiary carrier(s) out
     sets.loc_techs_out_3 = set(
         k for k in sets.loc_techs_conversion_plus if 'carrier_out_3' in
-        loc_techs_config[k].constraints.get_key('carrier_ratios', {})
+        model_run.techs[k.split('::')[1].split(':')[0]].essentials
     )
 
     # `conversion_plus` technologies with secondary carrier(s) in
     sets.loc_techs_in_2 = set(
         k for k in sets.loc_techs_conversion_plus if 'carrier_in_2' in
-        loc_techs_config[k].constraints.get_key('carrier_ratios', {})
+        model_run.techs[k.split('::')[1].split(':')[0]].essentials
     )
 
     # `conversion_plus` technologies with tertiary carrier(s) in
     sets.loc_techs_in_3 = set(
         k for k in sets.loc_techs_conversion_plus if 'carrier_in_3' in
-        loc_techs_config[k].constraints.get_key('carrier_ratios', {})
+        model_run.techs[k.split('::')[1].split(':')[0]].essentials
     )
 
     ##

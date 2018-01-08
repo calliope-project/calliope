@@ -96,9 +96,7 @@ techs:
             export_carrier: power
             energy_cap_max: 1500
             energy_eff: 0.405
-            carrier_ratios:
-                carrier_out_2:
-                    heat: 0.8
+            carrier_ratios.carrier_out_2.heat: 0.8
             lifetime: 25
         costs:
             monetary:

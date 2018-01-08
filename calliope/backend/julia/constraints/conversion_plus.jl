@@ -219,7 +219,7 @@ function balance_conversion_plus_tiers_constraint_rule(backend_model, set_indice
     c_2 = sum(decision_variable[loc_tech_carrier, timestep]
         / get_param(model_dict, "carrier_ratios", [loc_tech_carrier, tier])
         for loc_tech_carrier in loc_tech_carriers_2)
-    c_min = parameters["carrier_ratios_min"][tier]
+    c_min = parameters["carrier_ratios_min"][loc_tech, tier]
 
     return @constraint(backend_model, c_1 * c_min == c_2)
 end
