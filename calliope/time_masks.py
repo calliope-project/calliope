@@ -40,7 +40,7 @@ def _concat_indices(indices):
     return pd.concat([i.to_series() for i in indices]).sort_index().index
 
 
-def _get_minmax_timestaps(series, length, n, how='max', padding=None):
+def _get_minmax_timestamps(series, length, n, how='max', padding=None):
     # Get the max/min timestamps
     group = series.groupby(pd.TimeGrouper(length)).mean()
     timesteps = []
@@ -59,7 +59,7 @@ def _get_minmax_timestaps(series, length, n, how='max', padding=None):
         if padding is not None:
             ts -= pd.Timedelta(padding)
             ts_end += pd.Timedelta(padding)
-        ts_range = pd.date_range(ts, ts_end, freq='1H')[:-1]
+        ts_range = series[ts:ts_end].index[:-1]
         full_timesteps.append(ts_range)
 
     ts_index = _concat_indices(full_timesteps)
@@ -132,10 +132,10 @@ def _extreme(arr, how='max',
         grouping = full_series.groupby(groupby)
         for k in grouping.groups.keys():
             s = grouping.get_group(k)
-            group_indices.append(_get_minmax_timestaps(s, length, n, how, padding))
+            group_indices.append(_get_minmax_timestamps(s, length, n, how, padding))
         ts_index = _concat_indices(group_indices)
     else:
-        ts_index = _get_minmax_timestaps(full_series, length, n, how, padding)
+        ts_index = _get_minmax_timestamps(full_series, length, n, how, padding)
 
     return ts_index
 
@@ -147,6 +147,9 @@ _WEEK_DAY_FUNCS = {
 
 
 def week(data, day_func, **day_func_kwargs):
+    # series of raw timestamps
+    ts_series = data['t'].to_pandas()
+
     # Get extreme day time index
     func = _WEEK_DAY_FUNCS[day_func]
     day = func(data, **day_func_kwargs)
@@ -157,11 +160,10 @@ def week(data, day_func, **day_func_kwargs):
     days_after = 6 - days_before
 
     # Turn it into a week
-    # FIXME: assumes 1H timestep length
-    start_hour = day[0] - pd.Timedelta('{}D'.format(days_before))
-    end_hour = day[-1] + pd.Timedelta('{}D'.format(days_after))
-    before = pd.date_range(start_hour, day[0], freq='1H')[:-1]
-    after = pd.date_range(day[-1], end_hour, freq='1H')[1:]
+    start_time = day[0] - pd.Timedelta('{}D'.format(days_before))
+    end_time = day[-1] + pd.Timedelta('{}D'.format(days_after))
+    before = ts_series[start_time : day[0]].index[:-1]
+    after = ts_series[day[-1] : end_time].index[1:]
     result_week = before.append(day).append(after)
 
     return result_week
