@@ -42,14 +42,6 @@ def process_locations(model_config, modelrun_techs):
     locations_in = model_config.locations
     links_in = model_config.links
 
-    # These keys are removed from the constructed `locations` dict after
-    # merging across the inheritance chain, as they are contained in the
-    # `techs` dict
-    keys_to_kill = [
-        'essentials', 'allowed_constraints', 'allowed_costs',
-        'required_constraints'
-    ]
-
     allowed_from_file = defaults['file_allowed']
 
     warnings = []
@@ -124,13 +116,7 @@ def process_locations(model_config, modelrun_techs):
                     locations[loc_name].techs[tech_name],
                     allow_override=True)
 
-            # These are dealt with in process_techs(),
-            # we do not want them here
-            for k in keys_to_kill:
-                try:
-                    del tech_settings[k]
-                except KeyError:
-                    pass
+            tech_settings = cleanup_undesired_keys(tech_settings)
 
             # Resolve columns in filename if necessary
             file_configs = [
@@ -187,13 +173,7 @@ def process_locations(model_config, modelrun_techs):
                         allow_override=True
                     )
 
-                # These are dealt with in process_techs(),
-                # we do not want them here
-                for k in keys_to_kill:
-                    try:
-                        del tech_settings[k]
-                    except KeyError:
-                        pass
+                tech_settings = cleanup_undesired_keys(tech_settings)
 
                 tech_settings = process_per_distance_constraints(tech_name, tech_settings, locations, locations_comments, loc_from, loc_to)
                 tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
@@ -264,6 +244,35 @@ def _set_loc_key(d, k, value):
             raise KeyError('Problem at location {}: {}'.format(k, str(e)))
     else:
         d[k] = value
+
+
+def cleanup_undesired_keys(tech_settings):
+    # These keys are removed from the constructed `locations` dict after
+    # merging across the inheritance chain, as they are contained in the
+    # `techs` dict
+     # These are dealt with in process_techs(),
+    # we do not want them here
+    keys_to_kill = [
+        'essentials', 'allowed_constraints', 'allowed_costs',
+        'required_constraints'
+    ]
+    for k in keys_to_kill:
+        try:
+            del tech_settings[k]
+        except KeyError:
+            pass
+
+    # We also remove any system-wide constraints here,
+    # as they should not be accidentally read from or
+    # changed in per-location settings later
+    system_wide_keys = [
+        k for k in tech_settings.constraints.keys()
+        if k.endswith('_systemwide')
+    ]
+    for k in system_wide_keys:
+        del tech_settings.constraints[k]
+
+    return tech_settings
 
 
 def process_per_distance_constraints(tech_name, tech_settings, locations, locations_comments, loc_from, loc_to):

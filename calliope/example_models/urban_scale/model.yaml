@@ -11,13 +11,6 @@ model:
     # Time series data path - can either be a path relative to this file, or an absolute path
     timeseries_data_path: 'timeseries_data'
 
-    # Optional: specify a custom objective function
-    # objective:
-
-    # # Optional constraint functions to enable
-    # constraints:
-    # - constraints.optional.max_resource_area_per_loc
-
     # Model-wide settings for the system margin constraint
     system_margin:
         power: 0

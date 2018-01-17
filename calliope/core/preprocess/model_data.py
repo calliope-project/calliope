@@ -10,8 +10,9 @@ time-varying parameters.
 
 """
 
-import ruamel.yaml
+import collections
 
+import ruamel.yaml
 import xarray as xr
 import numpy as np
 
@@ -21,6 +22,7 @@ from calliope.core.preprocess import checks
 from calliope.core.preprocess.util import split_loc_techs_transmission, concat_iterable
 from calliope.core.preprocess.time import add_time_dimension
 from calliope.core.preprocess.lookup import add_lookup_arrays
+
 
 def build_model_data(model_run, debug=False):
     """
@@ -66,7 +68,6 @@ def build_model_data(model_run, debug=False):
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
-
     add_lookup_arrays(data, model_run)
 
     if debug:
@@ -107,7 +108,7 @@ def constraints_to_dataset(model_run):
 
     Returns
     -------
-    data : xarray Dataset
+    data_dict : dict conforming to xarray conventions
 
     """
     data_dict = dict()
@@ -141,7 +142,7 @@ def constraints_to_dataset(model_run):
                                if '.constraints.' in i and
                                '.carrier_ratios.'not in i)
     for constraint in relevant_constraints:
-        data_dict[constraint]=dict(dims=_get_set(constraint), data=[])
+        data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
         for loc_tech in model_run.sets[_get_set(constraint)]:
             loc, tech = loc_tech.split('::', 1)
             # for transmission technologies, we also need to go into link nesting
@@ -174,7 +175,7 @@ def costs_to_dataset(model_run):
 
     Returns
     -------
-    data : xarray Dataset
+    data_dict : dict conforming to xarray conventions
 
     """
     data_dict = dict()
@@ -232,7 +233,7 @@ def carriers_to_dataset(model_run):
 
     Returns
     -------
-    data : xarray Dataset
+    data_dict : dict conforming to xarray conventions
 
     """
     carrier_tiers = model_run.sets['carrier_tiers']
@@ -280,7 +281,7 @@ def location_specific_to_dataset(model_run):
 
     Returns
     -------
-    data : xarray Dataset
+    data_dict : dict conforming to xarray conventions
 
     """
     # for every transmission technology, we extract distance information, if it
@@ -336,15 +337,18 @@ def tech_specific_to_dataset(model_run):
 
     Returns
     -------
-    data : xarray Dataset
+    data_dict : dict conforming to xarray conventions
 
     """
-    # for every technology, we extract location inspecific information
-    information = ['essentials.color', 'essentials.stack_weight']
-    data_dict = {'colors':{'dims':['techs'], 'data':[]},
-                 'stack_weights':{'dims':['techs'], 'data':[]},
-                 'inheritance':{'dims':['techs'], 'data':[]},
-                 'names':{'dims':['techs'], 'data':[]}}
+    data_dict = collections.defaultdict(
+        lambda: {'dims': ['techs'], 'data': []}
+    )
+
+    systemwide_constraints = [
+        k.split('.')[-1] for k in model_run.techs.keys_nested()
+        if '.constraints.' in k and
+        k.endswith('_systemwide')
+    ]
 
     for tech in model_run.sets['techs']:
         if tech in model_run.sets['techs_transmission']:
@@ -357,6 +361,10 @@ def tech_specific_to_dataset(model_run):
             model_run.techs[tech].get_key('inheritance')))
         data_dict['names']['data'].append(model_run.techs[tech].get_key(
             'essentials.name'))
+        for k in systemwide_constraints:
+            data_dict[k]['data'].append(
+                model_run.techs[tech].constraints.get_key(k, np.nan)
+            )
 
     return data_dict
 

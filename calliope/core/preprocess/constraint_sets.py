@@ -85,6 +85,10 @@ def generate_constraint_sets(model_run):
         i for i in sets.loc_techs
         if i not in sets.loc_techs_milp + sets.loc_techs_purchase
     ],
+    techs_energy_capacity_systemwide_constraint = [
+        i for i in sets.techs
+        if model_run.get_key('techs.{}.constraints.energy_cap_max_systemwide'.format(i), None)
+    ],
 
     # dispatch.py
     loc_tech_carriers_carrier_production_max_constraint = [
@@ -106,6 +110,10 @@ def generate_constraint_sets(model_run):
     ],
     loc_techs_resource_max_constraint = sets.loc_techs_finite_resource_supply_plus,
     loc_techs_storage_max_constraint = sets.loc_techs_store,
+    loc_tech_carriers_ramping_constraint = [
+        i for i in sets.loc_tech_carriers_prod
+        if i.rsplit('::', 1)[0] in sets.loc_techs_ramping
+    ],
 
     # milp.py
     loc_techs_unit_commitment_constraint = sets.loc_techs_milp,

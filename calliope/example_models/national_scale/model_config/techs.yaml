@@ -18,6 +18,8 @@ techs:
             resource: inf
             energy_eff: 0.5
             energy_cap_max: 40000  # kW
+            energy_cap_max_systemwide: 100000  # kW
+            energy_ramping: 0.8
             lifetime: 25
         costs:
             monetary:

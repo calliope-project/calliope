@@ -12,7 +12,10 @@ of the technologies
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_loc_tech
+from calliope.backend.pyomo.util import \
+    get_param, \
+    get_loc_tech, \
+    get_previous_timestep
 
 
 def load_dispatch_constraints(backend_model):
@@ -49,6 +52,17 @@ def load_dispatch_constraints(backend_model):
             backend_model.loc_techs_storage_max_constraint,
             backend_model.timesteps,
             rule=storage_max_constraint_rule
+        )
+
+    if 'loc_tech_carriers_ramping_constraint' in sets:
+        backend_model.ramping_up_constraint = po.Constraint(
+            backend_model.loc_tech_carriers_ramping_constraint, backend_model.timesteps,
+            rule=ramping_up_constraint_rule
+        )
+
+        backend_model.ramping_down_constraint = po.Constraint(
+            backend_model.loc_tech_carriers_ramping_constraint, backend_model.timesteps,
+            rule=ramping_down_constraint_rule
         )
 
 
@@ -110,3 +124,58 @@ def storage_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     return (backend_model.storage[loc_tech, timestep]
         <= backend_model.storage_cap[loc_tech])
+
+
+def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):
+    return _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=0)
+
+
+def ramping_down_constraint_rule(backend_model, loc_tech_carrier, timestep):
+    return _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=1)
+
+
+def _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=0):
+    """
+    Ramping rate constraints.
+
+    Direction: 0 is up, 1 is down.
+
+    """
+    model_data_dict = backend_model.__calliope_model_data__['data']
+
+    # No constraint for first timestep
+    if backend_model.timesteps.order_dict[timestep] == 0:
+        return po.Constraint.NoConstraint
+    else:
+        previous_step = get_previous_timestep(backend_model, timestep)
+        time_res = model_data_dict['timestep_resolution'][timestep]
+        time_res_prev = model_data_dict['timestep_resolution'][previous_step]
+        loc_tech = loc_tech_carrier.rsplit('::', 1)[0]
+        # Ramping rate (fraction of installed capacity per hour)
+        ramping_rate = get_param(backend_model, 'energy_ramping', (loc_tech, timestep))
+
+        try:
+            prod_this = backend_model.carrier_prod[loc_tech_carrier, timestep]
+            prod_prev = backend_model.carrier_prod[loc_tech_carrier, previous_step]
+        except KeyError:
+            prod_this = 0
+            prod_prev = 0
+
+        try:
+            con_this = backend_model.carrier_con[loc_tech_carrier, timestep]
+            con_prev = backend_model.carrier_con[loc_tech_carrier, previous_step]
+        except KeyError:
+            con_this = 0
+            con_prev = 0
+
+        diff = (
+            (prod_this + con_this) / time_res -
+            (prod_prev + con_prev) / time_res_prev
+        )
+
+        max_ramping_rate = ramping_rate * backend_model.energy_cap[loc_tech]
+
+        if direction == 0:
+            return diff <= max_ramping_rate
+        else:
+            return -1 * max_ramping_rate <= diff

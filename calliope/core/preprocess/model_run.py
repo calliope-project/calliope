@@ -20,7 +20,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.core.preprocess import locations, sets, checks, constraint_sets
+from calliope.core.preprocess import locations, sets, checks, constraint_sets, util
 
 
 # Output of: sns.color_palette('cubehelix', 10).as_hex()
@@ -242,18 +242,26 @@ def process_techs(config_model):
 
         # Process inheritance
         tech_result.essentials = AttrDict()
+        tech_result.constraints = AttrDict()
         for parent in reversed(tech_result.inheritance):
             # Does the parent group have model-wide settings?
             parent_essentials = config_model.tech_groups[parent].essentials
+            parent_systemwide_constraints = util.get_systemwide_constraints(
+                config_model.tech_groups[parent]
+            )
             for k in parent_essentials.as_dict_flat():
                 debug_comments.set_key(
                     '{}.essentials.{}'.format(tech_id, k),
                     'From parent tech_group `{}`'.format(parent)
                 )
             tech_result.essentials.union(parent_essentials, allow_override=True)
+            tech_result.constraints.union(parent_systemwide_constraints, allow_override=True)
 
-        # Add this tech's essentials, overwriting any essentials from parents
+        # Add this tech's essentials and constraints, overwriting any essentials from parents
         tech_result.essentials.union(tech_config.essentials, allow_override=True)
+        tech_result.constraints.union(
+            util.get_systemwide_constraints(tech_config), allow_override=True
+        )
 
         # Add allowed_constraints and required_constraints from base tech
         keys_to_add = ['required_constraints', 'allowed_constraints', 'allowed_costs']

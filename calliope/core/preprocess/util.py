@@ -6,6 +6,8 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 import numpy as np
 
+from calliope.core.attrdict import AttrDict
+
 
 def concat_iterable(iterable, concatenators):
     """
@@ -76,6 +78,19 @@ def split_loc_techs_transmission(transmission_string):
     tech, link = tech_link.split(':')
 
     return {'loc_from': loc, 'loc_to': link, 'tech': tech}
+
+
+def get_systemwide_constraints(tech_config):
+    if 'constraints' in tech_config:
+        constraints = AttrDict({
+            k: tech_config.constraints[k]
+            for k in tech_config.constraints.keys()
+            if k.endswith('_systemwide')
+        })
+    else:
+        constraints = AttrDict({})
+
+    return constraints
 
 
 def vincenty(coord1, coord2):

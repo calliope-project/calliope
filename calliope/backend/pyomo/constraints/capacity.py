@@ -64,8 +64,14 @@ def load_capacity_constraints(backend_model):
 
     if 'loc_techs_energy_capacity_constraint' in sets:
         backend_model.energy_capacity_constraint = po.Constraint(
-                backend_model.loc_techs_energy_capacity_constraint,
-                rule=energy_capacity_constraint_rule
+            backend_model.loc_techs_energy_capacity_constraint,
+            rule=energy_capacity_constraint_rule
+        )
+
+    if 'techs_energy_capacity_systemwide_constraint' in sets:
+        backend_model.energy_capacity_systemwide_constraint = po.Constraint(
+            backend_model.techs_energy_capacity_systemwide_constraint,
+            rule=energy_capacity_systemwide_constraint_rule
         )
 
 
@@ -213,3 +219,25 @@ def energy_capacity_constraint_rule(backend_model, loc_tech):
     Set upper and lower bounds for energy_cap.
     """
     return get_capacity_constraint(backend_model, 'energy_cap', loc_tech)
+
+
+def energy_capacity_systemwide_constraint_rule(backend_model, tech):
+    all_loc_techs = [
+        i for i in backend_model.loc_techs
+        if i.split('::')[1] == tech
+    ]
+
+    max_systemwide = get_param(backend_model, 'energy_cap_max_systemwide', tech)
+    equals_systemwide = get_param(backend_model, 'energy_cap_equals_systemwide', tech)
+    # FIXME: changed in 0.6.0: changed name to _systemwide
+
+    if np.isinf(max_systemwide) and not equals_systemwide:
+        return po.Constraint.NoConstraint
+
+    sum_expr = sum(backend_model.energy_cap[loc_tech] for loc_tech in all_loc_techs)
+    total_expr = equals_systemwide if equals_systemwide else max_systemwide
+
+    if equals_systemwide:
+        return sum_expr == total_expr
+    else:
+        return sum_expr <= total_expr

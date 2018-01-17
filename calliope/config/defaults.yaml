@@ -75,8 +75,8 @@ default_tech:
         energy_cap_min: 0  # Minimum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_max: .inf  # Maximum installed storage to/from carrier conversion capacity (kW), per location
         energy_cap_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), per location
-        energy_cap_total_max: .inf  # Maximum installed storage to/from carrier conversion capacity (kW), model-wide
-        energy_cap_total_equals: false  # Specific installed storage to/from carrier conversion capacity (kW), model-wide
+        energy_cap_max_systemwide: .inf  # Maximum installed storage to/from carrier conversion capacity (kW), system-wide
+        energy_cap_equals_systemwide: false  # Specific installed storage to/from carrier conversion capacity (kW), system-wide
         energy_cap_scale: 1.0  # Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
         energy_cap_min_use: false  # Set to a value between 0 and 1 to force minimum storage to carrier capacity use for production technologies
         energy_cap_per_unit: false  # set the capacity of each integer unit of a technology perchased (kW/unit)
