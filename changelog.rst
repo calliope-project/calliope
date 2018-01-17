@@ -11,6 +11,10 @@ Other changes
 ~~~~~~~~~~~~~
 * |fixed| Allow `r_area` to be non-zero if either of `e_cap.max` or `e_cap.equals` is set, not just `e_cap.max`.
 
+0.5.5 (dev)
+-----------
+
+
 0.5.4 (2017-11-10)
 ------------------
 

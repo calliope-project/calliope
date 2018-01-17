@@ -1,3 +1,3 @@
-python:
+flake8:
   enabled: true
-    config_file: .flake8
+  config_file: .flake8
