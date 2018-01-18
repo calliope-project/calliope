@@ -219,8 +219,8 @@ def drop(data, timesteps, padding=None):
 
     """
     if padding:
-        ts_per_day = data.attrs['_timesteps_per_day']
-        freq = '{}H'.format(24 / ts_per_day)
+        timesteps_per_day = len(data.attrs['_daily_timesteps'])
+        freq = '{}H'.format(24 / timesteps_per_day)
 
         # Series of 1 where timesteps 'exist' and 0 where they don't
         s = (pd.Series(1, index=timesteps)

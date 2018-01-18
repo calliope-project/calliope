@@ -65,14 +65,17 @@ def apply_time_clustering(model_data, model_run):
     data = model_data.copy(deep=True)
 
     # Add temporary 'timesteps per day' attribute
-    timestep_resolution = data['timestep_resolution'].values[0]
-    if not np.all(data['timestep_resolution'] == timestep_resolution):
-        raise exceptions.ModelError('For clustering, timestep resolution must be uniform. ')
-    timesteps_per_day = 24 / timestep_resolution
+    daily_timesteps = [
+        data.timestep_resolution.loc[i].values
+        for i in np.unique(data.timesteps.to_pandas().index.strftime('%Y-%m-%d'))
+    ]
+    if not np.all(daily_timesteps == daily_timesteps[0]):
+        raise exceptions.ModelError('For clustering, timestep resolution must be uniform.')
+    timesteps_per_day = len(daily_timesteps[0])
     if isinstance(timesteps_per_day, float):
         assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
         timesteps_per_day = int(timesteps_per_day)
-    data.attrs['_timesteps_per_day'] = timesteps_per_day
+    data.attrs['_daily_timesteps'] = daily_timesteps[0]
 
     ##
     # Process masking and get list of timesteps to keep at high res
@@ -109,7 +112,7 @@ def apply_time_clustering(model_data, model_run):
 
     # Temporary timesteps per day attribute is no longer needed
     try:
-        del data.attrs['_timesteps_per_day']
+        del data.attrs['_daily_timesteps']
     except KeyError:
         pass
 
@@ -189,17 +192,17 @@ def add_time_dimension(data, model_run):
                 None
         data[variable] = timeseries_data_array
 
-    # Add time_resolution and timestep_weight variables
-    # parsed_timesteps = pd.to_datetime(data.timesteps)
-    seconds = abs(
-        pd.to_datetime(data.timesteps.values[0]) -
-        pd.to_datetime(data.timesteps.values[1])
-    ).total_seconds()
-    hours = seconds / 3600
+    # Add time_resolution by looking at the time difference between timestep n
+    # and timestep n + 1 for all timesteps
+    time_delta = (data.timesteps.shift(timesteps=-1) - data.timesteps).to_series()
 
-    data['timestep_resolution'] = xr.DataArray(
-        np.ones(len(data.timesteps)) * hours,
-        dims=['timesteps']
+    # Last timestep has no n + 1, so will be NaT (not a time),
+    # we duplicate the penultimate time_delta instead
+    time_delta[-1] = time_delta[-2]
+    time_delta.name = 'timestep_resolution'
+    # Time resolution is saved in hours (i.e. seconds / 3600)
+    data['timestep_resolution'] = (
+        xr.DataArray.from_series(time_delta.dt.total_seconds() / 3600)
     )
 
     data['timestep_weights'] = xr.DataArray(

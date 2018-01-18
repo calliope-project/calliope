@@ -192,4 +192,4 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
         for loc_tech_carrier in loc_tech_carriers_2)
     c_min = get_param(backend_model, 'carrier_ratios_min', (tier, loc_tech))
 
-    return c_1 * c_min == c_2
+    return c_1 == c_2

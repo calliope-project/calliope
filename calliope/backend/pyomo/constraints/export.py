@@ -75,14 +75,14 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
     """
     Update time varying cost constraint (from costs.py) to include export
     """
-    model_data_dict = backend_model.__calliope_model_data__
+    model_data_dict = backend_model.__calliope_model_data__['data']
 
-    loc_tech_carrier = model_data_dict['data']['lookup_loc_techs_export'][(loc_tech)]
-    weight = model_data_dict['data']['timestep_weights'][timestep]
+    loc_tech_carrier = model_data_dict['lookup_loc_techs_export'][(loc_tech)]
+    weight = model_data_dict['timestep_weights'][timestep]
 
     cost_export = (
         get_param(backend_model, 'cost_export', (cost, loc_tech, timestep))
-        * backend_model.carrier_prod[loc_tech_carrier, timestep]
+        * backend_model.carrier_export[loc_tech_carrier, timestep]
         * weight
     )
 
@@ -95,7 +95,6 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
 
     loc_tech = get_loc_tech(loc_tech_carrier)
-    sets = backend_model.__calliope_model_data__['sets']
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_tech_milp'):
         operating_units = backend_model.operating_units[loc_tech, timestep]
@@ -103,8 +102,5 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
         operating_units = 1
 
     export_cap = get_param(backend_model, 'export_cap', loc_tech)
-    if export_cap:
-        return (backend_model.carrier_export[loc_tech_carrier, timestep] <=
-                export_cap * operating_units)
-    else:
-        return po.Constraint.Skip
+    return (backend_model.carrier_export[loc_tech_carrier, timestep] <=
+            export_cap * operating_units)
