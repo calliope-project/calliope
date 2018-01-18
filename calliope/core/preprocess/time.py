@@ -16,12 +16,11 @@ import pandas as pd
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
-from calliope._version import __version__
 from calliope.core.preprocess import checks
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 
 
-def apply_time_clustering(model_data_original, model_run):
+def apply_time_clustering(model_data, model_run):
     """
     Take a Calliope model_data post time dimension addition, prior to any time
     clustering, and apply relevant time clustering/masking techniques.
@@ -44,7 +43,7 @@ def apply_time_clustering(model_data_original, model_run):
 
     Parameters
     ----------
-    model_data_original : xarray Dataset
+    model_data : xarray Dataset
         Preprocessed Calliope model_data, as produced using
         `calliope.core.preprocess_data.build_model_data`
         and found in model._model_data_original
@@ -58,14 +57,12 @@ def apply_time_clustering(model_data_original, model_run):
         Dataset with optimisation parameters as variables, optimisation sets as
         coordinates, and other information in attributes. Time dimension has
         been updated as per user-defined clustering techniques (from model_run)
+
     """
+    time_config = model_run.model['time']
 
     # Carry y_ subset sets over to data for easier data analysis
-    time_config = model_run.model.get('time', None)
-    if not time_config:
-        return reorganise_dataset_dimensions(model_data_original)  # Nothing more to do here
-    else:
-        data = model_data_original.copy(deep=True)
+    data = model_data.copy(deep=True)
 
     # Add temporary 'timesteps per day' attribute
     timestep_resolution = data['timestep_resolution'].values[0]
@@ -116,7 +113,7 @@ def apply_time_clustering(model_data_original, model_run):
     except KeyError:
         pass
 
-    return reorganise_dataset_dimensions(data)
+    return data
 
 
 def add_time_dimension(data, model_run):
@@ -201,13 +198,40 @@ def add_time_dimension(data, model_run):
     hours = seconds / 3600
 
     data['timestep_resolution'] = xr.DataArray(
-            np.ones(len(data.timesteps)) * hours,
-            dims=['timesteps']
+        np.ones(len(data.timesteps)) * hours,
+        dims=['timesteps']
     )
 
     data['timestep_weights'] = xr.DataArray(
-            np.ones(len(data.timesteps)),
-            dims=['timesteps']
+        np.ones(len(data.timesteps)),
+        dims=['timesteps']
     )
 
     return None
+
+
+def add_max_demand_timesteps(model_data):
+    # FIXME needs unit tests
+    max_demand_timesteps = []
+    for carrier in list(model_data.carriers.data):
+        carrier_demand = model_data.resource.loc[
+            dict(loc_techs_finite_resource=model_data.loc_techs_demand)
+        ].sum(dim='loc_techs_demand').copy()
+
+        # Only kep negative (=demand) values
+        carrier_demand[carrier_demand.values > 0] = 0
+
+        max_demand_timesteps.append(carrier_demand.to_series().idxmin())
+
+    model_data['max_demand_timesteps'] = xr.DataArray(
+        max_demand_timesteps,
+        dims=['carriers']
+    )
+
+    return model_data
+
+
+def final_timedimension_processing(model_data):
+    model_data = reorganise_dataset_dimensions(model_data)
+    model_data = add_max_demand_timesteps(model_data)
+    return model_data

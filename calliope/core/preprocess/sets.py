@@ -21,7 +21,9 @@ Main sets
 * techs_transmission
 * locs
 * costs
+* resources
 * carriers
+* carrier_tiers
 
 Location-technology subsets
 ===========================
@@ -231,6 +233,13 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k not in sets.loc_techs_conversion_plus
     ) | sets.loc_techs_transmission
 
+    # Techs that introduce energy into the system
+    sets.loc_techs_supply_all = (
+        sets.loc_techs_supply |
+        sets.loc_techs_supply_plus |
+        sets.loc_techs_unmet_demand
+    )
+
     ##
     # Sets based on specific constraints being active
     ##
@@ -425,6 +434,20 @@ def generate_loc_tech_sets(model_run, simple_sets):
         '{}::{}'.format(k, carrier)
         for k in sets.loc_techs
         if loc_techs_all_config[k].constraints.get_key('energy_con', False)
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='in')
+    )
+
+    # loc_tech_carriers for all supply technologies
+    sets.loc_tech_carriers_supply_all = set(
+        '{}::{}'.format(k, carrier)
+        for k in sets.loc_techs_supply_all
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='out')
+    )
+
+    # loc_tech_carriers for all demand technologies
+    sets.loc_tech_carriers_demand = set(
+        '{}::{}'.format(k, carrier)
+        for k in sets.loc_techs_demand
         for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='in')
     )
 

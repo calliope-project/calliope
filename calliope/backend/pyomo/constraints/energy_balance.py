@@ -76,6 +76,12 @@ def load_energy_balance_constraints(backend_model):
             rule=balance_storage_constraint_rule
         )
 
+    if 'carriers_reserve_margin_constraint' in sets:
+        backend_model.reserve_margin_constraint = po.Constraint(
+            backend_model.carriers_reserve_margin_constraint,
+            rule=reserve_margin_constraint_rule
+        )
+
 
 def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
     """
@@ -103,6 +109,7 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
+    min_use = get_param(backend_model, 'resource_min_use', (loc_tech, timestep))
 
     if energy_eff == 0:
         return backend_model.carrier_prod[loc_tech_carrier, timestep] == 0
@@ -116,6 +123,8 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
     if force_resource:
         return carrier_prod == available_resource
+    elif min_use:
+        return min_use * available_resource <= carrier_prod <= available_resource
     else:
         return carrier_prod <= available_resource
 
@@ -259,4 +268,25 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     return (
         backend_model.storage[loc_tech, timestep] ==
         storage_previous_step - carrier_prod - carrier_con
+    )
+
+
+def reserve_margin_constraint_rule(backend_model, carrier):
+    model_data_dict = backend_model.__calliope_model_data__['data']
+
+    reserve_margin = model_data_dict['reserve_margin'][carrier]
+    max_demand_timestep = model_data_dict['max_demand_timesteps'][carrier]
+    max_demand_time_res = model_data_dict['timestep_resolution'][max_demand_timestep]
+
+    return (
+        sum(  # Sum all demand for this carrier and timestep
+            backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
+            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
+        ) * -1 * (1 / max_demand_time_res)
+        >=
+        sum(  # Sum all supply capacity for this carrier
+            backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
+            for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
+            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
+        ) * (1 + reserve_margin)
     )

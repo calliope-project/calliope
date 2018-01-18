@@ -422,16 +422,16 @@ def generate_model_run(config, debug_comments):
     # Raises ModelErrors if there are problems with timeseries data at this stage
     model_run['timeseries_data'] = process_timeseries_data(config, model_run)
 
-    # 6) Initialize sets
+    # 6) Grab additional relevant bits from run and model config
+    model_run['run'] = config['run']
+    model_run['model'] = config['model']
+
+    # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
     model_run['constraint_sets'] = constraint_sets.generate_constraint_sets(model_run)
-
-    # 7) Grab additional relevant bits from run and model config
-    model_run['run'] = config['run']
-    model_run['model'] = config['model']
 
     # 8) Final sense-checking
     final_check_comments, warnings, errors = checks.check_final(model_run)

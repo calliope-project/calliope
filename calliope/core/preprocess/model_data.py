@@ -159,6 +159,13 @@ def constraints_to_dataset(model_run):
             data_dict[constraint]['data'].append(constraint_value)
         # once we've looped through all technology & location combinations, add the array to the dataset
 
+    # Additional system-wide constraints from model_run.model
+    # FIXME: hardcoding == bad
+    data_dict['reserve_margin'] = {
+        'data': [model_run.model.reserve_margin.get(c, np.nan) for c in model_run.sets['carriers']],
+        'dims': 'carriers'
+    }
+
     return data_dict
 
 

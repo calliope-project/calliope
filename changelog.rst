@@ -3,6 +3,25 @@
 Release History
 ===============
 
+0.6.0 (dev)
+-----------
+
+Version 0.6.0 is an almost complete rewrite of most of Calliope's internals.
+
+Major changes
+~~~~~~~~~~~~~
+
+* |changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files
+* |changed| |backwards-incompatible| Complete rewrite of Pyomo backend
+* |new| Experimental Julia/JuMP backend
+
+Minor changes
+~~~~~~~~~~~~~
+
+* ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
+* Add ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs
+
+
 0.5.3 (2017-08-22)
 ------------------
 

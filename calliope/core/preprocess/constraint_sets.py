@@ -34,6 +34,10 @@ def generate_constraint_sets(model_run):
     loc_techs_balance_transmission_constraint = sets.loc_techs_transmission,
     loc_techs_balance_supply_plus_constraint = sets.loc_techs_supply_plus,
     loc_techs_balance_storage_constraint = sets.loc_techs_storage,
+    carriers_reserve_margin_constraint = [
+        i for i in sets.carriers
+        if i in model_run.model.reserve_margin.keys()
+    ],
 
     # costs.py
     loc_techs_cost_constraint = sets.loc_techs_cost,

@@ -11,8 +11,8 @@ model:
     # Time series data path - can either be a path relative to this file, or an absolute path
     timeseries_data_path: 'timeseries_data'
 
-    # Model-wide settings for the system margin constraint
-    system_margin:
+    # Model-wide settings for the system-wide reserve margin
+    reserve_margin:
         power: 0
         heat: 0
         cooling: 0

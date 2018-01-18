@@ -14,7 +14,12 @@ import numpy as np
 from calliope.analysis import plotting as plot
 
 from calliope.core import debug, io
-from calliope.core.preprocess import model_run_from_yaml, model_run_from_dict, build_model_data, apply_time_clustering
+from calliope.core.preprocess import \
+    model_run_from_yaml, \
+    model_run_from_dict, \
+    build_model_data, \
+    apply_time_clustering, \
+    final_timedimension_processing
 from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
@@ -90,8 +95,14 @@ class Model(object):
             np.random.seed(seed=random_seed)
 
         # After setting the random seed, time clustering can take place
-        self._model_data = apply_time_clustering(
-            self._model_data_original, model_run)
+        time_config = model_run.model.get('time', None)
+        if not time_config:
+            self._model_data = final_timedimension_processing(self._model_data_original)
+        else:
+            clustered_model_data = apply_time_clustering(
+                self._model_data_original, model_run
+            )
+            self._model_data = final_timedimension_processing(clustered_model_data)
         log_time(self._timings, 'model_data_creation', time_since_start=True)
 
         for var in self._model_data.data_vars:
