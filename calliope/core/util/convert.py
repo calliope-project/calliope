@@ -18,7 +18,7 @@ from calliope.core.attrdict import AttrDict
 
 
 _CONVERSIONS = AttrDict.from_yaml(
-    os.path.join(os.path.dirname(__file__), 'conversion_0.6.0.yaml')
+    os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'conversion_0.6.0.yaml')
 )
 
 

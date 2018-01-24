@@ -20,7 +20,7 @@ Minor changes
 
 * ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
 * Add ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs
-
+* Add ``calliope convert`` command to convert 0.5.x models to 0.6.0 format. Does not preserve comments for now.
 
 0.5.3 (2017-08-22)
 ------------------
