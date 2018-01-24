@@ -21,6 +21,7 @@ import traceback
 import click
 
 from calliope import Model, examples, _time_format
+from calliope.core.util.convert import convert_model
 from calliope._version import __version__
 
 
@@ -118,7 +119,7 @@ def cli(ctx, version):
         print(_get_version())
 
 
-@cli.command(short_help='Create model.')
+@cli.command(short_help='Create a new model based on a built-in example.')
 @click.argument('path')
 @click.option('--template', type=str, default=None)
 @_debug
@@ -187,3 +188,25 @@ def run(config_file, override_file, save_netcdf, save_csv, save_logs,
             print('Saving NetCDF results to file: {}'.format(save_netcdf))
             model.to_netcdf(save_netcdf)
         print_end_time(start_time)
+
+
+@cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
+@click.argument('run_config_path')
+@click.argument('model_config_path')
+@click.argument('out_path')
+@_debug
+@_pdb
+def convert(
+        run_config_path, model_config_path, out_path,
+        debug, pdb):
+    """
+    Convert a Calliope 0.5.x model specified by its run and model
+    configurations to a Calliope 0.6.0 model.
+
+    The input model is not modified; the converted version of the model
+    is saved to ``out_path``.
+
+    """
+    print('Converting model...')
+    convert_model(run_config_path, model_config_path, out_path)
+    print('Done. Results saved to: {}'.format(out_path))

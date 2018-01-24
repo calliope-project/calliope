@@ -12,7 +12,7 @@ Debugging tools.
 from functools import reduce
 import operator
 
-import ruamel.yaml
+import ruamel.yaml as yaml
 
 
 def get_from_dict(data_dict, map_list):
@@ -27,7 +27,7 @@ def save_debug_data(model_run, debug_data, out_file):
     # README: currently based on ruamel.yaml 0.15 which is a mix of old
     # and new API - possibly needs a bit of rewriting once ruamel.yaml
     # has progressed a bit further
-    yaml = ruamel.yaml.YAML()
+    yaml = yaml.YAML()
 
     # Turn sets in model_run into lists for YAML serialization
     for k, v in model_run.sets.items():
@@ -40,11 +40,11 @@ def save_debug_data(model_run, debug_data, out_file):
         keys = k.split('.')
         apply_to_dict(debug_yaml, keys[:-1], 'yaml_add_eol_comment', (v, keys[-1]))
 
-    dumper = ruamel.yaml.dumper.RoundTripDumper
+    dumper = yaml.dumper.RoundTripDumper
     dumper.ignore_aliases = lambda self, data: True
 
     with open(out_file, 'w') as f:
-        ruamel.yaml.dump(
+        yaml.dump(
             debug_yaml, f,
             Dumper=dumper, default_flow_style=False
         )
