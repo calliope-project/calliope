@@ -110,7 +110,8 @@ def generate_model(model_data):
 
 
 def solve_model(backend_model, solver,
-                solver_io=None, solver_options=None, save_logs=False):
+                solver_io=None, solver_options=None, save_logs=False,
+                **solve_kwargs):
 
     opt = SolverFactory(solver, solver_io=solver_io)
 
@@ -119,14 +120,12 @@ def solve_model(backend_model, solver,
             opt.options[k] = v
 
     if save_logs:
-        solve_kwargs = {
+        solve_kwargs.update({
             'symbolic_solver_labels': True,
             'keepfiles': True
-        }
+        })
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    else:
-        solve_kwargs = {}
 
     with redirect_stdout(LogWriter('info', strip=True)):
         with redirect_stderr(LogWriter('error', strip=True)):

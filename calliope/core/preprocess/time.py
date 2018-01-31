@@ -67,14 +67,11 @@ def apply_time_clustering(model_data, model_run):
     # Add temporary 'timesteps per day' attribute
     daily_timesteps = [
         data.timestep_resolution.loc[i].values
-        for i in np.unique(data.timesteps.to_pandas().index.strftime('%Y-%m-%d'))
+        for i in np.unique(data.timesteps.to_index().strftime('%Y-%m-%d'))
     ]
     if not np.all(daily_timesteps == daily_timesteps[0]):
         raise exceptions.ModelError('For clustering, timestep resolution must be uniform.')
     timesteps_per_day = len(daily_timesteps[0])
-    if isinstance(timesteps_per_day, float):
-        assert timesteps_per_day.is_integer(), 'Timesteps/day must be integer.'
-        timesteps_per_day = int(timesteps_per_day)
     data.attrs['_daily_timesteps'] = daily_timesteps[0]
 
     ##
@@ -93,7 +90,7 @@ def apply_time_clustering(model_data, model_run):
         chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                      for m in masks.values()]).index
         # timesteps: a list of timesteps NOT picked by masks
-        timesteps = pd.Index(data.time.values).difference(chosen_timesteps)
+        timesteps = pd.Index(data.timesteps.values).difference(chosen_timesteps)
     else:
         timesteps = None
 

@@ -19,15 +19,16 @@ from sklearn import cluster as sk_cluster
 from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
 
-def _stack_data(data):
+def _stack_data(data, dates, times):
     """
     Stack all non-time dimensions of an xarray DataArray
     """
-    non_time_dims = list(set(data.dims).difference(['timesteps']))
-    if len(non_time_dims) >= 1:
-        stacked_var = data.stack(
-            stacked=[i for i in data.dims if i is not 'timesteps']
-        )
+    data_to_stack = data.assign_coords(
+        timesteps=pd.MultiIndex.from_product([dates, times], names=['dates', 'times'])
+    ).unstack('timesteps')
+    non_date_dims = list(set(data_to_stack.dims).difference(['dates', 'times'])) + ['times']
+    if len(non_date_dims) >= 2:
+        stacked_var = data_to_stack.stack(stacked=non_date_dims)
     else:
         e = exceptions.ModelError
         raise e("Cannot conduct time clustering with variable {} as it has no "
@@ -56,10 +57,15 @@ def reshape_for_clustering(data, loc_techs=None, variables=None):
         converted to zeros
     """
     # to create an array with days as rows, we need to get timesteps per day
-    timesteps_per_day = len(data.attrs['_daily_timesteps'])
-    days = int(len(data.timesteps) / timesteps_per_day)
+    timesteps = data.timesteps.to_index()
+    if timesteps.dtype.kind == 'M': # 'M' = datetime format
+        dates = np.unique(timesteps.date)
+        times = np.unique(timesteps.time)
+    else: # mean_data from get_closest_days_from_clusters is in the format cluster-timestep
+        dates = np.unique([i.split('-')[0] for i in timesteps])
+        times = np.unique([i.split('-')[1] for i in timesteps])
 
-    reshaped_data = np.array([[] for i in range(days)])
+    reshaped_data = np.array([[] for i in dates])
     # if 'variables' is given then we will loop over that, otherwise we loop over
     # all timeseries variables
     relevent_vars = variables if variables else data.data_vars
@@ -76,14 +82,10 @@ def reshape_for_clustering(data, loc_techs=None, variables=None):
             temp_data = temp_data.loc[{loc_tech_dim: relevent_loc_techs}]
 
         # stack all non-time dimensions to get one row of data for each timestep
-        stacked_var = _stack_data(temp_data)
+        stacked_var = _stack_data(temp_data, dates, times)
         # reshape the array to split days and timesteps within days, now we have
         # one row of data per day
-        reshaped_data = np.concatenate((reshaped_data,
-            stacked_var.T.values.reshape(days,
-                timesteps_per_day * len(stacked_var.stacked)
-            )), axis=1
-        )
+        reshaped_data = np.concatenate([reshaped_data, stacked_var.values], axis=1)
     # put all the columns of data together, keeping rows as days. Also convert
     # all nans to zeros
     X = np.nan_to_num(reshaped_data)
@@ -116,15 +118,21 @@ def reshape_clustered(clustered, data, loc_techs=None, variables=None):
         Dataset with DataArray variables associated with each timeseries
         variable of interest.
     """
+    timesteps = data.timesteps.to_index()
+    if timesteps.dtype.kind == 'M': # 'M' = datetime format
+        dates = np.unique(timesteps.date)
+        times = np.unique(timesteps.time)
+    else: # mean_data from get_closest_days_from_clusters is in the format cluster-timestep
+        dates = [i.split('-')[0] for i in timesteps]
+        times = [i.split('-')[1] for i in timesteps]
 
-    timesteps_per_day = len(data.attrs['_daily_timesteps'])
     clusters = clustered.shape[0]
 
     # if 'variables' is given then we will loop over that, otherwise we loop over
     # all timeseries variables
     relevent_vars = variables if variables else data.data_vars
 
-    reshaped_data = dict()
+    reshaped_data = []
 
     # Initialise the location of the last column of data for a given variable
     previous_last_column = 0
@@ -139,31 +147,28 @@ def reshape_clustered(clustered, data, loc_techs=None, variables=None):
             )
             temp_data = temp_data.loc[{loc_tech_dim: relevent_loc_techs}]
 
-        # list of strings of non-time dimensions for our variable
-        non_time_dims = set(temp_data.dims).difference(['timesteps'])
+        # Create an xarray DataArray with the correct dimensions
+        stacked_var = _stack_data(temp_data, dates, times)[:clusters]
 
-        # length of each of those non-time dimensions
-        non_time_dim_lengths = [len(temp_data[i]) for i in non_time_dims]
+        # get last column index for this variable's data
+        last_column = previous_last_column + len(stacked_var.stacked)
 
-        # length of each dimension in final output
-        reshaped_dims = ([clusters, timesteps_per_day] + non_time_dim_lengths)
+        # Update data to be the contents of 'clustered'
+        stacked_var.loc[{}] = clustered[:, range(previous_last_column, last_column)]
 
-        last_column = previous_last_column + (
-            timesteps_per_day * np.prod(non_time_dim_lengths)
+        # rename and unstack
+        reshaped_var = (
+            stacked_var.assign_coords(dates=[i for i in range(clusters)])
+                .rename({'dates': 'clusters'}).unstack('stacked')
         )
 
-        data_range = range(previous_last_column, last_column)
-
         # store information in dictionary, for later conversion to Dataset
-        reshaped_data[var] = {
-            'data': clustered[:, data_range].reshape(reshaped_dims),
-            'dims': ['clusters', 'timesteps'] + list(non_time_dims)
-        }
+        reshaped_data.append(reshaped_var.to_dataset(name=var))
 
         previous_last_column = last_column
 
     # output is a dataset, built from dictionaries
-    reshaped_dataset = xr.Dataset.from_dict(reshaped_data)
+    reshaped_dataset = xr.merge(reshaped_data)
 
     return reshaped_dataset
 
@@ -327,7 +332,7 @@ def map_clusters_to_data(data, clusters, how):
     weights = (value_counts.reindex(_hourly_from_daily_index(value_counts.index))
                            .fillna(method='ffill'))
     new_data['timestep_weights'] = xr.DataArray(weights, dims=['timesteps'])
-    days = np.unique(new_data.timesteps.to_pandas().index.date)
+    days = np.unique(new_data.timesteps.to_index().date)
     new_data['timestep_resolution'] = (
         xr.DataArray(np.repeat(data.attrs['_daily_timesteps'], len(days)),
                      dims=['timesteps'],
@@ -336,7 +341,7 @@ def map_clusters_to_data(data, clusters, how):
     return new_data
 
 
-def get_clusters_kmeans(data, tech=None, timesteps=None, k=None):
+def get_clusters_kmeans(data, tech=None, timesteps=None, k=None, variables=None):
     """
     Parameters
     ----------
@@ -358,7 +363,7 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=None):
     else:
         timesteps = data.timesteps.values
 
-    X = reshape_for_clustering(data, tech)
+    X = reshape_for_clustering(data, tech, variables)
 
     if not k:
         k = hartigan_n_clusters(X)
@@ -372,7 +377,7 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=None):
     clusters = pd.Series(day_clusters, index=timesteps[::timesteps_per_day])
 
     # Reshape centroids
-    centroids = reshape_clustered(clustered_data.cluster_centers_, data, tech)
+    centroids = reshape_clustered(clustered_data.cluster_centers_, data, tech, variables)
 
     # Get inertia, for e.g. checking clustering with Hartigan's rule
     inertia = clustered_data.inertia_
@@ -415,7 +420,7 @@ def hartigan_n_clusters(X, threshhold=10):
 
 # TODO get hierarchical clusters using scikitlearn too
 # TODO change scipy for scikitlearn in Calliope requirements
-def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
+def get_clusters_hierarchical(data, tech=None, max_d=None, k=None, variables=None):
     """
     Parameters
     ----------
@@ -433,7 +438,7 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None):
     Z
 
     """
-    X = reshape_for_clustering(data, tech)
+    X = reshape_for_clustering(data, tech, variables)
 
     # Generate the linkage matrix
     Z = hierarchy.linkage(X, 'ward')

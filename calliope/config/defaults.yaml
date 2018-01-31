@@ -57,6 +57,7 @@ default_tech:
         resource_cap_max: .inf  # Maximum installed resource to/from storage conversion capacity (kW)
         resource_cap_equals: false  # Specific installed resource to/from storage conversion capacity (kW)
         resource_cap_equals_energy_cap: false  # If true, r_cap is forced to equal energy_cap
+        resource_min_use: false # Set to a value between 0 and 1 to force minimum resource to carrier capacity use for production technologies
         resource_scale: 1.0  # Scale resource by this value
         resource_scale_to_peak: false  # Scale resource such that its peak is as defined here, ``false`` to disable. This setting only has an effect if a time series is used via ``r: file``
         storage_initial: 0  # Initial storage level (kWh)

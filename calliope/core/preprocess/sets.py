@@ -353,12 +353,12 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Any capacity or fixed annual costs
     loc_techs_investment_costs = set(
         k for k in loc_techs_costs
-        if any('_cap' in i or '.purchase' in i
+        if any('_cap' in i or '.purchase' in i or '_area' in i
                for i in loc_techs_config[k].costs.keys_nested())
     )
     loc_techs_transmission_investment_costs = set(
         k for k in loc_techs_transmission_costs
-        if any('_cap' in i or '.purchase' in i
+        if any('_cap' in i or '.purchase' in i or '_area' in i
                for i in loc_techs_transmission_config[k].costs.keys_nested())
     )
 

@@ -21,7 +21,7 @@ Calliope is a framework to develop energy system models, with a focus on flexibi
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `Pandas <http://pandas.pydata.org/>`_ and `xarray <http://xarray.pydata.org/>`_ data structures for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
 
-Two simple example models are `included with Calliope <calliope/example_models>`_ and accessible through the ``calliope.examples`` submodule.
+Several simple example models are `included with Calliope <calliope/example_models>`_ and accessible through the ``calliope.examples`` submodule. These are based on two simple models, with overrides applied to introduce particular functionality (e.g. time clustering, integer decision variables).
 
 A more elaborate example is `UK-Calliope <https://github.com/sjpfenninger/uk-calliope>`_, which models the power system of Great Britain (England+Scotland+Wales).
 
@@ -40,16 +40,35 @@ Calliope can be run from the command line:
 
     $ calliope new example  # Create a copy of the national-scale example model, in the `example` dir
 
-    $ calliope run example/run.yaml  # Run the model by pointing to its run configuration file
+    $ calliope run example/model.yaml  # Run the model by pointing to its run configuration file
 
 It can also be run interactively from a Python session:
 
 .. code-block:: python
 
     import calliope
-    model = calliope.Model('path/to/run.yaml')
+    model = calliope.examples.national_scale() # load the national-scale example model
+    inputs = model.inputs # a processed xarray.Dataset describing the model you will run
     model.run()
-    solution = model.solution  # An xarray.Dataset
+    solution = model.results  # An xarray.Dataset
+
+To run your own model, including the application of any overrides (slight changes to the YAML files describing the model):
+
+.. code-block:: bash
+
+    calliope run path/to/model.yaml --override_file path/to/overrides.yaml:override_1_name,override_2_name,etc
+    
+'override_1_name' etc. are the top-level names for the overrides within the file 'overrides.yaml'.
+
+In a Python interactive session, the `Model class <calliope/core/model.py>` is called to load our model configuration. Overriding can be specified as a YAML file or directly as a dictionary:
+
+.. code-block:: python
+
+    import calliope
+    model = calliope.Model('path/to/model.yaml', 
+                           override_file='path/to/overrides.yaml:override_1_name,override_2_name,etc',
+                           override_dict={'parameter': {'to': {'override': override_to_apply}}})
+
 
 Documentation
 -------------

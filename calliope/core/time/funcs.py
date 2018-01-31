@@ -74,7 +74,7 @@ def _combine_datasets(data0, data1):
     data_new = xr.concat([data0, data1], dim='timesteps')
     # Ensure time dimension is ordered
     data_new = data_new.loc[
-        {'timesteps': data_new.timesteps.to_pandas().index.sort_values()}
+        {'timesteps': data_new.timesteps.to_index().sort_values()}
     ]
 
     return data_new
