@@ -12,7 +12,7 @@ Transmission/distribution network constraints.
 import pyomo.core as po  # pylint: disable=import-error
 
 
-def load_network_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'loc_techs_symmetric_transmission_constraint' in sets:

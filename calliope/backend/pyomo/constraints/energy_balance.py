@@ -17,7 +17,7 @@ from calliope.backend.pyomo.util import \
     get_loc_tech_carriers
 
 
-def load_energy_balance_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
 

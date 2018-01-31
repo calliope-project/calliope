@@ -15,7 +15,7 @@ from calliope.backend.pyomo.util import \
     get_param
 
 
-def load_conversion_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     backend_model.balance_conversion_constraint = po.Constraint(

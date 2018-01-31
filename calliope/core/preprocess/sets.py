@@ -24,6 +24,7 @@ Main sets
 * resources
 * carriers
 * carrier_tiers
+* techlists
 
 Location-technology subsets
 ===========================
@@ -146,6 +147,12 @@ def generate_simple_sets(model_run):
     # timeseries have the exact same index
     first_key = list(model_run.timeseries_data.keys())[0]
     sets.timesteps = list(model_run.timeseries_data[first_key].index.astype(str))
+
+    # `techlists` are strings with comma-separated techs used for grouping in
+    # some model-wide constraints
+    sets.techlists = set()
+    for k in model_run.model.get_key('group_share', {}).keys():
+        sets.techlists.add(k)
 
     return sets
 

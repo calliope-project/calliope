@@ -29,6 +29,7 @@ model_config:
     objective: null  # custom objective not implemented yet
     constraints: null  # custom constraints not implemented yet
     system_margin: model.reserve_margin
+    group_fraction: null  # major change to structure of this constraint, not automatically converted
     metadata: null  ### SPECIAL LOGIC: move coordinates over to location configuration
 
 

@@ -16,8 +16,7 @@ from calliope.backend.pyomo.util import get_param, split_comma_list
 from calliope import exceptions
 
 
-
-def load_capacity_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'loc_techs_storage_capacity_constraint' in sets:

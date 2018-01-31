@@ -151,7 +151,7 @@ def add_time_dimension(data, model_run):
         data_series = data[variable].to_series()
 
         # 3) get a Series of all the uses of 'file=' for this variable
-        filenames = data_series[data_series.str.contains('=')]
+        filenames = data_series[data_series.str.contains('file=')]
 
         # 4) If no use of 'file=' then we can be on our way
         if filenames.empty:

@@ -17,7 +17,7 @@ from calliope.backend.pyomo.util import \
     loc_tech_is_in
 
 
-def load_cost_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'loc_techs_cost_constraint' in sets:

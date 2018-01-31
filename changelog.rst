@@ -11,16 +11,29 @@ Version 0.6.0 is an almost complete rewrite of most of Calliope's internals.
 Major changes
 ~~~~~~~~~~~~~
 
-* |changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files
-* |changed| |backwards-incompatible| Complete rewrite of Pyomo backend
-* |new| Experimental Julia/JuMP backend
+|changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files
+
+|changed| |backwards-incompatible| Complete rewrite of Pyomo backend
+
+|new| Experimental Julia/JuMP backend
+
+|changed| |backwards-incompatible|``group_fraction`` constraint is now called ``group_share`` and has a different formulation more in line with the rest of the tech-specific constraints::
+
+    group_share:
+        csp,ccgt:
+            energy_cap_min: 0.5
+            energy_cap_max: 0.9
+            carrier_prod_min:
+                power: 0.5
+
+Also removed the ``demand_power_peak`` and (undocumented) ``ignored_techs`` options from ``group_share``.
 
 Minor changes
 ~~~~~~~~~~~~~
 
-* ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
-* Add ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs
-* Add ``calliope convert`` command to convert 0.5.x models to 0.6.0 format. Does not preserve comments for now.
+* |changed ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
+* |new| Add ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs
+* |new| Add ``calliope convert`` command to convert 0.5.x models to 0.6.0 format. Does not preserve comments for now.
 
 0.5.3 (2017-08-22)
 ------------------

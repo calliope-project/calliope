@@ -162,9 +162,39 @@ def constraints_to_dataset(model_run):
     # Additional system-wide constraints from model_run.model
     # FIXME: hardcoding == bad
     data_dict['reserve_margin'] = {
-        'data': [model_run.model.reserve_margin.get(c, np.nan) for c in model_run.sets['carriers']],
+        'data': [model_run.model.get('reserve_margin', {}).get(c, np.nan) for c in model_run.sets['carriers']],
         'dims': 'carriers'
     }
+
+    group_share_data = {}
+    group_constraints = ['energy_cap_min', 'energy_cap_max', 'energy_cap_equals']
+    group_constraints_carrier = ['carrier_prod_min', 'carrier_prod_max', 'carrier_prod_equals']
+
+    for constraint in [  # Only process constraints that are defined
+            c for c in group_constraints
+            if c in ''.join(model_run.model.get_key('group_share', AttrDict()).keys_nested())]:
+        group_share_data[constraint] = [
+            model_run.model.get_key('group_share.{}.{}'.format(techlist, constraint), np.nan)
+            for techlist in model_run.sets['techlists']
+        ]
+
+    for constraint in [  # Only process constraints that are defined
+            c for c in group_constraints_carrier
+            if c in ''.join(model_run.model.get_key('group_share', AttrDict()).keys_nested())]:
+        group_share_data[constraint] = [
+            [
+                model_run.model.get_key('group_share.{}.{}.{}'.format(techlist, constraint, carrier), np.nan)
+                for techlist in model_run.sets['techlists']
+            ]
+            for carrier in model_run.sets['carriers']
+        ]
+
+    # Add to data_dict and set dims correctly
+    for k in group_share_data:
+        data_dict['group_share_' + k] = {
+            'data': group_share_data[k],
+            'dims': 'techlists' if k in group_constraints else ('carriers', 'techlists')
+        }
 
     return data_dict
 

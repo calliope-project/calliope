@@ -192,9 +192,43 @@ def generate_constraint_sets(model_run):
     loc_techs_balance_conversion_plus_out_3_constraint = sets.loc_techs_out_3,
 
     # network.py
-    loc_techs_symmetric_transmission_constraint = sets.loc_techs_transmission
+    loc_techs_symmetric_transmission_constraint = sets.loc_techs_transmission,
 
-    )
-    ## End of dictionary
+    # policy.py
+    techlists_group_share_energy_cap_min_constraint = [
+        i for i in sets.techlists
+        if 'energy_cap_min' in model_run.model.get_key('group_share.{}'.format(i), {}).keys()
+    ],
+    techlists_group_share_energy_cap_max_constraint = [
+        i for i in sets.techlists
+        if 'energy_cap_max' in model_run.model.get_key('group_share.{}'.format(i), {}).keys()
+    ],
+    techlists_group_share_energy_cap_equals_constraint = [
+        i for i in sets.techlists
+        if 'energy_cap_equals' in model_run.model.get_key('group_share.{}'.format(i), {}).keys()
+    ],
+    techlists_carrier_group_share_carrier_prod_min_constraint = [
+        i + '::' + carrier
+        for i in sets.techlists
+        if 'carrier_prod_min' in model_run.model.get_key('group_share.{}'.format(i), {}).keys()
+        for carrier in sets.carriers
+        if carrier in model_run.model.get_key('group_share.{}.carrier_prod_min'.format(i), {}).keys()
+    ],
+    techlists_carrier_group_share_carrier_prod_max_constraint = [
+        i + '::' + carrier
+        for i in sets.techlists
+        if 'carrier_prod_max' in model_run.model.get_key('group_share.{}'.format(i), {}).keys()
+        for carrier in sets.carriers
+        if carrier in model_run.model.get_key('group_share.{}.carrier_prod_max'.format(i), {}).keys()
+    ],
+    techlists_carrier_group_share_carrier_prod_equals_constraint = [
+        i + '::' + carrier
+        for i in sets.techlists
+        if 'carrier_prod_equals' in model_run.model.get_key('group_share.{}'.format(i), {}).keys()
+        for carrier in sets.carriers
+        if carrier in model_run.model.get_key('group_share.{}.carrier_prod_equals'.format(i), {}).keys()
+    ],
+
+    ) ## End of dictionary
 
     return constraint_sets

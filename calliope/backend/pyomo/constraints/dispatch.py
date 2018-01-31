@@ -18,7 +18,7 @@ from calliope.backend.pyomo.util import \
     get_previous_timestep
 
 
-def load_dispatch_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'loc_tech_carriers_carrier_production_max_constraint' in sets:

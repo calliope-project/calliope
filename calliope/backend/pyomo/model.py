@@ -66,26 +66,27 @@ def generate_model(model_data):
 
     # Constraints
     constraints_to_add = [
-        'energy_balance.load_energy_balance_constraints',
-        'capacity.load_capacity_constraints',
-        'dispatch.load_dispatch_constraints',
-        'network.load_network_constraints',
-        'costs.load_cost_constraints'
+        'energy_balance.load_constraints',
+        'capacity.load_constraints',
+        'dispatch.load_constraints',
+        'network.load_constraints',
+        'costs.load_constraints',
+        'policy.load_constraints'
     ]
 
     if hasattr(backend_model, 'loc_techs_conversion'):
-        constraints_to_add.append('conversion.load_conversion_constraints')
+        constraints_to_add.append('conversion.load_constraints')
 
     if hasattr(backend_model, 'loc_techs_conversion_plus'):
-        constraints_to_add.append('conversion_plus.load_conversion_plus_constraints')
+        constraints_to_add.append('conversion_plus.load_constraints')
 
     if hasattr(backend_model, 'loc_techs_milp') or hasattr(backend_model, 'loc_techs_purchase'):
-        constraints_to_add.append('milp.load_milp_constraints')
+        constraints_to_add.append('milp.load_constraints')
 
     # Export comes last as it can add to the cost expression, this could be
     # overwritten if it doesn't come last
     if hasattr(backend_model, 'loc_techs_export'):
-        constraints_to_add.append('export.load_export_constraints')
+        constraints_to_add.append('export.load_constraints')
 
     for c in constraints_to_add:
         load_function(

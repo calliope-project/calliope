@@ -19,8 +19,7 @@ from calliope.backend.pyomo.util import \
     split_comma_list
 
 
-
-def load_milp_constraints(backend_model):
+def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'loc_techs_milp' in sets:
