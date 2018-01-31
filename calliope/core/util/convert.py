@@ -195,6 +195,22 @@ def convert_model(run_config_path, model_config_path, out_path, override_run_con
     # a calliope version it's compatible with / built for
     new_model_config[model_config_path]['calliope_version'] = '0.6.0'
 
+    # README: adding top-level interest_rate and lifetime definitions
+    # for all techs, to mirror the fact that there used to be defaults
+    defaults_v05 = AttrDict()
+    tech_groups = ['supply', 'supply_plus', 'demand', 'transmission', 'conversion', 'conversion_plus']
+    cost_classes = [  # Get a list of all cost classes in model
+        k.split('costs.', 1)[-1].split('.', 1)[0]
+        for k in new_model_config.keys_nested()
+        if 'costs.' in k
+    ]
+    for t in tech_groups:
+        defaults_v05.set_key('tech_groups.{}.constraints.lifetime'.format(t), 25)
+        for cc in cost_classes:
+            interest = 0.1 if cc == 'monetary' else 0
+            defaults_v05.set_key('tech_groups.{}.costs.{}.interest_rate'.format(t, cc), interest)
+    new_model_config[model_config_path].union(defaults_v05)
+
     # For each file in new_model_config, save it to its same
     # position from the old path in the `out_path`
     for f in new_model_config:
