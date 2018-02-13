@@ -79,14 +79,14 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
     """
     Balance energy carrier consumption and production for carrier_in and carrier_out
     """
-    model_dict_data = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data__['data']
 
-    loc_tech_carriers_out = split_comma_list(get_param(
-        backend_model, 'lookup_loc_techs_conversion_plus', ('out', loc_tech)
-    ))
-    loc_tech_carriers_in = split_comma_list(get_param(
-        backend_model, 'lookup_loc_techs_conversion_plus', ('in', loc_tech)
-    ))
+    loc_tech_carriers_out = split_comma_list(
+        model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
+    )
+    loc_tech_carriers_in = split_comma_list(
+        model_data_dict['lookup_loc_techs_conversion_plus']['in', loc_tech]
+    )
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
@@ -104,10 +104,12 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
     """
     Set maximum conversion_plus carrier production.
     """
-    timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
-    loc_tech_carriers_out = split_comma_list(get_param(
-        backend_model, 'lookup_loc_techs_conversion_plus', ('out', loc_tech)
-    ))
+    model_data_dict = backend_model.__calliope_model_data__['data']
+
+    timestep_resolution = model_data_dict['timestep_resolution'][timestep]
+    loc_tech_carriers_out = split_comma_list(
+        model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
+    )
 
     carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
                  for loc_tech_carrier in loc_tech_carriers_out)
@@ -119,12 +121,14 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
     """
     Set minimum conversion_plus carrier production.
     """
-    timestep_resolution = get_param(backend_model, 'timestep_resolution', timestep)
+    model_data_dict = backend_model.__calliope_model_data__['data']
+
+    timestep_resolution = model_data_dict['timestep_resolution'][timestep]
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
 
-    loc_tech_carriers_out = split_comma_list(get_param(
-        backend_model, 'lookup_loc_techs_conversion_plus', ('out', loc_tech)
-    ))
+    loc_tech_carriers_out = split_comma_list(
+        model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
+    )
 
     carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
                 for loc_tech_carrier in loc_tech_carriers_out)
@@ -138,11 +142,11 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
     """
     Add time-varying conversion_plus technology costs
     """
-    model_data_dict = backend_model.__calliope_model_data__
-    weight = model_data_dict['data']['timestep_weights'][timestep]
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    weight = model_data_dict['timestep_weights'][timestep]
 
     loc_tech_carrier = (
-        model_data_dict['data']['lookup_primary_loc_tech_carriers'][loc_tech]
+        model_data_dict['lookup_primary_loc_tech_carriers'][loc_tech]
     )
 
     var_cost = 0
@@ -176,13 +180,14 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
     carrier_in and carrier_out (respectively).
     """
     primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
+    model_data_dict = backend_model.__calliope_model_data__['data']
 
-    loc_tech_carriers_1 = split_comma_list(get_param(
-        backend_model, 'lookup_loc_techs_conversion_plus', (primary_tier, loc_tech)
-    ))
-    loc_tech_carriers_2 = split_comma_list(get_param(
-        backend_model, 'lookup_loc_techs_conversion_plus', (tier, loc_tech)
-    ))
+    loc_tech_carriers_1 = split_comma_list(
+        model_data_dict['lookup_loc_techs_conversion_plus'][primary_tier, loc_tech]
+    )
+    loc_tech_carriers_2 = split_comma_list(
+        model_data_dict['lookup_loc_techs_conversion_plus'][tier, loc_tech]
+    )
 
     c_1 = sum(decision_variable[loc_tech_carrier, timestep]
         / get_param(backend_model, 'carrier_ratios', (primary_tier, loc_tech_carrier))
@@ -190,6 +195,6 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
     c_2 = sum(decision_variable[loc_tech_carrier, timestep]
         / get_param(backend_model, 'carrier_ratios', (tier, loc_tech_carrier))
         for loc_tech_carrier in loc_tech_carriers_2)
-    c_min = get_param(backend_model, 'carrier_ratios_min', (tier, loc_tech))
+    c_min = model_data_dict['carrier_ratios_min'][tier, loc_tech]
 
     return c_1 == c_2

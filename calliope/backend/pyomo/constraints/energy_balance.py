@@ -111,7 +111,7 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
     min_use = get_param(backend_model, 'resource_min_use', (loc_tech, timestep))
 
-    if energy_eff == 0:
+    if po.value(energy_eff) == 0:
         return backend_model.carrier_prod[loc_tech_carrier, timestep] == 0
     else:
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff
@@ -121,7 +121,7 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     else:
         available_resource = resource * resource_scale
 
-    if force_resource:
+    if po.value(force_resource):
         return carrier_prod == available_resource
     elif min_use:
         return min_use * available_resource <= carrier_prod <= available_resource
@@ -148,7 +148,7 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     else:
         required_resource = resource * resource_scale
 
-    if force_resource:
+    if po.value(force_resource):
         return carrier_con == required_resource
     else:
         return carrier_con >= required_resource
@@ -168,7 +168,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
     else:
         available_resource = resource * resource_scale * resource_eff
 
-    if force_resource:
+    if po.value(force_resource):
         return backend_model.resource_con[loc_tech, timestep] == available_resource
     else:
         return backend_model.resource_con[loc_tech, timestep] <= available_resource
@@ -207,7 +207,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
     total_eff = energy_eff * parasitic_eff
 
-    if total_eff == 0:
+    if po.value(total_eff) == 0:
         carrier_prod = 0
     else:
         loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
@@ -246,7 +246,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
-    if energy_eff == 0:
+    if po.value(energy_eff) == 0:
         carrier_prod = 0
     else:
         loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]

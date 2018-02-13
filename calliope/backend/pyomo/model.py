@@ -56,9 +56,19 @@ def generate_model(model_data):
     # in model_data generation such that timesteps are always last and the
     # remainder of dims are in alphabetic order
     backend_model.__calliope_model_data__ = model_data_dict
-    backend_model.__calliope_defaults__ = ruamel.yaml.load(model_data.attrs['defaults'],
-        Loader=ruamel.yaml.Loader)
+    backend_model.__calliope_defaults__ = (
+        ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
+    )
 
+    for k in model_data_dict['data'].keys():
+        if k in backend_model.__calliope_defaults__.keys():
+            setattr(
+                backend_model, k,
+                po.Param(*[getattr(backend_model, i)
+                           for i in model_data_dict['dims'][k]],
+                         initialize=model_data_dict['data'][k], mutable=True,
+                         default=backend_model.__calliope_defaults__[k])
+            )
     # Variables
     load_function(
         'calliope.backend.pyomo.variables.initialize_decision_variables'

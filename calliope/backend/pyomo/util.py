@@ -25,13 +25,16 @@ def get_param(backend_model, var, dims):
 
     """
     try:
-        return backend_model.__calliope_model_data__['data'][var][dims]
-    except KeyError:  # Try without time dimension, which is always last
+        return getattr(backend_model, var)[dims]
+    except AttributeError:  # i.e. parameter doesn't exist at all
+        logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+        return backend_model.__calliope_defaults__[var]
+    except KeyError:  # try removing timestep
         try:
             if len(dims) > 2:
-                return backend_model.__calliope_model_data__['data'][var][dims[:-1]]
+                return getattr(backend_model, var)[dims[:-1]]
             else:
-                return backend_model.__calliope_model_data__['data'][var][dims[0]]
+                return getattr(backend_model, var)[dims[0]]
         except KeyError:  # Static default value
             logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
             return backend_model.__calliope_defaults__[var]
