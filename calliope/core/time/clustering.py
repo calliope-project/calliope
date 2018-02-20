@@ -196,9 +196,6 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
 
     cluster_map = clusters.groupby(clusters).groups
 
-    hour_of_day = pd.Series([pd.Timestamp(i).hour
-                             for i in data.coords['timesteps'].values])
-
     ds = {}
     t_coords = ['{}-{}'.format(cid, t)
                 for cid in cluster_map
@@ -239,6 +236,7 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
 
     dtindex = data['timesteps'].to_index()
     timesteps_per_day = len(data.attrs['_daily_timesteps'])
+    #FIXME: Why do we have 'days' if it's unused?
     days = int(len(data['timesteps']) / timesteps_per_day)
 
     chosen_days = {}

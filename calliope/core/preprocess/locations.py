@@ -148,9 +148,9 @@ def process_locations(model_config, modelrun_techs):
 
     # Generate all transmission links
     processed_links = AttrDict()
-    processed_transmission_techs = AttrDict()
     for link in links_in:
         loc_from, loc_to = link.split(',')
+        processed_transmission_techs = AttrDict()
         for tech_name in links_in[link]:
             if tech_name not in processed_transmission_techs:
                 tech_settings = AttrDict()
@@ -181,26 +181,25 @@ def process_locations(model_config, modelrun_techs):
             else:
                 tech_settings = processed_transmission_techs[tech_name]
 
-        processed_links.set_key(
-            '{}.links.{}.techs.{}'.format(loc_from, loc_to, tech_name),
-            tech_settings
-        )
-
-        processed_links.set_key(
-            '{}.links.{}.techs.{}'.format(loc_to, loc_from, tech_name),
-            tech_settings
-        )
-
-        # If this is a one-way link, we set the constraints for energy_prod
-        # and energy_con accordingly on both parts of the link
-        if tech_settings.get('one_way', False):
             processed_links.set_key(
-                '{}.links.{}.techs.{}.constraints.energy_prod'.format(loc_from, loc_to, tech_name),
-                False)
-            processed_links.set_key(
-                '{}.links.{}.techs.{}.constraints.energy_con'.format(loc_to, loc_from, tech_name),
-                False)
+                '{}.links.{}.techs.{}'.format(loc_from, loc_to, tech_name),
+                tech_settings.copy()
+            )
 
+            processed_links.set_key(
+                '{}.links.{}.techs.{}'.format(loc_to, loc_from, tech_name),
+                tech_settings.copy()
+            )
+
+            # If this is a one-way link, we set the constraints for energy_prod
+            # and energy_con accordingly on both parts of the link
+            if tech_settings.get_key('constraints.one_way', False):
+                processed_links.set_key(
+                    '{}.links.{}.techs.{}.constraints.energy_prod'.format(loc_from, loc_to, tech_name),
+                    False)
+                processed_links.set_key(
+                    '{}.links.{}.techs.{}.constraints.energy_con'.format(loc_to, loc_from, tech_name),
+                    False)
     locations.union(processed_links, allow_override=True)
 
     return locations, locations_comments, list(set(warnings)), list(set(errors))

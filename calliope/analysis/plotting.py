@@ -155,7 +155,10 @@ def plot_transmission(model, mapbox_access_token=None):
 
         if sum_dims:
             var_da = var_da.sum(dim=sum_dims)
-        var_df = var_da.loc[dict(techs=model._model_data.techs_transmission)].to_pandas()
+        techs = list(
+            set(model._model_data.techs_transmission.values).intersection(var_da.techs.values)
+        )
+        var_df = var_da.loc[dict(techs=techs)].to_pandas()
 
         clean_var = var_df[
             (var_df != 0) &

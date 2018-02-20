@@ -230,7 +230,7 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
     equals_systemwide = get_param(backend_model, 'energy_cap_equals_systemwide', tech)
     # FIXME: changed in 0.6.0: changed name to _systemwide
 
-    if np.isinf(max_systemwide) and not equals_systemwide:
+    if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
         return po.Constraint.NoConstraint
 
     sum_expr = sum(backend_model.energy_cap[loc_tech] for loc_tech in all_loc_techs)

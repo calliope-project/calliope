@@ -71,7 +71,6 @@ def apply_time_clustering(model_data, model_run):
     ]
     if not np.all(daily_timesteps == daily_timesteps[0]):
         raise exceptions.ModelError('For clustering, timestep resolution must be uniform.')
-    timesteps_per_day = len(daily_timesteps[0])
     data.attrs['_daily_timesteps'] = daily_timesteps[0]
 
     ##
@@ -211,14 +210,15 @@ def add_time_dimension(data, model_run):
 
 
 def add_max_demand_timesteps(model_data):
-    # FIXME needs unit tests
+    #FIXME: needs unit tests
+    #FIXME: doesn't currently get a different max demand for different carriers
     max_demand_timesteps = []
     for carrier in list(model_data.carriers.data):
         carrier_demand = model_data.resource.loc[
             dict(loc_techs_finite_resource=model_data.loc_techs_demand)
         ].sum(dim='loc_techs_demand').copy()
 
-        # Only kep negative (=demand) values
+        # Only keep negative (=demand) values
         carrier_demand[carrier_demand.values > 0] = 0
 
         max_demand_timesteps.append(carrier_demand.to_series().idxmin())

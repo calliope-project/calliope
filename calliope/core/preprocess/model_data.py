@@ -64,7 +64,7 @@ def build_model_data(model_run, debug=False):
     data_dict.update(costs_to_dataset(model_run))
     data_dict.update(location_specific_to_dataset(model_run))
     data_dict.update(tech_specific_to_dataset(model_run))
-    data_dict.update(carriers_to_dataset(model_run))
+    data_dict.update(carrier_specific_to_dataset(model_run))
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
@@ -113,7 +113,7 @@ def constraints_to_dataset(model_run):
     """
     data_dict = dict()
 
-    # FIXME? should set finding be hardcoded like this?
+    # FIXME: hardcoding == bad
     def _get_set(constraint):
         """
         return the set of loc_techs over which the given constraint should be
@@ -162,7 +162,8 @@ def constraints_to_dataset(model_run):
     # Additional system-wide constraints from model_run.model
     # FIXME: hardcoding == bad
     data_dict['reserve_margin'] = {
-        'data': [model_run.model.get('reserve_margin', {}).get(c, np.nan) for c in model_run.sets['carriers']],
+        'data': [model_run.model.get('reserve_margin', {}).get(c, np.nan)
+                 for c in model_run.sets['carriers']],
         'dims': 'carriers'
     }
 
@@ -217,14 +218,14 @@ def costs_to_dataset(model_run):
     """
     data_dict = dict()
 
-    # FIXME? should set finding be hardcoded like this?
+    # FIXME: hardcoding == bad
     def _get_set(cost):
         """
         return the set of loc_techs over which the given cost should be built
         """
-        if '_cap' in cost or 'depreciation_rate' in cost or 'purchase' in cost:
+        if any(i in cost for i in ['_cap', 'depreciation_rate', 'purchase', 'area']):
             return 'loc_techs_investment_cost'
-        elif 'om_' in cost or 'export' in cost:
+        elif any(i in cost for i in ['om_', 'export']):
             return 'loc_techs_om_cost'
         else:
             return 'loc_techs'
@@ -257,7 +258,7 @@ def costs_to_dataset(model_run):
     return data_dict
 
 
-def carriers_to_dataset(model_run):
+def carrier_specific_to_dataset(model_run):
     """
     Extract carrier information from the processed dictionary (model.model_run)
     and return an xarray Dataset with DataArray variables describing carrier_in,
@@ -276,7 +277,8 @@ def carriers_to_dataset(model_run):
     carrier_tiers = model_run.sets['carrier_tiers']
     loc_tech_dict = {k: [] for k in model_run.sets['loc_techs_conversion_plus']}
     data_dict = dict()
-
+    # Set information per carrier tier ('out', 'out_2', 'in', etc.)
+    # for conversion-plus technologies
     if model_run.sets['loc_techs_conversion_plus']:
         # carrier ratios are the floating point numbers used to compare one
         # carrier_in/_out value with another carrier_in/_out value
@@ -301,6 +303,14 @@ def carriers_to_dataset(model_run):
             data_dict['carrier_ratios_min']['data'].append(
                 [min(i) for i in loc_tech_dict.values()]
             )
+
+    # Additional system-wide constraints from model_run.model
+    if 'reserve_margin' in model_run.model.keys():
+        data_dict['reserve_margin'] = {
+            'data': [model_run.model.reserve_margin.get(c, np.nan)
+                     for c in model_run.sets['carriers']],
+            'dims': 'carriers'
+        }
 
     return data_dict
 
@@ -331,7 +341,6 @@ def location_specific_to_dataset(model_run):
             .format(**split_loc_techs_transmission(loc_tech)), np.nan)
         for loc_tech in model_run.sets['loc_techs_transmission']
     ])
-    k = split_loc_techs_transmission
     data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission',
         data=concat_iterable([(k['loc_to'], k['tech'], k['loc_from'])
             for k in [split_loc_techs_transmission(loc_tech)

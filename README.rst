@@ -60,7 +60,7 @@ To run your own model, including the application of any overrides (slight change
     
 'override_1_name' etc. are the top-level names for the overrides within the file 'overrides.yaml'.
 
-In a Python interactive session, the `Model class <calliope/core/model.py>` is called to load our model configuration. Overriding can be specified as a YAML file or directly as a dictionary:
+In a Python interactive session, the `Model class <calliope/core/model.py>`_ is called to load our model configuration. Overriding can be specified as a YAML file or directly as a dictionary:
 
 .. code-block:: python
 
