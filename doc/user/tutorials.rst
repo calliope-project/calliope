@@ -129,7 +129,7 @@ Let's now look at the first location definition:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :lines: 5-17
+   :lines: 5-16
 
 There are several things to note here:
 
@@ -150,7 +150,7 @@ For transmission technologies, the model also needs to know which top-level loca
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :lines: 35-40
+   :lines: 35-39
 
 .. _urban_scale_example:
 
@@ -181,7 +181,7 @@ The definition of these technologies in the example model's configuration looks 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 7-31
+   :lines: 7-33
 
 The final supply technology is ``pv`` (solar photovoltaic power), which serves as a inflexible supply technology. It is simple to define, other than having a time-dependant resource availablity, loaded from file. Additionally, it is constrained by available area, which is the rooftop area of the locations in this example.
 
@@ -189,7 +189,7 @@ The definition of this technology in the example model's configuration looks as 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 33-49
+   :lines: 35-53
 
 Conversion technologies
 =======================
@@ -207,7 +207,7 @@ The definition of this technology in the example model's configuration looks as 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 50-60
+   :lines: 54-65
 
 There are a few things to note. First, ``boiler`` defines a name, a color (given as an HTML color code), and a stack_weight. These are used by the built-in analysis tools when analyzing model results. Second, it specifies its parent, ``conversion``, its carrier_in ``gas``, and its carrier_out ``heat``, thus setting itself up as a gasto heat conversion technology. This is followed by the definition of constraints and costs (the only cost class used is monetary, but this is where other "costs", such as emissions, could be defined).
 
@@ -223,7 +223,7 @@ This definition in the example model's configuration is more verbose:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 62-80
+   :lines: 67-87
 
 Again, ``chp`` has the definitions for name, color, stack_weight, parent, and carrier_in. Its constraints are no more numerous: it still only defines a carrier conversion efficiency and maximum carrier conversion capacity.
 
@@ -235,7 +235,7 @@ Electricity and heat demand, and their unmet_demand counterparts are defined her
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 82-102
+   :lines: 89-111
 
 Electricity and heat demand are a technologies like any other. We will associate an actual demand time series with each demand technology later. The parent of ``unmet_demand_power`` and ``unmet_demand_heat``, ``unmet_demand``, is a special kind of supply technology with an unlimited resource but very high cost. It allows a model to remain mathematically feasible even if insufficient supply is available to meet demand, and model results can easily be examined to verify whether there was any unmet demand. There is no requirement to include such a technology in a model, but it is useful to do so, since in its absence, an infeasible model would cause the solver to end with an error, returning no results for Calliope to analyze.
 
@@ -251,7 +251,7 @@ In this district, electricity and heat can be transmitted between two locations.
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :lines: 104-127
+   :lines: 113-138
 
 ``power_lines`` has an efficiency of 0.95, so a loss during transmission of 0.05. ``heat_pipes`` has a loss rate per unit distance of 2.5%/km. Over the distance between the two locations of 0.5km, this translates to 1.25% loss rate.
 
