@@ -45,3 +45,9 @@ class TestUrbanScaleExampleModelSenseChecks:
             override_dict={'model.subset_time': '2005-01-01'}
         )
         model.run()
+
+    def test_preprocess_milp(self):
+        model = calliope.examples.milp(
+            override_dict={'model.subset_time': '2005-01-01'}
+        )
+        model.run()

@@ -47,7 +47,7 @@ default_tech:
         carrier_ratios: {}  # FIXME this is new and needs a sensible description
         resource: 0  # Maximum available resourceo or reference to a file with time series data
         force_resource: false  # Forces this technology to use all available ``r``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption)
-        resource_unit: power  # Sets the unit of ``r`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
+        resource_unit: power  # Sets the unit of ``resource`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
         resource_eff: 1.0  # Resource to/from storage conversion efficiency
         resource_area_min: 0  # Minimum installed collector area (m\ :sup:`2`)
         resource_area_max: false  # Maximum installed collector area (m\ :sup:`2`), set to false by default in order to disable this constraint and force r_area to 1

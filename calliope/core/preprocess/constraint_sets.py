@@ -125,21 +125,26 @@ def generate_constraint_sets(model_run):
 
     # milp.py
     loc_techs_unit_commitment_constraint = sets.loc_techs_milp,
+    loc_techs_unit_capacity_constraint = sets.loc_techs_milp,
     loc_tech_carriers_carrier_production_max_milp_constraint = [
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
     ],
-    loc_tech_carriers_carrier_production_max_conversion_plus_milp_constraint_rule = [
-        i for i in sets.loc_tech_carriers_prod
-        if i in sets.loc_tech_carriers_conversion_plus
-        and i.rsplit('::', 1)[0] in sets.loc_techs_milp
+    loc_techs_carrier_production_max_conversion_plus_milp_constraint = [
+        i for i in sets.loc_techs_conversion_plus
+        if i in sets.loc_techs_milp
     ],
     loc_tech_carriers_carrier_production_min_milp_constraint = [
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
         and constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
+    ],
+    loc_techs_carrier_production_min_conversion_plus_milp_constraint = [
+        i for i in sets.loc_techs_conversion_plus
+        if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        and i in sets.loc_techs_milp
     ],
     loc_tech_carriers_carrier_consumption_max_milp_constraint = [
         i for i in sets.loc_tech_carriers_con
@@ -167,12 +172,11 @@ def generate_constraint_sets(model_run):
     ],
     loc_techs_update_costs_investment_units_constraint = [
         i for i in sets.loc_techs_milp
-        if constraint_exists(model_run, i, 'costs.cost_purchase')
+        if any('purchase' in i
+            for i in constraint_exists(model_run, i, 'costs').as_dict_flat().keys())
     ],
-    loc_techs_update_costs_investment_purchase_constraint = [
-        i for i in sets.loc_techs_purchase
-        if constraint_exists(model_run, i, 'costs.cost_purchase')
-    ],
+    # loc_techs_purchase technologies only exist becuase they have defined a purchase cost
+    loc_techs_update_costs_investment_purchase_constraint = sets.loc_techs_purchase,
 
     # conversion.py
     loc_techs_balance_conversion_constraint = sets.loc_techs_conversion,

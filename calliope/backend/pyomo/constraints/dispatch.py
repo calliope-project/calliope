@@ -71,7 +71,6 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
     Set maximum carrier production. All technologies.
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    sets = backend_model.__calliope_model_data__['sets']
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.__calliope_model_data__['data']['timestep_resolution'][timestep]
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))

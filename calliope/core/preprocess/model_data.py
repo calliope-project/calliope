@@ -119,12 +119,12 @@ def constraints_to_dataset(model_run):
         return the set of loc_techs over which the given constraint should be
         built
         """
-        if constraint == 'resource':
-            return 'loc_techs_finite_resource'
-        elif '_area' in constraint:
+        if '_area' in constraint:
             return 'loc_techs_area'
-        elif 'resource_' in constraint or 'parasitic' in constraint:
+        elif any(i in constraint for i in ['resource_cap',  'parasitic', 'resource_min_use']):
             return 'loc_techs_supply_plus'
+        elif 'resource' in constraint: # i.e. everything with 'resource' in the name that isn't resource_cap
+            return 'loc_techs_finite_resource'
         elif 'storage' in constraint or 'charge_rate' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:

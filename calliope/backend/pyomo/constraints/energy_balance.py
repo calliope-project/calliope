@@ -14,7 +14,8 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import \
     get_param, \
     get_previous_timestep, \
-    get_loc_tech_carriers
+    get_loc_tech_carriers, \
+    loc_tech_is_in
 
 
 def load_constraints(backend_model):
@@ -116,7 +117,7 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     else:
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff
 
-    if loc_tech in backend_model.loc_techs_area:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
         available_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
         available_resource = resource * resource_scale
@@ -143,7 +144,7 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
-    if loc_tech in backend_model.loc_techs_area:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
         required_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
         required_resource = resource * resource_scale
@@ -163,7 +164,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
 
-    if loc_tech in backend_model.loc_techs_area:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
         available_resource = resource * resource_scale * backend_model.resource_area[loc_tech] * resource_eff
     else:
         available_resource = resource * resource_scale * resource_eff
@@ -185,7 +186,7 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
     remote_loc_tech = model_data_dict['lookup_remotes'][loc_tech]
     remote_loc_tech_carrier = model_data_dict['lookup_loc_techs'][remote_loc_tech]
 
-    if (remote_loc_tech in backend_model.loc_techs_transmission
+    if (loc_tech_is_in(backend_model, remote_loc_tech, 'loc_techs_transmission')
         and get_param(backend_model, 'energy_prod', (loc_tech)) == 1):
         return (
             backend_model.carrier_prod[loc_tech_carrier, timestep] ==
@@ -202,7 +203,6 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     alongside any use of resource storage
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
-    sets = backend_model.__calliope_model_data__['sets']
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
@@ -215,7 +215,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / total_eff
 
     # A) Case where no storage allowed
-    if 'loc_techs_store' not in sets or loc_tech not in backend_model.loc_techs_store:
+    if not loc_tech_is_in(backend_model, loc_tech, 'loc_techs_store'):
         return backend_model.resource_con[loc_tech, timestep] == carrier_prod
 
     # B) Case where storage is allowed

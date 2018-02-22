@@ -54,4 +54,4 @@ def initialize_decision_variables(backend_model):
 
     if 'loc_techs_milp' in model_data_dict['sets']:
         backend_model.units = po.Var(backend_model.loc_techs_milp, within=po.NonNegativeIntegers)
-        backend_model.operating_units = po.Var(backend_model.loc_techs_milp, within=po.NonNegativeIntegers)
+        backend_model.operating_units = po.Var(backend_model.loc_techs_milp, backend_model.timesteps, within=po.NonNegativeIntegers)

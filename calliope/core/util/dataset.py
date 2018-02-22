@@ -130,7 +130,7 @@ def reorganise_dataset_dimensions(dataset):
     """
 
     new_dims = (
-        sorted(list(set(dataset.coords.keys()) - set(['timesteps'])))
+        sorted(list(set(dataset.dims.keys()) - set(['timesteps'])))
     ) + ['timesteps']
 
     updated_dataset = dataset.transpose(*new_dims).reindex(

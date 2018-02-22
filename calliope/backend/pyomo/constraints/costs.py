@@ -64,12 +64,12 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
     """
     Combine investment and time varying costs into one cost per technology
     """
-    if loc_tech in backend_model.loc_techs_investment_cost:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost'):
         cost_investment = backend_model.cost_investment[cost, loc_tech]
     else:
         cost_investment = 0
 
-    if loc_tech in backend_model.loc_techs_om_cost:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_om_cost'):
         cost_var = sum(backend_model.cost_var[cost, loc_tech, timestep]
                        for timestep in backend_model.timesteps)
     else:
@@ -117,7 +117,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     )
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
-    if loc_tech in backend_model.loc_techs_transmission:
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
             cost_con = cost_con / 2
 
     cost_fractional_om = cost_om_annual_investment_fraction * cost_con
