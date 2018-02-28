@@ -151,44 +151,41 @@ def lookup_loc_techs_conversion_plus(dataset, model_run):
     # Get the string name for a loc_tech which includes all the carriers in
     # and out associated with that technology (for conversion_plus technologies)
     carrier_tiers = model_run.sets['carrier_tiers']
+    loc_techs_conversion_plus = model_run.sets['loc_techs_conversion_plus']
 
     loc_techs_conversion_plus_array = (
-        xr.DataArray(np.empty((len(model_run.sets['loc_techs_conversion_plus']),
-                               len(carrier_tiers)), dtype=np.object),
-                     dims=['loc_techs_conversion_plus', 'carrier_tiers'],
-                     coords=[('loc_techs_conversion_plus',
-                              list(model_run.sets['loc_techs_conversion_plus'])),
-                             ('carrier_tiers', list(carrier_tiers))]
-                    )
+        np.empty((len(loc_techs_conversion_plus), len(carrier_tiers)), dtype=np.object)
     )
     primary_carrier_data = []
-
-    for loc_tech in model_run.sets['loc_techs_conversion_plus']:
+    for loc_tech_idx, loc_tech in enumerate(loc_techs_conversion_plus):
         _tech = loc_tech.split('::', 1)[1]
         primary_carrier = model_run.techs[_tech].essentials.primary_carrier
         primary_carrier_data.append(loc_tech + "::" + primary_carrier)
-        for carrier_tier in carrier_tiers:
+        for carrier_tier_idx, carrier_tier in enumerate(carrier_tiers):
             # create a list of carriers for the given technology that fits
             # the current carrier_tier.
             relevant_carriers = model_run.techs[_tech].essentials.get(
                 'carrier_' + carrier_tier, None)
+
             if relevant_carriers and isinstance(relevant_carriers, list):
                 loc_tech_carriers = ','.join([loc_tech + "::" + i
                                               for i in relevant_carriers])
             elif relevant_carriers:
                 loc_tech_carriers = loc_tech + "::" + relevant_carriers
             else:
-                loc_tech_carriers = None
-            loc_techs_conversion_plus_array.loc[
-                dict(loc_techs_conversion_plus=loc_tech,
-                     carrier_tiers=carrier_tier)
-            ] = loc_tech_carriers
-
+                continue
+            loc_techs_conversion_plus_array[loc_tech_idx, carrier_tier_idx] = loc_tech_carriers
     primary_carrier_data_array = xr.DataArray.from_dict(dict(
         data=primary_carrier_data, dims=['loc_techs_conversion_plus']
     ))
 
-    dataset['lookup_loc_techs_conversion_plus'] = loc_techs_conversion_plus_array
+    dataset['lookup_loc_techs_conversion_plus'] = (
+        xr.DataArray(loc_techs_conversion_plus_array,
+                     dims=['loc_techs_conversion_plus', 'carrier_tiers'],
+                     coords=[('loc_techs_conversion_plus', loc_techs_conversion_plus),
+                             ('carrier_tiers', carrier_tiers)]
+                    )
+    )
     dataset['lookup_primary_loc_tech_carriers'] = primary_carrier_data_array
 
     return None
