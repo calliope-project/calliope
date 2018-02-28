@@ -26,8 +26,8 @@ def load_constraints(backend_model):
             backend_model.loc_techs_cost,
             rule=cost_constraint_rule
         )
-
-    if 'loc_techs_cost_investment_constraint' in sets:
+    # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
+    if 'loc_techs_cost_investment_constraint' in sets and backend_model.mode != 'operate':
         # Right-hand side expression can be later updated by MILP investment costs
         backend_model.cost_investment_rhs = po.Expression(
             backend_model.costs,
@@ -64,7 +64,8 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
     """
     Combine investment and time varying costs into one cost per technology
     """
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost'):
+    # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost') and backend_model.mode != 'operate':
         cost_investment = backend_model.cost_investment[cost, loc_tech]
     else:
         cost_investment = 0
@@ -141,7 +142,7 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
 
     cost_om_prod = get_param(backend_model, 'cost_om_prod', (cost, loc_tech, timestep))
     cost_om_con = get_param(backend_model, 'cost_om_con', (cost, loc_tech, timestep))
-    weight = model_data_dict['data']['timestep_weights'][timestep]
+    weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier = model_data_dict['data']['lookup_loc_techs'][loc_tech]
 

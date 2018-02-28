@@ -24,7 +24,7 @@ from pyutilib.services import TempfileManager  # pylint: disable=import-error
 from calliope.backend.pyomo.util import get_var
 from calliope.core.util.tools import load_function, LogWriter
 from calliope.core.util.dataset import reorganise_dataset_dimensions
-
+from calliope import exceptions
 
 def generate_model(model_data):
     """
@@ -32,6 +32,8 @@ def generate_model(model_data):
 
     """
     backend_model = po.ConcreteModel()
+    mode = model_data.attrs['model.mode'] # 'plan' or 'operate'
+    backend_model.mode = mode
 
     # Sets
     for coord in list(model_data.coords):
@@ -69,6 +71,12 @@ def generate_model(model_data):
                          initialize=model_data_dict['data'][k], mutable=True,
                          default=backend_model.__calliope_defaults__[k])
             )
+        elif k == 'timestep_resolution' or k == 'timestep_weights': # no default value to look up
+            setattr(
+                backend_model, k,
+                po.Param(backend_model.timesteps, initialize=model_data_dict['data'][k], mutable=True)
+            )
+
     # Variables
     load_function(
         'calliope.backend.pyomo.variables.initialize_decision_variables'
@@ -77,12 +85,14 @@ def generate_model(model_data):
     # Constraints
     constraints_to_add = [
         'energy_balance.load_constraints',
-        'capacity.load_constraints',
         'dispatch.load_constraints',
         'network.load_constraints',
         'costs.load_constraints',
         'policy.load_constraints'
     ]
+
+    if mode != 'operate':
+        constraints_to_add.append('capacity.load_constraints')
 
     if hasattr(backend_model, 'loc_techs_conversion'):
         constraints_to_add.append('conversion.load_constraints')
@@ -136,6 +146,13 @@ def solve_model(backend_model, solver,
         })
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
+    if 'warmstart' in solve_kwargs.keys() and solver == 'glpk':
+        exceptions.ModelWarning(
+            'The chosen solver, GLPK, does not suport warmstart, which may '
+            'impact performance.'
+        )
+        del solve_kwargs['warmstart']
+
 
     with redirect_stdout(LogWriter('info', strip=True)):
         with redirect_stderr(LogWriter('error', strip=True)):

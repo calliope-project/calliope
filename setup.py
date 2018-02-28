@@ -33,7 +33,7 @@ def find_calliope_package_data():
 setup(
     name='calliope',
     version=__version__,
-    author='Stefan Pfenninger and Calliope contributors listed in AUTHORS',
+    author='Calliope contributors listed in AUTHORS',
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
     license='Apache 2.0',
@@ -50,6 +50,7 @@ setup(
         "pyomo >= 5.2, < 5.3",
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
+        "plotly >= 2.2.3"
     ],
     entry_points={
         'console_scripts': [

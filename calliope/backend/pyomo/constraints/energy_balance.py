@@ -226,7 +226,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
         else:
             storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
             previous_step = get_previous_timestep(backend_model, timestep)
-            time_resolution = model_data_dict['timestep_resolution'][previous_step]
+            time_resolution = backend_model.timestep_resolution[previous_step]
             storage_previous_step = (
                 ((1 - storage_loss) ** time_resolution) *
                 backend_model.storage[loc_tech, previous_step]
@@ -260,7 +260,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     else:
         storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
         previous_step = get_previous_timestep(backend_model, timestep)
-        time_resolution = model_data_dict['timestep_resolution'][previous_step]
+        time_resolution = backend_model.timestep_resolution[previous_step]
         storage_previous_step = (
             ((1 - storage_loss) ** time_resolution) *
             backend_model.storage[loc_tech, previous_step]
@@ -271,18 +271,20 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
         storage_previous_step - carrier_prod - carrier_con
     )
 
-
+# FIXME: As with max_demand_timesteps, this constraint doesn't correctly split
+# carriers
 def reserve_margin_constraint_rule(backend_model, carrier):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     reserve_margin = model_data_dict['reserve_margin'][carrier]
     max_demand_timestep = model_data_dict['max_demand_timesteps'][carrier]
-    max_demand_time_res = model_data_dict['timestep_resolution'][max_demand_timestep]
+    max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
 
     return (
         sum(  # Sum all demand for this carrier and timestep
             backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
             for loc_tech_carrier in backend_model.loc_tech_carriers_demand
+            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
         ) * -1 * (1 / max_demand_time_res)
         >=
         sum(  # Sum all supply capacity for this carrier

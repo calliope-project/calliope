@@ -106,7 +106,7 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    timestep_resolution = model_data_dict['timestep_resolution'][timestep]
+    timestep_resolution = backend_model.timestep_resolution[timestep]
     loc_tech_carriers_out = split_comma_list(
         model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
     )
@@ -123,7 +123,7 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    timestep_resolution = model_data_dict['timestep_resolution'][timestep]
+    timestep_resolution = backend_model.timestep_resolution[timestep]
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
 
     loc_tech_carriers_out = split_comma_list(
@@ -143,7 +143,7 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
     Add time-varying conversion_plus technology costs
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
-    weight = model_data_dict['timestep_weights'][timestep]
+    weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier = (
         model_data_dict['lookup_primary_loc_tech_carriers'][loc_tech]

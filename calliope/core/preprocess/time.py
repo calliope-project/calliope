@@ -102,10 +102,6 @@ def apply_time_clustering(model_data, model_run):
         func_kwargs = time_config.get('function_options', {})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
 
-    # Final checking of the data
-    final_check_comments, warnings, errors = checks.check_model_data(data)
-    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
-
     # Temporary timesteps per day attribute is no longer needed
     try:
         del data.attrs['_daily_timesteps']
@@ -232,6 +228,16 @@ def add_max_demand_timesteps(model_data):
 
 
 def final_timedimension_processing(model_data):
+
+    # Final checking of the data
+    final_check_comments, warnings, errors = checks.check_model_data(model_data)
+    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+
+    # operational mode checks
+    if model_data.attrs['model.mode'] == 'operate':
+        operate_comments, operate_warnings, operate_errors = checks.check_operate_params(model_data)
+        checks.print_warnings_and_raise_errors(warnings=operate_warnings, errors=operate_errors)
+
     model_data = reorganise_dataset_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)
     return model_data

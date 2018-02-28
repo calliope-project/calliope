@@ -141,6 +141,12 @@ class Model(object):
                 ' to force the results to be overwritten with a new run.'
             )
 
+        if self._model_data.attrs['model.mode'] == 'operate' and not self._model_data.attrs['model.operation.safe']:
+            raise exceptions.ModelError(
+                'Unable to run this model in operational mode, probably because '
+                'there exists non-uniform timesteps (e.g. from time masking)'
+            )
+
         backend = self._model_data.attrs['run.backend']
         results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self._timings)
 

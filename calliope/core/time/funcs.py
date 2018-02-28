@@ -199,7 +199,10 @@ def resample(data, timesteps, resolution):
 
     # Get rid of the filled-in NaN timestamps
     data_rs = data_rs.dropna(dim='timesteps', how='all')
-    data_rs.attrs['opmode_safe'] = True  # Resampling still permits operational mode
+
+    # repopulate the attribute dictionary, as it will have been lost along the way
+    data_rs.attrs.update(data.attrs)
+    data_rs.attrs['model.operation.safe'] = True  # Resampling still permits operational mode
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
@@ -207,7 +210,7 @@ def resample(data, timesteps, resolution):
         data_rs = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_rs)
         data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
-        data_rs.attrs['opmode_safe'] = False
+        data_rs.attrs['model.operation.safe'] = False
 
     return data_rs
 

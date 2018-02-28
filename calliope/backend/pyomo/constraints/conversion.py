@@ -54,7 +54,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
     Add time-varying conversion technology costs
     """
     model_data_dict = backend_model.__calliope_model_data__
-    weight = model_data_dict['data']['timestep_weights'][timestep]
+    weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier_in = (
         model_data_dict['data']['lookup_loc_techs_conversion'][('in', loc_tech)]

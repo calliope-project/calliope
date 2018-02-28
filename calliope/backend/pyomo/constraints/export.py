@@ -78,7 +78,7 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     loc_tech_carrier = model_data_dict['lookup_loc_techs_export'][(loc_tech)]
-    weight = model_data_dict['timestep_weights'][timestep]
+    weight = backend_model.timestep_weights[timestep]
 
     cost_export = (
         get_param(backend_model, 'cost_export', (cost, loc_tech, timestep))

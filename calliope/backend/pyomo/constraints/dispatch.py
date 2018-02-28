@@ -72,7 +72,7 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
-    timestep_resolution = backend_model.__calliope_model_data__['data']['timestep_resolution'][timestep]
+    timestep_resolution = backend_model.timestep_resolution[timestep]
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
 
     return carrier_prod <= (
@@ -86,7 +86,7 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
-    timestep_resolution = backend_model.__calliope_model_data__['data']['timestep_resolution'][timestep]
+    timestep_resolution = backend_model.timestep_resolution[timestep]
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
 
     return carrier_prod >= (
@@ -100,7 +100,7 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
-    timestep_resolution = backend_model.__calliope_model_data__['data']['timestep_resolution'][timestep]
+    timestep_resolution = backend_model.timestep_resolution[timestep]
 
     return carrier_con >= (-1 *
         backend_model.energy_cap[loc_tech] * timestep_resolution
@@ -111,7 +111,7 @@ def resource_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set maximum resource consumed by supply_plus techs
     """
-    timestep_resolution = backend_model.__calliope_model_data__['data']['timestep_resolution'][timestep]
+    timestep_resolution = backend_model.timestep_resolution[timestep]
 
     return backend_model.resource_con[loc_tech, timestep] <= (
         timestep_resolution * backend_model.resource_cap[loc_tech])
@@ -147,8 +147,8 @@ def _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, directio
         return po.Constraint.NoConstraint
     else:
         previous_step = get_previous_timestep(backend_model, timestep)
-        time_res = model_data_dict['timestep_resolution'][timestep]
-        time_res_prev = model_data_dict['timestep_resolution'][previous_step]
+        time_res = backend_model.timestep_resolution[timestep]
+        time_res_prev = backend_model.timestep_resolution[previous_step]
         loc_tech = loc_tech_carrier.rsplit('::', 1)[0]
         # Ramping rate (fraction of installed capacity per hour)
         ramping_rate = get_param(backend_model, 'energy_ramping', (loc_tech, timestep))
