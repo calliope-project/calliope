@@ -2,18 +2,13 @@
 
 Release History
 ===============
-0.5.5 (dev)
------------
-Major changes
-~~~~~~~~~~~~~
 
-Other changes
-~~~~~~~~~~~~~
+0.5.5 (2018-02-28)
+------------------
+
 * |fixed| Allow `r_area` to be non-zero if either of `e_cap.max` or `e_cap.equals` is set, not just `e_cap.max`.
-
-0.5.5 (dev)
------------
-
+* |fixed| Ensure static parameters in resampled timeseries are caught in constraint generation
+* |fixed| Fix time masking when set_t.csv contains sub-hourly resolutions
 
 0.5.4 (2017-11-10)
 ------------------

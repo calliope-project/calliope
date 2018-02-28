@@ -14,6 +14,10 @@
 
 -----
 
+**CAUTION:** Version 0.5.5 is likely to be the last release in the 0.5.x branch. Work on the next version has been taking place in the ``ng`` branch so far, but from 5th March 2018, the current ``master`` branch will be renamed to ``0.5`` and ``ng`` will become ``master``. The upcoming 0.6.0 release of Calliope will introduce many changes, remove some of the lesser used functionality, and features an entirely rewritten backend. It will also provide an automated conversion script to convert 0.5 models to 0.6 models.
+
+-----
+
 About
 -----
 
