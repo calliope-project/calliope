@@ -48,7 +48,7 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
 
 ::
 
-   Copyright 2013-2017 Calliope contributors listed in AUTHORS
+   Copyright 2013-2018 Calliope contributors listed in AUTHORS
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

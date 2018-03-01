@@ -11,7 +11,7 @@ This section details the mathematical formulation of the different components. F
 Time-varying vs. constant model parameters
 ------------------------------------------
 
-Some model parameters which are defined over the set of time steps ``t`` can either given as time series or as constant values. If given as constant values, the same value is used for each time step ``t``. For details on how to define a parameter as time-varying and how to load time series data into it, see the :ref:`time series description in the model configuration section <configuration_timeseries>`.
+Some model parameters which are defined over the set of time steps ``timesteps`` can either given as time series or as constant values. If given as constant values, the same value is used for each time step ``timestep``. For details on how to define a parameter as time-varying and how to load time series data into it, see the :ref:`time series description in the model configuration section <configuration_timeseries>`.
 
 ------------------
 Decision variables
@@ -20,35 +20,33 @@ Decision variables
 Capacity
 --------
 
-* ``s_cap(y, x)``: installed storage capacity. Supply plus/Storage only
-* ``r_cap(y, x)``: installed resource <-> storage/carrier_in conversion capacity
-* ``e_cap(y, x)``: installed storage <-> grid conversion capacity (gross)
-* ``r2_cap(y, x)``: installed secondary resource conversion capacity
-* ``r_area(y, x)``: resource collector area
+* ``storage_cap(loc::tech)``: installed storage capacity. Supply plus/Storage only
+* ``resource_cap(loc::tech)``: installed resource <-> storage/carrier_in conversion capacity
+* ``energy_cap(loc::tech)``: installed resource/storage/carrier_in <-> carrier_out conversion capacity (gross)
+* ``resource_area(loc::tech)``: resource collector area
 
 Unit Commitment
 ---------------
 
-* ``r(y, x, t)``: resource <-> storage/carrier_in (+ production, - consumption)
-* ``r2(y, x, t)``: secondary resource -> storage/carrier_in (+ production)
-* ``c_prod(c, y, x, t)``: resource/storage/carrier_in -> carrier_out (+ production)
-* ``c_con(c, y, x, t)``: resource/storage/carrier_in <- carrier_out (- consumption)
-* ``s(y, x, t)``: total energy stored in device
-* ``export(y, x, t)``: carrier_out -> export
+* ``resource(loc::tech, timestep)``: resource <-> storage/carrier_in (+ production, - consumption)
+* ``carrier_prod(loc::tech::carrier, timestep)``: resource/storage/carrier_in -> carrier_out (+ production)
+* ``carrier_con(loc::tech::carrier, timestep)``: resource/storage/carrier_in <- carrier_out (- consumption)
+* ``storage(loc::tech, timestep)``: total energy stored in technology
+* ``carrier_export(loc::tech::carrier, timestep)``: carrier_out -> export
 
 Costs
 -----
 
-* ``cost(y, x, k)``: total costs
-* ``cost_fixed(y, x, k)``: fixed operation costs
-* ``cost_var(y, x, k, t)``: variable operation costs
+* ``cost(loc::tech, cost)``: total costs
+* ``cost_investment(loc::tech, cost)``: investment operation costs
+* ``cost_var(loc::tech, cost, timestep)``: variable operation costs
 
 Binary/Integer variables
 ------------------------
 
-* ``units(y, x)``: Number of integer installed technologies
-* ``purchased(y, x)``: Binary switch indicating whether a technology has been installed
-* ``operating_units(y, x, t)``: Binary switch indicating whether a technology that has been installed is operating
+* ``units(loc::tech)``: Number of integer installed technologies
+* ``purchased(loc::tech)``: Binary switch indicating whether a technology has been installed
+* ``operating_units(loc::tech, timestep)``: Binary switch indicating whether a technology that has been installed is operating
 
 --------------------------------------
 Objective function (cost minimization)
@@ -60,28 +58,245 @@ The default objective function minimizes cost:
 
 .. math::
 
-   min: z = \sum_y (weight(y) \times \sum_x cost(y, x, k=k_{m}))
+   min: z = \sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{m}))
 
-where :math:`k_{m}` is the monetary cost class.
+where :math:`cost_{m}` is the monetary cost class.
 
 Alternative objective functions can be used by setting the ``objective`` in the model configuration (see :ref:`config_reference_model_wide`).
 
-`weight(y)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
+`weight(tech)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
 
 -----------------
 Basic constraints
 -----------------
 
-Node resource
--------------
+Energy Balance
+--------------
 
-Provided by: :func:`calliope.constraints.base.node_resource`
+For all technologies, in all locations, energy in must balance with energy out (minus efficiency losses). These constraints are provided in: :func:`calliope.backend.pyomo.constraints.energy_balance.py`
 
-Defines constraint ``c_r_available``:
+1. ``system_balance_constraint_rule``
+System balance ensures that, within each location, the production, consumption, and export of each carrier is balanced.
+.. math::
+
+  \sum_{loc::tech::carrier_{prod} in loc::carriers_i} carrier_{prod}(loc::tech::carrier, timestep) + \sum_{loc::tech::carrier_{con} in loc::carriers_i} carrier_{con}(loc::tech::carrier, timestep)  + \sum_{loc::tech::carrier_{export} in loc::carriers_i} carrier_{export}(loc::tech::carrier, timestep) \qquad\forall i, timesteps
+
+Where loc::carriers is the set of all location::carrier combinations. ``carrier_export`` is ignored entirely in this constraint if there are no technologies exporting energy.
+
+2. ``balance_supply_constraint_rule``
+Limit production from supply techs to their available resource.
 
 .. math::
 
-   r_{avail}(y, x, t) = resource(y, x, t) \times r_{scale}(y, x) \times r_{area}(y, x)
+  min_use(loc::tech) \times resource_{available}(loc::tech, timestep)\greq \fraq(carrier_{prod}(loc::tech::carrier, timestep))(energy_{eff}) \leq resource_{available}(loc::tech, timestep) \forall loc::tech in locs::techs_{supply}, timesteps
+
+Where:
+
+.. math::
+
+   resource_{available}(loc::tech, timestep) = resource(loc::tech, timestep) \times resource_{scale}(loc::tech) \times resource_{area}(loc::tech)
+
+If ``force_resource(loc::tech)`` is set, then the constraint becomes:
+
+.. math::
+
+  \fraq(carrier_{prod}(loc::tech::carrier, timestep))(energy_{eff}) \equals resource_{available}(loc::tech, timestep) \forall loc::tech in locs::techs_{supply}, timesteps
+
+3. ``balance_demand_constraint_rule``
+Limit consumption from demand techs to their required resource.
+
+.. math::
+
+  carrier_{con}(loc::tech::carrier, timestep) \times energy_{eff} \greq resource_{required}(loc::tech, timestep) \forall loc::tech in locs::techs_{demand}, timesteps
+
+Where:
+
+.. math::
+
+   resource_{required}(loc::tech, timestep) = resource(loc::tech, timestep) \times resource_{scale}(loc::tech) \times resource_{area}(loc::tech)
+
+If ``force_resource(loc::tech)`` is set, then the constraint becomes:
+
+.. math::
+
+  carrier_{con}(loc::tech::carrier, timestep) \times energy_{eff} \equals resource_{required}(loc::tech, timestep) \forall loc::tech in locs::techs_{demand}, timesteps
+
+4. ``resource_availability_supply_plus_constraint_rule``
+Limit production from supply_plus techs to their available resource.
+
+.. math::
+
+  resource_{con}(loc::tech, timestep) \leq resource_{available}(loc::tech, timestep) \forall loc::tech in locs::techs_{supply_plus}, timesteps
+
+Where:
+
+.. math::
+
+   resource_{available}(loc::tech, timestep) = resource(loc::tech, timestep) \times resource_{scale}(loc::tech) \times resource_{area}(loc::tech) \times resource_eff(loc::tech, timestep)
+
+If ``force_resource(loc::tech)`` is set, then the constraint becomes:
+
+.. math::
+
+  resource_{con}(loc::tech, timestep) \equals resource_{available}(loc::tech, timestep) \forall loc::tech in locs::techs_{supply_plus}, timesteps
+
+5. ``balance_transmission_constraint_rule``
+Balance carrier production and consumption of transmission technologies.
+
+.. math::
+
+  - carrier_{con}(loc_{from}::tech:loc_{to}::carrier, timestep) \times energy_{eff} \equals carrier_{prod}(loc_{to}::tech:loc_{from}::carrier, timestep) \times energy_{eff} \forall loc::tech:loc in locs::techs:locs_{transmission}, timesteps
+
+
+6. ``balance_supply_plus_constraint_rule``
+Balance carrier production and resource consumption of supply_plus technologies alongside any use of resource storage.
+
+.. math::
+
+  storage(loc::tech, timestep) = storage(loc::tech, timestep_{previous}) \times (1 - storage_{loss})^{timestep_{resolution}} \plus resource_{con}(loc::tech, timestep) - \fraq(carrier_{prod}(loc::tech::carrier, timestep))(energy_{eff} \times parasitic_{eff})
+
+If no storage is defined for the technology, this reduces to:
+
+.. math::
+
+resource_{con}(loc::tech, timestep) = \fraq(carrier_{prod}(loc::tech::carrier, timestep))(energy_{eff} \times parasitic_{eff})
+
+7. ``balance_storage_constraint_rule``
+Balance carrier production and consumption of storage technologies, alongside any use of the stored volume.
+
+.. math::
+
+  storage(loc::tech, timestep) = storage(loc::tech, timestep_{previous}) \times (1 - storage_{loss})^{timestep_{resolution}} - carrier_{con}(loc::tech::carrier, timestep) \times energy_{eff} - \fraq(carrier_{prod}(loc::tech::carrier, timestep))(energy_{eff})
+
+Capacity
+--------
+Constrain the capacity decision variables to maximum/minimum/equals the input parameters given
+:func:`calliope.backend.pyomo.constraints.capacity.py`
+
+1. ``storage_capacity_constraint_rule``
+Set maximum storage capacity for supply_plus & storage techs only. This can be set by either storage_cap (kWh) or by energy_cap (charge/discharge capacity) * charge rate. If storage_cap_equals and energy_cap_equals are set for the technology, then storage_cap * charge rate = energy_cap must hold. Otherwise, take the lowest capacity defined by storage_cap_max or energy_cap_max / charge rate.
+
+.. math::
+
+  storage_{cap}(loc::tech) \leq storage_{cap, equals}(loc::tech)
+
+if :math:`storage_{cap, equals}(loc::tech)` exists
+
+else:
+
+.. math::
+
+  storage_{cap}(loc::tech) \leq energy_{cap, equals}(loc::tech) \times charge_{rate}`
+
+if :math:`energy_{cap, equals}(loc::tech)` and :math:`charge_{rate}(loc::tech)` exist.
+
+else:
+
+.. math::
+
+  storage_cap(loc::tech) \leq storage_{cap, max}(loc::tech)
+
+if :math:`storage_{cap, max}(loc::tech) \leq energy_{cap, max}(loc::tech) \times charge_{rate}`.
+
+else:
+
+.. math::
+
+  storage_{cap}(loc::tech) \leq energy_{cap, max}(loc::tech) \times charge_{rate}`
+
+if :math:`energy_{cap, max}(loc::tech)` and :math:`charge_{rate}(loc::tech)` exist.
+
+Otherwise, no maximum capacity is placed on storage.
+
+2. ``energy_capacity_storage_constraint_rule``
+Set an additional energy capacity constraint on storage technologies, based on their use of `charge_rate`.
+
+.. math::
+
+  energy_{cap}(loc::tech) \leq storage_{cap}(loc::tech) \times charge_{rate}(loc::tech) \times energy_{cap, scale}(loc::tech)
+
+
+3. ``resource_capacity_constraint_rule``
+Add upper and lower bounds for resource_cap.
+
+.. math::
+
+  resource_{cap}(loc::tech) \leq resource_{cap, equals}(loc::tech)
+
+if :math:`resource_{cap, equals}(loc::tech)` exists
+
+else:
+
+.. math::
+
+  resource_{cap}(loc::tech) \leq resource_{cap, max}(loc::tech)
+
+4. ``resource_capacity_equals_energy_capacity_constraint_rule``
+Add equality constraint for resource_cap to equal energy_cap, for any technologies which have defined resource_cap_equals_energy_cap.
+
+.. math::
+
+  resource_{cap}(loc::tech) = energy_{cap}(loc::tech)
+
+5. ``resource_area_constraint_rule``
+Set upper and lower bounds for resource_area.
+
+.. math::
+
+  resource_{area}(loc::tech) \leq resource_{area, equals}(loc::tech)
+
+if :math:`resource_{cap, equals}(loc::tech)` exists
+
+else:
+
+.. math::
+
+  resource_{area}(loc::tech) \leq resource_{area, max}(loc::tech)
+
+6. ``resource_area_per_energy_capacity_constraint_rule``
+Add equality constraint for resource_area to equal a percentage of energy_cap, for any technologies which have defined resource_area_per_energy_cap.
+
+.. math::
+
+  resource_{area}(loc::tech) = energy_{cap}(loc::tech) \times area\_per\_energy\_cap(loc::tech) \forall loc::tech in locs::techs_{area}
+
+7. ``resource_area_capacity_per_loc_constraint_rule``
+Set upper bound on use of area for all locations which have `available_area` constraint set. Does not consider resource_area applied to demand technologies.
+
+\sum_{tech} resource_{area}(loc_i::tech) \leq area_{available} \forall i in locs
+
+8. ``energy_capacity_constraint_rule``
+Add upper and lower bounds for resource_cap.
+
+.. math::
+
+  energy_{cap}(loc::tech) \leq energy_{cap, equals}(loc::tech) \forall loc::tech in locs::techs
+
+if :math:`energy_{cap, equals}(loc::tech)` exists
+
+else:
+
+.. math::
+
+  energy_{cap}(loc::tech) \leq energy_{cap, max}(loc::tech) \forall loc::tech in locs::techs
+
+9. ``energy_capacity_systemwide_constraint_rule``
+Set constraints to limit the capacity of a single technology type across all locations in the model.
+
+.. math::
+
+  \sum_{loc} energy_{cap}(loc::tech_i) = energy_{cap, equals, systemwide}(loc::tech_i) \forall i in techs
+
+if :math:`energy_{cap, equals}(loc::tech)` exists
+
+else:
+
+.. math::
+
+  \sum_{loc} energy_{cap}(loc::tech_i) \leq energy_{cap, max, systemwide}(loc::tech_i) \forall i in techs
+
+10. ``reserve_margin_constraint_rule``
+Ensure there is always a percentage additional ``energy_cap``, across all carrier producers in a given location, above the demand for that carrier.
 
 Which limits the resource flow **to** ``supply`` and ``supply_plus`` technologies, or **from** ``demand`` technologies.
 
@@ -91,13 +306,13 @@ If the option ``constraints.force_r`` is set to true, then
 
 .. math::
 
-   \frac{c_{prod}(c, y, x, t)}{e_{eff}(y, x, t)} = r_{avail}(y, x, t)
+   \frac{c_{prod}(loc::tech::carrier, timestep)}{e_{eff}(loc::tech, timestep)} = r_{avail}(loc::tech, timestep)
 
 If that option is not set:
 
 .. math::
 
-    \frac{c_{prod}(c, y, x, t)}{e_{eff}(y, x, t)} \leq r_{avail}(y, x, t)
+    \frac{c_{prod}(loc::tech::carrier, timestep)}{e_{eff}(loc::tech, timestep)} \leq r_{avail}(loc::tech, timestep)
 
 For ``demand``:
 
@@ -105,13 +320,13 @@ If the option ``constraints.force_r`` is set to true, then
 
 .. math::
 
-   c_{con}(c, y, x, t) \times e_{eff}(y, x, t) = r_{avail}(y, x, t)
+   c_{con}(loc::tech::carrier, timestep) \times e_{eff}(loc::tech, timestep) = r_{avail}(loc::tech, timestep)
 
 If that option is not set:
 
 .. math::
 
-  c_{con}(c, y, x, t) \times e_{eff}(y, x, t) \geq r_{avail}(y, x, t)
+  c_{con}(loc::tech::carrier, timestep) \times e_{eff}(loc::tech, timestep) \geq r_{avail}(loc::tech, timestep)
 
 For ``supply_plus``:
 
@@ -119,13 +334,13 @@ If the option ``constraints.force_r`` is set to true, then
 
 .. math::
 
-   r(y, x, t) = r_{avail}(y, x, t) \times r_{eff}(y, x, t)
+   r(loc::tech, timestep) = r_{avail}(loc::tech, timestep) \times r_{eff}(loc::tech, timestep)
 
 If that option is not set:
 
 .. math::
 
-  r(y, x, t) \leq r_{avail}(y, x, t) \times r_{eff}(y, x, t)
+  r(loc::tech, timestep) \leq r_{avail}(loc::tech, timestep) \times r_{eff}(loc::tech, timestep)
 
 .. Note:: For all other technology types, defining a resource is irrelevant, so they are not constrained here.
 
@@ -138,7 +353,7 @@ Defines constraint ``c_unit_commitment``:
 
 .. math::
 
-   operating\_units(y, x, t) \leq units(y, x)
+   operating\_units(loc::tech, timestep) \leq units(loc::tech)
 
 .. Note:: This constraint only applies to technology-location sets which have ``units.max``, ``units.min``, or ``units.equals`` set in their constraints.
 
@@ -170,13 +385,13 @@ The balancing for transmission technologies is given by
 
 .. math::
 
-   c_{prod}(c, y, x, t) = -1 \times c_{con}(c, y_{remote}, x_{remote}, t) \times e_{eff}(y, x, t) \times e_{eff,perdistance}(y, x)
+   c_{prod}(loc::tech::carrier, timestep) = -1 \times c_{con}(c, y_{remote}, x_{remote}, timestep) \times e_{eff}(loc::tech, timestep) \times e_{eff,perdistance}(loc::tech)
 
-Here, :math:`x_{remote}, y_{remote}` are x and y at the remote end of the transmission technology. For example, for ``(y, x) = ('hvdc:region_2', 'region_1')``, the remotes would be ``('hvdc:region_1', 'region_2')``.
+Here, :math:`x_{remote}, y_{remote}` are x and y at the remote end of the transmission technology. For example, for ``(loc::tech) = ('hvdc:region_2', 'region_1')``, the remotes would be ``('hvdc:region_1', 'region_2')``.
 
-:math:`c_{prod}(c, y, x, t)` for ``c='power', y='hvdc:region_2', x='region_1'`` would be the import of power from ``region_2`` to ``region_1``, via a ``hvdc`` connection, at time ``t``.
+:math:`c_{prod}(loc::tech::carrier, timestep)` for ``c='power', y='hvdc:region_2', x='region_1'`` would be the import of power from ``region_2`` to ``region_1``, via a ``hvdc`` connection, at time ``timestep``.
 
-This also shows that transmission technologies can have both a static or time-dependent efficiency (line loss), :math:`e_{eff}(y, x, t)`, and a distance-dependent efficiency, :math:`e_{eff,perdistance}(y, x)`.
+This also shows that transmission technologies can have both a static or time-dependent efficiency (line loss), :math:`energy_{eff}(loc::tech, timestep)`, and a distance-dependent efficiency, :math:`energy_{eff,perdistance}(loc::tech)`.
 
 For more detail on distance-dependent configuration see :doc:`configuration`.
 
@@ -187,7 +402,7 @@ The conversion balance is given by
 
 .. math::
 
-   c_{prod}(c_{out}, y, x, t) = -1 \times c_{con}(c_{in}, y, x, t) \times e_{eff}(y, x, t)
+   c_{prod}(c_{out}, loc::tech, timestep) = -1 \times c_{con}(c_{in}, loc::tech, timestep) \times e_{eff}(loc::tech, timestep)
 
 The principle is similar to that of the transmission balance. The production of carrier :math:`c_{out}` (the ``carrier_out`` option set for the conversion technology) is driven by the consumption of carrier :math:`c_{in}` (the ``carrier_in`` option set for the conversion technology).
 
@@ -200,7 +415,7 @@ For the primary carrier(s), the balance is:
 
 .. math::
 
-  \sum\limits_{c_{out_1}} \frac{c_{prod}(c_{out_1}, y, x, t) }{carrier_{fraction}(c_{out_1})} =  -1 \times \sum\limits_{c_{in_1}} c_{con}(c_{in_1}, y, x, t) \times carrier_{fraction}(c_{in_1}) \times e_{eff}(x, y, t)
+  \sum\limits_{c_{out_1}} \frac{c_{prod}(c_{out_1}, loc::tech, timestep) }{carrier_{fraction}(c_{out_1})} =  -1 \times \sum\limits_{c_{in_1}} c_{con}(c_{in_1}, loc::tech, timestep) \times carrier_{fraction}(c_{in_1}) \times e_{eff}(x, y, timestep)
 
 Where ``c_{out_1}`` and ``c_{in_1}`` are the sets of primary production and consumption carriers, respectively and ``carrier_{fraction}`` is the relative contribution of these carriers, as defined in ??.
 
@@ -210,13 +425,13 @@ For production:
 
 .. math::
 
-  \sum\limits_{c_{out_1}} \frac{c_{prod}}{\frac{(c_{out_1}, y, x, t)}{carrier_{fraction}(c_{out_1})}} \times min(carrier_{fraction}(c_{out_x}))=  \sum\limits_{c_{out_x}} c_{prod}(c_{out_x}, y, x, t) \times \frac{carrier_{fraction}(c_{out_x})}{min(carrier_{fraction}(c_{out_x}))}
+  \sum\limits_{c_{out_1}} \frac{c_{prod}}{\frac{(c_{out_1}, loc::tech, timestep)}{carrier_{fraction}(c_{out_1})}} \times min(carrier_{fraction}(c_{out_x}))=  \sum\limits_{c_{out_x}} c_{prod}(c_{out_x}, loc::tech, timestep) \times \frac{carrier_{fraction}(c_{out_x})}{min(carrier_{fraction}(c_{out_x}))}
 
 For consumption:
 
 .. math::
 
-  \sum\limits_{c_{in_1}} \frac{c_{con}(c_{in_1}, y, x, t) }{carrier_{fraction}(c_{in_1})} \times min(carrier_{fraction}(c_{in_x}))=  \sum\limits_{c_{in_x}} c_{con}(c_{in_x}, y, x, t) \times \frac{carrier_{fraction}(c_{in_x})}{min(carrier_{fraction}(c_{in_x}))}
+  \sum\limits_{c_{in_1}} \frac{c_{con}(c_{in_1}, loc::tech, timestep) }{carrier_{fraction}(c_{in_1})} \times min(carrier_{fraction}(c_{in_x}))=  \sum\limits_{c_{in_x}} c_{con}(c_{in_x}, loc::tech, timestep) \times \frac{carrier_{fraction}(c_{in_x})}{min(carrier_{fraction}(c_{in_x}))}
 
 Where ``x`` is either 2 (secondary carriers) or 3 (tertiary carriers).
 
@@ -233,32 +448,32 @@ If storage is possible:
 
 .. math::
 
-   s(y, x, t) = s_{minusone} + r(y, x, t) + r_{2}(y, x, t) - c_{prod}
+   s(loc::tech, timestep) = s_{minusone} + r(loc::tech, timestep) + r_{2}(loc::tech, timestep) - c_{prod}
 
 Otherwise:
 
 .. math::
 
-  r(y, x, t) = c_{prod} - r_{2}
+  r(loc::tech, timestep) = c_{prod} - r_{2}
 
 
 Where:
 
-:math:`c_{prod}` is defined as :math:`\frac{c_{prod}(c, y, x, t)}{total_{eff}}`.
+:math:`c_{prod}` is defined as :math:`\frac{c_{prod}(loc::tech::carrier, timestep)}{total_{eff}}`.
 
-:math:`total_{eff}(y, x, t)` is defined as :math:`e_{eff}(y, x, t) + p_{eff}(y, x, t)`, the plant efficiency including parasitic losses
+:math:`total_{eff}(loc::tech, timestep)` is defined as :math:`energy_{eff}(loc::tech, timestep) + p_{eff}(loc::tech, timestep)`, the plant efficiency including parasitic losses
 
-:math:`r_{2}(y, x, t)` is the secondary resource and is always set to zero unless the technology explicitly defines a secondary resource.
+:math:`resource_{2}(loc::tech, timestep)` is the secondary resource and is always set to zero unless the technology explicitly defines a secondary resource.
 
-:math:`s(y, x, t)` is the storage level at time :math:`t`.
+:math:`storage(loc::tech, timestep)` is the storage level at time :math:`t`.
 
-:math:`s_{minusone}` describes the state of storage at the previous timestep. :math:`s_{minusone} = s_{init}(y, x)` at time :math:`t=0`. Else,
+:math:`storage_{minusone}` describes the state of storage at the previous timestep. :math:`storage_{minusone} = s_{init}(loc::tech)` at time :math:`t=0`. Else,
 
 .. math::
 
-   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(y, x, t-1)
+   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(loc::tech, t-1)
 
-.. Note:: In operation mode, ``s_init`` is carried over from the previous optimization period.
+.. Note:: In operation mode, ``storage_init`` is carried over from the previous optimization period.
 
 
 Storage balance
@@ -267,25 +482,25 @@ Storage technologies balance energy charge, energy discharge, and energy stored:
 
 .. math::
 
-   s(y, x, t) = s_{minusone} - c_{prod} - c_{con}
+   s(loc::tech, timestep) = s_{minusone} - c_{prod} - c_{con}
 
 Where:
 
-:math:`c_{prod}` is defined as :math:`\frac{c_{prod}(c, y, x, t)}{total_{eff}}` if :math:`total_{eff} > 0`, otherwise :math:`c_{prod} = 0`
+:math:`c_{prod}` is defined as :math:`\frac{c_{prod}(loc::tech::carrier, timestep)}{total_{eff}}` if :math:`total_{eff} > 0`, otherwise :math:`c_{prod} = 0`
 
-:math:`c_{con}` is defined as :math:`c_{con}(c, y, x, t) \times total_{eff}`
+:math:`c_{con}` is defined as :math:`c_{con}(loc::tech::carrier, timestep) \times total_{eff}`
 
-:math:`total_{eff}(y, x, t)` is defined as :math:`e_{eff}(y, x, t) + p_{eff}(y, x, t)`, the plant efficiency including parasitic losses
+:math:`total_{eff}(loc::tech, timestep)` is defined as :math:`energy_{eff}(loc::tech, timestep) + p_{eff}(loc::tech, timestep)`, the plant efficiency including parasitic losses
 
-:math:`s(y, x, t)` is the storage level at time :math:`t`.
+:math:`storage(loc::tech, timestep)` is the storage level at time :math:`t`.
 
-:math:`s_{minusone}` describes the state of storage at the previous timestep. :math:`s_{minusone} = s_{init}(y, x)` at time :math:`t=0`. Else,
+:math:`storage_{minusone}` describes the state of storage at the previous timestep. :math:`storage_{minusone} = s_{init}(loc::tech)` at time :math:`t=0`. Else,
 
 .. math::
 
-   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(y, x, t-1)
+   s_{minusone} = (1 - s_{loss}) \times timeres(t-1) \times s(loc::tech, t-1)
 
-.. Note:: In operation mode, ``s_init`` is carried over from the previous optimization period.
+.. Note:: In operation mode, ``storage_init`` is carried over from the previous optimization period.
 
 
 Node build constraints
@@ -301,19 +516,19 @@ This constrains the built storage capacity by:
 
 .. math::
 
-    s_{cap}(y, x) \leq s_{cap,max}(y, x)
+    s_{cap}(loc::tech) \leq s_{cap,max}(loc::tech)
 
 If ``y.constraints.s_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
-If both :math:`e_{cap,max}(y, x)` and :math:`charge\_rate` are not given, :math:`s_{cap}(y, x)` is automatically set to zero.
+If both :math:`energy_{cap,max}(loc::tech)` and :math:`charge\_rate` are not given, :math:`storage_{cap}(loc::tech)` is automatically set to zero.
 
-If ``y.constraints.s_time.max`` is true at location ``x``, then ``y.constraints.s_time.max`` and ``y.constraints.e_cap.max`` are used to to compute ``s_cap.max``. The minimum value of ``s_cap.max`` is taken, based on analysis of all possible time sets which meet the s_time.max value. This allows time-varying efficiency, :math:`e_{eff}(y, x, t)` to be accounted for.
+If ``y.constraints.s_time.max`` is true at location ``x``, then ``y.constraints.s_time.max`` and ``y.constraints.e_cap.max`` are used to to compute ``storage_cap.max``. The minimum value of ``storage_cap.max`` is taken, based on analysis of all possible time sets which meet the s_time.max value. This allows time-varying efficiency, :math:`energy_{eff}(loc::tech, timestep)` to be accounted for.
 
 If the technology is constrained with integer constraints ``units.max/min/equals`` then the built storage capacity becomes:
 
 .. math::
 
-    s_{cap}(y, x) \leq units_{max}(y, x) \times s_{cap,per\_unit}
+    s_{cap}(loc::tech) \leq units_{max}(loc::tech) \times s_{cap,per\_unit}
 
 ``c_r_cap``
 ^^^^^^^^^^^
@@ -321,7 +536,7 @@ This constrains the built resource conversion capacity by:
 
 .. math::
 
-  r_{cap}(y, x) \leq r_{cap,max}(y, x)
+  r_{cap}(loc::tech) \leq r_{cap,max}(loc::tech)
 
 If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
@@ -331,18 +546,18 @@ This constrains the resource conversion area by:
 
 .. math::
 
-  r_{area}(y, x) \leq r_{area,max}(y, x)
+  r_{area}(loc::tech) \leq r_{area,max}(loc::tech)
 
-By default, ``y.constraints.r_area.max`` is set to false, and in that case, :math:`r_{area}(y, x)` is forced to :math:`1.0`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap`` is given, then the equation :math:`r_{area}(y, x) = e_{cap}(y, x) * r\_area\_per\_cap` applies instead.
+By default, ``y.constraints.r_area.max`` is set to false, and in that case, :math:`resource_{area}(loc::tech)` is forced to :math:`1.0`. If the model is running in operational mode, the inequality in the equation above is turned into an equality constraint. Finally, if ``y.constraints.r_area_per_e_cap`` is given, then the equation :math:`resource_{area}(loc::tech) = e_{cap}(loc::tech) * r\_area\_per\_cap` applies instead.
 
 ``c_e_cap``
 ^^^^^^^^^^^
 This constrains the carrier conversion capacity by:
 
 .. math::
-  e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_scale
+  e_{cap}(loc::tech) \leq e_{cap,max}(loc::tech) \times e\_cap\_scale
 
-If a technology ``y`` is not allowed at a location ``x``, :math:`e_{cap}(y, x) = 0` is forced.
+If a technology ``y`` is not allowed at a location ``x``, :math:`energy_{cap}(loc::tech) = 0` is forced.
 
 ``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary.
 
@@ -352,22 +567,22 @@ If the technology is constrained with integer constraints ``units.max/min/equals
 
 .. math::
 
-    e_{cap}(y, x) \leq units_{max}(y, x) \times e_{cap,per\_unit}
+    e_{cap}(loc::tech) \leq units_{max}(loc::tech) \times e_{cap,per\_unit}
 
 If the technology is not constrained with integer constraints ``units.max/min/equals``, but does define a ``purchase`` cost then the carrier conversion capacity becomes:
 
 .. math::
 
-    e_{cap}(y, x) \leq e_{cap,max}(y, x) \times e\_cap\_scale \times purchased(y, x)
+    e_{cap}(loc::tech) \leq e_{cap,max}(loc::tech) \times e\_cap\_scale \times purchased(loc::tech)
 
 ``c_e_cap_storage``
 ^^^^^^^^^^^^^^^^^^^
 This constrains the carrier conversion capacity for storage technologies by:
 
 .. math::
-  e_{cap}(y, x) \leq e_{cap,max}
+  e_{cap}(loc::tech) \leq e_{cap,max}
 
-Where :math:`e_{cap,max} = s_{cap}(y, x) * charge\_rate * e\_cap\_scale`
+Where :math:`energy_{cap,max} = s_{cap}(loc::tech) * charge\_rate * e\_cap\_scale`
 
 ``y.constraints.e_cap_scale`` defaults to 1.0 but can be set on a per-technology, per-location basis if necessary.
 
@@ -375,25 +590,25 @@ If the technology is constrained with integer constraints ``units.max/min/equals
 
 .. math::
 
-    e_{cap}(y, x) \leq units_{max}(y, x) \times e_{cap,per\_unit}
+    e_{cap}(loc::tech) \leq units_{max}(loc::tech) \times e_{cap,per\_unit}
 
 ``c_r2_cap``
 ^^^^^^^^^^^^
 This manages the secondary resource conversion capacity by:
 
 .. math::
-  r2_{cap}(y, x) \leq r2_{cap,max}(y, x)
+  r2_{cap}(loc::tech) \leq r2_{cap,max}(loc::tech)
 
 If ``y.constraints.r2_cap.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
-There is an additional relevant option, ``y.constraints.r2_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``r_cap`` or ``e_cap``, and if set, sets ``c_r2_cap`` to track one of these, ie, :math:`r2_{cap,max} = r_{cap}(y, x)` (analogously for ``e_cap``), and also turns the constraint into an equality constraint.
+There is an additional relevant option, ``y.constraints.r2_cap_follows``, which can be overridden on a per-location basis. It can be set either to ``resource_cap`` or ``energy_cap``, and if set, sets ``c_r2_cap`` to track one of these, ie, :math:`r2_{cap,max} = r_{cap}(loc::tech)` (analogously for ``energy_cap``), and also turns the constraint into an equality constraint.
 
 ``c_units``
 ^^^^^^^^^^^^
 This manages the maximum number of integer units by:
 
 .. math::
-  units_{cap}(y, x) \leq units_{max}(y, x)
+  units_{cap}(loc::tech) \leq units_{max}(loc::tech)
 
 If ``y.constraints.units.equals`` is set for location ``x`` or the model is running in operational mode, the inequality in the equation above is turned into an equality constraint.
 
@@ -402,62 +617,62 @@ Node operational constraints
 
 Provided by: :func:`calliope.constraints.base.node_constraints_operational`
 
-This component ensures that nodes remain within their operational limits, by constraining ``r``, ``c_prod``, ``c_con``, ``s``, ``r2``, and ``export``.
+This component ensures that nodes remain within their operational limits, by constraining ``r``, ``carrier_prod``, ``carrier_con``, ``s``, ``r2``, and ``export``.
 
 ``r``
 ^^^^^
-:math:`r(y, x, t)` is constrained to remain within :math:`r_{cap}(y, x)`, with the constraint ``c_r_max_upper``:
+:math:`resource(loc::tech, timestep)` is constrained to remain within :math:`resource_{cap}(loc::tech)`, with the constraint ``c_r_max_upper``:
 
 .. math::
 
-   r(y, x, t) \leq time\_res(t) \times r_{cap}(y, x)
+   r(loc::tech, timestep) \leq time\_res(t) \times r_{cap}(loc::tech)
 
-``c_prod``
+``carrier_prod``
 ^^^^^^^^^^
-:math:`c_prod(c, y, x, t)` is constrained by ``c_prod_max`` and ``c_prod_min``:
+:math:`carrier_prod(loc::tech::carrier, timestep)` is constrained by ``carrier_prod_max`` and ``carrier_prod_min``:
 
 .. math::
 
-   c_{prod}(c, y, x, t) \leq time\_res(t) \times e_{cap}(y, x) \times p_{eff}(y, x, t)
+   c_{prod}(loc::tech::carrier, timestep) \leq time\_res(t) \times e_{cap}(loc::tech) \times p_{eff}(loc::tech, timestep)
 
-if ``c`` is the ``carrier_out`` of ``y``, else :math:`c_{prod}(c, y, x, y) = 0`.
+if ``c`` is the ``carrier_out`` of ``y``, else :math:`c_{prod}(loc::tech::carrier, y) = 0`.
 
-If ``e_cap_min_use`` is defined, the minimum output is constrained by:
+If ``energy_cap_min_use`` is defined, the minimum output is constrained by:
 
 .. math::
 
-   c_{prod}(c, y, x, t) \geq time\_res(t) \times e_{cap}(y, x) \times e_{cap,minuse}
+   c_{prod}(loc::tech::carrier, timestep) \geq time\_res(t) \times e_{cap}(loc::tech) \times e_{cap,minuse}
 
 These contraints are skipped for ``conversion_plus`` technologies if ``c`` is not the primary carrier.
 
-If the technology is constrained with integer constraints ``units.max/min/equals`` then `c_prod(c, y, x, t)` constraints become:
+If the technology is constrained with integer constraints ``units.max/min/equals`` then `carrier_prod(loc::tech::carrier, timestep)` constraints become:
 
 .. math::
 
-     c_{prod}(c, y, x, t) \leq time\_res(t) \times operating\_units(y, x, t) \times e_{cap, per\_unit}(y, x) \times p_{eff}(y, x, t)
+     c_{prod}(loc::tech::carrier, timestep) \leq time\_res(t) \times operating\_units(loc::tech, timestep) \times e_{cap, per\_unit}(loc::tech) \times p_{eff}(loc::tech, timestep)
 
 .. math::
 
-     c_{prod}(c, y, x, t) \geq time\_res(t) \times operating\_units(y, x, t) \times e_{cap, per\_unit}(y, x) \times e_{cap,minuse}
+     c_{prod}(loc::tech::carrier, timestep) \geq time\_res(t) \times operating\_units(loc::tech, timestep) \times e_{cap, per\_unit}(loc::tech) \times e_{cap,minuse}
 
 
-``c_con``
+``carrier_con``
 ^^^^^^^^^
-For technologies which are not ``supply`` or ``supply_plus``, :math:`c_con(c, y, x, t)` is non-zero. Thus :math:`c_con(c, y, x, t)` is constrainted by ``c_con_max``:
+For technologies which are not ``supply`` or ``supply_plus``, :math:`carrier_con(loc::tech::carrier, timestep)` is non-zero. Thus :math:`arrierc_con(loc::tech::carrier, timestep)` is constrainted by ``carrier_con_max``:
 
 .. math::
 
-   c_{con}(c, y, x, t) \geq -1 \times time\_res(t) \times e_{cap}(y, x)
+   c_{con}(loc::tech::carrier, timestep) \geq -1 \times time\_res(t) \times e_{cap}(loc::tech)
 
-and :math:`c_{con}(c, y, x, t) = 0` otherwise.
+and :math:`c_{con}(loc::tech::carrier, timestep) = 0` otherwise.
 
 This constraint is skipped for a ``conversion_plus`` and ``conversion`` technologies If ``c`` is a possible consumption carrier (primary, secondary, or tertiary).
 
-If the technology is constrained with integer constraints ``units.max/min/equals`` then `c_con(c, y, x, t)` constraints become:
+If the technology is constrained with integer constraints ``units.max/min/equals`` then `carrier_con(loc::tech::carrier, timestep)` constraints become:
 
 .. math::
 
-     c_{prod}(c, y, x, t) \geq-1 \times time\_res(t) \times operating\_units(y, x, t) \times e_{cap, per\_unit}(y, x) \times p_{eff}(y, x, t)
+     c_{prod}(loc::tech::carrier, timestep) \geq-1 \times time\_res(t) \times operating\_units(loc::tech, timestep) \times e_{cap, per\_unit}(loc::tech) \times p_{eff}(loc::tech, timestep)
 
 ``s``
 ^^^^^
@@ -465,7 +680,7 @@ The constraint ``c_s_max`` ensures that storage cannot exceed its maximum size b
 
 .. math::
 
-   s(y, x, t) \leq s_{cap}(y, x)
+   s(loc::tech, timestep) \leq s_{cap}(loc::tech)
 
 ``r2``
 ^^^^^^
@@ -474,9 +689,9 @@ The constraint ``c_s_max`` ensures that storage cannot exceed its maximum size b
 
 .. math::
 
-   r2(y, x, t) \leq timeres(t) \times r2_{cap}(y, x)
+   r2(loc::tech, timestep) \leq timeres(t) \times r2_{cap}(loc::tech)
 
-There is an additional check if ``y.constraints.r2_startup_only`` is true. In this case, :math:`r2(y, x, t) = 0` unless the current timestep is still within the startup time set in the ``startup_time_bounds`` model-wide setting. This can be useful to prevent undesired edge effects from occurring in the model.
+There is an additional check if ``y.constraints.r2_startup_only`` is true. In this case, :math:`r2(loc::tech, timestep) = 0` unless the current timestep is still within the startup time set in the ``startup_time_bounds`` model-wide setting. This can be useful to prevent undesired edge effects from occurring in the model.
 
 ``export``
 ^^^^^^^^^^
@@ -485,20 +700,20 @@ There is an additional check if ``y.constraints.r2_startup_only`` is true. In th
 
 .. math::
 
-   export(y, x, t) \leq export_{cap}(y, x)
+   carrier_export(loc::tech::carrier, timestep) \leq export_{cap}(loc::tech)
 
-If the technology is constrained with integer constraints ``units.max/min/equals`` then `export(y, x, t)` constraint becomes:
+If the technology is constrained with integer constraints ``units.max/min/equals`` then `carrier_export(loc::tech::carrier, timestep)` constraint becomes:
 
 .. math::
 
-     export(y, x, t) \leq export_{cap}(y, x) \times operating\_units(y, x, t)
+     carrier_export(loc::tech::carrier, timestep) \leq export_{cap}(loc::tech) \times operating\_units(loc::tech, timestep)
 
 Transmission constraints
 ------------------------
 
 Provided by: :func:`calliope.constraints.base.node_constraints_transmission`
 
-This component provides a single constraint, ``c_transmission_capacity``, which forces :math:`e_{cap}` to be symmetric for transmission nodes. For example, for for a given transmission line between :math:`x_1` and :math:`x_2`, using the technology ``hvdc``:
+This component provides a single constraint, ``c_transmission_capacity``, which forces :math:`energy_{cap}` to be symmetric for transmission nodes. For example, for for a given transmission line between :math:`x_1` and :math:`x_2`, using the technology ``hvdc``:
 
 .. math::
 
@@ -517,49 +732,49 @@ The depreciation rate for each cost class ``k`` is calculated as
 
 .. math::
 
-   d(y, k) = \frac{1}{plant\_life(y)}
+   d(y, cost) = \frac{1}{plant\_life(tech)}
 
 if the interest rate :math:`i` is :math:`0`, else
 
 .. math::
 
-   d(y, k) = \frac{i \times (1 + i(y, k))^{plant\_life(k)}}{(1 + i(y, k))^{plant\_life(k)} - 1}
+   d(y, cost) = \frac{i \times (1 + i(y, cost))^{plant\_life(k)}}{(1 + i(y, cost))^{plant\_life(k)} - 1}
 
 Costs are split into fixed and variable costs. The total costs are computed in ``c_cost`` by
 
 .. math::
 
-   cost(y, x, k) = cost_{fixed}(y, x, k) + \sum\limits_t cost_{var}(y, x, k, t)
+   cost(loc::tech, cost) = cost_{fixed}(loc::tech, cost) + \sum\limits_t cost_{var}(loc::tech, cost, timestep)
 
 The fixed costs include construction costs, annual operation and maintenance (O\&M) costs, and O\&M costs which are a fraction of the construction costs.
 The total fixed costs are computed in ``c_cost_fixed`` by
 
 .. math::
 
-  cost_{fixed}(y, x, k) = cost_{con} + cost_{om, frac} \times cost_{con} + cost_{om, fixed} \times e_{cap}(y, x) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760}
+  cost_{fixed}(loc::tech, cost) = cost_{con} + cost_{om, frac} \times cost_{con} + cost_{om, fixed} \times e_{cap}(loc::tech) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760}
 
 Where
 
 .. math::
 
-   cost_{con} &= d(y, k) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760} \\
-   & \times (cost_{s\_cap}(y, k) \times s_{cap}(y, x) \\
-   & + cost_{r\_cap}(y, k) \times r_{cap}(y, x) \\
-   & + cost_{r\_area}(y, k) \times r_{area}(y, x) \\
-   & + cost_{e\_cap}(y, k) \times e_{cap}(y, x) \\
-   & + cost_{r2\_cap}(y, k) \times r2_{cap}(y, x) \\
-   & + cost_{purchase}(y, k) \times units(y, x) \\
-   & + cost_{purchase}(y, k) \times purchased(y, x))
+   cost_{con} &= d(y, cost) \times \frac{\sum\limits_t timeres(t) \times W(t)}{8760} \\
+   & \times (cost_{s\_cap}(y, cost) \times s_{cap}(loc::tech) \\
+   & + cost_{r\_cap}(y, cost) \times r_{cap}(loc::tech) \\
+   & + cost_{r\_area}(y, cost) \times r_{area}(loc::tech) \\
+   & + cost_{e\_cap}(y, cost) \times e_{cap}(loc::tech) \\
+   & + cost_{r2\_cap}(y, cost) \times r2_{cap}(loc::tech) \\
+   & + cost_{purchase}(y, cost) \times units(loc::tech) \\
+   & + cost_{purchase}(y, cost) \times purchased(loc::tech))
 
-The costs are as defined in the model definition, e.g. :math:`cost_{r\_cap}(y, k)` corresponds to ``y.costs.k.r_cap``.
+The costs are as defined in the model definition, e.g. :math:`cost_{r\_cap}(y, cost)` corresponds to ``y.costs.k.r_cap``.
 
-.. Note:: purchase costs occur twice, but will only be applied once, depending on whether the technology constraints trigger an integer decision variable (``units(y, x)``) or a binary decision variable (``purchased(y, x)``).
+.. Note:: purchase costs occur twice, but will only be applied once, depending on whether the technology constraints trigger an integer decision variable (``units(loc::tech)``) or a binary decision variable (``purchased(loc::tech)``).
 
-For transmission technologies, :math:`cost_{e\_cap}(y, k)` is computed differently, to include the per-distance costs:
+For transmission technologies, :math:`cost_{e\_cap}(y, cost)` is computed differently, to include the per-distance costs:
 
 .. math::
 
-   cost_{e\_cap,transmission}(y, k) = \frac{cost_{e\_cap}(y, k) + cost_{e\_cap,perdistance}(y, k)}{2}
+   cost_{e\_cap,transmission}(y, cost) = \frac{cost_{e\_cap}(y, cost) + cost_{e\_cap,perdistance}(y, cost)}{2}
 
 This implies that for transmission technologies, the cost of construction is split equally across the two locations connected by the technology.
 
@@ -572,18 +787,18 @@ The variable costs are O&M costs applied at each time step:
 Where:
 
 .. math::
-   cost_{op,var} = cost_{om\_var}(k, y, x, t) \times \sum_t W(t) \times c_{prod}(c, y, x, t)
+   cost_{op,var} = cost_{om\_var}(k, loc::tech, timestep) \times \sum_t W(t) \times c_{prod}(loc::tech::carrier, timestep)
 
-   cost_{op,fuel} = \frac{cost_{om\_fuel}(k, y, x, t) \times \sum_t W(t) \times r(y, x, t)}{r_{eff}(y, x)}
+   cost_{op,fuel} = \frac{cost_{om\_fuel}(k, loc::tech, timestep) \times \sum_t W(t) \times r(loc::tech, timestep)}{r_{eff}(loc::tech)}
 
-   cost_{op,r2} = \frac{cost_{om\_r2}(k, y, x, t) \times \sum_t W(t) \times r_{2}(y, x, t)}{r2_{eff}(y, x)}
+   cost_{op,r2} = \frac{cost_{om\_r2}(k, loc::tech, timestep) \times \sum_t W(t) \times r_{2}(loc::tech, timestep)}{r2_{eff}(loc::tech)}
 
-   cost_{op, export} = cost_{export}(k, y, x, t) \times export(y, x, t)
+   cost_{op, export} = cost_{export}(k, loc::tech, timestep) \times carrier_export(loc::tech::carrier, timestep)
 
-If :math:`cost_{om\_fuel}(k, y, x, t)` is given for a ``supply`` technology and :math:`e_{eff}(y, x) > 0` for that technology, then:
+If :math:`cost_{om\_fuel}(k, loc::tech, timestep)` is given for a ``supply`` technology and :math:`energy_{eff}(loc::tech) > 0` for that technology, then:
 
 .. math::
-  cost_{op,fuel} =cost_{om\_fuel}(k, y, x, t) \times \sum_t W(t) \times \frac{c_{prod}(c, y, x, t)}{e_{eff}(y, x)}
+  cost_{op,fuel} =cost_{om\_fuel}(k, loc::tech, timestep) \times \sum_t W(t) \times \frac{c_{prod}(loc::tech::carrier, timestep)}{e_{eff}(loc::tech)}
 
 ``c`` is the technology primary ``carrier_out`` in all cases.
 
@@ -597,7 +812,7 @@ Model-wide balancing constraints are constructed for nodes that have children:
 
 .. math::
 
-   \sum_{y, x \in X_{i}} c_{prod}(c, y, x, t) + \sum_{y, x \in X_{i}} c_{con}(c, y, x, t) = 0 \qquad\forall i, t
+   \sum_{loc::tech \in X_{i}} c_{prod}(loc::tech::carrier, timestep) + \sum_{loc::tech \in X_{i}} c_{con}(loc::tech::carrier, timestep) = 0 \qquad\forall i, t
 
 :math:`i` are the level 0 locations, and :math:`X_{i}` is the set of level 1 locations (:math:`x`) within the given level 0 location, together with that location itself.
 
@@ -605,7 +820,7 @@ There is also the need to ensure that technologies cannot export more energy tha
 
 .. math::
 
-   c_{prod}(c, y, x, t) \geq export(y, x, t)
+   c_{prod}(loc::tech::carrier, timestep) \geq carrier_export(loc::tech::carrier, timestep)
 
 --------------------
 Planning constraints
@@ -624,7 +839,7 @@ This is a simplified capacity margin constraint, requiring the capacity to suppl
 
 .. math::
 
-   \sum_y \sum_x c_{prod}(c, y, x, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_x (e_{cap}(y, x) / e_{eff}(y, x, t_{max,c}))
+   \sum_{tech} \sum_{loc} c_{prod}(loc::tech::carrier, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_{loc} (e_{cap}(loc::tech) / e_{eff}(loc::tech, t_{max,c}))
 
 where :math:`y_{c}` is the subset of ``y`` that delivers the carrier ``c`` and :math:`m_{c}` is the system margin for that carrier.
 
@@ -637,17 +852,17 @@ System-wide capacity
 
 Provided by: :func:`calliope.constraints.planning.node_constraints_build_total`
 
-This constraint sets a maximum for capacity, ``e_cap``, across all locations for any given technology:
+This constraint sets a maximum for capacity, ``energy_cap``, across all locations for any given technology:
 
 .. math::
 
-  \sum_x e_{cap}(x, y) \leq e_{cap,total\_max}(y)
+  \sum_{loc} e_{cap}(x, y) \leq e_{cap,total\_max}(tech)
 
-If :math:`e_{cap,total\_equals}` is given instead, this becomes :math:`\sum_x e_{cap}(x, y) \leq e_{cap,total\_max}(y)`.
+If :math:`energy_{cap,total\_equals}` is given instead, this becomes :math:`\sum_{loc} e_{cap}(x, y) \leq e_{cap,total\_max}(tech)`.
 
 .. math::
 
-   \sum_y \sum_x c_{prod}(c, y, x, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_x (e_{cap}(y, x) / e_{eff}(y, x, t_{max,c}))
+   \sum_{tech} \sum_{loc} c_{prod}(loc::tech::carrier, t_{max,c}) \times (1 + m_{c}) \leq timeres(t) \times \sum_{y_{c}} \sum_{loc} (e_{cap}(loc::tech) / e_{eff}(loc::tech, t_{max,c}))
 
 where :math:`y_{c}` is the subset of ``y`` that delivers the carrier ``c`` and :math:`m_{c}` is the system margin for that carrier.
 
@@ -672,9 +887,9 @@ Constrains the rate at which plants can adjust their output, for technologies th
 
 .. math::
 
-   diff = \frac{c_{prod}(c, y, x, t) + c_{con}(c, y, x, t)}{timeres(t)} - \frac{c_{prod}(c, y, x, t-1) + c_{con}(c, y, x, t-1)}{timeres(t-1)}
+   diff = \frac{c_{prod}(loc::tech::carrier, timestep) + c_{con}(loc::tech::carrier, timestep)}{timeres(t)} - \frac{c_{prod}(loc::tech::carrier, t-1) + c_{con}(loc::tech::carrier, t-1)}{timeres(t-1)}
 
-   max\_ramping\_rate = e_{ramping} \times e_{cap}(y, x)
+   max\_ramping\_rate = e_{ramping} \times e_{cap}(loc::tech)
 
    diff \leq max\_ramping\_rate
 
@@ -705,7 +920,7 @@ For the above example, the ``c_group_fraction_capacity`` constraint sets up an e
 
 .. math::
 
-   \sum_{y^*} \sum_x e_{cap}(y, x) \geq fraction \times \sum_y \sum_x e_{cap}(y, x)
+   \sum_{y^*} \sum_{loc} e_{cap}(loc::tech) \geq fraction \times \sum_{tech} \sum_{loc} e_{cap}(loc::tech)
 
 Here, :math:`y^*` is the subset of :math:`y` given by the specified group, in this example, ``renewables``. :math:`fraction` is the fraction specified, in this example, :math:`0.8`. The relation between the right-hand side and the left-hand side, :math:`\geq`, is determined by the setting given, ``>=``, which can be ``==``, ``<=``, or ``>=``.
 
@@ -715,17 +930,17 @@ Similarly, ``c_group_fraction_output`` sets up constraints in the form of
 
 .. math::
 
-   \sum_{y^*} \sum_x \sum_t c_{prod}(c, y, x, t) \geq fraction \times \sum_y \sum_x \sum_t c_{prod}(c, y, x, t)
+   \sum_{y^*} \sum_{loc} \sum_t c_{prod}(loc::tech::carrier, timestep) \geq fraction \times \sum_{tech} \sum_{loc} \sum_t c_{prod}(loc::tech::carrier, timestep)
 
 Finally, ``c_group_fraction_demand_power_peak`` sets up constraints in the form of
 
 .. math::
 
-   \sum_{y^*} \sum_x e_{cap}(y, x) \geq fraction \times (-1 - m_{c}) \times peak
+   \sum_{y^*} \sum_{loc} e_{cap}(loc::tech) \geq fraction \times (-1 - m_{c}) \times peak
 
-   peak = \frac{\sum_x r(y_d, x, t_{peak}) \times r_{scale}(y_d, x)}{timeres(t_{peak})}
+   peak = \frac{\sum_{loc} r(y_d, x, t_{peak}) \times r_{scale}(y_d, x)}{timeres(t_{peak})}
 
-This assumes the existence of a technology, ``demand_power``, which defines a demand (negative resource). :math:`y_d` is ``demand_power``. :math:`m_{c}` is the capacity margin defined for the carrier ``c`` in the model-wide settings (see :ref:`system_margin`). :math:`t_{peak}` is the timestep where :math:`r(y_d, x, t)` is maximal.
+This assumes the existence of a technology, ``demand_power``, which defines a demand (negative resource). :math:`y_d` is ``demand_power``. :math:`m_{c}` is the capacity margin defined for the carrier ``c`` in the model-wide settings (see :ref:`system_margin`). :math:`t_{peak}` is the timestep where :math:`resource(y_d, x, timestep)` is maximal.
 
 Whether any of these equations are equalities, greater-or-equal-than inequalities, or lesser-or-equal-than inequalities, is determined by whether ``>=``, ``<=``, or ``==`` is given in their respective settings.
 
@@ -738,6 +953,6 @@ Where several technologies require space to acquire resource (e.g. solar collect
 
 .. math::
 
-  area_{available}(x) \geq \sum_y \sum_{xi} r_{area}(y, xi)
+  area_{available}(x) \geq \sum_{tech} \sum_{xi} r_{area}(loc::techi)
 
 Where ``xi`` is the set of locations within the family tree, descending from and including ``x``.

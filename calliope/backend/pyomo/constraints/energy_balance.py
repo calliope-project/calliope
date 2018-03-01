@@ -273,6 +273,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
 # FIXME: As with max_demand_timesteps, this constraint doesn't correctly split
 # carriers
+# FIXME: move to capacity?
 def reserve_margin_constraint_rule(backend_model, carrier):
     model_data_dict = backend_model.__calliope_model_data__['data']
 

@@ -1,0 +1,28 @@
+locations:
+    0:
+        techs:
+            test_supply:
+            test_supply_plus:
+            test_storage:
+            test_conversion:
+            test_conversion_plus:
+            test_demand_elec:
+            test_demand_heat:
+
+    1:
+        techs:
+            test_supply:
+            test_supply_plus:
+            test_storage:
+            test_conversion:
+            test_conversion_plus:
+            test_demand_elec:
+            test_demand_heat:
+
+links:
+    0,1:
+        test_transmission_elec:
+            distance: 1
+        test_transmission_heat:
+            distance: 2
+

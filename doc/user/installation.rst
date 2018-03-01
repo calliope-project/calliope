@@ -70,14 +70,6 @@ The following Python modules and their dependencies are required:
 * `ruamel.yaml <https://yaml.readthedocs.io/en/latest/>`_
 * `Click <http://click.pocoo.org/>`_
 
-`Matplotlib <http://matplotlib.org/>`_ is optional but necessary to graphically display results.
+`Plotly <https://plot.ly/>`_ is optional but necessary to graphically display results.
 
-These modules are optional but necessary to display transmission flows on a map:
-
-* NetworkX
-* Basemap
-
-These modules are optional and used for the example notebook in the tutorial:
-
-* `Seaborn <https://web.stanford.edu/~mwaskom/software/seaborn/>`_
-* `Jupyter <http://jupyter.org/>`_
+`Jupyter <http://jupyter.org/>`_ is optional and used for the example notebook in the tutorial:

@@ -1,0 +1,15 @@
+import:
+    - 'model_config/techs.yaml'
+    - 'model_config/locations.yaml'
+
+model:
+    mode: plan
+
+    name: Test model
+
+    timeseries_data_path: 'timeseries_data'
+
+    subset_time: ['2005-01-01', '2005-01-02']
+
+run:
+    solver: glpk

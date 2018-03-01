@@ -6,11 +6,11 @@ locations:
             supply_grid_power:
                 costs.monetary.energy_cap: 100 # cost of transformers
             supply_gas:
-            demand_power:
+            demand_electricity:
                 constraints.resource: file=demand_power.csv
             demand_heat:
                 constraints.resource: file=demand_heat.csv
-            unmet_demand_power:
+            unmet_demand_electricity:
             unmet_demand_heat:
         available_area: 500
         coordinates: {x: 2, y: 7}
@@ -24,11 +24,11 @@ locations:
                         om_prod: -0.0203 # revenue for just producing electricity
                         export: -0.0491 # FIT return for PV export
             supply_gas:
-            demand_power:
+            demand_electricity:
                 constraints.resource: file=demand_power.csv
             demand_heat:
                 constraints.resource: file=demand_heat.csv
-            unmet_demand_power:
+            unmet_demand_electricity:
             unmet_demand_heat:
         available_area: 1300
         coordinates: {x: 8, y: 7}
@@ -43,11 +43,11 @@ locations:
                 costs.monetary:
                         om_annual: -80.5 # reimbursement per kWp from FIT
             supply_gas:
-            demand_power:
+            demand_electricity:
                 constraints.resource: file=demand_power.csv
             demand_heat:
                 constraints.resource: file=demand_heat.csv
-            unmet_demand_power:
+            unmet_demand_electricity:
             unmet_demand_heat:
         available_area: 900
         coordinates: {x: 5, y: 3}

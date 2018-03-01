@@ -6,7 +6,7 @@ tech_groups:
     supply_power_plus:
         essentials:
             parent: supply_plus
-            carrier: power
+            carrier: electricity
 
 
 techs:
@@ -17,7 +17,7 @@ techs:
         essentials:
             name: 'National grid import'
             parent: supply
-            carrier: power
+            carrier: electricity
         constraints:
             resource: inf
             energy_cap_max: 2000
@@ -52,7 +52,7 @@ techs:
             stack_weight: 100
             parent: supply_power_plus
         constraints:
-            export_carrier: power
+            export_carrier: electricity
             resource: file=pv_resource.csv  # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
             parasitic_eff: 0.85 # inverter losses
             energy_cap_max: 250
@@ -88,12 +88,12 @@ techs:
             name: 'Combined heat and power'
             stack_weight: 100
             parent: conversion_plus
-            primary_carrier: power
+            primary_carrier: electricity
             carrier_in: gas
-            carrier_out: power
+            carrier_out: electricity
             carrier_out_2: heat
         constraints:
-            export_carrier: power
+            export_carrier: electricity
             energy_cap_max: 1500
             energy_eff: 0.405
             carrier_ratios.carrier_out_2.heat: 0.8
@@ -107,17 +107,17 @@ techs:
 
 ##-DEMAND-##
 
-    demand_power:
+    demand_electricity:
         essentials:
             name: 'Electrical demand'
             parent: demand
-            carrier: power
+            carrier: electricity
 
-    unmet_demand_power:
+    unmet_demand_electricity:
         essentials:
             name: 'Unmet electrical demand'
             parent: unmet_demand
-            carrier: power
+            carrier: electricity
 
     demand_heat:
         essentials:
@@ -137,7 +137,7 @@ techs:
         essentials:
             name: 'Electrical power distribution'
             parent: transmission
-            carrier: power
+            carrier: electricity
         constraints:
             energy_cap_max: 2000
             energy_eff: 0.98

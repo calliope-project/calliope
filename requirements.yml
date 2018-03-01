@@ -22,4 +22,4 @@ dependencies:
     - ruamel.yaml<=0.15
     - scikit-learn
     - scipy
-    - xarray=0.10
+    - xarray=0.10.1

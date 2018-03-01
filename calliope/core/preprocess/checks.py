@@ -254,18 +254,20 @@ def check_final(model_run):
             'Either all or no locations must have `coordinates` defined'
         )
 
+
     # If locations have coordinates, they must all be either lat/lon or x/y
-    first_loc = list(model_run.locations.keys())[0]
-    coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
-    if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
-        errors.append(
-            'Unidentified coordinate system. All locations must either'
-            'use the format {lat: N, lon: M} or {x: N, y: M}.'
-        )
-    for loc_id, loc_config in model_run.locations.items():
-        if sorted(list(loc_config.coordinates.keys())) != coord_keys:
-            errors.append('All locations must use the same coordinate format.')
-            break
+    elif len(locs_with_coords) != 0:
+        first_loc = list(model_run.locations.keys())[0]
+        coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
+        if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
+            errors.append(
+                'Unidentified coordinate system. All locations must either'
+                'use the format {lat: N, lon: M} or {x: N, y: M}.'
+            )
+        for loc_id, loc_config in model_run.locations.items():
+            if sorted(list(loc_config.coordinates.keys())) != coord_keys:
+                errors.append('All locations must use the same coordinate format.')
+                break
 
     # FIXME: check that constraints are consistent with desired mode:
     # planning or operational
@@ -349,7 +351,28 @@ def check_model_data(model_data):
                     .format(loc_tech, cap)
                 )
 
-    return comments, warnings, errors
+    for loc_tech in set(model_data.loc_techs_demand.values).intersection(model_data.loc_techs_finite_resource.values):
+        if any(model_data.resource.loc[loc_tech].values > 0):
+            errors.append(
+                'Positive resource given for demand loc_tech {}. All demands '
+                'must have negative resource'.format(loc_tech)
+            )
+
+    # Delete all empty dimensions & the variables associated with them
+    for dim_name, dim_length in model_data.dims.items():
+        if dim_length == 0:
+            if dim_name in model_data.coords.keys():
+                del model_data[dim_name]
+            associated_vars = [
+                var for var, data in model_data.data_vars.items() if dim_name in data.dims
+            ]
+            model_data = model_data.drop(associated_vars)
+            warnings.append(
+                'dimension {} and associated variables {} were empty, so have '
+                'been deleted'.format(dim_name, ', '.join(associated_vars))
+            )
+
+    return model_data, comments, warnings, errors
 
 def check_operate_params(model_data):
     """

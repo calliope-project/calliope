@@ -373,6 +373,11 @@ def process_timeseries_data(config_model, model_run):
             time_slice = str(subset_time_config)
         for k in timeseries_data.keys():
             timeseries_data[k] = timeseries_data[k].loc[time_slice, :]
+            if timeseries_data[k].empty:
+                raise exceptions.ModelError(
+                    'The time slice {} creates an empty timeseries array for {}'
+                    .format(time_slice, k)
+                )
 
     # Ensure all timeseries have the same index
     indices = [(file, df.index) for file, df in timeseries_data.items()]

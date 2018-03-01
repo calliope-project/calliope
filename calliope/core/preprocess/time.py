@@ -230,7 +230,7 @@ def add_max_demand_timesteps(model_data):
 def final_timedimension_processing(model_data):
 
     # Final checking of the data
-    final_check_comments, warnings, errors = checks.check_model_data(model_data)
+    model_data, final_check_comments, warnings, errors = checks.check_model_data(model_data)
     checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # operational mode checks
@@ -240,4 +240,5 @@ def final_timedimension_processing(model_data):
 
     model_data = reorganise_dataset_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)
+
     return model_data
