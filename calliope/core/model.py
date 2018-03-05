@@ -211,6 +211,8 @@ class Model(object):
             sum_dims = list of dimension names to sum plot_var.
             squeeze = bool stating whether to squeeze out dimensions containing
                 only single values
+            tech_order = list of technologies in the order you want them to appear.
+                Only those techs in the list will be plotted.
 
         """
         if plot_type == 'timeseries':

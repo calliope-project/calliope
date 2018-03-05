@@ -10,7 +10,6 @@ Constraints for binary and integer decision variables
 """
 
 import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
 
 from calliope.backend.pyomo.util import \
     get_param, \
@@ -137,7 +136,6 @@ def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier,
     Set maximum carrier production of MILP techs that aren't conversion plus
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    model_data_dict = backend_model.__calliope_model_data__['data']
 
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]

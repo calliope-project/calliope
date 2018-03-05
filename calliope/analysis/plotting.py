@@ -19,7 +19,7 @@ from calliope.analysis.util import get_zoom
 
 
 def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
-                    sum_dims='locs', squeeze=True):
+                    sum_dims='locs', squeeze=True, tech_order=[]):
     reindexer = dict(techs=model._model_data.techs.values,
                      locs=model._model_data.locs.values)
     if timeseries_type == 'carrier':
@@ -65,7 +65,10 @@ def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
 
     layout = dict(barmode='relative', title=title, yaxis=dict(title=y_axis_title))
 
-    for tech in model._model_data.techs.values:
+    techs = tech_order if tech_order else model._model_data.techs.values
+    for tech in techs:
+        if tech not in model._model_data.techs.values:
+            continue
         tech_dict = dict(techs=tech)
         base_tech = model._model_data.inheritance.loc[tech_dict].item().split('.')[0]
         if base_tech in ['transmission']:
@@ -84,7 +87,7 @@ def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
 
 
 def plot_capacity(model, cap_type='energy_cap', loc=dict(),
-                  sum_dims=None, squeeze=True):
+                  sum_dims=None, squeeze=True, tech_order=[]):
     array_cap = model.get_formatted_array(cap_type).loc[loc]
 
     if 'area' in cap_type:
@@ -127,7 +130,10 @@ def plot_capacity(model, cap_type='energy_cap', loc=dict(),
                   yaxis=dict(title=y_axis_title), xaxis=dict(title='Location'),
                   showlegend=True)
 
-    for tech in model._model_data.techs.values:
+    techs = tech_order if tech_order else model._model_data.techs.values
+    for tech in techs:
+        if tech not in model._model_data.techs.values:
+            continue
         tech_dict = dict(techs=tech)
         base_tech = model._model_data.inheritance.loc[tech_dict].item().split('.')[0]
         if base_tech in ['transmission', 'demand', 'unmet_demand']:

@@ -71,313 +71,329 @@ Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instea
 `overrides.yaml`:
 
 .. code-block:: yaml
+
     update_costs:
         techs.ccgt.costs.monetary.energy_cap: 10
-        locations.region1-1.techs.csp.costs.monetary.energy_cap: 100
+        locations.region2.techs.csp.costs.monetary.energy_cap: 100
     winter:
         model.subset_time: ['2005-01-01', '2005-02-28']
 
 Running interactively:
 
-``` python
-model = Calliope.Model('model.yaml', override_file='overrides.yaml:update_costs') # only apply the 'update_costs' override group
+.. code-block:: python
 
-model2 = Calliope.Model('model.yaml', override_file='overrides.yaml:update_costs,winter') # apply both the 'update_costs' and 'winter' override groups
-```
+    model = Calliope.Model('model.yaml', override_file='overrides.yaml:update_costs') # only apply the 'update_costs' override group
+
+    model2 = Calliope.Model('model.yaml', override_file='overrides.yaml:update_costs,winter') # apply both the 'update_costs' and 'winter' override groups
 
 Running in command line:
-``` bash
-calliope run model.yaml --override_file=overrides.yaml:update_costs
 
-calliope run model.yaml --override_file=overrides.yaml:update_costs,winter
-```
+.. code-block:: shell
+
+    calliope run model.yaml --override_file=overrides.yaml:update_costs
+
+    calliope run model.yaml --override_file=overrides.yaml:update_costs,winter
+
 
 As in `0.5`, overrides can be applied when calling the model, via the argument `override_dict`. A dictionary can then be given:
 
-``` python
-update_costs = dict(
-    techs=dict(
-        ccgt=dict(
-            costs=dict(
-                monetary=dict(
-                    energycap=10
+.. code-block:: python
+
+    update_costs = dict(
+        techs=dict(
+            ccgt=dict(
+                costs=dict(
+                    monetary=dict(
+                        energycap=10
+                    )
                 )
             )
         )
-    )
-    locations=dict(
-        region1-1=dict(
-            csp=dict(
-                costs=dict(
-                    monetary=dict(
-                        energy_cap=100
+        locations=dict(
+            region2=dict(
+                csp=dict(
+                    costs=dict(
+                        monetary=dict(
+                            energy_cap=100
+                        )
                     )
                 )
             )
         )
     )
-)
 
-update_costs = calliope.AttrDict.yaml_from_string(
-    """
-    techs.ccgt.costs.monetary.energy_cap: 10
-    locations.region1-1.techs.csp.costs.monetary.energy_cap: 100
-    """
-)
+    # or use the following, which is less verbose!
+    update_costs = calliope.AttrDict.yaml_from_string(
+        """
+        techs.ccgt.costs.monetary.energy_cap: 10
+        locations.region2.techs.csp.costs.monetary.energy_cap: 100
+        """
+    )
 
-model = Calliope.Model('model.yaml', override_dict=update_costs)
-```
+    model = Calliope.Model('model.yaml', override_dict=update_costs)
 
 Technology definition
 =====================
 A technology is now defined in three parts: `essentials`, `constraints`, and `costs`. All top-level definitions (`parent`, `carrier_out`, etc.) are now given under `essentials` and cannot be edited at a local level. `constraints` and `costs` remain the same as in 0.5, except with more verbose naming:
 
 old:
-``` yaml
-supply_grid_power:
-    name: 'National grid import'
-    parent: supply
-    carrier: power
-    constraints:
-        r: inf
-        e_cap.max: 2000
-    costs:
-        monetary:
-            e_cap: 15
-            om_fuel: 0.1
-```
 
-new:
-``` yaml
-supply_grid_power:
-    essentials:
+.. code-block:: yaml
+
+    supply_grid_power:
         name: 'National grid import'
         parent: supply
-        carrier: electricity
-    constraints:
-        resource: inf
-        energy_cap_max: 2000
-        lifetime: 25
-    costs:
-        monetary:
-            interest_rate: 0.10
-            energy_cap: 15
-            om_con: 0.1
-```
+        carrier: power
+        constraints:
+            r: inf
+            e_cap.max: 2000
+        costs:
+            monetary:
+                e_cap: 15
+                om_fuel: 0.1
+
+new:
+
+.. code-block:: yaml
+
+    supply_grid_power:
+        essentials:
+            name: 'National grid import'
+            parent: supply
+            carrier: electricity
+        constraints:
+            resource: inf
+            energy_cap_max: 2000
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                energy_cap: 15
+                om_con: 0.1
 
 Carrier ratios and export carriers have also been moved from essentials into constraints:
 
 old:
-``` yaml
-chp:
-    name: 'Combined heat and power'
-    stack_weight: 100
-    parent: conversion_plus
-    export: true
-    primary_carrier: power
-    carrier_in: gas
-    carrier_out: power
-    carrier_out_2:
-        heat: 0.8
-    constraints:
-        e_cap.max: 1500
-        e_eff: 0.405
-    costs:
-        monetary:
-            e_cap: 750
-            om_var: 0.004
-            export: file=export_power.csv
-```
+
+.. code-block:: yaml
+
+    chp:
+        name: 'Combined heat and power'
+        stack_weight: 100
+        parent: conversion_plus
+        export: true
+        primary_carrier: power
+        carrier_in: gas
+        carrier_out: power
+        carrier_out_2:
+            heat: 0.8
+        constraints:
+            e_cap.max: 1500
+            e_eff: 0.405
+        costs:
+            monetary:
+                e_cap: 750
+                om_var: 0.004
+                export: file=export_power.csv
 
 new:
-``` yaml
-chp:
-    essentials:
-        name: 'Combined heat and power'
-        parent: conversion_plus
-        primary_carrier: electricity
-        carrier_in: gas
-        carrier_out: electricity
-        carrier_out_2: heat
-    constraints:
-        export_carrier: electricity
-        energy_cap_max: 1500
-        energy_eff: 0.405
-        carrier_ratios.carrier_out_2.heat: 0.8
-        lifetime: 25
-    costs:
-        monetary:
-            interest_rate: 0.10
-            energy_cap: 750
-            om_prod: 0.004
-            export: file=export_power.csv
-```
+
+.. code-block:: yaml
+
+    chp:
+        essentials:
+            name: 'Combined heat and power'
+            parent: conversion_plus
+            primary_carrier: electricity
+            carrier_in: gas
+            carrier_out: electricity
+            carrier_out_2: heat
+        constraints:
+            export_carrier: electricity
+            energy_cap_max: 1500
+            energy_eff: 0.405
+            carrier_ratios.carrier_out_2.heat: 0.8
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                energy_cap: 750
+                om_prod: 0.004
+                export: file=export_power.csv
 
 As seen in both above examples, technology lifetime and interest rate have been defined in the new models. These are required for any technology which has investment costs (i.e. those which are not `om_`... or `export`).
 
 Per distance constraints and costs have now been incorporated under the constraints and costs keys, with a '_per_distance' suffix:
 
 old:
-``` yaml
-heat_pipes:
-    name: 'District heat distribution'
-    parent: transmission
-    carrier: heat
-    constraints:
-        e_cap.max: 2000
-    constraints_per_distance:
-        e_loss: 0.025
-    costs_per_distance:
-        monetary:
-            e_cap: 0.3
-```
 
-new:
-``` yaml
-heat_pipes:
-    essentials:
+.. code-block:: yaml
+
+    heat_pipes:
         name: 'District heat distribution'
         parent: transmission
         carrier: heat
-    constraints:
-        energy_cap_max: 2000
-        energy_eff_per_distance: 0.975
-        lifetime: 25
-    costs:
-        monetary:
-            interest_rate: 0.10
-            energy_cap_per_distance: 0.3
-```
+        constraints:
+            e_cap.max: 2000
+        constraints_per_distance:
+            e_loss: 0.025
+        costs_per_distance:
+            monetary:
+                e_cap: 0.3
+
+new:
+
+.. code-block:: yaml
+
+    heat_pipes:
+        essentials:
+            name: 'District heat distribution'
+            parent: transmission
+            carrier: heat
+        constraints:
+            energy_cap_max: 2000
+            energy_eff_per_distance: 0.975
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                energy_cap_per_distance: 0.3
 
 Location definition
 ===================
 At a location level, technologies are defined as YAML keys, not in a list. They can then apply local level constraints, which supercede the global technology constraints:
 
 old:
-``` yaml
-locations:
-    region1:
-        techs: [ccgt, csp]
-            overrides:
+
+.. code-block:: yaml
+
+    locations:
+        region1:
+            techs: [ccgt, csp]
+                overrides:
+                    ccgt:
+                        constraints:
+                            energy_cap: 100
+
+new:
+
+.. code-block:: yaml
+
+    locations:
+        region1:
+            techs:
                 ccgt:
                     constraints:
                         energy_cap: 100
-```
-
-new:
-``` yaml
-locations:
-    region1:
-        techs:
-            ccgt:
-                constraints:
-                    energy_cap: 100
-            csp: # note that csp is given as a key, but has no local overrides to apply
-```
+                csp: # note that csp is given as a key, but has no local overrides to apply
 
 `x_map` (mapping a technology name to a column in a timeseries file) has been removed. Instead, a used can define the timeseries file column in the same line as defining the file, following a `:`. If no column is provided, the location name will be assumed:
 
 old:
-``` yaml
-locations:
-    region1:
-        techs: [demand_power]
-            overrides:
-                demand_power:
-                    x_map: demand
-                    constraints:
-                        r: file # will look for the column `demand` in the file `demand_heat_r.csv`
 
-```
+.. code-block:: yaml
+
+    locations:
+        region1:
+            techs: [demand_power]
+                overrides:
+                    demand_power:
+                        x_map: demand
+                        constraints:
+                            r: file # will look for the column `demand` in the file `demand_heat_r.csv`
 
 new:
-``` yaml
-locations:
-    region1:
-        techs:
-            demand_power:
-                constraints:
-                    resource: file=demand_heat.csv:demand # will look for the column `demand` in the file `demand_heat_r.csv`
 
-```
+.. code-block:: yaml
+
+    locations:
+        region1:
+            techs:
+                demand_power:
+                    constraints:
+                        resource: file=demand_heat.csv:demand # will look for the column `demand` in the file `demand_heat_r.csv`
 
 Link definition
 ===============
 Links have remained much the same as before. However, there is a slightly different structure in defining the technologies:
 
 old:
-``` yaml
-links:
-    region1,region2:
-        ac_transmission:
-            constraints:
-                e_cap: 1000
-```
 
-new:
-``` yaml
-links:
-    region1,region2:
-        techs:
+.. code-block:: yaml
+
+    links:
+        region1,region2:
             ac_transmission:
                 constraints:
-                    energy_cap: 1000
+                    e_cap: 1000
 
-```
+new:
+
+.. code-block:: yaml
+
+    links:
+        region1,region2:
+            techs:
+                ac_transmission:
+                    constraints:
+                        energy_cap: 1000
 
 Location metadata
 =================
 Location coordinates, previously kept under the `metadata` key, are now given per location:
 
 old:
-``` yaml
-metadata:
-    # metadata given in cartesian coordinates, not lat, lon.
-    map_boundary:
-        lower_left:
-            x: 0
-            y: 0
-        upper_right:
-            x: 1
-            y: 1
-    location_coordinates:
-        region1: {x: 2, y: 7}
-        region2: {x: 8, y: 7}
-```
+
+.. code-block:: yaml
+
+    metadata:
+        # metadata given in cartesian coordinates, not lat, lon.
+        map_boundary:
+            lower_left:
+                x: 0
+                y: 0
+            upper_right:
+                x: 1
+                y: 1
+        location_coordinates:
+            region1: {x: 2, y: 7}
+            region2: {x: 8, y: 7}
 
 new:
-``` yaml
-locations:
-    region1:
-        techs:
-            ccgt:
-            csp:
-        coordinates: {x: 2, y: 7}
-    region2:
-        techs:
-            demand_power:
-        coordinates: {x: 8, y: 7}
 
-```
+
+.. code-block:: yaml
+
+    locations:
+        region1:
+            techs:
+                ccgt:
+                csp:
+            coordinates: {x: 2, y: 7}
+        region2:
+            techs:
+                demand_power:
+            coordinates: {x: 8, y: 7}
+
 
 Preprocessed data
 =================
 Version `0.5` kept preprocessed data in either a dictionary (static data), pandas dataframe (location data) or an xarray dataset (timeseries data). To view a value that would be used in optimisation, the user would call `model.get_option()`. Similarly, to edit a value before running the model, a user could use `model.set_option()`.
 
-Now, all preprocessed data is held in one xarray dataset: `model.inputs`. To view and edit this data before it is sent to the solver, a user need only use standard xarray functions (see their `documentation<http://xarray.pydata.org/en/stable/>`_ for more information).
+Now, all preprocessed data is held in one xarray dataset: `model.inputs`. To view and edit this data before it is sent to the solver, a user need only use standard xarray functions (see their `documentation <http://xarray.pydata.org/en/stable/>`_ for more information).
 
 Plotting data
 =============
 .. Note::
     Advanced plotting is still under construction. All input/output data can be plotted by the user, using their preferred method, in case our current functions are insufficient.
 
-Plotting functions can now be called directly on the model and currently use `Plotly<https://plot.ly/python/>`_ instead of matplotlib.
+Plotting functions can now be called directly on the model and currently use `Plotly <https://plot.ly/python/>`_ instead of matplotlib.
 
 Changes are:
 
 ``calliope.analysis.plot_capacity(model.solution)`` -> ``model.plot('capacity', 'energy_cap')``
 
-``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission') -> ``model.plot('transmission', 'carrier_prod')
+``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')`` -> ``model.plot('transmission', 'carrier_prod')``
 
 ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')`` ->
 ``model.plot('timeseries', 'carrier_prod', sum_dims=['locs'], loc=dict(carriers='power'))``
@@ -398,7 +414,7 @@ Having the preprocessed model available in one xarray Dataset allows a model to 
 
 Multiple Backends
 =================
-Our primary solver backend is `Pyomo<http://www.pyomo.org/>`_. However, we have now extracted preprocessing from the backend, with all necessary data for a model run being stored in one xarray Dataset. As such, other backends could be used in future. One such backend which could be used is `JuMP<https://github.com/JuliaOpt/JuMP.jl>`_ in the Julia programming language. Linking Calliope to Julia is a long-term project, for which we welcome any contributions.
+Our primary solver backend is `Pyomo <http://www.pyomo.org/>`_. However, we have now extracted preprocessing from the backend, with all necessary data for a model run being stored in one xarray Dataset. As such, other backends could be used in future. One such backend which could be used is `JuMP <https://github.com/JuliaOpt/JuMP.jl>`_ in the Julia programming language. Linking Calliope to Julia is a long-term project, for which we welcome any contributions.
 
 Pyomo warmstart
 ===============

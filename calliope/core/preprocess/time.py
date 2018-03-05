@@ -210,9 +210,13 @@ def add_max_demand_timesteps(model_data):
     #FIXME: doesn't currently get a different max demand for different carriers
     max_demand_timesteps = []
     for carrier in list(model_data.carriers.data):
+        loc_techs = list(
+            set(model_data.loc_techs_finite_resource.values)
+            .intersection(model_data.loc_techs_demand.values)
+        )
         carrier_demand = model_data.resource.loc[
-            dict(loc_techs_finite_resource=model_data.loc_techs_demand)
-        ].sum(dim='loc_techs_demand').copy()
+            dict(loc_techs_finite_resource=loc_techs)
+        ].sum(dim='loc_techs_finite_resource').copy()
 
         # Only keep negative (=demand) values
         carrier_demand[carrier_demand.values > 0] = 0

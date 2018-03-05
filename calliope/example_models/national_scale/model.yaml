@@ -17,13 +17,5 @@ model:
 
     subset_time: ['2005-01-01', '2005-01-05']  # Subset of timesteps
 
-    group_share:
-        csp,ccgt:
-            energy_cap_min: 0.5  # FIXME: dummy to test contraint buildling
-            energy_cap_max: 1.0  # FIXME: dummy to test contraint buildling
-        csp:
-            carrier_prod_max:
-                power: 0.9  # FIXME: dummy to test contraint buildling
-
 run:
     solver: glpk

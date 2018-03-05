@@ -23,6 +23,7 @@ The second part of the tutorial builds a model for part of a district network, e
 
 The third part of the tutorial extends the second part, exhibiting binary and integer decision variable functionality (extended an LP model to a MILP model)
 
+.. _national_scale_example:
 
 --------------------------
 Tutorial 1: national scale
@@ -354,7 +355,7 @@ Purchase cost
 
 The boiler does not have a unit limit, it still utilises the continuous variable for its capacity. However, we have introduced a ``purchase`` cost:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/run_milp.yaml
+.. literalinclude:: ../../calliope/example_models/urban_scale/overrides.yaml
    :language: yaml
    :lines: 17-21
 
@@ -401,13 +402,13 @@ At its most basic, the model configuration simply specifies which model to run, 
 
 To speed up model runs, the national-scale example model's run configuration also specifies a time subset:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/run.yaml
+.. literalinclude:: ../../calliope/example_models/national_scale/model.yaml
    :language: yaml
    :lines: 18
 
 The included time series is hourly for a full year. The ``subset_time`` setting runs the model over only a subset of five days.
 
-The full ``model.yaml`` file includes additional options, none of which are relevant for this tutorial. See the :ref:`full file listing <examplemodels_nationalscale_runsettings>` for the national-scale example and the :doc:`section on the run configuration <run_configuration>` for more details on the available options.
+The full ``model.yaml`` file includes additional options, none of which are relevant for this tutorial. See the :ref:`full file listing <examplemodels_nationalscale_modelsettings>` for the national-scale example and the :doc:`section on the run configuration <run_configuration>` for more details on the available options.
 
 ---------------
 Model overrides

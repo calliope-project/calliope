@@ -11,33 +11,45 @@ Policy constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-
+# FIXME: Not actually building any constraints here (i.e. po.Constraints is never called)
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'techlists_group_share_energy_cap_min_constraint' in sets:
-        for techlist in backend_model.techlists_group_share_energy_cap_min_constraint:
-            group_share_energy_cap_constraint_rule(backend_model, techlist, what='min')
+        backend_model.group_share_energy_cap_min_constraint = po.Constraint(
+            backend_model.techlists_group_share_energy_cap_min_constraint,
+            ['min'], rule=group_share_energy_cap_constraint_rule
+        )
 
     if 'techlists_group_share_energy_cap_max_constraint' in sets:
-        for techlist in backend_model.techlists_group_share_energy_cap_max_constraint:
-            group_share_energy_cap_constraint_rule(backend_model, techlist, what='max')
+        backend_model.group_share_energy_cap_max_constraint = po.Constraint(
+            backend_model.techlists_group_share_energy_cap_max_constraint,
+            ['max'], rule=group_share_energy_cap_constraint_rule
+        )
 
     if 'techlists_group_share_energy_cap_equals_constraint' in sets:
-        for techlist in backend_model.techlists_group_share_energy_cap_equals_constraint:
-            group_share_energy_cap_constraint_rule(backend_model, techlist, what='equals')
+        backend_model.group_share_energy_cap_equals_constraint = po.Constraint(
+            backend_model.techlists_group_share_energy_cap_equals_constraint,
+            ['equals'], rule=group_share_energy_cap_constraint_rule
+        )
 
     if 'techlists_carrier_group_share_carrier_prod_min_constraint' in sets:
-        for techlist_carrier in backend_model.techlists_carrier_group_share_carrier_prod_min_constraint:
-            group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, what='min')
+        backend_model.group_share_carrier_prod_min_constraint = po.Constraint(
+            backend_model.techlists_carrier_group_share_carrier_prod_min_constraint,
+            ['min'], rule=group_share_carrier_prod_constraint_rule
+        )
 
     if 'techlists_carrier_group_share_carrier_prod_max_constraint' in sets:
-        for techlist_carrier in backend_model.techlists_carrier_group_share_carrier_prod_max_constraint:
-            group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, what='max')
+        backend_model.group_share_carrier_prod_max_constraint = po.Constraint(
+            backend_model.techlists_carrier_group_share_carrier_prod_max_constraint,
+            ['max'], rule=group_share_carrier_prod_constraint_rule
+        )
 
     if 'techlists_carrier_group_share_carrier_prod_equals_constraint' in sets:
-        for techlist_carrier in backend_model.techlists_carrier_group_share_carrier_prod_equals_constraint:
-            group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, what='equals')
+        backend_model.group_share_carrier_prod_equals_constraint = po.Constraint(
+            backend_model.techlists_carrier_group_share_carrier_prod_equals_constraint,
+            ['equals'], rule=group_share_carrier_prod_constraint_rule
+        )
 
 
 def equalizer(lhs, rhs, sign):

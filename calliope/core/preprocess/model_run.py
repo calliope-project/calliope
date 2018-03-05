@@ -141,16 +141,21 @@ def apply_overrides(config, override_file=None, override_dict=None):
 
     # Check whether the model config attempts to override any of the
     # base technology groups
-    if 'tech_groups' in config:
-        overridden_groups = (
-            set(default_tech_groups) &
-            set(config.tech_groups.keys())
-        )
-        if overridden_groups:
-            raise exceptions.ModelError(
-                'Trying to re-define base '
-                'technology groups: {}'.format(overridden_groups)
+    def check_base_tech_group_override(config):
+        if 'tech_groups' in config:
+            overridden_groups = (
+                set(default_tech_groups) &
+                set(config.tech_groups.keys())
             )
+            if overridden_groups:
+                raise exceptions.ModelError(
+                    'Trying to re-define base '
+                    'technology groups: {}'.format(overridden_groups)
+                )
+        else:
+            return None
+
+    check_base_tech_group_override(config)
 
     # The input files are allowed to override other model defaults
     config_model.union(config, allow_override=True)
@@ -170,6 +175,8 @@ def apply_overrides(config, override_file=None, override_dict=None):
 
         override_from_file = combine_overrides(override_file_path, override_groups)
 
+        check_base_tech_group_override(override_from_file)
+
         config_model.union(
             override_from_file, allow_override=True, allow_replacement=True
         )
@@ -182,6 +189,7 @@ def apply_overrides(config, override_file=None, override_dict=None):
     if override_dict:
         if not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
+        check_base_tech_group_override(override_dict)
         config_model.union(
             override_dict, allow_override=True, allow_replacement=True
         )
@@ -359,12 +367,18 @@ def process_timeseries_data(config_model, model_run):
                     "".format(file, dtformat, e.args[0].split("'")[1]))
             timeseries_data[file] = df
 
+        datetime_range = df.index
+
     # Apply time subsetting, if supplied in model_run
     subset_time_config = config_model.model.subset_time
     if subset_time_config is not None:
         if isinstance(subset_time_config, list):
             if len(subset_time_config) == 2:
                 time_slice = slice(subset_time_config[0], subset_time_config[1])
+                if pd.to_datetime(subset_time_config[0], format=dtformat) < datetime_range[0] or pd.to_datetime(subset_time_config[1], format=dtformat) > datetime_range[-1]:
+                    raise exceptions.ModelError(
+                        'subset time range {} is outside the input data time range [{}, {}]'.format(subset_time_config, datetime_range[0].strftime('%Y-%m-%d'), datetime_range[-1].strftime('%Y-%m-%d'))
+                    )
             else:
                 raise exceptions.ModelError(
                     'Invalid subset_time value: {}'.format(subset_time_config)

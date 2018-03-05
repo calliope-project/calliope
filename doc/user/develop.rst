@@ -56,7 +56,7 @@ A constraint generator function can add constraints, parameters, and variables d
 
 The default cost-minimizing objective function provides a good example:
 
-.. literalinclude:: ../../calliope/constraints/objective.py
+.. literalinclude:: ../../calliope/backend/pyomo/objective.py
    :language: python
    :lines: 12-
 
@@ -79,7 +79,7 @@ Subsets
 
 Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.sets`, an overview of which is included here.
 
-.. include:: ../../calliope/sets.py
+.. include:: ../../calliope/core/preprocess/sets.py
    :start-after: ###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
    :end-before: ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 

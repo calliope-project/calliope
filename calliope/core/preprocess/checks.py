@@ -104,7 +104,7 @@ def check_initial(config_model):
     # Checks for techs and tech_groups:
     # * All user-defined tech and tech_groups must specify a parent
     # * No carrier may be called 'resource'
-    default_tech_groups = list(config_model.tech_groups.keys())
+    default_tech_groups = list(defaults_model.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
         if tg_name in default_tech_groups:
             continue
@@ -113,7 +113,7 @@ def check_initial(config_model):
                 'tech_group {} does not define '
                 '`essentials.parent`'.format(tg_name)
             )
-        if 'resource' in get_all_carriers(tg_config):
+        if 'resource' in get_all_carriers(tg_config.essentials):
             errors.append(
                 'No carrier called `resource` may '
                 'be defined (tech_group: {})'.format(tg_name)
@@ -125,13 +125,13 @@ def check_initial(config_model):
                 'tech {} does not define '
                 '`essentials.parent`'.format(t_name)
             )
-        if 'resource' in get_all_carriers(t_config):
+        if 'resource' in get_all_carriers(t_config.essentials):
             errors.append(
                 'No carrier called `resource` may '
                 'be defined (tech: {})'.format(t_name)
             )
 
-        return errors, warnings
+    return warnings, errors
 
 
 def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comments):
@@ -281,6 +281,7 @@ def check_final(model_run):
     # given that energy_cap = storage_cap * charge_rate
 
     return comments, warnings, errors
+
 
 def check_model_data(model_data):
     """

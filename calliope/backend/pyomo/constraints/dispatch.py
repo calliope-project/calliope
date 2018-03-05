@@ -140,7 +140,6 @@ def _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, directio
     Direction: 0 is up, 1 is down.
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
 
     # No constraint for first timestep
     if backend_model.timesteps.order_dict[timestep] == 0:

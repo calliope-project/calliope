@@ -9,7 +9,5 @@ model:
 
     timeseries_data_path: 'timeseries_data'
 
-    subset_time: ['2005-01-01', '2005-01-02']
-
 run:
     solver: glpk
