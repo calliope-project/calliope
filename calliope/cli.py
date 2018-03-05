@@ -22,6 +22,7 @@ import click
 
 from calliope import Model, examples, _time_format
 from calliope.core.util.convert import convert_model
+from calliope.core.util.generate_runs import generate
 from calliope._version import __version__
 
 
@@ -188,6 +189,37 @@ def run(config_file, override_file, save_netcdf, save_csv, save_logs,
             print('Saving NetCDF results to file: {}'.format(save_netcdf))
             model.to_netcdf(save_netcdf)
         print_end_time(start_time)
+
+
+@cli.command(short_help='Generate a script to run multiple models.')
+@click.argument('config_file')
+@click.argument('out_file')
+@click.option('--kind', help='One of: "bash", "bsub".')
+@click.option('--override_file')
+@click.option('--groups')
+@click.option('--cluster_threads', default=1)
+@click.option('--cluster_mem')
+@click.option('--cluster_time')
+@click.option(
+    '--additional_args', default='',
+    help='Any additional arguments to pass directly on to `calliope run`.')
+@_debug
+@_pdb
+def generate_runs(
+    config_file, out_file, kind, override_file, groups, additional_args,
+    cluster_threads, cluster_mem, cluster_time,
+    debug, pdb):
+        kwargs = dict(
+            model_file=config_file,
+            out_file=out_file,
+            override_file=override_file,
+            groups=groups,
+            additional_args=additional_args,
+            cluster_mem=cluster_mem,
+            cluster_time=cluster_time,
+            cluster_threads=cluster_threads,
+        )
+        generate(kind, **kwargs)
 
 
 @cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
