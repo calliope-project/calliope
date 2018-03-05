@@ -55,7 +55,9 @@ MOCK_MODULES = [
     'click', 'xarray', 'dask', 'xarray.ufuncs',
     'numpy.random', 'numpy.fft', 'numpy.lib', 'numpy.lib.scimath',
     'scipy', 'scipy.cluster', 'scipy.cluster.vq',
-    'scipy.spatial', 'scipy.spatial.distance'
+    'scipy.spatial', 'scipy.spatial.distance',
+    'sklearn',
+    'plotly', 'plotly.offline', 'plotly.graph_objs'
 ]
 
 for m in MOCK_MODULES:
@@ -118,7 +120,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Calliope'
-copyright = '2013–2017 Calliope contributors listed in AUTHORS (Apache 2.0 licensed)'
+copyright = '2013–2018 Calliope contributors listed in AUTHORS (Apache 2.0 licensed)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -211,8 +213,8 @@ html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
-    'index': ['sidebar_intro.html', 'globaltoc.html'],
-    '**': ['sidebar_default.html', 'globaltoc.html']  # 'relations.html']
+    'index': ['sidebar_intro.html', 'searchbox.html', 'globaltoc.html'],
+    '**': ['sidebar_default.html', 'searchbox.html', 'globaltoc.html']  # 'relations.html']
 }
 
 # Additional templates that should be rendered to pages, maps page names to

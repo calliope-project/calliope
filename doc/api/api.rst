@@ -12,16 +12,7 @@ Model class
 Constraints
 ===========
 
-.. automodule:: calliope.constraints.objective
-    :members:
-
-.. automodule:: calliope.constraints.base
-    :members:
-
-.. automodule:: calliope.constraints.planning
-    :members:
-
-.. automodule:: calliope.constraints.optional
+.. automodule:: calliope.backend.pyomo.constraints
     :members:
 
 
@@ -30,36 +21,22 @@ Constraints
 Time series
 ===========
 
-.. automodule:: calliope.time_funcs
+.. automodule:: calliope.core.time
     :members:
 
-.. automodule:: calliope.time_masks
-    :members:
-
-.. automodule:: calliope.time_clustering
-    :members:
-
-Reading results
-===============
-
-.. automodule:: calliope.read
-    :members:
 
 .. _api_analysis:
 
-Analyzing results
-=================
+Analyzing models
+================
 
 .. automodule:: calliope.analysis
     :members:
 
-Utility classes: AttrDict, Parallelizer, Exceptions
-===================================================
+Utility classes: AttrDict, Exceptions
+=====================================
 
-.. autoclass:: calliope.utils.AttrDict
-    :members:
-
-.. autoclass:: calliope.Parallelizer
+.. autoclass:: calliope.core.attrdict.AttrDict
     :members:
 
 .. automodule:: calliope.exceptions

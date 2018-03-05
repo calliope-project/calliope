@@ -11,61 +11,21 @@ for the documentation.
 """
 
 import csv
+import ruamel.yaml as yaml
 
 
-def get_line(f, strip_comments=False):
-    line = f.readline()
-    if strip_comments:
-        line = line.split('#', 1)[0].rstrip()
-    return line
-
-
-def seek(f, line_content, strip_comments=False):
-    line = get_line(f, strip_comments)
-    while line.strip() != line_content:
-        line = get_line(f, strip_comments)
-    return line
-
-
-def leading_spaces(line):
-    return len(line) - len(line.lstrip(' '))
-
-
-def get_block(filename, block):
-    with open(filename, 'r') as f:
-        line = seek(f, block, strip_comments=True)
-        spaces = leading_spaces(line)
-        lines = []
-        while True:
-            line = f.readline()
-            # Check if we reached beginning of next tech block, if so, break
-            if not line or leading_spaces(line) == spaces:
-                break
-            lines.append(line[spaces + 4:])  # Remove leading indentation
-    return ''.join(lines)
-
-
-def get_section(f, outside_indentation):
-    collector = []
-
-    while True:
-        line = f.readline()
-        # If leading spaces are outside_indentation, we've reached the end
-        # of the section
-        if leading_spaces(line) == outside_indentation:
-            break
-        setting, line = line.split(':', maxsplit=1)
-        try:
-            default, comment = line.split('#', maxsplit=1)
-        except ValueError:  # need more than 1 value to unpack
-            default = line
-            comment = ''
-        line_tuple = (setting.strip(), default.strip(), comment.strip())
-        # Skip things marked as 'UNCODUMENTED'
-        if not line_tuple[2].startswith('UNDOCUMENTED'):
-            collector.append(line_tuple)
-
-    return collector, line
+def get_section(commented_map):
+    """ Returns list of (setting, default, comment) tuples processed
+    from a YAML section."""
+    result = []
+    for k, v in commented_map.items():
+        comment = commented_map.ca.items[k][2].value.strip('#').strip()
+        # Special case: empty dict gets turned into CommentedMap,
+        # turn it back
+        if isinstance(v, yaml.comments.CommentedMap):
+            v = {}
+        result.append((k, v, comment))
+    return result
 
 
 def write_csv(filename, iterable):
@@ -75,40 +35,26 @@ def write_csv(filename, iterable):
 
 
 def process():
-    filename = '../calliope/config/defaults.yaml'
+    with open('../calliope/config/defaults.yaml', 'r') as f:
+        defaults = yaml.round_trip_load(f)
 
-    with open(filename, 'r') as f:
-        # Seek until 'techs:'
-        line = seek(f, 'techs:')
-        # Make sure we're looking at 'defaults:'
-        line = f.readline()
-        assert line.strip() == 'defaults:'
-
-        # Read 'constraints:'
-        line = seek(f, 'constraints:')  # Seek until 'constraints:'
-        constraints, line = get_section(f, 8)
-
-        # Read 'costs.default:', which directly follows 'constraints:'
-        assert line.startswith('        costs:')
-        line = get_line(f)  # Skip one line
-        costs, line = get_section(f, 8)
+    essentials = get_section(defaults['default_tech']['essentials'])
+    constraints = get_section(defaults['default_tech']['constraints'])
+    costs = get_section(defaults['default_tech']['costs']['default'])
 
     # Write files
+    write_csv('./user/includes/default_essentials.csv', essentials)
     write_csv('./user/includes/default_constraints.csv', constraints)
     write_csv('./user/includes/default_costs.csv', costs)
 
-    # Read entire depreciation block
-    depreciation = get_block(filename, 'depreciation:')
-    with open('./user/includes/default_depreciation.yaml', 'w') as f:
-        f.write(depreciation)
-
-    # Process the abstract base technologies
-    for tech in ['supply', 'supply_plus', 'demand', 'unmet_demand',
-                 'unmet_demand_as_supply_tech', 'storage',
-                 'transmission', 'conversion', 'conversion_plus']:
-        block = get_block(filename, tech + ':')
-        with open('./user/includes/basetech_{}.yaml'.format(tech), 'w') as f:
-            f.write(block)
+    # # Process the abstract base technologies
+    # # FIXME: here actually read model.yaml
+    # for tech in ['supply', 'supply_plus', 'demand', 'unmet_demand',
+    #              'unmet_demand_as_supply_tech', 'storage',
+    #              'transmission', 'conversion', 'conversion_plus']:
+    #     block = get_block(filename, tech + ':')
+    #     with open('./user/includes/basetech_{}.yaml'.format(tech), 'w') as f:
+    #         f.write(block)
 
 
 # Run the process function when exec'd -- this is bad style, yes

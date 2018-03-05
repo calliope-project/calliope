@@ -72,4 +72,4 @@ The following Python modules and their dependencies are required:
 
 `Plotly <https://plot.ly/>`_ is optional but necessary to graphically display results.
 
-`Jupyter <http://jupyter.org/>`_ is optional and used for the example notebook in the tutorial:
+`Jupyter <http://jupyter.org/>`_ is optional and used for the example notebook in the tutorial.
