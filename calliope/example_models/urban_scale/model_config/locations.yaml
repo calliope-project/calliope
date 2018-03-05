@@ -57,13 +57,18 @@ locations:
 
 links:
     X1,X2:
-        power_lines:
-            distance: 10
+        techs:
+            power_lines:
+                distance: 10
     X1,X3:
-        power_lines:
+        techs:
+            power_lines:
     X1,N1:
-        heat_pipes:
+        techs:
+            heat_pipes:
     N1,X2:
-        heat_pipes:
+        techs:
+            heat_pipes:
     N1,X3:
-        heat_pipes:
+        techs:
+            heat_pipes:

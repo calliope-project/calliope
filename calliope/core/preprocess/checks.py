@@ -422,7 +422,6 @@ def check_operate_params(model_data):
             cap = np.inf
         return cap
 
-
     if 'loc_techs_area' in model_data.dims:
         for loc_tech in model_data.loc_techs_area.values:
             if (is_in(loc_tech, 'loc_techs_store')

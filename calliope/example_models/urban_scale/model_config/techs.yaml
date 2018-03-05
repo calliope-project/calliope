@@ -49,7 +49,6 @@ techs:
         essentials:
             name: 'Solar photovoltaic power'
             color: '#99CB48'
-            stack_weight: 100
             parent: supply_power_plus
         constraints:
             export_carrier: electricity
@@ -69,7 +68,6 @@ techs:
     boiler:
         essentials:
             name: 'Natural gas boiler'
-            stack_weight: 100
             parent: conversion
             carrier_out: heat
             carrier_in: gas
@@ -86,7 +84,6 @@ techs:
     chp:
         essentials:
             name: 'Combined heat and power'
-            stack_weight: 100
             parent: conversion_plus
             primary_carrier: electricity
             carrier_in: gas

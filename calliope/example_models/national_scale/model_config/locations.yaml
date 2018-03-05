@@ -37,12 +37,16 @@ locations:
 
 links:
     region1,region2:
-        ac_transmission:
-            constraints:
-                energy_cap_max: 10000
+        techs:
+            ac_transmission:
+                constraints:
+                    energy_cap_max: 10000
     region1,region1-1:
-        free_transmission:
+        techs:
+            free_transmission:
     region1,region1-2:
-        free_transmission:
+        techs:
+            free_transmission:
     region1,region1-3:
-        free_transmission:
+        techs:
+            free_transmission:

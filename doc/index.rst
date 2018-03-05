@@ -42,6 +42,7 @@ User guide
 
    user/introduction
    user/installation
+   user/updates
    user/components
    user/tutorials
    user/formulation

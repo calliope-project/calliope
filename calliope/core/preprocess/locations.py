@@ -151,7 +151,7 @@ def process_locations(model_config, modelrun_techs):
     for link in links_in:
         loc_from, loc_to = link.split(',')
         processed_transmission_techs = AttrDict()
-        for tech_name in links_in[link]:
+        for tech_name in links_in[link].techs:
             if tech_name not in processed_transmission_techs:
                 tech_settings = AttrDict()
                 # Combine model-wide settings from all parent groups
@@ -167,9 +167,9 @@ def process_locations(model_config, modelrun_techs):
                 )
 
                 # Add link-specific constraint overrides
-                if links_in[link][tech_name]:
+                if links_in[link].techs[tech_name]:
                     tech_settings.union(
-                        links_in[link][tech_name],
+                        links_in[link].techs[tech_name],
                         allow_override=True
                     )
 
