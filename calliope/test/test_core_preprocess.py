@@ -146,7 +146,6 @@ class TestModelRun:
         with pytest.raises(exceptions.ModelError):
             run_model(override_dict=override2, override_groups='simple_conversion')
 
-
         # should fail: wrong dateformat input for all files
         override3 = AttrDict.from_yaml_string(
             """
@@ -158,20 +157,32 @@ class TestModelRun:
             run_model(override_dict=override3, override_groups='simple_supply')
 
         # should fail: one value wrong in file
-        override1 = AttrDict.from_yaml_string(
+        override4 = AttrDict.from_yaml_string(
             """
             techs.test_demand_heat.constraints.resource: file=demand_heat_wrong_dateformat.csv
             """
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            model = run_model(override_dict=override1, override_groups='simple_conversion')
+            run_model(override_dict=override4, override_groups='simple_conversion')
 
     def test_inconsistent_time_indeces(self):
         """
         Test that, including after any time subsetting, the indeces of all time
         varying input data are consistent with each other
         """
+        # should fail: wrong length of demand_heat csv vs demand_elec
+        override1 = AttrDict.from_yaml_string(
+            """
+            techs.test_demand_heat.constraints.resource: file=demand_heat_wrong_length.csv
+            """
+        )
+        # check in output error that it points to: 07/01/2005 10:00:00
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override1, override_groups='simple_conversion')
+
+        # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
+        run_model(override_dict=override1, override_groups='simple_conversion,one_day')
 
     def test_empty_key_on_explode(self):
         """
@@ -223,6 +234,7 @@ class TestChecks:
         User can only use 'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3',
         'out_3', 'ratios']
         """
+
         override1 = AttrDict.from_yaml_string(
             """
             techs.test_supply.essentials.carrier_1: power
@@ -341,11 +353,70 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             run_model(override_dict=override2, override_groups='simple_supply,one_day')
 
+    def test_missing_constraints(self):
+        """
+        A technology must define at least one constraint.
+        """
+
+        override = AttrDict.from_yaml_string(
+            """
+            techs:
+                supply_missing_constraint:
+                    essentials:
+                        parent: supply
+                        carrier: electricity
+                        name: supply missing constraint
+            locations:
+                1:
+                    techs:
+                        supply_missing_constraint:
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override, override_groups='simple_supply,one_day')
+
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
         hardcoded constraints in order to function
         """
+        # should fail: missing one of ['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']
+        override_supply1 = AttrDict.from_yaml_string(
+            """
+            techs:
+                supply_missing_constraint:
+                    essentials:
+                        parent: supply
+                        carrier: electricity
+                        name: supply missing constraint
+                    constraints:
+                        resource_area_max: 10
+            locations:
+                1:
+                    techs:
+                        supply_missing_constraint:
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
+
+        # should pass: giving one of ['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']
+        override_supply2 = AttrDict.from_yaml_string(
+            """
+            techs:
+                supply_missing_constraint:
+                    essentials:
+                        parent: supply
+                        carrier: electricity
+                        name: supply missing constraint
+                    constraints.energy_cap_max: 10
+            locations:
+                1:
+                    techs:
+                        supply_missing_constraint:
+            """
+        )
+        run_model(override_dict=override_supply2, override_groups='simple_supply,one_day')
 
     def test_defining_non_allowed_constraints(self):
         """
@@ -407,7 +478,6 @@ class TestDataset:
         """
         Check that the dataset includes all attributes *required* for a model to function
         """
-
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):
         """

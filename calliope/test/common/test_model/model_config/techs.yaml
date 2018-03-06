@@ -6,13 +6,9 @@ techs:
             carrier: gas
             parent: supply
         constraints:
-            lifetime: 20
             energy_cap_max: 10
             resource: .inf
             energy_eff: 0.9
-        costs:
-            monetary:
-                interest_rate: 0.1
 
     test_supply_plus:
         essentials:
@@ -20,7 +16,6 @@ techs:
             carrier: electricity
             parent: supply_plus
         constraints:
-            lifetime: 20
             energy_cap_max: 10
             resource: file=supply_plus_resource.csv
             resource_eff: 0.9
@@ -28,9 +23,6 @@ techs:
             storage_cap_max: 15
             storage_loss: 0.01
             resource_cap_max: 10
-        costs:
-            monetary:
-                interest_rate: 0.1
 
     test_storage:
         essentials:
@@ -38,15 +30,11 @@ techs:
             carrier:
             parent: storage
         constraints:
-            lifetime: 20
             energy_cap_max: 10
             charge_rate: 0.5
             storage_cap_max: 15
             energy_eff: 0.9
             storage_loss: 0.01
-        costs:
-            monetary:
-                interest_rate: 0.1
 
     test_conversion:
         essentials:
@@ -55,12 +43,8 @@ techs:
             carrier_out: heat
             parent: conversion
         constraints:
-            lifetime: 20
             energy_cap_max: 10
             energy_eff: 0.9
-        costs:
-            monetary:
-                interest_rate: 0.1
 
     test_conversion_plus:
         essentials:
@@ -71,13 +55,9 @@ techs:
             carrier_in_2: heat
             parent: conversion_plus
         constraints:
-            lifetime: 20
             energy_cap_max: 10
             carrier_ratios:
                 carrier_out_2: 0.8
-        costs:
-            monetary:
-                interest_rate: 0.1
 
     test_demand_elec:
         essentials:
@@ -101,11 +81,7 @@ techs:
             carrier: electricity
             parent: transmission
         constraints:
-            lifetime: 20
             energy_cap_max: 10
-        costs:
-            monetary:
-                interest_rate: 0.1
 
     test_transmission_heat:
         essentials:
@@ -113,8 +89,4 @@ techs:
             carrier: heat
             parent: transmission
         constraints:
-            lifetime: 20
             energy_cap_max: 5
-        costs:
-            monetary:
-                interest_rate: 0.1

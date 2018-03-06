@@ -151,6 +151,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
     allowed_costs = model_run.techs[tech_id].allowed_costs
     all_defaults = list(defaults.default_tech.constraints.keys())
 
+    # TODO: Add check for energy_cap_per_unit if one of units_max, units_min or units_equals is used
     # Error if required constraints are not defined
     for r in required:
         # If it's a string, it must be defined
@@ -215,7 +216,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                     'which is not allowed'.format(tech_id, loc_id, constraint_name)
                 )
 
-    return None
+    return warnings, errors
 
 
 def check_final(model_run):
@@ -240,20 +241,23 @@ def check_final(model_run):
     for loc_id, loc_config in model_run.locations.items():
         if 'techs' in loc_config:
             for tech_id, tech_config in loc_config.techs.items():
-                _check_tech(
+                _warnings, _errors = _check_tech(
                     model_run, tech_id, tech_config, loc_id,
                     warnings, errors, comments
                 )
+                warnings += _warnings
+                errors += _errors
 
         if 'links' in loc_config:
             for link_id, link_config in loc_config.links.items():
                 for tech_id, tech_config in link_config.techs.items():
-                    _check_tech(
+                    _warnings, _errors = _check_tech(
                         model_run, tech_id, tech_config,
                         'link {}:{}'.format(loc_id, link_id),
                         warnings, errors, comments
                     )
-
+                    warnings += _warnings
+                    errors += _errors
     # Either all locations or no locations must have coordinates
     all_locs = list(model_run.locations.keys())
     locs_with_coords = [
