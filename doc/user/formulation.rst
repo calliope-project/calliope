@@ -186,7 +186,7 @@ else:
 
 .. math::
 
-  storage_{cap}(loc::tech) \leq energy_{cap, equals}(loc::tech) \times charge_{rate}`
+  storage_{cap}(loc::tech) \leq energy_{cap, equals}(loc::tech) \times charge_{rate}
 
 if :math:`energy_{cap, equals}(loc::tech)` and :math:`charge_{rate}(loc::tech)` exist.
 
@@ -202,7 +202,7 @@ else:
 
 .. math::
 
-  storage_{cap}(loc::tech) \leq energy_{cap, max}(loc::tech) \times charge_{rate}`
+  storage_{cap}(loc::tech) \leq energy_{cap, max}(loc::tech) \times charge_{rate}
 
 if :math:`energy_{cap, max}(loc::tech)` and :math:`charge_{rate}(loc::tech)` exist.
 

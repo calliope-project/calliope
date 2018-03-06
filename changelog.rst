@@ -17,7 +17,7 @@ Major changes
 
 |new| Experimental Julia/JuMP backend
 
-|changed| |backwards-incompatible|``group_fraction`` constraint is now called ``group_share`` and has a different formulation more in line with the rest of the tech-specific constraints::
+|changed| |backwards-incompatible| ``group_fraction`` constraint is now called ``group_share`` and has a different formulation more in line with the rest of the tech-specific constraints::
 
     group_share:
         csp,ccgt:
