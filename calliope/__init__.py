@@ -16,7 +16,6 @@ _time_format = '%Y-%m-%d %H:%M:%S'
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning
-_time_format = '%Y-%m-%d %H:%M:%S'
 
 
 def _formatwarning(message, category, filename, lineno, line=None):

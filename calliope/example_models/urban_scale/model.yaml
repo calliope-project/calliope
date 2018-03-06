@@ -3,6 +3,8 @@ import:  # Import other files from paths relative to this file, or absolute path
     - 'model_config/locations.yaml'
 
 model:
+    calliope_version: 0.6.0  # What version of Calliope this model is intended for
+
     mode: plan  # Choices: plan, operate
 
     # Model name

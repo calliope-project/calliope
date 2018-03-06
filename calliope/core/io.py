@@ -13,6 +13,8 @@ import os
 
 import xarray as xr
 
+from calliope._version import __version__
+from calliope.exceptions import ModelWarning
 from calliope.core.util.dataset import split_loc_techs
 
 
@@ -20,6 +22,14 @@ def read_netcdf(path):
     """Read model_data from NetCDF file"""
     with xr.open_dataset(path) as model_data:
         model_data.load()
+
+    calliope_version = model_data.attrs.get('calliope_version', False)
+    if calliope_version:
+        if not str(calliope_version) in __version__:
+            raise ModelWarning(
+                'This model data was create with Calliope version {}, '
+                'but you are running {}. Proceed with caution!'
+            )
 
     # FIXME some checks for consistency
     # use check_dataset from the checks module

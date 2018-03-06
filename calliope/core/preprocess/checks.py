@@ -12,6 +12,7 @@ Checks for model consistency and possible errors during preprocessing.
 import os
 import ruamel.yaml
 import calliope
+from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
 from calliope.core.preprocess.util import get_all_carriers
@@ -69,6 +70,16 @@ def check_initial(config_model):
     """
     errors = []
     warnings = []
+
+    # Check for version mismatch
+    model_version = config_model.model.get('calliope_version', False)
+    if model_version:
+        if not str(model_version) in __version__:
+            warnings.append(
+                'Model configuration specifies calliope_version={}, '
+                'but you are running {}. Proceed with caution!'.format(
+                    model_version, __version__)
+            )
 
     # Check run configuration
     for k in config_model['run'].keys_nested():
@@ -268,6 +279,11 @@ def check_final(model_run):
             if sorted(list(loc_config.coordinates.keys())) != coord_keys:
                 errors.append('All locations must use the same coordinate format.')
                 break
+
+    # Ensure that timeseries have no non-unique index values
+    for k, df in model_run['timeseries_data'].items():
+        if df.index.duplicated().any():
+            errors.append('Time series `{}` contains non-unique timestap values.'.format(k))
 
     # FIXME: check that constraints are consistent with desired mode:
     # planning or operational

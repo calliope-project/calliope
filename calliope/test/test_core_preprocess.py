@@ -200,6 +200,24 @@ class TestModelRun:
 
 
 class TestChecks:
+    def test_model_version_mismatch(self):
+        """
+        Model config says model.calliope_version = 0.1, which is not what we
+        are running, so we want a warning.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            model.calliope_version: 0.1
+            """
+        )
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            run_model(override_dict=override, override_groups='simple_supply,one_day')
+
+        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
+
+        assert 'Model configuration specifies calliope_version' in all_warnings
+
     def test_unknown_carrier_tier(self):
         """
         User can only use 'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3',
