@@ -188,9 +188,10 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
             )
 
     # Error if an `export` statement does not match the given carrier_outs
-    if 'export' in tech_config.constraints:
-        export = tech_config.constraints.export
-        if export not in [tech_config.essentials.get_key(k) for k in ['carrier_out', 'carrier_out_2', 'carrier_out_3']]:
+    if 'export_carrier' in tech_config.constraints:
+        essentials = model_run.techs[tech_id].essentials
+        export = tech_config.constraints.export_carrier
+        if export and export not in [essentials.get_key(k, '') for k in ['carrier_out', 'carrier_out_2', 'carrier_out_3']]:
             errors.append(
                 '`{}` at `{}` is attempting to export a carrier '
                 'not given as an output carrier: `{}`'.format(tech_id, loc_id, export)

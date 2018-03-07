@@ -306,14 +306,20 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k for k in sets.loc_techs_non_transmission
         if any('.purchase' in i
                for i in loc_techs_config[k].get(
-                   'costs', AttrDict()).keys_nested())
+                   'costs', AttrDict()).keys_nested()) and not
+        any('units_' in i
+            for i in loc_techs_config[k].get(
+                'constraints', AttrDict()).keys_nested())
     )
 
     transmission_purchase = set(
         k for k in sets.loc_techs_transmission
         if any('.purchase' in i
                for i in loc_techs_transmission_config[k].get(
-                   'costs', AttrDict()).keys_nested())
+                   'costs', AttrDict()).keys_nested()) and not
+        any('units_' in i
+            for i in loc_techs_transmission_config[k].get(
+                'constraints', AttrDict()).keys_nested())
     )
 
     sets.loc_techs_purchase = loc_techs_purchase | transmission_purchase

@@ -24,8 +24,7 @@ model:
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
     subset_time: null  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
     objective: 'cost_minimization'
-    reserve_margin:  # Per-carrier system-wide reserve margins
-        power: 0
+    reserve_margin:  {} # Per-carrier system-wide reserve margins
 
 ##
 # Base technology groups
@@ -46,7 +45,7 @@ tech_groups:
     supply_plus:
         required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
         allowed_constraints: ['energy_prod', 'lifetime', 'resource', 'force_resource', 'resource_min_use', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'parasitic_eff', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_eff_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals', 'storage_initial', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss']
-        allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
+        allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
             stack_weight: 0

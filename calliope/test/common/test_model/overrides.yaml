@@ -2,38 +2,40 @@ simple_supply:
     locations:
         0:
             techs:
-                test_supply:
+                test_supply_elec:
                 test_demand_elec:
 
         1:
             techs:
-                test_supply:
+                test_supply_elec:
                 test_demand_elec:
 
 simple_supply_plus:
     locations:
         0:
             techs:
-                test_supply:
+                test_supply_plus:
                 test_demand_elec:
 
         1:
             techs:
-                test_supply:
+                test_supply_plus:
                 test_demand_elec:
 
 simple_conversion:
     locations:
         0:
             techs:
-                test_supply:
+                test_supply_elec:
+                test_supply_gas:
                 test_conversion:
                 test_demand_elec:
                 test_demand_heat:
 
         1:
             techs:
-                test_supply:
+                test_supply_elec:
+                test_supply_gas:
                 test_conversion:
                 test_demand_elec:
                 test_demand_heat:
@@ -42,14 +44,16 @@ simple_conversion_plus:
     locations:
         0:
             techs:
-                test_supply:
+                test_supply_elec:
+                test_supply_gas:
                 test_conversion_plus:
                 test_demand_elec:
                 test_demand_heat:
 
         1:
             techs:
-                test_supply:
+                test_supply_elec:
+                test_supply_gas:
                 test_conversion_plus:
                 test_demand_elec:
                 test_demand_heat:
@@ -58,13 +62,13 @@ simple_storage:
     locations:
         0:
             techs:
-                test_supply:
+                test_supply_elec:
                 test_storage:
                 test_demand_elec:
 
         1:
             techs:
-                test_supply:
+                test_supply_elec:
                 test_storage:
                 test_demand_elec:
 

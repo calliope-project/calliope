@@ -27,10 +27,7 @@ class TestModelRun:
         """
         override = AttrDict.from_yaml_string(
             """
-            tech_groups:
-                supply:
-                    constraints:
-                        energy_cap_max: 1000
+            tech_groups.supply.constraints.energy_cap_max: 1000
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -50,10 +47,7 @@ class TestModelRun:
                     constraints:
                         resource: .inf
                         energy_cap_max: .inf
-            locations:
-                1:
-                    techs:
-                        test_undefined_carrier:
+            locations.1.techs.test_undefined_carrier:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -201,8 +195,8 @@ class TestModelRun:
         """
         override = AttrDict.from_yaml_string(
             """
-            locations.0.test_supply.constraints.resource: 10
-            locations.0,1.test_supply.constraints.resource: 15
+            locations.0.test_supply_elec.constraints.resource: 10
+            locations.0,1.test_supply_elec.constraints.resource: 15
             """
         )
 
@@ -237,7 +231,7 @@ class TestChecks:
 
         override1 = AttrDict.from_yaml_string(
             """
-            techs.test_supply.essentials.carrier_1: power
+            techs.test_supply_elec.essentials.carrier_1: power
             """
         )
 
@@ -246,12 +240,12 @@ class TestChecks:
 
         override2 = AttrDict.from_yaml_string(
             """
-            techs.test_supply.essentials.carrier_out_4: power
+            techs.test_conversion_plus.essentials.carrier_out_4: power
             """
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_supply,one_day')
+            run_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
 
     def test_name_overlap(self):
         """
@@ -269,12 +263,8 @@ class TestChecks:
                         energy_cap_max: 10
                         resource: .inf
             locations:
-                1:
-                    techs:
-                        supply:
-                0:
-                    techs:
-                        supply:
+                1.techs.supply:
+                0.techs.supply:
             """
         )
 
@@ -324,7 +314,7 @@ class TestChecks:
         override1 = AttrDict.from_yaml_string(
             """
             techs:
-                test_supply:
+                test_supply_elec:
                     essentials:
                         name: Supply tech
                         carrier: resource
@@ -343,10 +333,7 @@ class TestChecks:
                         name: Supply tech
                         carrier: resource
                         parent: supply
-            techs:
-                test_supply:
-                    essentials:
-                        parent: test_supply_group
+            techs.test_supply_elec.essentials.parent: test_supply_group
             """
         )
 
@@ -366,10 +353,7 @@ class TestChecks:
                         parent: supply
                         carrier: electricity
                         name: supply missing constraint
-            locations:
-                1:
-                    techs:
-                        supply_missing_constraint:
+            locations.1.techs.supply_missing_constraint:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -391,10 +375,7 @@ class TestChecks:
                         name: supply missing constraint
                     constraints:
                         resource_area_max: 10
-            locations:
-                1:
-                    techs:
-                        supply_missing_constraint:
+            locations.1.techs.supply_missing_constraint:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -410,10 +391,7 @@ class TestChecks:
                         carrier: electricity
                         name: supply missing constraint
                     constraints.energy_cap_max: 10
-            locations:
-                1:
-                    techs:
-                        supply_missing_constraint:
+            locations.1.techs.supply_missing_constraint:
             """
         )
         run_model(override_dict=override_supply2, override_groups='simple_supply,one_day')
@@ -424,6 +402,14 @@ class TestChecks:
         of hardcoded constraints, anything else will not be implemented, so are
         not allowed for that technology. This includes misspellings
         """
+        # should fail: storage_cap_max not allowed for supply tech
+        override_supply1 = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_elec.constraints.storage_cap_max: 10
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
 
     def test_defining_non_allowed_costs(self):
         """
@@ -431,12 +417,62 @@ class TestChecks:
         of hardcoded costs, anything else will not be implemented, so are
         not allowed for that technology. This includes misspellings
         """
+        # should fail: storage_cap_max not allowed for supply tech
+        override = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_elec.costs.monetary.storage_cap: 10
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override, override_groups='simple_supply,one_day')
+
+        # should fail: om_prod not allowed for demand tech
+        override = AttrDict.from_yaml_string(
+            """
+            techs.test_demand_elec.costs.monetary.om_prod: 10
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override, override_groups='simple_supply,one_day')
 
     def test_exporting_unspecified_carrier(self):
         """
         User can only define an export carrier if it is defined in
         ['carrier_out', 'carrier_out_2', 'carrier_out_3']
         """
+        # should fail: exporting `heat` not allowed for electricity supply tech
+        override1 = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_elec.constraints.export_carrier: heat
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override1, override_groups='simple_supply,one_day')
+
+        # should fail: exporting `random` not allowed for conversion_plus tech
+        override2 = AttrDict.from_yaml_string(
+            """
+            techs.test_conversion_plus.constraints.export_carrier: random
+            """
+        )
+        with pytest.raises(exceptions.ModelError):
+            run_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
+
+        # should pass: exporting electricity for supply tech
+        override3 = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_elec.constraints.export_carrier: electricity
+            """
+        )
+        run_model(override_dict=override3, override_groups='simple_supply,one_day')
+
+        # should pass: exporting heat for conversion tech
+        override4 = AttrDict.from_yaml_string(
+            """
+            techs.test_conversion_plus.constraints.export_carrier: heat
+            """
+        )
+        run_model(override_dict=override4, override_groups='simple_conversion_plus,one_day')
 
     def test_allowed_time_varying_constraints(self):
         """

@@ -1,7 +1,3 @@
-import:
-    - 'model_config/techs.yaml'
-    - 'model_config/locations.yaml'
-
 model:
     mode: plan
 
@@ -11,3 +7,114 @@ model:
 
 run:
     solver: glpk
+
+techs:
+
+    test_supply_gas:
+        essentials:
+            name: Supply tech
+            carrier: gas
+            parent: supply
+        constraints:
+            energy_cap_max: 10
+            resource: .inf
+            energy_eff: 0.9
+
+    test_supply_elec:
+        essentials:
+            name: Supply tech
+            carrier: electricity
+            parent: supply
+        constraints:
+            energy_cap_max: 10
+            resource: .inf
+            energy_eff: 0.9
+
+    test_supply_plus:
+        essentials:
+            name: Supply plus tech
+            carrier: electricity
+            parent: supply_plus
+        constraints:
+            energy_cap_max: 10
+            resource: file=supply_plus_resource.csv
+            resource_eff: 0.9
+            energy_eff: 0.9
+            storage_cap_max: 15
+            storage_loss: 0.01
+            resource_cap_max: 10
+
+    test_storage:
+        essentials:
+            name: Storage tech
+            carrier: electricity
+            parent: storage
+        constraints:
+            energy_cap_max: 10
+            charge_rate: 0.5
+            storage_cap_max: 15
+            energy_eff: 0.9
+            storage_loss: 0.01
+
+    test_conversion:
+        essentials:
+            name: Conversion tech
+            carrier_in: gas
+            carrier_out: heat
+            parent: conversion
+        constraints:
+            energy_cap_max: 10
+            energy_eff: 0.9
+
+    test_conversion_plus:
+        essentials:
+            name: Conversion plus tech
+            primary_carrier: electricity
+            carrier_in: gas
+            carrier_out: electricity
+            carrier_out_2: heat
+            parent: conversion_plus
+        constraints:
+            energy_cap_max: 10
+            carrier_ratios:
+                carrier_out_2: 0.8
+
+    test_demand_elec:
+        essentials:
+            name: Demand elec tech
+            carrier: electricity
+            parent: demand
+        constraints:
+            resource: file=demand_elec.csv
+
+    test_demand_heat:
+        essentials:
+            name: Demand heat tech
+            carrier: heat
+            parent: demand
+        constraints:
+            resource: file=demand_heat.csv
+
+    test_transmission_elec:
+        essentials:
+            name: Transmission elec tech
+            carrier: electricity
+            parent: transmission
+        constraints:
+            energy_cap_max: 10
+
+    test_transmission_heat:
+        essentials:
+            name: Transmission heat tech
+            carrier: heat
+            parent: transmission
+        constraints:
+            energy_cap_max: 5
+
+links:
+    0,1:
+        techs:
+            test_transmission_elec:
+                distance: 1
+            test_transmission_heat:
+                distance: 2

@@ -151,6 +151,8 @@ def add_time_dimension(data, model_run):
 
         # 5) remove all before '=' and split filename and location column
         filenames = filenames.str.split('=').str[1].str.rsplit(':', 1)
+        if isinstance(filenames.index, pd.MultiIndex):
+            filenames.index = filenames.index.remove_unused_levels()
 
         # 6) Get all timeseries data from dataframes stored in model_run
         timeseries_data = [model_run.timeseries_data[file].loc[:, column].values
@@ -165,7 +167,6 @@ def add_time_dimension(data, model_run):
         # dimensions with the time varying data (static data is just duplicated
         # at each timestep)
         timeseries_data_array = xr.broadcast(data[variable], data.timesteps)[0].copy()
-
         timeseries_data_array.loc[
             xr.DataArray.from_series(timeseries_data_series).coords
         ] = xr.DataArray.from_series(timeseries_data_series).values

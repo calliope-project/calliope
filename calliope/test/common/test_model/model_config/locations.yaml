@@ -1,8 +1,0 @@
-links:
-    0,1:
-        techs:
-            test_transmission_elec:
-                distance: 1
-            test_transmission_heat:
-                distance: 2
-
