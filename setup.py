@@ -46,7 +46,7 @@ setup(
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.12",
-        "pandas >= 0.21, < 0.22",
+        "pandas >= 0.22, < 0.23",
         "pyomo >= 5.2, < 5.3",
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
