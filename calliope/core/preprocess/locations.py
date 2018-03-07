@@ -40,7 +40,7 @@ def process_locations(model_config, modelrun_techs):
     techs_in = model_config.techs
     tech_groups_in = model_config.tech_groups
     locations_in = model_config.locations
-    links_in = model_config.links
+    links_in = model_config.get('links', AttrDict())
 
     allowed_from_file = defaults['file_allowed']
 

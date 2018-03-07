@@ -11,7 +11,7 @@ from calliope.core.attrdict import AttrDict
 
 def concat_iterable(iterable, concatenators):
     """
-    Take an interable containing iterables of strings,
+    Take an iterable containing iterables of strings,
     return a list of strings concatenating inner iterables with '::'.
 
     E.g.:
@@ -24,6 +24,8 @@ def concat_iterable(iterable, concatenators):
     ``
 
     """
+    if len(iterable) == 0:
+        return []
     concatenators += ['']
     string_iter_len = len(iterable[0])
     assert string_iter_len == len(concatenators)
