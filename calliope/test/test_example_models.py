@@ -65,6 +65,13 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip('CPLEX not installed')
 
+    def test_nationalscale_example_results_cbc(self):
+        # Check for existence of the `cbc` command
+        if shutil.which('cbc'):
+            nationalscale_example_tester(solver='cbc')
+        else:
+            pytest.skip('CBC not installed')
+
 
 class TestUrbanScaleExampleModelSenseChecks:
     def test_urbanscale_example_results(self):

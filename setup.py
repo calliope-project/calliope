@@ -47,7 +47,7 @@ setup(
         "numexpr >= 2.3.1",
         "numpy >= 1.14",
         "pandas >= 0.22, < 0.23",
-        "pyomo >= 5.3, < 5.4",
+        "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
         "plotly >= 2.2.3"
