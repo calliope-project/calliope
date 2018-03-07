@@ -45,9 +45,9 @@ setup(
         "click >= 3.3",
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
-        "numpy >= 1.12",
+        "numpy >= 1.14",
         "pandas >= 0.22, < 0.23",
-        "pyomo >= 5.2, < 5.3",
+        "pyomo >= 5.3, < 5.4",
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
         "plotly >= 2.2.3"

@@ -1,3 +1,6 @@
+import shutil
+
+import pytest
 from pytest import approx
 
 import calliope
@@ -22,21 +25,45 @@ class TestUrbanScaleExampleModel:
         model = calliope.examples.milp()
 
 
+def nationalscale_example_tester(solver='glpk', solver_io=None):
+    override = {
+        'model.subset_time': '2005-01-01',
+        'model.solver': solver,
+    }
+
+    if solver_io:
+        override['model.solver_io'] = 'python'
+
+    model = calliope.examples.national_scale(override_dict=override)
+    model.run()
+
+    assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(45129.950)
+    assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6675.173)
+
+    assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(4.626588e+03)
+    assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
+    assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
+
+    assert float(model.results.cost.sum()) == approx(38997.3544)
+
+
 class TestNationalScaleExampleModelSenseChecks:
-    def test_nationalscale_example_results(self):
-        model = calliope.examples.national_scale(
-            override_dict={'model.subset_time': '2005-01-01'}
-        )
-        model.run()
+    def test_nationalscale_example_results_glpk(self):
+        nationalscale_example_tester()
 
-        assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(45129.950)
-        assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6675.173)
+    def test_nationalscale_example_results_gurobi(self):
+        try:
+            import gurobipy
+            nationalscale_example_tester(solver='gurobi', solver_io='python')
+        except ImportError:
+            pytest.skip('Gurobi not installed')
 
-        assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(4.626588e+03)
-        assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
-        assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
-
-        assert float(model.results.cost.sum()) == approx(38997.3544)
+    def test_nationalscale_example_results_cplex(self):
+        # Check for existence of the `cplex` command
+        if shutil.which('cplex'):
+            nationalscale_example_tester(solver='cplex')
+        else:
+            pytest.skip('CPLEX not installed')
 
 
 class TestUrbanScaleExampleModelSenseChecks:

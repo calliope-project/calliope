@@ -13,10 +13,10 @@ dependencies:
     - libnetcdf
     - netcdf4
     - numexpr
-    - numpy=1.12.1
+    - numpy=1.14.1
     - pandas=0.22
     - plotly
-    - pyomo=5.2
+    - pyomo=5.3
     - pytest
     - pytest-cov
     - ruamel.yaml<=0.15
