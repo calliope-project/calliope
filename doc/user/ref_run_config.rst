@@ -1,7 +1,7 @@
 
-=================
+-----------------
 Run configuration
-=================
+-----------------
 
 .. Note::
 
@@ -38,7 +38,6 @@ The optional settings to adjust the timestep resolution and those for parallel r
 
 .. _run_time_res:
 
---------------------------
 Time resolution adjustment
 --------------------------
 
@@ -83,7 +82,6 @@ The available options include:
 
 .. _run_config_parallel_runs:
 
---------------------------
 Settings for parallel runs
 --------------------------
 

@@ -1,6 +1,6 @@
 
 =================
-Analyzing results
+Analysing a model
 =================
 
 -------------------

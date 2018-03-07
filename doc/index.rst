@@ -42,16 +42,12 @@ User guide
 
    user/introduction
    user/installation
-   user/updates
-   user/components
-   user/tutorials
-   user/formulation
-   user/configuration
-   user/run_configuration
+   user/whatsnew
+   user/building
    user/running
-   user/analysis
-   user/configuration_reference
-   user/example_models
+   user/analysing
+   user/tutorials
+   user/reference
    user/develop
 
 -----------------

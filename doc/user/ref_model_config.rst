@@ -1,7 +1,7 @@
 
-===================
+-------------------
 Model configuration
-===================
+-------------------
 
 .. Note::
 
@@ -39,7 +39,6 @@ The model definition can be split into several files in two ways:
 
 .. _configuration_techs:
 
-------------
 Technologies
 ------------
 
@@ -94,7 +93,7 @@ Refer to :ref:`config_reference_techs` for a complete list of all available tech
 .. _config_parents_and_groups:
 
 Parents and groups
-------------------
+^^^^^^^^^^^^^^^^^^
 
 Because each technology must define a ``parent``, the definition of all technologies represents a tree structure, with the built-in defaults representing the root node, the built-in abstract base technologies inheriting from that root node, and all other user-defined technologies inheriting from one of the abstract base technologies.
 
@@ -112,7 +111,6 @@ The ``group`` option only has an effect on supply diversity functionality in the
 
    An example of a simple technology inheritance tree. ``renewables`` could define any defaults that both ``pv`` and ``wind`` should inherit, furthermore, it sets ``group: true``. Thus, for purposes of supply diversity, ``pv`` and ``wind`` will be counted together, while ``nuclear`` will be counted separately.
 
----------
 Locations
 ---------
 
@@ -144,7 +142,7 @@ Locations that are contained within a parent location have implicit loss-free an
    If a location contained within a parent location itself defines children, it is no longer included in the implicit free transmission between its siblings and parent location. In turn, it receives implicit free transmission with its own children.
 
 Transmission nodes
-------------------
+^^^^^^^^^^^^^^^^^^
 
 A location can also act as just a branch in a transmission network. This is relevant for locations where transmission links split into several lines, without any other technologies at those locations. In this case, the location definition becomes:
 
@@ -158,7 +156,6 @@ Where ``transmission-tech`` can refer to any previously defined ``transmission``
 
 .. _transmission_links:
 
-------------------
 Transmission links
 ------------------
 
@@ -216,7 +213,6 @@ Transmission links can also specify a distance, which transmission technologies 
 
 .. _overriding_tech_options:
 
------------------------------
 Overriding technology options
 -----------------------------
 
@@ -244,7 +240,6 @@ The following settings cannot be overridden on a per-location basis:
 
 .. _configuration_timeseries:
 
-----------------------
 Using time series data
 ----------------------
 
@@ -253,7 +248,7 @@ Using time series data
    If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific overrides, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource).
 
 Defining a model's time steps
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Irrespective of whether it actually uses time-varying parameters, a model must at specify its timesteps with a file called ``set_t.csv``. This must contain two columns (comma-separated), the first one being integer indices, and the second, ISO 8601 compatible timestamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``).
 
@@ -271,7 +266,7 @@ For example, the first few lines of a file specifying hourly timesteps for the y
 
 
 Defining time-varying parameters
---------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For parameters that vary in time, time series data can be read from CSV files. This can be done in two ways (using the example of ``r``):
 
@@ -330,9 +325,6 @@ When reading time series, the ``r_scale_to_peak`` option can be useful. Specifyi
 
 Calliope provides functionality to automatically adjust the resolution of time series data to make models more computationally tractable. See :ref:`run_time_res` for details on this.
 
-.. _loading_optional_constraints:
-
-----------------------------------------------------------
 Running a Linear (LP) or Mixed Integer Linear (MILP) model
 ----------------------------------------------------------
 
@@ -348,7 +340,8 @@ In both cases, there will be a time penalty, as linear programming solvers are l
 
    Integer and Binary variables are still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
 
-----------------------------
+.. _loading_optional_constraints:
+
 Loading optional constraints
 ----------------------------
 

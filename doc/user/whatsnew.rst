@@ -1,18 +1,20 @@
-==============
-0.5 -> 0.6
-==============
+This page provides a summary of information from the full :doc:`release history <history>`.
+
+=============
+New in v0.6.0
+=============
 
 Version `0.6` is backwards incompatible with version `0.5`. If you are familiar with how Calliope functions then this page will act as a reference for moving to using version `0.6`.
 
 -------------------------
 Depreciated functionality
 -------------------------
-If you require any depreciated funcitonality, we recommend you open an issue on GitHub for it to be built into a later version of 0.6
+If you require any depreciated functionality, we recommend you open an issue on GitHub for it to be built into a later version of 0.6
 
 Location and technology subsets
 ===============================
 
-In model configuration, `subset_x` and `subset_y` (allowing subsetting the used locations and technologies, respecitvely) no longer exist. `subset_t`, now `subset_time`, does still exist.
+In model configuration, `subset_x` and `subset_y` (allowing subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now `subset_time`, does still exist.
 
 Technology constraints
 ======================
@@ -20,7 +22,7 @@ Technology constraints
 
 * The variable `r2` (providing a secondary resource that could be used by a supply/supply_plus technology), along with all its constraints, have been removed. To utilise multiple inputs, conversion_plus can be used instead.
 
-* `r_scale_to_peak` (allowing a user to provide a value for the peak resource to which the entire timeseries would be scaled accordingly) has been removed. `resource_scale` (previously `r_scale`) can still be used for scaling resource values
+* `r_scale_to_peak` (allowing a user to provide a value for the peak resource to which the entire time series would be scaled accordingly) has been removed. `resource_scale` (previously `r_scale`) can still be used for scaling resource values
 
 * `weight` (providing a technology a disproportionate weight in the objective function calculation) has been removed.
 
@@ -404,7 +406,7 @@ New functionality
 
 Debugging & checks
 ==================
-A user can now output a verbose dictionary of all model input data (the `model_run` dictionary) into a YAML file, for debugging. This debug file includes comments as to where constraint/cost values have originated (e.g. from being locally supersceded or from an override group).
+A user can now output a verbose dictionary of all model input data (the `model_run` dictionary) into a YAML file, for debugging. This debug file includes comments as to where constraint/cost values have originated (e.g. from being locally superseded or from an override group).
 
 Similarly, sense checks are undertaken at points during preprocessing to ensure the model being built is robust. It checks for missing data, possibly misspelled constraints, incompatible inputs, and much more. It will not find all possible user input errors, as this is an impossible task. However, the format of implementation allows for further checks to be applied.
 
@@ -412,7 +414,7 @@ Preprocessed model
 ==================
 Having the preprocessed model available in one xarray Dataset allows a model to be saved to file *before* being run. Although preprocessing is quick, this allows a user to avoid preprocessing the same file multiple times, as they can instead call the saved NetCDF file of the model.
 
-Multiple Backends
+Multiple backends
 =================
 Our primary solver backend is `Pyomo <http://www.pyomo.org/>`_. However, we have now extracted preprocessing from the backend, with all necessary data for a model run being stored in one xarray Dataset. As such, other backends could be used in future. One such backend which could be used is `JuMP <https://github.com/JuliaOpt/JuMP.jl>`_ in the Julia programming language. Linking Calliope to Julia is a long-term project, for which we welcome any contributions.
 
@@ -420,5 +422,3 @@ Pyomo warmstart
 ===============
 
 Warmstart functionality can be used in solvers which are not GLPK. They allow a built model to be changed slightly without having to be rebuilt. This can speed up re-running a model when you have just a few input parameters you would like to change (the cost of a technology, for instance). Although this existed in operational mode in version `0.5`, now it extends to all possible parameters in all models. This functionality is undocumented in Calliope, but the Pyomo documentation provides some information and the Pyomo model can be accessed by `model._backend_model`.
-
-

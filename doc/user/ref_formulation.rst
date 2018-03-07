@@ -1,24 +1,21 @@
-
-=================
+-----------------
 Model formulation
-=================
+-----------------
 
 This section details the mathematical formulation of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
 
 .. _time_varying_vs_constant_parameters:
 
-------------------------------------------
 Time-varying vs. constant model parameters
 ------------------------------------------
 
 Some model parameters which are defined over the set of time steps ``timesteps`` can either given as time series or as constant values. If given as constant values, the same value is used for each time step ``timestep``. For details on how to define a parameter as time-varying and how to load time series data into it, see the :ref:`time series description in the model configuration section <configuration_timeseries>`.
 
-------------------
 Decision variables
 ------------------
 
 Capacity
---------
+^^^^^^^^
 
 * ``storage_cap(loc::tech)``: installed storage capacity. Supply plus/Storage only
 * ``resource_cap(loc::tech)``: installed resource <-> storage/carrier_in conversion capacity
@@ -26,7 +23,7 @@ Capacity
 * ``resource_area(loc::tech)``: resource collector area
 
 Unit Commitment
----------------
+^^^^^^^^^^^^^^^
 
 * ``resource(loc::tech, timestep)``: resource <-> storage/carrier_in (+ production, - consumption)
 * ``carrier_prod(loc::tech::carrier, timestep)``: resource/storage/carrier_in -> carrier_out (+ production)
@@ -35,20 +32,19 @@ Unit Commitment
 * ``carrier_export(loc::tech::carrier, timestep)``: carrier_out -> export
 
 Costs
------
+^^^^^
 
 * ``cost(loc::tech, cost)``: total costs
 * ``cost_investment(loc::tech, cost)``: investment operation costs
 * ``cost_var(loc::tech, cost, timestep)``: variable operation costs
 
 Binary/Integer variables
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``units(loc::tech)``: Number of integer installed technologies
 * ``purchased(loc::tech)``: Binary switch indicating whether a technology has been installed
 * ``operating_units(loc::tech, timestep)``: Binary switch indicating whether a technology that has been installed is operating
 
---------------------------------------
 Objective function (cost minimization)
 --------------------------------------
 
@@ -66,12 +62,11 @@ Alternative objective functions can be used by setting the ``objective`` in the 
 
 `weight(tech)` is 1 by default, but can be adjusted to change the relative weighting of costs of different technologies in the objective, by setting ``weight`` on any technology (see :ref:`config_reference_techs`).
 
------------------
 Basic constraints
 -----------------
 
 Energy Balance
---------------
+^^^^^^^^^^^^^^
 
 For all technologies, in all locations, energy in must balance with energy out (minus efficiency losses). These constraints are provided in: :func:`calliope.backend.pyomo.constraints.energy_balance.py`
 
@@ -169,7 +164,8 @@ Balance carrier production and consumption of storage technologies, alongside an
   storage(loc::tech, timestep) = storage(loc::tech, timestep_{previous}) \times (1 - storage_{loss})^{timestep_{resolution}} - carrier_{con}(loc::tech::carrier, timestep) \times energy_{eff} - \fraq(carrier_{prod}(loc::tech::carrier, timestep))(energy_{eff})
 
 Capacity
---------
+^^^^^^^^
+
 Constrain the capacity decision variables to maximum/minimum/equals the input parameters given
 :func:`calliope.backend.pyomo.constraints.capacity.py`
 

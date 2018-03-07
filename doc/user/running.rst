@@ -1,7 +1,7 @@
 
-=================
-Running the model
-=================
+===============
+Running a model
+===============
 
 There are two basic modes for the model: planning mode and operational mode. The mode is set in the run configuration.
 

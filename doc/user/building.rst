@@ -1,7 +1,7 @@
 
-===========================
-Components to build a model
-===========================
+================
+Building a model
+================
 
 This section proves an overview of how a model is built using Calliope.
 
