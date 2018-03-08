@@ -55,7 +55,7 @@ Model-wide settings
 
 These settings can either be in a central ``model.yaml`` file, or imported from other files if desired.
 
-Mandatory model-wide settings with no default values (see :doc:`configuration` for more information on defining ``techs``, ``locations`` and ``links``):
+Mandatory model-wide settings with no default values (see :doc:`ref_model_config` for more information on defining ``techs``, ``locations`` and ``links``):
 
 .. code-block:: yaml
 
@@ -223,13 +223,7 @@ These are all the available costs, which are set to :math:`0` by default for eve
    :widths: 10, 5, 30
    :stub-columns: 0
 
-Technology depreciation
-------------------------
-
-These technology depreciation settings apply when calculating levelized costs. The interest rate can be set on a per-cost class basis, and defaults to :math:`0.10` for ``monetary`` and :math:`0` for every other cost class.
-
-.. literalinclude:: includes/default_depreciation.yaml
-   :language: yaml
+Technology depreciation settings apply when calculating levelized costs. The interest rate and life times must be set for each technology with investment costs.
 
 .. _abstract_base_tech_definitions:
 

@@ -88,7 +88,7 @@ Each group defines any number of overrides to the technology, location, link, mo
     higher_costs:
         techs.ccgt.costs.monetary.energy_cap: 10
         locations.region2.techs.csp.costs.monetary.energy_cap: 100
-    winter_subset:
+    winter:
         model.subset_time: ['2005-01-01', '2005-02-28']
 
 Running in the command line:
@@ -97,26 +97,34 @@ Running in the command line:
 
     calliope run model.yaml --override_file=overrides.yaml:higher_costs
 
-    calliope run model.yaml --override_file=overrides.yaml:update_costs,winter_subset
+    calliope run model.yaml --override_file=overrides.yaml:higher_costs,winter
 
 Running interactively:
 
 .. code-block:: python
 
-    model = calliope.Model('model.yaml', override_file='overrides.yaml:higher_costs') # only apply the 'update_costs' override group
+    # only apply the 'higher_costs' override group
+    model = calliope.Model(
+        'model.yaml',
+        override_file='overrides.yaml:higher_costs'
+    )
 
-    model2 = calliope.Model('model.yaml', override_file='overrides.yaml:higher_costs,winter_subset') # apply both the 'update_costs' and 'winter' override groups
+    # apply both the 'higher_costs' and 'winter' override groups
+    model2 = calliope.Model(
+        'model.yaml',
+        override_file='overrides.yaml:higher_costs,winter'
+    )
 
 As in version `0.5`, overrides can be applied when creating a `Model` object, via the argument `override_dict`. A dictionary can then be given:
 
 .. code-block:: python
 
-    update_costs = {
+    higher_costs = {
         'techs.ccgt.costs.monetary.energy_cap': 10,
         'locations.region2.techs.csp.costs.monetary.energy_cap': 100
     }
 
-    model = calliope.Model('model.yaml', override_dict=update_costs)
+    model = calliope.Model('model.yaml', override_dict=higher_costs)
 
 Technology definition
 =====================
@@ -278,7 +286,7 @@ New:
                 ccgt:
                     constraints:
                         energy_cap: 100
-                # Note that csp must be listed to be permitted at this location,
+                # Note that csp must be listed to be permitted here,
                 # even though it has no location-specific configuration.
                 csp:
 
@@ -291,6 +299,7 @@ Old:
 
 .. code-block:: yaml
 
+    # will look for the column `demand` in the file `demand_heat_r.csv`
     locations:
         region1:
             techs: [demand_power]
@@ -298,18 +307,19 @@ Old:
                     demand_power:
                         x_map: demand
                         constraints:
-                            r: file # will look for the column `demand` in the file `demand_heat_r.csv`
+                            r: file
 
 New:
 
 .. code-block:: yaml
 
+    # will look for the column `demand` in the file `demand_heat_r.csv`
     locations:
         region1:
             techs:
                 demand_power:
                     constraints:
-                        resource: file=demand_heat.csv:demand # will look for the column `demand` in the file `demand_heat_r.csv`
+                        resource: file=demand_heat.csv:demand
 
 Link definition
 ===============

@@ -6,8 +6,6 @@ Calliope: a multi-scale energy systems (MUSES) modeling framework
 
 v\ |version| (:doc:`Release history <history>`)
 
-Calliope is a framework to develop energy system models using a modern and open source Python-based toolchain.
-
 ------------
 
 This is the documentation for version |version|. See the `main project website <http://www.callio.pe/>`_ for contact details and other useful information.
