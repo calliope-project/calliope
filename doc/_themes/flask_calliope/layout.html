@@ -6,7 +6,6 @@
   {% endif %}
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
   <link href='https://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css'>
-  <script src="{{ pathto('_static/jquery.sticky.js', 1) }}"></script>
 {% endblock %}
 {%- block relbar2 %}{% endblock %}
 {% block header %}
@@ -23,20 +22,4 @@
   {% if pagename == 'index' %}
   </div>
   {% endif %}
-  <script>
-    var stickySidebartoc = function() {
-      if ( $(window).height() >= $("#sidebartoc").height() + 10 ) {
-        $("#sidebartoc").sticky({topSpacing:0});
-      } else {
-        $("#sidebartoc").unstick();
-      }
-    };
-
-    $(document).ready(function(){
-      stickySidebartoc();
-    });
-    $(window).on('resize', function(){
-      stickySidebartoc();
-    });
-  </script>
 {%- endblock %}

@@ -39,6 +39,8 @@ div.bodywrapper {
 
 div.sphinxsidebar {
     width: {{ sidebar_width }};
+    position: sticky;
+    top: 30px;
 }
 
 div#sidebartoc{
