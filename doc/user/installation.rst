@@ -53,16 +53,16 @@ CBC
 Gurobi
 ------
 
-`Gurobi <http://www.gurobi.com/>`_ is commercial but significantly faster than GLPK and CBC, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
+`Gurobi <https://www.gurobi.com/>`_ is commercial but significantly faster than GLPK and CBC, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
 
-While Gurobi can be installed via conda (``conda install -c gurobi gurobi``) we recommend downloading and installing the installer from the `Gurobi website <http://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
+While Gurobi can be installed via conda (``conda install -c gurobi gurobi``) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
 
-After installing, log on to the `Gurobi website <http://www.gurobi.com/>`_ and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
+After installing, log on to the `Gurobi website <https://www.gurobi.com/>`_ and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
 
 CPLEX
 -----
 
-Another commercial alternative is `CPLEX <http://ibm.com/software/integration/optimization/cplex-optimization-studio/>`_. IBM offer academic licenses for CPLEX. Refer to the IBM website for details.
+Another commercial alternative is `CPLEX <https://www.ibm.com/products/ilog-cplex-optimization-studio>`_. IBM offer academic licenses for CPLEX. Refer to the IBM website for details.
 
 .. _python_module_requirements:
 

@@ -57,6 +57,7 @@ MOCK_MODULES = [
     'scipy', 'scipy.cluster', 'scipy.cluster.vq',
     'scipy.spatial', 'scipy.spatial.distance',
     'sklearn',
+    'bokeh', 'bokeh.plotting', 'bokeh.models', 'bokeh.core.properties',
     'plotly', 'plotly.offline', 'plotly.graph_objs'
 ]
 

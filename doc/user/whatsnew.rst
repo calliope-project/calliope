@@ -4,27 +4,29 @@ This page provides a summary of information from the full :doc:`release history 
 New in v0.6.0
 =============
 
-Version `0.6` is backwards incompatible with version `0.5`. If you are familiar with how Calliope functions then this page will act as a reference for moving to using version `0.6`.
+Version `0.6` is backwards incompatible with version `0.5`. If you are familiar with how Calliope functions then this page will act as a reference for moving to version `0.6`.
 
--------------------------
-Depreciated functionality
--------------------------
-If you require any depreciated functionality, we recommend you open an issue on GitHub for it to be built into a later version of 0.6
+------------------------
+Deprecated functionality
+------------------------
+
+If you require any deprecated functionality, we recommend you `open an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ for it to be built into a later revision of `0.6`.
 
 Location and technology subsets
 ===============================
 
-In model configuration, `subset_x` and `subset_y` (allowing subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now `subset_time`, does still exist.
+In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `subset_time`, does still exist.
 
 Technology constraints
 ======================
-* `s_time` (providing a minimum/maximum/exact time of stored energy available for discharge) no longer exists. This constraint was relatively volatile when providing any combination of `s_cap`, `e_cap`, `c_rate` and time clustering.
 
-* The variable `r2` (providing a secondary resource that could be used by a supply/supply_plus technology), along with all its constraints, have been removed. To utilise multiple inputs, conversion_plus can be used instead.
+* `s_time` (providing a minimum/maximum/exact time of stored energy available for discharge) no longer exists. This constraint was relatively unpredictable in its effects when providing any combination of `s_cap`, `e_cap`, `c_rate` and time clustering.
 
-* `r_scale_to_peak` (allowing a user to provide a value for the peak resource to which the entire time series would be scaled accordingly) has been removed. `resource_scale` (previously `r_scale`) can still be used for scaling resource values
+* The variable `r2` (providing a secondary resource that could be used by a supply/supply_plus technology), along with all its constraints, have been removed. To utilise multiple resource inputs, conversion_plus can be used instead.
 
-* `weight` (providing a technology a disproportionate weight in the objective function calculation) has been removed.
+* `r_scale_to_peak` (allowing a user to provide a value for the peak resource to which the entire time series would be scaled accordingly) has been removed. `resource_scale` (previously `r_scale`) can still be used for scaling resource values by the given scale factor.
+
+* `weight` (giving a technology a disproportionate weight in the objective function calculation) has been removed.
 
 ---------------------
 Updated functionality
@@ -33,10 +35,11 @@ Updated functionality
 Verbosity
 =========
 
-Almost all sets, constraints, costs, and variables have been updated be more verbose. The primary updates are:
+Almost all sets, constraints, costs, and variables have been updated be more verbose, making models more readable. The primary updates are:
 
 Sets
 ----
+
 - `y` -> `techs`
 - `x` -> `locs`
 - `c` -> `carriers`
@@ -44,6 +47,7 @@ Sets
 
 Constraints/Costs
 -----------------
+
 - `e` -> `energy`, e.g. `e_cap` -> `energy_cap`
 - `r` -> `resource`, e.g. `r_cap` -> `resource_cap`
 - `s` -> `storage`, e.g. `s_cap` -> `storage_cap`
@@ -52,93 +56,74 @@ Constraints/Costs
 
 Variables
 ---------
-- `r` -> `resource_con`: an output from the model of how much resource was consumed
+
+- `r` -> `resource_con`: an output from the model giving how much of a resource was consumed
 - `r` -> `resource`: the available resource as an input parameter to the model
 - `c_prod`/`c_con` -> `carrier_prod`/`carrier_con`: The produced/consumed carrier energy in each time storage_cap
 
-
 Model and run configuration
 ===========================
-`run.yaml` no longer exists. Instead, the information is all stored in `model.yaml` under the headings `model` and `run`.
+
+`run.yaml` no longer exists. Instead, all information needed to run a model is now stored in `model.yaml` under the headings `model` and `run`.
 
 `run` *only* contains information about the solver: which one to use and any specific solver options to apply.
+
 `model` contains all other information: time subsetting, model mode, output format, parallel runs, and time clustering.
 
-To call a model, point to the `model.yaml` file.
+To solve a model, point to the `model.yaml` file, e.g.: ``calliope run path/to/model.yaml``.
+
+.. _0.6_overrides:
 
 Overrides
 =========
-Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, any overrides are grouped and placed into a seperate YAML file, e.g. `overrides.yaml`. Each group defines any overrides to the technology, location, link, model, or run definitions. Each group can then be called when calling the model, e.g.:
+
+Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a seperate YAML file, called for example `overrides.yaml`.
+
+Each group defines any number of overrides to the technology, location, link, model, or run definitions. One or several such groups can then be applied when solving a model, e.g.:
 
 `overrides.yaml`:
 
 .. code-block:: yaml
 
-    update_costs:
+    higher_costs:
         techs.ccgt.costs.monetary.energy_cap: 10
         locations.region2.techs.csp.costs.monetary.energy_cap: 100
-    winter:
+    winter_subset:
         model.subset_time: ['2005-01-01', '2005-02-28']
+
+Running in the command line:
+
+.. code-block:: shell
+
+    calliope run model.yaml --override_file=overrides.yaml:higher_costs
+
+    calliope run model.yaml --override_file=overrides.yaml:update_costs,winter_subset
 
 Running interactively:
 
 .. code-block:: python
 
-    model = Calliope.Model('model.yaml', override_file='overrides.yaml:update_costs') # only apply the 'update_costs' override group
+    model = calliope.Model('model.yaml', override_file='overrides.yaml:higher_costs') # only apply the 'update_costs' override group
 
-    model2 = Calliope.Model('model.yaml', override_file='overrides.yaml:update_costs,winter') # apply both the 'update_costs' and 'winter' override groups
+    model2 = calliope.Model('model.yaml', override_file='overrides.yaml:higher_costs,winter_subset') # apply both the 'update_costs' and 'winter' override groups
 
-Running in command line:
-
-.. code-block:: shell
-
-    calliope run model.yaml --override_file=overrides.yaml:update_costs
-
-    calliope run model.yaml --override_file=overrides.yaml:update_costs,winter
-
-
-As in `0.5`, overrides can be applied when calling the model, via the argument `override_dict`. A dictionary can then be given:
+As in version `0.5`, overrides can be applied when creating a `Model` object, via the argument `override_dict`. A dictionary can then be given:
 
 .. code-block:: python
 
-    update_costs = dict(
-        techs=dict(
-            ccgt=dict(
-                costs=dict(
-                    monetary=dict(
-                        energycap=10
-                    )
-                )
-            )
-        )
-        locations=dict(
-            region2=dict(
-                csp=dict(
-                    costs=dict(
-                        monetary=dict(
-                            energy_cap=100
-                        )
-                    )
-                )
-            )
-        )
-    )
+    update_costs = {
+        'techs.ccgt.costs.monetary.energy_cap': 10,
+        'locations.region2.techs.csp.costs.monetary.energy_cap': 100
+    }
 
-    # or use the following, which is less verbose!
-    update_costs = calliope.AttrDict.yaml_from_string(
-        """
-        techs.ccgt.costs.monetary.energy_cap: 10
-        locations.region2.techs.csp.costs.monetary.energy_cap: 100
-        """
-    )
-
-    model = Calliope.Model('model.yaml', override_dict=update_costs)
+    model = calliope.Model('model.yaml', override_dict=update_costs)
 
 Technology definition
 =====================
-A technology is now defined in three parts: `essentials`, `constraints`, and `costs`. All top-level definitions (`parent`, `carrier_out`, etc.) are now given under `essentials` and cannot be edited at a local level. `constraints` and `costs` remain the same as in 0.5, except with more verbose naming:
 
-old:
+A technology is now defined in three parts: `essentials`, `constraints`, and `costs`. All top-level definitions (`parent`, `carrier_out`, etc.) are now given under `essentials` and cannot be defined per-location -- they are defined only once for a given technology and apply model-wide. Both `constraints` and `costs` remain the same as in `0.5`, but with more verbose naming:
+
+Old:
 
 .. code-block:: yaml
 
@@ -154,7 +139,7 @@ old:
                 e_cap: 15
                 om_fuel: 0.1
 
-new:
+New:
 
 .. code-block:: yaml
 
@@ -175,7 +160,7 @@ new:
 
 Carrier ratios and export carriers have also been moved from essentials into constraints:
 
-old:
+Old:
 
 .. code-block:: yaml
 
@@ -198,7 +183,7 @@ old:
                 om_var: 0.004
                 export: file=export_power.csv
 
-new:
+New:
 
 .. code-block:: yaml
 
@@ -223,11 +208,9 @@ new:
                 om_prod: 0.004
                 export: file=export_power.csv
 
-As seen in both above examples, technology lifetime and interest rate have been defined in the new models. These are required for any technology which has investment costs (i.e. those which are not `om_`... or `export`).
-
 Per distance constraints and costs have now been incorporated under the constraints and costs keys, with a '_per_distance' suffix:
 
-old:
+Old:
 
 .. code-block:: yaml
 
@@ -243,7 +226,7 @@ old:
             monetary:
                 e_cap: 0.3
 
-new:
+New:
 
 .. code-block:: yaml
 
@@ -261,23 +244,31 @@ new:
                 interest_rate: 0.10
                 energy_cap_per_distance: 0.3
 
+Interest rates and life times
+=============================
+
+As seen in the above examples, technology lifetime and interest rate must now be defined for each technology, under `costs`. In version `0.5`, technologies not defining these would silently use implicit default values of 0.10 for interest rate and 25 years for life time. Setting these explicitly for any technology which has investment costs (i.e. those which are not `om_`... or `export`) is now mandatory; no default values exist any more.
+
 Location definition
 ===================
-At a location level, technologies are defined as YAML keys, not in a list. They can then apply local level constraints, which supercede the global technology constraints:
 
-old:
+In version `0.5`, location definitions included a list of technologies to permit at that location(s). An additional `overrides` key permitted per-location changes to model-wide technology definitions.
+
+In `0.6`, "overriding" refers only to model-wide overrides applied :ref:`as described above <0.6_overrides>`. At each location, `techs` simply lists all allowed technologies and any possible changes to model-wide configurationi values to apply at this location only, as shown below:
+
+Old:
 
 .. code-block:: yaml
 
     locations:
         region1:
             techs: [ccgt, csp]
-                overrides:
-                    ccgt:
-                        constraints:
-                            energy_cap: 100
+            overrides:
+                ccgt:
+                    constraints:
+                        energy_cap: 100
 
-new:
+New:
 
 .. code-block:: yaml
 
@@ -287,11 +278,16 @@ new:
                 ccgt:
                     constraints:
                         energy_cap: 100
-                csp: # note that csp is given as a key, but has no local overrides to apply
+                # Note that csp must be listed to be permitted at this location,
+                # even though it has no location-specific configuration.
+                csp:
 
-`x_map` (mapping a technology name to a column in a timeseries file) has been removed. Instead, a used can define the timeseries file column in the same line as defining the file, following a `:`. If no column is provided, the location name will be assumed:
+Loading time series data from CSV files
+=======================================
 
-old:
+`x_map` (mapping a technology name to a column in a CSV file) has been removed. Instead, a user can define the time series file column when defining the file name, separated from the file name by a `:`. If no column name is provided, Calliope will look for a column with the location name.
+
+Old:
 
 .. code-block:: yaml
 
@@ -304,7 +300,7 @@ old:
                         constraints:
                             r: file # will look for the column `demand` in the file `demand_heat_r.csv`
 
-new:
+New:
 
 .. code-block:: yaml
 
@@ -317,9 +313,10 @@ new:
 
 Link definition
 ===============
-Links have remained much the same as before. However, there is a slightly different structure in defining the technologies:
 
-old:
+Links have remained much the same as before. However, there is a slightly different structure in defining technologies, bringing the definition of link technologies more in line with the rest of the model configuration format.
+
+Old:
 
 .. code-block:: yaml
 
@@ -329,7 +326,7 @@ old:
                 constraints:
                     e_cap: 1000
 
-new:
+New:
 
 .. code-block:: yaml
 
@@ -342,9 +339,10 @@ new:
 
 Location metadata
 =================
-Location coordinates, previously kept under the `metadata` key, are now given per location:
 
-old:
+Location coordinates, previously given under the `metadata` key, are now given directly per location:
+
+Old:
 
 .. code-block:: yaml
 
@@ -361,8 +359,7 @@ old:
             region1: {x: 2, y: 7}
             region2: {x: 8, y: 7}
 
-new:
-
+New:
 
 .. code-block:: yaml
 
@@ -377,19 +374,22 @@ new:
                 demand_power:
             coordinates: {x: 8, y: 7}
 
+Pre-processed data
+==================
 
-Preprocessed data
-=================
-Version `0.5` kept preprocessed data in either a dictionary (static data), pandas dataframe (location data) or an xarray dataset (timeseries data). To view a value that would be used in optimisation, the user would call `model.get_option()`. Similarly, to edit a value before running the model, a user could use `model.set_option()`.
+Version `0.5` kept pre-processed data in either a dictionary (static data), pandas dataframe (location data) or an xarray dataset (timeseries data). To view a value that would be used in optimisation, the user would call `model.get_option()`. Similarly, to edit a value before running the model, a user could use `model.set_option()`.
 
-Now, all preprocessed data is held in one xarray dataset: `model.inputs`. To view and edit this data before it is sent to the solver, a user need only use standard xarray functions (see their `documentation <http://xarray.pydata.org/en/stable/>`_ for more information).
+Now, all pre-processed data is held in a single unified xarray dataset: `model.inputs`.
+
+To view and edit this data before it is sent to the solver, a user need only use standard xarray functionality (see their `documentation <http://xarray.pydata.org/en/stable/>`_ for more information).
 
 Plotting data
 =============
-.. Note::
-    Advanced plotting is still under construction. All input/output data can be plotted by the user, using their preferred method, in case our current functions are insufficient.
 
-Plotting functions can now be called directly on the model and currently use `Plotly <https://plot.ly/python/>`_ instead of matplotlib.
+.. Note::
+    Advanced plotting is still under construction. In case our current functionality is insufficient, input and output data can be plotted by the user using their preferred Python plotting tools, or any other language that can access either NetCDF or CSV data.
+
+Plotting functions can now be called directly on the model and now use `Plotly <https://plot.ly/python/>`_ instead of `0.5`'s matplotlib.
 
 Changes are:
 
@@ -400,25 +400,39 @@ Changes are:
 ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')`` ->
 ``model.plot('timeseries', 'carrier_prod', sum_dims=['locs'], loc=dict(carriers='power'))``
 
+Operational mode
+================
+
+In `0.6`, running in operational mode changes capacities from decision variables to parameters, preventing various issues that plagued operational mode in prior versions. Additional sense checks were added to ensure that functionality incompatible with operational mode, such as time clustering, is not accidentally used together with it.
+
 -----------------
 New functionality
 -----------------
 
 Debugging & checks
 ==================
-A user can now output a verbose dictionary of all model input data (the `model_run` dictionary) into a YAML file, for debugging. This debug file includes comments as to where constraint/cost values have originated (e.g. from being locally superseded or from an override group).
 
-Similarly, sense checks are undertaken at points during preprocessing to ensure the model being built is robust. It checks for missing data, possibly misspelled constraints, incompatible inputs, and much more. It will not find all possible user input errors, as this is an impossible task. However, the format of implementation allows for further checks to be applied.
+A user can now output a data structure of all model input data (the `model_run` dictionary) after Calliope's internal pre-processing, into a YAML file, for debugging. This debug file includes comments as to where constraint/cost values have originated (e.g. having been set by a location-specific configuration, or from a model-wide override group).
 
-Preprocessed model
-==================
-Having the preprocessed model available in one xarray Dataset allows a model to be saved to file *before* being run. Although preprocessing is quick, this allows a user to avoid preprocessing the same file multiple times, as they can instead call the saved NetCDF file of the model.
+Similarly, sense checks are undertaken at several points during pre-processing to ensure the model being built is robust. This includes checks for missing data, possibly misspelled constraints, incompatible inputs, and much more.
+
+This functionality will not find all possible user input errors, as this is an impossible task. However, it flags common mistakes, and the format of implementation allows for further checks to be applied in the future.
+
+Pre-processed model
+===================
+
+Having the pre-processed model available in one xarray Dataset allows a model to be saved to file *before* being run. Although pre-processing is quick, this allows a user to avoid pre-processing the same file multiple times, as they can instead read in a previously saved NetCDF file fully describing the model.
 
 Multiple backends
 =================
-Our primary solver backend is `Pyomo <http://www.pyomo.org/>`_. However, we have now extracted preprocessing from the backend, with all necessary data for a model run being stored in one xarray Dataset. As such, other backends could be used in future. One such backend which could be used is `JuMP <https://github.com/JuliaOpt/JuMP.jl>`_ in the Julia programming language. Linking Calliope to Julia is a long-term project, for which we welcome any contributions.
+
+Our primary solver backend is `Pyomo <http://www.pyomo.org/>`_. However, we have now extracted all pre-processing stages from the backend, with all data for a model run being stored in a single xarray Dataset. This permits the implementation of additional backends.
+
+One such backend currently in an experimental state is based on `JuMP <https://github.com/JuliaOpt/JuMP.jl>`_ in the Julia programming language. Linking Calliope to Julia is a long-term project, for which we welcome any contributions.
 
 Pyomo warmstart
 ===============
 
-Warmstart functionality can be used in solvers which are not GLPK. They allow a built model to be changed slightly without having to be rebuilt. This can speed up re-running a model when you have just a few input parameters you would like to change (the cost of a technology, for instance). Although this existed in operational mode in version `0.5`, now it extends to all possible parameters in all models. This functionality is undocumented in Calliope, but the Pyomo documentation provides some information and the Pyomo model can be accessed by `model._backend_model`.
+Warmstart functionality can be used in solvers other than GLPK. They allow a previously constructed model to be changed slightly without having to be fully rebuilt. This can speed up re-running a model when you have just a few input parameters you would like to change (the cost of a technology, for instance).
+
+Although the use of warmstart existed in operational mode in version `0.5`, now it extends to all possible parameters in all models. This functionality is currently undocumented in Calliope, but the Pyomo documentation provides some information and the Pyomo model built by Calliope can be accessed by `model._backend_model`.
