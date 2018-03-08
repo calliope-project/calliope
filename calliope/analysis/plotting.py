@@ -18,17 +18,71 @@ from calliope import exceptions
 from calliope.analysis.util import get_zoom
 
 
-def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
-                    sum_dims='locs', squeeze=True, tech_order=[]):
+def plot_model(model, kind, **kwargs):
+        """
+        Plot model data.
+
+        Params
+        ------
+        kind : string
+            One of ``timeseries``, ``capacity``, or ``transmission``.
+            `timeseries`. Data plotted against the time axis, must be data in
+                the time domain.
+            `capacity`. Data plotted per location on x-axis and per technology
+                in a stacked bar. Can be any data input, provided array is only
+                indexed over locations and technologies after selecting and summing
+                over other dimensions (using loc=dict(...) and sum_dims=[...]).
+            `transmission`. Data plotted based on coordinates.
+                If coordinates are `lat`, `lon` then a map is used, otherwise
+                cartesian scatter is used.
+        kwargs :
+            Passed on to individual plotting functions. Look at their
+            documentation for more information.
+
+        """
+        if kind == 'timeseries':
+            timeseries_type = kwargs.pop('timeseries_type', None)
+            if timeseries_type in ['carrier_prod', 'carrier_con']:
+                timeseries_type = 'carrier'
+            kwargs['timeseries_type'] = timeseries_type
+            plot_timeseries(model, **kwargs)
+
+        elif kind == 'capacity':
+            plot_capacity(model, **kwargs)
+
+        elif kind == 'transmission':
+            plot_transmission(model, **kwargs)
+
+
+def plot_timeseries(
+        model, timeseries_type='carrier', loc=dict([]),
+        sum_dims='locs', squeeze=True, tech_order=[]):
+    """
+    Params
+    ------
+    timeseries_type : str, optional
+        "carrier", "storage", or "resource"
+    loc : dict, optional
+        Dictionary by which data is selected (keys any of ['timeseries',
+        'locs', 'techs', 'carriers']).
+    sum_dims : str, optional
+        List of dimension names to sum plot variable over.
+    squeeze : bool, optional
+        Whether to squeeze out dimensions containing only single values.
+    tech_order : list, optional
+        List of technologies in the order you want them to appear.
+        Only those techs in the list will be plotted.
+
+    """
     reindexer = dict(techs=model._model_data.techs.values,
-                     locs=model._model_data.locs.values)
+                    locs=model._model_data.locs.values)
     if timeseries_type == 'carrier':
         title = 'Carrier flow'
         y_axis_title = 'Energy produced(+)/consumed(-) (kWh)'
         array_prod = model.get_formatted_array('carrier_prod')
         array_con = model.get_formatted_array('carrier_con')
         array_flow = (array_prod.reindex(**reindexer).fillna(0)
-                      + array_con.reindex(**reindexer).fillna(0)).loc[loc]
+                    + array_con.reindex(**reindexer).fillna(0)).loc[loc]
     else:
         array_flow = model.get_formatted_array(timeseries_type).reindex(
             **reindexer).fillna(0).loc[loc]
@@ -86,8 +140,25 @@ def plot_timeseries(model, timeseries_type='carrier', loc=dict([]),
     pltly.iplot(dict(data=data, layout=layout))
 
 
-def plot_capacity(model, cap_type='energy_cap', loc=dict(),
-                  sum_dims=None, squeeze=True, tech_order=[]):
+def plot_capacity(
+        model, cap_type='energy_cap', loc=dict(),
+        sum_dims=None, squeeze=True, tech_order=[]):
+    """
+    Params
+    ------
+    cap_type : str, optional
+    loc : dict, optional
+        Dictionary by which data is selected (keys any of ['timeseries',
+        'locs', 'techs', 'carriers']).
+    sum_dims : str, optional
+        List of dimension names to sum plot variable over.
+    squeeze : bool, optional
+        Whether to squeeze out dimensions containing only single values.
+    tech_order : list, optional
+        List of technologies in the order you want them to appear.
+        Only those techs in the list will be plotted.
+
+    """
     array_cap = model.get_formatted_array(cap_type).loc[loc]
 
     if 'area' in cap_type:
@@ -126,9 +197,9 @@ def plot_capacity(model, cap_type='energy_cap', loc=dict(),
     names = model._model_data.names
 
     layout = dict(barmode='relative',
-                  title='Installed {}'.format(cap_type),
-                  yaxis=dict(title=y_axis_title), xaxis=dict(title='Location'),
-                  showlegend=True)
+                title='Installed {}'.format(cap_type),
+                yaxis=dict(title=y_axis_title), xaxis=dict(title='Location'),
+                showlegend=True)
 
     techs = tech_order if tech_order else model._model_data.techs.values
     for tech in techs:
@@ -149,6 +220,15 @@ def plot_capacity(model, cap_type='energy_cap', loc=dict(),
 
 
 def plot_transmission(model, mapbox_access_token=None):
+    """
+    Params
+    ------
+    mapbox_access_token : str, optional
+        If given and a valid Mapbox API key, a Mapbox map is drawn
+        for lat-lon coordinates, else (by default), a more simple
+        built-in map.
+
+    """
     coordinates = model._model_data.loc_coordinates
 
     colors = model._model_data.colors
@@ -203,8 +283,8 @@ def plot_transmission(model, mapbox_access_token=None):
                         filled_list.append('{} capacity: {}'.format(tech, int(e_cap.item())))
                     else:
                         filled_list.append(edge(loc_from, loc_to)
-                                           if scatter_dict == 'edge'
-                                           else mid_edge(loc_from, loc_to))
+                                        if scatter_dict == 'edge'
+                                        else mid_edge(loc_from, loc_to))
 
         return filled_list
 
@@ -314,9 +394,9 @@ def plot_transmission(model, mapbox_access_token=None):
 
     node_scatter_dict = {
         h_coord: [coordinates.loc[dict(locs=loc, coordinates=h_coord)].item()
-                  for loc in coordinates.locs],
+                for loc in coordinates.locs],
         v_coord: [coordinates.loc[dict(locs=loc, coordinates=v_coord)].item()
-                  for loc in coordinates.locs],
+                for loc in coordinates.locs],
         'text': [loc.item() for loc in coordinates.locs],
         'name': 'Locations',
         'type': scatter_type,
@@ -340,3 +420,30 @@ def plot_transmission(model, mapbox_access_token=None):
     fig = go.Figure(data=data, layout=layout_dict)
 
     pltly.iplot(fig, filename='network')
+
+
+class ModelPlotMethods:
+    def __init__(self, model):
+        self._model = model
+
+    def __call__(self, kind, **kwargs):
+        return plot_model(
+            self._model, kind=kind, **kwargs
+        )
+
+    __call__.__doc__ = plot_model.__doc__
+
+    def timeseries(self, **kwargs):
+        plot_timeseries(self._model, **kwargs)
+
+    timeseries.__doc__ = plot_timeseries.__doc__
+
+    def capacity(self, **kwargs):
+        plot_capacity(self._model, **kwargs)
+
+    capacity.__doc__ = plot_capacity.__doc__
+
+    def transmission(self, **kwargs):
+        plot_transmission(self._model, **kwargs)
+
+    transmission.__doc__ = plot_transmission.__doc__
