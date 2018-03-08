@@ -171,15 +171,19 @@ def load_results(backend_model, results):
     this_result = backend_model.solutions.load_from(results)
 
     if this_result is False or not_optimal:
-        logging.critical('Problem status:\n{}'.format(results.Problem))
-        logging.critical('Solver status:\n{}'.format(results.Solver))
+        logging.critical('Problem status:')
+        for l in str(results.Problem).split('\n'):
+            logging.critical(l)
+        logging.critical('Solver status:')
+        for l in str(results.Solver).split('\n'):
+            logging.critical(l)
 
         if not_optimal:
             message = 'Model solution was non-optimal.'
         else:
             message = 'Could not load results into model instance.'
 
-        raise exceptions.warn(message, exceptions.BackendWarning)
+        exceptions.warn(message, exceptions.BackendWarning)
 
 
 def get_result_array(backend_model):

@@ -14,7 +14,7 @@ import os
 import xarray as xr
 
 from calliope._version import __version__
-from calliope.exceptions import ModelWarning
+from calliope import exceptions
 from calliope.core.util.dataset import split_loc_techs
 
 
@@ -26,7 +26,7 @@ def read_netcdf(path):
     calliope_version = model_data.attrs.get('calliope_version', False)
     if calliope_version:
         if not str(calliope_version) in __version__:
-            raise ModelWarning(
+            exceptions.warn(
                 'This model data was created with Calliope version {}, '
                 'but you are running {}. Proceed with caution!'
             )
