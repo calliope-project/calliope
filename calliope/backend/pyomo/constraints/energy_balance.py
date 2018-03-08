@@ -21,7 +21,6 @@ from calliope.backend.pyomo.util import \
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
-
     if 'loc_carriers_system_balance_constraint' in sets:
         backend_model.system_balance = po.Expression(
             backend_model.loc_carriers_system_balance_constraint,
@@ -77,17 +76,19 @@ def load_constraints(backend_model):
             rule=balance_storage_constraint_rule
         )
 
-    if 'carriers_reserve_margin_constraint' in sets:
-        backend_model.reserve_margin_constraint = po.Constraint(
-            backend_model.carriers_reserve_margin_constraint,
-            rule=reserve_margin_constraint_rule
-        )
-
 
 def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
     """
     System balance ensures that, within each location, the production and
     consumption of each carrier is balanced.
+
+    .. math::
+
+        \\sum_{loc::tech::carrier_{prod} \\in loc::carrier} \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+        + \\sum_{loc::tech::carrier_{con} \\in loc::carrier} \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
+        + \\sum_{loc::tech::carrier_{export} \\in loc::carrier} \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
+        \\quad \\forall loc::carrier \\in loc::carriers, \\forall timestep \\in timesteps
+
     """
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
@@ -102,6 +103,36 @@ def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
 def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     """
     Limit production from supply techs to their available resource
+
+    .. math::
+
+        min\_use(loc::tech) \\times available\_resource(loc::tech, timestep) \\geq
+        \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
+        \\leq available\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
+
+    Where:
+
+    .. math::
+
+        available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+        \\times resource\_scale(loc::tech)
+
+    if :math:`loc::tech` is in :math:`loc::techs_{area}`:
+
+    .. math::
+
+        available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+        \\times resource\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
+
+    If :math:`force\_resource(loc::tech)` is set, then the constraint becomes:
+
+    .. math::
+
+        \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
+        = available\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
+
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -132,7 +163,36 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
 def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     """
-    Limit consumption from demand techs to their required resource
+    Limit consumption from demand techs to their required resource.
+
+    .. math::
+
+        \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\times \\eta_{energy}(loc::tech, timestep) \\geq
+        required\_resource(loc::tech, timestep) \\quad \\forall loc::tech \\in loc::techs_{demand},
+        \\forall timestep \\in timesteps
+
+    Where:
+
+    .. math::
+
+        required\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+        \\times resource\_scale(loc::tech)
+
+    if :math:`loc::tech` is in :math:`loc::techs_{area}`:
+
+    .. math::
+
+        required\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+        \\times resource\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
+
+    If :math:`force\_resource(loc::tech)` is set:
+
+    .. math::
+
+        \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\times \\eta_{energy}(loc::tech, timestep) =
+        required\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{demand}, \\forall timestep \\in timesteps
+
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -157,7 +217,37 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
 
 def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     """
-    Limit production from supply_plus techs to their available resource
+    Limit production from supply_plus techs to their available resource.
+
+    .. math::
+
+        \\boldsymbol{resource_{con}}(loc::tech, timestep)
+        \\leq available\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
+
+    Where:
+
+    .. math::
+
+        available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+        \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
+
+    if :math:`loc::tech` is in :math:`loc::techs_{area}`:
+
+    .. math::
+
+        available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+        \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
+        \\times resource_{area}(loc::tech)
+
+    If :math:`force\_resource(loc::tech)` is set:
+
+    .. math::
+
+        \\boldsymbol{resource_{con}}(loc::tech, timestep)
+        = available\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
+
     """
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
     resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
@@ -178,6 +268,19 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
 def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
     """
     Balance carrier production and consumption of transmission technologies
+
+    .. math::
+
+        \\boldsymbol{carrier_{con}}(loc_{from}::tech:loc_{to}::carrier, timestep)
+        \\times \\eta_{energy}(loc::tech, timestep)
+        = \\boldsymbol{carrier_{prod}}(loc_{to}::tech:loc_{from}::carrier, timestep)
+        \\times \\eta_{energy}(loc::tech, timestep)
+        \\quad \\forall loc::tech:loc \in locs::techs:locs_{transmission},
+        \\forall timestep \in timesteps
+
+    Where a link is the connection between :math:`loc_{from}::tech:loc_{to}`
+    and :math:`loc_{to}::tech:loc_{from}` for locations `to` and `from`.
+
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -200,8 +303,27 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
 def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     """
     Balance carrier production and resource consumption of supply_plus technologies
-    alongside any use of resource storage
+    alongside any use of resource storage.
+
+    .. math::
+
+        \\boldsymbol{storage}(loc::tech, timestep) =
+        \\boldsymbol{storage}(loc::tech, timestep_{previous})
+        \\times (1 - storage\_loss(loc::tech, timestep))^{timestep\_resolution(timestep)} +
+        \\boldsymbol{resource_{con}}(loc::tech, timestep) -
+        \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
+        \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
+
+    If *no* storage is defined for the technology, this reduces to:
+
+    .. math::
+
+        \\boldsymbol{resource_{con}}(loc::tech, timestep) =
+        \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
+        \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
+
     """
+
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
@@ -241,7 +363,17 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     """
     Balance carrier production and consumption of storage technologies,
-    alongside any use of the stored volume
+    alongside any use of the stored volume.
+
+    .. math::
+
+        \\boldsymbol{storage}(loc::tech, timestep) =
+        \\boldsymbol{storage}(loc::tech, timestep_{previous})
+        \\times (1 - storage\_loss(loc::tech, timestep))^{resolution(timestep)}
+        - \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
+        \\times \\eta_{energy}(loc::tech, timestep)
+        - \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
+        \\quad \\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -269,28 +401,4 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     return (
         backend_model.storage[loc_tech, timestep] ==
         storage_previous_step - carrier_prod - carrier_con
-    )
-
-# FIXME: As with max_demand_timesteps, this constraint doesn't correctly split
-# carriers
-# FIXME: move to capacity?
-def reserve_margin_constraint_rule(backend_model, carrier):
-    model_data_dict = backend_model.__calliope_model_data__['data']
-
-    reserve_margin = model_data_dict['reserve_margin'][carrier]
-    max_demand_timestep = model_data_dict['max_demand_timesteps'][carrier]
-    max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
-
-    return (
-        sum(  # Sum all demand for this carrier and timestep
-            backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
-            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
-            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
-        ) * -1 * (1 / max_demand_time_res)
-        >=
-        sum(  # Sum all supply capacity for this carrier
-            backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
-            for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
-            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
-        ) * (1 + reserve_margin)
     )

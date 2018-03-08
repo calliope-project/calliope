@@ -111,6 +111,20 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
     If storage_cap.equals and energy_cap.equals are set for the technology, then
     storage_cap * charge rate = energy_cap must hold. Otherwise, take the lowest capacity
     capacity defined by storage_cap.max or energy_cap.max / charge rate.
+
+    .. math::
+
+        \\boldsymbol{storage_{cap}}(loc::tech)
+        \\begin{cases}
+            = storage_{cap, equals}(loc::tech),& \\text{if } storage_{cap, equals}(loc::tech)\\\\
+            = energy_{cap, equals}(loc::tech) \\times charge\_rate,&
+                \\text{if } energy_{cap, equals}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
+            \\leq storage_{cap, max}(loc::tech),& \\text{if } storage_{cap, max}(loc::tech)\\\\
+            \\leq energy_{cap, max}(loc::tech) \\times charge\_rate,&
+                \\text{if } energy_{cap, max}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
+            \\text{unconstrained},& \\text{otherwise}
+        \\end{cases}
+        \\forall loc::tech \\in loc::techs_{store}
     """
 
     storage_cap_equals = get_param(backend_model, 'storage_cap_equals', loc_tech)
@@ -146,7 +160,13 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
 def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
     """
     Set an additional energy capacity constraint on storage technologies,
-    based on their use of `charge_rate`
+    based on their use of `charge_rate`.
+
+    .. math::
+
+        \\boldsymbol{energy_{cap}}(loc::tech) \\leq \\boldsymbol{storage_{cap}}(loc::tech)
+        \\times charge\_rate(loc::tech) \\times energy_{cap, scale}(loc::tech)
+        \\forall loc::tech \\in loc::techs_{store}
     """
     energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
     charge_rate = get_param(backend_model, 'charge_rate', loc_tech)

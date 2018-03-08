@@ -9,12 +9,22 @@ Model class
 .. autoclass:: calliope.Model
     :members:
 
+.. _api_constraints:
+
 Constraints
 ===========
 
-.. automodule:: calliope.backend.pyomo.constraints
+Energy Balance
+--------------
+
+.. automodule:: calliope.backend.pyomo.constraints.energy_balance
     :members:
 
+Capacity
+--------
+
+.. automodule:: calliope.backend.pyomo.constraints.capacity
+    :members:
 
 .. _api_time_masks:
 

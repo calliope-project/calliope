@@ -11,7 +11,7 @@ Policy constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-# FIXME: Not actually building any constraints here (i.e. po.Constraints is never called)
+
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
@@ -49,6 +49,12 @@ def load_constraints(backend_model):
         backend_model.group_share_carrier_prod_equals_constraint = po.Constraint(
             backend_model.techlists_carrier_group_share_carrier_prod_equals_constraint,
             ['equals'], rule=group_share_carrier_prod_constraint_rule
+        )
+
+    if 'carriers_reserve_margin_constraint' in sets:
+        backend_model.reserve_margin_constraint = po.Constraint(
+            backend_model.carriers_reserve_margin_constraint,
+            rule=reserve_margin_constraint_rule
         )
 
 
@@ -103,3 +109,25 @@ def group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, wh
     )
 
     return equalizer(lhs, rhs, what)
+
+
+def reserve_margin_constraint_rule(backend_model, carrier):
+    model_data_dict = backend_model.__calliope_model_data__['data']
+
+    reserve_margin = model_data_dict['reserve_margin'][carrier]
+    max_demand_timestep = model_data_dict['max_demand_timesteps'][carrier]
+    max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
+
+    return (
+        sum(  # Sum all demand for this carrier and timestep
+            backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
+            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
+            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
+        ) * -1 * (1 / max_demand_time_res)
+        >=
+        sum(  # Sum all supply capacity for this carrier
+            backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
+            for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
+            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
+        ) * (1 + reserve_margin)
+    )
