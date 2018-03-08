@@ -4,6 +4,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+import logging
 import os
 import ruamel.yaml
 from contextlib import redirect_stdout, redirect_stderr
@@ -25,6 +26,7 @@ from calliope.backend.pyomo.util import get_var
 from calliope.core.util.tools import load_function, LogWriter
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope import exceptions
+
 
 def generate_model(model_data):
     """
@@ -48,7 +50,8 @@ def generate_model(model_data):
 
     # "Parameters"
     model_data_dict = {
-        'data': {k:
+        'data': {
+            k:
             model_data[k].to_series().dropna().replace('inf', np.inf).to_dict()
             for k in model_data.data_vars},
         'dims': {k: model_data[k].dims for k in model_data.data_vars},
@@ -153,7 +156,6 @@ def solve_model(backend_model, solver,
         )
         del solve_kwargs['warmstart']
 
-
     with redirect_stdout(LogWriter('info', strip=True)):
         with redirect_stderr(LogWriter('error', strip=True)):
             results = opt.solve(backend_model, tee=True, **solve_kwargs)
@@ -168,16 +170,16 @@ def load_results(backend_model, results):
     )
     this_result = backend_model.solutions.load_from(results)
 
-    # FIXME -- what to do here?
-    # if this_result is False or not_optimal:
-    #     # logging.critical('Solver output:\n{}'.format('\n'.join(self.pyomo_output)))
-    #     # logging.critical(results.Problem)
-    #     # logging.critical(results.Solver)
-    #     if not_optimal:
-    #         message = 'Model solution was non-optimal.'
-    #     else:
-    #         message = 'Could not load results into model instance.'
-    #     raise exceptions.BackendError(message)
+    if this_result is False or not_optimal:
+        logging.critical('Problem status:\n{}'.format(results.Problem))
+        logging.critical('Solver status:\n{}'.format(results.Solver))
+
+        if not_optimal:
+            message = 'Model solution was non-optimal.'
+        else:
+            message = 'Could not load results into model instance.'
+
+        raise exceptions.warn(message, exceptions.BackendWarning)
 
 
 def get_result_array(backend_model):

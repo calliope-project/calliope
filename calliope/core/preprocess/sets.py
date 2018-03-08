@@ -103,9 +103,11 @@ def generate_simple_sets(model_run):
 
     sets.carriers = sets.resources - set(['resource'])
 
-    sets.carrier_tiers = set(key.split('.carrier_')[1]
+    sets.carrier_tiers = set(
+        key.split('.carrier_')[1]
         for key in flat_techs.keys()
-        if '.carrier_' in key)
+        if '.carrier_' in key
+    )
 
     sets.costs = set(
         k.split('costs.')[-1].split('.')[0]

@@ -34,5 +34,9 @@ class ModelWarning(Warning):
     pass
 
 
+class BackendWarning(Warning):
+    pass
+
+
 def warn(message, _class=ModelWarning):
     warnings.warn(message, _class)

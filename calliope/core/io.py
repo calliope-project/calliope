@@ -27,7 +27,7 @@ def read_netcdf(path):
     if calliope_version:
         if not str(calliope_version) in __version__:
             raise ModelWarning(
-                'This model data was create with Calliope version {}, '
+                'This model data was created with Calliope version {}, '
                 'but you are running {}. Proceed with caution!'
             )
 

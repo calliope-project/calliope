@@ -10,16 +10,16 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
-import ruamel.yaml
+
+import numpy as np
+import xarray as xr
+
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
 from calliope.core.preprocess.util import get_all_carriers
 from calliope import exceptions
-
-import numpy as np
-import xarray as xr
 
 
 _defaults_files = {

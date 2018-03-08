@@ -32,7 +32,7 @@ def nationalscale_example_tester(solver='glpk', solver_io=None):
     }
 
     if solver_io:
-        override['model.solver_io'] = 'python'
+        override['model.solver_io'] = solver_io
 
     model = calliope.examples.national_scale(override_dict=override)
     model.run()

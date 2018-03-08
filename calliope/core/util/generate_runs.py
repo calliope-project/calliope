@@ -35,7 +35,7 @@ def generate_runs(model_file, override_file, groups=None, additional_args=None):
 
     for i, run in enumerate(runs):
         cmd = 'calliope run {model} --override_file {override}:{groups} --save_netcdf out_{i}_{groups}.nc {other_options}'.format(
-            i=i+1,
+            i=i + 1,
             model=model_file,
             override=override_file,
             groups=run,
@@ -70,7 +70,7 @@ def generate_bash_script(out_file, model_file, override_file, groups, additional
         '',
     ]
 
-    lines_all = lines_start + [base_string.format(i=i+1, cmd=cmd) for i, cmd in enumerate(commands)] + lines_end
+    lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)] + lines_end
 
     with open(out_file, 'w') as f:
         f.write('\n'.join(lines_all))
@@ -114,7 +114,7 @@ def generate_windows_script(out_file, model_file, override_file, groups, additio
         '',
     ]
 
-    lines_all = lines_start + [base_string.format(i=i+1, cmd=cmd) for i, cmd in enumerate(commands)]
+    lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)]
 
     with open(out_file, 'w') as f:
         f.write('\r\n'.join(lines_all))
