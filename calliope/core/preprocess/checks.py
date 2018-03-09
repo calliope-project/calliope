@@ -142,6 +142,17 @@ def check_initial(config_model):
                 'be defined (tech: {})'.format(t_name)
             )
 
+    # Error if a constraint is loaded from file that must not be
+    allowed_from_file = defaults['file_allowed']
+    for k, v in config_model.as_dict_flat().items():
+        if 'file=' in str(v):
+            constraint_name = k.split('.')[-1]
+            if constraint_name not in allowed_from_file:
+                errors.append(
+                    'Cannot load `{}` from file for configuration {}'
+                    .format(constraint_name, k)
+                )
+
     return warnings, errors
 
 
@@ -204,17 +215,6 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                 errors.append(
                     '`{}` at `{}` defines non-allowed '
                     '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
-                )
-
-    # Error if a constraint is loaded from file that must not be
-    allowed_from_file = defaults['file_allowed']
-    for k, v in tech_config.as_dict_flat().items():
-        if 'file=' in str(v):
-            constraint_name = k.split('.')[-1]
-            if constraint_name not in allowed_from_file:
-                errors.append(
-                    '`{}` at `{}` is trying to load `{}` from file, '
-                    'which is not allowed'.format(tech_id, loc_id, constraint_name)
                 )
 
     return warnings, errors

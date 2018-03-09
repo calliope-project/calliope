@@ -172,16 +172,18 @@ def add_time_dimension(data, model_run):
         ] = xr.DataArray.from_series(timeseries_data_series).values
 
         # 8) assign correct dtype (might be string/object accidentally)
-        if all(np.where(
-            ((timeseries_data_array=='True') | (timeseries_data_array=='False'))
-            )):
+        # string 'nan' to NaN:
+
+        array_to_check = timeseries_data_array.where(timeseries_data_array != 'nan', drop=True)
+        timeseries_data_array = timeseries_data_array.where(timeseries_data_array != 'nan')
+
+        if ((array_to_check == 'True') | (array_to_check == '1') | (array_to_check == 'False') | (array_to_check == '0')).all().item():
             # Turn to bool
-            timeseries_data_array.loc[dict()] = timeseries_data_array == 'True'
-            timeseries_data_array = timeseries_data_array.astype(np.bool, copy=False)
+            timeseries_data_array = ((timeseries_data_array == 'True') | (timeseries_data_array == '1')).copy()
         else:
             try:
                 timeseries_data_array = timeseries_data_array.astype(np.float, copy=False)
-            except:
+            except ValueError:
                 None
         data[variable] = timeseries_data_array
 

@@ -12,8 +12,15 @@ this_path = os.path.dirname(__file__)
 model_location = os.path.join(this_path, 'common', 'test_model', 'model.yaml')
 override_location = os.path.join(this_path, 'common', 'test_model', 'overrides.yaml')
 
+_defaults_files = {
+    k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
+    for k in ['model', 'defaults']
+}
+defaults = AttrDict.from_yaml(_defaults_files['defaults'])
+defaults_model = AttrDict.from_yaml(_defaults_files['model'])
 
-def run_model(override_dict, override_groups):
+
+def build_model(override_dict, override_groups):
     return calliope.Model(
         model_location, override_dict=override_dict,
         override_file=override_location + ':' + override_groups
@@ -31,7 +38,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
     def test_undefined_carriers(self):
         """
@@ -51,7 +58,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
     def test_incorrect_subset_time(self):
         """
@@ -66,7 +73,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override1, override_groups='simple_supply')
+            build_model(override_dict=override1, override_groups='simple_supply')
 
         # should fail: three strings in list
         override2 = AttrDict.from_yaml_string(
@@ -75,7 +82,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_supply')
+            build_model(override_dict=override2, override_groups='simple_supply')
 
         # should pass: two string in list as slice
         override3 = AttrDict.from_yaml_string(
@@ -83,7 +90,7 @@ class TestModelRun:
             model.subset_time: ['2005-01-01', '2005-01-07']
             """
         )
-        model = run_model(override_dict=override3, override_groups='simple_supply')
+        model = build_model(override_dict=override3, override_groups='simple_supply')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-01-07 23:00:00', freq='H'))
 
         # should pass: one integer/string
@@ -92,7 +99,7 @@ class TestModelRun:
             model.subset_time: 2005-01
             """
         )
-        model = run_model(override_dict=override3, override_groups='simple_supply')
+        model = build_model(override_dict=override3, override_groups='simple_supply')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-01-31 23:00:00', freq='H'))
 
         # should fail: time subset out of range of input data
@@ -102,7 +109,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(KeyError):
-            run_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override3, override_groups='simple_supply')
 
         # should fail: time subset out of range of input data
         override3 = AttrDict.from_yaml_string(
@@ -111,7 +118,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override3, override_groups='simple_supply')
 
     def test_incorrect_date_format(self):
         """
@@ -127,7 +134,7 @@ class TestModelRun:
             techs.test_demand_elec.constraints.resource: file=demand_heat_diff_dateformat.csv
             """
         )
-        model = run_model(override_dict=override1, override_groups='simple_conversion')
+        model = build_model(override_dict=override1, override_groups='simple_conversion')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-02-01 23:00:00', freq='H'))
 
         # should fail: wrong dateformat input for one file
@@ -138,7 +145,7 @@ class TestModelRun:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_conversion')
+            build_model(override_dict=override2, override_groups='simple_conversion')
 
         # should fail: wrong dateformat input for all files
         override3 = AttrDict.from_yaml_string(
@@ -148,7 +155,7 @@ class TestModelRun:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override3, override_groups='simple_supply')
 
         # should fail: one value wrong in file
         override4 = AttrDict.from_yaml_string(
@@ -158,7 +165,7 @@ class TestModelRun:
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override4, override_groups='simple_conversion')
+            build_model(override_dict=override4, override_groups='simple_conversion')
 
     def test_inconsistent_time_indeces(self):
         """
@@ -173,10 +180,10 @@ class TestModelRun:
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override1, override_groups='simple_conversion')
+            build_model(override_dict=override1, override_groups='simple_conversion')
 
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
-        run_model(override_dict=override1, override_groups='simple_conversion,one_day')
+        build_model(override_dict=override1, override_groups='simple_conversion,one_day')
 
     def test_empty_key_on_explode(self):
         """
@@ -201,7 +208,7 @@ class TestModelRun:
         )
 
         with pytest.raises(KeyError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
 
 class TestChecks:
@@ -217,7 +224,7 @@ class TestChecks:
         )
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
         all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
 
@@ -236,7 +243,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, override_groups='simple_supply,one_day')
 
         override2 = AttrDict.from_yaml_string(
             """
@@ -245,7 +252,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
+            build_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
 
     def test_name_overlap(self):
         """
@@ -269,7 +276,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override1, override_groups='one_day')
+            build_model(override_dict=override1, override_groups='one_day')
 
         override2 = AttrDict.from_yaml_string(
             """
@@ -283,7 +290,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_supply,one_day')
+            build_model(override_dict=override2, override_groups='simple_supply,one_day')
 
     def test_unspecified_parent(self):
         """
@@ -304,7 +311,7 @@ class TestChecks:
         )
 
         with pytest.raises(KeyError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
     def test_resource_as_carrier(self):
         """
@@ -323,7 +330,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, override_groups='simple_supply,one_day')
 
         override2 = AttrDict.from_yaml_string(
             """
@@ -338,7 +345,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_supply,one_day')
+            build_model(override_dict=override2, override_groups='simple_supply,one_day')
 
     def test_missing_constraints(self):
         """
@@ -357,7 +364,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
     def test_missing_required_constraints(self):
         """
@@ -379,7 +386,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
 
         # should pass: giving one of ['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']
         override_supply2 = AttrDict.from_yaml_string(
@@ -394,7 +401,7 @@ class TestChecks:
             locations.1.techs.supply_missing_constraint:
             """
         )
-        run_model(override_dict=override_supply2, override_groups='simple_supply,one_day')
+        build_model(override_dict=override_supply2, override_groups='simple_supply,one_day')
 
     def test_defining_non_allowed_constraints(self):
         """
@@ -409,7 +416,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
 
     def test_defining_non_allowed_costs(self):
         """
@@ -424,7 +431,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
         # should fail: om_prod not allowed for demand tech
         override = AttrDict.from_yaml_string(
@@ -433,7 +440,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
 
     def test_exporting_unspecified_carrier(self):
         """
@@ -447,7 +454,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, override_groups='simple_supply,one_day')
 
         # should fail: exporting `random` not allowed for conversion_plus tech
         override2 = AttrDict.from_yaml_string(
@@ -456,7 +463,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            run_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
+            build_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
 
         # should pass: exporting electricity for supply tech
         override3 = AttrDict.from_yaml_string(
@@ -464,7 +471,7 @@ class TestChecks:
             techs.test_supply_elec.constraints.export_carrier: electricity
             """
         )
-        run_model(override_dict=override3, override_groups='simple_supply,one_day')
+        build_model(override_dict=override3, override_groups='simple_supply,one_day')
 
         # should pass: exporting heat for conversion tech
         override4 = AttrDict.from_yaml_string(
@@ -472,13 +479,36 @@ class TestChecks:
             techs.test_conversion_plus.constraints.export_carrier: heat
             """
         )
-        run_model(override_dict=override4, override_groups='simple_conversion_plus,one_day')
+        build_model(override_dict=override4, override_groups='simple_conversion_plus,one_day')
 
     def test_allowed_time_varying_constraints(self):
         """
         `file=` is only allowed on a hardcoded list of constraints, unless
         `_time_varying` is appended to the constraint (i.e. user input)
         """
+
+        allowed_constraints_no_file = list(
+            set(defaults_model.tech_groups.supply.allowed_constraints)
+            .difference(defaults.file_allowed)
+        )
+
+        allowed_constraints_file = list(
+            set(defaults_model.tech_groups.supply.allowed_constraints)
+            .intersection(defaults.file_allowed)
+        )
+
+        override = lambda param: AttrDict.from_yaml_string(
+            "techs.test_supply_elec.constraints.{}: file=binary_one_day.csv".format(param)
+        )
+
+        # should fail: Cannot have `file=` on the following constraints
+        for param in allowed_constraints_no_file:
+            with pytest.raises(exceptions.ModelError):
+                build_model(override_dict=override(param), override_groups='simple_supply,one_day')
+
+        # should pass: can have `file=` on the following constraints
+        for param in allowed_constraints_file:
+            build_model(override_dict=override(param), override_groups='simple_supply,one_day')
 
     def test_incorrect_location_coordinates(self):
         """

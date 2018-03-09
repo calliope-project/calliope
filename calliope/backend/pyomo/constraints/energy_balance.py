@@ -106,9 +106,17 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
     .. math::
 
-        min\_use(loc::tech) \\times available\_resource(loc::tech, timestep) \\geq
+        min\_use(loc::tech) \\times available\_resource(loc::tech, timestep) \\leq
         \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
-        \\leq available\_resource(loc::tech, timestep)
+        \\geq available\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
+
+    If :math:`force\_resource(loc::tech)` is set:
+
+    .. math::
+
+        \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
+        = available\_resource(loc::tech, timestep)
         \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
 
     Where:
@@ -124,14 +132,6 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
         available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
         \\times resource\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
-
-    If :math:`force\_resource(loc::tech)` is set, then the constraint becomes:
-
-    .. math::
-
-        \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
-        = available\_resource(loc::tech, timestep)
-        \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -171,6 +171,14 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
         required\_resource(loc::tech, timestep) \\quad \\forall loc::tech \\in loc::techs_{demand},
         \\forall timestep \\in timesteps
 
+    If :math:`force\_resource(loc::tech)` is set:
+
+    .. math::
+
+        \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\times \\eta_{energy}(loc::tech, timestep) =
+        required\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{demand}, \\forall timestep \\in timesteps
+
     Where:
 
     .. math::
@@ -184,14 +192,6 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
 
         required\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
         \\times resource\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
-
-    If :math:`force\_resource(loc::tech)` is set:
-
-    .. math::
-
-        \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\times \\eta_{energy}(loc::tech, timestep) =
-        required\_resource(loc::tech, timestep)
-        \\quad \\forall loc::tech \\in loc::techs_{demand}, \\forall timestep \\in timesteps
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -225,6 +225,14 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
         \\leq available\_resource(loc::tech, timestep)
         \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
 
+    If :math:`force\_resource(loc::tech)` is set:
+
+    .. math::
+
+        \\boldsymbol{resource_{con}}(loc::tech, timestep)
+        = available\_resource(loc::tech, timestep)
+        \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
+
     Where:
 
     .. math::
@@ -239,14 +247,6 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
         available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
         \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
         \\times resource_{area}(loc::tech)
-
-    If :math:`force\_resource(loc::tech)` is set:
-
-    .. math::
-
-        \\boldsymbol{resource_{con}}(loc::tech, timestep)
-        = available\_resource(loc::tech, timestep)
-        \\quad \\forall loc::tech \\in loc::techs_{supply\_plus}, \\forall timestep \\in timesteps
 
     """
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
