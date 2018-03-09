@@ -1,4 +1,4 @@
-|badge_gitter| |badge_travis| |badge_appveyor| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
+|badge_gitter| |badge_travis| |badge_appveyor| ||badge_rtd| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
 
 -----
 
@@ -19,69 +19,33 @@ About
 
 Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 
-A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `Pandas <http://pandas.pydata.org/>`_ and `xarray <http://xarray.pydata.org/>`_ data structures for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc. Calliope takes these files, constructs an optimization problem, solves it, and reports back results. Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like `Pandas <http://pandas.pydata.org/>`_ and `xarray <http://xarray.pydata.org/>`_.
 
-Several simple example models are `included with Calliope <calliope/example_models>`_ and accessible through the ``calliope.examples`` submodule. These are based on two simple models, with overrides applied to introduce particular functionality (e.g. time clustering, integer decision variables).
-
-A more elaborate example is `UK-Calliope <https://github.com/sjpfenninger/uk-calliope>`_, which models the power system of Great Britain (England+Scotland+Wales).
+Calliope comes with several built-in analysis and visualisation tools. Having some knowledge of the Python programming language helps when running Calliope and using these tools, but is not a prerequisite.
 
 Quick start
 -----------
 
-Install Calliope and all dependencies with conda:
+Calliope can run on Windows, macOS and Linux. Installing it is quickest with the ``conda`` package manager by running a single command: ``conda create -c conda-forge -n calliope python=3.6 calliope``. See the documentation for more `information on installing <https://calliope.readthedocs.io/en/stable/user/installation.html>`_.
 
-.. code-block:: bash
+Several easy to understand example models are `included with Calliope <calliope/example_models>`_ and accessible through the ``calliope.examples`` submodule.
 
-    $ conda create -c conda-forge -n calliope python=3.6 calliope
+The `tutorials in the documentation run through these examples <https://calliope.readthedocs.io/en/stable/user/tutorials.html>`_. A good place to start is to look at these tutorials to get a feel for how Calliope works, and then to read the "Introduction", "Building a model", "Running a model", and "Analysing a model" sections in the online documentation.
 
-Calliope can be run from the command line:
-
-.. code-block:: bash
-
-    $ calliope new example  # Create a copy of the national-scale example model, in the `example` dir
-
-    $ calliope run example/model.yaml  # Run the model by pointing to its run configuration file
-
-It can also be run interactively from a Python session:
-
-.. code-block:: python
-
-    import calliope
-    model = calliope.examples.national_scale() # load the national-scale example model
-    inputs = model.inputs # a processed xarray.Dataset describing the model you will run
-    model.run()
-    solution = model.results  # An xarray.Dataset
-
-To run your own model, including the application of any overrides (slight changes to the YAML files describing the model):
-
-.. code-block:: bash
-
-    calliope run path/to/model.yaml --override_file path/to/overrides.yaml:override_1_name,override_2_name,etc
-    
-'override_1_name' etc. are the top-level names for the overrides within the file 'overrides.yaml'.
-
-In a Python interactive session, the `Model class <calliope/core/model.py>`_ is called to load our model configuration. Overriding can be specified as a YAML file or directly as a dictionary:
-
-.. code-block:: python
-
-    import calliope
-    model = calliope.Model('path/to/model.yaml', 
-                           override_file='path/to/overrides.yaml:override_1_name,override_2_name,etc',
-                           override_dict={'parameter': {'to': {'override': override_to_apply}}})
-
+A fully-featured example model is `UK-Calliope <https://github.com/sjpfenninger/uk-calliope>`_, which models the power system of Great Britain (England+Scotland+Wales), and has been used in several peer-reviewed scientific publications.
 
 Documentation
 -------------
 
 Documentation is available on Read the Docs:
 
-* `Stable version <https://calliope.readthedocs.io/en/stable/>`_
-* `Development version <https://calliope.readthedocs.io/en/latest/>`_
+* `Read the documentation online (recommended) <https://calliope.readthedocs.io/en/stable/>`_
+* `Download all documentation in a single PDF file <https://readthedocs.org/projects/calliope/downloads/pdf/stable/>`_
 
-Changelog
----------
+What's new
+----------
 
-See `changelog.rst <https://github.com/calliope-project/calliope/blob/master/changelog.rst>`_.
+See changes made in recent versions in the `changelog <https://github.com/calliope-project/calliope/blob/master/changelog.rst>`_.
 
 Citing Calliope
 ---------------
@@ -95,7 +59,7 @@ All Calliope releases are archived on Zenodo, and can be referred to by the over
 License
 -------
 
-Copyright 2013-2017 Calliope contributors listed in AUTHORS
+Copyright 2013-2018 Calliope contributors listed in AUTHORS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -116,9 +80,9 @@ limitations under the License.
     :target: https://pypi.python.org/pypi/calliope
     :alt: PyPI version
 
-.. |badge_conda| image:: https://anaconda.org/conda-forge/calliope/badges/version.svg
+.. |badge_conda| image:: https://img.shields.io/conda/vn/conda-forge/calliope.svg?style=flat-square&label=conda
     :target: https://anaconda.org/conda-forge/calliope
-    :alt: Anaconda.org version
+    :alt: Anaconda.org/conda-forge version
 
 .. |badge_license| image:: https://img.shields.io/pypi/l/calliope.svg?style=flat-square
     :target: #license
@@ -134,6 +98,10 @@ limitations under the License.
 .. |badge_appveyor|  image:: https://img.shields.io/appveyor/ci/sjpfenninger/calliope/master.svg?style=flat-square&label=windows%20build
     :target: https://ci.appveyor.com/project/sjpfenninger/calliope
     :alt: Build status on Windows
+
+.. |badge_rtd| image:: https://img.shields.io/readthedocs/calliope.svg?style=flat-square
+    :target: https://readthedocs.org/projects/calliope/builds/
+    :alt: Documentation build status
 
 .. |badge_gitter|  image:: https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square
     :target: https://gitter.im/calliope-project/calliope
