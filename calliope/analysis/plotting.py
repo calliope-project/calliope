@@ -41,10 +41,6 @@ def plot_model(model, kind, **kwargs):
 
         """
         if kind == 'timeseries':
-            timeseries_type = kwargs.pop('timeseries_type', None)
-            if timeseries_type in ['carrier_prod', 'carrier_con']:
-                timeseries_type = 'carrier'
-            kwargs['timeseries_type'] = timeseries_type
             plot_timeseries(model, **kwargs)
 
         elif kind == 'capacity':
@@ -55,13 +51,16 @@ def plot_model(model, kind, **kwargs):
 
 
 def plot_timeseries(
-        model, timeseries_type='carrier', loc=dict([]),
-        sum_dims='locs', squeeze=True, tech_order=[]):
+        model, timeseries_type='carrier', timesteps_zoom=None,
+        loc=dict([]), sum_dims='locs', squeeze=True):
     """
     Params
     ------
     timeseries_type : str, optional
-        "carrier", "storage", or "resource"
+        "carrier", "carrier_prod", "carrier_con", "storage", or "resource"
+    timesteps_zoom : int, optional
+        Number of timesteps to show initially on the x-axis (if not
+        given, the full time range is shown by default).
     loc : dict, optional
         Dictionary by which data is selected (keys any of ['timeseries',
         'locs', 'techs', 'carriers']).
@@ -69,20 +68,19 @@ def plot_timeseries(
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions containing only single values.
-    tech_order : list, optional
-        List of technologies in the order you want them to appear.
-        Only those techs in the list will be plotted.
 
     """
-    reindexer = dict(techs=model._model_data.techs.values,
-                    locs=model._model_data.locs.values)
-    if timeseries_type == 'carrier':
+    reindexer = dict(
+        techs=model._model_data.techs.values,
+        locs=model._model_data.locs.values)
+    if timeseries_type in ['carrier', 'carrier_prod', 'carrier_con']:
         title = 'Carrier flow'
         y_axis_title = 'Energy produced(+)/consumed(-) (kWh)'
         array_prod = model.get_formatted_array('carrier_prod')
         array_con = model.get_formatted_array('carrier_con')
-        array_flow = (array_prod.reindex(**reindexer).fillna(0)
-                    + array_con.reindex(**reindexer).fillna(0)).loc[loc]
+        array_flow = (
+            array_prod.reindex(**reindexer).fillna(0) +
+            array_con.reindex(**reindexer).fillna(0)).loc[loc]
     else:
         array_flow = model.get_formatted_array(timeseries_type).reindex(
             **reindexer).fillna(0).loc[loc]
@@ -113,40 +111,53 @@ def plot_timeseries(
                 'and `sim_dims: {}`'.format(timeseries_type, loc, sum_dims))
 
     data = []
-    colors = model._model_data.colors
-    names = model._model_data.names
     timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
-    layout = dict(barmode='relative', title=title, yaxis=dict(title=y_axis_title))
+    layout = dict(
+        barmode='relative', title=title,
+        xaxis=dict(),
+        yaxis=dict(title=y_axis_title),
+        legend=(dict(traceorder='reversed'))
+    )
 
-    techs = tech_order if tech_order else model._model_data.techs.values
-    for tech in techs:
-        if tech not in model._model_data.techs.values:
-            continue
+    if timesteps_zoom:
+        layout['xaxis']['range'] = [timesteps[0], timesteps[timesteps_zoom]]
+
+    for tech in array_flow.techs.values:
         tech_dict = dict(techs=tech)
         base_tech = model._model_data.inheritance.loc[tech_dict].item().split('.')[0]
+
         if base_tech in ['transmission']:
-            continue
+            continue  # Transmission is not plotted here
+
         if base_tech == 'demand' and array_flow.loc[tech_dict].sum():
-            data.append(go.Scatter(
+            # Always insert demand at position 0 in the list, to make
+            # sure it appears on top in the legend
+            data.insert(0, go.Scatter(
                 x=timesteps, y=-array_flow.loc[tech_dict].values,
-                line=dict(color='red'), name=names.loc[tech_dict].item())
+                line=dict(color='red'),
+                name=model._model_data.names.loc[tech_dict].item())
             )
+
         elif array_flow.loc[tech_dict].sum():
             data.append(go.Bar(
                 x=timesteps, y=array_flow.loc[tech_dict].values,
-                name=names.loc[tech_dict].item(), legendgroup=tech,
-                marker=dict(color=colors.loc[tech_dict].item())))
+                name=model._model_data.names.loc[tech_dict].item(),
+                legendgroup=tech,
+                marker=dict(color=model._model_data.colors.loc[tech_dict].item())))
+
     pltly.iplot(dict(data=data, layout=layout))
 
 
 def plot_capacity(
-        model, cap_type='energy_cap', loc=dict(),
-        sum_dims=None, squeeze=True, tech_order=[]):
+        model, cap_type='energy_cap', orient='horizontal',
+        loc=dict(), sum_dims=None, squeeze=True):
     """
     Params
     ------
     cap_type : str, optional
+    orient : str, optional
+        'horizontal' or 'vertical' barchart
     loc : dict, optional
         Dictionary by which data is selected (keys any of ['timeseries',
         'locs', 'techs', 'carriers']).
@@ -154,9 +165,6 @@ def plot_capacity(
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions containing only single values.
-    tech_order : list, optional
-        List of technologies in the order you want them to appear.
-        Only those techs in the list will be plotted.
 
     """
     array_cap = model.get_formatted_array(cap_type).loc[loc]
@@ -193,16 +201,22 @@ def plot_capacity(
         )
 
     data = []
-    colors = model._model_data.colors
-    names = model._model_data.names
 
-    layout = dict(barmode='relative',
-                title='Installed {}'.format(cap_type),
-                yaxis=dict(title=y_axis_title), xaxis=dict(title='Location'),
-                showlegend=True)
+    if orient == 'horizontal':
+        orientation = 'h'
+        xaxis = dict(title=y_axis_title)
+        yaxis = dict(title='Location')
+    elif orient == 'vertical':
+        orientation = 'v'
+        yaxis = dict(title=y_axis_title)
+        xaxis = dict(title='Location')
 
-    techs = tech_order if tech_order else model._model_data.techs.values
-    for tech in techs:
+    layout = dict(
+        barmode='relative', title='Installed {}'.format(cap_type),
+        showlegend=True, xaxis=xaxis, yaxis=yaxis
+    )
+
+    for tech in array_cap.techs.values:
         if tech not in model._model_data.techs.values:
             continue
         tech_dict = dict(techs=tech)
@@ -210,11 +224,19 @@ def plot_capacity(
         if base_tech in ['transmission', 'demand', 'unmet_demand']:
             continue
         if tech in array_cap.techs.values and array_cap.loc[dict(techs=tech)].sum() > 0:
+            x = array_cap.loc[dict(techs=tech)].values
+            y = array_cap.locs.values[::-1]
+            if orientation == 'v':
+                x, y = y[::-1], x  # Fip axes
             data.append(go.Bar(
-                x=array_cap.locs.values, y=array_cap.loc[dict(techs=tech)].values,
-                name=names.loc[dict(techs=tech)].item(), legendgroup=base_tech,
-                text=tech, hoverinfo='y+text',
-                marker=dict(color=colors.loc[dict(techs=tech)].item())))
+                x=x, y=y,
+                name=model._model_data.names.loc[dict(techs=tech)].item(),
+                legendgroup=base_tech,
+                text=tech,
+                hoverinfo='x+y+name',
+                marker=dict(color=model._model_data.colors.loc[dict(techs=tech)].item()),
+                orientation=orientation
+            ))
 
     pltly.iplot(dict(data=data, layout=layout))
 
@@ -413,8 +435,7 @@ def plot_transmission(model, mapbox_access_token=None):
         title=model._model_data.attrs['model.name'],
         autosize=True,
         hovermode='closest',
-        showlegend=True,
-        legend=dict(orientation='h', y=1.01)
+        showlegend=True
     ))
 
     fig = go.Figure(data=data, layout=layout_dict)
@@ -427,9 +448,7 @@ class ModelPlotMethods:
         self._model = model
 
     def __call__(self, kind, **kwargs):
-        return plot_model(
-            self._model, kind=kind, **kwargs
-        )
+        return plot_model(self._model, kind=kind, **kwargs)
 
     __call__.__doc__ = plot_model.__doc__
 
