@@ -1,4 +1,4 @@
-|badge_gitter| |badge_travis| |badge_appveyor| ||badge_rtd| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
+|badge_gitter| |badge_travis| |badge_appveyor| |badge_rtd| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
 
 -----
 
