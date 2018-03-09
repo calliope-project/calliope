@@ -32,6 +32,7 @@ def normalized_copy(data):
     -------
     ds : xarray Dataset
         Copy of `data`, with the absolute taken and normalized to 0-1
+
     """
     ds = data.copy(deep=True)  # Work off a copy
 
@@ -181,7 +182,7 @@ def resample(data, timesteps, resolution):
             data_rs[v] = data[v]
 
     for var in timestep_vars:
-        if var in ['time_resolution', 'resource']:
+        if var in ['timestep_resolution', 'resource']:
             data_rs[var] = data_new[var].resample(
                 resolution, dim='timesteps', how='sum'
             )

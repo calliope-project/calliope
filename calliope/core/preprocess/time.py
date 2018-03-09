@@ -187,7 +187,7 @@ def add_time_dimension(data, model_run):
                 None
         data[variable] = timeseries_data_array
 
-    # Add time_resolution by looking at the time difference between timestep n
+    # Add timestep_resolution by looking at the time difference between timestep n
     # and timestep n + 1 for all timesteps
     time_delta = (data.timesteps.shift(timesteps=-1) - data.timesteps).to_series()
 

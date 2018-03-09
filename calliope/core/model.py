@@ -146,7 +146,7 @@ class Model(object):
         if self._model_data.attrs['model.mode'] == 'operate' and not self._model_data.attrs['model.operation.safe']:
             raise exceptions.ModelError(
                 'Unable to run this model in operational mode, probably because '
-                'there exists non-uniform timesteps (e.g. from time masking)'
+                'there exist non-uniform timesteps (e.g. from time masking)'
             )
 
         backend = self._model_data.attrs['run.backend']
@@ -164,7 +164,7 @@ class Model(object):
     def get_formatted_array(self, var):
         """
         Return an xr.DataArray with locs, techs, and carriers as separate
-        dimensions. Can be used to view input/output as in calliope < v0.6.0.
+        dimensions.
 
         """
         if var not in self._model_data.data_vars:
