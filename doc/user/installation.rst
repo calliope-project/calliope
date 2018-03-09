@@ -19,9 +19,11 @@ Running Calliope requires four things:
 Recommended installation method
 ===============================
 
-The easiest way to get a working Calliope installation is to use the free `Anaconda Python distribution <https://store.continuum.io/cshop/anaconda/>`_ and its package manager, ``conda``, which can install all of the four things described above in a single step.
+The easiest way to get a working Calliope installation is to use the free ``conda``package manager, which can install all of the four things described above in a single step.
 
-With Anaconda installed, you can create a new Python 3.6 environment called ``"calliope"`` with all the necessary modules, including the free and open source GLPK solver, with the following command::
+To get ``conda``, `download and install the "Miniconda" distribution for your operating system <https://conda.io/miniconda.html>`_ (using the version for Python 3).
+
+With Miniconda installed, you can create a new Python 3.6 environment called ``"calliope"`` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window::
 
    $ conda create -c conda-forge -n calliope python=3.6 calliope
 
