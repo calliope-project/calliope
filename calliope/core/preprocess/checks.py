@@ -274,15 +274,29 @@ def check_final(model_run):
     # If locations have coordinates, they must all be either lat/lon or x/y
     elif len(locs_with_coords) != 0:
         first_loc = list(model_run.locations.keys())[0]
-        coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
-        if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
+        try:
+            coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
+            if coord_keys != ['lat', 'lon'] and coord_keys != ['x', 'y']:
+                errors.append(
+                    'Unidentified coordinate system. All locations must either'
+                    'use the format {lat: N, lon: M} or {x: N, y: M}.'
+                )
+        except AttributeError:
             errors.append(
-                'Unidentified coordinate system. All locations must either'
-                'use the format {lat: N, lon: M} or {x: N, y: M}.'
+                'Coordinates must be given in the format {lat: N, lon: M} or '
+                '{x: N, y: M}, not ' + str(model_run.locations[first_loc].coordinates)
             )
+
         for loc_id, loc_config in model_run.locations.items():
-            if sorted(list(loc_config.coordinates.keys())) != coord_keys:
-                errors.append('All locations must use the same coordinate format.')
+            try:
+                if sorted(list(loc_config.coordinates.keys())) != coord_keys:
+                    errors.append('All locations must use the same coordinate format.')
+                    break
+            except AttributeError:
+                errors.append(
+                    'Coordinates must be given in the format {lat: N, lon: M} or '
+                    '{x: N, y: M}, not ' + str(model_run.locations[first_loc].coordinates)
+                )
                 break
 
     # Ensure that timeseries have no non-unique index values

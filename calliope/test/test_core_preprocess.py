@@ -12,6 +12,8 @@ this_path = os.path.dirname(__file__)
 model_location = os.path.join(this_path, 'common', 'test_model', 'model.yaml')
 override_location = os.path.join(this_path, 'common', 'test_model', 'overrides.yaml')
 
+constraint_sets = AttrDict.from_yaml(os.path.join(this_path, 'common', 'constraint_sets.yaml'))
+
 _defaults_files = {
     k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
     for k in ['model', 'defaults']
@@ -66,59 +68,34 @@ class TestModelRun:
         If subset_time is not a list, it should successfully subset on the given
         string/integer
         """
-        # should fail: one string in list
-        override1 = AttrDict.from_yaml_string(
-            """
-            model.subset_time: ['2005-01']
-            """
+
+        override = lambda param: AttrDict.from_yaml_string(
+            "model.subset_time: {}".format(param)
         )
+
+        # should fail: one string in list
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='simple_supply')
+            build_model(override_dict=override(['2005-01']), override_groups='simple_supply')
 
         # should fail: three strings in list
-        override2 = AttrDict.from_yaml_string(
-            """
-            model.subset_time: ['2005-01-01', '2005-01-02', '2005-01-03']
-            """
-        )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, override_groups='simple_supply')
+            build_model(override_dict=override(['2005-01-01', '2005-01-02', '2005-01-03']), override_groups='simple_supply')
 
         # should pass: two string in list as slice
-        override3 = AttrDict.from_yaml_string(
-            """
-            model.subset_time: ['2005-01-01', '2005-01-07']
-            """
-        )
-        model = build_model(override_dict=override3, override_groups='simple_supply')
+        model = build_model(override_dict=override(['2005-01-01', '2005-01-07']), override_groups='simple_supply')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-01-07 23:00:00', freq='H'))
 
         # should pass: one integer/string
-        override3 = AttrDict.from_yaml_string(
-            """
-            model.subset_time: 2005-01
-            """
-        )
-        model = build_model(override_dict=override3, override_groups='simple_supply')
+        model = build_model(override_dict=override('2005-01'), override_groups='simple_supply')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-01-31 23:00:00', freq='H'))
 
         # should fail: time subset out of range of input data
-        override3 = AttrDict.from_yaml_string(
-            """
-            model.subset_time: 2005-03
-            """
-        )
         with pytest.raises(KeyError):
-            build_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override('2005-03'), override_groups='simple_supply')
 
         # should fail: time subset out of range of input data
-        override3 = AttrDict.from_yaml_string(
-            """
-            model.subset_time: ['2005-02-01', '2005-02-05']
-            """
-        )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override(['2005-02-01', '2005-02-05']), override_groups='simple_supply')
 
     def test_incorrect_date_format(self):
         """
@@ -447,41 +424,29 @@ class TestChecks:
         User can only define an export carrier if it is defined in
         ['carrier_out', 'carrier_out_2', 'carrier_out_3']
         """
-        # should fail: exporting `heat` not allowed for electricity supply tech
-        override1 = AttrDict.from_yaml_string(
-            """
-            techs.test_supply_elec.constraints.export_carrier: heat
-            """
+        override_supply = lambda param: AttrDict.from_yaml_string(
+            "techs.test_supply_elec.constraints.export_carrier: {}".format(param)
         )
+
+        override_converison_plus = lambda param: AttrDict.from_yaml_string(
+            "techs.test_conversion_plus.constraints.export_carrier: {}".format(param)
+        )
+
+        # should fail: exporting `heat` not allowed for electricity supply tech
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override_supply('heat'), override_groups='simple_supply,one_day')
 
         # should fail: exporting `random` not allowed for conversion_plus tech
-        override2 = AttrDict.from_yaml_string(
-            """
-            techs.test_conversion_plus.constraints.export_carrier: random
-            """
-        )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
+            build_model(override_dict=override_converison_plus('random'), override_groups='simple_conversion_plus,one_day')
 
         # should pass: exporting electricity for supply tech
-        override3 = AttrDict.from_yaml_string(
-            """
-            techs.test_supply_elec.constraints.export_carrier: electricity
-            """
-        )
-        build_model(override_dict=override3, override_groups='simple_supply,one_day')
+        build_model(override_dict=override_supply('electricity'), override_groups='simple_supply,one_day')
 
         # should pass: exporting heat for conversion tech
-        override4 = AttrDict.from_yaml_string(
-            """
-            techs.test_conversion_plus.constraints.export_carrier: heat
-            """
-        )
-        build_model(override_dict=override4, override_groups='simple_conversion_plus,one_day')
+        build_model(override_dict=override_converison_plus('heat'), override_groups='simple_conversion_plus,one_day')
 
-    def test_allowed_time_varying_constraints(self):
+    def test_allowed_time_varying_constraints_supply(self):
         """
         `file=` is only allowed on a hardcoded list of constraints, unless
         `_time_varying` is appended to the constraint (i.e. user input)
@@ -510,30 +475,110 @@ class TestChecks:
         for param in allowed_constraints_file:
             build_model(override_dict=override(param), override_groups='simple_supply,one_day')
 
+    def test_allowed_time_varying_constraints_storage(self):
+        """
+        `file=` is only allowed on a hardcoded list of constraints, unless
+        `_time_varying` is appended to the constraint (i.e. user input)
+        """
+
+        allowed_constraints_no_file = list(
+            set(defaults_model.tech_groups.storage.allowed_constraints)
+            .difference(defaults.file_allowed)
+        )
+
+        allowed_constraints_file = list(
+            set(defaults_model.tech_groups.storage.allowed_constraints)
+            .intersection(defaults.file_allowed)
+        )
+
+        override = lambda param: AttrDict.from_yaml_string(
+            "techs.test_storage.constraints.{}: file=binary_one_day.csv".format(param)
+        )
+
+        # should fail: Cannot have `file=` on the following constraints
+        for param in allowed_constraints_no_file:
+            with pytest.raises(exceptions.ModelError):
+                build_model(override_dict=override(param), override_groups='simple_storage,one_day')
+
+        # should pass: can have `file=` on the following constraints
+        for param in allowed_constraints_file:
+            build_model(override_dict=override(param), override_groups='simple_storage,one_day')
+
     def test_incorrect_location_coordinates(self):
         """
         Either all or no locations must have `coordinates` defined and, if all
         defined, they must be in the same coordinate system (lat/lon or x/y)
         """
 
+        override = lambda param0, param1: AttrDict.from_yaml_string(
+            """
+            locations:
+                0.coordinates: {}
+                1.coordinates: {}
+            """.format(param0, param1)
+        )
+        cartesian0 = {'x': 0, 'y': 1}
+        cartesian1 = {'x': 1, 'y': 1}
+        geographic0 = {'lat': 0, 'lon': 1}
+        geographic1 = {'lat': 1, 'lon': 1}
+
+        # should fail: cannot have locations in one place and not in another
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override(cartesian0, 'null'), override_groups='simple_storage,one_day')
+
+        # should fail: cannot have cartesian coordinates in one place and geographic in another
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override(cartesian0, geographic1), override_groups='simple_storage,one_day')
+
+        # should pass: cartesian coordinates in both places
+        build_model(override_dict=override(cartesian0, cartesian1), override_groups='simple_storage,one_day')
+
+        # should pass: geographic coordinates in both places
+        build_model(override_dict=override(geographic0, geographic1), override_groups='simple_storage,one_day')
 
 class TestDataset:
+
+    # FIXME: What are we testing here?
     def test_inconsistent_timesteps(self):
         """
         Timesteps must be consistent?
         """
 
+    # TODO: Are the hard-coded constraint sets actually correct?
     def test_unassigned_sets(self):
         """
         Check that all sets in which there are possible loc:techs are assigned
         and have been filled
         """
+        models = dict()
+        models['model_national'] = calliope.examples.national_scale()
+        models['model_urban'] = calliope.examples.urban_scale()
+        models['model_milp'] = calliope.examples.milp()
+
+        for model_name, model in models.items():
+            for set_name, set_vals in model._model_data.coords.items():
+                if 'constraint' in set_name:
+                    assert set(set_vals.values) == set(constraint_sets[model_name][set_name])
 
     def test_negative_cost_unassigned_cap(self):
         """
         Any negative cost associated with a capacity (e.g. cost_energy_cap) must
         be applied to a capacity iff the upper bound of that capacity has been defined
         """
+
+        # should fail: resource_cap cost is negtive, resource_cap_max is infinite
+        override = AttrDict.from_yaml_string(
+            "techs.test_supply_plus.costs.monetary.resource_cap: -10"
+        )
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override, override_groups='simple_supply_plus,one_day')
+
+        # should fail: storage_cap cost is negative, storage_cap_max is infinite
+        override = AttrDict.from_yaml_string(
+            "techs.test_storage.costs.monetary.storage_cap: -10"
+        )
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override, override_groups='simple_storage,one_day')
 
     def test_missing_array(self):
         """

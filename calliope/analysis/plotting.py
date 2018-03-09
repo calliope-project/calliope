@@ -27,41 +27,9 @@ PLOTLY_KWARGS = dict(
 )
 
 
-def plot_model(model, kind, **kwargs):
-        """
-        Plot model data.
-
-        Params
-        ------
-        kind : string
-            One of ``timeseries``, ``capacity``, or ``transmission``.
-            `timeseries`. Data plotted against the time axis, must be data in
-                the time domain.
-            `capacity`. Data plotted per location on x-axis and per technology
-                in a stacked bar. Can be any data input, provided array is only
-                indexed over locations and technologies after selecting and summing
-                over other dimensions (using loc=dict(...) and sum_dims=[...]).
-            `transmission`. Data plotted based on coordinates.
-                If coordinates are `lat`, `lon` then a map is used, otherwise
-                cartesian scatter is used.
-        kwargs :
-            Passed on to individual plotting functions. Look at their
-            documentation for more information.
-
-        """
-        if kind == 'timeseries':
-            plot_timeseries(model, **kwargs)
-
-        elif kind == 'capacity':
-            plot_capacity(model, **kwargs)
-
-        elif kind == 'transmission':
-            plot_transmission(model, **kwargs)
-
-
 def plot_timeseries(
         model, timeseries_type='carrier', timesteps_zoom=None,
-        loc=dict([]), sum_dims='locs', squeeze=True):
+        loc=dict(), sum_dims='locs', squeeze=True, html_only=False):
     """
     Params
     ------
@@ -77,12 +45,16 @@ def plot_timeseries(
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions containing only single values.
+    html_only : bool, optional, default = False
+        Returns a html string for embedding the plot in a webpage
 
     """
-    reindexer = dict(
-        techs=model._model_data.techs.values,
-        locs=model._model_data.locs.values)
     if timeseries_type in ['carrier', 'carrier_prod', 'carrier_con']:
+        reindexer = dict(
+            techs=model._model_data.techs.values,
+            locs=model._model_data.locs.values,
+            carriers=model._model_data.carriers.values
+        )
         title = 'Carrier flow'
         y_axis_title = 'Energy produced(+)/consumed(-) (kWh)'
         array_prod = model.get_formatted_array('carrier_prod')
@@ -91,6 +63,10 @@ def plot_timeseries(
             array_prod.reindex(**reindexer).fillna(0) +
             array_con.reindex(**reindexer).fillna(0)).loc[loc]
     else:
+        reindexer = dict(
+            techs=model._model_data.techs.values,
+            locs=model._model_data.locs.values
+        )
         array_flow = model.get_formatted_array(timeseries_type).reindex(
             **reindexer).fillna(0).loc[loc]
         if timeseries_type == 'storage':
@@ -98,6 +74,12 @@ def plot_timeseries(
             y_axis_title = 'Stored energy (kWh)'
         elif timeseries_type == 'resource':
             title = 'Available resource'
+            y_axis_title = 'Energy (kWh)'
+            resource_area = model.get_formatted_array('resource_area').reindex(
+                **reindexer).fillna(1).loc[loc]
+            array_flow *= resource_area
+        elif timeseries_type == 'resource_con':
+            title = 'Consumed resource'
             y_axis_title = 'Energy (kWh)'
             resource_area = model.get_formatted_array('resource_area').reindex(
                 **reindexer).fillna(1).loc[loc]
@@ -155,12 +137,23 @@ def plot_timeseries(
                 legendgroup=tech,
                 marker=dict(color=model._model_data.colors.loc[tech_dict].item())))
 
-    pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
+    if html_only:
+        return pltly.plot(
+            dict(data=data, layout=layout),
+            include_plotlyjs=False, output_type='div',
+            **PLOTLY_KWARGS
+        )
+
+    elif data:
+        pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
+
+    else:
+        print('No data to plot')
 
 
 def plot_capacity(
         model, cap_type='energy_cap', orient='horizontal',
-        loc=dict(), sum_dims=None, squeeze=True):
+        loc=dict(), sum_dims=None, squeeze=True, html_only=False):
     """
     Params
     ------
@@ -174,6 +167,8 @@ def plot_capacity(
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions containing only single values.
+    html_only : bool, optional, default = False
+        Returns a html string for embedding the plot in a webpage
 
     """
     array_cap = model.get_formatted_array(cap_type).loc[loc]
@@ -211,14 +206,16 @@ def plot_capacity(
 
     data = []
 
-    if orient == 'horizontal':
+    if orient in ['horizontal', 'h']:
         orientation = 'h'
         xaxis = dict(title=y_axis_title)
         yaxis = dict(title='Location')
-    elif orient == 'vertical':
+    elif orient in ['vertical', 'v']:
         orientation = 'v'
         yaxis = dict(title=y_axis_title)
         xaxis = dict(title='Location')
+    else:
+        raise ValueError('Orient must be `v`/`vertical` or `h`/`horizontal`')
 
     layout = dict(
         barmode='relative', title='Installed {}'.format(cap_type),
@@ -247,10 +244,21 @@ def plot_capacity(
                 orientation=orientation
             ))
 
-    pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
+    if html_only:
+        return pltly.plot(
+            dict(data=data, layout=layout),
+            include_plotlyjs=False, output_type='div',
+            **PLOTLY_KWARGS
+        )
+
+    elif data:
+        pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
+
+    else:
+        print('No data to plot')
 
 
-def plot_transmission(model, mapbox_access_token=None):
+def plot_transmission(model, mapbox_access_token=None, html_only=False):
     """
     Params
     ------
@@ -258,6 +266,8 @@ def plot_transmission(model, mapbox_access_token=None):
         If given and a valid Mapbox API key, a Mapbox map is drawn
         for lat-lon coordinates, else (by default), a more simple
         built-in map.
+    html_only : bool, optional, default = False
+        Returns a html string for embedding the plot in a webpage
 
     """
     coordinates = model._model_data.loc_coordinates
@@ -336,7 +346,7 @@ def plot_transmission(model, mapbox_access_token=None):
     else:
         energy_cap = _get_data('energy_cap_max')
         energy_flow = energy_cap.copy()
-        energy_flow.loc[dict([])] = 0
+        energy_flow.loc[dict()] = 0
 
     if sorted(coordinates.coordinates.values) == ['lat', 'lon']:
         h_coord, v_coord = ('lat', 'lon')
@@ -425,9 +435,9 @@ def plot_transmission(model, mapbox_access_token=None):
 
     node_scatter_dict = {
         h_coord: [coordinates.loc[dict(locs=loc, coordinates=h_coord)].item()
-                for loc in coordinates.locs],
+                  for loc in coordinates.locs],
         v_coord: [coordinates.loc[dict(locs=loc, coordinates=v_coord)].item()
-                for loc in coordinates.locs],
+                  for loc in coordinates.locs],
         'text': [loc.item() for loc in coordinates.locs],
         'name': 'Locations',
         'type': scatter_type,
@@ -447,19 +457,23 @@ def plot_transmission(model, mapbox_access_token=None):
         showlegend=True
     ))
 
-    fig = go.Figure(data=data, layout=layout_dict)
+    if html_only:
+        return pltly.plot(
+            dict(data=data, layout=layout_dict),
+            include_plotlyjs=False, output_type='div',
+            **PLOTLY_KWARGS
+        )
 
-    pltly.iplot(fig, **PLOTLY_KWARGS)
+    elif data:
+        pltly.iplot(dict(data=data, layout=layout_dict), **PLOTLY_KWARGS)
+
+    else:
+        print('No data to plot')
 
 
 class ModelPlotMethods:
     def __init__(self, model):
         self._model = model
-
-    def __call__(self, kind, **kwargs):
-        return plot_model(self._model, kind=kind, **kwargs)
-
-    __call__.__doc__ = plot_model.__doc__
 
     def timeseries(self, **kwargs):
         plot_timeseries(self._model, **kwargs)
@@ -475,3 +489,13 @@ class ModelPlotMethods:
         plot_transmission(self._model, **kwargs)
 
     transmission.__doc__ = plot_transmission.__doc__
+
+    def summary(self, carrier, mapbox_access_token=None):
+
+        timeseries = plot_timeseries(self._model, html_only=True, loc=dict(carriers=carrier))
+
+        capacity = plot_capacity(self._model, html_only=True, cap_type='energy_cap')
+
+        transmission = plot_transmission(self._model, html_only=True, mapbox_access_token=mapbox_access_token)
+
+        return dict(timeseries=timeseries, capacity=capacity, transmission=transmission)
