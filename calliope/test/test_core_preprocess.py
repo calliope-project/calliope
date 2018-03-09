@@ -536,6 +536,27 @@ class TestChecks:
         # should pass: geographic coordinates in both places
         build_model(override_dict=override(geographic0, geographic1), override_groups='simple_storage,one_day')
 
+    def test_milp_constraints(self):
+        """
+        If `units` is defined, but not `energy_cap_per_unit`, throw an error
+        """
+
+        # should fail: no energy_cap_per_unit
+        override1 = AttrDict.from_yaml_string("techs.test_supply_elec.constraints.units_max: 4")
+
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+
+        # should pass: energy_cap_per_unit given
+        override2 = AttrDict.from_yaml_string("""
+            techs.test_supply_elec.constraints:
+                        units_max: 4
+                        energy_cap_per_unit: 5
+            """)
+
+        build_model(override_dict=override2, override_groups='simple_supply,one_day')
+
+
 class TestDataset:
 
     # FIXME: What are we testing here?
@@ -544,7 +565,6 @@ class TestDataset:
         Timesteps must be consistent?
         """
 
-    # TODO: Are the hard-coded constraint sets actually correct?
     def test_unassigned_sets(self):
         """
         Check that all sets in which there are possible loc:techs are assigned

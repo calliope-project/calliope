@@ -43,13 +43,13 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
     if warnings:
         exceptions.warn(
             'Possible issues found during pre-processing:\n' +
-            '\n'.join(warnings)
+            '\n'.join(list(set(warnings)))
         )
 
     if errors:
         raise exceptions.ModelError(
             'Errors during pre-processing:\n' +
-            '\n'.join(errors)
+            '\n'.join(list(set(errors)))
         )
 
     return None
@@ -162,7 +162,6 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
     allowed_costs = model_run.techs[tech_id].allowed_costs
     all_defaults = list(defaults.default_tech.constraints.keys())
 
-    # TODO: Add check for energy_cap_per_unit if one of units_max, units_min or units_equals is used
     # Error if required constraints are not defined
     for r in required:
         # If it's a string, it must be defined
@@ -178,6 +177,22 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                 'all required constraints: {}'.format(tech_id, loc_id, required)
             )
             # print('{} -- {}-{}: {}, {}'.format(r, loc_id, tech_id, single_ok, multiple_ok))
+
+    # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
+    if model_run.techs[tech_id].essentials.parent == 'supply_plus':
+        if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
+            and 'charge_rate' not in tech_config.constraints.keys()):
+            errors.append(
+                '`{}` at `{}` fails to define '
+                'charge_rate, but is using storage'.format(tech_id, loc_id, required)
+            )
+    # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
+    if (any(['units_' in k for k in tech_config.constraints.keys()])
+        and 'energy_cap_per_unit' not in tech_config.constraints.keys()):
+        errors.append(
+            '`{}` at `{}` fails to define energy_cap_per_unit when specifying '
+            'technology in units_max/min/equals'.format(tech_id, loc_id, required)
+        )
 
     # Flatten required list and gather remaining unallowed constraints
     required_f = flatten_list(required)

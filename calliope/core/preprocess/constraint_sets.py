@@ -72,7 +72,12 @@ def generate_constraint_sets(model_run):
         i for i in sets.loc_techs_store
         if constraint_exists(model_run, i, 'constraints.charge_rate')
     ],
-    loc_techs_resource_capacity_constraint = sets.loc_techs_finite_resource_supply_plus,
+    loc_techs_resource_capacity_constraint = [
+        i for i in sets.loc_techs_finite_resource_supply_plus
+        if any([constraint_exists(model_run, i, 'constraints.resource_cap_equals'),
+                constraint_exists(model_run, i, 'constraints.resource_cap_max'),
+                constraint_exists(model_run, i, 'constraints.resource_cap_min')])
+    ],
     loc_techs_resource_capacity_equals_energy_capacity_constraint = [
         i for i in sets.loc_techs_finite_resource_supply_plus
         if constraint_exists(model_run, i, 'constraints.resource_cap_equals_energy_cap')
@@ -172,8 +177,9 @@ def generate_constraint_sets(model_run):
     ],
     loc_techs_update_costs_investment_units_constraint = [
         i for i in sets.loc_techs_milp
-        if any('purchase' in i
-            for i in constraint_exists(model_run, i, 'costs').as_dict_flat().keys())
+        if i in sets.loc_techs_investment_cost and
+        any(constraint_exists(model_run, i, 'costs.{}.purchase'.format(j))
+               for j in model_run.sets.costs)
     ],
     # loc_techs_purchase technologies only exist becuase they have defined a purchase cost
     loc_techs_update_costs_investment_purchase_constraint = sets.loc_techs_purchase,
@@ -184,10 +190,14 @@ def generate_constraint_sets(model_run):
 
     # conversion_plus.py
     loc_techs_balance_conversion_plus_primary_constraint = sets.loc_techs_conversion_plus,
-    loc_techs_carrier_production_max_conversion_plus_constraint = sets.loc_techs_conversion_plus,
+    loc_techs_carrier_production_max_conversion_plus_constraint = [
+        i for i in sets.loc_techs_conversion_plus
+        if i not in sets.loc_techs_milp
+    ],
     loc_techs_carrier_production_min_conversion_plus_constraint = [
         i for i in sets.loc_techs_conversion_plus
-        if constraint_exists(model_run, i, 'energy_cap_min_use')
+        if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        and i not in sets.loc_techs_milp
     ],
     loc_techs_cost_var_conversion_plus_constraint = sets.loc_techs_om_cost_conversion_plus,
     loc_techs_balance_conversion_plus_in_2_constraint = sets.loc_techs_in_2,

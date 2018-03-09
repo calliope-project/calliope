@@ -26,11 +26,12 @@ def load_constraints(backend_model):
         rule=balance_conversion_plus_primary_constraint_rule
     )
 
-    backend_model.carrier_production_max_conversion_plus_constraint = po.Constraint(
-        backend_model.loc_techs_carrier_production_max_conversion_plus_constraint,
-        backend_model.timesteps,
-        rule=carrier_production_max_conversion_plus_constraint_rule
-    )
+    if 'carrier_production_max_conversion_plus_constraint' in sets:
+        backend_model.carrier_production_max_conversion_plus_constraint = po.Constraint(
+            backend_model.loc_techs_carrier_production_max_conversion_plus_constraint,
+            backend_model.timesteps,
+            rule=carrier_production_max_conversion_plus_constraint_rule
+        )
 
     if 'carrier_production_min_conversion_plus_constraint' in sets:
         backend_model.carrier_production_min_conversion_plus_constraint = po.Constraint(

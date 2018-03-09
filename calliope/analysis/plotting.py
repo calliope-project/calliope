@@ -138,6 +138,7 @@ def plot_timeseries(
                 marker=dict(color=model._model_data.colors.loc[tech_dict].item())))
 
     if html_only:
+        del layout['title']
         return pltly.plot(
             dict(data=data, layout=layout),
             include_plotlyjs=False, output_type='div',
@@ -245,6 +246,7 @@ def plot_capacity(
             ))
 
     if html_only:
+        del layout['title']
         return pltly.plot(
             dict(data=data, layout=layout),
             include_plotlyjs=False, output_type='div',
@@ -458,6 +460,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False):
     ))
 
     if html_only:
+        del layout_dict['title']
         return pltly.plot(
             dict(data=data, layout=layout_dict),
             include_plotlyjs=False, output_type='div',
