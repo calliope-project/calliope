@@ -18,6 +18,15 @@ from calliope import exceptions
 from calliope.analysis.util import get_zoom
 
 
+PLOTLY_KWARGS = dict(
+    show_link=False,
+    config={
+        'displaylogo': False,
+        'modeBarButtonsToRemove': ['sendDataToCloud']
+    }
+)
+
+
 def plot_model(model, kind, **kwargs):
         """
         Plot model data.
@@ -146,7 +155,7 @@ def plot_timeseries(
                 legendgroup=tech,
                 marker=dict(color=model._model_data.colors.loc[tech_dict].item())))
 
-    pltly.iplot(dict(data=data, layout=layout))
+    pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
 
 
 def plot_capacity(
@@ -238,7 +247,7 @@ def plot_capacity(
                 orientation=orientation
             ))
 
-    pltly.iplot(dict(data=data, layout=layout))
+    pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
 
 
 def plot_transmission(model, mapbox_access_token=None):
@@ -440,7 +449,7 @@ def plot_transmission(model, mapbox_access_token=None):
 
     fig = go.Figure(data=data, layout=layout_dict)
 
-    pltly.iplot(fig, filename='network')
+    pltly.iplot(fig, **PLOTLY_KWARGS)
 
 
 class ModelPlotMethods:
