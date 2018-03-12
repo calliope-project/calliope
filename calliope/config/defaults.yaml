@@ -28,11 +28,6 @@ default_tech:
     essentials:
         parent: null  # Parent tech_group. Must always be defined
         name: 'Default technology'  # Name of tech, used for plotting and analysis
-<<<<<<< Updated upstream
-        # FIXME: x_map no longer exists
-=======
-        stack_weight: 100  # Used to set the vertical ordering of technologies when plotting system-wide output
->>>>>>> Stashed changes
         color: false  # Color to use when plotting results. If not defined, a random one will be chosen
         primary_carrier: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
         carrier_in: false  # Defaults to false, allows technologies to define primary carrier(s) to consume

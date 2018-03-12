@@ -6,23 +6,21 @@ from pytest import approx
 import calliope
 
 
-class TestNationalScaleExampleModel:
+class TestModelPreproccesing:
     def test_preprocess_national_scale(self):
-        model = calliope.examples.national_scale()
+        calliope.examples.national_scale()
 
     def test_preprocess_time_clustering(self):
-        model = calliope.examples.time_clustering()
+        calliope.examples.time_clustering()
 
     def test_preprocess_time_resampling(self):
-        model = calliope.examples.time_resampling()
+        calliope.examples.time_resampling()
 
-
-class TestUrbanScaleExampleModel:
     def test_preprocess_urban_scale(self):
-        model = calliope.examples.urban_scale()
+        calliope.examples.urban_scale()
 
     def test_preprocess_milp(self):
-        model = calliope.examples.milp()
+        calliope.examples.milp()
 
 
 def nationalscale_example_tester(solver='glpk', solver_io=None):
@@ -114,8 +112,29 @@ class TestUrbanScaleExampleModelSenseChecks:
         )
         model.run()
 
+        assert model.results.energy_cap.to_pandas()['X1::chp'] == approx(272.227204)
+        assert model.results.energy_cap.to_pandas()['X2::heat_pipes:N1'] == approx(197.908691)
+
+        assert model.results.carrier_prod.sum('timesteps').to_pandas()['X3::boiler::heat'] == approx(462.189531)
+        assert float(model.results.carrier_export.sum()) == approx(0)
+
+        assert float(model.results.cost.sum()) == approx(510.858739)
+
     def test_preprocess_milp(self):
         model = calliope.examples.milp(
             override_dict={'model.subset_time': '2005-01-01'}
         )
         model.run()
+
+        assert model.results.energy_cap.to_pandas()['X1::chp'] == 300
+        assert model.results.energy_cap.to_pandas()['X2::heat_pipes:N1'] == approx(188.363137)
+
+        assert model.results.carrier_prod.sum('timesteps').to_pandas()['X1::supply_gas::gas'] == approx(12363.173036)
+        assert float(model.results.carrier_export.sum()) == approx(0)
+
+        assert model.results.purchased.to_pandas()['X2::boiler'] == 1
+        assert model.results.units.to_pandas()['X1::chp'] == 1
+
+        assert float(model.results.operating_units.sum()) == 24
+
+        assert float(model.results.cost.sum()) == approx(522.829998)
