@@ -11,6 +11,7 @@ Functionality to plot model data.
 
 from calliope.core.preprocess.util import vincenty
 
+
 def get_zoom(coordinate_array, width):
     """
     If mapbox is being used for tranmission plotting, get the zoom based on the

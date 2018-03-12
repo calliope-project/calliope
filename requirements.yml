@@ -10,6 +10,7 @@ dependencies:
     - click
     - glpk=4.61
     - hdf5
+    - jinja2
     - libnetcdf
     - netcdf4
     - numexpr

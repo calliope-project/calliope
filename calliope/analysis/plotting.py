@@ -8,11 +8,16 @@ plotting.py
 Functionality to plot model data.
 
 """
+
+import os
+import re
+
 import numpy as np
 import pandas as pd
 import xarray as xr
 import plotly.offline as pltly
 import plotly.graph_objs as go
+import jinja2
 
 from calliope import exceptions
 from calliope.analysis.util import get_zoom
@@ -22,9 +27,37 @@ PLOTLY_KWARGS = dict(
     show_link=False,
     config={
         'displaylogo': False,
-        'modeBarButtonsToRemove': ['sendDataToCloud']
+        'modeBarButtonsToRemove': ['sendDataToCloud'],
     }
 )
+
+
+def plot_summary(model, out_file=None, mapbox_access_token=None):
+    timeseries = plot_timeseries(model, html_only=True)
+    capacity = plot_capacity(model, html_only=True)
+    transmission = plot_transmission(model, html_only=True, mapbox_access_token=mapbox_access_token)
+
+    with open(os.path.join(os.path.dirname(__file__), '..', 'config', 'plots_template.html'), 'r') as f:
+        html_template = jinja2.Template(f.read())
+
+    html = html_template.render(
+        model_name=model._model_data.attrs['model.name'],
+        calliope_version=model._model_data.attrs['calliope_version'],
+        solution_time=(model._model_data.attrs['solution_time'] / 60),
+        time_finished=model._model_data.attrs['time_finished'],
+        top=timeseries,
+        bottom_left=capacity,
+        bottom_right=transmission,
+    )
+
+    # Strip plotly-inserted style="..." attributes
+    html = re.sub(r'style=".+?"', '', html)
+
+    if out_file:
+        with open(out_file, 'w') as f:
+            f.write(html)
+    else:
+        return html
 
 
 def plot_timeseries(
@@ -88,7 +121,9 @@ def plot_timeseries(
     if not relevant_vars and not isinstance(array, list):
         relevant_vars = [array]
 
-    relevant_vars = set(relevant_vars).intersection([k for k in dataset.data_vars.keys()] + carriers)
+    relevant_vars = sorted(list(
+        set(relevant_vars).intersection([k for k in dataset.data_vars.keys()] + carriers)
+    ))
     # data_len is used to populate visibility of traces, for dropdown
     data_len = [0]
     data = []
@@ -207,13 +242,13 @@ def plot_timeseries(
         args = {}
         if var in carriers:
             title = 'Carrier flow'
-            y_axis_title = 'Energy produced(+)/consumed(-) (kWh)'
+            y_axis_title = 'Energy produced(+)/consumed(-)'
         elif var == 'resource':
             title = 'Available resource'
-            y_axis_title = 'Energy (kWh/m^2)'
+            y_axis_title = 'Energy (per uniit of area)'
         elif var == 'resource_con':
             title = 'Consumed resource'
-            y_axis_title = 'Energy (kWh)'
+            y_axis_title = 'Energy'
         elif var == 'cost_var':
             title = 'Variable costs'
             y_axis_title = 'Cost'
@@ -248,7 +283,7 @@ def plot_timeseries(
         if len(relevant_vars) > 1:
             buttons.append(dict(label=var, method='update', args=var_layout))
 
-    layout = dict(barmode='relative', xaxis=dict(), legend=(dict(traceorder='reversed')))
+    layout = dict(barmode='relative', xaxis=dict(), legend=(dict(traceorder='reversed')), autosize=True)
 
     # If there are multiple vars to plot, use dropdowns via 'updatemenus'
     if len(relevant_vars) > 1:
@@ -287,7 +322,7 @@ def plot_timeseries(
 
 
 def plot_capacity(
-        model, orient='horizontal', array='all',
+        model, orient='h', array='all',
         subset=dict(), sum_dims=None, squeeze=True, html_only=False, save_svg=False):
     """
     Params
@@ -295,14 +330,13 @@ def plot_capacity(
     array : str or list; default = 'all'
         options: 'all', 'results', 'inputs', the name/list of any energy capacity
         DataArray(s) from inputs/results.
-
         User can specify 'all' for all input/results capacities, 'inputs'
         for just input capacities, 'results' for just results capacities, or the
         name(s) of any data array(s) to plot (in either inputs or results).
-        In all but the last case, arrays can be picked from dropdown in visualisaiton.
+        In all but the last case, arrays can be picked from dropdown in visualisation.
         In the last case, output can be saved to SVG.
     orient : str, optional
-        'horizontal' or 'vertical' barchart
+        'h' for horizontal or 'v' for vertical barchart
     subset : dict, optional
         Dictionary by which data is selected (using xarray indexing `loc[]`).
         Keys any of ['timeseries', 'locs', 'techs', 'carriers', 'costs']).
@@ -347,7 +381,7 @@ def plot_capacity(
     # if not 'all', 'inputs', or 'results', take user input
     if not relevant_vars and not isinstance(array, list):
         relevant_vars = [array]
-    relevant_vars = set(relevant_vars).intersection(dataset.data_vars.keys())
+    relevant_vars = sorted(list(set(relevant_vars).intersection(dataset.data_vars.keys())))
     # data_len is used to populate visibility of traces, for dropdown
     data_len = [0]
     data = []
@@ -391,7 +425,7 @@ def plot_capacity(
         for tech in array_cap.techs.values:
             if tech not in dataset.techs.values:
                 continue
-            if tech in dataset.loc_techs_transmission:
+            if tech in dataset.loc_techs_transmission.values:
                 base_tech = 'transmission'
             else:
                 base_tech = dataset.inheritance.loc[{'techs': tech}].item().split('.')[0]
@@ -417,13 +451,13 @@ def plot_capacity(
     def get_cap_layout(cap, visible_data):
         args = {}
         if 'area' in cap:
-            value_axis_title = 'Installed area (m^2)'
+            value_axis_title = 'Installed area'
         elif 'units' in cap:
             value_axis_title = 'Installed units'
         elif 'storage' in cap:
-            value_axis_title = 'Installed capacity (kWh)'
+            value_axis_title = 'Installed capacity'
         else:
-            value_axis_title = 'Installed capacity (kW)'
+            value_axis_title = 'Installed capacity'
 
         args.update({value_axis: dict(title=value_axis_title)})
         if visible_data is not None:
@@ -456,7 +490,8 @@ def plot_capacity(
         var_num += 1
 
     layout = {'barmode': 'relative', location_axis: dict(title='Location'),
-              'legend': (dict(traceorder='reversed'))}
+              'legend': (dict(traceorder='reversed')),
+              'autosize': True}
 
     # If there are multiple vars to plot, use dropdowns via 'updatemenus'
     if len(relevant_vars) > 1:
@@ -690,6 +725,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
 
     if html_only:
         del layout_dict['title']
+        del layout_dict['width']
         return pltly.plot(
             dict(data=data, layout=layout_dict),
             include_plotlyjs=False, output_type='div',
@@ -699,8 +735,6 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
         PLOTLY_KWARGS.update({'image': 'svg'})
     elif data:
         pltly.iplot(dict(data=data, layout=layout_dict), **PLOTLY_KWARGS)
-
-
     else:
         print('No data to plot')
 
@@ -710,26 +744,21 @@ class ModelPlotMethods:
         self._model = model
 
     def timeseries(self, **kwargs):
-        plot_timeseries(self._model, **kwargs)
+        return plot_timeseries(self._model, **kwargs)
 
     timeseries.__doc__ = plot_timeseries.__doc__
 
     def capacity(self, **kwargs):
-        plot_capacity(self._model, **kwargs)
+        return plot_capacity(self._model, **kwargs)
 
     capacity.__doc__ = plot_capacity.__doc__
 
     def transmission(self, **kwargs):
-        plot_transmission(self._model, **kwargs)
+        return plot_transmission(self._model, **kwargs)
 
     transmission.__doc__ = plot_transmission.__doc__
 
-    def summary(self, mapbox_access_token=None):
+    def summary(self, **kwargs):
+        return plot_summary(self._model, **kwargs)
 
-        timeseries = plot_timeseries(self._model, html_only=True)
-
-        capacity = plot_capacity(self._model, html_only=True)
-
-        transmission = plot_transmission(self._model, html_only=True, mapbox_access_token=mapbox_access_token)
-
-        return dict(timeseries=timeseries, capacity=capacity, transmission=transmission)
+    summary.__doc__ = plot_summary.__doc__

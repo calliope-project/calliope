@@ -18,7 +18,7 @@ def get_subdirs(path, glob_string):
 def find_calliope_package_data():
     """Returns a list of found directories with package data files"""
     path = Path('./calliope')
-    package_data = ['config/*.yaml', 'test/common/*.yaml']
+    package_data = ['config/*.yaml', 'config/*.html', 'test/common/*.yaml']
     for subdir_level in ['*', '*/*', '*/*/*']:
         for example_dir in get_subdirs(path, 'example_models/' + subdir_level):
             package_data.append(str(example_dir) + '/*.csv')
@@ -50,7 +50,8 @@ setup(
         "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
-        "plotly >= 2.2.3"
+        "plotly >= 2.2.3",
+        "jinja2 >= 2.10"
     ],
     entry_points={
         'console_scripts': [

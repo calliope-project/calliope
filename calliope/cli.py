@@ -144,13 +144,14 @@ def new(path, template, debug):
 @click.option('--override_file')
 @click.option('--save_netcdf')
 @click.option('--save_csv')
+@click.option('--save_plots')
 @click.option('--save_logs')
 @_debug
 @_pdb
 @_profile
 @_profile_filename
-def run(config_file, override_file, save_netcdf, save_csv, save_logs,
-        debug, pdb, profile, profile_filename):
+def run(config_file, override_file, save_netcdf, save_csv, save_plots,
+        save_logs, debug, pdb, profile, profile_filename):
     """Execute the given model."""
     if debug:
         print(_get_version())
@@ -188,6 +189,9 @@ def run(config_file, override_file, save_netcdf, save_csv, save_logs,
         if save_netcdf:
             print('Saving NetCDF results to file: {}'.format(save_netcdf))
             model.to_netcdf(save_netcdf)
+        if save_plots:
+            print('Saving HTML file with plots to: {}'.format(save_plots))
+            model.plot.summary(out_file=save_plots)
         print_end_time(start_time)
 
 
