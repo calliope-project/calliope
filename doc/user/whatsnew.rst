@@ -262,7 +262,7 @@ Location definition
 
 In version `0.5`, location definitions included a list of technologies to permit at that location(s). An additional `overrides` key permitted per-location changes to model-wide technology definitions.
 
-In `0.6`, "overriding" refers only to model-wide overrides applied :ref:`as described above <0.6_overrides>`. At each location, `techs` simply lists all allowed technologies and any possible changes to model-wide configurationi values to apply at this location only, as shown below:
+In `0.6`, "overriding" refers only to model-wide overrides applied :ref:`as described above <0.6_overrides>`. At each location, `techs` simply lists all allowed technologies and any possible changes to model-wide configuration values to apply at this location only, as shown below:
 
 Old:
 
@@ -387,9 +387,9 @@ New:
 Pre-processed data
 ==================
 
-Version `0.5` kept pre-processed data in either a dictionary (static data), pandas dataframe (location data) or an xarray dataset (timeseries data). To view a value that would be used in optimisation, the user would call `model.get_option()`. Similarly, to edit a value before running the model, a user could use `model.set_option()`.
+Version `0.5` kept pre-processed data in either a dictionary (static data), pandas dataframe (location data) or an `xarray Dataset <http://xarray.pydata.org/en/stable/generated/xarray.Dataset.html>`_ (timeseries data). To view a value that would be used in optimisation, the user would call `model.get_option()`. Similarly, to edit a value before running the model, a user could use `model.set_option()`.
 
-Now, all pre-processed data is held in a single unified xarray dataset: `model.inputs`.
+Now, all pre-processed data is held in a single unified `xarray Dataset <http://xarray.pydata.org/en/stable/generated/xarray.Dataset.html>`_: `model.inputs`.
 
 To view and edit this data before it is sent to the solver, a user need only use standard xarray functionality (see their `documentation <http://xarray.pydata.org/en/stable/>`_ for more information).
 
@@ -403,12 +403,14 @@ Plotting functions can now be called directly on the model and now use `Plotly <
 
 Changes are:
 
-``calliope.analysis.plot_capacity(model.solution)`` -> ``model.plot('capacity', 'energy_cap')``
+Old: ``calliope.analysis.plot_capacity(model.solution)``
+New: ``model.plot.capacity(cap_type='energy_cap')``
 
-``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')`` -> ``model.plot('transmission', 'carrier_prod')``
+Old: ``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')``
+New: ``model.plot.transmission()``
 
-``calliope.analysis.plot_carrier_production(model.solution, carrier='power')`` ->
-``model.plot('timeseries', 'carrier_prod', sum_dims=['locs'], loc=dict(carriers='power'))``
+Old: ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')``
+New: ``model.plot.timeseries(loc=dict(carriers='power'))``
 
 Operational mode
 ================
@@ -431,12 +433,12 @@ This functionality will not find all possible user input errors, as this is an i
 Pre-processed model
 ===================
 
-Having the pre-processed model available in one xarray Dataset allows a model to be saved to file *before* being run. Although pre-processing is quick, this allows a user to avoid pre-processing the same file multiple times, as they can instead read in a previously saved NetCDF file fully describing the model.
+Having the pre-processed model available in one `xarray Dataset <http://xarray.pydata.org/en/stable/generated/xarray.Dataset.html>`_ allows a model to be saved to file *before* being run. Although pre-processing is quick, this allows a user to avoid pre-processing the same file multiple times. Instead, they can read in a previously saved NetCDF file which fully describes the model.
 
 Multiple backends
 =================
 
-Our primary solver backend is `Pyomo <http://www.pyomo.org/>`_. However, we have now extracted all pre-processing stages from the backend, with all data for a model run being stored in a single xarray Dataset. This permits the implementation of additional backends.
+Our primary solver backend is `Pyomo <http://www.pyomo.org/>`_. However, we have now extracted all pre-processing stages from the backend, with all data for a model run being stored in a single `xarray Dataset <http://xarray.pydata.org/en/stable/generated/xarray.Dataset.html>`_. This permits the implementation of additional backends.
 
 One such backend currently in an experimental state is based on `JuMP <https://github.com/JuliaOpt/JuMP.jl>`_ in the Julia programming language. Linking Calliope to Julia is a long-term project, for which we welcome any contributions.
 
