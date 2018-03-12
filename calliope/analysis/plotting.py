@@ -23,6 +23,7 @@ from calliope import exceptions
 from calliope.analysis.util import get_zoom
 from itertools import product
 
+
 PLOTLY_KWARGS = dict(
     show_link=False,
     config={
@@ -50,9 +51,14 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
     """
     timeseries = plot_timeseries(model, html_only=True)
     capacity = plot_capacity(model, html_only=True)
-    transmission = plot_transmission(model, html_only=True, mapbox_access_token=mapbox_access_token)
+    transmission = plot_transmission(
+        model, html_only=True, mapbox_access_token=mapbox_access_token
+    )
 
-    with open(os.path.join(os.path.dirname(__file__), '..', 'config', 'plots_template.html'), 'r') as f:
+    template_path = os.path.join(
+        os.path.dirname(__file__), '..', 'config', 'plots_template.html'
+    )
+    with open(template_path, 'r') as f:
         html_template = jinja2.Template(f.read())
 
     html = html_template.render(
@@ -136,8 +142,9 @@ def plot_timeseries(
     if not relevant_vars and not isinstance(array, list):
         relevant_vars = [array]
 
-    relevant_vars = sorted(list(
-        set(relevant_vars).intersection([k for k in dataset.data_vars.keys()] + carriers)
+    # Ensure carriers are at the front of the relevant_vars list
+    relevant_vars = sorted(carriers) + sorted(list(
+        set(relevant_vars).intersection([k for k in dataset.data_vars.keys()])
     ))
     # data_len is used to populate visibility of traces, for dropdown
     data_len = [0]
@@ -256,11 +263,11 @@ def plot_timeseries(
 
         args = {}
         if var in carriers:
-            title = 'Carrier flow'
-            y_axis_title = 'Energy produced(+)/consumed(-)'
+            title = 'Carrier flow: {}'.format(var)
+            y_axis_title = 'Energy produced(+) / consumed(-)'
         elif var == 'resource':
             title = 'Available resource'
-            y_axis_title = 'Energy (per uniit of area)'
+            y_axis_title = 'Energy (per unit of area)'
         elif var == 'resource_con':
             title = 'Consumed resource'
             y_axis_title = 'Energy'
@@ -268,7 +275,7 @@ def plot_timeseries(
             title = 'Variable costs'
             y_axis_title = 'Cost'
         else:
-            title = y_axis_title = '{}'.format(var)
+            title = y_axis_title = '{}'.format(var).capitalize()
         args.update({'yaxis': dict(title=y_axis_title), 'title': title})
         if visible_data is not None:
             return [{'visible': list(visible_data)}, args]
@@ -298,7 +305,11 @@ def plot_timeseries(
         if len(relevant_vars) > 1:
             buttons.append(dict(label=var, method='update', args=var_layout))
 
-    layout = dict(barmode='relative', xaxis=dict(), legend=(dict(traceorder='reversed')), autosize=True)
+    layout = dict(
+        barmode='relative', xaxis=dict(),
+        legend=(dict(traceorder='reversed')), autosize=True,
+        title=buttons[0]['args'][1]['title']
+    )
 
     # If there are multiple vars to plot, use dropdowns via 'updatemenus'
     if len(relevant_vars) > 1:
@@ -470,11 +481,20 @@ def plot_capacity(
         elif 'units' in cap:
             value_axis_title = 'Installed units'
         elif 'storage' in cap:
-            value_axis_title = 'Installed capacity'
+            value_axis_title = 'Installed storage capacity'
+        elif 'energy' in cap:
+            value_axis_title = 'Installed energy capacity'
         else:
             value_axis_title = 'Installed capacity'
 
-        args.update({value_axis: dict(title=value_axis_title)})
+        if '_max' in cap:
+            title = 'Maximum ' + value_axis_title.lower()
+        elif '_min' in cap:
+            title = 'Minimum ' + value_axis_title.lower()
+        else:
+            title = value_axis_title
+
+        args.update({value_axis: dict(title=value_axis_title), 'title': title})
         if visible_data is not None:
             return [{'visible': list(visible_data)}, args]
         else:
@@ -504,9 +524,12 @@ def plot_capacity(
 
         var_num += 1
 
-    layout = {'barmode': 'relative', location_axis: dict(title='Location'),
-              'legend': (dict(traceorder='reversed')),
-              'autosize': True}
+    layout = {
+        'barmode': 'relative', location_axis: dict(title='Location'),
+        'legend': (dict(traceorder='reversed')),
+        'autosize': True,
+        'title': buttons[0]['args'][1]['title']
+    }
 
     # If there are multiple vars to plot, use dropdowns via 'updatemenus'
     if len(relevant_vars) > 1:
