@@ -33,6 +33,21 @@ PLOTLY_KWARGS = dict(
 
 
 def plot_summary(model, out_file=None, mapbox_access_token=None):
+    """
+    Plot a summary containing timeseries, installed capacities, and
+    transmission plots. Returns a HTML string if ``out_file`` not
+    given, else None.
+
+    Params
+    ------
+    out_file : str, optional
+        Path to output file to save HTML to.
+    mapbox_access_token : str, optional
+        (passed to plot_transmission) If given and a valid Mapbox API
+        key, a Mapbox map is drawn for lat-lon coordinates, else
+        (by default), a more simple built-in map.
+
+    """
     timeseries = plot_timeseries(model, html_only=True)
     capacity = plot_capacity(model, html_only=True)
     transmission = plot_transmission(model, html_only=True, mapbox_access_token=mapbox_access_token)
