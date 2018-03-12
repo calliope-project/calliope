@@ -11,7 +11,6 @@ techs:
         essentials:
             name: 'Combined cycle gas turbine'
             color: '#FDC97D'
-            stack_weight: 200
             parent: supply
             carrier_out: power
         constraints:
@@ -30,7 +29,6 @@ techs:
         essentials:
             name: 'Concentrating solar power'
             color: '#99CB48'
-            stack_weight: 100
             parent: supply_plus
             carrier_out: power
         constraints:

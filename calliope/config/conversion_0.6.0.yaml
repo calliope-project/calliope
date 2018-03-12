@@ -36,7 +36,7 @@ model_config:
 tech_config:
     parent: essentials.parent
     name: essentials.name
-    stack_weight: essentials.stack_weight
+    stack_weight: null  # stack_weight is no longer supported
     color: essentials.color
     x_map: null  # now achieved by directly specifying file=filename.csv:column
     primary_carrier: essentials.primary_carrier

@@ -37,7 +37,6 @@ tech_groups:
         allowed_costs: ['interest_rate', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
-            stack_weight: 0
         constraints:
             resource: inf
             resource_unit: power
@@ -48,7 +47,6 @@ tech_groups:
         allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
-            stack_weight: 0
         constraints:
             resource: inf
             resource_unit: power
@@ -60,7 +58,6 @@ tech_groups:
         allowed_costs: []
         essentials:
             parent: null
-            stack_weight: 0
         constraints:
             resource_unit: power
             force_resource: true
@@ -71,7 +68,6 @@ tech_groups:
         allowed_costs: ['om_prod']
         essentials:
             parent: null
-            stack_weight: 0
             color: '#666666'
         constraints:
             resource: inf
@@ -87,7 +83,6 @@ tech_groups:
         allowed_costs: ['interest_rate', 'storage_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
-            stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
@@ -98,7 +93,6 @@ tech_groups:
         allowed_costs: ['interest_rate', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'purchase_per_distance', 'depreciation_rate']
         essentials:
                 parent: null
-                stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
@@ -108,7 +102,6 @@ tech_groups:
         allowed_costs: ['interest_rate', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
-            stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true
@@ -118,7 +111,6 @@ tech_groups:
         allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
-            stack_weight: 0
         constraints:
             energy_prod: true
             energy_con: true

@@ -374,7 +374,7 @@ def tech_specific_to_dataset(model_run):
     """
     Extract technology (location inspecific) information from the processed
     dictionary (model.model_run) and return an xarray Dataset with DataArray
-    variables describing color, inheritance chain and stack_weight information.
+    variables describing color and inheritance chain information.
 
     Parameters
     ----------
@@ -401,8 +401,6 @@ def tech_specific_to_dataset(model_run):
             tech = tech.split(':')[0]
         data_dict['colors']['data'].append(model_run.techs[tech].get_key(
             'essentials.color'))
-        data_dict['stack_weights']['data'].append(model_run.techs[tech].get_key(
-            'essentials.stack_weight'))
         data_dict['inheritance']['data'].append('.'.join(
             model_run.techs[tech].get_key('inheritance')))
         data_dict['names']['data'].append(model_run.techs[tech].get_key(
