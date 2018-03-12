@@ -49,19 +49,19 @@ class Model(object):
     """
     def __init__(self, config, model_data=None, *args, **kwargs):
         """
-        Returns a new Model from either the path to a run configuration file
-        or a dict containing 'run' and 'model' keys fully specifying the
-        model.
+        Returns a new Model from either the path to a YAML model
+        configuration file or a dict fully specifying the model.
 
         Parameters
         ----------
         config : str or dict or AttrDict
-            If str, must be the path to a run configuration file.
-            If dict or AttrDict, must contain two top-level keys, model and run,
-            specifying the model and run configuration respectively.
+            If str, must be the path to a model configuration file.
+            If dict or AttrDict, must fully specify the model.
         model_data : Dataset, optional
             Create a Model instance from a fully built model_data Dataset.
-            Only used if `config` is explicitly set to None.
+            This is only used if `config` is explicitly set to None
+            and is primarily used to re-create a Model instance from
+            a model previously saved to a NetCDF file.
 
         """
         self._timings = {}
@@ -132,15 +132,16 @@ class Model(object):
 
     def run(self, force_rerun=False):
         """
-        Run the model. if force_rerun is True, any existing results will be
-        overwritten.
+        Run the model. If ``force_rerun`` is True, any existing results
+        will be overwritten.
 
         """
 
         if hasattr(self, 'results') and not force_rerun:
             raise exceptions.ModelError(
-                'This model object already has results, set force_rerun to True'
-                ' to force the results to be overwritten with a new run.'
+                'This model object already has results. '
+                'Use model.run(force_rerun=True) to force'
+                'the results to be overwritten with a new run.'
             )
 
         if self._model_data.attrs['model.mode'] == 'operate' and not self._model_data.attrs['allow_operate_mode']:
@@ -170,8 +171,13 @@ class Model(object):
 
     def get_formatted_array(self, var):
         """
-        Return an xr.DataArray with locs, techs, and carriers as separate
-        dimensions.
+        Return an xr.DataArray with locs, techs, and carriers as
+        separate dimensions.
+
+        Params
+        ------
+        var : str
+            Decision variable for which to return a DataArray.
 
         """
         if var not in self._model_data.data_vars:
@@ -182,7 +188,7 @@ class Model(object):
     def to_netcdf(self, path):
         """
         Save complete model data (inputs and, if available, results)
-        to a NetCDF file at the given path.
+        to a NetCDF file at the given ``path``.
 
         """
         io.save_netcdf(self._model_data, path)
@@ -190,7 +196,7 @@ class Model(object):
     def to_csv(self, path):
         """
         Save complete model data (inputs and, if available, results)
-        as a set of CSV files to the given path.
+        as a set of CSV files to the given ``path``.
 
         """
         io.save_csv(self._model_data, path)
