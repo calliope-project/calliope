@@ -524,8 +524,8 @@ The following table lists all available technology constraint settings and their
 
 .. csv-table::
    :file: includes/default_constraints.csv
-   :header: Setting,Default,Details
-   :widths: 10, 5, 30
+   :header: Setting,Default,Name,Unit,Comments
+   :widths: 10, 5, 10, 5, 15
    :stub-columns: 0
 
 .. _config_reference_costs:
@@ -537,8 +537,8 @@ These are all the available costs, which are set to :math:`0` by default for eve
 
 .. csv-table::
    :file: includes/default_costs.csv
-   :header: Setting,Default,Details
-   :widths: 10, 5, 30
+   :header: Setting,Default,Name,Unit,Comments
+   :widths: 10, 5, 10, 5, 15
    :stub-columns: 0
 
 Technology depreciation settings apply when calculating levelized costs. The interest rate and life times must be set for each technology with investment costs.

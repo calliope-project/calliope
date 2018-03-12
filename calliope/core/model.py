@@ -143,7 +143,7 @@ class Model(object):
                 ' to force the results to be overwritten with a new run.'
             )
 
-        if self._model_data.attrs['model.mode'] == 'operate' and not self._model_data.attrs['model.operation.safe']:
+        if self._model_data.attrs['model.mode'] == 'operate' and not self._model_data.attrs['allow_operate_mode']:
             raise exceptions.ModelError(
                 'Unable to run this model in operational mode, probably because '
                 'there exist non-uniform timesteps (e.g. from time masking)'

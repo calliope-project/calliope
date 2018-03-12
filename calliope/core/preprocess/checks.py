@@ -514,19 +514,19 @@ def check_operate_params(model_data):
                 'in loc_techs_store, for use in iterative optimisation'
             )
 
-    if 'model.operation.safe' not in model_data.attrs.keys():
+    if 'allow_operate_mode' not in model_data.attrs.keys():
         daily_timesteps = [
             model_data.timestep_resolution.loc[i].values
             for i in np.unique(model_data.timesteps.to_index().strftime('%Y-%m-%d'))
         ]
         if not np.all(daily_timesteps == daily_timesteps[0]):
-            model_data.attrs['model.operation.safe'] = False
+            model_data.attrs['allow_operate_mode'] = 0
             errors.append(
                 'Operational mode requires the same timestep resolution profile '
                 'to be emulated on each date'
             )
         else:
-            model_data.attrs['model.operation.safe'] = True
+            model_data.attrs['allow_operate_mode'] = 1
 
     try:
         window = model_data.attrs['model.operation.window']

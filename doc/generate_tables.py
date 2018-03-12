@@ -20,11 +20,18 @@ def get_section(commented_map):
     result = []
     for k, v in commented_map.items():
         comment = commented_map.ca.items[k][2].value.strip('#').strip()
+        if '¦' in comment:
+            comment = comment.split('¦')
+            comment[0] = comment[0].replace('name:', '').strip()
+            comment[1] = comment[1].replace('unit:', '').strip()
+            comment[2] = comment[2].strip()
+        else:
+            comment = [comment]
         # Special case: empty dict gets turned into CommentedMap,
         # turn it back
         if isinstance(v, yaml.comments.CommentedMap):
             v = {}
-        result.append((k, v, comment))
+        result.append((k, v, *comment))
     return result
 
 

@@ -203,7 +203,7 @@ def resample(data, timesteps, resolution):
 
     # repopulate the attribute dictionary, as it will have been lost along the way
     data_rs.attrs.update(data.attrs)
-    data_rs.attrs['model.operation.safe'] = True  # Resampling still permits operational mode
+    data_rs.attrs['allow_operate_mode'] = 1  # Resampling still permits operational mode
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
@@ -211,7 +211,7 @@ def resample(data, timesteps, resolution):
         data_rs = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_rs)
         data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
-        data_rs.attrs['model.operation.safe'] = False
+        data_rs.attrs['allow_operate_mode'] = 0
 
     return data_rs
 
