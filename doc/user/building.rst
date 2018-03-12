@@ -2,160 +2,205 @@
 Building a model
 ================
 
-This section proves an overview of how a model is built using Calliope.
+In short, a Calliope model works like this: **supply technologies** can take a **resource** from outside of the modeled system and turn it into a specific energy **carrier** in the system. The model specifies one or more **locations** along with the technologies allowed at those locations. **Transmission technologies** can move energy of the same carrier from one location to another, while **conversion technologies** can convert one carrier into another at the same location. **Demand technologies** remove energy from the system, while **storage technologies** can store energy at a specific location. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
 
-Calliope allows a modeler to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base technologies, :ref:`which are described below <technology_types>`. Technologies can take a **resource** from outside of the modeled system and turn it into a specific energy **carrier** in the system. These technologies, together with the **locations** specified in the model, result in a set of **nodes**: the energy balance equations indexed over the set of technologies and locations.
+In more technical terms, Calliope allows a modeller to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base technologies -- ``supply``, ``supply_plus``, ``demand``, ``conversion``, ``conversion_plus``, and ``transmission``. The base technologies are described in more detail in the :ref:`reference section <technology_types>`.
 
+-------------------------
+Files that define a model
+-------------------------
 
------------
-Terminology
------------
+Calliope models are defined through YAML files, which are both human-readable and computer-readable (see :ref:`yaml_format` for details on this format), and CSV files (a simple tabular format) for time series data.
 
-The terminology defined here is used throughout the documentation and the model code and configuration files:
+It makes sense to collect all files belonging to a model inside a single model directory. The layout of that directory typically looks roughly like this (``+`` denotes directories, ``-`` files):
 
-* **Technology**: a technology that produces, consumes, converts or transports energy
-* **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
-* **Node**: a combination of technology and location resulting in specific energy balance equations (:ref:`see below <node_energy_balance>`)
-* **Resource**: a source or sink of energy that can (or must) be used by a technology to introduce into or remove energy from the system
-* **Carrier**: an energy carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
+.. code-block:: text
 
-As more generally in constrained optimization, the following terms are also used:
+    + example_model
+        + model_config
+            - locations.yaml
+            - techs.yaml
+        + timeseries_data
+            - solar_resource.csv
+            - electricity_demand.csv
+        - model.yaml
+        - overrides.yaml
 
-* Parameter: a fixed coefficient that enters into model equations
-* Variable: a variable coefficient (decision variable) that enters into model equations
-* Set: an index in the algebraic formulation of the equations
-* Constraint: an equality or inequality expression that constrains one or several variables
+While it is possible to define the entire model in a single YAML file, it makes sense for purposes of readability to break up the definition into multiple files. A complete listing of the files in the included example models is available in :doc:`example_models`, showing what such a structure looks like in practice.
 
-----------
-Index sets
-----------
+Inside the ``timeseries_data`` directory, timeseries are stored as CSV files (the location of this directory can be specified in the model configuration, e.g. in ``model.yaml``). For more details specifying time series data, refer to :ref:`configuration_timeseries` in the reference section.
 
-Most parameters, variables, and constraints are formulated with respect to at least some of the indices below:
+In the above example, the files ``model.yaml``, ``locations.yaml`` and ``techs.yaml`` together are the model definition.
 
-* ``carriers``: carriers
-* ``techs``: technologies
-* ``locs``: locations
-* ``timesteps``: time steps
-* ``costs``: cost classes
+.. Note::
 
-In some cases, these index sets may have only a single member. For example, if only the power system is modeled, the set ``carriers`` will have a single member, ``power``.
+   The easiest way to create a new model is to use the ``calliope new`` command, which makes a copy of one of the built-in examples models::
 
-When processed, these sets are often concatenated to avoid sparse matrices. For instance, if a technology ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then we will specify parameters for just the ``loc::tech`` ``X1::boiler``. This can be extended to parameters which also consider ``carriers``, such that we would have a ``loc::tech::carrier`` ``X1::boiler::heat`` (avoiding empty parameter values for ``power``, as the boiler never considers that enery carrier).
+   $ calliope new my_new_model
 
-.. _technology_types:
+   This creates a new directory, ``my_new_model``, in the current working directory.
 
-----------------
-Technology types
-----------------
+   By default, ``calliope new`` uses the national-scale example model as a template. To use a different template, you can specify the example model to use, e.g.: ``--template=urban_scale``.
 
-Each technology (that is, each member of the set ``techs``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of seven abstract base technologies (see :ref:`configuration_techs` in the model configuration section for more details on this inheritance model):
+-------------------------------
+Model configuration (``model``)
+-------------------------------
 
-* Supply: Supplies energy from a resource to a carrier (a source) (base technology: ``supply``)
-* Supply_plus: A more feature rich version of ``supply``. It can have storage of resource before conversion to carrier, can define an additional secondary resource, and can have several more intermediate loss factors (base technology: ``supply_plus``)
-* Demand: Acts like supply but with a resource that is negative (a sink). Draws energy from a carrier to satisfy a resource demand (base technology: ``demand``)
-* Conversion: Converts energy from one carrier to another, can have neither resource nor storage associated with it (base technology: ``conversion``)
-* Conversion_plus: A more feature rich version of ``conversion``. There can be several carriers in, converted to several carriers out (base technology: ``conversion_plus``)
-* Storage: Can store energy of a specific carrier, cannot have any resource (base technology: ``storage``)
-* Transmission: Transports energy of a specific carrier from one location to another, can have neither resource nor storage (base technology: ``transmission``)
+The model configuration specifies all aspects of the model to run. It is structured into several top-level headings (keys in the YAML file): ``model``, ``techs``, ``locations``, ``links``, and ``run``. We will discuss each of these in turn, starting with ``model``:
 
-The internal definition of these abstract base technologies is given in the :ref:`model configuration reference <abstract_base_tech_definitions>`.
+.. code-block:: yaml
 
-------------
-Cost classes
-------------
+    model:
+        name: 'My energy model'
+        mode: plan
+        timeseries_data_path: 'timeseries_data'
+        reserve_margin:
+            power: 0
+        subset_time: ['2005-01-01', '2005-01-05']
 
-Costs are modeled in Calliope via *cost classes*. By default, only one classes is defined: ``monetary``.
+Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), the most important part of the ``model`` section is ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``).
 
-Technologies can define costs for components (installed capacity), for operation & maintenance, and for export for any cost class. Costs can be given as negative values, which defines a revenue rather than a cost.
+In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration. In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm (see :ref:`config_reference_model_wide` for the settings that control the receding horizon)
 
-The primary cost class, ``monetary``, is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one cost parameter, as it would be considered free otherwise. By default, any cost not specified is assumed to be zero.
+To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``energy_cap_equals``. In the absence of ``energy_cap_equals``, constraints given as ``energy_cap_max`` are assumed to be fixed in operational mode.
 
-Only the ``monetary`` cost class is entered into the default objective function, but other cost classes can be defined for accounting purposes, e.g. ``emissions`` to account for greenhouse gas emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology (see the :doc:`model configuration section <ref_model_config>` for more detail on this).
+To speed up model runs, the above example specifies a time subset to run the model over only five days of time series data (``subset_time: ['2005-01-01', '2005-01-05']``)-- this is entirely optional. Usually, a full model will contain at least one year of data, but subsetting time can be useful to speed up a model for testing purposes.
 
-To add additional cost classes to the objective function (e.g. ``emissions``), a custom objective function would need to be created. See :ref:`config_reference_model_wide` in model configuration for more details.
+For more details on the available options, see the national-scale example's :ref:`full file listing <examplemodels_nationalscale_settings>`, and :doc:`ref_config_listing`.
 
-Revenue
--------
+------------------------
+Technologies (``techs``)
+------------------------
 
-It is possible to specify revenues for technologies simply by setting a negative cost value. For example, to consider a feed-in tariff for PV generation, it could be given a negative operational cost equal to the real operational cost minus the level of feed-in tariff received.
+The ``techs`` section in the model configuration specifies all of the model's technologies. In our current example, this is in a separate file, ``model_config/techs.yaml``, which is imported into the main ``model.yaml`` file alongside the file for locations described further below:
 
---------------------------------------------------
-Putting technologies and locations together: Nodes
---------------------------------------------------
+.. code-block:: yaml
 
-In the model definition, locations can be defined, and for each location (or for groups of locations), technologies can be permitted. The details of this are laid out in the :doc:`model configuration section <ref_model_config>`.
+    import:
+        - 'model_config/techs.yaml'
+        - 'model_config/locations.yaml'
 
-A *node* is the combination of a specific location and technology, and is how Calliope internally builds the model. For a given location, ``loc``, and technology, ``tech``, a set of equations defined over ``loc::tech`` models that specific node.
+The following example shows the definition of a ``ccgt`` technology, i.e. a combined cycle gas turbine that delivers electricity:
 
-The most important node variables are laid out below, but more detail is also available in the section :doc:`ref_formulation`.
+.. code-block:: yaml
 
-.. _node_energy_balance:
+    ccgt:
+        essentials:
+            name: 'Combined cycle gas turbine'
+            color: '#FDC97D'
+            parent: supply
+            carrier_out: power
+        constraints:
+            resource: inf
+            energy_eff: 0.5
+            energy_cap_max: 40000  # kW
+            energy_cap_max_systemwide: 100000  # kW
+            energy_ramping: 0.8
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                energy_cap: 750  # USD per kW
+                om_con: 0.02  # USD per kWh
 
--------------------
-Node energy balance
--------------------
+Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its energy carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
 
-The basic formulation of each node uses a set of energy balance equations. Depending on the technology type, different energy balance variables are used:
+The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the resource is set to infinite via ``inf``). A full list of all possible constraints is given in :ref:`config_reference_constraints`.
 
-* ``storage(loc::tech, timestep)``: storage level at time ``timestep``
-    This is used for ``storage`` and ``supply_plus`` technologies.
-* ``resource(loc::tech, timestep)``: resource to technology (+ production) at time ``timestep``. If storage is defined for ``supply_plus``, this is resource to storage flow.
-    This is used for ``supply_plus`` technologies.
-* ``carrier_prod(loc::tech::carrier, timestep)``: production of a given energy carrier by a technology (+ supply) at time ``timestep``.
-    This is used for all technologies, except ``demand``.
-* ``c_con(loc::tech::carrier, timestep)``: consumption of a given energy carrier by a technology at time ``timestep``
-    This is used for all technologies, except ``supply`` and ``supply_plus``.
+The ``costs`` section gives costs for the technology. Calliope uses the concept of "cost classes" to allow accounting for more than just monetary costs. The above example specifies only the ``monetary`` cost class, but any number of other classes could be used, for example ``co2`` to account for emissions. See :ref:`config_reference_costs` for the full range of cost configuration options available.
 
-The resulting losses associated with energy balancing also depend on the technology type. Each technology node is mapped here, with details on interactions given in :doc:`ref_model_config`.
+See the :doc:`tutorials <tutorials>` and the :doc:`built-in examples <ref_example_models>` for some other examples of technology definitions, including the use of time series data.
 
-.. figure:: images/nodes.*
-   :alt: Layout of a various node and their energy balance
+Allowing for unmet demand
+-------------------------
 
-   The layout of nodes, and their energy balance variables, associated with each technology type. The outward arrows show where losses occur. Depending on a technology, some of these steps may be skipped. For example, most ``supply_plus`` technologies will have no parasitic losses.
+For a model to find a feasible solution even when in one or several timesteps, insufficient supply is available to meet demand, it is a good idea to always include a backstop technology that can provide extra supply to meet such unmet demand. In Calliope, such technologies can be added by defining a simple technology that inherits from the ``unmet_demand`` base technology:
 
-Each node can also have the following capacity variables:
+.. code-block:: yaml
 
-* ``storage_cap(loc::tech)``: installed storage capacity
-    This is used for ``storage`` and ``supply_plus`` technologies.
-* ``resource_cap(loc::tech)``: installed resource to storage conversion capacity
-    This is used for ``supply_plus`` technologies.
-* ``resource_area(loc::tech)``: installed resource collector area
-    This is used for ``supply``, ``supply_plus``, and ``demand`` technologies.
-* ``energy_cap(loc::tech)``: installed storage to carrier conversion capacity
-    This is used for all technologies.
+    unmet_demand_power:
+        essentials:
+            name: 'Unmet power demand'
+            parent: unmet_demand
+            carrier: power
 
-.. Note:: For nodes that have an internal (parasitic) energy consumption, ``energy_cap_net`` is also included in the solution. This specifies the net conversion capacity, while ``energy_cap`` is gross capacity.
+This ``unmet_demand_power`` technology will automatically have a very high cost so that it is not used except when absolutely necessary.
 
-When defining a technology, it must be given at least some constraints, that is, options that describe the functioning of the technology. If not specified, all of these are inherited from the default technology definition (with default values being ``0`` for capacities and ``1`` for efficiencies). Some examples of such options are:
+----------------------------------------------
+Locations and links (``locations``, ``links``)
+----------------------------------------------
 
-* ``resource(loc::tech, timestep)``: available resource (+ source, - sink)
-* ``storage_cap_max(loc::tech)``: maximum storage capacity
-* ``storage_loss(loc::tech, timestep)``: storage loss rate
-* ``resource_area_max(loc::tech)``: maximum resource collector area
-* ``resource_eff(loc::tech)``: resource efficiency
-* ``resource_cap_max(loc::tech)``: maximum resource to storage conversion capacity
-* ``energy_eff(loc::tech, timestep)``: resource/storage/carrier_in to carrier_out conversion efficiency
-* ``energy_cap_max(loc::tech)``: maximum installed carrier conversion capacity, applied to carrier_out
+A model can specify any number of locations. These locations are linked together by transmission technologies. By consuming an energy carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
 
-.. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`ref_model_config` for details on this. Once processed in Calliope, all constraints will be indexed over location::technology sets.
+The ``locations`` section specifies each location:
 
-Finally, each node tracks its costs (+ costs, - revenue), formulated in two constraints (more details in the :doc:`ref_formulation` section):
+.. code-block:: yaml
 
-* ``cost_investment``: static investment costs, for construction and fixed operational and maintenance (O&M) (i.e., costs per unit of installed capacity)
-* ``cost_var``: variable O&M and export costs (i.e., costs per produced unit of output)
+    locations:
+        region1:
+            coordinates: {lat: 40, lon: -2}
+            techs:
+                unmet_demand_power:
+                demand_power:
+                ccgt:
+                    constraints:
+                        energy_cap_max: 30000
 
-.. Note:: Efficiencies, available resources, and costs can be defined to vary in time. Equally (and more likely) they can be given as single values. For more detail on time-varying versus constant values, see :ref:`the corresponding section <time_varying_vs_constant_parameters>` in the model formulation chapter.
+Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific constraints. If given, location-specific constraints supersede any model-wide constraints a technology defines in the ``techs`` section for that location.
 
--------------------
-Linking locations
--------------------
-Locations are linked together by transmission technologies. By consuming an energy carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
+The ``links`` section specifies possible transmission links between locations in the form ``location1,location2``:
 
-.. figure:: images/nodes_network.*
-   :alt: Layout of linked locations
+.. code-block:: yaml
 
-   Schematic of location linking, including interaction of resource, nodes, and energy carriers. The dashed box defines the system under consideration. Resource flows (green) are lossless, whereas losses can occur along transmission links (black).
+    links:
+        region1,region2:
+            techs:
+                ac_transmission:
+                    constraints:
+                        energy_cap_max: 10000
 
-Transmission links are considered by the system as nodes at each end of the link, with the same technology at each end. In this regard, the same nodal energy balance equations apply. Additionally, the user can utilise per-distance constraints and costs. For more information on available constraints/costs, see the :doc:`ref_model_config` section.
+In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given model-wide constraints such as costs. As in the case of locations, the ``links`` section can specify per-link constraints that supersede any model-wide constraints.
 
-The next section is a brief tutorial. Following this, :doc:`ref_formulation` details the constraints that actually implement all these formulations mathematically. The section following it, :doc:`ref_model_config`, details how a model is configured, and how the various components outlined here are defined in a working model.
+The modeller can also specify a distance for each link, and use per-distance constraints and costs for transmission technologies. For more information on all available constraints and costs, see :ref:`config_reference_constraints` and :ref:`config_reference_costs`.
+
+---------------------------
+Run configuration (``run``)
+---------------------------
+
+The only required setting in the run configuration is the solver to use:
+
+.. code-block:: yaml
+
+    run:
+        solver: glpk
+
+Possible options for solver include ``glpk``, `gurobi`, ``cplex``, and ``cbc``. The interface to these solvers is done through the Pyomo library. Any solver compatible with Pyomo should work with Calliope.
+
+For solvers with which Pyomo provides more than one way to interface, the additional ``solver_io`` option can be used. In the case of Gurobi, for example, it is usually fastest to use the direct Python interface:
+
+.. code-block:: yaml
+
+    run:
+        solver: gurobi
+        solver_io: python
+
+Further optional settings, including debug settings, can be specified in the run configuration. More detail on these are given in :ref:`debugging_runs_config`.
+
+Recommended settings to use with different solvers are detailed in :ref:`solver_options`.
+
+---------
+Overrides
+---------
+
+To make it easier to run a given model multiple times with slightly changed settings or constraints, for example, varying the cost of a key technology, it is possible to define and apply "override groups" in a separate file (in the above example, ``overrides.yaml``):
+
+.. code-block:: yaml
+
+    run1:
+        model.subset_time: ['2005-01-01', '2005-01-31']
+    run2:
+        model.subset_time: ['2005-02-01', '2005-02-31']
+
+Each group is given by a name (above, ``run1`` and ``run2`` and any number of model settings -- anything in the model configuration can be overridden by an override group). In the above example, the two runs specify different time subsets, so would run an otherwise identical model over two different periods of the time series data.
+
+One or several override groups can be applied when running a model, as described in :doc:`running`. They can also be used to generate scripts that run many Calliope models sequentially or in parallel on a high-performance cluster, as detailed in :ref:`generating_scripts`.

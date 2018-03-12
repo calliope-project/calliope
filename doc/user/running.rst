@@ -1,60 +1,57 @@
-
 ===============
 Running a model
 ===============
 
-There are two basic modes for the model: planning mode and operational mode. The mode is set in the run configuration.
-
-In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration.
-
-In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm (see :ref:`config_reference_model_wide` for the settings that control the receding horizon).
-
-In either case, there are three ways to run the model:
+There are essentially three ways to run a Calliope model:
 
 1. With the ``calliope run`` command-line tool.
 
-2. By generating and then executing parallel runs with the ``calliope generate`` command-line tool.
+2. By programmatically creating and running a model from within other Python code, or in an interactive Python session.
 
-3. By programmatically creating and running a model from within other Python code, or in an interactive Python session.
+3. By generating and then executing scripts with the ``calliope generate_runs`` command-line tool, which is primarily designed for running many scenarios on a high-performance cluster.
 
---------------------------------------
-Single runs with the command-line tool
---------------------------------------
+----------------------------------
+Running with the command-line tool
+----------------------------------
+
+We can now run this model::
+
+   $ calliope run testmodel/model.yaml
+
+Because of the output options set in ``model.yaml``, model results will be stored as a set of CSV files in the directory ``Output``. Saving CSV files is an easy way to get results in a format suitable for further processing with other tools. In order to make use of Calliope's analysis functionality, results should be saved as a single NetCDF file instead, which comes with improved performance and handling.
+
+See :doc:`running` for more on how to run a model and then retrieve results from it. See :doc:`analysis` for more details on analyzing results, including the built-in functionality to read results from either CSV or NetCDF files, making them available for further analysis as described above (:ref:`tutorial_run_interactively`).
+
 
 The included command-line tool ``calliope run`` will execute a given run configuration::
 
    $ calliope run my_model/run.yaml
 
-It will generate and solve the model, then save the results to the the output directory given by ``output.path`` in the run configuration.
+It will generate and solve the model, then save the results to the the output directory given by
+
+``output.path`` in the run configuration.
+
+Saving results
+--------------
+
+If running single runs via the command-line tool or using the parallel run functionality, results will be saved as either a single NetCDF file per model run or a set of CSV files per model run. These can then be read back into an interactive Python session for analysis -- see :doc:`analysis` -- or further processed with any other tool available to the modeller.
 
 Two output formats are available: a collection CSV files or a single NetCDF file. They can be chosen by settings ``output.format`` in the run configuration (set to ``netcdf`` or ``csv``). The :mod:`~calliope.read` module provides methods to read results stored in either of these formats, so that they can then be analyzed with the :mod:`~calliope.analysis` module.
 
-.. _parallel_runs:
+Overrides
+---------
 
--------------
-Parallel runs
--------------
+In the command line interface we use ``--override_file=overrides.yaml:milp``. Multiple overrides from the YAML file could be applied at once. E.g. if we changed some costs and had an additional entry ``cost_changes``, we could call ``--override_file=overrides.yaml:milp,cost_changes`` to apply both overrides.
 
-.. Warning:: This functionality is currently not Windows-compatible.
 
-Scripts to simplify the creation and execution of a large number of Calliope model runs are generated with the ``calliope generate`` command-line tool as follows:
+---------------------------------
+Running interactively with Python
+---------------------------------
 
-* Create a ``run.yaml`` file with a ``parallel:`` section as needed (see :ref:`run_config_parallel_runs`).
-* On the command line, run ``calliope generate path/to/run.yaml``.
-* By default, this will create a new subdirectory inside a ``runs`` directory in the current working directory. You can optionally specify a different target directory by passing a second path to ``calliope generate``, e.g. ``calliope generate path/to/run.yaml path/to/my_run_files``.
-* Calliope generates several files and directories in the target path. The most important are the ``Runs`` subdirectory which hosts the self-contained configuration for the runs and ``run.sh`` script, which is responsible for executing each run. In order to execute these runs in parallel on a compute cluster, a submit.sh script is also generated containing job control data, and which can be submitted via a cluster controller (e.g., ``qsub submit.sh``).
+An example which also demonstrates some of the analysis possibilities after running a model is given in the following Jupyter notebook, based on the national-scale example model. Note that you can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed):
 
-The ``run.sh`` script can simply be called with an integer argument from the sequence (1, number of parallel runs) to execute a given run, e.g. ``run.sh 1``, ``run.sh 2``, etc. This way the runs can easily be executed irrespective of the parallel computing environment available.
+:nbviewer_docs:`Calliope interactive national-scale example notebook <_static/notebooks/tutorial.ipynb>`
 
-.. Note:: Models generated via ``calliope generate`` automatically save results as a single NetCDF file per run inside the parallel runs' ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
-
-See :ref:`run_config_parallel_runs` for details on configuring parallel runs.
-
-.. _builtin_example:
-
------------------------------------------------
-Running programmatically from other Python code
------------------------------------------------
 
 The most basic way to run a model programmatically from within a Python interpreter is to create a :class:`~calliope.Model` instance with a given ``run.yaml`` configuration file, and then call its :meth:`~calliope.Model.run` method::
 
@@ -72,17 +69,39 @@ After the model has been solved, an xarray Dataset containing solution variables
 
 The :doc:`API documentation <../api/api>` gives an overview of the available methods for programmatic access.
 
----------------------------------------------
-Extracting results from a completed model run
----------------------------------------------
+Overrides
+---------
 
-If running single runs via the command-line tool or using the parallel run functionality, results will be saved as either a single NetCDF file per model run or a set of CSV files per model run. These can then be read back into an interactive Python session for analysis -- see :doc:`analysis` -- or further processed with any other tool available to the modeller.
+Interactively we apply this override by setting the override_file argument to ``overrides.yaml:milp``.
 
-When working with the in-memory ``solution`` object, which is an n-dimensional `xarray.Dataset <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_, the `xarray documentation <http://xarray.pydata.org/en/stable/>`_ should be consulted (this will be the case either in interactive runs, or after having read it back into memory from disk),
+.. _generating_scripts:
 
-It is easy to extract 2-dimensional slices from the solution by using xarray's ability to extract pandas DataFrames. See the :doc:`tutorials` for examples of how this is done.
+--------------------------------------
+Generating scripts for many model runs
+--------------------------------------
 
-The easiest path to extracting data from a model without dealing with xarray, pandas, or other Python data analysis tools, is to set the ``output.format`` in the run configuration to ``csv``, which results in CSV files that can be read for example with common spreadsheet software.
+Scripts to simplify the creation and execution of a large number of Calliope model runs are generated with the ``calliope generate`` command-line tool. More detail on this is available in :ref:`run_config_generate`.
+
+------------------------
+Improving solution times
+------------------------
+
+TBA
+
+Running a Linear (LP) or Mixed Integer Linear (MILP) model
+----------------------------------------------------------
+
+Calliope is primarily an LP framework, but application of certain constraints will trigger binary or integer decision variables. When triggered, a MILP model will be created.
+
+By applying a ``purchase`` cost to a technology, that technology will have a binary variable associated with it, describing whether or not it has been "purchased".
+
+By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, that technology will have a integer variable associated with it, describing how many of that technology have been "purchased". If a ``purchase`` cost has been applied to this same technology, the purchasing cost will be applied per unit.
+
+In both cases, there will be a time penalty, as linear programming solvers are less able to converge on solutions of problems which include binary or integer decision variables. But, the additional functionality can be useful. A purchasing cost allows for a cost curve of the form ``y = Mx + C`` to be applied to a technology, instead of the LP costs which are all of the form ``y = Mx``. Integer units also trigger per-timestep decision variables, which allow technologies to be "on" or "off" at each timestep.
+
+.. Warning::
+
+   Integer and Binary variables are still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
 
 ----------------------
 Debugging failing runs
@@ -94,9 +113,4 @@ What will typically go wrong, in order of decreasing likelihood:
    * The model is consistent and properly defined but infeasible. Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
    * There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
 
-Calliope provides some run configuration options to make it easier to determine the cause of the first two of these possibilities. See the :ref:`debugging options described in the configuration reference <debugging_runs_config>`.
-
-Python debugging
-----------------
-
-If using Calliope interactively in a Python session and/or developing custom constraints and analysis functionality, we recommend reading up on the `Python debugger <https://docs.python.org/3/library/pdb.html>`_ and (if using IPython or Jupyter Notebooks) making heavy use of the `%debug magic <https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug>`_.
+Calliope provides some run configuration options to make it easier to determine the cause of the first two of these possibilities. See the :ref:`debugging options described in the full configuration listing <debugging_runs_config>`.

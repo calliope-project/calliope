@@ -19,7 +19,7 @@ Running Calliope requires four things:
 Recommended installation method
 ===============================
 
-The easiest way to get a working Calliope installation is to use the free ``conda``package manager, which can install all of the four things described above in a single step.
+The easiest way to get a working Calliope installation is to use the free ``conda`` package manager, which can install all of the four things described above in a single step.
 
 To get ``conda``, `download and install the "Miniconda" distribution for your operating system <https://conda.io/miniconda.html>`_ (using the version for Python 3).
 

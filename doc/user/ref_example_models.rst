@@ -14,7 +14,7 @@ National-scale example
 
 Available as :class:`calliope.examples.NationalScale`.
 
-.. _examplemodels_nationalscale_runsettings:
+.. _examplemodels_nationalscale_settings:
 
 Model settings
 ^^^^^^^^^^^^^^

@@ -31,7 +31,7 @@ Also removed the ``demand_power_peak`` and (undocumented) ``ignored_techs`` opti
 Minor changes
 ~~~~~~~~~~~~~
 
-* |changed ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
+* |changed| ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
 * |new| Add ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs
 * |new| Add ``calliope convert`` command to convert 0.5.x models to 0.6.0 format. Does not preserve comments for now.
 

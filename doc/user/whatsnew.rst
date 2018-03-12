@@ -6,11 +6,11 @@ New in v0.6.0
 
 Version `0.6` is backwards incompatible with version `0.5`. If you are familiar with how Calliope functions then this page will act as a reference for moving to version `0.6`.
 
-------------------------
-Deprecated functionality
-------------------------
+---------------------
+Removed functionality
+---------------------
 
-If you require any deprecated functionality, we recommend you `open an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ for it to be built into a later revision of `0.6`.
+If you require any of the removed functionality, we recommend you `open an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ for it to be built into a later revision of `0.6`.
 
 Location and technology subsets
 ===============================

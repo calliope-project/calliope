@@ -3,12 +3,12 @@ import:  # Import other files from paths relative to this file, or absolute path
     - 'model_config/locations.yaml'
 
 model:
-    calliope_version: 0.6.0  # What version of Calliope this model is intended for
+    name: National-scale example model
+
+    # What version of Calliope this model is intended for
+    calliope_version: 0.6.0
 
     mode: plan  # Choices: plan, operate
-
-    # Model name
-    name: National-scale example model
 
     # Time series data path - can either be a path relative to this file, or an absolute path
     timeseries_data_path: 'timeseries_data'

@@ -40,7 +40,9 @@ div.bodywrapper {
 div.sphinxsidebar {
     width: {{ sidebar_width }};
     position: sticky;
-    top: 30px;
+    top: 35px;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 div#sidebartoc{
@@ -414,6 +416,16 @@ pre {
     padding: 7px 30px;
     margin: 15px -30px;
     line-height: 1.3em;
+}
+
+.pre {
+    font-family: monospace;
+    background: #FAFCEF;
+    padding: 2px;
+}
+
+.admonition .pre {
+    background: transparent;
 }
 
 dl pre, blockquote pre, li pre {
