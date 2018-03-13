@@ -40,7 +40,7 @@ Time series
 Analyzing models
 ================
 
-.. automodule:: calliope.analysis
+.. automodule:: calliope.analysis.plotting
     :members:
 
 Utility classes: AttrDict, Exceptions

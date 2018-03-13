@@ -155,6 +155,22 @@ def apply_overrides(config, override_file=None, override_dict=None):
         else:
             return None
 
+    # Check if overriding coordinates are in the same coordinate system. If not,
+    # delete all incumbent coordinates, ready for the new coordinates to come in
+    def check_and_remove_coordinates(config_model, override):
+        if (any(['coordinates' in k for k in config_model.as_dict_flat().keys()]) and
+            any(['coordinates' in k for k in override.as_dict_flat().keys()])):
+
+            config_keys = [k for k in config_model.as_dict_flat().keys() if 'coordinates.' in k]
+            config_coordinates = [k.split('coordinates.')[-1] for k in config_keys]
+            override_coordinates = set(
+                k.split('coordinates.')[-1] for k in override.as_dict_flat().keys()
+                if 'coordinates.' in k
+            )
+            if config_coordinates != override_coordinates:
+                for key in config_keys:
+                    config_model.del_key(key)
+
     check_base_tech_group_override(config)
 
     # The input files are allowed to override other model defaults
@@ -176,6 +192,7 @@ def apply_overrides(config, override_file=None, override_dict=None):
         override_from_file = combine_overrides(override_file_path, override_groups)
 
         check_base_tech_group_override(override_from_file)
+        check_and_remove_coordinates(config_model, override_from_file)
 
         config_model.union(
             override_from_file, allow_override=True, allow_replacement=True
@@ -189,7 +206,10 @@ def apply_overrides(config, override_file=None, override_dict=None):
     if override_dict:
         if not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
+
         check_base_tech_group_override(override_dict)
+        check_and_remove_coordinates(config_model, override_dict)
+
         config_model.union(
             override_dict, allow_override=True, allow_replacement=True
         )

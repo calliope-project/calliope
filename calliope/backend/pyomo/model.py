@@ -193,6 +193,7 @@ def get_result_array(backend_model):
         if isinstance(i, po.base.var.IndexedVar)
     }
     # if unmet_demand was unused, delete it before it reaches the user
-    if 'unmet_demand' in all_variables.keys() and not sum(backend_model.unmet_demand.get_values().values()):
+    if ('unmet_demand' in all_variables.keys() and not
+            sum(filter(None, backend_model.unmet_demand.get_values().values()))):
         del all_variables['unmet_demand']
     return reorganise_dataset_dimensions(xr.Dataset(all_variables))

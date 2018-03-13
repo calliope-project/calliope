@@ -20,7 +20,8 @@ import plotly.graph_objs as go
 import jinja2
 
 from calliope import exceptions
-from calliope.analysis.util import get_zoom, subset_sum_squeeze, hex_to_rgba
+from calliope.core.preprocess.util import vincenty
+from calliope.analysis.util import subset_sum_squeeze, hex_to_rgba
 from itertools import product
 
 
@@ -141,7 +142,7 @@ def _get_data_layout(plot_type, get_var_data, get_var_layout, relevant_vars, lay
     if len(relevant_vars) > 1:
         updatemenus = list([dict(
             active=0, buttons=buttons, type='dropdown',
-            xanchor='auto', y=1.2, pad=dict(t=0.05, b=0.05, l=0.05, r=0.05)
+            xanchor='left', x=0, y=1.13, pad=dict(t=0.05, b=0.05, l=0.05, r=0.05)
         )])
         layout['updatemenus'] = updatemenus
     else:
@@ -428,7 +429,7 @@ def plot_capacity(
         allowed_result_vars = [
             'results', 'inputs', 'all', 'resource_area', 'energy_cap', 'resource_cap',
             'storage_cap', 'units',
-            # 'systemwide_levelised_cost', 'systemwide_capacity_factor'
+            'systemwide_levelised_cost', 'systemwide_capacity_factor'
         ]
 
         if ((isinstance(array, list) and not
@@ -459,25 +460,32 @@ def plot_capacity(
         return sorted(list(set(relevant_vars).intersection(dataset.data_vars.keys())))
 
     def get_var_data(cap, dataset, visible):
-        array_cap = model.get_formatted_array(cap).reindex(locs=locations)
+        if 'systemwide' in cap:
+            array_cap = subset_sum_squeeze(dataset[cap], subset)
+            if 'costs' in array_cap.dims and len(array_cap['costs']) == 1:
+                array_cap = array_cap.squeeze('costs')
+            elif 'costs' in array_cap.dims and len(array_cap['costs']) > 1:
+                raise exceptions.ModelError(
+                    'Cannot plot {} without subsetting to pick one cost type '
+                    'of interest'.format(cap)
+                )
+            if 'carriers' not in subset.keys():
+                array_cap['carriers'] = array_cap.carriers.sortby('carriers')
 
-        if subset:  # first, subset the data
-            allowed_subsets = {k: v for k, v in subset.items() if k in array_cap.dims}
-            array_cap = array_cap.loc[allowed_subsets]
-        if sum_dims:  # second, sum along all necessary dimensions
-            array_cap = array_cap.sum(sum_dims)
-
-        if squeeze and len(array_cap.techs.values) > 1:  # finally, squeeze out single length dimensions
-            array_cap = array_cap.squeeze()
+        else:
+            array_cap = model.get_formatted_array(cap).reindex(locs=locations)
+            subset_sum_squeeze(array_cap, subset, sum_dims, squeeze)
 
         if len(array_cap.dims) > 2:
             raise exceptions.ModelError(
                 'Maximum two dimensions allowed for plotting capacity, but {} '
                 'given as dimensions for {}'.format(array_cap.dims, cap)
             )
+
         if 'techs' not in array_cap.dims:
             e = exceptions.ModelError
             raise e('Cannot plot capacity without `techs` in dimensions')
+
         elif 'techs' not in subset.keys():
             array_cap['techs'] = array_cap.techs.sortby('techs')
 
@@ -495,7 +503,10 @@ def plot_capacity(
                 continue
             if array_cap.loc[{'techs': tech}].sum() > 0:
                 x = array_cap.loc[{'techs': tech}].values
-                y = array_cap.locs.values
+                if 'systemwide' in cap:
+                    y = array_cap.carriers.values
+                else:
+                    y = array_cap.locs.values
                 if orientation == 'v':
                     x, y = y, x  # Flip axes
                 data.append(go.Bar(
@@ -519,6 +530,9 @@ def plot_capacity(
             value_axis_title = 'Installed storage capacity'
         elif 'energy' in cap:
             value_axis_title = 'Installed energy capacity'
+        elif 'systemwide' in cap:
+            value_axis_title = cap.replace('_', ' ').capitalize()
+            args.update({location_axis: {'title': 'Carrier'}})
         else:
             value_axis_title = 'Installed capacity'
 
@@ -584,6 +598,34 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
     names = model._model_data.names
 
     plot_width = 1000
+
+    def _get_zoom(coordinate_array, width):
+        """
+        If mapbox is being used for tranmission plotting, get the zoom based on the
+        bounding area of the input data and the width (in pixels) of the map
+        """
+
+        # Keys are zoom levels, values are m/pixel at that zoom level
+        zoom_dict = {0: 156412, 1: 78206, 2: 39103, 3: 19551, 4: 9776, 5: 4888,
+                     6: 2444, 7: 1222, 8: 610.984, 9: 305.492, 10: 152.746,
+                     11: 76.373, 12: 38.187, 13: 19.093, 14: 9.547, 15: 4.773,
+                     16: 2.387, 17: 1.193, 18: 0.596, 19: 0.298}
+
+        bounds = [coordinate_array.max(dim='locs').values,
+                  coordinate_array.min(dim='locs').values]
+
+        max_distance = vincenty(*bounds)
+
+        metres_per_pixel = max_distance / width
+
+        for k, v in zoom_dict.items():
+            if v > metres_per_pixel:
+                continue
+            else:
+                zoom = k - 4
+                break
+
+        return zoom
 
     def _get_data(var, sum_dims=None):
         var_da = model.get_formatted_array(var).rename({'locs': 'locs_to'})
@@ -665,11 +707,19 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
                 mapbox=dict(
                     accesstoken=mapbox_access_token,
                     center=_get_centre(coordinates),
-                    zoom=get_zoom(coordinates, plot_width),
+                    zoom=_get_zoom(coordinates, plot_width),
                     style='light'
                 )
             )
         else:
+            def get_range(axis):
+                _range = [
+                    coordinates.loc[dict(coordinates=axis)].min().item(),
+                    coordinates.loc[dict(coordinates=axis)].max().item()
+                ]
+                _offset = abs(_range[1] - _range[0]) * 0.1
+                return [_range[0] - _offset, _range[1] + _offset]
+
             scatter_type = 'scattergeo'
             layout_dict = dict(
                 geo=dict(
@@ -681,12 +731,8 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
                     showocean=True,
                     showrivers=True,
                     showlakes=True,
-                    lonaxis=dict(range=[
-                        coordinates.loc[dict(coordinates='lon')].min().item() - 1,
-                        coordinates.loc[dict(coordinates='lon')].max().item() + 1]),
-                    lataxis=dict(range=[
-                        coordinates.loc[dict(coordinates='lat')].min().item() - 1,
-                        coordinates.loc[dict(coordinates='lat')].max().item() + 1]),
+                    lonaxis=dict(range=get_range('lon')),
+                    lataxis=dict(range=get_range('lat')),
                     resolution=50,
                     landcolor="rgba(240, 240, 240, 0.8)",
                     oceancolor='#aec6cf',
