@@ -76,6 +76,24 @@ Overrides
 
 Interactively we apply this override by setting the `override_file` argument to e.g. ``overrides.yaml:milp`` and/or the `override_dict` argument to a dictionary of overrides.
 
+Tracking progress
+-----------------
+
+When running Calliope in command line, logging of model preprocessing and solving occurs automatically. Interactively, in the Jupyter notebook, you can also having verbose logging printed by running the following:
+
+.. code-block::
+
+    import logging
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(levelname)s: %(message)s',
+    )
+
+    logger = logging.getLogger()
+
+This will include our model processing output, as well as that of the chosen solver.
+
 .. _generating_scripts:
 
 --------------------------------------

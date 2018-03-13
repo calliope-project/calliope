@@ -2,11 +2,13 @@
 Analysing a model
 =================
 
+Calliope inputs and results are made to be very easily handled. Whatever platform you prefer to use for data processing, our NetCDF or CSV output makes it easy. If you prefer to not worry about writing your own scripts, then we have that covered too! :class:`~calliope.Model.plot` is built on plotly's interactive toolbox to bring your data to life!
+
 -------------------
 Visualising results
 -------------------
 
-**TBA: using plotly**
+In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. ``summary`` can also be accessed from the command line interface, to gain access to result visualisation without the need to interact with Python.
 
 Refer to the :ref:`API documentation for the analysis module<api_analysis>` for an overview of available analysis functionality.
 
