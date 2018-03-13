@@ -43,13 +43,13 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
     if warnings:
         exceptions.warn(
             'Possible issues found during pre-processing:\n' +
-            '\n'.join(list(set(warnings)))
+            '\n'.join(sorted(list(set(warnings))))
         )
 
     if errors:
         raise exceptions.ModelError(
             'Errors during pre-processing:\n' +
-            '\n'.join(list(set(errors)))
+            '\n'.join(sorted(list(set(errors))))
         )
 
     return None
@@ -449,9 +449,8 @@ def check_operate_params(model_data):
         if is_in(loc_tech, var):
             param = model_data[var].loc[loc_tech].item()
         else:
-            param = defaults[var]
+            param = defaults.default_tech.constraints[var]
         return param
-
 
     def is_in(loc_tech, set_or_var):
         if set_or_var in model_data:
@@ -462,7 +461,6 @@ def check_operate_params(model_data):
                 return False
         else:
             return False
-
 
     def get_cap(loc_tech, param):
         if is_in(loc_tech, param + '_equals'):
@@ -507,7 +505,7 @@ def check_operate_params(model_data):
                         )
         if 'storage_initial' not in model_data.data_vars:
             model_data['storage_initial'] = (
-                xr.DataArray([0 for loc_tech in model_data.loc_techsstore.values], dims='loc_techs_store')
+                xr.DataArray([0 for loc_tech in model_data.loc_techs_store.values], dims='loc_techs_store')
             )
             warnings.append(
                 'Initial stored energy not defined, set to zero for all loc::techs'
