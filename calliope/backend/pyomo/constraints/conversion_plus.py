@@ -1,9 +1,9 @@
 """
-Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-Conversion plus.py
-~~~~~~~~~~~~~~~~~
+conversion_plus.py
+~~~~~~~~~~~~~~~~~~
 
 Conversion plus technology constraints.
 

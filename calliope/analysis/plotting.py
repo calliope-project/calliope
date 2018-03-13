@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 plotting.py
@@ -39,8 +39,8 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
     transmission plots. Returns a HTML string if ``out_file`` not
     given, else None.
 
-    Params
-    ------
+    Parameters
+    ----------
     out_file : str, optional
         Path to output file to save HTML to.
     mapbox_access_token : str, optional
@@ -85,8 +85,8 @@ def plot_timeseries(
         model, array='all', timesteps_zoom=None, subset=dict(), sum_dims='locs',
         squeeze=True, html_only=False, save_svg=False):
     """
-    Params
-    ------
+    Parameters
+    ----------
     array : str or list; default = 'all'
         options: 'all', 'results', 'inputs', the name/list of any energy carrier(s)
         (e.g. 'power'), the name/list of any input/output DataArray(s).
@@ -351,8 +351,8 @@ def plot_capacity(
         model, orient='h', array='all',
         subset=dict(), sum_dims=None, squeeze=True, html_only=False, save_svg=False):
     """
-    Params
-    ------
+    Parameters
+    ----------
     array : str or list; default = 'all'
         options: 'all', 'results', 'inputs', the name/list of any energy capacity
         DataArray(s) from inputs/results.
@@ -561,8 +561,8 @@ def plot_capacity(
 
 def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg=False):
     """
-    Params
-    ------
+    Parameters
+    ----------
     mapbox_access_token : str, optional
         If given and a valid Mapbox API key, a Mapbox map is drawn
         for lat-lon coordinates, else (by default), a more simple
