@@ -122,17 +122,17 @@ The ``costs`` section gives costs for the technology. Calliope uses the concept 
 Allowing for unmet demand
 -------------------------
 
-For a model to find a feasible solution, supply must always be able to meet demand. To avoid the solver failing to find a solution, due to infeasibility, a backstop technology can be easily defined. In Calliope, such technologies can be added by defining a simple technology that inherits from the ``unmet_demand`` base technology:
+For a model to find a feasible solution, supply must always be able to meet demand. To avoid the solver failing to find a solution, you can ensure feasibility:
 
 .. code-block:: yaml
 
-    unmet_demand_power:
-        essentials:
-            name: 'Unmet power demand'
-            parent: unmet_demand
-            carrier: power
+    model:
+        ensure_feasibility: true
 
-This ``unmet_demand_power`` technology will automatically have a very high cost so that it is not used except when absolutely necessary.
+This will create an ``unmet_demand`` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all energy carriers. It has a very high cost associated with its use, so it will only appear when absolutely necessary.
+
+.. note::
+    When ensuring feasibility, you can also set a `big M value <https://en.wikipedia.org/wiki/Big_M_method>`_ (``model.bigM``). This is the "cost" of unmet demand. It is possible to make model convergence very slow if bigM is set too high. default bigM is 1x10 :sup:`9`, but should be close to the maximum total system cost that you can imagine. This is perhaps closer to 1x10 :sup:`6` for urban scale models.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)

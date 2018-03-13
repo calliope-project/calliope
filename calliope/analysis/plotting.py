@@ -485,12 +485,12 @@ def plot_capacity(
         for tech in array_cap.techs.values:
             if tech not in dataset.techs.values:
                 continue
-            if tech in dataset.loc_techs_transmission.values:
-                base_tech = 'transmission'
+            if tech in dataset.techs_transmission.values:
+                continue
             else:
                 base_tech = dataset.inheritance.loc[{'techs': tech}].item().split('.')[0]
 
-            if base_tech in ['transmission', 'demand']:
+            if base_tech in 'demand':
                 continue
             if array_cap.loc[{'techs': tech}].sum() > 0:
                 x = array_cap.loc[{'techs': tech}].values
