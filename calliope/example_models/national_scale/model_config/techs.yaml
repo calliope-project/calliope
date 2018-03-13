@@ -78,11 +78,6 @@ techs:
             name: 'Power demand'
             parent: demand
             carrier: power
-    unmet_demand_power:
-        essentials:
-            name: 'Unmet power demand'
-            parent: unmet_demand
-            carrier: power
 
     ##
     # Transmission

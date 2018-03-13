@@ -10,8 +10,6 @@ locations:
                 constraints.resource: file=demand_power.csv
             demand_heat:
                 constraints.resource: file=demand_heat.csv
-            unmet_demand_electricity:
-            unmet_demand_heat:
         available_area: 500
         coordinates: {x: 2, y: 7}
 
@@ -28,8 +26,6 @@ locations:
                 constraints.resource: file=demand_power.csv
             demand_heat:
                 constraints.resource: file=demand_heat.csv
-            unmet_demand_electricity:
-            unmet_demand_heat:
         available_area: 1300
         coordinates: {x: 8, y: 7}
 
@@ -47,8 +43,6 @@ locations:
                 constraints.resource: file=demand_power.csv
             demand_heat:
                 constraints.resource: file=demand_heat.csv
-            unmet_demand_electricity:
-            unmet_demand_heat:
         available_area: 900
         coordinates: {x: 5, y: 3}
 

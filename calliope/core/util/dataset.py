@@ -74,6 +74,8 @@ def split_loc_techs(data_var, as_='DataArray'):
 
     # Separately find the loc_techs(_carriers) dimension and all other dimensions
     loc_tech_dim = [i for i in data_var.dims if 'loc_tech' in i]
+    if not loc_tech_dim:
+        loc_tech_dim = [i for i in data_var.dims if 'loc_carrier' in i]
     non_loc_tech_dims = list(set(data_var.dims).difference(loc_tech_dim))
 
     if not loc_tech_dim:
@@ -97,8 +99,8 @@ def split_loc_techs(data_var, as_='DataArray'):
 
     # carrier_prod, carrier_con, and carrier_export will return an index_list
     # of size 3, all others will be an index list of size 2
-    possible_names = ['locs', 'techs', 'carriers']
-    names = [possible_names[i] for i in range(len(index_list[0]))]
+    possible_names = ['loc', 'tech', 'carrier']
+    names = [i + 's' for i in possible_names if i in loc_tech_dim]
 
     data_var_df.index = pd.MultiIndex.from_tuples(index_list, names=names)
 

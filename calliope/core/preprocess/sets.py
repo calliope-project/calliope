@@ -40,7 +40,6 @@ Technology groups
 * loc_techs_supply_plus
 * loc_techs_conversion
 * loc_techs_conversion_plus
-* loc_techs_unmet_demand
 
 Subsets based on active constraints
 
@@ -229,7 +228,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     for group in [
             'storage', 'demand', 'supply', 'supply_plus',
-            'unmet_demand', 'conversion', 'conversion_plus']:
+            'conversion', 'conversion_plus']:
         tech_set = set(
             k for k in sets.loc_techs_non_transmission
             if model_run.techs[k.split('::')[1]].inheritance[-1] == group
@@ -245,8 +244,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Techs that introduce energy into the system
     sets.loc_techs_supply_all = (
         sets.loc_techs_supply |
-        sets.loc_techs_supply_plus |
-        sets.loc_techs_unmet_demand
+        sets.loc_techs_supply_plus
     )
 
     ##

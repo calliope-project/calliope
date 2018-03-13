@@ -21,10 +21,22 @@ def cost_minimization(backend_model):
         min: z = \sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{monetary}))
 
     """
+
     def obj_rule(backend_model):
-        return sum(
-            backend_model.cost['monetary', loc_tech]
-            for loc_tech in backend_model.loc_techs_cost
+        if hasattr(backend_model, 'unmet_demand'):
+            unmet_demand = sum(
+                backend_model.unmet_demand[loc_carrier, timestep]
+                for loc_carrier in backend_model.loc_carriers
+                for timestep in backend_model.timesteps
+            ) * backend_model.bigM
+        else:
+            unmet_demand = 0
+
+        return (
+            sum(
+                backend_model.cost['monetary', loc_tech]
+                for loc_tech in backend_model.loc_techs_cost
+            ) + unmet_demand
         )
 
     backend_model.obj = po.Objective(sense=po.minimize, rule=obj_rule)

@@ -55,7 +55,8 @@ def generate_model(model_data):
             model_data[k].to_series().dropna().replace('inf', np.inf).to_dict()
             for k in model_data.data_vars},
         'dims': {k: model_data[k].dims for k in model_data.data_vars},
-        'sets': list(model_data.coords)
+        'sets': list(model_data.coords),
+        'attrs': {k: v for k, v in model_data.attrs.items() if k is not 'defaults'}
     }
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
@@ -191,4 +192,7 @@ def get_result_array(backend_model):
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
         if isinstance(i, po.base.var.IndexedVar)
     }
+    # if unmet_demand was unused, delete it before it reaches the user
+    if 'unmet_demand' in all_variables.keys() and not sum(backend_model.unmet_demand.get_values().values()):
+        del all_variables['unmet_demand']
     return reorganise_dataset_dimensions(xr.Dataset(all_variables))

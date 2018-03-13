@@ -56,8 +56,8 @@ def process():
 
     # # Process the abstract base technologies
     # # FIXME: here actually read model.yaml
-    # for tech in ['supply', 'supply_plus', 'demand', 'unmet_demand',
-    #              'unmet_demand_as_supply_tech', 'storage',
+    # for tech in ['supply', 'supply_plus', 'demand'
+    #              'storage',
     #              'transmission', 'conversion', 'conversion_plus']:
     #     block = get_block(filename, tech + ':')
     #     with open('./user/includes/basetech_{}.yaml'.format(tech), 'w') as f:

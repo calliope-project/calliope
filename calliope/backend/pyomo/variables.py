@@ -7,6 +7,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
+
 def initialize_decision_variables(backend_model):
     """
     Defines variables
@@ -88,3 +89,7 @@ def initialize_decision_variables(backend_model):
         if backend_model.mode == 'operate':
             for k, v in backend_model.units.items():
                 backend_model.energy_cap[k] = v * backend_model.energy_cap_per_unit[k]
+
+    if model_data_dict['attrs'].get('model.ensure_feasibility', False):
+        backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
+        backend_model.bigM = model_data_dict['attrs'].get('model.bigM')

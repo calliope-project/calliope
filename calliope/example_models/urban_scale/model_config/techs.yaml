@@ -110,22 +110,10 @@ techs:
             parent: demand
             carrier: electricity
 
-    unmet_demand_electricity:
-        essentials:
-            name: 'Unmet electrical demand'
-            parent: unmet_demand
-            carrier: electricity
-
     demand_heat:
         essentials:
             name: 'Heat demand'
             parent: demand
-            carrier: heat
-
-    unmet_demand_heat:
-        essentials:
-            name: 'Unmet heat demand'
-            parent: unmet_demand
             carrier: heat
 
 ##-DISTRIBUTION-##

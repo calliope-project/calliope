@@ -20,7 +20,7 @@ import plotly.graph_objs as go
 import jinja2
 
 from calliope import exceptions
-from calliope.analysis.util import get_zoom
+from calliope.analysis.util import get_zoom, subset_sum_squeeze, hex_to_rgba
 from itertools import product
 
 
@@ -49,11 +49,11 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
         (by default), a more simple built-in map.
 
     """
-    timeseries = plot_timeseries(model, html_only=True)
-    capacity = plot_capacity(model, html_only=True)
-    transmission = plot_transmission(
+    timeseries = _plot(*plot_timeseries(model), html_only=True)
+    capacity = _plot(*plot_capacity(model), html_only=True)
+    transmission = _plot(*plot_transmission(
         model, html_only=True, mapbox_access_token=mapbox_access_token
-    )
+    ), html_only=True)
 
     template_path = os.path.join(
         os.path.dirname(__file__), '..', 'config', 'plots_template.html'
@@ -79,6 +79,74 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
             f.write(html)
     else:
         return html
+
+
+def _plot(data, layout, html_only=False, save_svg=False, **kwargs):
+    if html_only:
+        return pltly.plot(
+            {'data': data, 'layout': layout},
+            include_plotlyjs=False, output_type='div',
+            **PLOTLY_KWARGS
+        )
+
+    if save_svg:
+        if 'updatemenus' in layout:
+            print('Unable to save multiple arrays to SVG, pick one array only')
+        else:
+            PLOTLY_KWARGS.update(image='svg')
+
+    elif data:
+        pltly.iplot({'data': data, 'layout': layout}, **PLOTLY_KWARGS)
+
+    else:
+        print('No data to plot')
+
+
+def _get_data_layout(plot_type, get_var_data, get_var_layout, relevant_vars, layout, dataset):
+
+    # data_len is used to populate visibility of traces, for dropdown
+    data_len = [0]
+    data = []
+    buttons = []
+    # fill trace data and add number of traces per var to 'data_len' for use with
+    # visibility. first var in loop has visibility == True by default
+    visible = True
+
+    for var in relevant_vars:
+        data += get_var_data(var, dataset, visible)
+        data_len.append(len(data))
+        visible = False
+
+    # Initialise all visibility to False for dropdown updates
+    total_data_arrays = np.array([False for i in range(data_len[-1])])
+    var_num = 0
+    for var in relevant_vars:
+        # update visibility to True for all traces linked to this variable `var`
+        visible_data = total_data_arrays.copy()
+        visible_data[data_len[var_num]:data_len[var_num + 1]] = True
+
+        # Get variable-specific layout
+        var_layout = get_var_layout(var, dataset)
+
+        if var_num == 0:
+            layout['title'] = var_layout['title']
+
+        if len(relevant_vars) > 1:
+            var_layout = [{'visible': list(visible_data)}, var_layout]
+            buttons.append(dict(label=var, method='update', args=var_layout))
+
+        var_num += 1
+
+    # If there are multiple vars to plot, use dropdowns via 'updatemenus'
+    if len(relevant_vars) > 1:
+        updatemenus = list([dict(
+            active=0, buttons=buttons, type='dropdown',
+            xanchor='auto', y=1.2, pad=dict(t=0.05, b=0.05, l=0.05, r=0.05)
+        )])
+        layout['updatemenus'] = updatemenus
+    else:
+        layout.update(var_layout)
+    return data, layout
 
 
 def plot_timeseries(
@@ -113,66 +181,63 @@ def plot_timeseries(
         Will save plot to svg on rendering
     """
 
-    dataset = model._model_data.copy()
-    carriers = list(dataset.carriers.values)
-    timesteps = pd.to_datetime(model._model_data.timesteps.values)
-
-    if array not in (
-        ['results', 'inputs', 'all'] + carriers + ['storage', 'resource_con', 'cost_var'] +
-        [k for k, v in model.inputs.data_vars.items() if 'timesteps' in v.dims and len(v.dims) > 1]
-    ):
-        raise exceptions.ModelError(
-            'Cannot plot array={}. If you want carrier flow (_prod, _con, _export) '
-            'then specify the name of the energy carrier as array'.format(array)
+    def get_relevant_vars(array):
+        allowed_input_vars = [
+            k for k, v in model.inputs.data_vars.items()
+            if 'timesteps' in v.dims and len(v.dims) > 1
+        ]
+        allowed_result_vars = (
+            ['results', 'inputs', 'all', 'storage', 'resource_con', 'cost_var']
         )
 
-    # relevant_vars are all variables relevant to this plotting instance
-    relevant_vars = []
+        if ((isinstance(array, list) and not
+             set(array).intersection(allowed_input_vars + allowed_result_vars + carriers)) or
+            (isinstance(array, str) and
+             array not in allowed_input_vars + allowed_result_vars + carriers)):
+            raise exceptions.ModelError(
+                'Cannot plot array={}. If you want carrier flow (_prod, _con, _export) '
+                'then specify the name of the energy carrier as array'.format(array)
+            )
 
-    if array in ['results', 'all']:
-        relevant_vars += carriers + ['resource_con', 'cost_var']
-        if 'storage' in dataset:
-            relevant_vars.append('storage')
+        # relevant_vars are all variables relevant to this plotting instance
+        relevant_vars = []
 
-    if array in ['inputs', 'all']:
-        relevant_vars += [k for k, v in model.inputs.data_vars.items()
-                          if 'timesteps' in v.dims and len(v.dims) > 1]
+        # Ensure carriers are at the top of the list
+        if array == 'results':
+            relevant_vars += sorted(carriers) + sorted(allowed_result_vars)
+        elif array == 'inputs':
+            relevant_vars += sorted(allowed_input_vars)
+        elif array == 'all':
+            relevant_vars += sorted(carriers) + sorted(allowed_result_vars + allowed_input_vars)
+        elif isinstance(array, list):
+            relevant_vars = array
+        elif isinstance(array, str):
+            relevant_vars = [array]
 
-    # if not 'all', 'inputs', or 'results', take user input
-    if not relevant_vars and not isinstance(array, list):
-        relevant_vars = [array]
+        relevant_vars = [i for i in relevant_vars if i in dataset or i in carriers]
+        return relevant_vars
 
-    # Ensure carriers are at the front of the relevant_vars list
-    relevant_vars = sorted(carriers) + sorted(list(
-        set(relevant_vars).intersection([k for k in dataset.data_vars.keys()])
-    ))
-    # data_len is used to populate visibility of traces, for dropdown
-    data_len = [0]
-    data = []
-    buttons = []
-
-    def get_var_data(var, visible):
+    def get_var_data(var, dataset, visible):
         """
         Get variable data from model_data and use it to populate a list with Plotly plots
         """
         # list to populate
         data = []
 
-        def _get_reindexed_array(array, carrier_index=False, fillna=None):
+        timesteps = pd.to_datetime(model._model_data.timesteps.values)
+
+        def _get_reindexed_array(array, index=['locs', 'techs'], fillna=None):
             # reindexing data means that DataArrays have the same values in locs and techs
-            reindexer = dict(techs=dataset.techs.values, locs=dataset.locs.values)
+            reindexer = {k: sorted(dataset[k].values) for k in index}
             formatted_array = model.get_formatted_array(array)
-            if carrier_index:
-                reindexer.update(dict(carriers=carriers))
             if fillna is not None:
                 return formatted_array.reindex(**reindexer).fillna(fillna)
             else:
                 return formatted_array.reindex(**reindexer)
 
         if hasattr(model, 'results'):
-            array_prod = _get_reindexed_array('carrier_prod', carrier_index=True, fillna=0)
-            array_con = _get_reindexed_array('carrier_con', carrier_index=True, fillna=0)
-
+            array_prod = _get_reindexed_array('carrier_prod', index=['locs', 'techs', 'carriers'], fillna=0)
+            array_con = _get_reindexed_array('carrier_con', index=['locs', 'techs', 'carriers'], fillna=0)
             resource_con = _get_reindexed_array('resource_con', fillna=0)
 
         # carrier flow is a combination of carrier_prod, carrier_con and
@@ -180,14 +245,26 @@ def plot_timeseries(
         if var in carriers:
             array_flow = (array_prod.loc[dict(carriers=var)] + array_con.loc[dict(carriers=var)])
             if 'carrier_export' in dataset:
-                export_flow = _get_reindexed_array('carrier_export', carrier_index=True, fillna=0)
-                array_flow = array_flow - export_flow.loc[dict(carriers=var)]
+                export_flow = subset_sum_squeeze(
+                    _get_reindexed_array(
+                        'carrier_export', index=['locs', 'techs', 'carriers'], fillna=0
+                    ).loc[dict(carriers=var)],
+                    subset, sum_dims, squeeze
+                )
+            if 'unmet_demand' in dataset:
+                unmet_flow = subset_sum_squeeze(
+                    _get_reindexed_array(
+                        'unmet_demand', index=['locs', 'carriers'], fillna=0
+                    ).loc[dict(carriers=var)],
+                    subset, sum_dims, squeeze=False
+                )
+
         # array flow for storage tracks stored energy. carrier_flow is
         # charge/discharge (including resource consumed for supply_plus techs)
         elif var == 'storage':
             array_flow = model.get_formatted_array('storage')
-            # currently hacked to assume summing over some dimension
-            carrier_flow = (array_prod.sum('carriers') + array_con.sum('carriers') - resource_con).sum(sum_dims)
+            carrier_flow = (array_prod.sum('carriers') + array_con.sum('carriers') - resource_con)
+            carrier_flow = subset_sum_squeeze(carrier_flow, subset, sum_dims, squeeze)
 
         elif var == 'resource_con':
             array_flow = resource_con
@@ -195,15 +272,7 @@ def plot_timeseries(
         else:
             array_flow = model.get_formatted_array(var)
 
-        if subset:  # first, subset the data
-            allowed_subsets = [{k: v for k, v in subset.items() if k in array_flow.dims}]
-            array_flow = array_flow.loc[allowed_subsets]
-
-        if sum_dims:  # second, sum along all necessary dimensions
-            array_flow = array_flow.sum(sum_dims)
-
-        if squeeze and len(array_flow.techs.values) > 1:  # finally, squeeze out single length dimensions
-            array_flow = array_flow.squeeze()
+        array_flow = subset_sum_squeeze(array_flow, subset, sum_dims, squeeze)
 
         if 'timesteps' not in array_flow.dims or len(array_flow.dims) > 2:
             e = exceptions.ModelError
@@ -211,23 +280,22 @@ def plot_timeseries(
                     'and `sum_dims: {}`'.format(var, subset, sum_dims))
 
         for tech in array_flow.techs.values:
-            tech_dict = dict(techs=tech)
-
+            tech_dict = {'techs': tech}
+            if not array_flow.loc[tech_dict].sum():
+                continue
             # We allow transmisison tech information to show up in some cases
             if tech in dataset.techs_transmission.values:
                 base_tech = 'transmission'
                 color = dataset.colors.loc[{'techs': tech.split(':')[0]}].item()
                 name = dataset.names.loc[{'techs': tech.split(':')[0]}].item()
+                if var in carriers:
+                    continue  # no transmission in carrier flow
             else:
                 base_tech = dataset.inheritance.loc[tech_dict].item().split('.')[0]
                 color = dataset.colors.loc[tech_dict].item()
                 name = dataset.names.loc[tech_dict].item()
 
-            # no transmission in carrier flow
-            if base_tech in ['transmission'] and var in carriers:
-                continue  # Transmission is not plotted here
-
-            elif base_tech == 'demand' and array_flow.loc[tech_dict].sum():
+            if base_tech == 'demand':
                 # Always insert demand at position 0 in the list, to make
                 # sure it appears on top in the legend
                 data.insert(0, go.Scatter(
@@ -235,34 +303,49 @@ def plot_timeseries(
                     visible=visible, line=dict(color=color), name=name)
                 )
 
-            elif var == 'storage' and array_flow.loc[tech_dict].sum():
+            elif var == 'storage':
                 # stored energy as scatter, carrier/resource prod/con as stacked bar
                 data.insert(0, go.Scatter(
                     x=timesteps, y=array_flow.loc[tech_dict].values, visible=visible,
-                    line=dict(color=color), legendgroup='storage', mode='lines',
-                    name=name + ' stored energy')
+                    line=dict(color=color), mode='lines', name=name + ' stored energy',
+                    showlegend=False, text=tech + ' stored energy', hoverinfo='x+y+text',
+                    legendgroup=tech)
                 )
                 data.append(go.Bar(
-                    x=timesteps, y=carrier_flow.loc[tech_dict].values, visible=visible,
-                    name=name + ' charge/discharge', legendgroup=tech, marker=dict(color=color)
+                    x=timesteps, y=-carrier_flow.loc[tech_dict].values, visible=visible,
+                    name=name, marker=dict(color=color), legendgroup=tech,
+                    text=tech + ' charge (+) / discharge (-)', hoverinfo='x+y+text'
                 ))
 
-            elif array_flow.loc[tech_dict].sum():
+            else:
                 data.append(go.Bar(
                     x=timesteps, y=array_flow.loc[tech_dict].values, visible=visible,
                     name=name, legendgroup=tech, marker=dict(color=color)
                 ))
 
+            if var in carriers and 'carrier_export' in dataset and export_flow.loc[tech_dict].sum():
+                data.append(go.Bar(
+                    x=timesteps, y=-export_flow.loc[tech_dict].values, visible=visible,
+                    name=name + ' export', legendgroup=tech, marker=dict(color=hex_to_rgba(color, 0.5))
+                ))
+
+        if var in carriers and 'unmet_demand' in dataset:
+            data.append(go.Bar(
+                x=timesteps, y=unmet_flow.values, visible=visible,
+                name='Unmet ' + var + ' demand', legendgroup=tech,
+                marker=dict(color='grey')
+            ))
+
         return data
 
-    def get_var_layout(var, visible_data=None):
+    def get_var_layout(var, dataset):
         """
         Variable-specific layout. Increases axis verbosity for some known variables.
         `visible` used in dropdown, not if only one array is shown.
         """
 
         args = {}
-        if var in carriers:
+        if var in dataset.carriers.values:
             title = 'Carrier flow: {}'.format(var)
             y_axis_title = 'Energy produced(+) / consumed(-)'
         elif var == 'resource':
@@ -277,79 +360,38 @@ def plot_timeseries(
         else:
             title = y_axis_title = '{}'.format(var).capitalize()
         args.update({'yaxis': dict(title=y_axis_title), 'title': title})
-        if visible_data is not None:
-            return [{'visible': list(visible_data)}, args]
-        else:
-            return args
 
-    # fill trace data and add number of traces per var to 'data_len' for use with
-    # visibility. first var in loop has visibility == True by default
-    visible = True
-    for var in relevant_vars:
-        data += get_var_data(var, visible)
-        data_len.append(len(data))
-        visible = False
+        return args
 
-    # Initialise all visibility to False for dropdown updates
-    total_data_arrays = np.array([False for i in range(data_len[-1])])
-    var_num = 0
-    for var in relevant_vars:
-        # update visibility to True for all traces linked to this variable `var`
-        visible_data = total_data_arrays.copy()
-        visible_data[data_len[var_num]:data_len[var_num + 1]] = True
-
-        # Get variable-specific layout
-        var_layout = get_var_layout(var, visible_data)
-
-        var_num += 1
-        if len(relevant_vars) > 1:
-            buttons.append(dict(label=var, method='update', args=var_layout))
+    dataset = model._model_data.copy()
+    carriers = list(dataset.carriers.values)
+    timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
     layout = dict(
-        barmode='relative', xaxis=dict(),
-        legend=(dict(traceorder='reversed')), autosize=True,
-        title=buttons[0]['args'][1]['title']
+        barmode='relative', xaxis={}, autosize=True,
+        legend=(dict(traceorder='reversed', xanchor='left')), hovermode='x'
+    )
+
+    relevant_vars = get_relevant_vars(array)
+    data, layout = _get_data_layout(
+        'timeseries', get_var_data, get_var_layout, relevant_vars, layout, dataset
     )
 
     # If there are multiple vars to plot, use dropdowns via 'updatemenus'
-    if len(relevant_vars) > 1:
-        updatemenus = list([dict(
-            active=0, buttons=buttons, type='dropdown',
-            xanchor='auto', y=1.2, pad=dict(t=0.05, b=0.05, l=0.05, r=0.05)
-        )])
-        layout['updatemenus'] = updatemenus
-    else:
+    if len(relevant_vars) == 1:
         # If there is one var, rangeslider can be added without the ensuing plot
         # running too slowly
-        layout['xaxis']['rangeslider'] = dict()
+        layout['xaxis']['rangeslider'] = {}
 
     if timesteps_zoom:
         layout['xaxis']['range'] = [timesteps[0], timesteps[timesteps_zoom]]
 
-    # html_only used to create a custom dashboard by returning only the html
-    # of the plot
-    if html_only:
-
-        return pltly.plot(
-            dict(data=data, layout=layout),
-            include_plotlyjs=False, output_type='div',
-            **PLOTLY_KWARGS
-        )
-
-    if save_svg:
-        if len(relevant_vars) > 1:
-            print('Unable to save multiple arrays to SVG, pick one array only')
-        else:
-            PLOTLY_KWARGS.update(image='svg')
-    elif data:
-        pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
-    else:
-        print('No data to plot')
+    return data, layout
 
 
 def plot_capacity(
         model, orient='h', array='all',
-        subset=dict(), sum_dims=None, squeeze=True, html_only=False, save_svg=False):
+        subset={}, sum_dims=None, squeeze=True, html_only=False, save_svg=False):
     """
     Parameters
     ----------
@@ -376,61 +418,51 @@ def plot_capacity(
         Will save plot to svg on rendering
 
     """
-    dataset = model._model_data.copy()
-    locations = dataset.locs
 
-    if array not in (
-        ['results', 'inputs', 'all'] +
-        ['resource_area', 'energy_cap', 'resource_cap', 'storage_cap', 'units'] +
-        [i + j for i, j in
-         product(['resource_area', 'energy_cap', 'resource_cap', 'storage_cap', 'units'],
-                 ['_max', '_min', '_equals'])]
-    ):
-        raise exceptions.ModelError(
-            'Cannot plot array={}. If you want carrier flow (_prod, _con, _export) '
-            'then specify the name of the energy carrier as array'.format(array)
-        )
-
-    # relevant_vars are all variables relevant to this plotting instance
-    relevant_vars = []
-
-    if array in ['results', 'all']:
-        relevant_vars += ['resource_area', 'energy_cap', 'resource_cap', 'storage_cap', 'units']
-
-    if array in ['inputs', 'all']:
-        relevant_vars += [
+    def get_relevant_vars(array):
+        allowed_input_vars = [
             i + j for i, j in
             product(['resource_area', 'energy_cap', 'resource_cap', 'storage_cap', 'units'],
                     ['_max', '_min', '_equals'])
         ]
+        allowed_result_vars = [
+            'results', 'inputs', 'all', 'resource_area', 'energy_cap', 'resource_cap',
+            'storage_cap', 'units'
+        ]
 
-    # if not 'all', 'inputs', or 'results', take user input
-    if not relevant_vars and not isinstance(array, list):
-        relevant_vars = [array]
-    relevant_vars = sorted(list(set(relevant_vars).intersection(dataset.data_vars.keys())))
-    # data_len is used to populate visibility of traces, for dropdown
-    data_len = [0]
-    data = []
-    buttons = []
+        if ((isinstance(array, list) and not
+             set(array) != set(allowed_input_vars + allowed_result_vars)) or
+            (isinstance(array, str) and
+             array not in allowed_input_vars + allowed_result_vars)):
+            raise exceptions.ModelError(
+                'Cannot plot array={}. as one or more of the elements is not considered '
+                'to be a capacity'.format(array)
+            )
 
-    if orient in ['horizontal', 'h']:
-        orientation = 'h'
-        location_axis = 'yaxis'
-        value_axis = 'xaxis'
-    elif orient in ['vertical', 'v']:
-        orientation = 'v'
-        location_axis = 'xaxis'
-        value_axis = 'yaxis'
-    else:
-        raise ValueError('Orient must be `v`/`vertical` or `h`/`horizontal`')
+        # relevant_vars are all variables relevant to this plotting instance
+        if array == 'results':
+            relevant_vars = sorted(allowed_result_vars)
+        elif array == 'inputs':
+            relevant_vars = sorted(allowed_input_vars)
+        elif array == 'all':
+            relevant_vars = sorted(allowed_result_vars + allowed_input_vars)
+        elif isinstance(array, list):
+            relevant_vars = array
+        elif isinstance(array, str):
+            relevant_vars = [array]
 
-    def get_cap_data(cap, visible):
+        relevant_vars = [i for i in relevant_vars if i in dataset]
+
+        # Remove all vars that don't actually turn up in the dataset, which is relevant
+        # ony really for results vars
+        return sorted(list(set(relevant_vars).intersection(dataset.data_vars.keys())))
+
+    def get_var_data(cap, dataset, visible):
         array_cap = model.get_formatted_array(cap).reindex(locs=locations)
 
         if subset:  # first, subset the data
-            allowed_subsets = [{k: v for k, v in subset.items() if k in array_cap.dims}]
+            allowed_subsets = {k: v for k, v in subset.items() if k in array_cap.dims}
             array_cap = array_cap.loc[allowed_subsets]
-
         if sum_dims:  # second, sum along all necessary dimensions
             array_cap = array_cap.sum(sum_dims)
 
@@ -445,6 +477,8 @@ def plot_capacity(
         if 'techs' not in array_cap.dims:
             e = exceptions.ModelError
             raise e('Cannot plot capacity without `techs` in dimensions')
+        elif 'techs' not in subset.keys():
+            array_cap['techs'] = array_cap.techs.sortby('techs')
 
         data = []
 
@@ -456,7 +490,7 @@ def plot_capacity(
             else:
                 base_tech = dataset.inheritance.loc[{'techs': tech}].item().split('.')[0]
 
-            if base_tech in ['transmission', 'demand', 'unmet_demand']:
+            if base_tech in ['transmission', 'demand']:
                 continue
             if array_cap.loc[{'techs': tech}].sum() > 0:
                 x = array_cap.loc[{'techs': tech}].values
@@ -474,7 +508,7 @@ def plot_capacity(
                 ))
         return data
 
-    def get_cap_layout(cap, visible_data):
+    def get_var_layout(cap, dataset):
         args = {}
         if 'area' in cap:
             value_axis_title = 'Installed area'
@@ -488,75 +522,44 @@ def plot_capacity(
             value_axis_title = 'Installed capacity'
 
         if '_max' in cap:
-            title = 'Maximum ' + value_axis_title.lower()
+            title = value_axis_title.replace('Installed', 'Maximum allowed')
         elif '_min' in cap:
-            title = 'Minimum ' + value_axis_title.lower()
+            title = value_axis_title.replace('Installed', 'Minimum allowed')
+        elif '_equal' in cap:
+            title = value_axis_title.replace('Installed', 'Allowed')
         else:
             title = value_axis_title
 
         args.update({value_axis: dict(title=value_axis_title), 'title': title})
-        if visible_data is not None:
-            return [{'visible': list(visible_data)}, args]
-        else:
-            return args
 
-    # fill trace data and add number of traces per var to 'data_len' for use with
-    # visibility. first var in loop has visibility == True by default
-    visible = True
-    for var in relevant_vars:
-        data += get_cap_data(var, visible)
-        data_len.append(len(data))
-        visible = False
+        return args
 
-    # Initialise all visibility to False for dropdown updates
-    total_data_arrays = np.array([False for i in range(data_len[-1])])
-    var_num = 0
-    for var in relevant_vars:
-        # update visibility to True for all traces linked to this variable `var`
-        visible_data = total_data_arrays.copy()
-        visible_data[data_len[var_num]:data_len[var_num + 1]] = True
+    dataset = model._model_data.copy()
+    locations = sorted(list(dataset.locs.values))
 
-        # Get variable-specific layout
-        cap_layout = get_cap_layout(var, visible_data)
-
-        if len(relevant_vars) > 1:
-            buttons.append(dict(label=var, method='update', args=cap_layout))
-
-        var_num += 1
+    if orient in ['horizontal', 'h']:
+        orientation = 'h'
+        location_axis = 'yaxis'
+        value_axis = 'xaxis'
+    elif orient in ['vertical', 'v']:
+        orientation = 'v'
+        location_axis = 'xaxis'
+        value_axis = 'yaxis'
+    else:
+        raise ValueError('Orient must be `v`/`vertical` or `h`/`horizontal`')
 
     layout = {
         'barmode': 'relative', location_axis: dict(title='Location'),
         'legend': (dict(traceorder='reversed')),
-        'autosize': True,
-        'title': buttons[0]['args'][1]['title']
+        'autosize': True
     }
 
-    # If there are multiple vars to plot, use dropdowns via 'updatemenus'
-    if len(relevant_vars) > 1:
-        updatemenus = list([dict(
-            active=0, buttons=buttons, type='dropdown',
-            xanchor='auto', y=1.2, pad=dict(t=0.05, b=0.05, l=0.05, r=0.05)
-        )])
-        layout['updatemenus'] = updatemenus
+    relevant_vars = get_relevant_vars(array)
+    data, layout = _get_data_layout(
+        'timeseries', get_var_data, get_var_layout, relevant_vars, layout, dataset
+    )
 
-    if html_only:
-        return pltly.plot(
-            dict(data=data, layout=layout),
-            include_plotlyjs=False, output_type='div',
-            **PLOTLY_KWARGS
-        )
-
-    if save_svg:
-        if len(relevant_vars) > 1:
-            print('Unable to save multiple arrays to SVG, pick one array only')
-        else:
-            PLOTLY_KWARGS.update(image='svg')
-
-    elif data:
-        pltly.iplot(dict(data=data, layout=layout), **PLOTLY_KWARGS)
-
-    else:
-        print('No data to plot')
+    return data, layout
 
 
 def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg=False):
@@ -574,7 +577,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
         image in this case.
 
     """
-    coordinates = model._model_data.loc_coordinates
+    coordinates = model._model_data.loc_coordinates.sortby('locs')
 
     colors = model._model_data.colors
     names = model._model_data.names
@@ -627,9 +630,10 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
                     if dict_entry == 'text':
                         filled_list.append('{} capacity: {}'.format(tech, int(e_cap.item())))
                     else:
-                        filled_list.append(edge(loc_from, loc_to)
-                                        if scatter_dict == 'edge'
-                                        else mid_edge(loc_from, loc_to))
+                        filled_list.append(
+                            edge(loc_from, loc_to)
+                            if scatter_dict == 'edge' else mid_edge(loc_from, loc_to)
+                        )
 
         return filled_list
 
@@ -713,24 +717,24 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
 
     data = []
 
-    for tech in energy_cap.techs:
+    for tech in sorted(energy_cap.techs.values):
         per_tech_mid_edge_dict = mid_edge_scatter_dict.copy()
         per_tech_mid_edge_dict = {**mid_edge_scatter_dict, **{
-            h_coord: _fill_scatter('mid_edge', h_coord, tech.item()),
-            v_coord: _fill_scatter('mid_edge', v_coord, tech.item()),
-            'text': _fill_scatter('mid_edge', 'text', tech.item()),
-            'legendgroup': tech.item(),
+            h_coord: _fill_scatter('mid_edge', h_coord, tech),
+            v_coord: _fill_scatter('mid_edge', v_coord, tech),
+            'text': _fill_scatter('mid_edge', 'text', tech),
+            'legendgroup': tech,
             'marker': {'color': colors.loc[dict(techs=tech)].item()}}}
 
-        h_edge = _fill_scatter('edge', h_coord, tech.item())
-        v_edge = _fill_scatter('edge', v_coord, tech.item())
+        h_edge = _fill_scatter('edge', h_coord, tech)
+        v_edge = _fill_scatter('edge', v_coord, tech)
         showlegend = True
         for i in range(len(h_edge)):
             data.append({**edge_scatter_dict, **{
                 h_coord: h_edge[i],
                 v_coord: v_edge[i],
                 'showlegend': showlegend,
-                'legendgroup': tech.item(),
+                'legendgroup': tech,
                 'name': names.loc[dict(techs=tech)].item(),
                 'line': {'color': colors.loc[dict(techs=tech)].item()}
             }})
@@ -764,17 +768,8 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
     if html_only:
         del layout_dict['title']
         del layout_dict['width']
-        return pltly.plot(
-            dict(data=data, layout=layout_dict),
-            include_plotlyjs=False, output_type='div',
-            **PLOTLY_KWARGS
-        )
-    if save_svg:
-        PLOTLY_KWARGS.update({'image': 'svg'})
-    elif data:
-        pltly.iplot(dict(data=data, layout=layout_dict), **PLOTLY_KWARGS)
-    else:
-        print('No data to plot')
+
+    return data, layout_dict
 
 
 class ModelPlotMethods:
@@ -782,17 +777,20 @@ class ModelPlotMethods:
         self._model = model
 
     def timeseries(self, **kwargs):
-        return plot_timeseries(self._model, **kwargs)
+        data, layout = plot_timeseries(self._model, **kwargs)
+        return _plot(data, layout, **kwargs)
 
     timeseries.__doc__ = plot_timeseries.__doc__
 
     def capacity(self, **kwargs):
-        return plot_capacity(self._model, **kwargs)
+        data, layout = plot_capacity(self._model, **kwargs)
+        return _plot(data, layout, **kwargs)
 
     capacity.__doc__ = plot_capacity.__doc__
 
     def transmission(self, **kwargs):
-        return plot_transmission(self._model, **kwargs)
+        data, layout = plot_transmission(self._model, **kwargs)
+        return _plot(data, layout, **kwargs)
 
     transmission.__doc__ = plot_transmission.__doc__
 

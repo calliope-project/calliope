@@ -279,7 +279,7 @@ def process_techs(config_model):
         # CHECK: If necessary, populate carrier_in and carrier_out in essentials, but
         # also break on missing carrier data
         if 'carrier_in' not in tech_result.essentials:
-            if tech_result.inheritance[-1] in ['supply', 'supply_plus', 'unmet_demand']:
+            if tech_result.inheritance[-1] in ['supply', 'supply_plus']:
                 tech_result.essentials.carrier_in = 'resource'
             elif tech_result.inheritance[-1] in ['demand', 'transmission',
                                                  'storage']:
@@ -300,7 +300,7 @@ def process_techs(config_model):
         if 'carrier_out' not in tech_result.essentials:
             if tech_result.inheritance[-1] == 'demand':
                 tech_result.essentials.carrier_out = 'resource'
-            elif tech_result.inheritance[-1] in ['supply', 'supply_plus', 'unmet_demand',
+            elif tech_result.inheritance[-1] in ['supply', 'supply_plus',
                                                  'transmission', 'storage']:
                 try:
                     tech_result.essentials.carrier_out = \

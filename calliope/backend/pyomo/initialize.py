@@ -172,7 +172,7 @@ def run_iterative(model_data, timings):
         # We always save the window data. Until the last window(s) this will crop
         # the window_to_horizon timesteps. In the last window(s), optimistion will
         # only be occurring over a window length anyway
-        results = results.loc[dict(timesteps=slice(None,window_ends.index[i]))]
+        results = results.loc[dict(timesteps=slice(None, window_ends.index[i]))]
         result_array.append(results)
 
         # Set up initial storage for the next iteration

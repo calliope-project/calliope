@@ -28,6 +28,8 @@ model:
     operation:
         horizon: null
         window: null
+    bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
+    ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
 
 ##
 # Base technology groups
@@ -65,21 +67,6 @@ tech_groups:
             resource_unit: power
             force_resource: true
             energy_con: true
-    unmet_demand:
-        required_constraints: []
-        allowed_constraints: ['energy_prod', 'energy_cap_max', 'energy_prod', 'resource', 'resource_unit']
-        allowed_costs: ['om_prod']
-        essentials:
-            parent: null
-            color: '#666666'
-        constraints:
-            resource: inf
-            resource_unit: power
-            energy_cap_max: inf
-            energy_prod: true
-        costs:
-            monetary:
-                om_prod: 1.0e+9
     storage:
         required_constraints: [['energy_cap_max', 'energy_cap_equals', 'storage_cap_max', 'storage_cap_equals', 'energy_cap_per_unit'], 'charge_rate']
         allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'resource_scale_to_peak', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'storage_initial', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss', 'units_min', 'units_max', 'units_equals']

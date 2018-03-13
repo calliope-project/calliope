@@ -6,7 +6,6 @@ locations:
     region1:
         coordinates: {lat: 40, lon: -2}
         techs:
-            unmet_demand_power:
             demand_power:
                 constraints:
                     resource: file=demand-1.csv:demand
@@ -17,7 +16,6 @@ locations:
     region2:
         coordinates: {lat: 40, lon: -8}
         techs:
-            unmet_demand_power:
             demand_power:
                 constraints:
                     resource: file=demand-2.csv:demand
