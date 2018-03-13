@@ -395,7 +395,7 @@ def process_timeseries_data(config_model, model_run):
         if isinstance(subset_time_config, list):
             if len(subset_time_config) == 2:
                 time_slice = slice(subset_time_config[0], subset_time_config[1])
-                if pd.to_datetime(subset_time_config[0], format=dtformat) < datetime_range[0] or pd.to_datetime(subset_time_config[1], format=dtformat) > datetime_range[-1]:
+                if pd.to_datetime(subset_time_config[0]).date() < datetime_range[0].date() or pd.to_datetime(subset_time_config[1]).date() > datetime_range[-1].date():
                     raise exceptions.ModelError(
                         'subset time range {} is outside the input data time range [{}, {}]'.format(subset_time_config, datetime_range[0].strftime('%Y-%m-%d'), datetime_range[-1].strftime('%Y-%m-%d'))
                     )
