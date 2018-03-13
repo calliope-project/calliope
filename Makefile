@@ -36,6 +36,10 @@ endif
 .PHONY : all-ci
 all-ci : test lint
 
+.PHONY : doc-plots
+doc-plots :
+	python doc/generate_plots.py
+
 ###
 # Build package and upload to PyPI
 ###

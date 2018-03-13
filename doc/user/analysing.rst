@@ -8,11 +8,37 @@ Calliope inputs and results are made to be very easily handled. Whatever platfor
 Visualising results
 -------------------
 
+**FIXME clean up these initial paras**
+
 In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. ``summary`` can also be accessed from the command line interface, to gain access to result visualisation without the need to interact with Python.
 
 Refer to the :ref:`API documentation for the analysis module<api_analysis>` for an overview of available analysis functionality.
 
 Refer to the :doc:`tutorials <tutorials>` for some basic analysis techniques.
+
+Plotting time series
+--------------------
+
+.. raw:: html
+   :file: images/plot_timeseries.html
+
+**TBA**
+
+Plotting capacities
+-------------------
+
+.. raw:: html
+   :file: images/plot_capacity.html
+
+**TBA**
+
+Plotting transmission
+---------------------
+
+.. raw:: html
+   :file: images/plot_transmission.html
+
+**TBA**
 
 Saving publication-quality SVG figures
 --------------------------------------

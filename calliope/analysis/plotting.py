@@ -427,7 +427,8 @@ def plot_capacity(
         ]
         allowed_result_vars = [
             'results', 'inputs', 'all', 'resource_area', 'energy_cap', 'resource_cap',
-            'storage_cap', 'units'
+            'storage_cap', 'units',
+            # 'systemwide_levelised_cost', 'systemwide_capacity_factor'
         ]
 
         if ((isinstance(array, list) and not

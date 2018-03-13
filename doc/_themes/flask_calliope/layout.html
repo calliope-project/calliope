@@ -1,20 +1,19 @@
-{%- extends "basic/layout.html" %}
-{%- block extrahead %}
-  {{ super() }}
-  {% if theme_touch_icon %}
-  <link rel="apple-touch-icon" href="{{ pathto('_static/' ~ theme_touch_icon, 1) }}" />
-  {% endif %}
+{% extends "basic/layout.html" %}
+
+{% block extrahead %}
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
   <link href='https://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css'>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 {% endblock %}
-{%- block relbar2 %}{% endblock %}
+
 {% block header %}
   {{ super() }}
   {% if pagename == 'index' %}
   <div class=indexwrapper>
   {% endif %}
 {% endblock %}
-{%- block footer %}
+
+{% block footer %}
   <div class="footer">
     &copy; Copyright {{ copyright }}.
     <br><br>Documentation created with <a href="http://sphinx-doc.org/">Sphinx</a>, hosted by <a href="http://www.readthedocs.org">Read the Docs</a>.
@@ -22,4 +21,4 @@
   {% if pagename == 'index' %}
   </div>
   {% endif %}
-{%- endblock %}
+{% endblock %}
