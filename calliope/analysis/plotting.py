@@ -263,7 +263,7 @@ def plot_timeseries(
         # array flow for storage tracks stored energy. carrier_flow is
         # charge/discharge (including resource consumed for supply_plus techs)
         elif var == 'storage':
-            array_flow = model.get_formatted_array('storage')
+            array_flow = _get_reindexed_array('storage')
             carrier_flow = (array_prod.sum('carriers') + array_con.sum('carriers') - resource_con)
             carrier_flow = subset_sum_squeeze(carrier_flow, subset, sum_dims, squeeze)
 
@@ -271,7 +271,7 @@ def plot_timeseries(
             array_flow = resource_con
 
         else:
-            array_flow = model.get_formatted_array(var)
+            array_flow = _get_reindexed_array(var)
 
         array_flow = subset_sum_squeeze(array_flow, subset, sum_dims, squeeze)
 
@@ -474,7 +474,7 @@ def plot_capacity(
 
         else:
             array_cap = model.get_formatted_array(cap).reindex(locs=locations)
-            subset_sum_squeeze(array_cap, subset, sum_dims, squeeze)
+            array_cap = subset_sum_squeeze(array_cap, subset, sum_dims, squeeze)
 
         if len(array_cap.dims) > 2:
             raise exceptions.ModelError(
