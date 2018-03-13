@@ -11,8 +11,7 @@ Implements the core Model class.
 
 import numpy as np
 
-from calliope.analysis import plotting
-
+from calliope.analysis import plotting, postprocess
 from calliope.core import debug, io
 from calliope.core.preprocess import \
     model_run_from_yaml, \
@@ -153,10 +152,11 @@ class Model(object):
         backend = self._model_data.attrs['run.backend']
         results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self._timings)
 
+        # Add additional post-processed result variables to results
+        postprocess.postprocess_model_results(results, self._model_data)
+
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
-
-        # FIXME: possibly add some summary tables to results
 
         self._model_data = self._model_data.merge(results)
 
