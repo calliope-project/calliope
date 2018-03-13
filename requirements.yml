@@ -17,13 +17,10 @@ dependencies:
     - numpy=1.14.1
     - pandas=0.22
     - plotly
-    # temporarily installing pyomo via pip
-    # - pyomo=5.2
+    - pyomo=5.4.3
     - pytest
     - pytest-cov
     - ruamel.yaml<=0.15
     - scikit-learn
     - scipy
     - xarray=0.10.1
-    - pip:
-        - pyomo==5.4.3

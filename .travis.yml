@@ -5,8 +5,6 @@ sudo: false  # Use container-based infrastructure
 
 matrix:
   include:
-    # - env:
-    #   - JOB_TYPE="lint"
     - env:
       - JOB_TYPE="test"
 
@@ -17,20 +15,13 @@ before_install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  # Useful for debugging any issues with conda
   - conda info -a
 
 install:
   - conda env create -n calliope --file requirements.yml
   - source activate calliope
-  - conda install -c conda-forge python-coveralls  # Install manually here but not on appveyor
-  - conda install -c conda-forge pylint=1.6
+  - conda env update --file requirements_travis.yml
   - pip install --no-cache-dir .
-
-before_script:  # configure a headless display to test plot generation
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3  # give xvfb some time to start
 
 script: "make ci"
 
