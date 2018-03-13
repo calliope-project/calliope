@@ -25,6 +25,9 @@ model:
     subset_time: null  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
     objective: 'cost_minimization'
     reserve_margin:  {} # Per-carrier system-wide reserve margins
+    operation:
+        horizon: null
+        window: null
 
 ##
 # Base technology groups

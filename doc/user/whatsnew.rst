@@ -18,11 +18,21 @@ Version `0.6` provides a conversion script to models created with Calliope 0.5 i
 
 ``run.yaml`` and ``model.yaml`` are the main run and model configuration files of the 0.5 model to be converted, while ``output_dir`` is a directory into which the converted model will be saved.
 
+The file structure of the input model is preserved (all YAML and CSV input files and their folder structure), but all information from the run configuration file is merged into the main model configuration file.
+
+Time series are handled by the script: the ``set_t.csv`` required in Calliope 0.5 models is removed, with the time step information inserted directly into each of the remaining time series CSV files.
+
 The conversion script has some important limitations:
 
-* Comments are lost
-* Some functionality is not converted
+* Comments in YAML files are lost
+* Parallel run configurations are not converted to the new override group configuration format
+* The ``group_fraction`` constraint is not converted, as its formulation has changed substantially in 0.6.0
+* ``carrier_ratios`` are not converted
+* Operational mode configuration is not converted
 
+Functionality which is not converted, has been removed in version 0.6.0, or keys not known to the script, are moved into a ``__disabled`` key in the output YAML files, so they remain visible for the user to remove or to manually convert if needed.
+
+The script also adds ``interest_rate`` and ``lifetime`` for each technology, using the implicit default values from Calliope 0.5 (25 years lifetime, a 0.10 interest rate for the monetary cost class and 0 for other cost classes).
 
 ---------------------
 Removed functionality

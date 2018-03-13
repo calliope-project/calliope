@@ -815,6 +815,8 @@ Optional settings:
 * ``time``: Settings to adjust time resolution, see :ref:`time_clustering` for the available options.
 * ``solver_io``
 * ``solver_options``: A list of options, which are passed on to the chosen solver, and are therefore solver-dependent (see below)
+* ``random_seed``
+* ``save_logs``
 
 .. _debugging_runs_config:
 

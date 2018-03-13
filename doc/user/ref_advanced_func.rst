@@ -136,6 +136,14 @@ The available options include:
 Operational mode
 ----------------
 
+Requires two model settings:
+
+.. code-block:: yaml
+
+    model:
+        operation:
+            horizon:
+            window:
 
 .. _run_config_generate:
 
