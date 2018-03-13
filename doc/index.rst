@@ -45,7 +45,7 @@ User guide
    user/running
    user/analysing
    user/tutorials
-   user/reference
+   user/more_info
    user/develop
 
 -----------------

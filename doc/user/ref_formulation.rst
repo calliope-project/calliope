@@ -63,7 +63,7 @@ Technologies can define costs for components (installed capacity), for operation
 
 The primary cost class, ``monetary``, is used to calculate levelized costs and by default enters into the objective function. Therefore each technology should define at least one cost parameter, as it would be considered free otherwise. By default, any cost not specified is assumed to be zero.
 
-Only the ``monetary`` cost class is entered into the default objective function, but other cost classes can be defined for accounting purposes, e.g. ``emissions`` to account for greenhouse gas emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology (see the :doc:`model configuration section <ref_model_config>` for more detail on this).
+Only the ``monetary`` cost class is entered into the default objective function, but other cost classes can be defined for accounting purposes, e.g. ``emissions`` to account for greenhouse gas emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology (see :doc:`ref_config_listing` for more detail on this).
 
 To add additional cost classes to the objective function (e.g. ``emissions``), a custom objective function would need to be created. See :ref:`config_reference_model_wide` in model configuration for more details.
 
@@ -75,7 +75,7 @@ It is possible to specify revenues for technologies simply by setting a negative
 Putting technologies and locations together: Nodes
 --------------------------------------------------
 
-In the model definition, locations can be defined, and for each location (or for groups of locations), technologies can be permitted. The details of this are laid out in the :doc:`model configuration section <ref_model_config>`.
+In the model definition, locations can be defined, and for each location (or for groups of locations), technologies can be permitted. The details of this are laid out in :doc:`ref_config_listing`.
 
 A *node* is the combination of a specific location and technology, and is how Calliope internally builds the model. For a given location, ``loc``, and technology, ``tech``, a set of equations defined over ``loc::tech`` models that specific node.
 
@@ -97,7 +97,7 @@ The basic formulation of each node uses a set of energy balance equations. Depen
 * ``c_con(loc::tech::carrier, timestep)``: consumption of a given energy carrier by a technology at time ``timestep``
     This is used for all technologies, except ``supply`` and ``supply_plus``.
 
-The resulting losses associated with energy balancing also depend on the technology type. Each technology node is mapped here, with details on interactions given in :doc:`ref_model_config`.
+The resulting losses associated with energy balancing also depend on the technology type. Each technology node is mapped here, with details on interactions given in :doc:`ref_config_listing`.
 
 .. figure:: images/nodes.*
    :alt: Layout of a various node and their energy balance
@@ -128,7 +128,7 @@ When defining a technology, it must be given at least some constraints, that is,
 * ``energy_eff(loc::tech, timestep)``: resource/storage/carrier_in to carrier_out conversion efficiency
 * ``energy_cap_max(loc::tech)``: maximum installed carrier conversion capacity, applied to carrier_out
 
-.. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`ref_model_config` for details on this. Once processed in Calliope, all constraints will be indexed over location::technology sets.
+.. Note:: Generally, these constraints are defined on a per-technology basis. However, some (but not all) of them may be overridden on a per-location basis. This allows, for example, setting different constraints on the allowed maximum capacity for a specific technology at each location separately. See :doc:`ref_config_listing` for details on this. Once processed in Calliope, all constraints will be indexed over location::technology sets.
 
 Finally, each node tracks its costs (+ costs, - revenue), formulated in two constraints (more details in the :doc:`ref_formulation` section):
 

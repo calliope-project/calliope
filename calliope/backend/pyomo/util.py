@@ -17,8 +17,8 @@ from calliope import exceptions
 @memoize
 def get_param(backend_model, var, dims):
     """
-    Params
-    ------
+    Parameters
+    ----------
     backend_model : Pyomo model instance
     var : str
     dims : single value or tuple

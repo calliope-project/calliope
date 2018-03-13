@@ -14,31 +14,33 @@ There are essentially three ways to run a Calliope model:
 Running with the command-line tool
 ----------------------------------
 
-We can now run this model::
+We can easily run a model after creating it (see :doc:`building`), saving results to a single NetCDF file for further processing::
 
-   $ calliope run testmodel/model.yaml
+   $ calliope run testmodel/model.yaml --save_netcdf=results.nc
 
-Because of the output options set in ``model.yaml``, model results will be stored as a set of CSV files in the directory ``Output``. Saving CSV files is an easy way to get results in a format suitable for further processing with other tools. In order to make use of Calliope's analysis functionality, results should be saved as a single NetCDF file instead, which comes with improved performance and handling.
+The ``calliope run`` command takes the following options:
 
-The included command-line tool ``calliope run`` will execute a given run configuration::
+* ``--save_netcdf={filename.nc}``: Save complete model, including results, to the given NetCDF file. This is the recommended way to save model input and output data into a single file, as it preserves all data fully, and allows later reconstruction of the Calliope model for further analysis.
+* ``--save_csv={directory name}``: Save results as a set of CSV files to the given directory. This can be handy if the modeler needs results in a simple text-based format for further processing with a tool like Microsoft Excel.
+* ``--save_plots={filename.html}``: Save interactive plots to the given HTML file (see :doc:`analysing` for further details on the plotting functionality).
+* ``--debug``: Run in debug mode, which prints more internal information, and is useful when troubleshooting failing models.
+* ``--override_file={filename.yaml}:{override_groups}``: Specify override groups to apply to the model (see below for more information).
+* ``--help``: Show all available options.
 
-   $ calliope run my_model/run.yaml
+Multiple options can be specified, for example, saving NetCDF, CSV, and HTML plots simultaneously::
 
-It will generate and solve the model, then save the results to the the output directory given by
+   $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs --save_plots=plots.html
 
-``output.path`` in the run configuration.
-
-Saving results
---------------
-
-If running single runs via the command-line tool or using the parallel run functionality, results will be saved as either a single NetCDF file per model run or a set of CSV files per model run. These can then be read back into an interactive Python session for analysis or further processed with any other tool available to the modeller.
-
-Two output formats are available: a collection CSV files or a single NetCDF file. They can be chosen by settings ``output.format`` in the run configuration (set to ``netcdf`` or ``csv``). The :mod:`~calliope.open_netcdf` module provides methods to read results stored in the NetCDF format, so that they can then be analyzed with the :mod:`~calliope.analysis` module.
+.. Warning:: Unlike in versions prior to 0.6.0, the command-line tool in Calliope 0.6.0 and upward does not save results by default -- the modeller must specify one of the ``-save`` options.
 
 Overrides
 ---------
 
-In the command line interface we use ``--override_file=overrides.yaml:milp``. Multiple overrides from the YAML file could be applied at once. E.g. if we changed some costs and had an additional entry ``cost_changes``, we could call ``--override_file=overrides.yaml:milp,cost_changes`` to apply both overrides.
+Assuming we have specified an override group called ``milp`` in a file called ``overrides.yaml``, we can apply it to our model with::
+
+   $ calliope run testmodel/model.yaml --override_file=overrides.yaml:milp --save_netcdf=results.nc
+
+Multiple overrides from the YAML file can be applied at once. For example, we may want to change some of the costs through an additional override group called ``high_cost_scenario``. We could then use ``--override_file=overrides.yaml:milp,high_cost_scenario`` to apply both overrides simultaneously.
 
 .. seealso::
 
@@ -48,40 +50,55 @@ In the command line interface we use ``--override_file=overrides.yaml:milp``. Mu
 Running interactively with Python
 ---------------------------------
 
-An example which also demonstrates some of the analysis possibilities after running a model is given in the following Jupyter notebook, based on the national-scale example model. Note that you can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed):
-
-:nbviewer_docs:`Calliope interactive national-scale example notebook <_static/notebooks/tutorial.ipynb>`
-
-
 The most basic way to run a model programmatically from within a Python interpreter is to create a :class:`~calliope.Model` instance with a given ``model.yaml`` configuration file, and then call its :meth:`~calliope.Model.run` method::
 
    import calliope
-   model = calliope.Model(config='/path/to/model_configuration.yaml')
+   model = calliope.Model('path/to/model.yaml')
    model.run()
 
-.. note:
-    If ``config`` is not specified (i.e. ``model = Model()``), an error is raised. See :doc:`ref_example_models` for information on instantiating a simple example model without specifying a run configuration.
+.. note:: If ``config`` is not specified (i.e. ``model = Model()``), an error is raised. See :doc:`ref_example_models` for information on instantiating a simple example model without specifying a custom model configuration.
 
 Other ways to load a model interactively are:
 
-    * giving ``config`` an :class:`~calliope.AttrDict` object or standard dictionary, which has the same nested format as the YAML files (top-level keys: ``model``, ``run``, ``locations``, ``techs``)
-    * providing a ``model_data`` object, which is the complete pre-processed NetCDF of a model (loaded in as a xarray Dataset).
+* Passing an :class:`~calliope.AttrDict` or standard Python dictionary to the :class:`~calliope.Model` constructor, with the same nested format as the YAML model configuration (top-level keys: ``model``, ``run``, ``locations``, ``techs``).
+* Loading a previously saved model from a NetCDF file with ``model = calliope.read_netcdf('path/to/saved_model.nc')``. This can either be a pre-processed model saved before its ``run`` method was called, which will include input data only, or a completely solved model, which will include input and result data.
 
-After instantiating the ``Model`` object, and before calling the ``run()`` method, it is possible to manually inspect and adjust the configuration of the model. The preprocessed inputs are all held in the xarray Dataset ``model.inputs``.
+After instantiating the ``Model`` object, and before calling the ``run()`` method, it is possible to manually inspect and adjust the configuration of the model. The pre-processed inputs are all held in the xarray Dataset ``model.inputs``.
 
-After the model has been solved, an xarray Dataset containing results (``model.results``) can be viewed. At this point the model can be saved :meth:`~calliope.Model.to_csv` and :meth:`~calliope.Model.to_netcdf`, which saves all inputs and results.
+After the model has been solved, an xarray Dataset containing results (``model.results``) can be accessed. At this point, the model can be saved with either :meth:`~calliope.Model.to_csv` or :meth:`~calliope.Model.to_netcdf`, which saves all inputs and results, and is equivalent to the corresponding ``--save`` options of the command-line tool.
+
+.. seealso::
+    An example of interactive running in a Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the :nbviewer_docs:`Calliope interactive national-scale example notebook <_static/notebooks/tutorial.ipynb>`. You can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
 Overrides
 ---------
 
-Interactively we apply this override by setting the `override_file` argument to e.g. ``overrides.yaml:milp`` and/or the `override_dict` argument to a dictionary of overrides.
+There are two ways to apply override groups interactively:
+
+1. By setting the `override_file` argument analogously to use in the command-line tool, e.g.:
+
+    .. code-block:: python
+
+        model = calliope.Model(
+            'model.yaml',
+            override_file='overrides.yaml:milp'
+        )
+
+2. By passing the `override_dict` argument, which is a Python dictionary or :class:`~calliope.AttrDict` of overrides:
+
+    .. code-block:: python
+
+        model = calliope.Model(
+            'model.yaml',
+            override_dict={'run.solver': 'gurobi'}
+        )
 
 Tracking progress
 -----------------
 
-When running Calliope in command line, logging of model preprocessing and solving occurs automatically. Interactively, in the Jupyter notebook, you can also having verbose logging printed by running the following:
+When running Calliope in command line, logging of model pre-processing and solving occurs automatically. Interactively, for example in a Jupyter notebook, you can enable verbose logging by running the following code before instantiating and running a Calliope model:
 
-.. code-block::
+.. code-block:: python
 
     import logging
 
@@ -92,7 +109,7 @@ When running Calliope in command line, logging of model preprocessing and solvin
 
     logger = logging.getLogger()
 
-This will include our model processing output, as well as that of the chosen solver.
+This will include model processing output, as well as the output of the chosen solver.
 
 .. _generating_scripts:
 
@@ -131,27 +148,17 @@ In both cases, there will be a time penalty, as linear programming solvers are l
 
 Additionally, in LP models, interactions between timesteps (in ``storage`` technologies) can lead to longer solution time. The exact extent of this is as-yet untested.
 
-TODO: move elsewhere:
-
-By applying a ``purchase`` cost to a technology, that technology will have a binary variable associated with it, describing whether or not it has been "purchased".
-
-By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, that technology will have a integer variable associated with it, describing how many of that technology have been "purchased". If a ``purchase`` cost has been applied to this same technology, the purchasing cost will be applied per unit.
-
-.. Warning::
-
-   Integer and Binary variables are still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
-
-.. seealso:: :ref:`milp_example_model`
-
 Model mode
 ----------
-Solution time increases more than linearly with the number of decision variables. As it splits the model into ~daily chunks, operational mode can help to aleviate solution time of big problems. This is clearly at the expense of fixing technology capacities. However, one solution is to use a heavily time clustered ``plan`` mode to get indicative model capapcities. Then run ``operate`` mode with these capacities to get a higher resolution operation strategy. If necessary, this process could be iterated.
+
+Solution time increases more than linearly with the number of decision variables. As it splits the model into ~daily chunks, operational mode can help to alleviate solution time of big problems. This is clearly at the expense of fixing technology capacities. However, one solution is to use a heavily time clustered ``plan`` mode to get indicative model capacities. Then run ``operate`` mode with these capacities to get a higher resolution operation strategy. If necessary, this process could be iterated.
 
 .. seealso:: :ref:`operational_mode`
 
 Solver choice
 -------------
-The open-source solvers (``GLPK`` and ``CBC``) are slower than the commercial solvers. If you are an academic researcher, it's recommended to acquire a free licence for ``Gurobi`` or ``CPLEX`` to very quickly improve solution times. Particularly, GPLK suffers in solver MILP models. CBC is an improvement on it, but can be several orders of magnitude slower at reaching a solution than gurobi or CPLEX.
+
+The open-source solvers (GLPK and CBC) are slower than the commercial solvers. If you are an academic researcher, it is recommended to acquire a free licence for Gurobi or CPLEX to very quickly improve solution times. GLPK in particular is slow when solving MILP models. CBC is an improvement, but can still be several orders of magnitude slower at reaching a solution than Gurobi or CPLEX.
 
 .. seealso:: :ref:`solver_options`
 

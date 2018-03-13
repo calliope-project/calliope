@@ -39,45 +39,12 @@ Then install Calliope itself with pip::
 Creating modular extensions
 ---------------------------
 
-Constraint generator functions
-------------------------------
-
-By making use of the ability to load custom constraint generator functions (see :ref:`loading_optional_constraints`), a Calliope model can be extended by additional constraints easily without modifying the core code.
-
-Constraint generator functions are called during construction of the model with the :class:`~calliope.Model` object passed as the only parameter.
-
-The ``Model`` object provides, amongst other things:
-
-* The Pyomo model instance, under the property ``m``
-* The model data under the ``data`` property
-* An easy way to access model configuration with the :meth:`~calliope.Model.get_option` method
-
-A constraint generator function can add constraints, parameters, and variables directly to the Pyomo model instance (``Model.m``). Refer to the `Pyomo documentation <https://software.sandia.gov/trac/pyomo/>`_ for information on how to construct these model components.
-
-The default cost-minimizing objective function provides a good example:
-
-.. literalinclude:: ../../calliope/backend/pyomo/objective.py
-   :language: python
-   :lines: 12-
-
-See the source code of the :func:`~calliope.constraints.optional.ramping_rate` function for a more elaborate example.
-
-The process of including custom, optional constraints is as follows:
-
-First, create the source code (see e.g. the above example for the ``ramping_rate`` function) in a file, for example ``my_constraints.py``
-
-Then, assuming your custom constraint generator function is called ``my_first_custom_constraint`` and is defined in ``my_constraints.py``, you can tell Calliope to load it by adding it to the list of optional constraints in your model configuration as follows::
-
-  constraints:
-      - constraints.optional.ramping_rate
-      - my_constraints.my_first_custom_constraint
-
-This assumes that the file ``my_constraints.py`` is importable when the model is run. It must therefore either be in the directory from which the model is run, installed as a Python module (see `this document <https://python-packaging.readthedocs.io/en/latest/index.html>`_ on how to create importable and installable Python packages), or the Python import path has to be adjusted according to the `official Python documentation <https://docs.python.org/3/tutorial/modules.html#the-module-search-path>`_.
+As of version 0.6.0, dynamic loading of custom constraint generator extensions has been removed due it not not being used by users of Calliope. The ability to dynamically load custom functions to adjust time resolution remains (see below).
 
 Subsets
 -------
 
-Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.sets`, an overview of which is included here.
+Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of custom constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.sets`, an overview of which is included here.
 
 .. include:: ../../calliope/core/preprocess/sets.py
    :start-after: ###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
@@ -86,7 +53,7 @@ Calliope internally builds many subsets to better manage constraints, in particu
 Time functions and masks
 ------------------------
 
-Like custom constraint generator functions, custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.time_masks` or :mod:`calliope.time_functions` module, and if not, attempts to load the function from an importable module:
+Custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.time_masks` or :mod:`calliope.time_functions` module, and if not, attempts to load the function from an importable module:
 
 .. code-block:: yaml
 

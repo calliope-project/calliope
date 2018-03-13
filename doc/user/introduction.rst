@@ -3,16 +3,15 @@
 Introduction
 ============
 
-
 The basic process of modelling with Calliope is based on three steps:
 
-1. Create a model from scratch or by adjusting an existing model `(see documentation) <https://calliope.readthedocs.io/en/stable/>`_
-2. Run your model `(see documentation) <https://calliope.readthedocs.io/en/stable/>`_
-3. Analyse and visualise model results `(see documentation) <https://calliope.readthedocs.io/en/stable/>`_
+1. Create a model from scratch or by adjusting an existing model (:doc:`building`)
+2. Run your model (:doc:`running`)
+3. Analyse and visualise model results (:doc:`analysing`)
 
-
-
-
+--------------------
+Energy system models
+--------------------
 
 Energy system models allow analysts to form internally coherent scenarios of how energy is extracted, converted, transported, and used, and how these processes might change in the future. These models have been gaining renewed importance as methods to help navigate the climate policy-driven transformation of the energy system.
 

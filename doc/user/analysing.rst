@@ -31,6 +31,6 @@ Calliope provides functionality to read a previously-saved model a single NetCDF
 
 In the above example, the model's input data will be available under ``solved_model.inputs``, while the results (if the model had previously been solved) are available under ``solved_model.results``.
 
-Both of these are `xarray.Datasets <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ and can be further processed with Python. The `xarray documentation <http://xarray.pydata.org/en/stable/>`_ should be consulted for further information.
+Both of these are `xarray.Datasets <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ and can be further processed with Python.
 
-Calliope's NetCDF files follow the `CF conventions <http://cfconventions.org/>`_ and easily be processed with any other tool that can deal with NetCDF.
+.. seealso:: The `xarray documentation <http://xarray.pydata.org/en/stable/>`_ should be consulted for further information on dealing with Datasets. Calliope's NetCDF files follow the `CF conventions <http://cfconventions.org/>`_ and can easily be processed with any other tool that can deal with NetCDF.

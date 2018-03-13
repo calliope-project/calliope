@@ -1,10 +1,28 @@
-This page provides a summary of information from the full :doc:`release history <history>`.
+This page provides a summary of information from the full :doc:`release history <../history>`.
 
 =============
 New in v0.6.0
 =============
 
 Version `0.6` is backwards incompatible with version `0.5`. If you are familiar with how Calliope functions then this page will act as a reference for moving to version `0.6`.
+
+---------------------------------
+Converting a 0.5.x model to 0.6.0
+---------------------------------
+
+Version `0.6` provides a conversion script to models created with Calliope 0.5 into 0.6-compatible models:
+
+.. code-block:: shell
+
+    calliope convert run.yaml model.yaml output_dir
+
+``run.yaml`` and ``model.yaml`` are the main run and model configuration files of the 0.5 model to be converted, while ``output_dir`` is a directory into which the converted model will be saved.
+
+The conversion script has some important limitations:
+
+* Comments are lost
+* Some functionality is not converted
+
 
 ---------------------
 Removed functionality

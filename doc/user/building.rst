@@ -109,7 +109,7 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
                 energy_cap: 750  # USD per kW
                 om_con: 0.02  # USD per kWh
 
-Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its energy carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the `built-in visualisation tools <:doc:`analysing>`_.
+Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its energy carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
 
 The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the resource is set to infinite via ``inf``).
 

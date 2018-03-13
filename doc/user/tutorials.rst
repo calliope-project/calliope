@@ -2,8 +2,6 @@
 Tutorials
 =========
 
-Before going through these tutorials, it is recommended to have a brief look at the :doc:`components section <components>` to become familiar with the terminology and modeling approach used.
-
 The tutorials are based on the built-in example models, they explain the key steps necessary to set up and run simple models. Refer to the other parts of the documentation for more detailed information on configuring and running more complex models.
 
 The built-in examples are simple on purpose, to show the key components of a Calliope model.

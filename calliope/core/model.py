@@ -174,8 +174,8 @@ class Model(object):
         Return an xr.DataArray with locs, techs, and carriers as
         separate dimensions.
 
-        Params
-        ------
+        Parameters
+        ----------
         var : str
             Decision variable for which to return a DataArray.
 

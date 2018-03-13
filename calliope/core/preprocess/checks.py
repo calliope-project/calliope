@@ -34,8 +34,8 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
     """
     Print warnings and raise ModelError from errors.
 
-    Params
-    ------
+    Parameters
+    ----------
     warnings : list, optional
     errors : list, optional
 
