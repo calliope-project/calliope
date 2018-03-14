@@ -70,6 +70,8 @@ def process():
         get_section(model['run'])
     )
 
+    y = yaml.YAML()
+
     for tech_group in model['tech_groups']:
         defaults = {
             'essentials': model['tech_groups'][tech_group].get('essentials', {}),
@@ -80,12 +82,12 @@ def process():
             f.write(yaml.dump(defaults, Dumper=yaml.RoundTripDumper))
 
         required_allowed = {
-            'required_constraints': model['tech_groups'][tech_group].get('required_constraints', {}),
-            'allowed_constraints': model['tech_groups'][tech_group].get('allowed_constraints', {}),
-            'allowed_costs': model['tech_groups'][tech_group].get('allowed_costs', {})
+            'required_constraints': y.seq(model['tech_groups'][tech_group].get('required_constraints', [])),
+            'allowed_constraints': y.seq(model['tech_groups'][tech_group].get('allowed_constraints', [])),
+            'allowed_costs': y.seq(model['tech_groups'][tech_group].get('allowed_costs', []))
         }
         with open('./user/includes/required_allowed_{}.yaml'.format(tech_group), 'w') as f:
-            f.write(yaml.dump(required_allowed, Dumper=yaml.RoundTripDumper))
+            f.write(yaml.dump(required_allowed, indent=4, Dumper=yaml.RoundTripDumper))
 
 
 # Run the process function when exec'd -- this is bad style, yes
