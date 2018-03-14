@@ -82,8 +82,11 @@ def check_initial(config_model):
             )
 
     # Check run configuration
+    # Exclude solver_options from checks, as we don't know all possible
+    # options for all solvers
     for k in config_model['run'].keys_nested():
-        if k not in defaults_model['run'].keys_nested():
+        if (k not in defaults_model['run'].keys_nested() and
+                'solver_options' not in k):
             warnings.append(
                 'Unrecognized setting in run configuration: {}'.format(k)
             )

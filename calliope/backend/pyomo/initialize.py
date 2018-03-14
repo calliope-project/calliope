@@ -24,10 +24,17 @@ def run(model_data, timings):
         comment='Pyomo backend: model generated'
     )
 
+    save_logs = model_data.attrs.get('run.save_logs', None)
     solver = model_data.attrs['run.solver']
     solver_io = model_data.attrs.get('run.solver_io', None)
-    solver_options = model_data.attrs.get('run.solver_options', None)
-    save_logs = model_data.attrs.get('run.save_logs', None)
+    solver_option_keys = [
+        k for k in model_data.attrs.keys()
+        if 'run.solver_options' in k
+    ]
+    solver_options = {
+        k.replace('run.solver_options.', ''): model_data.attrs.get(k)
+        for k in solver_option_keys
+    }
 
     log_time(
         timings, 'run_solver_start',
