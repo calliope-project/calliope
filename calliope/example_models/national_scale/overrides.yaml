@@ -20,6 +20,24 @@ time_clustering:
     # Cluster timesteps using k-means
     model.time: {function: apply_clustering, function_options: {clustering_func: 'get_clusters_kmeans', how: 'closest', k: 10}}
 
+power_generation_share:
+    techs:
+        cold_fusion:
+            essentials:
+                name: 'Cold fusion'
+                color: '#233B39'
+            constraints:
+                energy_cap_max: 100000
+            costs:
+                monetary:
+                    energy_cap: 100
+    model:
+        group_share:
+            # At least 95% of power supply must come from CSP and cold fusion
+            csp,cold_fusion:
+                carrier_prod_min:
+                    power: 0.95
+
 ##
 # Overrides for parallel runs
 ##

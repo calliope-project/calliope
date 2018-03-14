@@ -37,23 +37,6 @@ In some cases, these index sets may have only a single member. For example, if o
 
 When processed, these sets are often concatenated to avoid sparse matrices. For instance, if a technology ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then we will specify parameters for just the ``loc::tech`` ``X1::boiler``. This can be extended to parameters which also consider ``carriers``, such that we would have a ``loc::tech::carrier`` ``X1::boiler::heat`` (avoiding empty parameter values for ``power``, as the boiler never considers that enery carrier).
 
-.. _technology_types:
-
-Technology types
-----------------
-
-Each technology (that is, each member of the set ``techs``) is of a specific *technology type*, which determines how the framework models the technology and what properties it can have. The technology type is specified by inheritance from one of seven abstract base technologies (see :ref:`configuration_techs` in the model configuration section for more details on this inheritance model):
-
-* Supply: Supplies energy from a resource to a carrier (a source) (base technology: ``supply``)
-* Supply_plus: A more feature rich version of ``supply``. It can have storage of resource before conversion to carrier, can define an additional secondary resource, and can have several more intermediate loss factors (base technology: ``supply_plus``)
-* Demand: Acts like supply but with a resource that is negative (a sink). Draws energy from a carrier to satisfy a resource demand (base technology: ``demand``)
-* Conversion: Converts energy from one carrier to another, can have neither resource nor storage associated with it (base technology: ``conversion``)
-* Conversion_plus: A more feature rich version of ``conversion``. There can be several carriers in, converted to several carriers out (base technology: ``conversion_plus``)
-* Storage: Can store energy of a specific carrier, cannot have any resource (base technology: ``storage``)
-* Transmission: Transports energy of a specific carrier from one location to another, can have neither resource nor storage (base technology: ``transmission``)
-
-The internal definition of these abstract base technologies is given in the :ref:`model configuration reference <abstract_base_tech_definitions>`.
-
 Cost classes
 ------------
 
@@ -72,18 +55,9 @@ Revenue
 
 It is possible to specify revenues for technologies simply by setting a negative cost value. For example, to consider a feed-in tariff for PV generation, it could be given a negative operational cost equal to the real operational cost minus the level of feed-in tariff received.
 
-Putting technologies and locations together: Nodes
---------------------------------------------------
+.. _energy_balance:
 
-In the model definition, locations can be defined, and for each location (or for groups of locations), technologies can be permitted. The details of this are laid out in :doc:`ref_config_listing`.
-
-A *node* is the combination of a specific location and technology, and is how Calliope internally builds the model. For a given location, ``loc``, and technology, ``tech``, a set of equations defined over ``loc::tech`` models that specific node.
-
-The most important node variables are laid out below, but more detail is also available in the section :doc:`ref_formulation`.
-
-.. _node_energy_balance:
-
-Node energy balance
+Energy balance
 -------------------
 
 The basic formulation of each node uses a set of energy balance equations. Depending on the technology type, different energy balance variables are used:
@@ -150,7 +124,7 @@ Locations and links
 Time-varying vs. constant model parameters
 ------------------------------------------
 
-Some model parameters which are defined over the set of time steps ``timesteps`` can either given as time series or as constant values. If given as constant values, the same value is used for each time step ``timestep``. For details on how to define a parameter as time-varying and how to load time series data into it, see the :ref:`time series description in the model configuration section <configuration_timeseries>`.
+Some model parameters which are defined over the set of time steps ``timesteps`` can either given as time series or as constant values. If given as constant values, the same value is used for each time step ``timestep``.
 
 Decision variables
 ------------------

@@ -85,11 +85,11 @@ On calling any of the three primary plotting functions, you can also set ``save_
 Reading solutions
 -----------------
 
-Calliope provides functionality to read a previously-saved model a single NetCDF file:
+Calliope provides functionality to read a previously-saved model from a single NetCDF file:
 
 .. code-block:: python
 
-   solved_model = calliope.read_netcdf('my_solution.nc')
+   solved_model = calliope.read_netcdf('my_saved_model.nc')
 
 In the above example, the model's input data will be available under ``solved_model.inputs``, while the results (if the model had previously been solved) are available under ``solved_model.results``.
 

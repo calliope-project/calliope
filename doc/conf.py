@@ -336,5 +336,8 @@ def remove_module_docstring(app, what, name, obj, options, lines):
         del lines[:]
 
 
+autodoc_member_order = "bysource"
+
+
 def setup(app):
     app.connect("autodoc-process-docstring", remove_module_docstring)

@@ -45,23 +45,47 @@ def process():
     with open('../calliope/config/defaults.yaml', 'r') as f:
         defaults = yaml.round_trip_load(f)
 
-    essentials = get_section(defaults['default_tech']['essentials'])
-    constraints = get_section(defaults['default_tech']['constraints'])
-    costs = get_section(defaults['default_tech']['costs']['default'])
+    write_csv(
+        './user/includes/default_essentials.csv',
+        get_section(defaults['default_tech']['essentials'])
+    )
+    write_csv(
+        './user/includes/default_constraints.csv',
+        get_section(defaults['default_tech']['constraints'])
+    )
+    write_csv(
+        './user/includes/default_costs.csv',
+        get_section(defaults['default_tech']['costs']['default'])
+    )
 
-    # Write files
-    write_csv('./user/includes/default_essentials.csv', essentials)
-    write_csv('./user/includes/default_constraints.csv', constraints)
-    write_csv('./user/includes/default_costs.csv', costs)
+    with open('../calliope/config/model.yaml', 'r') as f:
+        model = yaml.round_trip_load(f)
 
-    # # Process the abstract base technologies
-    # # FIXME: here actually read model.yaml
-    # for tech in ['supply', 'supply_plus', 'demand'
-    #              'storage',
-    #              'transmission', 'conversion', 'conversion_plus']:
-    #     block = get_block(filename, tech + ':')
-    #     with open('./user/includes/basetech_{}.yaml'.format(tech), 'w') as f:
-    #         f.write(block)
+    write_csv(
+        './user/includes/model_settings.csv',
+        get_section(model['model'])
+    )
+    write_csv(
+        './user/includes/run_settings.csv',
+        get_section(model['run'])
+    )
+
+    for tech_group in model['tech_groups']:
+        defaults = {
+            'essentials': model['tech_groups'][tech_group].get('essentials', {}),
+            'constraints': model['tech_groups'][tech_group].get('constraints', {}),
+            'costs': model['tech_groups'][tech_group].get('costs', {})
+        }
+        with open('./user/includes/basetech_{}.yaml'.format(tech_group), 'w') as f:
+            f.write(yaml.dump(defaults, Dumper=yaml.RoundTripDumper))
+
+        required_allowed = {
+            'required_constraints': model['tech_groups'][tech_group].get('required_constraints', {}),
+            'allowed_constraints': model['tech_groups'][tech_group].get('allowed_constraints', {}),
+            'allowed_costs': model['tech_groups'][tech_group].get('allowed_costs', {})
+        }
+        with open('./user/includes/required_allowed_{}.yaml'.format(tech_group), 'w') as f:
+            f.write(yaml.dump(required_allowed, Dumper=yaml.RoundTripDumper))
 
 
 # Run the process function when exec'd -- this is bad style, yes

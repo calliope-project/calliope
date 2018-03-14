@@ -60,19 +60,15 @@ The model configuration specifies all aspects of the model to run. It is structu
             power: 0
         subset_time: ['2005-01-01', '2005-01-05']
 
-Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), the most important part of the ``model`` section is ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``).
-
-In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration. In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
+Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), the most important part of the ``model`` section is ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
 
 .. seealso:: :ref:`config_reference_model_wide`
-
-To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``energy_cap_equals``. In the absence of ``energy_cap_equals``, constraints given as ``energy_cap_max`` are assumed to be fixed in operational mode.
 
 To speed up model runs, the above example specifies a time subset to run the model over only five days of time series data (``subset_time: ['2005-01-01', '2005-01-05']``)-- this is entirely optional. Usually, a full model will contain at least one year of data, but subsetting time can be useful to speed up a model for testing purposes.
 
 .. seealso::
 
-    :ref:`National scale example model <examplemodels_nationalscale_settings>`, :doc:`ref_config_listing`.
+    :ref:`National scale example model <examplemodels_nationalscale_settings>`, :doc:`ref_config_listing` and :ref:`documentation on operational mode <operational_mode>`.
 
 ------------------------
 Technologies (``techs``)
@@ -85,6 +81,8 @@ The ``techs`` section in the model configuration specifies all of the model's te
     import:
         - 'model_config/techs.yaml'
         - 'model_config/locations.yaml'
+
+.. Note:: The ``import`` statement can specify a list of paths to additional files to import (the imported files, in turn, may include further files, so arbitrary degrees of nested configurations are possible). The ``import`` statement can either give an absolute path or a path relative to the importing file.
 
 The following example shows the definition of a ``ccgt`` technology, i.e. a combined cycle gas turbine that delivers electricity:
 
@@ -219,8 +217,8 @@ To make it easier to run a given model multiple times with slightly changed sett
     run2:
         model.subset_time: ['2005-02-01', '2005-02-31']
 
-Each group is given by a name (above, ``run1`` and ``run2``) and any number of model settings -- anything in the model configuration can be overridden by an override group. In the above example, the two runs specify different time subsets, so would run an otherwise identical model over two different periods of the time series data.
+Each group is given by a name (above, ``run1`` and ``run2``) and any number of model settings -- anything in the model configuration can be overridden by an override group. In the above example, the two runs specify different time subsets, so would run an otherwise identical model over two different periods of time series data.
 
-One or several override groups can be applied when running a model, as described in :doc:`running`. They can also be used to generate scripts that run many Calliope models sequentially or in parallel on a high-performance cluster.
+One or several override groups can be applied when running a model, as described in :doc:`running`. They can also be used to generate scripts that run a Calliope model with slightly changed settings many times, either sequentially, or in parallel on a high-performance cluster.
 
 .. seealso:: :ref:`generating_scripts`

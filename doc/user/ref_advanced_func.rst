@@ -2,133 +2,273 @@
 Advanced functionality
 ----------------------
 
+Per-distance constraints and costs
+----------------------------------
+
+Transmission technologies can additionally specify per-distance efficiency (loss) with ``energy_eff_per_distance`` and per-distance costs with ``energy_cap_per_distance``:
+
+.. code-block:: yaml
+
+    techs:
+        my_transmission_tech:
+            essentials:
+                ...
+            constraints:
+                # "efficiency" (1-loss) per unit of distance
+                energy_eff_per_distance: 0.99
+            costs:
+                monetary:
+                    # cost per unit of distance
+                    energy_cap_per_distance: 10
+
+The distance is specified in transmission links:
+
+.. code-block:: yaml
+
+    links:
+        location1,location2:
+            my_transmission_tech:
+                distance: 500
+                constraints:
+                    e_cap.max: 10000
+
+If no distance is given, but the locations have been given lat and lon coordinates, Calliope will compute distances automatically (based on the length of a straight line connecting the locations).
+
+One-way transmission links
+--------------------------
+
+Transmission links are bidirectional by default. To force unidirectionality for a given technology along a given link, you have to set the ``one_way`` constraint in the constraint definition of that technology, for that link:
+
+.. code-block:: yaml
+
+    links:
+        location1,location2:
+            transmission-tech:
+                constraints:
+                    one_way: true
+
+This will only allow transmission from ``location1`` to ``location2``. To swap the direction, the link name must be inverted, i.e. ``location2,location1``.
 
 .. _configuration_timeseries:
 
-Using time series data
-----------------------
+Time series data
+----------------
 
 .. Note::
 
-   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific overrides, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource).
+   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource).
 
-Defining a model's time steps
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Irrespective of whether it actually uses time-varying parameters, a model must at specify its timesteps with a file called ``set_t.csv``. This must contain two columns (comma-separated), the first one being integer indices, and the second, ISO 8601 compatible timestamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``).
+For parameters that vary in time, time series data can be read from CSV files, by specifying ``resource: file=filename.csv`` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
-For example, the first few lines of a file specifying hourly timesteps for the year 2005 would look like this:
+By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column too use when setting ``resource`` per location, by giving the column name with a colon following the filename: ``resource: file=filename.csv:column``
 
-.. code-block:: text
+All time series data in a model must be indexed by ISO 8601 compatible time stamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``), i.e., the first column in the CSV file must be time stamps.
 
-   0,2005-01-01 00:00:00
-   1,2005-01-01 01:00:00
-   2,2005-01-01 02:00:00
-   3,2005-01-01 03:00:00
-   4,2005-01-01 04:00:00
-   5,2005-01-01 05:00:00
-   6,2005-01-01 06:00:00
-
-Defining time-varying parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For parameters that vary in time, time series data can be read from CSV files. This can be done in two ways (using the example of ``r``):
-
-1. Specify ``r: file=filename.csv`` to pick the desired CSV file.
-2. Specify ``r: file``. In this case, the file name is automatically determined according to the format ``tech_param.csv`` (e.g., ``pv_r.csv`` for the parameter ``r`` of a technology with the identifier ``pv``).
-
-Each CSV file must have integer indices in the first column which match the integer indices from ``set_t.csv``. The first row must be column names, while the rest of the cells are the actual (integer or floating point) data values:
+For example, the first few lines of a CSV file giving a resource potential for two locations might look like this:
 
 .. code-block:: text
 
-   ,loc1,loc2,loc3,...
-   0,10,20,10.0,...
-   1,11,19,9.9,...
-   2,12,18,9.8,...
-   ...
-
-In the most straightforward case, the column names in the CSV files correspond to the location names defined in the model (in the above example, ``loc1``, ``loc2`` and ``loc3``). However, it is possible to define a mapping of column names to locations. For example, if our model has two locations, ``uk`` and ``germany``, but the electricity demand data columns are ``loc1``, ``loc2`` and ``loc3``, then the following ``x_map`` definition will read the demand data for the desired locations from the specified columns:
-
-.. code-block:: yaml
-
-   electricity_demand:
-      x_map: 'uk: loc1, germany: loc2'
-      constraints:
-         r: 'file=demand.csv'
-
-.. Warning::
-
-   After reading a CSV file, if any columns are missing (i.e. if a file does not contain columns for all locations defined in the current model), the value for those locations is simply set to :math:`0` for all timesteps.
-
-.. Note::
-
-   ``x_map`` maps column names in an input CSV file to locations defined in the model, in the format ``name_in_model: name_in_file``, with as many comma-separated such definitions as necessary.
-
-In all cases, all CSV files, alongside ``set_t.csv``, must be inside the data directory specified by ``data_path`` in the model definition.
-
-For example, the files for a model specified in ``model.yaml``, which defined ``data_path: model_data``, might look like this (``+`` are directories, ``-`` files):
-
-.. code-block:: text
-
-   - model.yaml
-   + model_data/
-      - set_t.csv
-      - tech1_r.csv
-      - tech2_r.csv
-      - tech2_e_eff.csv
-      - ...
-
-When reading time series, the ``r_scale_to_peak`` option can be useful. Specifying this will automatically scale the time series so that the peak matches the given value. In the case of ``r`` for demand technologies, where ``r`` will be negative, the peak is instead a trough, and this is handled automatically. In the below example, the electricity demand timeseries is loaded from ``demand.csv`` and scaled such that the demand peak is 60,000:
-
-.. code-block:: yaml
-
-   electricity_demand:
-      constraints:
-         r: 'file=demand.csv'
-         r_scale_to_peak: -60000
-
+    ,location1,location2
+    2005-01-01 00:00:00,0,0
+    2005-01-01 01:00:00,0,11
+    2005-01-01 02:00:00,0,18
+    2005-01-01 03:00:00,0,49
+    2005-01-01 04:00:00,11,110
+    2005-01-01 05:00:00,45,300
+    2005-01-01 06:00:00,90,458
 
 .. _time_clustering:
 
 Time resolution adjustment
 --------------------------
 
-Models must have a default timestep length (defined implicitly by the timesteps defined in ``set_t.csv``), and all time series files used in a given model must conform to that timestep length requirement.
+Models have a default timestep length (defined implicitly by the timesteps of the model's time series data). This default resolution can be adjusted over parts of the dataset by specifying time resolution adjustment in the model configuration, for example:
 
-However, this default resolution can be adjusted over parts of the dataset via configuring ``time`` in the run settings. At its most basic, this allows running a function that can perform arbitrary adjustments to the time series data in the model, via ``time.function``, and/or applying a series of masks to the time series data to select specific areas of interest, such as periods of maximum or minimum production by certain technologies, via ``time.masks``.
+.. code-block:: yaml
+
+    model:
+        time:
+            function: resample
+            function_options: {'resolution': '6H'}
+
+In the above example, this would resample all time series data to 6-hourly timesteps.
+
+Calliope's time resolution adjustment functionality allows running a function that can perform arbitrary adjustments to the time series data in the model.
 
 The available options include:
 
-1. Uniform time resolution reduction through the resample function, which takes a `pandas-compatible rule describing the target resolution <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_. For example, to resample to 6-hourly timesteps:
+1. Uniform time resolution reduction through the ``resample`` function, which takes a `pandas-compatible rule describing the target resolution <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ (see above example).
+
+2. Deriving representative days from the input time series, by applying one of the clustering methods implemented in :mod:`calliope.time.clustering`, for example:
 
 .. code-block:: yaml
 
-   time:
-       function: resample
-       function_options: {'resolution': '6H'}
+    model:
+        time:
+            function: apply_clustering
+            function_options:
+                clustering_func: get_clusters_kmeans
+                how: mean
+                k: 20
 
-2. Deriving representative days from the input time series, by applying either k-means or hierarchical clustering as defined in :mod:`calliope.time_clustering`, for example:
-
-.. code-block:: yaml
-
-   time:
-       function: apply_clustering
-       function_options: {clustering_func: 'get_clusters_kmeans', how: 'mean', k: 20}
-
-3. Heuristic selection: application of one or more of the masks defined in :mod:`calliope.time_masks`, via a list of masks given in ``time.masks``. See :ref:`api_time_masks` in the API documentation for the available masking functions. Options can be passed to the masking functions by specifying ``options``. A ``time.function`` can still be specified and will be applied to the masked areas (i.e. those areas of the time series not selected), as in this example which looks for the week of minimum and maximum potential wind production (assuming a ``wind`` technology was specified), then reduces the rest of the input time series to 6-hourly resolution:
+3. Heuristic selection of time steps, that is, the application of one or more of the masks defined in :mod:`calliope.time.masks`, which will mark areas of the time series to retain at maximum resolution (unmasked) and areas where resolution can be lowered (masked). Options can be passed to the masking functions by specifying ``options``. A ``time.function`` can still be specified and will be applied to the masked areas (i.e. those areas of the time series not selected to remain at the maximum resolution), as in this example, which looks for the week of minimum and maximum potential wind generation (assuming a ``wind`` technology was specified), then reduces the rest of the input time series to 6-hourly resolution:
 
 .. code-block:: yaml
 
-   time:
-      masks:
-          - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'max'}}
-          - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'min'}}
-      function: resample
-      function_options: {'resolution': '6H'}
+   model:
+        time:
+            masks:
+                - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'max'}}
+                - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'min'}}
+            function: resample
+            function_options: {'resolution': '6H'}
 
 .. Note::
 
-  When loading a model, all time steps initially have the same weight. Time step resolution reduction methods may adjust the weight of individual timesteps; this is used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. See the implementation of constraints in :mod:`calliope.constraints.base` for more detail.
+  When loading a model, all time steps initially have the same weight. Time step resolution reduction methods may adjust the weight of individual timesteps; this is used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. See the implementation of constraints in :mod:`calliope.backend.pyomo.constraints` for more detail.
+
+.. _conversion_plus:
+
+The ``conversion_plus`` tech
+----------------------------
+
+**FIXME**
+
+For conversion and conversion_plus, there are further options available:
+
+.. code-block:: yaml
+
+    tech_identifier:
+        primary_carrier: false # Setting the primary carrier_out to associate with costs & constraints, if multiple primary carriers are assigned
+        carrier_in: false # Primary energy carrier(s) to consume
+        carrier_in_2: false # Secondary energy carrier(s) to consume, conversion_plus only
+        carrier_in_3: false # Tertiary energy carrier(s) to consume, conversion_plus only
+        carrier_out: false # Primary energy carrier(s) to produce
+        carrier_out_2: false # Secondary energy carrier(s) to produce, conversion_plus only
+        carrier_out_3: false # Tertiary energy carrier(s) to produce, conversion_plus only
+
+If carriers are given at secondary or tertiary level, they are given in an indented list, with their consumption/production with respect to ``carrier_in``/``carrier_out``. For example:
+
+.. code-block:: yaml
+
+    tech_identifier_1:
+        carrier_in: 'primary_consumed_carrier'
+        carrier_in_2:
+            secondary_consumed_carrier: 0.8 # consumes 0.8 units of ``secondary_consumed_carrier`` for every 1 unit of ``primary_consumed_carrier``
+        carrier_in_3:
+            tertiary_consumed_carrier: 0.1 # consumes 0.1 units of ``tertiary_consumed_carrier`` for every 1 unit of ``primary_consumed_carrier``
+        carrier_out: 'primary_produced_carrier'
+        carrier_out_2:
+            secondary_produced_carrier: 0.5 # produces 0.5 units of ``secondary_produced_carrier`` for every 1 unit of ``primary_produced_carrier``
+        carrier_out_3:
+            tertiary_produced_carrier: 0.9 # produces 0.9 units of ``tertiary_produced_carrier`` for every 1 unit of ``primary_produced_carrier``
+
+Where multiple carriers are included in a carrier level, any of those carriers can meet the carrier level requirement. They are listed in the same indented level, for example:
+
+.. code-block:: yaml
+
+    tech_identifier_1:
+        primary_carrier: 'primary_produced_carrier' # ``primary_produced_carrier`` will be used to cost/constraint application
+        carrier_in:
+            primary_consumed_carrier: 1 # if chosen, will consume 1 unit of ``primary_consumed_carrier`` to meet the requirements of ``carrier_in``
+            primary_consumed_carrier_2: 0.5 # if chosen, will consume 0.5 units of ``primary_consumed_carrier_2`` to meet the requirements of ``carrier_in``
+        carrier_in_2:
+            secondary_consumed_carrier: 0.8 # if chosen, will consume 0.8 units of ``secondary_consumed_carrier`` for every 1 unit of ``carrier_in`` being consumed
+            secondary_consumed_carrier_2: 0.1 # if chosen, will consume 0.1 / 0.8 = 0.125 units of ``secondary_consumed_carrier_2`` for every 1 unit of ``carrier_in`` being consumed
+        carrier_out:
+            primary_produced_carrier: 1 # if chosen, will produce 1 unit of ``primary_produced_carrier`` for every 1 unit of ``carrier_out`` being produced
+            primary_produced_carrier_2: 0.8 # if chosen, will produce 0.8 units of ``primary_produced_carrier_2`` for every 1 unit of ``carrier_in`` being produced
+
+.. Note:: A ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers).
+
+.. _tech_groups:
+
+Using ``tech_groups`` to group configuration
+--------------------------------------------
+
+In a large model, several very similar technologies may exist, for example, different kinds of PV technologies with slightly different cost data or with different potentials at different moodel locations.
+
+To make it easier to specify closely related technologies, ``tech_groups`` can be used to specify configuration shared between multiple technologies. The technologies then give the ``tech_group`` as their parent, rather than one of the abstract base technologies.
+
+For example:
+
+.. code-block:: yaml
+
+    tech_groups:
+        pv:
+            essentials:
+                parent: supply
+                carrier: power
+            constraints:
+                resource: file=pv_resource.csv
+                lifetime: 30
+            costs:
+                monetary:
+                    om_annual_investment_fraction: 0.05
+                    depreciation_rate: 0.15
+
+    techs:
+        pv_large_scale:
+            essentials:
+                parent: pv
+                name: 'Large-scale PV'
+            constraints:
+                energy_cap_max: 2000
+            costs:
+                monetary:
+                    e_cap: 750
+        pv_rooftop:
+            essentials:
+                parent: pv
+                name: 'Rooftop PV'
+            constraints:
+                energy_cap_max: 10000
+            costs:
+                monetary:
+                    e_cap: 1000
+
+None of the ``tech_groups`` appear in model results, they are only used to group model configuration values.
+
+.. _group_share:
+
+Using the ``group_share`` constraint
+-------------------------------------
+
+The ``group_share`` constraint can be used to force groups of technologies to fulfill certain shares of supply or capacity.
+
+For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power generation technology, we could force at least 95% of generation to come from these two technologies with the following constraint definition in the ``model`` settings:
+
+.. code-block:: yaml
+
+    model:
+        group_share:
+            csp,cold_fusion:
+                carrier_prod_min:
+                    power: 0.95
+
+Possible ``group_share`` constraints with carrier-specific settings are:
+
+* ``carrier_prod_min``
+* ``carrier_prod_max``
+* ``carrier_prod_equals``
+
+Possible ``group_share`` constraints with carrier-independent settings are:
+
+* ``energy_cap_min``
+* ``energy_cap_max``
+* ``energy_cap_equals``
+
+These can be implemented as, for example, to force at least 50% of ``energy_cap`` to come from the two listed technologies:
+
+.. code-block:: yaml
+
+    model:
+        group_share:
+            csp,cold_fusion:
+                energy_cap_min: 0.50
+
+.. seealso:: An example similar to the above is supplied as an override group in the built-in national-scale example's ``overrides.yaml``. See :ref:`documentation on the national-scale example <examplemodels_nationalscale_settings>`.
 
 
 .. _operational_mode:
@@ -136,109 +276,69 @@ The available options include:
 Operational mode
 ----------------
 
-Requires two model settings:
+In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration. In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
+
+To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``energy_cap_equals``. In the absence of ``energy_cap_equals``, constraints given as ``energy_cap_max`` are assumed to be fixed in operational mode.
+
+Operational mode runs a model with a receding horizon control algorithm. This requires two additional settings:
 
 .. code-block:: yaml
 
-    model:
+    run:
         operation:
-            horizon:
-            window:
+            horizon: 48  # hours
+            window: 24  # hours
 
-.. _run_config_generate:
+``horizon`` specifies how far into the future the control algorithm optimises in each iteration. ``window`` specifies how many of the hours within ``horizon`` are actually used. In the above example, decisions on how to operate for each 24-hour window are made by optimising over 48-hour horizons (i.e., the second half of each optimisation run is discarded). For this reason, ``horizon`` must always be larger than ``window``.
 
-Overrides and generating scripts for running multiple scenarios
----------------------------------------------------------------
+.. _generating_scripts:
 
-* Create a ``run.yaml`` file with a ``parallel:`` section as needed (see :ref:`run_config_generate`).
-* On the command line, run ``calliope generate path/to/run.yaml``.
-* By default, this will create a new subdirectory inside a ``runs`` directory in the current working directory. You can optionally specify a different target directory by passing a second path to ``calliope generate``, e.g. ``calliope generate path/to/run.yaml path/to/my_run_files``.
-* Calliope generates several files and directories in the target path. The most important are the ``Runs`` subdirectory which hosts the self-contained configuration for the runs and ``run.sh`` script, which is responsible for executing each run. In order to execute these runs in parallel on a compute cluster, a submit.sh script is also generated containing job control data, and which can be submitted via a cluster controller (e.g., ``qsub submit.sh``).
+Generating scripts to run a model many times
+--------------------------------------------
 
-The ``run.sh`` script can simply be called with an integer argument from the sequence (1, number of parallel runs) to execute a given run, e.g. ``run.sh 1``, ``run.sh 2``, etc. This way the runs can easily be executed irrespective of the parallel computing environment available.
+:ref:`Override groups <building_overrides>` can be used to run a given model multiple times with slightly changed settings or constraints.
 
-.. Note:: Models generated via ``calliope generate`` automatically save results as a single NetCDF file per run inside the parallel runs' ``Output`` subdirectory, regardless of whether the ``output.path`` or ``output.format`` options have been set.
+This functionality can be used together with the ``calliope generate_runs`` command-line tool to generate scripts that run a model many times over in a fully automated way, for example, to explore the effect of different technology costs on model results.
 
-The run settings can also include a ``parallel`` section.
+``calliope generate_runs``, at a minimum, must be given the following arguments:
 
-This section is parsed when using the ``calliope generate`` command-line tool to generate a set of runs to be executed in parallel. A run settings file defining ``parallel`` can still be used to execute a single model run, in which case the ``parallel`` section is simply ignored.
+* the model configuration file to use
+* the name of the script to create
+* ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, and ``bsub`` creates a submission script for a bsub-based high-performance cluster.
+* ``--override_file``: The file that specifies override groups.
+* ``--groups``: A comma-separated list of override groups to generate scripts for, for example, ``run1,run2``. A semi-colon can be used to group override groups together into a single model -- for example, ``run1;high_costs,run1;low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
 
-The concept behind parallel runs is to specify a base model (via the run configuration's ``model`` setting), then define a set of model runs using this base model, but overriding one or a small number of settings in each run. For example, one could explore a range of costs of a specific technology and how this affects the result.
+A fully-formed command generating a Windows batch script to run a model four times with each of the override groups "run1", "run2", "run3", and "run4":
 
-Specifying these iterations is not (yet) automated, they must be manually entered under ``parallel.iterations:`` section. However, Calliope provides functionality to gather and process the results from a set of parallel runs (see :doc:`analysing`).
+.. code-block:: shell
 
-At a minimum, the ``parallel`` block must define:
+    calliope generate_runs model.yaml run_model.bat --kind=windows --override_file=overrides.yaml --groups "run1,run2,run3,run4"
 
-* a ``name`` for the run
-* the ``environment`` of the cluster (if it is to be run on a cluster), currently supported is ``bsub`` and ``qsub``. In either case, the generated scripts can also be run manually
-* ``iterations``: a list of model runs, with each entry giving the settings that should be overridden for that run. The settings are *run settings*, so, for example, ``time.function`` can be overridden. Because the run settings can themselves override model settings, via ``override``, model settings can be specified here, e.g. ``override.techs.nuclear.costs.monetary.e_cap``.
+Optional arguments are:
 
-The following example parallel settings show the available options. In this case, two iterations are defined, and each of them overrides the nuclear ``e_cap`` costs (``override.techs.nuclear.costs.monetary.e_cap``):
+* ``--cluster_threads``: specifies the number of threads to request on a HPC cluster
+* ``--cluster_mem``: specifies the memory to request on a HPC cluster
+* ``--cluster_time``: specifies the run time to request on a HPC cluster
+* ``--additional_args``: A text string of any additional arguments to pass directly through to ``calliope run`` in the generated scripts, for example, ``--additional_args="--debug"``.
+* ``--debug``: Print additional debug information when running the run generation script.
 
-.. code-block:: yaml
+An example generating a script to run on a ``bsub``-type high-performance cluster, with additional arguments to specify the resources to request from the cluster:
 
-   parallel:
-       name: 'example-model'  # Name of this run
-       environment: 'bsub'  # Cluster environment, choices: bsub, qsub
-       data_path_adjustment: '../../../model_config'
-       # Execute additional commands in the run script before starting the model
-       pre_run: ['source activate pyomo']
-       # Execute additional commands after running the model
-       post_run: []
-       iterations:
-           - override.techs.nuclear.costs.monetary.e_cap: 1000
-           - override.techs.nuclear.costs.monetary.e_cap: 2000
-       resources:
-           threads: 1  # Set to request a non-default number of threads
-           wall_time: 30  # Set to request a non-default run time in minutes
-           memory: 1000  # Set to request a non-default amount of memory in MB
+.. code-block:: shell
 
-This also shows the optional settings available:
+    calliope generate_runs model.yaml submit_runs.sh --kind=bsub --cluster_mem=1G --cluster_time=100 --cluster_threads=5 --override_file=overrides.yaml --groups "run1,run2,run3,run4"
 
-* ``data_path_adjustment``: replaces the ``data_path`` setting in the model configuration during parallel runs only
-* ``pre_run`` and ``post_run``: one or multiple lines (given as a list) that will be executed in the run script before / after running the model. If running on a computing cluster, ``pre_run`` is likely to include a line or two setting up any environment variables and activating the necessary Python environment.
-* ``resources``: specifying these will include resource requests to the cluster controller into the generated run scripts. ``threads``, ``wall_time``, and ``memory`` are available. Whether and how these actually get processed or honored depends on the setup of the cluster environment.
+Running this will create two files:
 
-For an iteration to override more than one setting at a time, the notation is as follows:
+* ``submit_runs.sh``: The cluster submission script to pass to ``bsub`` on the cluster.
+* ``submit_runs.array.sh``: The accompanying script defining the runs for the cluster to execute.
 
-.. code-block:: yaml
-
-   iterations:
-       - first_option: 500
-         second_option: 10
-       - first_option: 600
-         second_option: 20
-
-
-.. _overriding_tech_options:
-
-Overriding technology options
------------------------------
-
-Technologies can define generic options, for example ``name``, constraints, for example ``constraints.e_cap.max``, and costs, for example ``costs.monetary.e_cap``.
-
-These options can be overridden in several ways, and whenever such an option is accessed by Calliope it works its way through the following list until it finds a definition (so entries further up in this list take precedence over those further down):
-
-1. Override for a specific location ``x1`` and technology ``y1``, which may be defined via ``locations`` (e.g. ``locations.x1.override.y1.constraints.e_cap.max``)
-2. Setting specific to the technology ``y1`` if defined in ``techs`` (e.g. ``techs.y1.constraints.e_cap.max``)
-3. Check whether the immediate parent of the technology ``y`` defines the option (assuming that ``y1`` specifies ``parent: my_parent_tech``, e.g. ``techs.my_parent_tech.constraints.e_cap.max``)
-4. If the option is still not found, continue along the chain of parent-child relationships. Since every technology should inherit from one of the abstract base technologies, and those in turn inherit from the model-wide defaults, this will ultimately lead to the model-wide default setting if it has not been specified anywhere else. See :ref:`config_reference_constraints` for a complete listing of those defaults.
-
-The following technology options can be overriden on a per-location basis:
-
-* ``x_map``
-* ``constraints.*``
-* ``constraints_per_distance.*``
-* ``costs.*``
-
-The following settings cannot be overridden on a per-location basis:
-
-* Any other options, such as ``parent`` or ``carrier``
-* ``costs_per_distance.*``
-* ``depreciation.*``
+In all cases, results are saved into the same directory as the script, with filenames of the form ``out_{run_number}_{groups}.nc`` (model results) and ``plots_{run_number}_{groups}.html`` (HTML plots), where ``{run_number}`` is the run number and ``{groups}`` is the specified set of groups. On a cluster, log files are saved to files with names starting with ``log_`` in the same directory.
 
 Binary and mixed-integer models
 -------------------------------
+
+Calliope models are purely linear by default. However, several constraints can turn a model into a binary or mixed-integer model. Because solving problems with binary or integer variables takes considerably longer than solving purely linear models, it usually makes sense to carefully consider whether the research question really necessitates going beyond a purely linear model.
 
 By applying a ``purchase`` cost to a technology, that technology will have a binary variable associated with it, describing whether or not it has been "purchased".
 
@@ -246,6 +346,55 @@ By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, t
 
 .. Warning::
 
-   Integer and Binary variables are still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
+   Integer and binary variables are a recent addition to Calliope and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
 
 .. seealso:: :ref:`milp_example_model`
+
+.. _debugging_runs_config:
+
+Debugging failing runs
+----------------------
+
+Several settings can aid in debugging failing models:
+
+``model.subset_time`` allows specifying a subset of timesteps to be used. This can be useful for debugging purposes as it can dramatically speed up model solution times. The timestep subset can be specified as ``[startdate, enddate]``, e.g. ``['2005-01-01', '2005-01-31']``, or as a single time period, such as ``2005-01`` to select January only. The subsets are processed before building the model and applying time resolution adjustments, so time resolution reduction functions will only see the reduced set of data.
+
+``run.save_logs`` Off by default, if given, sets the directory into which to save logs and temporary files from the backend, to inspect solver logs and solver-generated model files. This also turns on symbolic solver labels in the Pyomo backend, so that all model components in the backend model are named according to the corresponding Calliope model components (by default, Pyomo uses short random names for all generated model components).
+
+.. seealso::
+
+   If using Calliope interactively in a Python session, we recommend reading up on the `Python debugger <https://docs.python.org/3/library/pdb.html>`_ and (if using Jupyter notebooks) making use of the `%debug magic <https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug>`_.
+
+.. _solver_options:
+
+Solver options
+--------------
+
+Gurobi
+^^^^^^
+
+Refer to the `Gurobi manual <https://www.gurobi.com/documentation/>`_, which contains a list of parameters. Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value). For example:
+
+.. code-block:: yaml
+
+    run:
+        solver: gurobi
+        solver_options:
+            Threads: 3
+            NumericFocus: 2
+
+CPLEX
+^^^^^
+
+Refer to the `CPLEX parameter list <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/introListAlpha.html>`_. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory"). For example:
+
+.. code-block:: yaml
+
+    run:
+        solver: cplex
+        solver_options:
+            mipgap: 0.01
+            mip_polishafter_absmipgap: 0.1
+            emphasis_mip: 1
+            mip_cuts: 2
+            mip_cuts_cliques: 3

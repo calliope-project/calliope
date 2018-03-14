@@ -3,16 +3,21 @@
 Built-in example models
 -----------------------
 
-This section gives a listing of all the YAML configuration files included in the built-in example models. Refer to the :doc:`tutorials section <tutorials>` for a brief overview of how these parts together can provide a simple working model.
+This section gives a listing of all the YAML configuration files included in the built-in example models. Refer to the :doc:`tutorials section <tutorials>` for a brief overview of how these parts together provide a working model.
 
-The example models are accessible in the :mod:`calliope.examples` module. To create an instance of an example model, e.g.::
+The example models are accessible in the :mod:`calliope.examples` module. To create an instance of an example model, call its constructor function, e.g.::
 
-   urban_model = calliope.examples.UrbanScale()
+   urban_model = calliope.examples.urban_scale()
+
+The available example models and their constructor functions are:
+
+.. automodule:: calliope.examples
+    :members:
 
 National-scale example
 ----------------------
 
-Available as :class:`calliope.examples.NationalScale`.
+Available as :class:`calliope.examples.national_scale`.
 
 .. _examplemodels_nationalscale_settings:
 
@@ -24,8 +29,9 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 .. code-block:: text
 
     - model.yaml
+    - overrides.yaml
     + timeseries_data
-        - csp_r.csv
+        - csp_resource.csv
         - demand-1.csv
         - demand-2.csv
     + model_config
@@ -36,6 +42,11 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 ``model.yaml``:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model.yaml
+   :language: yaml
+
+``overrides.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/national_scale/overrides.yaml
    :language: yaml
 
 ``techs.yaml``:
@@ -51,7 +62,7 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 Urban-scale example
 -------------------
 
-Available as :class:`calliope.examples.UrbanScale`.
+Available as :class:`calliope.examples.urban_scale`.
 
 .. _examplemodels_urbanscale_runsettings:
 
@@ -63,45 +74,17 @@ Model settings
 .. literalinclude:: ../../calliope/example_models/urban_scale/model.yaml
    :language: yaml
 
-``techs.yaml``:
-
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
-   :language: yaml
-
-``locations.yaml``:
-
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
-   :language: yaml
-
-Mixed Integer Linear Programming (MILP) example
------------------------------------------------
-
-Available as :class:`calliope.examples.MILP`.
-
-This example is based on the Urban scale example, calling the `milp` override group from `overrides.yaml`, which includes the necessary overrides for MILP functionality.
-
-Model settings
-^^^^^^^^^^^^^^
-
-``model.yaml``:
-
-.. literalinclude:: ../../calliope/example_models/urban_scale/model.yaml
-   :language: yaml
-
-``techs.yaml``:
-
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
-   :language: yaml
-
-``locations.yaml``:
-
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
-   :language: yaml
-
-Overrides
-------------
-
 ``overrides.yaml``:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/overrides.yaml
+   :language: yaml
+
+``techs.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+   :language: yaml
+
+``locations.yaml``:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml

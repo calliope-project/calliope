@@ -113,13 +113,11 @@ When running Calliope in command line, logging of model pre-processing and solvi
 
 This will include model processing output, as well as the output of the chosen solver.
 
-.. _generating_scripts:
-
 --------------------------------------
 Generating scripts for many model runs
 --------------------------------------
 
-Scripts to simplify the creation and execution of a large number of Calliope model runs are generated with the ``calliope generate`` command-line tool. More detail on this is available in :ref:`run_config_generate`.
+Scripts to simplify the creation and execution of a large number of Calliope model runs are generated with the ``calliope generate_runs`` command-line tool. More detail on this is available in :ref:`generating_scripts`.
 
 ------------------------
 Improving solution times
