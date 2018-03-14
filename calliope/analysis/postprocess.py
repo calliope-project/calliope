@@ -10,11 +10,13 @@ Functionality to post-process model results.
 """
 
 import xarray as xr
+import numpy as np
 
 from calliope.core.util.dataset import split_loc_techs
+from calliope.core.util.tools import log_time
 
 
-def postprocess_model_results(results, model_data):
+def postprocess_model_results(results, model_data, timings):
     """
     Adds additional post-processed result variables to
     the given model results in-place. Model must have solved successfully.
@@ -22,13 +24,23 @@ def postprocess_model_results(results, model_data):
     Returns None.
 
     """
+    log_time(
+        timings, 'post_process_start',
+        comment='Postprocessing: started'
+    )
 
     results['capacity_factor'] = capacity_factor(results)
     results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
     results['systemwide_levelised_cost'] = systemwide_levelised_cost(results)
     results['total_levelised_cost'] = systemwide_levelised_cost(results, total=True)
+    results = clean_results(results, model_data.attrs.get('run.zero_thresshold', 0), timings)
 
-    return None
+    log_time(
+        timings, 'post_process_end', time_since_start=True,
+        comment='Postprocessing: ended'
+    )
+
+    return results
 
 
 def capacity_factor(results):
@@ -84,3 +96,42 @@ def systemwide_levelised_cost(results, total=False):
         levelised_cost.append(cost / carrier_prod.loc[dict(carriers=carrier)])
 
     return xr.concat(levelised_cost, dim='carriers')
+
+
+def clean_results(results, zero_threshhold, timings):
+    """
+    Remove unreasonably small values (solver output can lead to floating point
+    errors) and remove unmet_demand if it was never used (i.e. sum = zero)
+
+    zero_thresshold is a value set in model configuration. If not set, defaults
+    to zero (i.e. doesn't do anything). Reasonable value = 1e-12
+    """
+    thresshold_applied = []
+    for k, v in results.data_vars.items():
+        # If there are any values in the data variable which fall below the
+        # thresshold, note the data variable name and set those values to zero
+        if v.where(abs(v) < zero_threshhold, drop=True).sum():
+            thresshold_applied.append(k)
+            with np.errstate(invalid='ignore'):
+                v.values[abs(v.values) < zero_threshhold] = 0
+            v.loc[{}] = v.values
+
+    if thresshold_applied:
+        comment = 'All values < {} set to 0 in {}'.format(zero_threshhold, ', '.join(thresshold_applied))
+    else:
+        comment = 'zero thresshold of {} not required'.format(zero_threshhold)
+
+    log_time(
+        timings, 'thresshold_applied',
+        comment='Postprocessing: ' + comment
+    )
+
+    if 'unmet_demand' in results.data_vars.keys() and not results.unmet_demand.sum():
+
+        log_time(
+            timings, 'delete_unmet_demand',
+            comment='Postprocessing: Model was feasible, deleting unmet_demand variable'
+        )
+        results = results.drop('unmet_demand')
+
+    return results

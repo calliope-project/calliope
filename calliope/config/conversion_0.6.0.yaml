@@ -7,14 +7,14 @@ run_config:
     solver_options: run.solver_options
     name: null
     model: null  # since there is no separate run configuration file any more, there is no need to specify a model configuration file
-    mode: model.mode
+    mode: run.mode
     output.format: null
     output.path: null
     debug.keep_temp_files: run.save_logs
     debug.symbolic_solver_labels: null
     override: null  # now achieved with override groups, see override.yaml in examples
     parallel: null
-    random_seed: run.random_seed
+    random_seed: model.random_seed
 
 
 model_config:

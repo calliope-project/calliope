@@ -23,11 +23,11 @@ from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
 
-from calliope.backend.pyomo import run as run_pyomo
+import calliope.backend.pyomo as pyomo_backend
 # from calliope.backend.julia import run as run_julia
 
-BACKEND_RUNNERS = {
-    'pyomo': run_pyomo,
+BACKEND = {
+    'pyomo': pyomo_backend,
     # 'julia': run_julia
 }
 
@@ -91,7 +91,7 @@ class Model(object):
         self._model_data_original = build_model_data(model_run)
         log_time(self._timings, 'model_data_original_creation')
 
-        random_seed = self._model_run.get_key('run.random_seed', None)
+        random_seed = self._model_run.get_key('model.random_seed', None)
         if random_seed:
             np.random.seed(seed=random_seed)
 
@@ -143,17 +143,17 @@ class Model(object):
                 'the results to be overwritten with a new run.'
             )
 
-        if self._model_data.attrs['model.mode'] == 'operate' and not self._model_data.attrs['allow_operate_mode']:
+        if self._model_data.attrs['run.mode'] == 'operate' and not self._model_data.attrs['allow_operate_mode']:
             raise exceptions.ModelError(
                 'Unable to run this model in operational mode, probably because '
                 'there exist non-uniform timesteps (e.g. from time masking)'
             )
 
         backend = self._model_data.attrs['run.backend']
-        results, self._backend_model = BACKEND_RUNNERS[backend](self._model_data, self._timings)
+        results, self._backend_model = BACKEND[backend].run(self._model_data, self._timings)
 
         # Add additional post-processed result variables to results
-        postprocess.postprocess_model_results(results, self._model_data)
+        results = postprocess.postprocess_model_results(results, self._model_data, self._timings)
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
@@ -168,6 +168,8 @@ class Model(object):
         )
 
         self.results = self._model_data.filter_by_attrs(is_result=1)
+
+        self.backend = BACKEND[backend].interface.BackendInterfaceMethods(self)
 
     def get_formatted_array(self, var):
         """

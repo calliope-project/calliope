@@ -530,12 +530,12 @@ def check_operate_params(model_data):
             model_data.attrs['allow_operate_mode'] = 1
 
     try:
-        window = model_data.attrs['model.operation.window']
-        horizon = model_data.attrs['model.operation.horizon']
+        window = model_data.attrs['run.operation.window']
+        horizon = model_data.attrs['run.operation.horizon']
     except KeyError:
         errors.append(
             'Operational mode requires a timestep window and horizon to be '
-            'defined under model.operation'
+            'defined under run.operation'
         )
         window = horizon = None
     if window and horizon and horizon < window:

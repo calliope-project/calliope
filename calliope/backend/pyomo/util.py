@@ -107,7 +107,7 @@ def get_conversion_plus_io(backend_model, tier):
         return 'in', backend_model.carrier_con
 
 
-def get_var(backend_model, var, dims=None):
+def get_var(backend_model, var, dims=None, sparse=False):
     """
     Return output for variable `var` as a pandas.Series (1d),
     pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
@@ -118,7 +118,9 @@ def get_var(backend_model, var, dims=None):
     dims : list, optional
         indices as strings, e.g. ('loc_techs', 'timesteps');
         if not given, they are auto-detected
-
+    sparse : bool, optional; default = False
+        If extracting Pyomo Param data, the output sparse array includes inputs
+        the user left as NaN replaced with the default value for that Param.
     """
     try:
         var_container = getattr(backend_model, var)
@@ -131,7 +133,10 @@ def get_var(backend_model, var, dims=None):
         else:
             dims = [var_container.index_set().name]
 
-    result = pd.DataFrame.from_dict(var_container.get_values(), orient='index')
+    if sparse:
+        result = pd.DataFrame.from_dict(var_container.extract_values_sparse(), orient='index')
+    else:
+        result = pd.DataFrame.from_dict(var_container.extract_values(), orient='index')
 
     if result.empty:
         raise exceptions.BackendError('Variable {} has no data.'.format(var))

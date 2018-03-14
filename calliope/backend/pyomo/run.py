@@ -12,7 +12,7 @@ import numpy as np
 import xarray as xr
 
 def run(model_data, timings):
-    if model_data.attrs['model.mode'] == 'operate':
+    if model_data.attrs['run.mode'] == 'operate':
         return run_iterative(model_data, timings)
 
     log_time(timings, 'run_start', comment='Pyomo backend: starting model run')
@@ -24,17 +24,10 @@ def run(model_data, timings):
         comment='Pyomo backend: model generated'
     )
 
-    save_logs = model_data.attrs.get('run.save_logs', None)
     solver = model_data.attrs['run.solver']
     solver_io = model_data.attrs.get('run.solver_io', None)
-    solver_option_keys = [
-        k for k in model_data.attrs.keys()
-        if 'run.solver_options' in k
-    ]
-    solver_options = {
-        k.replace('run.solver_options.', ''): model_data.attrs.get(k)
-        for k in solver_option_keys
-    }
+    solver_options = model_data.attrs.get('run.solver_options', None)
+    save_logs = model_data.attrs.get('run.save_logs', None)
 
     log_time(
         timings, 'run_solver_start',
@@ -58,7 +51,7 @@ def run(model_data, timings):
         comment='Pyomo backend: loaded results'
     )
 
-    results = get_result_array(backend_model)
+    results = get_result_array(backend_model, model_data)
 
     log_time(
         timings, 'run_solution_returned', time_since_start=True,
@@ -80,8 +73,8 @@ def run_iterative(model_data, timings):
     solver_io = model_data.attrs.get('run.solver_io', None)
     solver_options = model_data.attrs.get('run.solver_options', None)
     save_logs = model_data.attrs.get('run.save_logs', None)
-    window = model_data.attrs['model.operation.window']
-    horizon = model_data.attrs['model.operation.horizon']
+    window = model_data.attrs['run.operation.window']
+    horizon = model_data.attrs['run.operation.horizon']
     window_to_horizon = horizon - window
 
     # get the cumulative sum of timestep resolution, to find where we hit our window and horizon

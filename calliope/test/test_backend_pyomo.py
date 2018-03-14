@@ -15,3 +15,20 @@ class TestUtil:
         """
         If a default is not defined, raise KeyError
         """
+
+class TestInterface:
+    def get_input_params(self):
+        """
+        Test that the function access_model_inputs works
+        """
+
+
+    def try_update_param(self):
+        """
+        test that the function update_param works
+        """
+
+    def try_activate_constraint(self):
+        """
+        test that the function activate_constraint works
+        """

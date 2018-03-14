@@ -34,7 +34,7 @@ def generate_model(model_data):
 
     """
     backend_model = po.ConcreteModel()
-    mode = model_data.attrs['model.mode'] # 'plan' or 'operate'
+    mode = model_data.attrs['run.mode']  # 'plan' or 'operate'
     backend_model.mode = mode
 
     # Sets
@@ -124,7 +124,7 @@ def generate_model(model_data):
     #         self.add_constraint(load_function(c))
 
     # Objective function
-    objective_name = model_data.attrs['model.objective']
+    objective_name = model_data.attrs['run.objective']
     objective_function = 'calliope.backend.pyomo.objective.' + objective_name
     load_function(objective_function)(backend_model)
 
@@ -187,13 +187,26 @@ def load_results(backend_model, results):
         exceptions.warn(message, exceptions.BackendWarning)
 
 
-def get_result_array(backend_model):
+def get_result_array(backend_model, model_data):
     all_variables = {
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
         if isinstance(i, po.base.var.IndexedVar)
     }
-    # if unmet_demand was unused, delete it before it reaches the user
-    if ('unmet_demand' in all_variables.keys() and not
-            sum(filter(None, backend_model.unmet_demand.get_values().values()))):
-        del all_variables['unmet_demand']
-    return reorganise_dataset_dimensions(xr.Dataset(all_variables))
+
+    # Get any parameters that did not appear in the user's model.inputs Dataset
+    all_params = {
+        i.name: get_var(backend_model, i.name)
+        for i in backend_model.component_objects()
+        if isinstance(i, po.base.param.IndexedParam)
+            and i.name not in model_data.data_vars.keys()
+    }
+
+    results = reorganise_dataset_dimensions(xr.Dataset(all_variables))
+
+    if all_params:
+        additional_inputs = reorganise_dataset_dimensions(xr.Dataset(all_params))
+        for var in additional_inputs.data_vars:
+            additional_inputs[var].attrs['is_result'] = 0
+        model_data.update(additional_inputs)
+
+    return results

@@ -90,6 +90,6 @@ def initialize_decision_variables(backend_model):
             for k, v in backend_model.units.items():
                 backend_model.energy_cap[k] = v * backend_model.energy_cap_per_unit[k]
 
-    if model_data_dict['attrs'].get('model.ensure_feasibility', False):
+    if model_data_dict['attrs'].get('run.ensure_feasibility', False):
         backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
-        backend_model.bigM = model_data_dict['attrs'].get('model.bigM')
+        backend_model.bigM = model_data_dict['attrs'].get('run.bigM')

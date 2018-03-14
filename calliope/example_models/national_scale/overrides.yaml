@@ -14,7 +14,7 @@ time_resampling:
     model.time: {function: resample, function_options: {'resolution': '6H'}}
 
 time_clustering:
-    run.random_seed: 23
+    model.random_seed: 23
     model.name: 'National-scale example model with time clustering'
     model.subset_time: null  # No time subsetting
     # Cluster timesteps using k-means

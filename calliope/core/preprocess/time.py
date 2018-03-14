@@ -241,7 +241,7 @@ def final_timedimension_processing(model_data):
     checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # operational mode checks
-    if model_data.attrs['model.mode'] == 'operate':
+    if model_data.attrs['run.mode'] == 'operate':
         operate_comments, operate_warnings, operate_errors = checks.check_operate_params(model_data)
         checks.print_warnings_and_raise_errors(warnings=operate_warnings, errors=operate_errors)
 
