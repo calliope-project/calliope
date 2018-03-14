@@ -34,7 +34,7 @@ def generate_runs(model_file, override_file, groups=None, additional_args=None):
     commands = []
 
     for i, run in enumerate(runs):
-        cmd = 'calliope run {model} --override_file {override}:{groups} --save_netcdf out_{i}_{groups}.nc {other_options}'.format(
+        cmd = 'calliope run {model} --override_file {override}:{groups} --save_netcdf out_{i}_{groups}.nc --save_plots plots_{i}_{groups}.html {other_options}'.format(
             i=i + 1,
             model=model_file,
             override=override_file,
