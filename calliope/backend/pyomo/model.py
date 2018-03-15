@@ -51,10 +51,15 @@ def generate_model(model_data):
     # "Parameters"
     model_data_dict = {
         'data': {
-            k:
-            model_data[k].to_series().dropna().replace('inf', np.inf).to_dict()
-            for k in model_data.data_vars},
-        'dims': {k: model_data[k].dims for k in model_data.data_vars},
+            k: v.to_series().dropna().replace('inf', np.inf).to_dict()
+            for k, v in model_data.data_vars.items()
+            if v.attrs['is_result'] == 0 or v.attrs.get('operate_param', 0) == 1
+        },
+        'dims': {
+            k: v.dims
+            for k, v in model_data.data_vars.items()
+            if v.attrs['is_result'] == 0 or v.attrs.get('operate_param', 0) == 1
+        },
         'sets': list(model_data.coords),
         'attrs': {k: v for k, v in model_data.attrs.items() if k is not 'defaults'}
     }
@@ -66,20 +71,27 @@ def generate_model(model_data):
         ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
     )
 
-    for k in model_data_dict['data'].keys():
+    for k, v in model_data_dict['data'].items():
         if k in backend_model.__calliope_defaults__.keys():
             setattr(
                 backend_model, k,
                 po.Param(*[getattr(backend_model, i)
                            for i in model_data_dict['dims'][k]],
-                         initialize=model_data_dict['data'][k], mutable=True,
+                         initialize=v, mutable=True,
                          default=backend_model.__calliope_defaults__[k])
             )
-        elif k == 'timestep_resolution' or k == 'timestep_weights': # no default value to look up
+        elif k == 'timestep_resolution' or k == 'timestep_weights':  # no default value to look up
             setattr(
                 backend_model, k,
-                po.Param(backend_model.timesteps, initialize=model_data_dict['data'][k], mutable=True)
+                po.Param(backend_model.timesteps, initialize=v, mutable=True)
             )
+        elif mode == 'operate' and model_data[k].attrs.get('operate_param') == 1:
+            setattr(
+                backend_model, k,
+                po.Param(getattr(backend_model, model_data_dict['dims'][k][0]),
+                         initialize=v, mutable=True)
+            )
+
 
     # Variables
     load_function(
@@ -197,8 +209,8 @@ def get_result_array(backend_model, model_data):
     all_params = {
         i.name: get_var(backend_model, i.name)
         for i in backend_model.component_objects()
-        if isinstance(i, po.base.param.IndexedParam)
-            and i.name not in model_data.data_vars.keys()
+        if isinstance(i, po.base.param.IndexedParam) and
+        i.name not in model_data.data_vars.keys()
     }
 
     results = reorganise_dataset_dimensions(xr.Dataset(all_variables))

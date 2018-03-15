@@ -238,12 +238,7 @@ def final_timedimension_processing(model_data):
 
     # Final checking of the data
     model_data, final_check_comments, warnings, errors = checks.check_model_data(model_data)
-    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
-
-    # operational mode checks
-    if model_data.attrs['run.mode'] == 'operate':
-        operate_comments, operate_warnings, operate_errors = checks.check_operate_params(model_data)
-        checks.print_warnings_and_raise_errors(warnings=operate_warnings, errors=operate_errors)
+    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     model_data = reorganise_dataset_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)

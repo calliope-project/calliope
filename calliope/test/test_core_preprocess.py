@@ -569,7 +569,11 @@ class TestDataset:
 
         # should fail: storage_cap cost is negative, storage_cap_max is infinite
         override = AttrDict.from_yaml_string(
-            "techs.test_storage.costs.monetary.storage_cap: -10"
+            """
+            techs.test_storage:
+                    constraints.storage_cap_max: .inf
+                    costs.monetary.storage_cap: -10
+            """
         )
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, override_groups='simple_storage,one_day')
@@ -583,6 +587,8 @@ class TestDataset:
         """
         Check that the dataset includes all attributes *required* for a model to function
         """
+
+
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):
         """

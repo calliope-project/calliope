@@ -96,7 +96,7 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
     loc_tech = get_loc_tech(loc_tech_carrier)
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_tech_milp'):
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp'):
         operating_units = backend_model.operating_units[loc_tech, timestep]
     else:
         operating_units = 1

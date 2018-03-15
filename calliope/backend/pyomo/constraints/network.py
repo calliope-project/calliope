@@ -15,7 +15,7 @@ import pyomo.core as po  # pylint: disable=import-error
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
-    if 'loc_techs_symmetric_transmission_constraint' in sets:
+    if 'loc_techs_symmetric_transmission_constraint' in sets and backend_model.mode != 'operate':
         backend_model.symmetric_transmission_constraint = po.Constraint(
             backend_model.loc_techs_symmetric_transmission_constraint,
             rule=symmetric_transmission_constraint_rule

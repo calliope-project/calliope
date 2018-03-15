@@ -29,7 +29,7 @@ def postprocess_model_results(results, model_data, timings):
         comment='Postprocessing: started'
     )
 
-    results['capacity_factor'] = capacity_factor(results)
+    results['capacity_factor'] = capacity_factor(results, model_data)
     results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
     results['systemwide_levelised_cost'] = systemwide_levelised_cost(results)
     results['total_levelised_cost'] = systemwide_levelised_cost(results, total=True)
@@ -43,14 +43,20 @@ def postprocess_model_results(results, model_data, timings):
     return results
 
 
-def capacity_factor(results):
+def capacity_factor(results, model_data):
     """
     Returns a DataArray with capacity factor for the given results,
     indexed by loc_tech_carriers_prod and timesteps.
 
     """
+    # In operate mode, energy_cap is an input parameter
+    if 'energy_cap' not in results.keys():
+        energy_cap = model_data.energy_cap
+    else:
+        energy_cap = results.energy_cap
+
     capacities = xr.DataArray([
-        results['energy_cap'].loc[dict(loc_techs=i.rsplit('::', 1)[0])].values
+        energy_cap.loc[dict(loc_techs=i.rsplit('::', 1)[0])].values
         for i in results['loc_tech_carriers_prod'].values
     ], dims=['loc_tech_carriers_prod'], coords={'loc_tech_carriers_prod': results['loc_tech_carriers_prod']})
 
@@ -65,10 +71,16 @@ def systemwide_capacity_factor(results, model_data):
     results, indexed by techs and carriers.
 
     """
+    # In operate mode, energy_cap is an input parameter
+    if 'energy_cap' not in results.keys():
+        energy_cap = model_data.energy_cap
+    else:
+        energy_cap = results.energy_cap
+
     capacity_factors = (
         split_loc_techs(results['carrier_prod']).sum(dim='timesteps').sum(dim='locs') /
         (
-            split_loc_techs(results['energy_cap']).sum(dim='locs') *
+            split_loc_techs(energy_cap).sum(dim='locs') *
             sum(model_data.timestep_resolution)
         )
     )

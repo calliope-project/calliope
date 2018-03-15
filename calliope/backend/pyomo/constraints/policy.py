@@ -51,7 +51,7 @@ def load_constraints(backend_model):
             ['equals'], rule=group_share_carrier_prod_constraint_rule
         )
 
-    if 'carriers_reserve_margin_constraint' in sets:
+    if 'carriers_reserve_margin_constraint' in sets and backend_model.mode != 'operate':
         backend_model.reserve_margin_constraint = po.Constraint(
             backend_model.carriers_reserve_margin_constraint,
             rule=reserve_margin_constraint_rule

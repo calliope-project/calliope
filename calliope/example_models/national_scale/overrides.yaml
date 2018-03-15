@@ -38,6 +38,16 @@ power_generation_share:
                 carrier_prod_min:
                     power: 0.95
 
+operate_mode:
+    run.mode: operate
+    run.operation:
+            window: 12
+            horizon: 24
+    techs.csp.constraints.charge_rate: 0.0162857697 # energy_cap_max / storage_cap_max
+    techs.csp.constraints.energy_cap_max: null
+    techs.battery.constraints.storage_cap_max: null
+
+
 ##
 # Overrides for parallel runs
 ##

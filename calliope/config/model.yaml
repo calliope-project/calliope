@@ -17,7 +17,10 @@ run:
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
     bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
     ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
-    operation: {}  # Settings for operational mode
+    operation:  # Settings for operational mode
+        window: null
+        horizon: null
+        use_cap_results: false
     objective: 'cost_minimization'  # Objective function to use. As of v0.6.0, this has no effect.
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
     zero_thresshold: 1e-10 # Any value coming out of the backend that is smaller than this thresshold (due to floating point errors, probably) will be set to zero

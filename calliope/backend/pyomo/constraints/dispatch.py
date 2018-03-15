@@ -102,8 +102,8 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
-    return carrier_con >= (-1 *
-        backend_model.energy_cap[loc_tech] * timestep_resolution
+    return carrier_con >= (
+        -1 * backend_model.energy_cap[loc_tech] * timestep_resolution
     )
 
 

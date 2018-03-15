@@ -40,3 +40,28 @@ class BackendWarning(Warning):
 
 def warn(message, _class=ModelWarning):
     warnings.warn(message, _class)
+
+
+def print_warnings_and_raise_errors(warnings=None, errors=None):
+    """
+    Print warnings and raise ModelError from errors.
+
+    Parameters
+    ----------
+    warnings : list, optional
+    errors : list, optional
+
+    """
+    if warnings:
+        warn(
+            'Possible issues found during model processing:\n' +
+            '\n'.join(sorted(list(set(warnings))))
+        )
+
+    if errors:
+        raise ModelError(
+            'Errors during model processing:\n' +
+            '\n'.join(sorted(list(set(errors))))
+        )
+
+    return None

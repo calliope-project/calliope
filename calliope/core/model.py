@@ -22,14 +22,7 @@ from calliope.core.preprocess import \
 from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
-
-import calliope.backend.pyomo as pyomo_backend
-# from calliope.backend.julia import run as run_julia
-
-BACKEND = {
-    'pyomo': pyomo_backend,
-    # 'julia': run_julia
-}
+from calliope.backend.run import run as run_backend
 
 
 def read_netcdf(path):
@@ -98,12 +91,12 @@ class Model(object):
         # After setting the random seed, time clustering can take place
         time_config = model_run.model.get('time', None)
         if not time_config:
-            self._model_data = final_timedimension_processing(self._model_data_original)
+            _model_data = self._model_data_original
         else:
-            clustered_model_data = apply_time_clustering(
+            _model_data = apply_time_clustering(
                 self._model_data_original, model_run
             )
-            self._model_data = final_timedimension_processing(clustered_model_data)
+        self._model_data = final_timedimension_processing(_model_data)
         log_time(self._timings, 'model_data_creation', time_since_start=True)
 
         for var in self._model_data.data_vars:
@@ -149,8 +142,7 @@ class Model(object):
                 'there exist non-uniform timesteps (e.g. from time masking)'
             )
 
-        backend = self._model_data.attrs['run.backend']
-        results, self._backend_model = BACKEND[backend].run(self._model_data, self._timings)
+        results, self._backend_model, interface = run_backend(self._model_data, self._timings)
 
         # Add additional post-processed result variables to results
         results = postprocess.postprocess_model_results(results, self._model_data, self._timings)
@@ -158,7 +150,7 @@ class Model(object):
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
 
-        self._model_data = self._model_data.merge(results)
+        self._model_data = self._model_data.update(results)
 
         self._model_data.attrs['solution_time'] = (
             self._timings['run_solution_returned'] -
@@ -169,7 +161,7 @@ class Model(object):
 
         self.results = self._model_data.filter_by_attrs(is_result=1)
 
-        self.backend = BACKEND[backend].interface.BackendInterfaceMethods(self)
+        self.backend = interface(self)
 
     def get_formatted_array(self, var):
         """

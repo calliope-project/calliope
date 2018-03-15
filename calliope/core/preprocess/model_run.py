@@ -424,13 +424,13 @@ def generate_model_run(config, debug_comments):
 
     # 1) Initial checks on model configuration
     warnings, errors = checks.check_initial(config)
-    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 2) Fully populate techs
     # Raises ModelError if necessary
     model_run['techs'], debug_techs, errors = process_techs(config)
     debug_comments.set_key('model_run.techs', debug_techs)
-    checks.print_warnings_and_raise_errors(errors=errors)
+    exceptions.print_warnings_and_raise_errors(errors=errors)
 
     # 3) Fully populate tech_groups
     model_run['tech_groups'] = process_tech_groups(config, model_run['techs'])
@@ -440,7 +440,7 @@ def generate_model_run(config, debug_comments):
         config, model_run['techs']
     )
     debug_comments.set_key('model_run.locations', debug_locs)
-    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
@@ -461,7 +461,7 @@ def generate_model_run(config, debug_comments):
     # 8) Final sense-checking
     final_check_comments, warnings, errors = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
-    checks.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
     debug_data = AttrDict({
