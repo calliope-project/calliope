@@ -270,6 +270,20 @@ These can be implemented as, for example, to force at least 50% of ``energy_cap`
 
 .. seealso:: An example similar to the above is supplied as an override group in the built-in national-scale example's ``overrides.yaml``. See :ref:`documentation on the national-scale example <examplemodels_nationalscale_settings>`.
 
+.. _removing_techs_locations:
+
+Removing techs, locations and links
+-----------------------------------
+
+By specifying ``exists: false`` in the model configuration, which can be done through override groups, model components can be removed for debugging or scenario analysis.
+
+This works for:
+
+* Techs: ``techs.techname.exists: false``
+* Locations: ``locations.location_name.exists: false``
+* Links: ``links.location1,location2.exists: false``
+* Techs at a specific location:  ``locations.location_name.techs.exists: false``
+* Transmission techs at a specific location: ``links.location1,location2.techs.transmission_tech.exists: false``
 
 .. _operational_mode:
 

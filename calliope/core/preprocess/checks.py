@@ -159,6 +159,13 @@ def check_initial(config_model):
 
 
 def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comments):
+    if tech_id not in model_run.techs:
+        warnings.append(
+            'Tech {} was removed by setting ``exists: False`` - not checking '
+            'the consistency of its constraints at location {}.'.format(tech_id, loc_id)
+        )
+        return warnings, errors
+
     required = model_run.techs[tech_id].required_constraints
     allowed = model_run.techs[tech_id].allowed_constraints
     allowed_costs = model_run.techs[tech_id].allowed_costs
@@ -284,9 +291,10 @@ def check_final(model_run):
     ]
     if len(locs_with_coords) != 0 and len(all_locs) != len(locs_with_coords):
         errors.append(
-            'Either all or no locations must have `coordinates` defined'
+            'Either all or no locations must have `coordinates` defined. '
+            'Locations defined: {} - Locations with coordinates: {}'.format(
+                all_locs, locs_with_coords)
         )
-
 
     # If locations have coordinates, they must all be either lat/lon or x/y
     elif len(locs_with_coords) != 0:

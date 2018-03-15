@@ -236,6 +236,11 @@ def process_techs(config_model):
     debug_comments = AttrDict()
 
     for tech_id, tech_config in config_model.techs.items():
+
+        # If a tech specifies ``exists: false``, we skip it entirely
+        if not tech_config.get('exists', True):
+            continue
+
         tech_result = AttrDict()
 
         # Add inheritance chain
@@ -444,6 +449,7 @@ def generate_model_run(config, debug_comments):
     # 6) Grab additional relevant bits from run and model config
     model_run['run'] = config['run']
     model_run['model'] = config['model']
+    model_run['name'] = config['name']
 
     # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)

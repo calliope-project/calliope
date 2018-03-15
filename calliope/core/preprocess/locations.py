@@ -37,7 +37,7 @@ def process_locations(model_config, modelrun_techs):
     locations_comments : AttrDict
 
     """
-    techs_in = model_config.techs
+    techs_in = model_config.techs.copy()
     tech_groups_in = model_config.tech_groups
     locations_in = model_config.locations
     links_in = model_config.get('links', AttrDict())
@@ -61,9 +61,20 @@ def process_locations(model_config, modelrun_techs):
             _set_loc_key(locations, key, locations_in[key].copy())
 
     ##
+    # Kill any locations that the modeller does not want to exist
+    ##
+    for loc in list(locations.keys()):
+        if not locations[loc].get('exists', True):
+            locations.del_key(loc)
+
+    ##
     # Process technologies
     ##
+    techs_to_delete = []
     for tech_name in techs_in:
+        if not techs_in[tech_name].get('exists', True):
+            techs_to_delete.append(tech_name)
+            continue
         # Get inheritance chain generated in process_techs()
         inheritance_chain = modelrun_techs[tech_name].inheritance
 
@@ -73,11 +84,18 @@ def process_locations(model_config, modelrun_techs):
         # locations[loc_name].techs[tech_name].required_constraints = rq
         techs_in[tech_name].required_constraints = rq
 
+    # Kill any techs that the modeller does not want to exist
+    for tech_name in techs_to_delete:
+        del techs_in[tech_name]
+
     ##
     # Fully expand all installed technologies for the location,
     # filling in any undefined parameters from defaults
     ##
+    location_techs_to_delete = []
+
     for loc_name, loc in locations.items():
+
         if 'techs' not in loc:
             # Mark this as a transmission-only node if it has not allowed
             # any technologies
@@ -90,6 +108,10 @@ def process_locations(model_config, modelrun_techs):
             continue  # No need to process any technologies at this node
 
         for tech_name in loc.techs:
+            if tech_name in techs_to_delete:
+                # Techs that were removed need not be further considered
+                continue
+
             if not isinstance(locations[loc_name].techs[tech_name], dict):
                 locations[loc_name].techs[tech_name] = AttrDict()
 
@@ -141,17 +163,40 @@ def process_locations(model_config, modelrun_techs):
             tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
 
             # Now merge the tech settings into the location-specific
-            # tech dict
-            locations[loc_name].techs[tech_name].union(
-                tech_settings, allow_override=True
-            )
+            # tech dict -- but if a tech specifies ``exists: false``,
+            # we kill it at this location
+            if not tech_settings.get('exists', True):
+                location_techs_to_delete.append('{}.techs.{}'.format(loc_name, tech_name))
+            else:
+                locations[loc_name].techs[tech_name].union(
+                    tech_settings, allow_override=True
+                )
+
+    for k in location_techs_to_delete:
+        locations.del_key(k)
 
     # Generate all transmission links
     processed_links = AttrDict()
     for link in links_in:
         loc_from, loc_to = link.split(',')
+        # Skip this link entirely if it has been told not to exist
+        if not links_in[link].get('exists', True):
+            continue
+        # Also skip this link - and warn about it - if it links to a
+        # now-inexistant (because removed) location
+        if (loc_from not in locations.keys() or loc_to not in locations.keys()):
+            warnings.append(
+                'Not building the link {},{} because one or both of its '
+                'locations have been removed from the model by setting '
+                '``exists: false``'.format(loc_from, loc_to)
+            )
+            continue
         processed_transmission_techs = AttrDict()
         for tech_name in links_in[link].techs:
+            # Skip techs that have been told not to exist
+            # for this particular link
+            if not links_in[link].get_key('techs.{}.exists'.format(tech_name), True):
+                continue
             if tech_name not in processed_transmission_techs:
                 tech_settings = AttrDict()
                 # Combine model-wide settings from all parent groups
