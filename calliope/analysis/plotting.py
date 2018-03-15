@@ -285,7 +285,7 @@ def plot_timeseries(
             if not array_flow.loc[tech_dict].sum():
                 continue
             # We allow transmisison tech information to show up in some cases
-            if tech in dataset.techs_transmission.values:
+            if 'techs_transmission' in dataset and tech in dataset.techs_transmission.values:
                 base_tech = 'transmission'
                 color = dataset.colors.loc[{'techs': tech.split(':')[0]}].item()
                 name = dataset.names.loc[{'techs': tech.split(':')[0]}].item()
@@ -494,7 +494,7 @@ def plot_capacity(
         for tech in array_cap.techs.values:
             if tech not in dataset.techs.values:
                 continue
-            if tech in dataset.techs_transmission.values:
+            if 'techs_transmission' in dataset and tech in dataset.techs_transmission.values:
                 continue
             else:
                 base_tech = dataset.inheritance.loc[{'techs': tech}].item().split('.')[0]
