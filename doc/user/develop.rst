@@ -9,7 +9,9 @@ Development takes place in the ``master`` branch. Stable versions are tagged off
 
 Tests are included and can be run with ``py.test`` from the project's root directory.
 
-See the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+See our `contributors guide on GitHub <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_.
+
+Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
 
 --------------------------------
 Installing a development version
@@ -44,7 +46,7 @@ As of version 0.6.0, dynamic loading of custom constraint generator extensions h
 Subsets
 -------
 
-Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of custom constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.sets`, an overview of which is included here.
+Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of custom constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.core.preprocess.sets`, an overview of which is included here.
 
 .. include:: ../../calliope/core/preprocess/sets.py
    :start-after: ###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
@@ -53,7 +55,7 @@ Calliope internally builds many subsets to better manage constraints, in particu
 Time functions and masks
 ------------------------
 
-Custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.time_masks` or :mod:`calliope.time_functions` module, and if not, attempts to load the function from an importable module:
+Custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.core.time.masks` or :mod:`calliope.core.time.funcs` module, and if not, attempts to load the function from an importable module:
 
 .. code-block:: yaml
 

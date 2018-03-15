@@ -6,7 +6,8 @@
  * :license: Flask Design License, see LICENSE for details.
  */
 
-{% set page_width = '940px' %}
+{% set page_width_min = '940px' %}
+{% set page_width_max = '1080px' %}
 {% set sidebar_width = '220px' %}
 {% set sidebar_width_withoutpadding = '200px' %}
 
@@ -24,7 +25,8 @@ body {
 }
 
 div.document {
-    width: {{ page_width }};
+    min-width: {{ page_width_min }};
+    max-width: {{ page_width_max }};
     margin: 30px auto 0 auto;
 }
 
@@ -65,7 +67,8 @@ img.floatingflask {
 }
 
 div.footer {
-    width: {{ page_width }};
+    min-width: {{ page_width_min }};
+    max-width: {{ page_width_max }};
     margin: 20px auto 30px auto;
     font-size: 14px;
     color: #888;

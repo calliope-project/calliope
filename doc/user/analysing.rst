@@ -24,20 +24,29 @@ In Python, we get this function by calling ``model.plot.timeseries()``. It inclu
 
 .. code-block:: python
 
-    model.plot.timeseries(array='inputs') # only inputs
-    model.plot.timeseries(array='results') # only results
-    model.plot.timeseries(array='resource_con') # only consumed resource
-    model.plot.timeseries(array=['power', `resource_con`]) # only consumed_resource and `power` carrier flow
+    # Only inputs or only results
+    model.plot.timeseries(array='inputs')
+    model.plot.timeseries(array='results')
+
+    # Only consumed resource
+    model.plot.timeseries(array='resource_con')
+
+    # Only consumed resource and `power` carrier flow
+    model.plot.timeseries(array=['power', `resource_con`])
 
 The data used to build the plots can also be subset and ordered by using the ``subset`` argument. This uses `xarray's 'loc' indexing functionality <http://xarray.pydata.org/en/stable/indexing.html>`_ to access subsets of data:
 
 .. code-block:: python
 
-    model.plot.timeseries(subset={'locs': ['region1']}) # only show region1 data (the data it shows is a sum of all locations, by default
-    model.plot.timeseries(subset={'techs': ['ccgt', 'csp']}) # only show two technologies
+    # Only show region1 data (rather than the default, which is a sum of all locations)
+    model.plot.timeseries(subset={'locs': ['region1']})
 
-    # If all the technologies in our model were: ['ccgt', 'csp', 'battery'] we could order them in our stack:
-    model.plot.timeseries(subset={'techs': ['ccgt', 'battery', 'csp']}) # show all technologies, but in the order specified ('ccgt' on the bottom)
+    # Only show a subset of technologies
+    model.plot.timeseries(subset={'techs': ['ccgt', 'csp']})
+
+    # Assuming our model has three techs, 'ccgt', 'csp', and 'battery',
+    # specifying `subset` lets us order them in the stacked barchart
+    model.plot.timeseries(subset={'techs': ['ccgt', 'battery', 'csp']})
 
 .. seealso:: :ref:`API documentation for the analysis module<api_analysis>`
 
