@@ -132,11 +132,12 @@ def new(path, template, debug):
     """
     if debug:
         print(_get_version())
-    if template is None:
-        template = 'national_scale'
-    source_path = examples._PATHS[template]
-    click.echo('Copying {} template to target directory: {}'.format(template, path))
-    shutil.copytree(source_path, path)
+    with format_exceptions(debug):
+        if template is None:
+            template = 'national_scale'
+        source_path = examples._PATHS[template]
+        click.echo('Copying {} template to target directory: {}'.format(template, path))
+        shutil.copytree(source_path, path)
 
 
 @cli.command(short_help='Run a model.')
@@ -223,7 +224,8 @@ def generate_runs(
             cluster_time=cluster_time,
             cluster_threads=cluster_threads,
         )
-        generate(kind, **kwargs)
+        with format_exceptions(debug, pdb):
+            generate(kind, **kwargs)
 
 
 @cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
@@ -243,6 +245,7 @@ def convert(
     is saved to ``out_path``.
 
     """
-    print('Converting model...')
-    convert_model(run_config_path, model_config_path, out_path)
-    print('Done. Results saved to: {}'.format(out_path))
+    with format_exceptions(debug, pdb):
+        print('Converting model...')
+        convert_model(run_config_path, model_config_path, out_path)
+        print('Done. Results saved to: {}'.format(out_path))

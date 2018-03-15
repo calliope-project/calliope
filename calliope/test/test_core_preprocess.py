@@ -30,18 +30,6 @@ def build_model(override_dict, override_groups):
 
 
 class TestModelRun:
-    def test_override_base_technology_groups(self):
-        """
-        Test that base technology are not being overriden by any user input
-        """
-        override = AttrDict.from_yaml_string(
-            """
-            tech_groups.supply.constraints.energy_cap_max: 1000
-            """
-        )
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
-
     def test_undefined_carriers(self):
         """
         Test that user has input either carrier or carrier_in/_out for each tech
@@ -233,9 +221,9 @@ class TestChecks:
 
     def test_name_overlap(self):
         """
-        No tech_groups/techs may have the same identifier as the built-in groups
+        No tech may have the same identifier as a tech group
         """
-        override1 = AttrDict.from_yaml_string(
+        override = AttrDict.from_yaml_string(
             """
             techs:
                 supply:
@@ -253,21 +241,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='one_day')
-
-        override2 = AttrDict.from_yaml_string(
-            """
-            tech_groups:
-                supply:
-                    essentials:
-                        name: Supply tech
-                        carrier: gas
-                        parent: supply_plus
-            """
-        )
-
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, override_groups='one_day')
 
     def test_unspecified_parent(self):
         """

@@ -103,8 +103,7 @@ def check_initial(config_model):
                 "is valid.".format(key)
             )
 
-    # No tech_groups/techs may have the same identifier as the built-in groups
-    # tech_groups are checked in preprocess_model.process_config()
+    # No techs may have the same identifier as a tech_group
     name_overlap = (
         set(config_model.tech_groups.keys()) &
         set(config_model.techs.keys())

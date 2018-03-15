@@ -139,22 +139,6 @@ def apply_overrides(config, override_file=None, override_dict=None):
         config.config_path, config.model.timeseries_data_path
     )
 
-    # Check whether the model config attempts to override any of the
-    # base technology groups
-    def check_base_tech_group_override(config):
-        if 'tech_groups' in config:
-            overridden_groups = (
-                set(default_tech_groups) &
-                set(config.tech_groups.keys())
-            )
-            if overridden_groups:
-                raise exceptions.ModelError(
-                    'Trying to re-define base '
-                    'technology groups: {}'.format(overridden_groups)
-                )
-        else:
-            return None
-
     # Check if overriding coordinates are in the same coordinate system. If not,
     # delete all incumbent coordinates, ready for the new coordinates to come in
     def check_and_remove_coordinates(config_model, override):
@@ -170,8 +154,6 @@ def apply_overrides(config, override_file=None, override_dict=None):
             if config_coordinates != override_coordinates:
                 for key in config_keys:
                     config_model.del_key(key)
-
-    check_base_tech_group_override(config)
 
     # The input files are allowed to override other model defaults
     config_model.union(config, allow_override=True)
@@ -191,7 +173,6 @@ def apply_overrides(config, override_file=None, override_dict=None):
 
         override_from_file = combine_overrides(override_file_path, override_groups)
 
-        check_base_tech_group_override(override_from_file)
         check_and_remove_coordinates(config_model, override_from_file)
 
         config_model.union(
@@ -207,7 +188,6 @@ def apply_overrides(config, override_file=None, override_dict=None):
         if not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
 
-        check_base_tech_group_override(override_dict)
         check_and_remove_coordinates(config_model, override_dict)
 
         config_model.union(
