@@ -4,7 +4,25 @@ Building a model
 
 In short, a Calliope model works like this: **supply technologies** can take a **resource** from outside of the modeled system and turn it into a specific energy **carrier** in the system. The model specifies one or more **locations** along with the technologies allowed at those locations. **Transmission technologies** can move energy of the same carrier from one location to another, while **conversion technologies** can convert one carrier into another at the same location. **Demand technologies** remove energy from the system, while **storage technologies** can store energy at a specific location. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
 
-In more technical terms, Calliope allows a modeller to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base technologies -- ``supply``, ``supply_plus``, ``demand``, ``conversion``, ``conversion_plus``, and ``transmission``. The base technologies are described in more detail in the :ref:`reference section <technology_types>`.
+In more technical terms, Calliope allows a modeller to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base tech groups -- ``supply``, ``supply_plus``, ``demand``, ``conversion``, ``conversion_plus``, and ``transmission``. These groups are described in more detail in :ref:`abstract_base_tech_definitions`.
+
+-----------
+Terminology
+-----------
+
+The terminology defined here is used throughout the documentation and the model code and configuration files:
+
+* **Technology**: a technology that produces, consumes, converts or transports energy
+* **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
+* **Resource**: a source or sink of energy that can (or must) be used by a technology to introduce into or remove energy from the system
+* **Carrier**: an energy carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
+
+As more generally in constrained optimization, the following terms are also used:
+
+* Parameter: a fixed coefficient that enters into model equations
+* Variable: a variable coefficient (decision variable) that enters into model equations
+* Set: an index in the algebraic formulation of the equations
+* Constraint: an equality or inequality expression that constrains one or several variables
 
 -------------------------
 Files that define a model
@@ -112,6 +130,8 @@ Each technology must specify some ``essentials``, most importantly a name, the a
 The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the resource is set to infinite via ``inf``).
 
 The ``costs`` section gives costs for the technology. Calliope uses the concept of "cost classes" to allow accounting for more than just monetary costs. The above example specifies only the ``monetary`` cost class, but any number of other classes could be used, for example ``co2`` to account for emissions.
+
+Only the ``monetary`` cost class is entered into the default objective function. Additional cost classes can be created simply by adding them to the definition of costs for a technology.
 
 .. seealso::
 

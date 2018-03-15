@@ -1,4 +1,3 @@
-
 =================
 Development guide
 =================
@@ -42,15 +41,6 @@ Creating modular extensions
 ---------------------------
 
 As of version 0.6.0, dynamic loading of custom constraint generator extensions has been removed due it not not being used by users of Calliope. The ability to dynamically load custom functions to adjust time resolution remains (see below).
-
-Subsets
--------
-
-Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of custom constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.core.preprocess.sets`, an overview of which is included here.
-
-.. include:: ../../calliope/core/preprocess/sets.py
-   :start-after: ###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
-   :end-before: ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
 
 Time functions and masks
 ------------------------

@@ -56,6 +56,13 @@ Technology constraints
 
 * `weight` (giving a technology a disproportionate weight in the objective function calculation) has been removed.
 
+Custom objectives
+=================
+
+The ability to load additional constraints or objectives has been removed. It is still possible to define a custom objective, but to load it, a modeller needs to use a development installation of Calliope and load the function manually.
+
+.. seealso:: :doc:`develop`
+
 ---------------------
 Updated functionality
 ---------------------

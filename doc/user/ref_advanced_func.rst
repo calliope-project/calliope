@@ -182,6 +182,13 @@ Where multiple carriers are included in a carrier level, any of those carriers c
 
 .. Note:: A ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers).
 
+Revenue and export
+------------------
+
+**FIXME TBA actually talk about export**
+
+It is possible to specify revenues for technologies simply by setting a negative cost value. For example, to consider a feed-in tariff for PV generation, it could be given a negative operational cost equal to the real operational cost minus the level of feed-in tariff received.
+
 .. _tech_groups:
 
 Using ``tech_groups`` to group configuration

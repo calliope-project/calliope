@@ -4,6 +4,11 @@ Analysing a model
 
 Calliope inputs and results are made to be very easily handled. Whatever platform you prefer to use for data processing, our NetCDF or CSV output makes it easy. If you prefer to not worry about writing your own scripts, then we have that covered too! :class:`~calliope.Model.plot` is built on plotly's interactive toolbox, to bring your data to life.
 
+**FIXME** When processed, these sets are often concatenated to avoid sparse matrices. For instance, if a technology ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then we will specify parameters for just the ``loc::tech`` ``X1::boiler``. This can be extended to parameters which also consider ``carriers``, such that we would have a ``loc::tech::carrier`` ``X1::boiler::heat`` (avoiding empty parameter values for ``power``, as the boiler never considers that enery carrier).
+
+**FIXME TBA: link to ``get_formatted_array()``**
+
+
 -------------------
 Visualising results
 -------------------
