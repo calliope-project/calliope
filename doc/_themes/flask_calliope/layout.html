@@ -1,9 +1,24 @@
 {% extends "basic/layout.html" %}
 
+{# Plotly must load before MathJax or MathJax breaks #}
+{% set script_files = ["https://cdn.plot.ly/plotly-latest.min.js"] + script_files %}
+
 {% block extrahead %}
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
   <link href='https://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css'>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        "HTML-CSS": {
+            scale: 90
+        },
+     showMathMenu: true,
+     menuSettings: {
+         zoom: "Hover",
+         context: "Browser",
+         CTRL: false
+     }
+    });
+</script>
 {% endblock %}
 
 {% block header %}
