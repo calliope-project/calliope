@@ -52,7 +52,7 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
     ), html_only=True)
 
     template_path = os.path.join(
-        os.path.dirname(__file__), '..', 'config', 'plots_template.html'
+        os.path.dirname(__file__), '..', '..', 'config', 'plots_template.html'
     )
     with open(template_path, 'r') as f:
         html_template = jinja2.Template(f.read())

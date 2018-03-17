@@ -4,13 +4,11 @@ import pytest  # pylint: disable=unused-import
 
 from calliope.core.attrdict import AttrDict
 import calliope.exceptions as exceptions
-import pandas as pd
 
-this_path = os.path.dirname(__file__)
 
-html_strings_location = os.path.join(this_path, 'common', 'html_strings.yaml')
-
-html_strings = AttrDict.from_yaml(html_strings_location)
+HTML_STRINGS = AttrDict.from_yaml(
+    os.path.join(os.path.dirname(__file__), 'common', 'html_strings.yaml')
+)
 
 
 class TestPlotting:
@@ -20,30 +18,35 @@ class TestPlotting:
         model = calliope.examples.national_scale(override_dict=override)
         model.run()
 
-        capacity_string = model.plot.capacity(html_only=True)
-        timeseries_string = model.plot.timeseries(html_only=True)
-        transmission_string = model.plot.transmission(html_only=True)
+        plot_html_outputs = {
+            'capacity': model.plot.capacity(html_only=True),
+            'timeseries': model.plot.timeseries(html_only=True),
+            'transmission': model.plot.transmission(html_only=True),
+        }
 
-        # Div IDs are always unique, so we ignore the string until the start of the data
-        assert capacity_string[capacity_string.find('[{'):] == html_strings['national_scale']['capacity']
-        assert timeseries_string[timeseries_string.find('[{'):] == html_strings['national_scale']['timeseries']
-        assert transmission_string[transmission_string.find('[{'):] == html_strings['national_scale']['transmission']
+        for plot_type in HTML_STRINGS['national_scale']:
+            for string in HTML_STRINGS['national_scale'][plot_type]:
+                assert string in plot_html_outputs[plot_type]
+
+        # Also just try plotting the summary
+        model.plot.summary()
 
     def test_milp_plotting(self):
         override = {'model.subset_time': '2005-01-01'}
         model = calliope.examples.milp(override_dict=override)
         model.run()
 
-        capacity_string = model.plot.capacity(html_only=True)
-        timeseries_string = model.plot.timeseries(html_only=True)
-        transmission_string = model.plot.transmission(html_only=True)
+        plot_html_outputs = {
+            'capacity': model.plot.capacity(html_only=True),
+            'timeseries': model.plot.timeseries(html_only=True),
+            'transmission': model.plot.transmission(html_only=True),
+        }
 
-        # Div IDs are always unique, so we ignore the string until the start of the data
-        assert capacity_string[capacity_string.find('[{'):] == html_strings['milp']['capacity']
-        assert timeseries_string[timeseries_string.find('[{'):] == html_strings['milp']['timeseries']
-        assert transmission_string[transmission_string.find('[{'):] == html_strings['milp']['transmission']
+        for plot_type in HTML_STRINGS['milp']:
+            for string in HTML_STRINGS['milp'][plot_type]:
+                assert string in plot_html_outputs[plot_type]
 
-        # Just try plotting the summary
+        # Also just try plotting the summary
         model.plot.summary()
 
     def test_failed_cap_plotting(self):
