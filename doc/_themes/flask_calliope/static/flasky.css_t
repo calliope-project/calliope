@@ -160,14 +160,22 @@ div.sphinxsidebar input {
     font-size: 1em;
 }
 
+div.twocol {
+    display: flex;
+    align-items: center;
+}
+
 div.leftside {
     width: 50%;
-    padding: 0px 3px 0px 0px;
-    float: left;
+    padding: 0 15px 0 0;
 }
 
 div.rightside {
-    margin-left: 50%;
+    width: 50%;
+}
+
+div.scrolling-wrapper {
+  overflow-x: scroll;
 }
 
 /* -- body styles ----------------------------------------------------------- */

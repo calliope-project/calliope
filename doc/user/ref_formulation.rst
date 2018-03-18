@@ -57,7 +57,43 @@ where :math:`cost_{m}` is the monetary cost class.
 
 Alternative objective functions can be used by setting the ``objective`` in the model configuration (see :ref:`config_reference_model_wide`).
 
-Constraints
------------
+.. _api_constraints:
 
-**TBA - link to API**
+Constraints
+===========
+
+Energy Balance
+--------------
+
+.. automodule:: calliope.backend.pyomo.constraints.energy_balance
+    :members:
+
+Capacity
+--------
+
+.. automodule:: calliope.backend.pyomo.constraints.capacity
+    :members:
+
+Export
+------
+
+.. automodule:: calliope.backend.pyomo.constraints.export
+    :members:
+
+MILP
+----
+
+.. automodule:: calliope.backend.pyomo.constraints.milp
+    :members:
+
+Conversion
+----------
+
+.. automodule:: calliope.backend.pyomo.constraints.conversion
+    :members:
+
+Conversion_plus
+---------------
+
+.. automodule:: calliope.backend.pyomo.constraints.conversion_plus
+    :members:

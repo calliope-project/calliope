@@ -114,26 +114,30 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
 
     The first valid case is applied:
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{storage_{cap}}(loc::tech)
-        \\begin{cases}
-            = storage_{cap, equals}(loc::tech),& \\text{if } storage_{cap, equals}(loc::tech)\\\\
-            = energy_{cap, equals}(loc::tech) \\times charge\_rate,&
-                \\text{if } energy_{cap, equals}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
-            \\leq storage_{cap, max}(loc::tech),& \\text{if } storage_{cap, max}(loc::tech)\\\\
-            \\leq energy_{cap, max}(loc::tech) \\times charge\_rate,&
-                \\text{if } energy_{cap, max}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
-            \\text{unconstrained},& \\text{otherwise}
-        \\end{cases}
-        \\forall loc::tech \\in loc::techs_{store}
+        .. math::
+
+            \\boldsymbol{storage_{cap}}(loc::tech)
+            \\begin{cases}
+                = storage_{cap, equals}(loc::tech),& \\text{if } storage_{cap, equals}(loc::tech)\\\\
+                = energy_{cap, equals}(loc::tech) \\times charge\_rate,&
+                    \\text{if } energy_{cap, equals}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
+                \\leq storage_{cap, max}(loc::tech),& \\text{if } storage_{cap, max}(loc::tech)\\\\
+                \\leq energy_{cap, max}(loc::tech) \\times charge\_rate,&
+                    \\text{if } energy_{cap, max}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
+                \\text{unconstrained},& \\text{otherwise}
+            \\end{cases}
+            \\forall loc::tech \\in loc::techs_{store}
 
     and (if ``equals`` not enforced):
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{storage_{cap}}(loc::tech) \\geq storage_{cap, min}(loc::tech)
-        \\quad \\forall loc::tech \\in loc::techs_{store}
+        .. math::
+
+            \\boldsymbol{storage_{cap}}(loc::tech) \\geq storage_{cap, min}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
 
@@ -172,11 +176,13 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
     Set an additional energy capacity constraint on storage technologies,
     based on their use of `charge_rate`.
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{energy_{cap}}(loc::tech) \\leq \\boldsymbol{storage_{cap}}(loc::tech)
-        \\times charge\_rate(loc::tech) \\times energy_{cap, scale}(loc::tech)
-        \\quad \\forall loc::tech \\in loc::techs_{store}
+        .. math::
+
+            \\boldsymbol{energy_{cap}}(loc::tech) \\leq \\boldsymbol{storage_{cap}}(loc::tech)
+            \\times charge\_rate(loc::tech) \\times energy_{cap, scale}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
     energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
@@ -193,22 +199,26 @@ def resource_capacity_constraint_rule(backend_model, loc_tech):
 
     The first valid case is applied:
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{resource_{cap}}(loc::tech)
-        \\begin{cases}
-            = resource_{cap, equals}(loc::tech),& \\text{if } resource_{cap, equals}(loc::tech)\\\\
-            \\leq resource_{cap, max}(loc::tech),& \\text{if } resource_{cap, max}(loc::tech)\\\\
-            \\text{unconstrained},& \\text{otherwise}
-        \\end{cases}
-        \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
+        .. math::
+
+            \\boldsymbol{resource_{cap}}(loc::tech)
+            \\begin{cases}
+                = resource_{cap, equals}(loc::tech),& \\text{if } resource_{cap, equals}(loc::tech)\\\\
+                \\leq resource_{cap, max}(loc::tech),& \\text{if } resource_{cap, max}(loc::tech)\\\\
+                \\text{unconstrained},& \\text{otherwise}
+            \\end{cases}
+            \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
 
     and (if ``equals`` not enforced):
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{resource_{cap}}(loc::tech) \\geq resource_{cap, min}(loc::tech)
-        \\quad \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
+        .. math::
+
+            \\boldsymbol{resource_{cap}}(loc::tech) \\geq resource_{cap, min}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
     """
 
     return get_capacity_constraint(backend_model, 'resource_cap', loc_tech)
@@ -219,11 +229,13 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, loc_
     Add equality constraint for resource_cap to equal energy_cap, for any technologies
     which have defined resource_cap_equals_energy_cap.
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{resource_{cap}}(loc::tech) = \\boldsymbol{energy_{cap}}(loc::tech)
-        \\quad \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
-        \\text{ if } resource\_cap\_equals\_energy\_cap = \\text{True}
+        .. math::
+
+            \\boldsymbol{resource_{cap}}(loc::tech) = \\boldsymbol{energy_{cap}}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
+            \\text{ if } resource\_cap\_equals\_energy\_cap = \\text{True}
     """
     return backend_model.resource_cap[loc_tech] == backend_model.energy_cap[loc_tech]
 
@@ -234,22 +246,26 @@ def resource_area_constraint_rule(backend_model, loc_tech):
 
     The first valid case is applied:
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{resource_{area}}(loc::tech)
-        \\begin{cases}
-            = resource_{area, equals}(loc::tech),& \\text{if } resource_{area, equals}(loc::tech)\\\\
-            \\leq resource_{area, max}(loc::tech),& \\text{if } resource_{area, max}(loc::tech)\\\\
-            \\text{unconstrained},& \\text{otherwise}
-        \\end{cases}
-        \\forall loc::tech \\in loc::techs_{area}
+        .. math::
+
+            \\boldsymbol{resource_{area}}(loc::tech)
+            \\begin{cases}
+                = resource_{area, equals}(loc::tech),& \\text{if } resource_{area, equals}(loc::tech)\\\\
+                \\leq resource_{area, max}(loc::tech),& \\text{if } resource_{area, max}(loc::tech)\\\\
+                \\text{unconstrained},& \\text{otherwise}
+            \\end{cases}
+            \\forall loc::tech \\in loc::techs_{area}
 
     and (if ``equals`` not enforced):
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{resource_{area}}(loc::tech) \\geq resource_{area, min}(loc::tech)
-        \\quad \\forall loc::tech \\in loc::techs_{area}
+        .. math::
+
+            \\boldsymbol{resource_{area}}(loc::tech) \\geq resource_{area, min}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{area}
     """
     energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
@@ -267,11 +283,13 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
     Add equality constraint for resource_area to equal a percentage of energy_cap,
     for any technologies which have defined resource_area_per_energy_cap
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{resource_{area}}(loc::tech) =
-        \\boldsymbol{energy_{cap}}(loc::tech) \\times area\_per\_energy\_cap(loc::tech)
-        \\quad \\forall loc::tech in locs::techs_{area} \\text{ if } area\_per\_energy\_cap(loc::tech)
+        .. math::
+
+            \\boldsymbol{resource_{area}}(loc::tech) =
+            \\boldsymbol{energy_{cap}}(loc::tech) \\times area\_per\_energy\_cap(loc::tech)
+            \\quad \\forall loc::tech \\in locs::techs_{area} \\text{ if } area\_per\_energy\_cap(loc::tech)
     """
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
@@ -284,9 +302,12 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
     Set upper bound on use of area for all locations which have `available_area`
     constraint set. Does not consider resource_area applied to demand technologies
 
-    .. math::
-        \\sum_{tech} \\boldsymbol{resource_{area}}(loc::tech) \\leq available\_area
-        \\quad \\forall loc \in locs \\text{ if } available\_area
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{tech} \\boldsymbol{resource_{area}}(loc::tech) \\leq available\_area
+            \\quad \\forall loc \in locs \\text{ if } available\_area(loc)
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     available_area = model_data_dict['available_area'][loc]
@@ -305,22 +326,27 @@ def energy_capacity_constraint_rule(backend_model, loc_tech):
 
     The first valid case is applied:
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{energy_{cap}}(loc::tech)
-        \\begin{cases}
-            = energy_{cap, equals}(loc::tech),& \\text{if } energy_{cap, equals}(loc::tech)\\\\
-            \\leq energy_{cap, max}(loc::tech),& \\text{if } energy_{cap, max}(loc::tech)\\\\
-            \\text{unconstrained},& \\text{otherwise}
-        \\end{cases}
-        \\forall loc::tech \\in loc::techs
+        .. math::
+
+            \\frac{\\boldsymbol{energy_{cap}}(loc::tech)}{energy_{cap, scale}(loc::tech)}
+            \\begin{cases}
+                = energy_{cap, equals}(loc::tech),& \\text{if } energy_{cap, equals}(loc::tech)\\\\
+                \\leq energy_{cap, max}(loc::tech),& \\text{if } energy_{cap, max}(loc::tech)\\\\
+                \\text{unconstrained},& \\text{otherwise}
+            \\end{cases}
+            \\forall loc::tech \\in loc::techs
 
     and (if ``equals`` not enforced):
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\boldsymbol{energy_{cap}}(loc::tech) \\geq energy_{cap, min}(loc::tech)
-        \\quad \\forall loc::tech \\in loc::techs
+        .. math::
+
+            \\frac{\\boldsymbol{energy_{cap}}(loc::tech)}{energy_{cap, scale}(loc::tech)}
+            \\geq energy_{cap, min}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs
     """
     return get_capacity_constraint(backend_model, 'energy_cap', loc_tech)
 
@@ -331,17 +357,19 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
 
     The first valid case is applied:
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        \\sum_{loc}\\boldsymbol{energy_{cap}}(loc::tech)
-        \\begin{cases}
-            = energy_{cap, equals, systemwide}(loc::tech),&
-                \\text{if } energy_{cap, equals, systemwide}(loc::tech)\\\\
-            \\leq energy_{cap, max, systemwide}(loc::tech),&
-                \\text{if } energy_{cap, max, systemwide}(loc::tech)\\\\
-            \\text{unconstrained},& \\text{otherwise}
-        \\end{cases}
-        \\forall tech \\in techs
+        .. math::
+
+            \\sum_{loc}\\boldsymbol{energy_{cap}}(loc::tech)
+            \\begin{cases}
+                = energy_{cap, equals, systemwide}(loc::tech),&
+                    \\text{if } energy_{cap, equals, systemwide}(loc::tech)\\\\
+                \\leq energy_{cap, max, systemwide}(loc::tech),&
+                    \\text{if } energy_{cap, max, systemwide}(loc::tech)\\\\
+                \\text{unconstrained},& \\text{otherwise}
+            \\end{cases}
+            \\forall tech \\in techs
 
     """
     all_loc_techs = [

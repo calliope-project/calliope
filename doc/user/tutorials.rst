@@ -40,7 +40,7 @@ The example model defines two power supply technologies.
 
 The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example of a simple technology with an infinite resource. Its only constraints are the cost of built capacity (``energy_cap``) and a constraint on its maximum built capacity.
 
-.. figure:: images/node_supply.*
+.. figure:: images/supply.*
    :alt: Supply node
 
    The layout of a supply node, in this case ``ccgt``, which has an infinite resource, a carrier conversion efficiency (:math:`energy_{eff}`), and a constraint on its maximum built :math:`energy_{cap}` (which puts an upper limit on :math:`energy_{prod}`).
@@ -61,10 +61,10 @@ The second technology is ``csp`` (concentrating solar power), and serves as an e
 * built-in storage
 * plant-internal losses (``parasitic_eff``)
 
-.. figure:: images/node_supply_plus.*
-   :alt: More complex node but without a secondary resource
+.. figure:: images/supply_plus.*
+   :alt: More complex node, with resource storage
 
-   The layout of a more complex node, in this case ``csp``, which makes use of most node-level functionality available, with the exception of a secondary resource.
+   The layout of a more complex node, in this case ``csp``, which makes use of most node-level functionality available.
 
 This definition in the example model's configuration is more verbose:
 
@@ -111,7 +111,7 @@ What remains to set up is a simple transmission technologies:
 
 Transmission technologies (like conversion technologies) look different than other nodes, as they link the carrier at one location to the carrier at another (or, in the case of conversion, one carrier to another at the same location). The following figure illustrates this for the example model's transmission technology:
 
-.. figure:: images/node_transmission.*
+.. figure:: images/transmission.*
    :alt: Transmission node
 
    A simple transmission node with an :math:`energy_{eff}`.
@@ -176,7 +176,7 @@ This example model defines three supply technologies.
 
 The first two are ``supply_gas`` and ``supply_grid_power``, referring to the supply of ``gas`` (natural gas) and ``electricity``, respectively, from the national distribution system. These 'inifinitely' available national commodities can become energy carriers in the system, with the cost of their purchase being considered at supply, not conversion.
 
-.. figure:: images/node_supply.*
+.. figure:: images/supply.*
    :alt: Simple node
 
    The layout of a simple supply technology, in this case ``supply_gas``, which has a resource input and a carrier output. A carrier conversion efficiency (:math:`energy_{eff}`) can also be applied (although isn't considered for our supply technologies in this problem).
@@ -214,7 +214,7 @@ The example model defines two conversion technologies.
 
 The first is ``boiler`` (natural gas boiler), which serves as an example of a simple conversion technology with one input carrier and one output carrier. Its only constraints are the cost of built capacity (``costs.monetary.energy_cap``), a constraint on its maximum built capacity (``constraints.energy_cap.max``), and an energy conversion efficiency (``energy_eff``).
 
-.. figure:: images/node_conversion.*
+.. figure:: images/conversion.*
    :alt: Simple conversion node
 
    The layout of a simple node, in this case ``boiler``, which has one carrier input, one carrier output, a carrier conversion efficiency (:math:`energy_{eff}`), and a constraint on its maximum built :math:`energy_{cap}` (which puts an upper limit on :math:`carrier_{prod}`).
@@ -230,8 +230,8 @@ There are a few things to note. First, ``boiler`` defines a name, a color (given
 The second technology is ``chp`` (combined heat and power), and serves as an example of a possible conversion_plus technology making use of two output carriers.
 
 
-.. figure:: images/node_conversion_plus.*
-   :alt: More complex node but without a secondary resource
+.. figure:: images/conversion_plus.*
+   :alt: More complex conversion technology, with multiple output carriers
 
    The layout of a more complex node, in this case ``chp``, which makes use of multiple output carriers.
 
@@ -240,6 +240,8 @@ This definition in the example model's configuration is more verbose:
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :lines: 86-106
+
+.. seealso:: :ref:`conversion_plus`
 
 Again, ``chp`` has the definitions for name, color, parent, and carrier_in/out. It now has an additional carrier (``carrier_out_2``) defined in its essential information, allowing a second carrier to be produced *at the same time* as the first carrier (``carrier_out``). The carrier ratio constraint tells us the ratio of carrier_out_2 to carrier_out that we can achieve, in this case 0.8 units of heat are produced every time a unit of electricity is produced. to produce these units of energy, gas is consumed at a rate of  ``carrier_prod(carrier_out) / energy_eff``, so gas consumption is only a function of power output.
 
@@ -261,7 +263,7 @@ Transmission technologies
 
 In this district, electricity and heat can be distributed between locations. Gas is made available in each location without consideration of transmission.
 
-.. figure:: images/node_transmission.*
+.. figure:: images/transmission.*
    :alt: Transmission node
 
    A simple transmission node with an :math:`energy_{eff}`.

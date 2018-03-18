@@ -37,7 +37,7 @@ def initialize_decision_variables(backend_model):
         backend_model.storage = po.Var(backend_model.loc_techs_store, backend_model.timesteps, within=po.NonNegativeReals)
 
     if 'loc_techs_finite_resource_supply_plus' in model_data_dict['sets']:
-        backend_model.resource_con = po.Var(backend_model.loc_techs_finite_resource, backend_model.timesteps, within=po.Reals)
+        backend_model.resource_con = po.Var(backend_model.loc_techs_finite_resource_supply_plus, backend_model.timesteps, within=po.Reals)
         if backend_model.mode != 'operate':
             backend_model.resource_cap = po.Var(backend_model.loc_techs_finite_resource_supply_plus, within=po.NonNegativeReals)
 

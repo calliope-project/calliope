@@ -31,10 +31,20 @@ def load_constraints(backend_model):
         )
 
 
-
 def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
     """
     Balance energy carrier consumption and production
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            -1 * \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
+            \\times \\eta_{energy}(loc::tech, timestep)
+            = \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+            \\times \\eta_{energy}(loc::tech, timestep)
+            \\quad \\forall loc::tech \in locs::techs_{conversion},
+            \\forall timestep \in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -52,6 +62,18 @@ def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
 def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep):
     """
     Add time-varying conversion technology costs
+
+    .. container:: srolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{cost_{var}}(loc::tech, cost, timestep) =
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+            \\times timestep_{weight}(timestep) \\times cost_{om, prod}(loc::tech, cost, timestep)
+            +
+            \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
+            \\times timestep_{weight}(timestep) \\times cost_{om, con}(loc::tech, cost, timestep)
+            \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion}
     """
     model_data_dict = backend_model.__calliope_model_data__
     weight = backend_model.timestep_weights[timestep]

@@ -50,6 +50,8 @@ def load_constraints(backend_model):
 def update_system_balance_constraint(backend_model, loc_carrier, timestep):
     """
     Update system balance constraint (from energy_balance.py) to include export
+
+    Math given in :func:`~calliope.backend.pyomo.constraints.energy_balance.system_balance_constraint_rule`
     """
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
@@ -65,6 +67,16 @@ def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
     Ensure no technology can 'pass' its export capability to another technology
     with the same carrier_out, by limiting its export to the capacity of its production
+
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+            \\geq \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
+            \\quad \\forall loc::tech::carrier \in locs::tech::carriers_{export},
+            \\forall timestep \in timesteps
     """
 
     return (backend_model.carrier_prod[loc_tech_carrier, timestep] >=
@@ -74,6 +86,18 @@ def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
 def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
     """
     Update time varying cost constraint (from costs.py) to include export
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{cost_{var}}(cost, loc::tech, timestep) +=
+            cost_{export}(cost, loc::tech, timestep) \\times
+            \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
+            * timestep_{weight} \\quad \\forall cost \\in costs,
+            \\forall loc::tech \\in loc::techs_{cost_{var}, export},
+            \\forall timestep \\in timesteps
+
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -92,6 +116,27 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
 def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
     Set maximum export. All exporting technologies.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
+            \\leq export_{cap}(loc::tech)
+            \\quad \\forall loc::tech::carrier \in locs::tech::carriers_{export},
+            \\forall timestep \in timesteps
+
+    If the technology is defined by integer units, not a continuous capacity,
+    this constraint becomes:
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
+            \\leq export_{cap}(loc::tech) \\times
+            \\boldsymbol{operating_{units}}(loc::tech, timestep)
+
     """
 
     loc_tech = get_loc_tech(loc_tech_carrier)

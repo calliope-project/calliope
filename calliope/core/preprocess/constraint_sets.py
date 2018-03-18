@@ -162,6 +162,9 @@ def generate_constraint_sets(model_run):
         if constraint_exists(model_run, i, 'constraints.energy_cap_per_unit')
         is not None
     ],
+    loc_techs_storage_capacity_units_constraint_rule = [
+        i for i in sets.loc_techs_milp if i in sets.loc_techs_store
+    ],
     loc_techs_energy_capacity_max_purchase_constraint = [
         i for i in sets.loc_techs_purchase
         if (constraint_exists(model_run, i, 'constraints.energy_cap_equals') is not None
@@ -172,8 +175,15 @@ def generate_constraint_sets(model_run):
         if (not constraint_exists(model_run, i, 'constraints.energy_cap_equals')
             and constraint_exists(model_run, i, 'constraints.energy_cap_min'))
     ],
-    loc_techs_storage_capacity_milp_constraint = [
-        i for i in sets.loc_techs_milp if i in sets.loc_techs_store
+    loc_techs_storage_capacity_max_purchase_constraint = [
+        i for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
+    ],
+    loc_techs_storage_capacity_min_purchase_constraint = [
+        i for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
+        if (not constraint_exists(model_run, i, 'constraints.storage_cap_equals')
+            and (constraint_exists(model_run, i, 'constraints.storage_cap_min') is not None
+                or constraint_exists(model_run, i, 'constraints.energy_cap_min') is not None)
+        )
     ],
     loc_techs_update_costs_investment_units_constraint = [
         i for i in sets.loc_techs_milp

@@ -133,12 +133,14 @@ The available options include:
 The ``conversion_plus`` tech
 ----------------------------
 
-The ``plus`` tech groups offer complex functionality, for technolgies which cannot be described easily. ``Conversion_plus`` allows several carriers to be converted to several other carriers. Describing such a technology requires that the user understands the ``carrier_ratios``, i.e. the interactions and relative efficiency of carrier input/output.
+The ``plus`` tech groups offer complex functionality, for technologies which cannot be described easily. ``Conversion_plus`` allows several carriers to be converted to several other carriers. Describing such a technology requires that the user understands the ``carrier_ratios``, i.e. the interactions and relative efficiency of carrier input/output.
 
 .. figure:: images/conversion_plus.*
    :alt: conversion_plus
 
    Representation of the most complex conversion plus technology available
+
+The efficiency of a ``conversion_plus`` tech dictates how many units of `carrier_out` are produced per unit of consumed `carrier_in`. A unit of `carrier_out_2` and of `carrier_out_3` is produced each time a unit of `carrier_out` is produced. Similarly, a unit of `Carrier_in_2` and of `carrier_in_3` is consumed each time a unit of `carrier_in` is consumed. With a carrier group (e.g. `carrier_out_2`) any number of carriers can meet this one unit. The ``carrier_ratio`` of any carrier compares it either to the production of one unit of `carrier_out` or to the consumption of one unit of `carrier_in`.
 
 In this section, we give examples of a few ``conversion_plus`` technologies alongside the YAML formulation required to construct them:
 
@@ -173,32 +175,26 @@ A combined heat and power plant produces electricity, in this case from natural 
 
 The output energy from the heat pump can be _either_ heat or coolth, simulating a heat pump that can be useful in both summer and winter. For each unit of electricity input, one unit of output is produced. Within this one unit of carrier_out, there can be a combination of heat and coolth. Heat is produced with a COP of 5, coolth with a COP of 3. If only heat were produced in a timestep, 5 units of it would be available in carrier_out; similarly 3 units for coolth. In a timestep, both heat and coolth might be produced, e.g. 2.5 units heat + 1.5 units coolth = 1 unit carrier_out.
 
-.. container:: twocol
+.. figure:: images/conversion_plus_ahp.*
 
-    .. container:: leftside
+.. code-block:: yaml
 
-        .. figure:: images/conversion_plus_ahp.*
+    ahp:
+        essentials:
+            name: Air source heat pump
+            carrier_in: electricity
+            carrier_out: [heat, coolth]
+            primary_carrier: heat
 
-    .. container:: rightside
+        constraints:
+            energy_eff: 1
+            energy_cap_max: 100
+            carrier_ratios:
+                carrier_out:
+                    heat: 5
+                    coolth: 3
 
-        .. code-block:: yaml
-
-            ahp:
-                essentials:
-                    name: Air source heat pump
-                    carrier_in: electricity
-                    carrier_out: [heat, coolth]
-                    primary_carrier: heat
-
-                constraints:
-                    energy_eff: 1
-                    energy_cap_max: 100
-                    carrier_ratios:
-                        carrier_out:
-                            heat: 5
-                            coolth: 3
-
-1. Combined cooling, heat and power (CCHP)
+3. Combined cooling, heat and power (CCHP)
 
 A CCHP plant can use generated heat to produce coolth, via an absorption chiller. As with the CHP, electricity is produced at 45% efficiency.  For every unit of electricity produced, 1 unit of carrier_out_2 must be produced, which can be a combination of 0.8 units of heat and 0.5 units of coolth. E.g. 1 unit gas -> 0.45 units electricity + (0.8 * 0.45) units heat, or 1 unit gas -> 0.45 units electricity + (0.5 * 0.45) units coolth, or 1 unit gas -> 0.45 units electricity + (0.3 * 0.8 * 0.45) units heat + (0.7 * 0.5 * 0.45) units coolth.
 
@@ -229,27 +225,21 @@ A CCHP plant can use generated heat to produce coolth, via an absorption chiller
 
 This technology can choose to burn methane (CH:sub:`4`) or send Hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (energy_eff). If all Hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (energy_eff * hydrogen carrier ratio).
 
-.. container:: twocol
+.. figure:: images/conversion_plus_gas.*
 
-    .. container:: leftside
+.. code-block:: yaml
 
-        .. figure:: images/conversion_plus_gas.*
+    gt:
+        essentials:
+            name: Advanced gas turbine
+            carrier_in: [methane, hydrogen]
+            carrier_out: electricity
 
-    .. container:: rightside
-
-        .. code-block:: yaml
-
-            gt:
-                essentials:
-                    name: Advanced gas turbine
-                    carrier_in: [methane, hydrogen]
-                    carrier_out: electricity
-
-                constraints:
-                    energy_eff: 0.5
-                    energy_cap_max: 100
-                    carrier_ratios:
-                        carrier_out: {methane: 1, hydrogen: 0.5}
+        constraints:
+            energy_eff: 0.5
+            energy_cap_max: 100
+            carrier_ratios:
+                carrier_in: {methane: 1, hydrogen: 0.5}
 
 5. Complex fictional technology
 

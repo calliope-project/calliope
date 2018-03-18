@@ -95,6 +95,8 @@ The following lists the pre-defined base tech groups and the defaults they provi
 supply
 ^^^^^^
 
+.. figure:: images/supply.*
+
 Default constraints provided by the parent tech group:
 
 .. literalinclude:: includes/basetech_supply.yaml
@@ -107,6 +109,8 @@ Required constraints, allowed constraints, and allowed costs:
 
 supply_plus
 ^^^^^^^^^^^
+
+.. figure:: images/supply_plus.*
 
 Default constraints provided by the parent tech group:
 
@@ -121,6 +125,8 @@ Required constraints, allowed constraints, and allowed costs:
 demand
 ^^^^^^
 
+.. figure:: images/demand.*
+
 Default constraints provided by the parent tech group:
 
 .. literalinclude:: includes/basetech_demand.yaml
@@ -133,6 +139,8 @@ Required constraints, allowed constraints, and allowed costs:
 
 storage
 ^^^^^^^
+
+.. figure:: images/storage.*
 
 Default constraints provided by the parent tech group:
 
@@ -147,6 +155,8 @@ Required constraints, allowed constraints, and allowed costs:
 transmission
 ^^^^^^^^^^^^
 
+.. figure:: images/transmission.*
+
 Default constraints provided by the parent tech group:
 
 .. literalinclude:: includes/basetech_transmission.yaml
@@ -160,6 +170,8 @@ Required constraints, allowed constraints, and allowed costs:
 conversion
 ^^^^^^^^^^
 
+.. figure:: images/conversion.*
+
 Default constraints provided by the parent tech group:
 
 .. literalinclude:: includes/basetech_conversion.yaml
@@ -172,6 +184,8 @@ Required constraints, allowed constraints, and allowed costs:
 
 conversion_plus
 ^^^^^^^^^^^^^^^
+
+.. figure:: images/conversion_plus.*
 
 Default constraints provided by the parent tech group:
 

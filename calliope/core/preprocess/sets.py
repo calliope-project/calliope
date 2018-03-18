@@ -138,8 +138,6 @@ def generate_simple_sets(model_run):
         k.split('.')[-1] for k in flat_locations.keys()
         if '.coordinates.' in k)
 
-    # TODO there should then be a check in preprocess checks which makes sure
-    # that if coordinates is set, it is set for *every* location
     if coordinates:
         sets.coordinates = coordinates
 

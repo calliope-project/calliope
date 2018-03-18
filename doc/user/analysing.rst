@@ -6,7 +6,7 @@ Calliope inputs and results are made to be very easily handled. Whatever platfor
 
 Within the xarray Datasets of ``model.inputs`` and ``model.results``, variables are indexed over concatenated sets. For instance, if a technology ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then we will specify parameters for just the `loc::tech` ``X1::boiler``. This can be extended to parameters which also consider ``carriers``, such that we would have a ``loc::tech::carrier`` ``X1::boiler::heat`` (avoiding empty parameter values for ``power``, as the boiler never considers that enery carrier). If a user knows the name of this concatenated set and indeces, they can index by those (e.g. ``resource_area`` is indexed over the set ``loc_techs_area``, within which are all `loc::techs` which receive their resource over an area). Otherwise, ``model.get_formatted_array('name of variable')`` can be used to produce an xarray DataArray, indexed over seperated indeces: any of `techs`, `locs`, `carriers`, `costs`, `timesteps`. This for analysis per technology, location, etc.
 
-.. note:: On saving to CSV, all variables are foramtted to separate concatenated sets.
+.. note:: On saving to CSV, all variables are formatted to separate concatenated sets.
 
 -------------------
 Visualising results

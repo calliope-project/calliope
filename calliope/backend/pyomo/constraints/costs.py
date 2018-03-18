@@ -84,6 +84,11 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     """
     Calculate costs from capacity decision variables
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
     """
     model_data_dict = backend_model.__calliope_model_data__
 
@@ -137,6 +142,11 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
 def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
     """
     Calculate costs from time-varying decision variables
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
     """
     model_data_dict = backend_model.__calliope_model_data__
 

@@ -79,6 +79,18 @@ def load_constraints(backend_model):
 def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, timestep):
     """
     Balance energy carrier consumption and production for carrier_in and carrier_out
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
+                carrier\_ratio(loc::tech::carrier, `out')} =
+            -1 * \\sum_{loc::tech::carrier \\in loc::tech::carriers_{in}} (
+            \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
+            * carrier\_ratio(loc::tech::carrier, `in') * \\eta_{energy}(loc::tech, timestep))
+            \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -104,6 +116,16 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
 def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set maximum conversion_plus carrier production.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+            \\leq \\boldsymbol{energy_{cap}}(loc::tech) \\times timestep\_resolution(timestep)
+            \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}},
+            \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -121,6 +143,17 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
 def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set minimum conversion_plus carrier production.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+            \\leq \\boldsymbol{energy_{cap}}(loc::tech) \\times timestep\_resolution(timestep)
+            \\times energy_{cap, min use}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}},
+            \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
@@ -142,6 +175,18 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
 def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, timestep):
     """
     Add time-varying conversion_plus technology costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{cost_{var}}(loc::tech, cost, timestep) =
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier_{primary}, timestep)
+            \\times timestep_{weight}(timestep) \\times cost_{om, prod}(loc::tech, cost, timestep)
+            +
+            \\boldsymbol{carrier_{con}}(loc::tech::carrier_{primary}, timestep)
+            \\times timestep_{weight}(timestep) \\times cost_{om, con}(loc::tech, cost, timestep)
+            \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion^{+}}
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     weight = backend_model.timestep_weights[timestep]
@@ -179,6 +224,36 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
     """
     Force all carrier_in_2/carrier_in_3 and carrier_out_2/carrier_out_3 to follow
     carrier_in and carrier_out (respectively).
+
+    If `tier` in ['out_2', 'out_3']:
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}} (
+            \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
+                carrier\_ratio(loc::tech::carrier, `out')} =
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{tier}} (
+            \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
+                carrier\_ratio(loc::tech::carrier, tier)}
+            \\quad \\forall \\text { tier } \\in [`out_2', `out_3'], \\forall loc::tech
+                \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
+
+    If `tier` in ['in_2', 'in_3']:
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{in}}
+            \\frac{\\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)}{
+                carrier\_ratio(loc::tech::carrier, `in')} =
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{tier}}
+            \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
+                carrier\_ratio(loc::tech::carrier, tier)}
+            \\quad \\forall \\text{ tier } \\in [`in_2', `in_3'], \\forall loc::tech
+                \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
     """
     primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
     model_data_dict = backend_model.__calliope_model_data__['data']
