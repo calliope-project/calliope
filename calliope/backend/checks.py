@@ -11,6 +11,7 @@ Checks for model consistency and possible errors when preparing run in the backe
 import ruamel.yaml
 
 import numpy as np
+import xarray as xr
 from calliope.core.attrdict import AttrDict
 
 
@@ -99,6 +100,17 @@ def check_operate_params(model_data):
                         'Resource capacity constraint removed from {} as force_resource '
                         'is applied'.format(loc_tech)
                     )
+        if is_in(loc_tech, 'loc_techs_supply_plus'):
+            if 'resource_cap' not in model_data.data_vars.keys():
+                model_data['resource_cap'] = xr.DataArray(
+                    [np.inf for i in model_data.loc_techs_supply_plus.values],
+                    dims='loc_techs_supply_plus')
+                model_data['resource_cap'].attrs['is_result'] = 1
+                model_data['resource_cap'].attrs['operate_param'] = 1
+                warnings.append(
+                    'Resource capacity constraint defined and set to infinity '
+                    'for all supply_plus techs'
+                )
         # FIXME: remove?
         # Cannot have storage capacity be less than energy capacity * charge rate
         if is_in(loc_tech, 'loc_techs_store'):

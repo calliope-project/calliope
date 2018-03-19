@@ -177,6 +177,15 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
             'technology in units_max/min/equals'.format(tech_id, loc_id, required)
         )
 
+    # If a technology is defined by units & is a storage tech, it must define storage_cap_per_unit
+    if (any(['units_' in k for k in tech_config.constraints.keys()])
+        and model_run.techs[tech_id].essentials.parent in ['storage', 'supply_plus']
+        and any(['storage' in k for k in tech_config.constraints.keys()])
+        and 'storage_cap_per_unit' not in tech_config.constraints.keys()):
+        errors.append(
+            '`{}` at `{}` fails to define storage_cap_per_unit when specifying '
+            'technology in units_max/min/equals'.format(tech_id, loc_id, required)
+        )
     # Flatten required list and gather remaining unallowed constraints
     required_f = flatten_list(required)
     remaining = set(tech_config.constraints) - set(required_f) - set(allowed)

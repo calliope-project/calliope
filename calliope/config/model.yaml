@@ -92,7 +92,7 @@ tech_groups:
     conversion:
         required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
         allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_eff_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
-        allowed_costs: ['interest_rate', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'export', 'purchase', 'depreciation_rate']
+        allowed_costs: ['interest_rate', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
         essentials:
             parent: null
         constraints:

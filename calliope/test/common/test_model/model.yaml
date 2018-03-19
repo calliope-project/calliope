@@ -37,6 +37,13 @@ tech_groups:
             monetary:
                 interest_rate: 0.1
                 energy_cap: 10
+    conversion_plus:
+        constraints:
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 10
 
 
 techs:
@@ -47,15 +54,24 @@ techs:
             carrier: gas
             parent: supply
         constraints:
-            energy_cap_max: 10
+            energy_cap_max: 15
             resource: .inf
             energy_eff: 0.9
-
 
     test_supply_elec:
         essentials:
             name: Supply tech
             carrier: electricity
+            parent: supply
+        constraints:
+            energy_cap_max: 10
+            resource: .inf
+            energy_eff: 0.9
+
+    test_supply_coal:
+        essentials:
+            name: Supply tech
+            carrier: coal
             parent: supply
         constraints:
             energy_cap_max: 10
@@ -68,13 +84,13 @@ techs:
             carrier: electricity
             parent: supply_plus
         constraints:
-            energy_cap_max: 10
+            energy_cap_max: 15
             resource: file=supply_plus_resource.csv
             resource_eff: 0.9
             energy_eff: 0.9
             storage_cap_max: 15
             storage_loss: 0.01
-            resource_cap_max: 10
+            charge_rate: 0.5
 
     test_storage:
         essentials:
@@ -95,7 +111,7 @@ techs:
             carrier_out: heat
             parent: conversion
         constraints:
-            energy_cap_max: 10
+            energy_cap_max: 15
             energy_eff: 0.9
 
     test_conversion_plus:
@@ -107,9 +123,9 @@ techs:
             carrier_out_2: heat
             parent: conversion_plus
         constraints:
-            energy_cap_max: 10
+            energy_cap_max: 20
             carrier_ratios:
-                carrier_out_2: 0.8
+                carrier_out_2: {heat: 0.8}
 
     test_demand_elec:
         essentials:

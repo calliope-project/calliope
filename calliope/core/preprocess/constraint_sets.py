@@ -83,16 +83,17 @@ def generate_constraint_sets(model_run):
         if constraint_exists(model_run, i, 'constraints.resource_cap_equals_energy_cap')
     ],
     loc_techs_resource_area_constraint = [
-        i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
+        i for i in sets.loc_techs_area
     ],
     loc_techs_resource_area_per_energy_capacity_constraint = [
-        i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
-        and constraint_exists(model_run, i, 'constraints.resource_area_per_energy_cap')
+        i for i in sets.loc_techs_area
+        if constraint_exists(model_run, i, 'constraints.resource_area_per_energy_cap')
         is not None
     ],
     locs_resource_area_capacity_per_loc_constraint = [
         i for i in sets.locs
         if model_run.locations[i].get_key('available_area', None) is not None
+        and sets.loc_techs_area
     ],
     loc_techs_energy_capacity_constraint = [
         i for i in sets.loc_techs
@@ -101,6 +102,7 @@ def generate_constraint_sets(model_run):
     techs_energy_capacity_systemwide_constraint = [
         i for i in sets.techs
         if model_run.get_key('techs.{}.constraints.energy_cap_max_systemwide'.format(i), None)
+        or model_run.get_key('techs.{}.constraints.energy_cap_equals_systemwide'.format(i), None)
     ],
 
     # dispatch.py
@@ -112,7 +114,7 @@ def generate_constraint_sets(model_run):
     loc_tech_carriers_carrier_production_min_constraint = [
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
-        and constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        and constraint_exists(model_run, i.rsplit('::', 1)[0], 'constraints.energy_cap_min_use')
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
     ],
     loc_tech_carriers_carrier_consumption_max_constraint = [
@@ -121,7 +123,7 @@ def generate_constraint_sets(model_run):
             sets.loc_techs_storage + sets.loc_techs_transmission
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
     ],
-    loc_techs_resource_max_constraint = sets.loc_techs_finite_resource_supply_plus,
+    loc_techs_resource_max_constraint = sets.loc_techs_supply_plus,
     loc_techs_storage_max_constraint = sets.loc_techs_store,
     loc_tech_carriers_ramping_constraint = [
         i for i in sets.loc_tech_carriers_prod
@@ -143,7 +145,7 @@ def generate_constraint_sets(model_run):
     loc_tech_carriers_carrier_production_min_milp_constraint = [
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
-        and constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        and constraint_exists(model_run, i.rsplit('::', 1)[0], 'constraints.energy_cap_min_use')
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
     ],
     loc_techs_carrier_production_min_conversion_plus_milp_constraint = [
@@ -162,7 +164,7 @@ def generate_constraint_sets(model_run):
         if constraint_exists(model_run, i, 'constraints.energy_cap_per_unit')
         is not None
     ],
-    loc_techs_storage_capacity_units_constraint_rule = [
+    loc_techs_storage_capacity_units_constraint = [
         i for i in sets.loc_techs_milp if i in sets.loc_techs_store
     ],
     loc_techs_energy_capacity_max_purchase_constraint = [

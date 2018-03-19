@@ -418,7 +418,13 @@ class TestChecks:
         build_model(override_dict=override_supply('electricity'), override_groups='simple_supply,one_day')
 
         # should pass: exporting heat for conversion tech
-        build_model(override_dict=override_converison_plus('heat'), override_groups='simple_conversion_plus,one_day')
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override_converison_plus('heat'), override_groups='simple_conversion_plus,one_day')
+        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
+        assert (
+            'dimension loc_techs_transmission and associated variables distance, '
+            'lookup_remotes were empty, so have been deleted' in all_warnings
+        )
 
     def test_allowed_time_varying_constraints_supply(self):
         """

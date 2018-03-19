@@ -235,6 +235,7 @@ def costs_to_dataset(model_run):
                 for i in model_run.locations.as_dict_flat().keys()
                 if '.costs.' in i)
     cost_classes = model_run.sets['costs']
+
     # loop over unique costs, cost classes and technology & location combinations
     for cost in costs:
         data_dict['cost_' + cost] = dict(dims=["costs", _get_set(cost)], data=[])
@@ -249,6 +250,7 @@ def costs_to_dataset(model_run):
                 else:  # all other technologies
                     loc_tech_dict = model_run.locations[loc].techs[tech]
                 cost_dict = loc_tech_dict.get_key('costs.' + cost_class, None)
+
                 # inf is assumed to be string on import, so need to np.inf it
                 cost_value = np.nan if not cost_dict else cost_dict.get(cost, np.nan)
                 # add the value for the particular location & technology combination to the correct cost class list

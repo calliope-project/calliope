@@ -121,8 +121,7 @@ def storage_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set maximum stored energy. Supply_plus & storage techs only.
     """
-    return (backend_model.storage[loc_tech, timestep]
-        <= backend_model.storage_cap[loc_tech])
+    return backend_model.storage[loc_tech, timestep] <= backend_model.storage_cap[loc_tech]
 
 
 def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):

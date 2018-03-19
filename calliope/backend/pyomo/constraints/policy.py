@@ -123,11 +123,11 @@ def reserve_margin_constraint_rule(backend_model, carrier):
             backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
             for loc_tech_carrier in backend_model.loc_tech_carriers_demand
             if loc_tech_carrier.rsplit('::', 1)[1] == carrier
-        ) * -1 * (1 / max_demand_time_res)
+        ) * -1 * (1 / max_demand_time_res) * (1 + reserve_margin)
         >=
         sum(  # Sum all supply capacity for this carrier
             backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
             for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
             if loc_tech_carrier.rsplit('::', 1)[1] == carrier
-        ) * (1 + reserve_margin)
+        )
     )

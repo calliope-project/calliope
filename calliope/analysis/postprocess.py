@@ -81,7 +81,7 @@ def systemwide_capacity_factor(results, model_data):
         split_loc_techs(results['carrier_prod']).sum(dim='timesteps').sum(dim='locs') /
         (
             split_loc_techs(energy_cap).sum(dim='locs') *
-            sum(model_data.timestep_resolution)
+            model_data.timestep_resolution.sum()
         )
     )
 

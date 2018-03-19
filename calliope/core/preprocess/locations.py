@@ -399,8 +399,8 @@ def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
     for cost in cost_classes:
         plant_life = tech_config.constraints.get_key('lifetime', 0)
         if plant_life == 0:
-            if (any(['_cap' in i for i in tech_config.costs[cost].keys()])  or
-                    any(['_area' in i for i in tech_config.costs[cost].keys()])):
+            if any(any(i in j for j in ['_area', '_cap', 'purchase'])
+                    for i in tech_config.costs[cost].keys()):
                 errors.append(
                     'Must specify a lifetime when specifying '
                     'fixed `{}` costs for `{}`'.format(cost, tech_id)

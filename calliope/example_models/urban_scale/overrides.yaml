@@ -33,3 +33,35 @@ mapbox_ready:
         N1,X2.techs.heat_pipes.distance: 3
         N1,X3.techs.heat_pipes.distance: 4
 
+operate:
+    run.mode: operate
+    run.operation:
+        window: 24
+        horizon: 48
+    model.subset_time: ['2005-07-01', '2005-07-10']
+    locations:
+        X1:
+            techs:
+                chp.constraints.energy_cap_max: 300
+                pv.constraints.energy_cap_max: 0
+                supply_grid_power.constraints.energy_cap_max: 40
+                supply_gas.constraints.energy_cap_max: 700
+
+        X2:
+            techs:
+                boiler.constraints.energy_cap_max: 200
+                pv.constraints.energy_cap_max: 70
+                supply_gas.constraints.energy_cap_max: 250
+
+        X3:
+            techs:
+                boiler.constraints.energy_cap_max: 0
+                pv.constraints.energy_cap_max: 50
+                supply_gas.constraints.energy_cap_max: 0
+
+    links:
+        X1,X2.techs.power_lines.constraints.energy_cap_max: 300
+        X1,X3.techs.power_lines.constraints.energy_cap_max: 60
+        X1,N1.techs.heat_pipes.constraints.energy_cap_max: 300
+        N1,X2.techs.heat_pipes.constraints.energy_cap_max: 250
+        N1,X3.techs.heat_pipes.constraints.energy_cap_max: 320

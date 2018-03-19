@@ -145,13 +145,14 @@ class Model(object):
         results, self._backend_model, interface = run_backend(self._model_data, self._timings)
 
         # Add additional post-processed result variables to results
-        results = postprocess.postprocess_model_results(results, self._model_data, self._timings)
+        if results.attrs['termination_condition'] == 'optimal':
+            results = postprocess.postprocess_model_results(results, self._model_data, self._timings)
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
 
-        self._model_data = self._model_data.update(results)
-
+        self._model_data.update(results)
+        self._model_data.attrs.update(results.attrs)
         self._model_data.attrs['solution_time'] = (
             self._timings['run_solution_returned'] -
             self._timings['run_start']).total_seconds()

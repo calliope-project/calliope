@@ -66,10 +66,28 @@ def get_all_carriers(config, direction='both'):
     elif direction == 'out':
         carrier_list = ['out', 'out_2', 'out_3']
 
-    return set([config.get_key('carrier', '')] + [
-        config.get_key('carrier_{}'.format(k), '')
-        for k in carrier_list
-    ]) - set([''])
+    carriers = flatten_list(
+        [config.get_key('carrier', '')] + [
+            config.get_key('carrier_{}'.format(k), '')
+            for k in carrier_list
+        ]
+    )
+
+    return set(carriers) - set([''])
+
+
+def flatten_list(unflattened_list):
+    """
+    Take list of iterables/non-iterables and outputs a list of non-iterables.
+    """
+    flattened_list = []
+    for item in unflattened_list:
+        if hasattr(item, '__iter__') and not isinstance(item, str):
+            flattened_list.extend(item)
+        else:
+            flattened_list.append(item)
+
+    return flattened_list
 
 
 def split_loc_techs_transmission(transmission_string):

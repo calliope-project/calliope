@@ -158,6 +158,9 @@ def _get_var_layout(
     else:
         title = value_axis_title
 
+    if 'systemwide' not in cap:
+        args.update({location_axis: {'title': 'Location'}})
+
     # Grouped, not stacked, barcharts for the systemwide variables
     if 'systemwide' in cap:
         args['barmode'] = 'group'

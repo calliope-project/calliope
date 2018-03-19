@@ -5,6 +5,7 @@ from pytest import approx
 
 import calliope
 
+import pandas as pd
 
 class TestModelPreproccesing:
     def test_preprocess_national_scale(self):
@@ -21,6 +22,9 @@ class TestModelPreproccesing:
 
     def test_preprocess_milp(self):
         calliope.examples.milp()
+
+    def test_preprocess_operate(self):
+        calliope.examples.operate()
 
 
 def nationalscale_example_tester(solver='glpk', solver_io=None):
@@ -120,7 +124,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert float(model.results.cost.sum()) == approx(510.858739)
 
-    def test_preprocess_milp(self):
+    def test_milp_example_results(self):
         model = calliope.examples.milp(
             override_dict={'model.subset_time': '2005-01-01'}
         )
@@ -138,3 +142,11 @@ class TestUrbanScaleExampleModelSenseChecks:
         assert float(model.results.operating_units.sum()) == 24
 
         assert float(model.results.cost.sum()) == approx(522.829998)
+
+    def test_operate_example_results(self):
+        model = calliope.examples.milp(
+            override_dict={'model.subset_time': ['2005-07-01', '2005-07-04']}
+        )
+        model.run()
+
+        assert all(model.results.timesteps == pd.date_range('2005-07', '2005-07-04 23:00:00', freq='H'))

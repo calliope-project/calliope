@@ -67,7 +67,7 @@ def run_plan(model_data, timings, backend):
         comment='Pyomo backend: solver finished running'
     )
 
-    backend.load_results(backend_model, results)
+    termination = backend.load_results(backend_model, results)
 
     log_time(
         timings, 'run_results_loaded',
@@ -75,6 +75,7 @@ def run_plan(model_data, timings, backend):
     )
 
     results = backend.get_result_array(backend_model, model_data)
+    results.attrs['termination_condition'] = termination
 
     log_time(
         timings, 'run_solution_returned', time_since_start=True,
@@ -188,6 +189,8 @@ def run_operate(model_data, timings, backend):
     # result_array we only go as far as the end of the last horizon, which may
     # clip the last bit of data
     result_array = []
+    # track whether each iteration finds an optimal solution or not
+    terminations = []
 
     for i in range(len(window_starts)):
         start_timestep = window_starts.index[i]
@@ -223,7 +226,7 @@ def run_operate(model_data, timings, backend):
                 )
             )
 
-            backend_model = generate_model(window_model_data)
+            backend_model = backend.generate_model(window_model_data)
 
         # Update relevent Pyomo Params in intermediate instances
         else:
@@ -265,7 +268,9 @@ def run_operate(model_data, timings, backend):
             comment='Pyomo backend: iteration {}: solver finished running'.format(i + 1)
         )
         # xarray dataset is built for each iteration
-        backend.load_results(backend_model, _results)
+        _termination = backend.load_results(backend_model, _results)
+        terminations.append(_termination)
+
         _results = backend.get_result_array(backend_model, model_data)
 
         # We give back the actual timesteps for this iteration and take a slice
@@ -299,6 +304,10 @@ def run_operate(model_data, timings, backend):
 
     # concatenate results over the timestep dimension to get one xarray dataset of interest
     results = xr.concat(result_array, dim='timesteps')
+    if all(i == 'optimal' for i in terminations):
+        results.attrs['termination_condition'] = 'optimal'
+    else:
+        results.attrs['termination_condition'] = ','.join(terminations)
 
     log_time(
         timings, 'run_solution_returned', time_since_start=True,

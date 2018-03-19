@@ -79,7 +79,9 @@ from itertools import product
 import numpy as np
 
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers, split_loc_techs_transmission, concat_iterable
+from calliope.core.preprocess.util import \
+    get_all_carriers, split_loc_techs_transmission, \
+    concat_iterable, flatten_list
 
 
 def generate_simple_sets(model_run):
@@ -96,9 +98,10 @@ def generate_simple_sets(model_run):
     flat_techs = model_run.techs.as_dict(flat=True)
     flat_locations = model_run.locations.as_dict(flat=True)
 
-    sets.resources = set(
+    sets.resources = set(flatten_list(
         v for k, v in flat_techs.items()
-        if '.carrier' in k)
+        if '.carrier' in k
+    ))
 
     sets.carriers = sets.resources - set(['resource'])
 
@@ -242,7 +245,9 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Techs that introduce energy into the system
     sets.loc_techs_supply_all = (
         sets.loc_techs_supply |
-        sets.loc_techs_supply_plus
+        sets.loc_techs_supply_plus |
+        sets.loc_techs_conversion |
+        sets.loc_techs_conversion_plus
     )
 
     ##
@@ -369,7 +374,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Any operation and maintenance
     loc_techs_om_costs = set(
         k for k in loc_techs_costs
-        if any('om_' in i
+        if any('om_' in i or 'export' in i
                for i in loc_techs_config[k].costs.keys_nested())
     )
     loc_techs_transmission_om_costs = set(

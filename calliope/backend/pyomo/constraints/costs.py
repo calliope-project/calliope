@@ -41,7 +41,7 @@ def load_constraints(backend_model):
             rule=cost_investment_constraint_rule
         )
 
-    if 'loc_techs_cost_var_constraint' in sets:
+    if 'loc_techs_om_cost' in sets:
         # Right-hand side expression can be later updated by export costs/revenue
         backend_model.cost_var_rhs = po.Expression(
             backend_model.costs,
@@ -49,7 +49,7 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             initialize=0.0
         )
-
+    if 'loc_techs_cost_var_constraint' in sets:
         # Constraint is built over a different loc_techs set to expression, as
         # it is updated in conversion.py and conversion_plus.py constraints
         backend_model.cost_var_constraint = po.Constraint(

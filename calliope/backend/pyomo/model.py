@@ -196,7 +196,9 @@ def load_results(backend_model, results):
         else:
             message = 'Could not load results into model instance.'
 
-        exceptions.warn(message, exceptions.BackendWarning)
+        exceptions.BackendWarning(message)
+
+    return results['Solver'][0]['Termination condition'].key
 
 
 def get_result_array(backend_model, model_data):

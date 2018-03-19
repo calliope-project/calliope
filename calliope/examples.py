@@ -55,3 +55,12 @@ def milp(*args, **kwargs):
         override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:milp'),
         *args, **kwargs
     )
+
+
+def operate(*args, **kwargs):
+    """Returns the built-in urban-scale example model in operate mode."""
+    return Model(
+        os.path.join(_PATHS['urban_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:operate'),
+        *args, **kwargs
+    )

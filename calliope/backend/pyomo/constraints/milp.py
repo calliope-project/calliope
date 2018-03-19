@@ -35,7 +35,7 @@ def load_constraints(backend_model):
 
     if 'loc_tech_carriers_carrier_production_max_milp_constraint' in sets:
         backend_model.carrier_production_max_milp_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_production_max_milp_constraint_rule,
+            backend_model.loc_tech_carriers_carrier_production_max_milp_constraint,
             backend_model.timesteps,
             rule=carrier_production_max_milp_constraint_rule
         )
@@ -68,9 +68,9 @@ def load_constraints(backend_model):
             rule=carrier_production_min_conversion_plus_milp_constraint_rule
         )
 
-    if 'loc_techs_storage_capacity_units_constraint_rule' in sets:
+    if 'loc_techs_storage_capacity_units_constraint' in sets:
         backend_model.storage_capacity_units_constraint = po.Constraint(
-            backend_model.loc_techs_storage_capacity_units_constraint_rule,
+            backend_model.loc_techs_storage_capacity_units_constraint,
             rule=storage_capacity_units_constraint_rule
         )
 
