@@ -71,7 +71,7 @@ def _get_var_data(
                 'of interest'.format(cap)
             )
         if 'carriers' not in subset.keys():
-            array_cap['carriers'] = array_cap.carriers.sortby('carriers')
+            array_cap = array_cap.sortby('carriers')
 
     else:
         array_cap = model.get_formatted_array(cap).reindex(locs=locations)
@@ -88,7 +88,7 @@ def _get_var_data(
         raise e('Cannot plot capacity without `techs` in dimensions')
 
     elif 'techs' not in subset.keys():
-        array_cap['techs'] = array_cap.techs.sortby('techs')
+        array_cap = array_cap.sortby('techs')
 
     data = []
 
