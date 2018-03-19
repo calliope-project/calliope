@@ -16,6 +16,7 @@ techs:
     supply_grid_power:
         essentials:
             name: 'National grid import'
+            color: '#C5ABE3'
             parent: supply
             carrier: electricity
         constraints:
@@ -31,6 +32,7 @@ techs:
     supply_gas:
         essentials:
             name: 'Natural gas import'
+            color: '#C98AAD'
             parent: supply
             carrier: gas
         constraints:
@@ -48,7 +50,7 @@ techs:
     pv:
         essentials:
             name: 'Solar photovoltaic power'
-            color: '#99CB48'
+            color: '#F9D956'
             parent: supply_power_plus
         constraints:
             export_carrier: electricity
@@ -68,6 +70,7 @@ techs:
     boiler:
         essentials:
             name: 'Natural gas boiler'
+            color: '#8E2999'
             parent: conversion
             carrier_out: heat
             carrier_in: gas
@@ -84,6 +87,7 @@ techs:
     chp:
         essentials:
             name: 'Combined heat and power'
+            color: '#E4AB97'
             parent: conversion_plus
             primary_carrier: electricity
             carrier_in: gas
@@ -107,12 +111,14 @@ techs:
     demand_electricity:
         essentials:
             name: 'Electrical demand'
+            color: '#072486'
             parent: demand
             carrier: electricity
 
     demand_heat:
         essentials:
             name: 'Heat demand'
+            color: '#660507'
             parent: demand
             carrier: heat
 
@@ -121,6 +127,7 @@ techs:
     power_lines:
         essentials:
             name: 'Electrical power distribution'
+            color: '#6783E3'
             parent: transmission
             carrier: electricity
         constraints:
@@ -135,6 +142,7 @@ techs:
     heat_pipes:
         essentials:
             name: 'District heat distribution'
+            color: '#823739'
             parent: transmission
             carrier: heat
         constraints:
