@@ -41,8 +41,20 @@ def read_netcdf(path):
 def save_netcdf(model_data, path):
     encoding = {k: {'zlib': True, 'complevel': 4} for k in model_data.data_vars}
 
-    model_data.to_netcdf(path, format='netCDF4', encoding=encoding)
-    model_data.close()  # Force-close NetCDF file after writing
+    # Convert boolean attrs to ints
+    bool_attrs = [
+        k for k, v in model_data.attrs.items()
+        if isinstance(v, bool)
+    ]
+    for k in bool_attrs:
+        model_data.attrs[k] = int(model_data.attrs[k])
+
+    try:
+        model_data.to_netcdf(path, format='netCDF4', encoding=encoding)
+        model_data.close()  # Force-close NetCDF file after writing
+    finally:  # Convert ints back to bools
+        for k in bool_attrs:
+            model_data.attrs[k] = bool(model_data.attrs[k])
 
 
 def save_csv(model_data, path):
