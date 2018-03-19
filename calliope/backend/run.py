@@ -15,7 +15,20 @@ import calliope.backend.pyomo.model as run_pyomo
 import calliope.backend.pyomo.interface as pyomo_interface
 
 
-def run(model_data, timings):
+def run(model_data, timings, build_only=False):
+    """
+    Parameters
+    ----------
+    model_data : xarray.Dataset
+        Pre-processed dataset of Calliope model data.
+    timings : dict
+        Stores timings of various stages of model processing.
+    build_only : bool, optional
+        If True, the backend only constructs its in-memory representation
+        of the problem rather than solving it. Used for debugging and
+        testing.
+
+    """
 
     BACKEND = {
         'pyomo': run_pyomo
@@ -28,15 +41,21 @@ def run(model_data, timings):
     run_backend = model_data.attrs['run.backend']
 
     if model_data.attrs['run.mode'] == 'plan':
-        results, backend = run_plan(model_data, timings, backend=BACKEND[run_backend])
+        results, backend = run_plan(
+            model_data, timings,
+            backend=BACKEND[run_backend], build_only=build_only
+        )
 
     elif model_data.attrs['run.mode'] == 'operate':
-        results, backend = run_operate(model_data, timings, backend=BACKEND[run_backend])
+        results, backend = run_operate(
+            model_data, timings,
+            backend=BACKEND[run_backend], build_only=build_only
+        )
 
     return results, backend, INTERFACE[run_backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, timings, backend):
+def run_plan(model_data, timings, backend, build_only):
 
     log_time(timings, 'run_start', comment='Pyomo backend: starting model run')
 
@@ -44,7 +63,7 @@ def run_plan(model_data, timings, backend):
 
     log_time(
         timings, 'run_backend_model_generated', time_since_start=True,
-        comment='Pyomo backend: model generated'
+        comment='Backend: model generated'
     )
 
     solver = model_data.attrs['run.solver']
@@ -52,43 +71,48 @@ def run_plan(model_data, timings, backend):
     solver_options = model_data.attrs.get('run.solver_options', None)
     save_logs = model_data.attrs.get('run.save_logs', None)
 
-    log_time(
-        timings, 'run_solver_start',
-        comment='Pyomo backend: sending model to solver'
-    )
+    if build_only:
+        results = xr.Dataset()
 
-    results = backend.solve_model(
-        backend_model, solver=solver,
-        solver_io=solver_io, solver_options=solver_options, save_logs=save_logs
-    )
+    else:
+        log_time(
+            timings, 'run_solver_start',
+            comment='Backend: sending model to solver'
+        )
 
-    log_time(
-        timings, 'run_solver_exit', time_since_start=True,
-        comment='Pyomo backend: solver finished running'
-    )
+        results = backend.solve_model(
+            backend_model, solver=solver,
+            solver_io=solver_io, solver_options=solver_options, save_logs=save_logs
+        )
 
-    termination = backend.load_results(backend_model, results)
+        log_time(
+            timings, 'run_solver_exit', time_since_start=True,
+            comment='Backend: solver finished running'
+        )
 
-    log_time(
-        timings, 'run_results_loaded',
-        comment='Pyomo backend: loaded results'
-    )
+        termination = backend.load_results(backend_model, results)
 
-    results = backend.get_result_array(backend_model, model_data)
-    results.attrs['termination_condition'] = termination
+        log_time(
+            timings, 'run_results_loaded',
+            comment='Backend: loaded results'
+        )
 
-    log_time(
-        timings, 'run_solution_returned', time_since_start=True,
-        comment='Pyomo backend: generated solution array'
-    )
+        results = backend.get_result_array(backend_model, model_data)
+        results.attrs['termination_condition'] = termination
+
+        log_time(
+            timings, 'run_solution_returned', time_since_start=True,
+            comment='Backend: generated solution array'
+        )
 
     return results, backend_model
 
 
-def run_operate(model_data, timings, backend):
+def run_operate(model_data, timings, backend, build_only):
     """
     For use when mode is 'operate', to allow the model to be built, edited, and
-    iteratively run within Pyomo
+    iteratively run within Pyomo.
+
     """
     log_time(timings, 'run_start',
              comment='Backend: starting model run in operational mode')
@@ -192,7 +216,12 @@ def run_operate(model_data, timings, backend):
     # track whether each iteration finds an optimal solution or not
     terminations = []
 
-    for i in range(len(window_starts)):
+    if build_only:
+        iterations = [0]
+    else:
+        iterations = range(len(window_starts))
+
+    for i in iterations:
         start_timestep = window_starts.index[i]
 
         # Build full model in first instance
@@ -252,66 +281,71 @@ def run_operate(model_data, timings, backend):
                     if k in var_dict:
                         v.set_value(var_dict[k])
 
-        log_time(
-            timings, 'model_run_{}'.format(i + 1), time_since_start=True,
-            comment='Pyomo backend: iteration {}: sending model to solver'.format(i + 1)
-        )
-        # After iteration 1, warmstart = True, which should speed up the process
-        # Note: Warmstart isn't possible with GLPK (dealt with later on)
-        _results = backend.solve_model(
-            backend_model, solver=solver, solver_io=solver_io,
-            solver_options=solver_options, save_logs=save_logs, warmstart=warmstart
-        )
+        if not build_only:
+            log_time(
+                timings, 'model_run_{}'.format(i + 1), time_since_start=True,
+                comment='Pyomo backend: iteration {}: sending model to solver'.format(i + 1)
+            )
+            # After iteration 1, warmstart = True, which should speed up the process
+            # Note: Warmstart isn't possible with GLPK (dealt with later on)
+            _results = backend.solve_model(
+                backend_model, solver=solver, solver_io=solver_io,
+                solver_options=solver_options, save_logs=save_logs, warmstart=warmstart
+            )
 
-        log_time(
-            timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
-            comment='Pyomo backend: iteration {}: solver finished running'.format(i + 1)
-        )
-        # xarray dataset is built for each iteration
-        _termination = backend.load_results(backend_model, _results)
-        terminations.append(_termination)
+            log_time(
+                timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
+                comment='Pyomo backend: iteration {}: solver finished running'.format(i + 1)
+            )
+            # xarray dataset is built for each iteration
+            _termination = backend.load_results(backend_model, _results)
+            terminations.append(_termination)
 
-        _results = backend.get_result_array(backend_model, model_data)
+            _results = backend.get_result_array(backend_model, model_data)
 
-        # We give back the actual timesteps for this iteration and take a slice
-        # equal to the window length
-        _results['timesteps'] = window_model_data.timesteps.copy()
+            # We give back the actual timesteps for this iteration and take a slice
+            # equal to the window length
+            _results['timesteps'] = window_model_data.timesteps.copy()
 
-        # We always save the window data. Until the last window(s) this will crop
-        # the window_to_horizon timesteps. In the last window(s), optimistion will
-        # only be occurring over a window length anyway
-        _results = _results.loc[dict(timesteps=slice(None, window_ends.index[i]))]
-        result_array.append(_results)
+            # We always save the window data. Until the last window(s) this will crop
+            # the window_to_horizon timesteps. In the last window(s), optimistion will
+            # only be occurring over a window length anyway
+            _results = _results.loc[dict(timesteps=slice(None, window_ends.index[i]))]
+            result_array.append(_results)
 
-        # Set up initial storage for the next iteration
-        if 'loc_techs_store' in model_data.dims.keys():
-            storage_initial = _results.storage.loc[dict(timesteps=window_ends.index[i])]
-            model_data['storage_initial'].loc[{}] = storage_initial.values
-            for k, v in backend_model.storage_initial.items():
-                v.set_value(storage_initial.to_series().dropna().to_dict()[k])
+            # Set up initial storage for the next iteration
+            if 'loc_techs_store' in model_data.dims.keys():
+                storage_initial = _results.storage.loc[dict(timesteps=window_ends.index[i])]
+                model_data['storage_initial'].loc[{}] = storage_initial.values
+                for k, v in backend_model.storage_initial.items():
+                    v.set_value(storage_initial.to_series().dropna().to_dict()[k])
 
-        # Set up total operated units for the next iteration
-        if 'loc_techs_milp' in model_data.dims.keys():
-            operated_units = _results.operating_units.sum('timesteps').astype(np.int)
-            model_data['operated_units'].loc[{}] += operated_units.values
-            for k, v in backend_model.operated_units.items():
-                v.set_value(operated_units.to_series().dropna().to_dict()[k])
+            # Set up total operated units for the next iteration
+            if 'loc_techs_milp' in model_data.dims.keys():
+                operated_units = _results.operating_units.sum('timesteps').astype(np.int)
+                model_data['operated_units'].loc[{}] += operated_units.values
+                for k, v in backend_model.operated_units.items():
+                    v.set_value(operated_units.to_series().dropna().to_dict()[k])
 
-        log_time(
-            timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
-            comment='Pyomo backend: iteration {}: generated solution array'.format(i + 1)
-        )
+            log_time(
+                timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
+                comment='Pyomo backend: iteration {}: generated solution array'.format(i + 1)
+            )
 
-    # concatenate results over the timestep dimension to get one xarray dataset of interest
-    results = xr.concat(result_array, dim='timesteps')
-    if all(i == 'optimal' for i in terminations):
-        results.attrs['termination_condition'] = 'optimal'
+    if build_only:
+        results = xr.Dataset()
     else:
-        results.attrs['termination_condition'] = ','.join(terminations)
+        # Concatenate results over the timestep dimension to get a single
+        # xarray Dataset of interest
+        results = xr.concat(result_array, dim='timesteps')
+        if all(i == 'optimal' for i in terminations):
+            results.attrs['termination_condition'] = 'optimal'
+        else:
+            results.attrs['termination_condition'] = ','.join(terminations)
 
-    log_time(
-        timings, 'run_solution_returned', time_since_start=True,
-        comment='Pyomo backend: generated full solution array'
-    )
+        log_time(
+            timings, 'run_solution_returned', time_since_start=True,
+            comment='Pyomo backend: generated full solution array'
+        )
 
     return results, backend_model

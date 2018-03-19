@@ -122,10 +122,12 @@ class Model(object):
         """
         debug.save_debug_data(self._model_run, self._debug_data, path)
 
-    def run(self, force_rerun=False):
+    def run(self, force_rerun=False, **kwargs):
         """
         Run the model. If ``force_rerun`` is True, any existing results
         will be overwritten.
+
+        Additional kwargs are passed to the backend.
 
         """
 
@@ -136,29 +138,36 @@ class Model(object):
                 'the results to be overwritten with a new run.'
             )
 
-        if self._model_data.attrs['run.mode'] == 'operate' and not self._model_data.attrs['allow_operate_mode']:
+        if (self._model_data.attrs['run.mode'] == 'operate' and
+                not self._model_data.attrs['allow_operate_mode']):
             raise exceptions.ModelError(
                 'Unable to run this model in operational mode, probably because '
                 'there exist non-uniform timesteps (e.g. from time masking)'
             )
 
-        results, self._backend_model, interface = run_backend(self._model_data, self._timings)
+        results, self._backend_model, interface = run_backend(
+            self._model_data, self._timings, **kwargs
+        )
 
         # Add additional post-processed result variables to results
-        if results.attrs['termination_condition'] == 'optimal':
-            results = postprocess.postprocess_model_results(results, self._model_data, self._timings)
+        if results.attrs.get('termination_condition', None) == 'optimal':
+            results = postprocess.postprocess_model_results(
+                results, self._model_data, self._timings
+            )
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
 
         self._model_data.update(results)
         self._model_data.attrs.update(results.attrs)
-        self._model_data.attrs['solution_time'] = (
-            self._timings['run_solution_returned'] -
-            self._timings['run_start']).total_seconds()
-        self._model_data.attrs['time_finished'] = (
-            self._timings['run_solution_returned'].strftime('%Y-%m-%d %H:%M:%S')
-        )
+
+        if 'run_solution_returned' in self._timings.keys():
+            self._model_data.attrs['solution_time'] = (
+                self._timings['run_solution_returned'] -
+                self._timings['run_start']).total_seconds()
+            self._model_data.attrs['time_finished'] = (
+                self._timings['run_solution_returned'].strftime('%Y-%m-%d %H:%M:%S')
+            )
 
         self.results = self._model_data.filter_by_attrs(is_result=1)
 
