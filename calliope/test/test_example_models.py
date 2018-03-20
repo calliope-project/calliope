@@ -144,9 +144,31 @@ class TestUrbanScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(522.829998)
 
     def test_operate_example_results(self):
-        model = calliope.examples.milp(
+
+        model = calliope.examples.operate(
             override_dict={'model.subset_time': ['2005-07-01', '2005-07-04']}
         )
-        model.run()
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            model.run()
+
+        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
+
+        expected_warnings = [
+            'Energy capacity constraint removed from X1::demand_electricity as force_resource is applied',
+            'Energy capacity constraint removed from X1::demand_heat as force_resource is applied',
+            'Energy capacity constraint removed from X1::pv as force_resource is applied',
+            'Energy capacity constraint removed from X2::demand_electricity as force_resource is applied',
+            'Energy capacity constraint removed from X2::demand_heat as force_resource is applied',
+            'Energy capacity constraint removed from X2::pv as force_resource is applied',
+            'Energy capacity constraint removed from X3::demand_electricity as force_resource is applied',
+            'Energy capacity constraint removed from X3::demand_heat as force_resource is applied',
+            'Energy capacity constraint removed from X3::pv as force_resource is applied',
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
+            'Resource capacity constraint removed from X2::pv as force_resource is applied',
+            'Resource capacity constraint removed from X3::pv as force_resource is applied'
+        ]
+
+        for warning in expected_warnings:
+            assert warning in all_warnings
 
         assert all(model.results.timesteps == pd.date_range('2005-07', '2005-07-04 23:00:00', freq='H'))

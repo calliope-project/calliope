@@ -37,7 +37,7 @@ def check_operate_params(model_data):
     comments = AttrDict()
 
     def get_param(loc_tech, var):
-        if is_in(loc_tech, var):
+        if is_in(loc_tech, var) and not np.isnan(model_data[var].loc[loc_tech].item()):
             param = model_data[var].loc[loc_tech].item()
         else:
             param = defaults[var]
@@ -61,8 +61,22 @@ def check_operate_params(model_data):
                 'Operate mode: User must define a finite energy_cap (via '
                 'energy_cap_equals or energy_cap_max) for {}'.format(loc_tech)
             )
-        # Cannot have infinite resource area (physically impossible)
+
         elif is_in(loc_tech, 'loc_techs_finite_resource'):
+            # force resource overrides capacity constraints, so set capacity constraints to infinity
+            if is_in(loc_tech, 'force_resource'):
+                energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
+                warnings.append(
+                    'Energy capacity constraint removed from {} as force_resource '
+                    'is applied'.format(loc_tech)
+                )
+                if is_in(loc_tech, 'resource_cap'):
+                    resource_cap = model_data.resource_cap.loc[loc_tech] = np.inf
+                    warnings.append(
+                        'Resource capacity constraint removed from {} as force_resource '
+                        'is applied'.format(loc_tech)
+                    )
+            # Cannot have infinite resource area (physically impossible)
             if is_in(loc_tech, 'loc_techs_area'):
                 area = model_data.resource_area.loc[loc_tech].item()
                 if np.isnan(area) or np.isinf(area):
@@ -75,31 +89,21 @@ def check_operate_params(model_data):
             # constraints will clash. Doesn't affect supply_plus techs with a
             # storage buffer prior to carrier production.
             elif not is_in(loc_tech, 'loc_techs_store'):
-                area = 1
                 resource_scale = get_param(loc_tech, 'resource_scale')
                 energy_cap_scale = get_param(loc_tech, 'energy_cap_scale')
                 resource_eff = get_param(loc_tech, 'resource_eff')
                 energy_eff = get_param(loc_tech, 'energy_eff')
                 energy_cap_scale = get_param(loc_tech, 'energy_cap_scale')
-                resource = model_data.resource.loc[loc_tech] * area
-                if any(resource.values * resource_scale * resource_eff
-                    > energy_cap * energy_cap_scale * energy_eff):
+                resource = model_data.resource.loc[loc_tech].values
+                if (energy_cap is not None and
+                    any(resource * resource_scale * resource_eff >
+                        energy_cap * energy_cap_scale * energy_eff)):
                     errors.append(
                         'Operate mode: resource is forced to be higher than '
                         'fixed energy cap for `{}`'.format(loc_tech)
                     )
-            if is_in(loc_tech, 'force_resource'):
-                model_data.energy_cap.loc[loc_tech] = np.inf
-                warnings.append(
-                    'Energy capacity constraint removed from {} as force_resource '
-                    'is applied'.format(loc_tech)
-                )
-                if is_in(loc_tech, 'resource_cap'):
-                    model_data.resource_cap.loc[loc_tech] = np.inf
-                    warnings.append(
-                        'Resource capacity constraint removed from {} as force_resource '
-                        'is applied'.format(loc_tech)
-                    )
+        # Must define a resource capacity to ensure the Pyomo param is created
+        # for it. But we just create an array of infs, so the capacity has no effect
         if is_in(loc_tech, 'loc_techs_supply_plus'):
             if 'resource_cap' not in model_data.data_vars.keys():
                 model_data['resource_cap'] = xr.DataArray(

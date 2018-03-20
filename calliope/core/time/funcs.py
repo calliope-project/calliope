@@ -165,6 +165,21 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
 
 
 def resample(data, timesteps, resolution):
+    """
+    Function to resample timeseries data from the input resolution (e.g. 1H), to
+    the given resolution (e.g. 2H)
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+        calliope model data, containing only timeseries data variables
+    timesteps : str or list; optional
+        If given, apply resampling to a subset of the timeseries data
+    resolution : str
+        time resolution of the output data, given in Pandas time frequency format.
+        E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute. Multiples allowed.
+
+    """
     data_new = data.copy(deep=True)
     if timesteps is not None:
         data_new = data_new.loc[{'timesteps': timesteps}]

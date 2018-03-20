@@ -33,7 +33,7 @@ def postprocess_model_results(results, model_data, timings):
     results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
     results['systemwide_levelised_cost'] = systemwide_levelised_cost(results)
     results['total_levelised_cost'] = systemwide_levelised_cost(results, total=True)
-    results = clean_results(results, model_data.attrs.get('run.zero_thresshold', 0), timings)
+    results = clean_results(results, model_data.attrs.get('run.zero_threshold', 0), timings)
 
     log_time(
         timings, 'post_process_end', time_since_start=True,
@@ -110,31 +110,31 @@ def systemwide_levelised_cost(results, total=False):
     return xr.concat(levelised_cost, dim='carriers')
 
 
-def clean_results(results, zero_threshhold, timings):
+def clean_results(results, zero_threshold, timings):
     """
     Remove unreasonably small values (solver output can lead to floating point
     errors) and remove unmet_demand if it was never used (i.e. sum = zero)
 
-    zero_thresshold is a value set in model configuration. If not set, defaults
+    zero_threshold is a value set in model configuration. If not set, defaults
     to zero (i.e. doesn't do anything). Reasonable value = 1e-12
     """
-    thresshold_applied = []
+    threshold_applied = []
     for k, v in results.data_vars.items():
         # If there are any values in the data variable which fall below the
-        # thresshold, note the data variable name and set those values to zero
-        if v.where(abs(v) < zero_threshhold, drop=True).sum():
-            thresshold_applied.append(k)
+        # threshold, note the data variable name and set those values to zero
+        if v.where(abs(v) < zero_threshold, drop=True).sum():
+            threshold_applied.append(k)
             with np.errstate(invalid='ignore'):
-                v.values[abs(v.values) < zero_threshhold] = 0
+                v.values[abs(v.values) < zero_threshold] = 0
             v.loc[{}] = v.values
 
-    if thresshold_applied:
-        comment = 'All values < {} set to 0 in {}'.format(zero_threshhold, ', '.join(thresshold_applied))
+    if threshold_applied:
+        comment = 'All values < {} set to 0 in {}'.format(zero_threshold, ', '.join(threshold_applied))
     else:
-        comment = 'zero thresshold of {} not required'.format(zero_threshhold)
+        comment = 'zero threshold of {} not required'.format(zero_threshold)
 
     log_time(
-        timings, 'thresshold_applied',
+        timings, 'threshold_applied',
         comment='Postprocessing: ' + comment
     )
 

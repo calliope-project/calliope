@@ -23,7 +23,7 @@ run:
         use_cap_results: false
     objective: 'cost_minimization'  # Objective function to use. As of v0.6.0, this has no effect.
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
-    zero_thresshold: 1e-10 # Any value coming out of the backend that is smaller than this thresshold (due to floating point errors, probably) will be set to zero
+    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
 
 model:
     timeseries_data_path: null  # Path to time series data

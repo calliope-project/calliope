@@ -83,7 +83,7 @@ def extreme(data, tech, var='resource', how='max',
             padding=None, **kwargs):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
-    ``tech`` across the given list of ``locations`` is either minmal
+    ``tech`` across the given list of ``locations`` is either minimal
     or maximal.
 
     Parameters
@@ -121,6 +121,38 @@ def extreme(data, tech, var='resource', how='max',
 def extreme_diff(data, tech0, tech1, var='resource', how='max',
                  length='1D', n=1, groupby_length=None,
                  padding=None, normalize=True, **kwargs):
+    """
+    Returns timesteps for period of ``length`` where ``var`` for the technology
+    ``tech`` across the given list of ``locations`` has the highest difference
+    between minimum and maximum.
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+    tech : str
+        Technology whose `var` to find extreme for.
+    var : str, optional
+        default 'resource'
+    how : str, optional
+        'max' (default) or 'min'.
+    length : str, optional
+        Defaults to '1D'.
+    n : int, optional
+        Number of periods of `length` to look for, default is 1.
+    groupby_length : str, optional
+        Group time series and return `n` periods of `length`
+        for each group.
+    padding : int, optional
+        Pad beginning and end of the unmasked area by the number of
+        timesteps given.
+    normalize : bool, optional
+        If True (default), data is normalized
+        using :func:`~calliope.core.time.funcs.normalized_copy`.
+    kwargs : dict, optional
+        Dimensions of the selected var over which to index. Any remaining
+        dimensions will be flattened by mean
+
+    """
     if normalize:
         data_n = funcs.normalized_copy(data)
     else:

@@ -345,6 +345,17 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=None, variables=None)
     ----------
     data : xarray.Dataset
         Should be normalized
+    tech : list, optional
+        list of strings referring to technologies by which clustering is undertaken.
+        If none (default), all technologies within timeseries variables will be used.
+    timesteps : list or str, optional
+        Subset of the time domain within which to apply clustering.
+    k : int, optional
+        Number of clusters to create. If none (default), will use Hartigan's rule
+        to infer a reasonable number of clusters.
+    variables : list, optional
+        data variables (e.g. `resource`, `energy_eff`) by whose values the data
+        will be clustered. If none (default), all timeseries variables will be used.
 
     Returns
     -------
@@ -383,7 +394,7 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=None, variables=None)
     return clusters, centroids, inertia
 
 
-def hartigan_n_clusters(X, threshhold=10):
+def hartigan_n_clusters(X, threshold=10):
     """
     Try clustering using an sklearn.cluster method, for several cluster sizes.
     Using Hartigan's rule, we will return the number of clusters after which
@@ -395,9 +406,9 @@ def hartigan_n_clusters(X, threshhold=10):
 
     len_input = len(X)
     n_clusters = 1
-    HK = threshhold + 1
+    HK = threshold + 1
 
-    while n_clusters <= len_input and HK > threshhold:
+    while n_clusters <= len_input and HK > threshold:
 
         kmeans = sk_cluster.KMeans(n_clusters=n_clusters).fit(X)
         kmeans_plus_one = sk_cluster.KMeans(n_clusters=n_clusters + 1).fit(X)
@@ -409,8 +420,8 @@ def hartigan_n_clusters(X, threshhold=10):
 
         n_clusters += 1
 
-    if HK > threshhold:  # i.e. we went to the limit where n_clusters = len_input
-        exceptions.warn("Based on thresshold, number of clusters = number of dates")
+    if HK > threshold:  # i.e. we went to the limit where n_clusters = len_input
+        exceptions.warn("Based on threshold, number of clusters = number of dates")
         return len_input
     else:
         return n_clusters - 1
@@ -424,10 +435,17 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None, variables=Non
     ----------
     data : xarray.Dataset
         Should be normalized
+    tech : list, optional
+        list of strings referring to technologies by which clustering is undertaken.
+        If none (default), all technologies within timeseries variables will be used.
     max_d : float or int, optional
         Max distance for returning clusters.
     k : int, optional
-        Number of desired clusters.
+        Number of clusters to create. If none (default), will use Hartigan's rule
+        to infer a reasonable number of clusters.
+    variables : list, optional
+        data variables (e.g. `resource`, `energy_eff`) by whose values the data
+        will be clustered. If none (default), all timeseries variables will be used.
 
     Returns
     -------

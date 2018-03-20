@@ -24,6 +24,6 @@ run:
 
     bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
 
-    zero_thresshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 
     mode: plan  # Choices: plan, operate

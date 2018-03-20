@@ -14,17 +14,23 @@ Model class
 Time series
 ===========
 
-.. automodule:: calliope.core.time
-    :members:
+.. automodule:: calliope.core.time.clustering
+    :members: get_clusters_kmeans, get_clusters_hierarchical
 
+.. automodule:: calliope.core.time.masks
+    :members: extreme, extreme_diff
+
+.. automodule:: calliope.core.time.funcs
+    :members: resample
 
 .. _api_analysis:
 
 Analyzing models
 ================
 
-.. automodule:: calliope.analysis.plotting
-    :members:
+.. autoclass:: calliope.analysis.plotting.plotting.ModelPlotMethods
+    :members: timeseries, capacity, transmission, summary
+
 
 Utility classes: AttrDict, Exceptions
 =====================================

@@ -1,5 +1,18 @@
 @ECHO OFF
 
+if "%1" == "" goto help
+
+if "%1" == "help" (
+	:help
+	echo.Please use `make ^<target^>` where ^<target^> is one of
+	echo.  test             to run all Calliope tests using py.test and custom arguments
+	echo.  lint             to run the linter on all Calliope files, using pylint and custom arguments
+	echo.  profile          to run an example model for memory profiling, saves SVG of results
+	echo.  profile-clean    to remove files ocurring from profiling
+	echo.  doc-plots        to make HTML files for each interactive plot in Calliope docs
+	goto end
+)
+
 if "%1" == "test" (
     py.test --cov calliope --cov-report term-missing
     goto end
