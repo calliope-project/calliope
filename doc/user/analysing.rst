@@ -77,7 +77,7 @@ Without the token, the plot will fall back on simple country-level outlines. In 
 .. raw:: html
    :file: images/plot_transmission.html
 
-If the coordinates were in `x` and `y`, not `lat` and `lon`, the transmission trace would be given on a cartesian plot.
+.. note:: If the coordinates were in `x` and `y`, not `lat` and `lon`, the transmission trace would be given on a cartesian plot.
 
 Summary plots
 -------------

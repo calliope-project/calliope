@@ -154,21 +154,10 @@ class TestUrbanScaleExampleModelSenseChecks:
         all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
 
         expected_warnings = [
-            'Energy capacity constraint removed from X1::demand_electricity as force_resource is applied',
-            'Energy capacity constraint removed from X1::demand_heat as force_resource is applied',
-            'Energy capacity constraint removed from X1::pv as force_resource is applied',
-            'Energy capacity constraint removed from X2::demand_electricity as force_resource is applied',
-            'Energy capacity constraint removed from X2::demand_heat as force_resource is applied',
-            'Energy capacity constraint removed from X2::pv as force_resource is applied',
-            'Energy capacity constraint removed from X3::demand_electricity as force_resource is applied',
-            'Energy capacity constraint removed from X3::demand_heat as force_resource is applied',
-            'Energy capacity constraint removed from X3::pv as force_resource is applied',
+            'Energy capacity constraint removed',
             'Resource capacity constraint defined and set to infinity for all supply_plus techs',
-            'Resource capacity constraint removed from X2::pv as force_resource is applied',
-            'Resource capacity constraint removed from X3::pv as force_resource is applied'
+            'Resource capacity constraint removed'
         ]
 
-        for warning in expected_warnings:
-            assert warning in all_warnings
-
+        assert all(warning in all_warnings for warning in expected_warnings)
         assert all(model.results.timesteps == pd.date_range('2005-07', '2005-07-04 23:00:00', freq='H'))

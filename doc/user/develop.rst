@@ -18,23 +18,34 @@ Installing a development version
 
 As when installing a stable version, using ``conda`` is recommended.
 
+If you only want to track the latest commit, without having a local Calliope
+repository, then just download `this requirements file <>`_ and then run::
+
+    $ conda env create -f requirements_git_master.yml
+
+This will create a conda environment called ``calliope_master``.
+
+To contribute to Calliope code, you'll instead want to clone the repository. This will provide you with the master branch in a known on your local device.
+
 First, clone the repository::
 
    $ git clone https://github.com/calliope-project/calliope
 
 Using Anaconda/conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
 
-   $ conda env create -f ./calliope/requirements.yml -n calliope_dev
+   $ conda env create -f ./calliope/requirements_dev.yml -n calliope_dev
    $ source activate calliope_dev
 
 On Windows::
 
-   $ conda env create -f ./calliope/requirements.yml -n calliope_dev
+   $ conda env create -f ./calliope/requirements_dev.yml -n calliope_dev
    $ activate calliope_dev
 
 Then install Calliope itself with pip::
 
    $ pip install -e ./calliope
+
+.. note:: `requirements_dev.yml` includes additional packages for successfully joining Calliope development, including `py.test`, `pylint`, and memory profilers.
 
 ---------------------------
 Creating modular extensions

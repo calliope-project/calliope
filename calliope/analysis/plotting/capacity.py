@@ -218,7 +218,8 @@ def plot_capacity(
     layout = {
         location_axis: dict(title='Location'),
         'legend': (dict(traceorder='reversed')),
-        'autosize': True
+        'autosize': True,
+        'hovermode': 'closest'
     }
 
     relevant_vars = _get_relevant_vars(dataset, array)
