@@ -72,21 +72,18 @@ The model configuration specifies all aspects of the model to run. It is structu
 
     model:
         name: 'My energy model'
-        mode: plan
         timeseries_data_path: 'timeseries_data'
         reserve_margin:
             power: 0
         subset_time: ['2005-01-01', '2005-01-05']
 
-Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), the most important part of the ``model`` section is ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
-
-.. seealso:: :ref:`config_reference_model_wide`
+Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), model-wide constraints can be set, like ``reserve_margin``.
 
 To speed up model runs, the above example specifies a time subset to run the model over only five days of time series data (``subset_time: ['2005-01-01', '2005-01-05']``)-- this is entirely optional. Usually, a full model will contain at least one year of data, but subsetting time can be useful to speed up a model for testing purposes.
 
 .. seealso::
 
-    :ref:`National scale example model <examplemodels_nationalscale_settings>`, :doc:`ref_config_listing` and :ref:`documentation on operational mode <operational_mode>`.
+    :ref:`National scale example model <examplemodels_nationalscale_settings>`, :ref:`config_reference_model`
 
 ------------------------
 Technologies (``techs``)
@@ -203,6 +200,9 @@ The only required setting in the run configuration is the solver to use:
 
     run:
         solver: glpk
+        model: plan
+
+the most important parts of the ``run`` section are ``solver`` and  ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
 
 Possible options for solver include ``glpk``, ``gurobi``, ``cplex``, and ``cbc``. The interface to these solvers is done through the Pyomo library. Any `solver compatible with Pyomo <https://software.sandia.gov/downloads/pub/pyomo/PyomoInstallGuide.html#Solvers>`_ should work with Calliope.
 
@@ -220,7 +220,7 @@ Further optional settings, including debug settings, can be specified in the run
 
 .. seealso::
 
-    :ref:`debugging_runs_config`, :ref:`solver_options`
+    :ref:`config_reference_run`, :ref:`debugging_runs_config`, :ref:`solver_options`, :ref:`documentation on operational mode <operational_mode>`.
 
 .. _building_overrides:
 

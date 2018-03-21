@@ -1,11 +1,10 @@
 model:
-    mode: plan
-
     name: Test model
 
     timeseries_data_path: 'timeseries_data'
 
 run:
+    mode: plan
     solver: glpk
 
 tech_groups:
