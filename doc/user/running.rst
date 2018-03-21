@@ -162,6 +162,19 @@ The open-source solvers (GLPK and CBC) are slower than the commercial solvers. I
 
 .. seealso:: :ref:`solver_options`
 
+Rerunning a model
+-----------------
+
+After running, if there is an infeasibility you want to address, or simply a few values you dont think were quite right, you can change them and rerun your model. If you change them in `model.inputs`, just rerun the model as ``model.run(force_rerun=True)``.
+
+.. note:: ``model.run(force_rerun=True)`` will replace you current model.results and rebuild he entire model backend. You may want to save your model before doing this.
+
+Particularly if your problem is large, you may not want to rebuild the backend to change a few small values. Instead you can interface directly with the backend using the ``model.backend`` functions, to update individual parameter values and switch constraints on/off. By rerunning the backend specifically, you can optimise your problem with these backend changes, without rebuilding the backend entirely.
+
+.. note:: ``model.inputs`` and ``model.results`` will not be changed when updating and rerunning the backend. Instead, a new xarray Dataset is returned.
+
+.. seealso:: :ref:`backend_interface`
+
 ----------------------
 Debugging failing runs
 ----------------------

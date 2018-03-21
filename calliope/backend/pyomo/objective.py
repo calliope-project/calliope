@@ -41,3 +41,15 @@ def cost_minimization(backend_model):
 
     backend_model.obj = po.Objective(sense=po.minimize, rule=obj_rule)
     backend_model.obj.domain = po.Reals
+
+
+def check_feasibility(backend_model):
+    """
+    Dummy objective, to check that there are no conflicting constraints.
+    """
+
+    def obj_rule(backend_model):
+        return 1
+
+    backend_model.obj = po.Objective(sense=po.minimize, rule=obj_rule)
+    backend_model.obj.domain = po.Reals

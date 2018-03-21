@@ -31,6 +31,12 @@ Analyzing models
 .. autoclass:: calliope.analysis.plotting.plotting.ModelPlotMethods
     :members: timeseries, capacity, transmission, summary
 
+.. _backend_interface_api:
+
+Pyomo backend interface
+=======================
+
+.. autoclass:: calliope.backend.pyomo.interface.BackendInterfaceMethods
 
 Utility classes: AttrDict, Exceptions
 =====================================

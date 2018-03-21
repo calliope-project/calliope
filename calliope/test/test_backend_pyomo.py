@@ -2,6 +2,7 @@ import os
 
 import pytest  # pylint: disable=unused-import
 import numpy as np
+import xarray as xr
 import pyomo.core as po
 from pyomo.core.base.expr import identify_variables
 
@@ -148,7 +149,7 @@ class TestInterface:
         m.run()
         m.backend.access_model_inputs()
 
-    def test_try_update_param(self):
+    def test_update_param(self):
         """
         test that the function update_param works
         """
@@ -159,7 +160,7 @@ class TestInterface:
             m._backend_model.energy_cap_max.extract_values()['1::test_supply_elec'] == 20
         )
 
-    def test_try_activate_constraint(self):
+    def test_activate_constraint(self):
         """
         test that the function activate_constraint works
         """
@@ -167,6 +168,20 @@ class TestInterface:
         m.run()
         m.backend.activate_constraint('system_balance_constraint', active=False)
         assert not m._backend_model.system_balance_constraint.active
+
+    def test_rerun(self):
+        """
+        test that the function rerun works
+        """
+        m = build_model({}, 'simple_supply,two_hours')
+        m.run()
+        returned_dataset = m.backend.rerun()
+        assert isinstance(returned_dataset, xr.Dataset)
+
+        # should fail if the run mode is not 'plan'
+        with pytest.raises(exceptions.ModelError):
+            m._model_data.attrs['run.mode'] = 'operate'
+            m.backend.rerun()
 
 
 class TestConstraints:

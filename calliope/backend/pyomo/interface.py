@@ -2,7 +2,11 @@ import xarray as xr
 import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var
+from calliope.backend import run as backend_run
+from calliope.backend.pyomo import model as run_pyomo
+
 from calliope.core.util.dataset import reorganise_dataset_dimensions
+from calliope.core.util.tools import log_time
 from calliope import exceptions
 
 
@@ -98,10 +102,61 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
         raise ValueError('Argument `active` must be True or False')
 
 
+def rerun_pyomo_model(model_data, backend_model):
+    """
+    Rerun the Pyomo backend, perhaps after updating a parameter value,
+    (de)activating a constraint/objective or updating run options in the model
+    model_data object (e.g. `run.solver`).
+
+    Returns
+    -------
+    run_data : xarray.Dataset
+        Raw data from this rerun, including both inputs and results.
+        to filter inputs/results, use `run_data.filter_by_attrs(is_result=...)`
+        with 0 for inputs and 1 for results.
+    """
+
+    if model_data.attrs['run.mode'] != 'plan':
+        raise exceptions.ModelError(
+            'Cannot rerun the backend in {} run mode. Only `plan` mode is '
+            'possible.'.format(model_data.attrs['run.mode'])
+        )
+
+    timings = {}
+    log_time(timings, 'model_creation')
+
+    results, backend_model = backend_run.run_plan(
+        model_data, timings, run_pyomo,
+        build_only=False, backend_rerun=backend_model
+    )
+    for k, v in timings.items():
+        results.attrs['timings.' + k] = v
+
+    exceptions.ModelWarning(
+        'model.results will only be updated on running the model from '
+        '`model.run()`. We provide results of this rerun as a standalone xarray '
+        'Dataset'
+    )
+
+    results.attrs.update(model_data.attrs)
+    for key, var in results.data_vars.items():
+        var.attrs['is_result'] = 1
+
+    inputs = access_pyomo_model_inputs(backend_model)
+    for key, var in inputs.data_vars.items():
+        var.attrs['is_result'] = 0
+
+    results.update(inputs)
+    run_data = results
+
+    return run_data
+
+
 class BackendInterfaceMethods:
 
     def __init__(self, model):
         self._backend = model._backend_model
+        self._model_data = model._model_data
 
     def access_model_inputs(self):
         return access_pyomo_model_inputs(self._backend)
@@ -117,3 +172,8 @@ class BackendInterfaceMethods:
         return activate_pyomo_constraint(self._backend, *args, **kwargs)
 
     activate_constraint.__doc__ = activate_pyomo_constraint.__doc__
+
+    def rerun(self, *args, **kwargs):
+        return rerun_pyomo_model(self._model_data, self._backend, *args, **kwargs)
+
+    rerun.__doc__ = rerun_pyomo_model.__doc__

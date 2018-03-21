@@ -55,16 +55,20 @@ def run(model_data, timings, build_only=False):
     return results, backend, INTERFACE[run_backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, timings, backend, build_only):
+def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
-    log_time(timings, 'run_start', comment='Pyomo backend: starting model run')
+    log_time(timings, 'run_start', comment='Backend: starting model run')
 
-    backend_model = backend.generate_model(model_data)
+    if not backend_rerun:
+        backend_model = backend.generate_model(model_data)
 
-    log_time(
-        timings, 'run_backend_model_generated', time_since_start=True,
-        comment='Backend: model generated'
-    )
+        log_time(
+            timings, 'run_backend_model_generated', time_since_start=True,
+            comment='Backend: model generated'
+        )
+
+    else:
+        backend_model = backend_rerun
 
     solver = model_data.attrs['run.solver']
     solver_io = model_data.attrs.get('run.solver_io', None)
@@ -233,7 +237,7 @@ def run_operate(model_data, timings, backend, build_only):
 
             log_time(
                 timings, 'model_gen_1',
-                comment='Pyomo backend: generating initial model'
+                comment='Backend: generating initial model'
             )
 
             backend_model = backend.generate_model(window_model_data)
@@ -249,7 +253,7 @@ def run_operate(model_data, timings, backend, build_only):
             log_time(
                 timings, 'model_gen_{}'.format(i + 1),
                 comment=(
-                    'Pyomo backend: ite()ration {}: generating new model for '
+                    'Backend: ite()ration {}: generating new model for '
                     'end of timeseries, with horizon = {} timesteps'
                     .format(i + 1, window_ends[i] - window_starts[i])
                 )
@@ -266,7 +270,7 @@ def run_operate(model_data, timings, backend, build_only):
 
             log_time(
                 timings, 'model_gen_{}'.format(i + 1),
-                comment='Pyomo backend: iteration {}: updating model parameters'.format(i + 1)
+                comment='Backend: iteration {}: updating model parameters'.format(i + 1)
             )
             # Pyomo model sees the same timestamps each time, we just change the
             # values associated with those timestamps
@@ -284,7 +288,7 @@ def run_operate(model_data, timings, backend, build_only):
         if not build_only:
             log_time(
                 timings, 'model_run_{}'.format(i + 1), time_since_start=True,
-                comment='Pyomo backend: iteration {}: sending model to solver'.format(i + 1)
+                comment='Backend: iteration {}: sending model to solver'.format(i + 1)
             )
             # After iteration 1, warmstart = True, which should speed up the process
             # Note: Warmstart isn't possible with GLPK (dealt with later on)
@@ -295,7 +299,7 @@ def run_operate(model_data, timings, backend, build_only):
 
             log_time(
                 timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
-                comment='Pyomo backend: iteration {}: solver finished running'.format(i + 1)
+                comment='Backend: iteration {}: solver finished running'.format(i + 1)
             )
             # xarray dataset is built for each iteration
             _termination = backend.load_results(backend_model, _results)
@@ -329,7 +333,7 @@ def run_operate(model_data, timings, backend, build_only):
 
             log_time(
                 timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
-                comment='Pyomo backend: iteration {}: generated solution array'.format(i + 1)
+                comment='Backend: iteration {}: generated solution array'.format(i + 1)
             )
 
     if build_only:
@@ -345,7 +349,7 @@ def run_operate(model_data, timings, backend, build_only):
 
         log_time(
             timings, 'run_solution_returned', time_since_start=True,
-            comment='Pyomo backend: generated full solution array'
+            comment='Backend: generated full solution array'
         )
 
     return results, backend_model
