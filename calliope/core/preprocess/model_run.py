@@ -292,11 +292,14 @@ def process_techs(config_model):
                     tech_result.essentials.carrier_in = \
                         tech_result.essentials.carrier
                     debug_comments.set_key(
-                        '{}.essentials.carrier_in', 'From run configuration filename'
+                        '{}.essentials.carrier_in'.format(tech_id),
+                        'Set from essentials.carrier'
                     )
                 except KeyError:
-                    errors.append('`carrier` or `carrier_in` must be '
-                        'defined for {}'.format(tech_id))
+                    errors.append(
+                        '`carrier` or `carrier_in` must be '
+                        'defined for {}'.format(tech_id)
+                    )
             else:
                 errors.append(
                     '`carrier_in` must be defined for {}'.format(tech_id)

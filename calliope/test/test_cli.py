@@ -17,20 +17,57 @@ class TestCLI:
             # Assert that `run.yaml` in the target dir exists
             assert os.path.isfile(os.path.join(tempdir, 'test', 'model.yaml'))
 
-    # def test_run(self):
-    #     runner = CliRunner()
-    #     this_dir = os.path.dirname(__file__)
-    #     run_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'model.yaml')
-    #     with runner.isolated_filesystem() as tempdir:
-    #         result = runner.invoke(cli.run, [run_config])
-    #         assert result.exit_code == 0
-    #         assert os.path.isfile(os.path.join(tempdir, 'Output', 'r.csv'))
+    def test_run(self):
+        runner = CliRunner()
+        this_dir = os.path.dirname(__file__)
+        model_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'model.yaml')
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.run, [model_config, '--save_netcdf=output.nc'])
+            assert result.exit_code == 0
+            assert os.path.isfile(os.path.join(tempdir, 'output.nc'))
 
-    # def test_generate(self):
-    #     runner = CliRunner()
-    #     this_dir = os.path.dirname(__file__)
-    #     run_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'run.yaml')
-    #     with runner.isolated_filesystem() as tempdir:
-    #         result = runner.invoke(cli.generate, [run_config])
-    #         assert result.exit_code == 0
-    #         assert os.path.isfile(os.path.join(tempdir, 'runs', 'example-model-national', 'submit_array.sh'))
+    def test_generate_runs_bash(self):
+        runner = CliRunner()
+        this_dir = os.path.dirname(__file__)
+        model_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'model.yaml')
+        override_file = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'overrides.yaml')
+        # test.sh '
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.generate_runs, [
+                model_config, 'test.sh', '--kind=bash',
+                '--groups="run1,run2,run3,run4"',
+                '--override_file={}'.format(override_file)
+            ])
+            assert result.exit_code == 0
+            assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
+
+    def test_generate_runs_windows(self):
+        runner = CliRunner()
+        this_dir = os.path.dirname(__file__)
+        model_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'model.yaml')
+        override_file = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'overrides.yaml')
+        # test.sh '
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.generate_runs, [
+                model_config, 'test.bat', '--kind=windows',
+                '--groups="run1,run2,run3,run4"',
+                '--override_file={}'.format(override_file)
+            ])
+            assert result.exit_code == 0
+            assert os.path.isfile(os.path.join(tempdir, 'test.bat'))
+
+    def test_generate_runs_bsub(self):
+        runner = CliRunner()
+        this_dir = os.path.dirname(__file__)
+        model_config = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'model.yaml')
+        override_file = os.path.join(this_dir, '..', 'example_models', 'national_scale', 'overrides.yaml')
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.generate_runs, [
+                model_config, 'test.sh', '--kind=bsub',
+                '--groups="run1,run2,run3,run4"',
+                '--cluster_mem=1G', '--cluster_time=100',
+                '--override_file={}'.format(override_file)
+            ])
+            assert result.exit_code == 0
+            assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
+            assert os.path.isfile(os.path.join(tempdir, 'test.sh.array.sh'))
