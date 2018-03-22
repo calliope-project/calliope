@@ -39,7 +39,7 @@ if "%1" == "profile-clean" (
 )
 
 if "%1" == "doc-plots" (
-    python doc/generate_plots.py
+    python doc/helpers/generate_plots.py
     goto end
 )
 

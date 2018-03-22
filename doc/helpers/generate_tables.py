@@ -88,7 +88,3 @@ def process():
         }
         with open('./user/includes/required_allowed_{}.yaml'.format(tech_group), 'w') as f:
             f.write(yaml.dump(required_allowed, indent=4, Dumper=yaml.RoundTripDumper))
-
-
-# Run the process function when exec'd -- this is bad style, yes
-process()

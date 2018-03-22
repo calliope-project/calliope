@@ -14,12 +14,21 @@
 import sys
 import os
 
+# Append the local _extensions dir to module search path
+sys.path.append(os.path.abspath('_extensions'))
+sys.path.append(os.path.abspath('helpers'))
+
+from sphinx.builders.html import StandaloneHTMLBuilder, SingleFileHTMLBuilder
+
+import generate_tables  # from helpers
+import convert_images  # from helpers
+
 __version__ = None
 # Sets the __version__ variable
 exec(open('../calliope/_version.py').read())
 
 # Generates the tables and source code files
-exec(open('generate_tables.py').read())
+generate_tables.process()
 
 
 ##
@@ -64,6 +73,12 @@ MOCK_MODULES = [
 for m in MOCK_MODULES:
     sys.modules[m] = Mock()
 
+
+# Redefine supported_image_types for the HTML builder to prefer PNG over SVG
+image_types = ['image/png', 'image/svg+xml', 'image/gif', 'image/jpeg']
+StandaloneHTMLBuilder.supported_image_types = image_types
+SingleFileHTMLBuilder.supported_image_types = image_types
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -79,9 +94,6 @@ else:
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
-
-# Append the local _extensions dir to module search path
-# sys.path.append(os.path.abspath('_extensions'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.

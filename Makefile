@@ -38,7 +38,7 @@ all-ci : test lint
 
 .PHONY : doc-plots
 doc-plots :
-	python doc/generate_plots.py
+	python doc/helpers/generate_plots.py
 
 ###
 # Build package and upload to PyPI

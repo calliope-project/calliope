@@ -385,10 +385,10 @@ By specifying ``exists: false`` in the model configuration, which can be done th
 
 This works for:
 
-* Techs: ``techs.techname.exists: false``
+* Techs: ``techs.tech_name.exists: false``
 * Locations: ``locations.location_name.exists: false``
 * Links: ``links.location1,location2.exists: false``
-* Techs at a specific location:  ``locations.location_name.techs.exists: false``
+* Techs at a specific location:  ``locations.location_name.techs.tech_name.exists: false``
 * Transmission techs at a specific location: ``links.location1,location2.techs.transmission_tech.exists: false``
 
 .. _operational_mode:
