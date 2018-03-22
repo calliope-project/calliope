@@ -61,7 +61,6 @@ def apply_time_clustering(model_data, model_run):
     """
     time_config = model_run.model['time']
 
-    # Carry y_ subset sets over to data for easier data analysis
     data = model_data.copy(deep=True)
 
     # Add temporary 'timesteps per day' attribute
@@ -209,14 +208,21 @@ def add_time_dimension(data, model_run):
 
 
 def add_max_demand_timesteps(model_data):
-    #FIXME: needs unit tests
-    #FIXME: doesn't currently get a different max demand for different carriers
     max_demand_timesteps = []
+
+    # Get all loc_techs with a demand resource
+    loc_techs_with_demand_resource = list(
+        set(model_data.coords['loc_techs_finite_resource'].values)
+        .intersection(model_data.coords['loc_techs_demand'].values)
+    )
+
     for carrier in list(model_data.carriers.data):
-        loc_techs = list(
-            set(model_data.loc_techs_finite_resource.values)
-            .intersection(model_data.loc_techs_demand.values)
-        )
+        # Filter demand loc_techs for this carrier
+        loc_techs = [
+            i for i in loc_techs_with_demand_resource
+            if '{}::{}'.format(i, carrier) in model_data.coords['loc_tech_carriers_con'].values
+        ]
+
         carrier_demand = model_data.resource.loc[
             dict(loc_techs_finite_resource=loc_techs)
         ].sum(dim='loc_techs_finite_resource').copy()
