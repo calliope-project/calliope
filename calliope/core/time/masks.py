@@ -17,18 +17,22 @@ from calliope import exceptions
 
 
 def _get_array(data, var, tech, **kwargs):
-    subset = {'techs':tech}
+    subset = {'techs': tech}
     if kwargs is not None:
-        subset.update({k:v for k, v in kwargs.items()})
-    unusable_dims = (set(subset.keys())
-                        .difference(["techs", "locs"])
-                        .difference(data[var].dims)
-                    )
+        subset.update({k: v for k, v in kwargs.items()})
+
+    unusable_dims = (
+        set(subset.keys())
+        .difference(["techs", "locs"])
+        .difference(data[var].dims)
+    )
     if unusable_dims:
-        raise exceptions.ModelError("attempting to mask time based on "
-                                    "technology {}, but dimension(s) "
-                                    "{} don't exist for parameter {}".format(
-                                        tech, unusable_dims, var.name))
+        raise exceptions.ModelError(
+            'Attempting to mask time based on  technology {}, '
+            'but dimension(s) {} do not exist for parameter {}'.format(
+                tech, unusable_dims, var.name)
+        )
+
     arr = split_loc_techs(data[var].copy()).loc[subset]
     arr = arr.mean(dim=[i for i in arr.dims if i is not 'timesteps']).to_pandas()
     return arr
@@ -36,10 +40,10 @@ def _get_array(data, var, tech, **kwargs):
 
 def zero(data, tech, var='resource', **kwargs):
     """
-    Returns timesteps where ``var`` for the technology ``tech``
-    across the given list of ``locations`` is zero.
+    Returns timesteps where ``var`` for the technology ``tech`` is zero.
 
-    If ``locations`` not given, uses all available locations.
+    kwargs are additional dimensions to subset on, for example,
+    ``locs=['location1', 'location2]``
 
     """
     s = _get_array(data, var, tech, **kwargs)
@@ -154,7 +158,9 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
 
     """
     if normalize:
-        data_n = funcs.normalized_copy(data)
+        # Only normalise the desired var as rest of data may contain
+        # non-numeric variables!
+        data_n = funcs.normalized_copy(data[var].to_dataset(name=var))
     else:
         data_n = data
     arr0 = _get_array(data_n, var, tech0, **kwargs)

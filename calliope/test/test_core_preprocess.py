@@ -1,5 +1,4 @@
 
-import os
 import calliope
 import pytest  # pylint: disable=unused-import
 
@@ -7,26 +6,8 @@ from calliope.core.attrdict import AttrDict
 import calliope.exceptions as exceptions
 import pandas as pd
 
-
-this_path = os.path.dirname(__file__)
-model_location = os.path.join(this_path, 'common', 'test_model', 'model.yaml')
-override_location = os.path.join(this_path, 'common', 'test_model', 'overrides.yaml')
-
-constraint_sets = AttrDict.from_yaml(os.path.join(this_path, 'common', 'constraint_sets.yaml'))
-
-_defaults_files = {
-    k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
-    for k in ['model', 'defaults']
-}
-defaults = AttrDict.from_yaml(_defaults_files['defaults'])
-defaults_model = AttrDict.from_yaml(_defaults_files['model'])
-
-
-def build_model(override_dict, override_groups):
-    return calliope.Model(
-        model_location, override_dict=override_dict,
-        override_file=override_location + ':' + override_groups
-    )
+from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import constraint_sets, defaults, defaults_model
 
 
 class TestModelRun:
@@ -605,3 +586,9 @@ class TestUtil():
         """
         Contatenators should be one shorter than the length of each iterable
         """
+
+    def test_vincenty(self):
+        # London to Paris: about 344 km
+        coords = [(51.507222, -0.1275), (48.8567, 2.3508)]
+        distance = calliope.core.preprocess.util.vincenty(coords[0], coords[1])
+        assert distance == pytest.approx(343834)  # in meters

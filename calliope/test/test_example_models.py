@@ -7,6 +7,7 @@ import calliope
 
 import pandas as pd
 
+
 class TestModelPreproccesing:
     def test_preprocess_national_scale(self):
         calliope.examples.national_scale()
@@ -47,6 +48,13 @@ def nationalscale_example_tester(solver='glpk', solver_io=None):
     assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
 
     assert float(model.results.cost.sum()) == approx(38997.3544)
+
+    assert float(
+        model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+    ) == approx(0.063543, abs=0.000001)
+    assert float(
+        model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+    ) == approx(0.2642256, abs=0.000001)
 
 
 class TestNationalScaleExampleModelSenseChecks:
@@ -105,6 +113,40 @@ class TestNationalScaleResampledExampleModelSenseChecks:
         # Check for existence of the `cbc` command
         if shutil.which('cbc'):
             nationalscale_resampled_example_tester(solver='cbc')
+        else:
+            pytest.skip('CBC not installed')
+
+
+def nationalscale_clustered_example_tester(solver='glpk', solver_io=None):
+    override = {
+        'model.subset_time': '2005-01-01',
+        'model.solver': solver,
+    }
+
+    if solver_io:
+        override['model.solver_io'] = solver_io
+
+    model = calliope.examples.time_resampling(override_dict=override)
+    model.run()
+
+    # assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(23563.444)
+    # assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6315.78947)
+
+    # assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(1440.8377)
+    # assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
+    # assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
+
+    # assert float(model.results.cost.sum()) == approx(37344.221869)
+
+
+class TestNationalScaleClusteredExampleModelSenseChecks:
+    def test_nationalscale_clustered_example_results_glpk(self):
+        nationalscale_clustered_example_tester()
+
+    def test_nationalscale_clustered_example_results_cbc(self):
+        # Check for existence of the `cbc` command
+        if shutil.which('cbc'):
+            nationalscale_clustered_example_tester(solver='cbc')
         else:
             pytest.skip('CBC not installed')
 

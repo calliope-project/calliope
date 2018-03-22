@@ -28,8 +28,8 @@ def get_loc_techs(loc_techs, tech=None, loc=None):
     Returns
     -------
     relevant_loc_techs : list of strings
-    """
 
+    """
     # If both are strings, there is only one loc:tech possibility to look for
     if (isinstance(tech, str) and isinstance(loc, str)
         and '::'.join([loc, tech]) in loc_techs):

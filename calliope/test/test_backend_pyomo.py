@@ -1,26 +1,13 @@
-import os
-
 import pytest  # pylint: disable=unused-import
 import numpy as np
 import xarray as xr
 import pyomo.core as po
 from pyomo.core.base.expr import identify_variables
 
-import calliope
 from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
 
-
-this_path = os.path.dirname(__file__)
-model_location = os.path.join(this_path, 'common', 'test_model', 'model.yaml')
-override_location = os.path.join(this_path, 'common', 'test_model', 'overrides.yaml')
-
-
-def build_model(override_dict, override_groups):
-    return calliope.Model(
-        model_location, override_dict=override_dict,
-        override_file=override_location + ':' + override_groups
-    )
+from calliope.test.common.util import build_test_model as build_model
 
 
 def check_variable_exists(backend_model, constraint, variable):
