@@ -73,10 +73,10 @@ def group_share_energy_cap_constraint_rule(backend_model, techlist, what):
     model_data_dict = backend_model.__calliope_model_data__['data']
     fraction = model_data_dict['group_share_energy_cap_{}'.format(what)][techlist]
 
-    rhs_loc_techs = backend_model.loc_techs_supply
+    rhs_loc_techs = backend_model.loc_techs_supply | backend_model.loc_techs_supply_plus
     lhs_loc_techs = [
-        i for i in backend_model.loc_techs_supply
-        if i.split('::')[0] in techlist.split(',')
+        i for i in backend_model.loc_techs_supply | backend_model.loc_techs_supply_plus
+        if i.split('::')[1] in techlist.split(',')
     ]
 
     rhs = (fraction * sum(backend_model.energy_cap[loc_tech] for loc_tech in rhs_loc_techs))
@@ -96,7 +96,7 @@ def group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, wh
     ]
     lhs_loc_tech_carriers = [
         i for i in backend_model.loc_tech_carriers_supply_all
-        if i.split('::')[0] in techlist.split(',')
+        if i.split('::')[1] in techlist.split(',')
         and i.split('::')[-1] == carrier
     ]
     rhs = (fraction * sum(
@@ -122,12 +122,12 @@ def reserve_margin_constraint_rule(backend_model, carrier):
         sum(  # Sum all demand for this carrier and timestep
             backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
             for loc_tech_carrier in backend_model.loc_tech_carriers_demand
-            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
+            if loc_tech_carrier.split('::')[-1] == carrier
         ) * -1 * (1 / max_demand_time_res) * (1 + reserve_margin)
         >=
         sum(  # Sum all supply capacity for this carrier
             backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
             for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
-            if loc_tech_carrier.rsplit('::', 1)[1] == carrier
+            if loc_tech_carrier.split('::')[-1] == carrier
         )
     )

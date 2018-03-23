@@ -343,7 +343,7 @@ Using the ``group_share`` constraint
 
 The ``group_share`` constraint can be used to force groups of technologies to fulfill certain shares of supply or capacity.
 
-For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power generation technology, we could force at least 95% of generation to come from these two technologies with the following constraint definition in the ``model`` settings:
+For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power generation technology, we could force at least 85% of power generation in the model to come from these two technologies with the following constraint definition in the ``model`` settings:
 
 .. code-block:: yaml
 
@@ -351,7 +351,7 @@ For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power g
         group_share:
             csp,cold_fusion:
                 carrier_prod_min:
-                    power: 0.95
+                    power: 0.85
 
 Possible ``group_share`` constraints with carrier-specific settings are:
 
@@ -365,16 +365,18 @@ Possible ``group_share`` constraints with carrier-independent settings are:
 * ``energy_cap_max``
 * ``energy_cap_equals``
 
-These can be implemented as, for example, to force at least 50% of ``energy_cap`` to come from the two listed technologies:
+These can be implemented as, for example, to force at most 20% of ``energy_cap`` to come from the two listed technologies:
 
 .. code-block:: yaml
 
     model:
         group_share:
             csp,cold_fusion:
-                energy_cap_min: 0.50
+                energy_cap_max: 0.20
 
-.. seealso:: An example similar to the above is supplied as an override group in the built-in national-scale example's ``overrides.yaml``. See :ref:`documentation on the national-scale example <examplemodels_nationalscale_settings>`.
+.. Note:: The share given in the ``carrier_prod`` constraints refer to the use of generation from ``supply`` and ``supply_plus`` technologies only. The share given in the ``energy_cap`` constraints refers to the combined capacity from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus`` technologies.
+
+.. seealso:: The above examples are supplied override groups in the :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``overrides.yaml`` (``cold_fusion`` to define that tech, and ``group_share_cold_fusion_prod`` or ``group_share_cold_fusion_cap`` to apply the group share constraints).
 
 .. _removing_techs_locations:
 
