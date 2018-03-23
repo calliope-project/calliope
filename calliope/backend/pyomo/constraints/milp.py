@@ -414,8 +414,7 @@ def energy_capacity_min_purchase_constraint_rule(backend_model, loc_tech):
 
 def storage_capacity_max_purchase_constraint_rule(backend_model, loc_tech):
     """
-    Set maximum storage capacity, by either storage_cap_max.equals or a combination
-    of energy_cap_max/equals and charge_rate.
+    Set maximum storage capacity.
 
     The first valid case is applied:
 
@@ -427,48 +426,26 @@ def storage_capacity_max_purchase_constraint_rule(backend_model, loc_tech):
             \\begin{cases}
                 = storage_{cap, equals}(loc::tech) \\times \\boldsymbol{purchased},&
                     \\text{if } storage_{cap, equals} \\\\
-                = \\frac{energy_{cap, equals}(loc::tech)}{charge\_rate} \\times
-                    \\boldsymbol{purchased} \\times energy_{cap, scale},&
-                    \\text{if } energy_{cap, equals}(loc::tech) \\text{ and }
-                    \\text{ and } charge_{rate}(loc::tech)\\\\
                 \\leq storage_{cap, max}(loc::tech) \\times \\boldsymbol{purchased},&
                     \\text{if } storage_{cap, max}(loc::tech)\\\\
-                \\leq \\frac{energy_{cap, max}(loc::tech)}{charge\_rate}
-                    \\times \\boldsymbol{purchased} \\times energy_{cap, scale},&
-                    \\text{if } energy_{cap, max}(loc::tech) \\text{ and }
-                    charge_{rate}(loc::tech)\\\\
                 \\text{unconstrained},& \\text{otherwise}
             \\end{cases}
             \\forall loc::tech \\in loc::techs_{purchase, store}
 
     """
-    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
-    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
-    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
     storage_cap_max = get_param(backend_model, 'storage_cap_max', loc_tech)
     storage_cap_equals = get_param(backend_model, 'storage_cap_equals', loc_tech)
-    charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
 
     if po.value(storage_cap_equals):
         return backend_model.storage_cap[loc_tech] == (
             storage_cap_equals * backend_model.purchased[loc_tech]
         )
 
-    elif po.value(energy_cap_equals) and po.value(charge_rate):
-        return backend_model.storage_cap[loc_tech] == (
-            (energy_cap_equals / charge_rate) * energy_cap_scale
-            * backend_model.purchased[loc_tech]
-        )
     elif po.value(storage_cap_max):
         return backend_model.storage_cap[loc_tech] <= (
             storage_cap_max * backend_model.purchased[loc_tech]
         )
 
-    elif po.value(energy_cap_max) and po.value(charge_rate):
-        return backend_model.storage_cap[loc_tech] <= (
-            (energy_cap_max / charge_rate) * energy_cap_scale
-            * backend_model.purchased[loc_tech]
-        )
     else:
         return po.Constraint.Skip
 
@@ -489,17 +466,12 @@ def storage_capacity_min_purchase_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{purchase, store}
     """
     storage_cap_min = get_param(backend_model, 'storage_cap_min', loc_tech)
-    energy_cap_min = get_param(backend_model, 'storage_cap_min', loc_tech)
-    charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
 
     if po.value(storage_cap_min):
         return backend_model.storage_cap[loc_tech] >= (
             storage_cap_min * backend_model.purchased[loc_tech]
         )
-    elif po.value(energy_cap_min) and po.value(charge_rate):
-        return backend_model.storage_cap[loc_tech] >= (
-            energy_cap_min * charge_rate * backend_model.purchased[loc_tech]
-        )
+
     else:
         return po.Constraint.Skip
 

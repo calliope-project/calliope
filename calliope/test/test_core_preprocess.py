@@ -5,9 +5,11 @@ import pytest  # pylint: disable=unused-import
 from calliope.core.attrdict import AttrDict
 import calliope.exceptions as exceptions
 import pandas as pd
+import numpy as np
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import constraint_sets, defaults, defaults_model
+from calliope.test.common.util import \
+    constraint_sets, defaults, defaults_model, check_error_or_warning
 
 
 class TestModelRun:
@@ -407,36 +409,7 @@ class TestChecks:
             'lookup_remotes were empty, so have been deleted' in all_warnings
         )
 
-    def test_allowed_time_varying_constraints_supply(self):
-        """
-        `file=` is only allowed on a hardcoded list of constraints, unless
-        `_time_varying` is appended to the constraint (i.e. user input)
-        """
-
-        allowed_constraints_no_file = list(
-            set(defaults_model.tech_groups.supply.allowed_constraints)
-            .difference(defaults.file_allowed)
-        )
-
-        allowed_constraints_file = list(
-            set(defaults_model.tech_groups.supply.allowed_constraints)
-            .intersection(defaults.file_allowed)
-        )
-
-        override = lambda param: AttrDict.from_yaml_string(
-            "techs.test_supply_elec.constraints.{}: file=binary_one_day.csv".format(param)
-        )
-
-        # should fail: Cannot have `file=` on the following constraints
-        for param in allowed_constraints_no_file:
-            with pytest.raises(exceptions.ModelError):
-                build_model(override_dict=override(param), override_groups='simple_supply,one_day')
-
-        # should pass: can have `file=` on the following constraints
-        for param in allowed_constraints_file:
-            build_model(override_dict=override(param), override_groups='simple_supply,one_day')
-
-    def test_allowed_time_varying_constraints_storage(self):
+    def test_allowed_time_varying_constraints(self):
         """
         `file=` is only allowed on a hardcoded list of constraints, unless
         `_time_varying` is appended to the constraint (i.e. user input)
@@ -458,8 +431,12 @@ class TestChecks:
 
         # should fail: Cannot have `file=` on the following constraints
         for param in allowed_constraints_no_file:
-            with pytest.raises(exceptions.ModelError):
+            with pytest.raises(exceptions.ModelError) as errors:
                 build_model(override_dict=override(param), override_groups='simple_storage,one_day')
+            assert check_error_or_warning(
+                errors,
+                'Cannot load `{}` from file for configuration'.format(param)
+            )
 
         # should pass: can have `file=` on the following constraints
         for param in allowed_constraints_file:
@@ -517,6 +494,26 @@ class TestChecks:
 
         build_model(override_dict=override2, override_groups='simple_supply,one_day')
 
+    def test_force_resource_ignored(self):
+        """
+        If a technology is defines force_resource but is not in loc_techs_finite_resource
+        it will have no effect
+        """
+
+        override = {
+            'techs.test_supply_elec.constraints.resource': np.inf,
+            'techs.test_supply_elec.constraints.force_resource': True,
+        }
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            '`test_supply_elec` at `0` defines force_resource but not a finite resource'
+        )
+
+
 
 class TestDataset:
 
@@ -565,15 +562,69 @@ class TestDataset:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, override_groups='simple_storage,one_day')
 
+    # FIXME: What are the *required* arrays?
     def test_missing_array(self):
         """
         Check that the dataset includes all arrays *required* for a model to function
         """
-
+    # FIXME: What are the *required* attributes?
     def test_missing_attrs(self):
         """
         Check that the dataset includes all attributes *required* for a model to function
         """
+
+    def test_force_infinite_resource(self):
+        """
+        Ensure that no loc-tech specifies infinite resource and force_resource=True
+        """
+
+        override = {
+            'techs.test_supply_plus.constraints.resource': 'file=supply_plus_resource_inf.csv',
+            'techs.test_supply_plus.constraints.force_resource': True,
+        }
+
+        with pytest.raises(exceptions.ModelError) as error_info:
+            build_model(override_dict=override, override_groups='simple_supply_plus,one_day')
+
+        assert check_error_or_warning(error_info, 'Ensure all entries are numeric')
+
+    def test_positive_demand(self):
+        """
+        Resource for demand must be negative
+        """
+
+        override = {
+            'techs.test_demand_elec.constraints.resource': 'file=demand_elec_positive.csv',
+        }
+
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override, override_groups='simple_supply,one_day')
+
+    def test_empty_dimensions(self):
+        """
+        Empty dimensions lead Pyomo to blow up (building sets with no data),
+        so check that we have successfully removed them here.
+        """
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_groups='simple_conversion_plus,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            'dimension loc_techs_transmission and associated variables distance, '
+            'lookup_remotes were empty, so have been deleted'
+        )
+
+    def check_operate_mode_allowed(self):
+        """
+        On masking times, operate mode will no longer be allowed
+        """
+
+        model = build_model(override_groups='simple_supply,one_day')
+        assert model.model_data.attrs['allow_operate_mode'] == 1
+
+        model1 = calliope.examples.time_masking()
+        assert model1.model_data.attrs['allow_operate_mode'] == 0
 
 
 class TestUtil():

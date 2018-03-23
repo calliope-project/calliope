@@ -8,6 +8,7 @@ from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
 
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 
 def check_variable_exists(backend_model, constraint, variable):
@@ -30,10 +31,10 @@ def check_variable_exists(backend_model, constraint, variable):
 def check_standard_warning(info, warning):
 
     if warning == 'transmission':
-        all_warnings = ','.join(str(info.list[i]) for i in range(len(info.list)))
-        return (
+        return check_error_or_warning(
+            info,
             'dimension loc_techs_transmission and associated variables distance, '
-            'lookup_remotes were empty, so have been deleted' in all_warnings
+            'lookup_remotes were empty, so have been deleted'
         )
 
 
@@ -166,9 +167,10 @@ class TestInterface:
         assert isinstance(returned_dataset, xr.Dataset)
 
         # should fail if the run mode is not 'plan'
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(exceptions.ModelError) as error:
             m._model_data.attrs['run.mode'] = 'operate'
             m.backend.rerun()
+        assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
 
 
 class TestConstraints:
@@ -405,6 +407,14 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'storage_capacity_constraint')
 
+        m = build_model(
+            {'techs.test_storage.constraints.storage_cap_equals': 20},
+            'simple_storage,two_hours'
+        )
+        m.run(build_only=True)
+        assert m._backend_model.storage_capacity_constraint['0::test_storage'].upper() == 20
+        assert m._backend_model.storage_capacity_constraint['0::test_storage'].lower() == 20
+
     def test_loc_techs_energy_capacity_storage_constraint(self):
         """
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.charge_rate')
@@ -416,6 +426,14 @@ class TestConstraints:
         m = build_model({}, 'simple_supply_and_supply_plus,two_hours')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+
+        # constraint should exist in the MILP case too
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            m = build_model({}, 'supply_and_supply_plus_milp,two_hours')
+            m.run(build_only=True)
+            assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+
+        assert check_standard_warning(excinfo, 'transmission')
 
     def test_loc_techs_resource_capacity_constraint(self):
         """
@@ -494,6 +512,14 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'resource_area_constraint')
 
+        # Check that setting energy_cap_max to 0 also forces this constraint to 0
+        m = build_model(
+            {'techs.test_supply_plus.constraints': {'resource_area_max': 10, 'energy_cap_max': 0}},
+            'simple_supply_and_supply_plus,two_hours'
+        )
+        m.run(build_only=True)
+        assert m._backend_model.resource_area_constraint['0::test_supply_plus'].upper() == 0
+
     def test_loc_techs_resource_area_per_energy_capacity_constraint(self):
         """
         i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
@@ -555,6 +581,16 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_constraint')
 
+        m2 = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_scale': 5},
+            'simple_supply_and_supply_plus,two_hours'
+        )
+        m2.run(build_only=True)
+        assert (
+            m2._backend_model.energy_capacity_constraint['0::test_supply_elec'].upper() ==
+            m._backend_model.energy_capacity_constraint['0::test_supply_elec'].upper() * 5
+        )
+
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             m = build_model({}, 'supply_milp,two_hours')  # demand still is in loc_techs
             m.run(build_only=True)
@@ -562,6 +598,16 @@ class TestConstraints:
 
             # Ensure warnings were raised
             assert check_standard_warning(excinfo, 'transmission')
+        # Check that setting `_equals` to infinity is caught:
+        override = {'locations.0.techs.test_supply_elec.constraints.energy_cap_equals': np.inf}
+        with pytest.raises(exceptions.ModelError) as error:
+            m = build_model(override, 'simple_supply,two_hours')
+            m.run(build_only=True)
+
+        assert check_error_or_warning(
+            error,
+            'Cannot use inf for energy_cap_equals for loc:tech `0::test_supply_elec`'
+        )
 
     def test_techs_energy_capacity_systemwide_constraint(self):
         """
@@ -578,16 +624,42 @@ class TestConstraints:
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
+        assert (
+            'test_supply_elec' in
+            m._backend_model.energy_capacity_systemwide_constraint.keys()
+        )
+
+        # setting the constraint to infinity leads to Pyomo creating NoConstraint
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_max_systemwide': np.inf},
+            'simple_supply,two_hours'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
+        assert (
+            'test_supply_elec' not in
+            m._backend_model.energy_capacity_systemwide_constraint.keys()
+        )
+
+        # Check that setting `_equals` to infinity is caught:
+        with pytest.raises(exceptions.ModelError) as error:
+            m = build_model(
+                {'techs.test_supply_elec.constraints.energy_cap_equals_systemwide': np.inf},
+                'simple_supply,two_hours'
+            )
+            m.run(build_only=True)
+
+        assert check_error_or_warning(
+            error,
+            'Cannot use inf for energy_cap_equals_systemwide for tech `test_supply_elec`'
+        )
 
         m = build_model(
             {'techs.test_supply_elec.constraints.energy_cap_equals_systemwide': 20},
             'simple_supply,two_hours'
         )
-        m.run()
+        m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
-        assert (
-            m.get_formatted_array('energy_cap').loc[{'techs': 'test_supply_elec'}].sum() == 20
-        )
 
     # dispatch.py
     def test_loc_tech_carriers_carrier_production_max_constraint(self):

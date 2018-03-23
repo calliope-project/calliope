@@ -15,6 +15,7 @@ import os
 import itertools
 
 import pandas as pd
+import numpy as np
 
 import calliope
 from calliope import exceptions
@@ -314,8 +315,10 @@ def process_techs(config_model):
                     tech_result.essentials.carrier_out = \
                         tech_result.essentials.carrier
                 except KeyError:
-                    errors.append('`carrier` or `carrier_out` must be '
-                        'defined for {}'.format(tech_id))
+                    errors.append(
+                        '`carrier` or `carrier_out` must be '
+                        'defined for {}'.format(tech_id)
+                    )
             else:
                 errors.append(
                     '`carrier_out` must be defined for {}'.format(tech_id)
@@ -346,10 +349,14 @@ def process_tech_groups(config_model, techs):
 
 
 def process_timeseries_data(config_model, model_run):
+
     if config_model.model.timeseries_data is None:
         timeseries_data = AttrDict()
     else:
         timeseries_data = config_model.model.timeseries_data
+
+    def _parser(x, format):
+        return pd.to_datetime(x, format=format, exact=False)
 
     if 'timeseries_data_path' in config_model.model:
         dtformat = config_model.model['timeseries_dateformat']
@@ -363,16 +370,23 @@ def process_timeseries_data(config_model, model_run):
 
         for file in csv_files:
             file_path = os.path.join(config_model.model.timeseries_data_path, file)
-            parser = lambda x: datetime.datetime.strptime(x, dtformat)
+            # load the data, without parsing the dates, to catch errors in the data
+            df = pd.read_csv(file_path, index_col=0)
             try:
-                df = pd.read_csv(
-                    file_path, index_col=0, parse_dates=True, date_parser=parser
-                )
+                df.apply(pd.to_numeric)
             except ValueError as e:
                 raise exceptions.ModelError(
-                    "Incorrect datetime format used in {}, expecting "
-                    "`{}`, got `{}` instead"
-                    "".format(file, dtformat, e.args[0].split("'")[1]))
+                    'Error in loading data from {}. Ensure all entries are '
+                    'numeric. Full error: {}'.format(file, e)
+                )
+            # Now parse the dates, checking for errors specific to this
+            try:
+                df.index = _parser(df.index, dtformat)
+            except ValueError as e:
+                raise exceptions.ModelError(
+                    'Error in parsing dates in timeseries data from {}, '
+                    'using datetime format `{}`: {}'.format(file, dtformat, e)
+                )
             timeseries_data[file] = df
 
         datetime_range = df.index
@@ -380,19 +394,36 @@ def process_timeseries_data(config_model, model_run):
     # Apply time subsetting, if supplied in model_run
     subset_time_config = config_model.model.subset_time
     if subset_time_config is not None:
-        if isinstance(subset_time_config, list):
-            if len(subset_time_config) == 2:
-                time_slice = slice(subset_time_config[0], subset_time_config[1])
-                if pd.to_datetime(subset_time_config[0]).date() < datetime_range[0].date() or pd.to_datetime(subset_time_config[1]).date() > datetime_range[-1].date():
-                    raise exceptions.ModelError(
-                        'subset time range {} is outside the input data time range [{}, {}]'.format(subset_time_config, datetime_range[0].strftime('%Y-%m-%d'), datetime_range[-1].strftime('%Y-%m-%d'))
-                    )
-            else:
+        # Test parsing dates first, to make sure they fit our required subset format
+
+        try:
+            subset_time = _parser(subset_time_config, '%Y-%m-%d %H:%M:%S')
+        except ValueError as e:
+            raise exceptions.ModelError(
+                'Timeseries subset must be in ISO format (anything up to the  '
+                'detail of `%Y-%m-%d %H:%M:%S`.\n User time subset: {}\n '
+                'Error caused: {}'.format(subset_time_config, e)
+            )
+        if isinstance(subset_time_config, list) and len(subset_time_config) == 2:
+            time_slice = slice(subset_time_config[0], subset_time_config[1])
+
+            # Don't allow slicing outside the range of input data
+            if (subset_time[0].date() < datetime_range[0].date() or
+                subset_time[1].date() > datetime_range[-1].date()):
+
                 raise exceptions.ModelError(
-                    'Invalid subset_time value: {}'.format(subset_time_config)
+                    'subset time range {} is outside the input data time range '
+                    '[{}, {}]'.format(subset_time_config,
+                                      datetime_range[0].strftime('%Y-%m-%d'),
+                                      datetime_range[-1].strftime('%Y-%m-%d'))
                 )
+        elif isinstance(subset_time_config, list):
+            raise exceptions.ModelError(
+                'Invalid subset_time value: {}'.format(subset_time_config)
+            )
         else:
             time_slice = str(subset_time_config)
+
         for k in timeseries_data.keys():
             timeseries_data[k] = timeseries_data[k].loc[time_slice, :]
             if timeseries_data[k].empty:
@@ -406,8 +437,10 @@ def process_timeseries_data(config_model, model_run):
     first_file, first_index = indices[0]
     for file, idx in indices[1:]:
         if not first_index.equals(idx):
-            raise exceptions.ModelError('Time series indices do not match '
-                'between {} and {}'.format(first_file, file))
+            raise exceptions.ModelError(
+                'Time series indices do not match '
+                'between {} and {}'.format(first_file, file)
+            )
 
     return timeseries_data
 

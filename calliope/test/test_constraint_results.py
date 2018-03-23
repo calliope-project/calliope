@@ -2,7 +2,7 @@ import pytest
 from pytest import approx
 
 import calliope
-
+from calliope.test.common.util import build_test_model as build_model
 
 _OVERRIDE_FILE = calliope.examples._PATHS['national_scale'] + '/overrides.yaml'
 
@@ -39,3 +39,13 @@ class TestNationalScaleExampleModelSenseChecks:
         )
 
         assert cap_share == approx(0.2)
+
+    def test_systemwide_equals(self):
+        model = calliope.examples.national_scale(
+            override_dict={'techs.ccgt.constraints.energy_cap_max_systemwide': 10000}
+        )
+        model.run()
+        # Check that setting `_equals` to a finite value leads to forcing
+        assert (
+            model.get_formatted_array('energy_cap').loc[{'techs': 'ccgt'}].sum() == 10000
+        )

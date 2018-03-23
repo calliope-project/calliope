@@ -85,14 +85,12 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
         _max = get_param(backend_model, parameter + '_max', loc_tech)
     if not _min:
         _min = get_param(backend_model, parameter + '_min', loc_tech)
-    if scale:
-        _equals = scale * _equals
-        _min = scale * _min
-        _max = scale * _max
     if po.value(_equals) is not False and po.value(_equals) is not None:
         if np.isinf(po.value(_equals)):
             e = exceptions.ModelError
             raise e('Cannot use inf for {}_equals for loc:tech `{}`'.format(parameter, loc_tech))
+        if scale:
+            _equals *= scale
         return decision_variable[loc_tech] == _equals
     else:
         if np.isinf(po.value(_max)):
@@ -100,17 +98,15 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
         if po.value(_min) == 0 and po.value(_max) is None:
             return po.Constraint.NoConstraint
         else:
+            if scale:
+                _max *= scale
+                _min *= scale
             return (_min, decision_variable[loc_tech], _max)
 
 
 def storage_capacity_constraint_rule(backend_model, loc_tech):
     """
     Set maximum storage capacity. Supply_plus & storage techs only
-    This can be set by either storage_cap (kWh) or by
-    energy_cap (charge/discharge capacity) * charge rate.
-    If storage_cap.equals and energy_cap.equals are set for the technology, then
-    storage_cap * charge rate = energy_cap must hold. Otherwise, take the lowest capacity
-    capacity defined by storage_cap.max or energy_cap.max / charge rate.
 
     The first valid case is applied:
 
@@ -121,11 +117,7 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
             \\boldsymbol{storage_{cap}}(loc::tech)
             \\begin{cases}
                 = storage_{cap, equals}(loc::tech),& \\text{if } storage_{cap, equals}(loc::tech)\\\\
-                = energy_{cap, equals}(loc::tech) \\times charge\_rate,&
-                    \\text{if } energy_{cap, equals}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
                 \\leq storage_{cap, max}(loc::tech),& \\text{if } storage_{cap, max}(loc::tech)\\\\
-                \\leq energy_{cap, max}(loc::tech) \\times charge\_rate,&
-                    \\text{if } energy_{cap, max}(loc::tech) \\text{ and } charge_{rate}(loc::tech)\\\\
                 \\text{unconstrained},& \\text{otherwise}
             \\end{cases}
             \\forall loc::tech \\in loc::techs_{store}
@@ -141,34 +133,7 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
 
     """
 
-    storage_cap_equals = get_param(backend_model, 'storage_cap_equals', loc_tech)
-    scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
-    energy_cap_equals = (scale * get_param(backend_model, 'energy_cap_equals', loc_tech))
-
-    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
-    storage_cap_max = get_param(backend_model, 'storage_cap_max', loc_tech)
-
-    charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
-
-    # FIXME: working out storage_cap_max or storage_cap_equals from e_cap_max/_equals
-    # should be done in preprocessing, not here.
-
-    if po.value(storage_cap_equals):
-        return get_capacity_constraint(backend_model, 'storage_cap',
-                                        loc_tech, _equals=storage_cap_equals)
-    elif po.value(energy_cap_equals) and po.value(charge_rate):
-        storage_cap_equals = energy_cap_equals * scale / charge_rate
-        return get_capacity_constraint(backend_model, 'storage_cap',
-                                        loc_tech, _equals=storage_cap_equals)
-    elif po.value(storage_cap_max):
-        return get_capacity_constraint(backend_model, 'storage_cap',
-                                        loc_tech, _max=storage_cap_max)
-    elif po.value(energy_cap_max) and po.value(charge_rate):
-        storage_cap_max = energy_cap_max * scale / charge_rate
-        return get_capacity_constraint(backend_model, 'storage_cap',
-                                        loc_tech, _max=storage_cap_max)
-    else:
-        po.Constraint.NoConstraint
+    return get_capacity_constraint(backend_model, 'storage_cap', loc_tech)
 
 
 def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
@@ -180,16 +145,15 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
 
         .. math::
 
-            \\boldsymbol{energy_{cap}}(loc::tech) \\leq \\boldsymbol{storage_{cap}}(loc::tech)
-            \\times charge\_rate(loc::tech) \\times energy_{cap, scale}(loc::tech)
+            \\boldsymbol{energy_{cap}}(loc::tech)
+            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times charge\_rate(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
-    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
     charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
 
     return backend_model.energy_cap[loc_tech] <= (
-        backend_model.storage_cap[loc_tech] * charge_rate * energy_cap_scale
+        backend_model.storage_cap[loc_tech] * charge_rate
     )
 
 
@@ -348,7 +312,8 @@ def energy_capacity_constraint_rule(backend_model, loc_tech):
             \\geq energy_{cap, min}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs
     """
-    return get_capacity_constraint(backend_model, 'energy_cap', loc_tech)
+    scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
+    return get_capacity_constraint(backend_model, 'energy_cap', loc_tech, scale=scale)
 
 
 def energy_capacity_systemwide_constraint_rule(backend_model, tech):
@@ -379,10 +344,13 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
 
     max_systemwide = get_param(backend_model, 'energy_cap_max_systemwide', tech)
     equals_systemwide = get_param(backend_model, 'energy_cap_equals_systemwide', tech)
-    # FIXME: changed in 0.6.0: changed name to _systemwide
 
     if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
         return po.Constraint.NoConstraint
+    elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
+        raise exceptions.ModelError(
+            'Cannot use inf for energy_cap_equals_systemwide for tech `{}`'.format(tech)
+        )
 
     sum_expr = sum(backend_model.energy_cap[loc_tech] for loc_tech in all_loc_techs)
     total_expr = equals_systemwide if equals_systemwide else max_systemwide

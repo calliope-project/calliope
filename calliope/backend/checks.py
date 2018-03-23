@@ -115,15 +115,13 @@ def check_operate_params(model_data):
                     'Resource capacity constraint defined and set to infinity '
                     'for all supply_plus techs'
                 )
-        # FIXME: remove?
-        # Cannot have storage capacity be less than energy capacity * charge rate
+
         if is_in(loc_tech, 'loc_techs_store'):
             if is_in(loc_tech, 'charge_rate'):
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()
-                energy_cap_scale = get_param(loc_tech, 'energy_cap_scale')
                 if storage_cap and energy_cap:
                     charge_rate = model_data['charge_rate'].loc[loc_tech]
-                    if storage_cap * charge_rate < energy_cap * energy_cap_scale:
+                    if storage_cap * charge_rate < energy_cap:
                         errors.append(
                             'fixed storage capacity * charge rate is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)

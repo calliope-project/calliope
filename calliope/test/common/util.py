@@ -27,3 +27,12 @@ def build_test_model(override_dict=None, override_groups=None):
         model_location, override_dict=override_dict,
         override_file=override_file
     )
+
+
+def check_error_or_warning(error_warning, test_string):
+    if hasattr(error_warning, 'list'):
+        output = ','.join(str(error_warning.list[i]) for i in range(len(error_warning.list)))
+    else:
+        output = str(error_warning.value)
+
+    return test_string in output

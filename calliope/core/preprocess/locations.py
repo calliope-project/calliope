@@ -56,9 +56,9 @@ def process_locations(model_config, modelrun_techs):
         if ('--' in key) or (',' in key):
             key_locs = explode_locations(key)
             for subkey in key_locs:
-                _set_loc_key(locations, subkey, locations_in[key].copy())
+                _set_loc_key(locations, subkey, locations_in[key])
         else:
-            _set_loc_key(locations, key, locations_in[key].copy())
+            _set_loc_key(locations, key, locations_in[key])
 
     ##
     # Kill any locations that the modeller does not want to exist
@@ -281,13 +281,15 @@ def explode_locations(k):
 
 def _set_loc_key(d, k, value):
     """Set key ``k`` in ``d`` to ``value```."""
+    if not value:
+        return None
     if k in d:
         try:
-            d[k].union(value)
+            d[k].union(value.copy())
         except KeyError as e:
             raise KeyError('Problem at location {}: {}'.format(k, str(e)))
     else:
-        d[k] = value
+        d[k] = value.copy()
 
 
 def cleanup_undesired_keys(tech_settings):
