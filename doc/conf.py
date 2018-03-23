@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath('helpers'))
 from sphinx.builders.html import StandaloneHTMLBuilder, SingleFileHTMLBuilder
 
 import generate_tables  # from helpers
-import convert_images  # from helpers
+# import convert_images  # from helpers
 
 __version__ = None
 # Sets the __version__ variable
