@@ -71,13 +71,21 @@ def equalizer(lhs, rhs, sign):
 
 def group_share_energy_cap_constraint_rule(backend_model, techlist, what):
     model_data_dict = backend_model.__calliope_model_data__['data']
+    sets = backend_model.__calliope_model_data__['sets']
     fraction = model_data_dict['group_share_energy_cap_{}'.format(what)][techlist]
 
-    rhs_loc_techs = backend_model.loc_techs_supply | backend_model.loc_techs_supply_plus
-    lhs_loc_techs = [
-        i for i in backend_model.loc_techs_supply | backend_model.loc_techs_supply_plus
-        if i.split('::')[1] in techlist.split(',')
-    ]
+    if 'loc_techs_supply_plus' in sets:
+        rhs_loc_techs = backend_model.loc_techs_supply | backend_model.loc_techs_supply_plus
+        lhs_loc_techs = [
+            i for i in backend_model.loc_techs_supply | backend_model.loc_techs_supply_plus
+            if i.split('::')[1] in techlist.split(',')
+        ]
+    else:
+        rhs_loc_techs = backend_model.loc_techs_supply
+        lhs_loc_techs = [
+            i for i in backend_model.loc_techs_supply
+            if i.split('::')[1] in techlist.split(',')
+        ]
 
     rhs = (fraction * sum(backend_model.energy_cap[loc_tech] for loc_tech in rhs_loc_techs))
     lhs = sum(backend_model.energy_cap[loc_tech] for loc_tech in lhs_loc_techs)
