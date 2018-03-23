@@ -65,3 +65,13 @@ operate:
         X1,N1.techs.heat_pipes.constraints.energy_cap_max: 300
         N1,X2.techs.heat_pipes.constraints.energy_cap_max: 250
         N1,X3.techs.heat_pipes.constraints.energy_cap_max: 320
+
+time_masking:
+    model.name: 'Urban-scale example model with time masking'
+    model.subset_time: '2005-01'
+    # Resample time resolution to 6-hourly
+    model.time:
+        masks:
+            - {function: extreme_diff, options: {tech0: demand_heat, tech1: demand_electricity, how: max, n: 2}}
+        function: resample
+        function_options: {resolution: 6H}

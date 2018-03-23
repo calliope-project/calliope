@@ -106,9 +106,11 @@ def extreme(data, tech, var='resource', how='max',
     groupby_length : str, optional
         Group time series and return `n` periods of `length`
         for each group.
-    padding : int, optional
-        Pad beginning and end of the unmasked area by the number of
-        timesteps given.
+    padding : str, optional
+        Either Pandas frequency (e.g. '1D') or 'calendar_week'.
+        If Pandas frequency, symmetric padding is undertaken, either side of `length`
+        If 'calendar_week', padding is fit to the calendar week in which the
+        extreme day(s) are found.
     normalize : bool, optional
         If True (default), data is normalized
         using :func:`~calliope.core.time.funcs.normalized_copy`.
@@ -126,15 +128,17 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
                  length='1D', n=1, groupby_length=None,
                  padding=None, normalize=True, **kwargs):
     """
-    Returns timesteps for period of ``length`` where ``var`` for the technology
-    ``tech`` across the given list of ``locations`` has the highest difference
-    between minimum and maximum.
+    Returns timesteps for period of ``length`` where the diffence in extreme
+    value for ``var`` between technologies ``tech0`` and ``tech1`` is either a
+    minimum or a maximum.
 
     Parameters
     ----------
     data : xarray.Dataset
-    tech : str
-        Technology whose `var` to find extreme for.
+    tech0 : str
+        First technology for which we find the extreme of `var`
+    tech1 : str
+        Second technology for which we find the extreme of `var`
     var : str, optional
         default 'resource'
     how : str, optional
@@ -146,9 +150,11 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
     groupby_length : str, optional
         Group time series and return `n` periods of `length`
         for each group.
-    padding : int, optional
-        Pad beginning and end of the unmasked area by the number of
-        timesteps given.
+    padding : str, optional
+        Either Pandas frequency (e.g. '1D') or 'calendar_week'.
+        If Pandas frequency, symmetric padding is undertaken, either side of `length`
+        If 'calendar_week', padding is fit to the calendar week in which the
+        extreme day(s) are found.
     normalize : bool, optional
         If True (default), data is normalized
         using :func:`~calliope.core.time.funcs.normalized_copy`.
