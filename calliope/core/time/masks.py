@@ -120,8 +120,7 @@ def extreme(data, tech, var='resource', how='max',
 
     """
     arr = _get_array(data, var, tech, **kwargs)
-
-    return _extreme(arr, how, length, n, groupby_length, padding)
+    return _extreme_with_padding(arr, how, length, n, groupby_length, padding)
 
 
 def extreme_diff(data, tech0, tech1, var='resource', how='max',
@@ -173,7 +172,7 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
     arr1 = _get_array(data_n, var, tech1, **kwargs)
     arr = arr0 - arr1
 
-    return _extreme(arr, how, length, n, groupby_length, padding)
+    return _extreme_with_padding(arr, how, length, n, groupby_length, padding)
 
 
 def _extreme(arr, how='max',
@@ -194,16 +193,35 @@ def _extreme(arr, how='max',
     return ts_index
 
 
-_WEEK_DAY_FUNCS = {
-    'extreme': extreme,
-    'extreme_diff': extreme_diff
-}
+def _extreme_with_padding(arr, how, length, n, groupby_length, padding):
+    if padding == 'calendar_week':
+        if n != 1 or length != '1D':
+            raise ValueError(
+                'calendar_week padding only supports n=1 and length=1D for now.'
+            )
+        result = _extreme(arr, how, length, n, groupby_length, padding=None)
+        # get week padding for each day in result
+        days = list(result.groupby(result.dayofyear).values())
+        weeks = pd.DatetimeIndex(days[0])
+        for d in days:
+            weeks = weeks.union(_calendar_week_padding(d))
+        # concatenate the weeks into one index and drop possible duplicates
+        return pd.DatetimeIndex(weeks).drop_duplicates()
+    else:
+        return _extreme(arr, how, length, n, groupby_length, padding)
 
 
-def week(data, day_func, **day_func_kwargs):
-    # Get extreme day time index
-    func = _WEEK_DAY_FUNCS[day_func]
-    day = func(data, **day_func_kwargs)
+def _calendar_week_padding(day):
+    """
+    Given a day, returns the whole calendar week which contains that day
+
+    """
+    days = len(day.day.unique())
+    if not days == 1:
+        raise ValueError(
+            'Only a single day at a time may be used for calendar_week padding, '
+            'but {} days were passed.'.format(days)
+        )
 
     # Using day of week, figure out how many days before and after to get
     # a complete week

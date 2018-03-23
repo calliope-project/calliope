@@ -137,26 +137,22 @@ class TestMasks:
 
         assert dtindex.equals(mask)
 
-    def test_week(self, model_national):
+    def test_extreme_week_1d(self, model_national):
         data = model_national._model_data_original.copy()
-        mask = masks.week(
-            data, 'extreme',
-            tech='csp', var='resource', how='max',
-            length='2D', n=1,
+        mask = masks.extreme(
+            data, 'csp', var='resource', how='max',
+            length='1D', n=1, padding='calendar_week'
         )
 
-        dtindex_start = pd.DatetimeIndex([
-            '2005-01-15 00:00:00', '2005-01-15 01:00:00',
-            '2005-01-15 02:00:00', '2005-01-15 03:00:00',
-            '2005-01-15 04:00:00', '2005-01-15 05:00:00',
-            '2005-01-15 06:00:00', '2005-01-15 07:00:00',
-            '2005-01-15 08:00:00', '2005-01-15 09:00:00'])
-        dtindex_end = pd.DatetimeIndex([
-            '2005-01-22 14:00:00', '2005-01-22 15:00:00',
-            '2005-01-22 16:00:00', '2005-01-22 17:00:00',
-            '2005-01-22 18:00:00', '2005-01-22 19:00:00',
-            '2005-01-22 20:00:00', '2005-01-22 21:00:00',
-            '2005-01-22 22:00:00', '2005-01-22 23:00:00'])
+        found_days = list(mask.dayofyear.unique())
+        days = [18, 19, 20, 21, 22, 23, 24]
 
-        assert dtindex_start.equals(mask[:10])
-        assert dtindex_end.equals(mask[-10:])
+        assert days == found_days
+
+    def test_extreme_week_2d(self, model_national):
+        data = model_national._model_data_original.copy()
+        with pytest.raises(ValueError):
+            mask = masks.extreme(
+                data, 'csp', var='resource', how='max',
+                length='2D', n=1, padding='calendar_week'
+            )
