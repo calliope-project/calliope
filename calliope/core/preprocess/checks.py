@@ -133,6 +133,10 @@ def check_initial(config_model):
 
 
 def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comments):
+    """
+    Checks individual tech/tech groups at specific locations.
+    NOTE: Updates `warnings` and `errors` lists in-place.
+    """
     if tech_id not in model_run.techs:
         warnings.append(
             'Tech {} was removed by setting ``exists: False`` - not checking '
@@ -219,7 +223,8 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
     if 'export_carrier' in tech_config.constraints:
         essentials = model_run.techs[tech_id].essentials
         export = tech_config.constraints.export_carrier
-        if export and export not in [essentials.get_key(k, '') for k in ['carrier_out', 'carrier_out_2', 'carrier_out_3']]:
+        if (export and export not in [essentials.get_key(k, '')
+                for k in ['carrier_out', 'carrier_out_2', 'carrier_out_3']]):
             errors.append(
                 '`{}` at `{}` is attempting to export a carrier '
                 'not given as an output carrier: `{}`'.format(tech_id, loc_id, export)
@@ -233,7 +238,6 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                     '`{}` at `{}` defines non-allowed '
                     '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
                 )
-
     return warnings, errors
 
 
@@ -259,23 +263,19 @@ def check_final(model_run):
     for loc_id, loc_config in model_run.locations.items():
         if 'techs' in loc_config:
             for tech_id, tech_config in loc_config.techs.items():
-                _warnings, _errors = _check_tech(
+                _check_tech(
                     model_run, tech_id, tech_config, loc_id,
                     warnings, errors, comments
                 )
-                warnings += _warnings
-                errors += _errors
 
         if 'links' in loc_config:
             for link_id, link_config in loc_config.links.items():
                 for tech_id, tech_config in link_config.techs.items():
-                    _warnings, _errors = _check_tech(
+                    _check_tech(
                         model_run, tech_id, tech_config,
                         'link {}:{}'.format(loc_id, link_id),
                         warnings, errors, comments
                     )
-                    warnings += _warnings
-                    errors += _errors
     # Either all locations or no locations must have coordinates
     all_locs = list(model_run.locations.keys())
     locs_with_coords = [
@@ -325,10 +325,6 @@ def check_final(model_run):
     # FIXME:
     # make sure `comments` is at the the base level:
     # i.e. comments.model_run.xxxxx....
-
-    # FIXME: check that any storage/supply_plus technologies correctly define
-    # energy_cap, storage_cap, and charge_rate so as not to clash with each other
-    # given that energy_cap = storage_cap * charge_rate
 
     return comments, warnings, errors
 
