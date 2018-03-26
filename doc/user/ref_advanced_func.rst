@@ -124,9 +124,13 @@ The available options include:
             function: resample
             function_options: {'resolution': '6H'}
 
-.. Note::
+.. Warning::
 
-  When loading a model, all time steps initially have the same weight. Time step resolution reduction methods may adjust the weight of individual timesteps; this is used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. See the implementation of constraints in :mod:`calliope.backend.pyomo.constraints` for more detail.
+  When using time clustering or time masking, the resulting timesteps will be assigned different weights depending on how long a period of time they represent. Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. The weighting is accessible in the model data, e.g. through ``Model.inputs.timestep_weights``. The interpretation of results when weights are not 1 for all timesteps requires caution. Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function. This means that costs and production values are not consistent without manually post-processing them by either multipyling production by weight (production would then be inconsistent with capacity) or dividing costs by weight. The computation of levelised costs and of capacity factors takes weighting into account, so these values are consisten and can be used as usual.
+
+.. seealso::
+
+  See the implementation of constraints in :mod:`calliope.backend.pyomo.constraints` for more detail on timestep weights and how they affect model constraints.
 
 .. _conversion_plus:
 
@@ -293,7 +297,7 @@ Export is an extension of this, allowing an energy carrier to be removed from th
 Using ``tech_groups`` to group configuration
 --------------------------------------------
 
-In a large model, several very similar technologies may exist, for example, different kinds of PV technologies with slightly different cost data or with different potentials at different moodel locations.
+In a large model, several very similar technologies may exist, for example, different kinds of PV technologies with slightly different cost data or with different potentials at different model locations.
 
 To make it easier to specify closely related technologies, ``tech_groups`` can be used to specify configuration shared between multiple technologies. The technologies then give the ``tech_group`` as their parent, rather than one of the abstract base technologies.
 
