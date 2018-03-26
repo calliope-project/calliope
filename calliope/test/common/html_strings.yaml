@@ -25,3 +25,7 @@ milp:
         - '[{"type": "scatter", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "x": [5, 2, null], "y": [7, 7, null], "showlegend": true, "legendgroup": "heat_pipes", "name": "District heat distribution",'
         - '"name": "Locations", "type": "scatter", "legendgroup": "locations", "mode": "markers", "hoverinfo": "text"'
         - '{"autosize": true, "hovermode": "closest", "showlegend": true}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+
+clustering:
+    timeseries:
+        - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters", "rangeslider": {}}'

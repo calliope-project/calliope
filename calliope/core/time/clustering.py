@@ -197,33 +197,22 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
     cluster_map = clusters.groupby(clusters).groups
 
     ds = {}
-    t_coords = ['{}-{}'.format(cid, t)
-                for cid in cluster_map
-                for t in range(timesteps_per_day)]
+    t_coords = [
+        '{}-{}'.format(cid, t) for cid in cluster_map for t in range(timesteps_per_day)
+    ]
     for var in data.data_vars:
-        loc_tech_dim = [i for i in data[var].dims if 'loc_techs' in i][0]
-        data_arrays = []
         array = data[var].copy()
+        clustered_array = array[:, :len(t_coords)]
+        clustered_array['timesteps'] = t_coords
         for cluster_id, cluster_members in cluster_map.items():
-            loc_tech_arrays = []
-            var_techs = set(
-                i.split('::')[1] for i in data[var][loc_tech_dim].values
+            current_cluster = [
+                i for i in t_coords if i.startswith('{}-'.format(cluster_id))
+            ]
+            clustered_array.loc[{'timesteps': current_cluster}] = (
+                array.loc[{'timesteps': cluster_members}]
+                .groupby('timesteps.hour').mean(dim='timesteps').values
             )
-            for tech in var_techs:
-                relevent_loc_techs = (
-                    get_loc_techs(data[loc_tech_dim].values, tech)
-                )
-                d = (array.loc[{'timesteps': cluster_members,
-                                loc_tech_dim: relevent_loc_techs}]
-                          .groupby('timesteps.hour').mean(dim='timesteps')
-                          .rename({'hour': 'timesteps'})
-                        )
-                d.coords['timesteps'] = [i for i in t_coords
-                                    if i.startswith('{}-'.format(cluster_id))]
-                loc_tech_arrays.append(d)
-            data_arrays.append(xr.concat(loc_tech_arrays, dim=loc_tech_dim))
-
-            ds[var] = xr.concat(data_arrays, dim='timesteps')
+        ds[var] = clustered_array
     ds = xr.Dataset(ds)
     return ds
 
@@ -326,7 +315,16 @@ def map_clusters_to_data(data, clusters, how):
         # of year of the cluster the timestep belongs to
         clusterdays_timeseries = clusters_timeseries.map(lambda x: chosen_ts[x])
         value_counts = clusterdays_timeseries.value_counts() / timesteps_per_day
+        timestamps = pd.DataFrame.from_dict(chosen_ts, orient='index')[0]
 
+    _clusters = xr.DataArray(
+        data=np.full(len(new_data.timesteps.values), np.nan),
+        dims='timesteps',
+        coords={'timesteps': new_data.timesteps.values}
+    )
+    for cluster in timestamps.index:
+        _clusters.loc[_clusters.timesteps.to_index().date == timestamps[cluster].date()] = cluster
+    new_data['clusters'] = _clusters.astype(int)
     weights = (value_counts.reindex(_hourly_from_daily_index(value_counts.index))
                            .fillna(method='ffill'))
     new_data['timestep_weights'] = xr.DataArray(weights, dims=['timesteps'])

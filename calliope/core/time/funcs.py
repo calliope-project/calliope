@@ -155,7 +155,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     data_vars_in_t = [
         v for v in data_new.data_vars
         if 'timesteps' in data_new[v].dims and
-        'timestep_' not in v]
+        'timestep_' not in v and v != 'clusters']
     for var in data_vars_in_t:
         scale_to_match_mean = (data[var].mean(dim='timesteps') /
             data_new[var].mean(dim='timesteps')).fillna(0)

@@ -10,6 +10,7 @@ Plot timeseries data.
 """
 
 import pandas as pd
+import numpy as np
 import plotly.graph_objs as go
 
 from calliope import exceptions
@@ -44,7 +45,7 @@ def _get_relevant_vars(model, dataset, array):
     # Ensure carriers are at the top of the list
     if array == 'results':
         relevant_vars += sorted(carriers) + sorted(allowed_result_vars)
-    elif array == 'inputs':
+    elif array == 'inputs' or (array == 'all' and not hasattr(model, 'results')):
         relevant_vars += sorted(allowed_input_vars)
     elif array == 'all':
         relevant_vars += sorted(carriers) + sorted(allowed_result_vars + allowed_input_vars)
@@ -66,16 +67,36 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     # list to populate
     data = []
 
-    timesteps = pd.to_datetime(model._model_data.timesteps.values)
+    # Clustered data does not get plotted on a datetime axis
+    if hasattr(dataset, 'clusters'):
+        clusters = dataset.clusters.to_pandas()
+        cluster_groups = clusters.groupby(clusters).groups
+        # Add an extra timestep at the end of each cluster, so we can break
+        # scatter lines with a NaN between each cluster
+        dummy_timestep = lambda x: pd.to_datetime(x[-1] + pd.Timedelta(100, unit='ns'))
+        reindexing_timesteps = np.concatenate([
+            group_timesteps.append(pd.Index([dummy_timestep(group_timesteps)])).values
+            for group_timesteps in cluster_groups.values()
+        ])
+        timesteps = pd.Index(reindexing_timesteps).values.astype(str)
+        # replace dummy timestep with NaN
+        timesteps[pd.Index(reindexing_timesteps).nanosecond == 100] = np.nan
+        timesteps = pd.to_datetime(timesteps, errors='ignore')
+    else:
+        timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
     def _get_reindexed_array(array, index=['locs', 'techs'], fillna=None):
         # reindexing data means that DataArrays have the same values in locs and techs
         reindexer = {k: sorted(dataset[k].values) for k in index}
         formatted_array = model.get_formatted_array(array)
         if fillna is not None:
-            return formatted_array.reindex(**reindexer).fillna(fillna)
+            reindexed_array = formatted_array.reindex(**reindexer).fillna(fillna)
         else:
-            return formatted_array.reindex(**reindexer)
+            reindexed_array = formatted_array.reindex(**reindexer)
+        if hasattr(dataset, 'clusters'):
+            return reindexed_array.reindex({'timesteps': reindexing_timesteps})
+        else:
+            return reindexed_array
 
     if hasattr(model, 'results'):
         array_prod = _get_reindexed_array('carrier_prod', index=['locs', 'techs', 'carriers'], fillna=0)
@@ -136,6 +157,14 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
             base_tech = dataset.inheritance.loc[tech_dict].item().split('.')[0]
             color = dataset.colors.loc[tech_dict].item()
             name = dataset.names.loc[tech_dict].item()
+
+        # Wrap legend items longer than 30 characters, preferably at a space
+        if len(name) > 30:
+            breakpoint = name.rfind(' ', int(len(name) / 3), 35)
+            if breakpoint:
+                name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
+            else:
+                name = name[:30].rstrip() + '...<br>' + name[30:].lstrip()
 
         if base_tech == 'demand':
             # Always insert demand at position 0 in the list, to make
@@ -248,7 +277,13 @@ def plot_timeseries(
         barmode='relative', xaxis={}, autosize=True,
         legend=(dict(traceorder='reversed', xanchor='left')), hovermode='x'
     )
-
+    # Clustered data does not get plotted on a datetime axis
+    if hasattr(dataset, 'clusters'):
+        clusters = dataset.clusters.to_pandas().groupby(dataset.clusters.to_pandas()).groups
+        layout['xaxis']['type'] = 'category'
+        layout['xaxis']['tickvals'] = [(2 * k + 1) * len(v) / 2 - 0.5 for k, v in clusters.items()]
+        layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
+        layout['xaxis']['title'] = 'Clusters'
     relevant_vars = _get_relevant_vars(model, dataset, array)
 
     data, layout = get_data_layout(

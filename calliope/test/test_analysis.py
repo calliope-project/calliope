@@ -71,3 +71,11 @@ class TestPlotting:
             model.plot.timeseries(array='energy_cap')
             model.plot.timeseries(squeeze=False)
             model.plot.timeseries(sum_dims=None)
+
+    def test_clustered_plotting(self):
+        override = {'model.time.function_options.k': 2}
+        model = calliope.examples.time_clustering(override_dict=override)
+
+        plot_html = model.plot.timeseries(html_only=True)
+        for string in HTML_STRINGS['clustering']['timeseries']:
+            assert string in plot_html
