@@ -31,8 +31,8 @@ def postprocess_model_results(results, model_data, timings):
 
     results['capacity_factor'] = capacity_factor(results, model_data)
     results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
-    results['systemwide_levelised_cost'] = systemwide_levelised_cost(results)
-    results['total_levelised_cost'] = systemwide_levelised_cost(results, total=True)
+    results['systemwide_levelised_cost'] = systemwide_levelised_cost(results, model_data)
+    results['total_levelised_cost'] = systemwide_levelised_cost(results, model_data, total=True)
     results = clean_results(results, model_data.attrs.get('run.zero_threshold', 0), timings)
 
     log_time(
@@ -55,10 +55,14 @@ def capacity_factor(results, model_data):
     else:
         energy_cap = results.energy_cap
 
-    capacities = xr.DataArray([
-        energy_cap.loc[dict(loc_techs=i.rsplit('::', 1)[0])].values
-        for i in results['loc_tech_carriers_prod'].values
-    ], dims=['loc_tech_carriers_prod'], coords={'loc_tech_carriers_prod': results['loc_tech_carriers_prod']})
+    capacities = xr.DataArray(
+        [
+            energy_cap.loc[dict(loc_techs=i.rsplit('::', 1)[0])].values
+            for i in results['loc_tech_carriers_prod'].values
+        ],
+        dims=['loc_tech_carriers_prod'],
+        coords={'loc_tech_carriers_prod': results['loc_tech_carriers_prod']}
+    )
 
     capacity_factors = (results['carrier_prod'] / capacities).fillna(0)
 
@@ -67,8 +71,12 @@ def capacity_factor(results, model_data):
 
 def systemwide_capacity_factor(results, model_data):
     """
-    Returns a DataArray with systemwide capacity factors for the given
-    results, indexed by techs and carriers.
+    Returns a DataArray with systemwide capacity factors over the entire
+    model duration, for the given results, indexed by techs and carriers.
+
+    The weight of timesteps is considered when computing capacity factors,
+    such that higher-weighted timesteps have a stronger influence
+    on the resulting system-wide time-averaged capacity factor.
 
     """
     # In operate mode, energy_cap is an input parameter
@@ -77,26 +85,50 @@ def systemwide_capacity_factor(results, model_data):
     else:
         energy_cap = results.energy_cap
 
-    capacity_factors = (
-        split_loc_techs(results['carrier_prod']).sum(dim='timesteps').sum(dim='locs') /
-        (
-            split_loc_techs(energy_cap).sum(dim='locs') *
-            model_data.timestep_resolution.sum()
-        )
-    )
+    prod_sum = (
+        # Aggregated/clustered days are represented `timestep_weights` times
+        split_loc_techs(results['carrier_prod']) * model_data.timestep_weights
+    ).sum(dim='timesteps').sum(dim='locs')
+    cap_sum = split_loc_techs(energy_cap).sum(dim='locs')
+    time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
+
+    capacity_factors = prod_sum / (cap_sum * time_sum)
 
     return capacity_factors
 
 
-def systemwide_levelised_cost(results, total=False):
+def systemwide_levelised_cost(results, model_data, total=False):
     """
     Returns a DataArray with systemwide levelised costs for the given
     results, indexed by techs, carriers and costs if total is False,
     or by carriers and costs if total is True.
 
+    The weight of timesteps is considered when computing levelised costs:
+
+    * costs are already multiplied by weight in the constraints, and not
+      further adjusted here.
+
+    * production is not multiplied by weight in the contraints, so scaled
+      by weight here to be consistent with costs. CAUTION: this scaling
+      is temporary duriing levelised cost computation - the actual
+      costs in the results remain untouched.
+
+    Parameters
+    ----------
+    results : xarray.Dataset
+        Model results
+    model_data : xarray.Dataset
+        Model input data
+    total : bool, optional
+        If False (default) returns per-technology levelised cost, if True,
+        returns overall system-wide levelised cost.
+
     """
     cost = split_loc_techs(results['cost']).sum(dim='locs')
-    carrier_prod = split_loc_techs(results['carrier_prod'].sum(dim='timesteps')).sum(dim='locs')
+    carrier_prod = (
+        # Here we scale production by timestep weight
+        split_loc_techs(results['carrier_prod']) * model_data.timestep_weights
+    ).sum(dim='timesteps').sum(dim='locs')
 
     if total:
         cost = cost.sum(dim='techs')

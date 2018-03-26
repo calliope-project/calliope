@@ -119,14 +119,13 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 def nationalscale_clustered_example_tester(solver='glpk', solver_io=None):
     override = {
-        'model.subset_time': '2005-01-01',
         'model.solver': solver,
     }
 
     if solver_io:
         override['model.solver_io'] = solver_io
 
-    model = calliope.examples.time_resampling(override_dict=override)
+    model = calliope.examples.time_clustering(override_dict=override)
     model.run()
 
     # assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(23563.444)
@@ -137,6 +136,13 @@ def nationalscale_clustered_example_tester(solver='glpk', solver_io=None):
     # assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
 
     # assert float(model.results.cost.sum()) == approx(37344.221869)
+
+    assert float(
+        model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+    ) == approx(0.084837, abs=0.000001)
+    assert float(
+        model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+    ) == approx(0.099366, abs=0.000001)
 
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
