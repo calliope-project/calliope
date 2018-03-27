@@ -49,12 +49,22 @@ def save_netcdf(model_data, path):
     for k in bool_attrs:
         model_data.attrs[k] = int(model_data.attrs[k])
 
+    # Convert None attrs to 'None'
+    none_attrs = [
+        k for k, v in model_data.attrs.items()
+        if v is None
+    ]
+    for k in none_attrs:
+        model_data.attrs[k] = 'None'
+
     try:
         model_data.to_netcdf(path, format='netCDF4', encoding=encoding)
         model_data.close()  # Force-close NetCDF file after writing
-    finally:  # Convert ints back to bools
+    finally:  # Convert ints back to bools, 'None' back to None
         for k in bool_attrs:
             model_data.attrs[k] = bool(model_data.attrs[k])
+        for k in none_attrs:
+            model_data.attrs[k] = None
 
 
 def save_csv(model_data, path):

@@ -20,7 +20,7 @@ import traceback
 
 import click
 
-from calliope import Model, examples, _time_format
+from calliope import Model, read_netcdf, examples, _time_format
 from calliope.core.util.convert import convert_model
 from calliope.core.util.generate_runs import generate
 from calliope._version import __version__
@@ -141,19 +141,27 @@ def new(path, template, debug):
 
 
 @cli.command(short_help='Run a model.')
-@click.argument('config_file')
+@click.argument('model_file')
 @click.option('--override_file')
 @click.option('--save_netcdf')
 @click.option('--save_csv')
 @click.option('--save_plots')
 @click.option('--save_logs')
+@click.option('--model_format')
 @_debug
 @_pdb
 @_profile
 @_profile_filename
-def run(config_file, override_file, save_netcdf, save_csv, save_plots,
-        save_logs, debug, pdb, profile, profile_filename):
-    """Execute the given model."""
+def run(model_file, override_file, save_netcdf, save_csv, save_plots,
+        save_logs, model_format,
+        debug, pdb, profile, profile_filename):
+    """
+    Execute the given model. Tries to guess from the file extension whether
+    ``model_file`` is a YAML file or a pre-built model saved to NetCDF.
+    This can also explicitly be set with the --model_format=yaml or
+    --model_format=netcdf option.
+
+    """
     if debug:
         print(_get_version())
     logging.captureWarnings(True)
@@ -166,21 +174,49 @@ def run(config_file, override_file, save_netcdf, save_csv, save_plots,
             )
         tstart = start_time.strftime(_time_format)
         print('Calliope run starting at {}\n'.format(tstart))
-        override_dict = {
-            'run.save_logs': save_logs
-        }
-        model = Model(
-            config_file, override_file=override_file, override_dict=override_dict
-        )
-        model_name = model._model_run.get_key('model.name', default='None')
+
+        # Try to determine model file type if not given explicitly
+        if model_format is None:
+            if model_file.split('.')[-1] in ['yaml', 'yml']:
+                model_format = 'yaml'
+            elif model_file.split('.')[-1] in ['nc', 'nc4', 'netcdf']:
+                model_format = 'netcdf'
+            else:
+                raise ValueError(
+                    'Cannot determine model file format based on file '
+                    'extension for "{}". Set format explicitly with '
+                    '--model_format.'.format(model_file)
+                )
+
+        if model_format == 'yaml':
+            override_dict = {
+                'run.save_logs': save_logs
+            }
+            model = Model(
+                model_file, override_file=override_file, override_dict=override_dict
+            )
+        elif model_format == 'netcdf':
+            if override_file is not None:
+                raise ValueError(
+                    'Overrides cannot be applied when loading a pre-built '
+                    'model from NetCDF. Please run without --override options.'
+                )
+            model = read_netcdf(model_file)
+            if save_logs is not None:
+                model._model_data.attrs['run.save_logs'] = save_logs
+        else:
+            raise ValueError('Invalid model format: {}'.format(model_format))
+
+        # FIXME: get this from model._model_data rather than _model_run
+        model_name = model._model_data.attrs.get('model.name', 'None')
         print('Model name:   {}'.format(model_name))
         msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
-            locs=len(model._model_run.sets['locs']),
+            locs=len(model._model_data.coords['locs'].values),
             techs=(
-                len(model._model_run.sets['techs_non_transmission']) +
-                len(model._model_run.sets['techs_transmission_names'])
+                len(model._model_data.coords['techs_non_transmission'].values) +
+                len(model._model_data.coords['techs_transmission_names'].values)
             ),
-            times=len(model._model_run.sets['timesteps']))
+            times=len(model._model_data.coords['timesteps'].values))
         print('Model size:   {}\n'.format(msize))
         print('Starting model run...')
         model.run()
@@ -197,7 +233,7 @@ def run(config_file, override_file, save_netcdf, save_csv, save_plots,
 
 
 @cli.command(short_help='Generate a script to run multiple models.')
-@click.argument('config_file')
+@click.argument('model_file')
 @click.argument('out_file')
 @click.option('--kind', help='One of: "bash", "bsub".')
 @click.option('--override_file')
@@ -211,11 +247,11 @@ def run(config_file, override_file, save_netcdf, save_csv, save_plots,
 @_debug
 @_pdb
 def generate_runs(
-    config_file, out_file, kind, override_file, groups, additional_args,
+    model_file, out_file, kind, override_file, groups, additional_args,
     cluster_threads, cluster_mem, cluster_time,
     debug, pdb):
         kwargs = dict(
-            model_file=config_file,
+            model_file=model_file,
             out_file=out_file,
             override_file=override_file,
             groups=groups,
