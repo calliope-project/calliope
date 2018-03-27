@@ -91,7 +91,7 @@ def _plot(data, layout, html_only=False, save_svg=False, **kwargs):
         else:
             PLOTLY_KWARGS.update(image='svg')
 
-    elif data:
+    if data:
         pltly.iplot({'data': data, 'layout': layout}, **PLOTLY_KWARGS)
 
     else:
