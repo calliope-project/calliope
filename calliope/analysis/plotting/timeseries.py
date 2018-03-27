@@ -90,13 +90,15 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         reindexer = {k: sorted(dataset[k].values) for k in index}
         formatted_array = model.get_formatted_array(array)
         if fillna is not None:
-            reindexed_array = formatted_array.reindex(**reindexer).fillna(fillna)
+            return formatted_array.reindex(**reindexer).fillna(fillna)
         else:
-            reindexed_array = formatted_array.reindex(**reindexer)
+            return formatted_array.reindex(**reindexer)
+
+    def _get_y_vals(array):
         if hasattr(dataset, 'clusters'):
-            return reindexed_array.reindex({'timesteps': reindexing_timesteps})
+            return array.to_pandas().reindex(reindexing_timesteps).values
         else:
-            return reindexed_array
+            return array.values
 
     if hasattr(model, 'results'):
         array_prod = _get_reindexed_array('carrier_prod', index=['locs', 'techs', 'carriers'], fillna=0)
@@ -170,39 +172,39 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
             # Always insert demand at position 0 in the list, to make
             # sure it appears on top in the legend
             data.insert(0, go.Scatter(
-                x=timesteps, y=-array_flow.loc[tech_dict].values,
+                x=timesteps, y=_get_y_vals(-array_flow.loc[tech_dict]),
                 visible=visible, line=dict(color=color), name=name)
             )
 
         elif var == 'storage':
             # stored energy as scatter, carrier/resource prod/con as stacked bar
             data.insert(0, go.Scatter(
-                x=timesteps, y=array_flow.loc[tech_dict].values, visible=visible,
+                x=timesteps, y=_get_y_vals(array_flow.loc[tech_dict]), visible=visible,
                 line=dict(color=color), mode='lines', name=name + ' stored energy',
                 showlegend=False, text=tech + ' stored energy', hoverinfo='x+y+text',
                 legendgroup=tech)
             )
             data.append(go.Bar(
-                x=timesteps, y=-carrier_flow.loc[tech_dict].values, visible=visible,
+                x=timesteps, y=_get_y_vals(-carrier_flow.loc[tech_dict]), visible=visible,
                 name=name, marker=dict(color=color), legendgroup=tech,
                 text=tech + ' charge (+) / discharge (-)', hoverinfo='x+y+text'
             ))
 
         else:
             data.append(go.Bar(
-                x=timesteps, y=array_flow.loc[tech_dict].values, visible=visible,
+                x=timesteps, y=_get_y_vals(array_flow.loc[tech_dict]), visible=visible,
                 name=name, legendgroup=tech, marker=dict(color=color)
             ))
 
         if var in carriers and 'carrier_export' in dataset and export_flow.loc[tech_dict].sum():
             data.append(go.Bar(
-                x=timesteps, y=-export_flow.loc[tech_dict].values, visible=visible,
+                x=timesteps, y=_get_y_vals(-export_flow.loc[tech_dict]), visible=visible,
                 name=name + ' export', legendgroup=tech, marker=dict(color=hex_to_rgba(color, 0.5))
             ))
 
     if var in carriers and 'unmet_demand' in dataset:
         data.append(go.Bar(
-            x=timesteps, y=unmet_flow.values, visible=visible,
+            x=timesteps, y=_get_y_vals(unmet_flow), visible=visible,
             name='Unmet ' + var + ' demand', legendgroup=tech,
             marker=dict(color='grey')
         ))
@@ -281,7 +283,10 @@ def plot_timeseries(
     if hasattr(dataset, 'clusters'):
         clusters = dataset.clusters.to_pandas().groupby(dataset.clusters.to_pandas()).groups
         layout['xaxis']['type'] = 'category'
-        layout['xaxis']['tickvals'] = [(2 * k + 1) * len(v) / 2 - 0.5 for k, v in clusters.items()]
+        layout['xaxis']['tickvals'] = [
+            (2 * (k - min(clusters.keys())) + 1) * len(v) / 2 - 0.5
+            for k, v in clusters.items()
+        ]
         layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
         layout['xaxis']['title'] = 'Clusters'
     relevant_vars = _get_relevant_vars(model, dataset, array)

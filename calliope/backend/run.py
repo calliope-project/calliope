@@ -72,7 +72,10 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
     solver = model_data.attrs['run.solver']
     solver_io = model_data.attrs.get('run.solver_io', None)
-    solver_options = model_data.attrs.get('run.solver_options', None)
+    solver_options = {
+        k.split('.')[-1]: v
+        for k, v in model_data.attrs.items() if '.solver_options.' in k
+    }
     save_logs = model_data.attrs.get('run.save_logs', None)
 
     if build_only:
