@@ -15,7 +15,8 @@ from calliope.backend.pyomo.util import \
     get_param, \
     get_timestep_weight, \
     get_loc_tech, \
-    split_comma_list
+    split_comma_list, \
+    loc_tech_is_in
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
 
@@ -497,6 +498,9 @@ def update_costs_investment_units_constraint(backend_model, cost, loc_tech):
         backend_model.units[loc_tech] * cost_purchase * ts_weight * depreciation_rate
     )
 
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+        cost_of_purchase = cost_of_purchase / 2
+
     backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
 
     return None
@@ -523,6 +527,9 @@ def update_costs_investment_purchase_constraint(backend_model, cost, loc_tech):
     cost_of_purchase = (
         backend_model.purchased[loc_tech] * cost_purchase * ts_weight * depreciation_rate
     )
+
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+        cost_of_purchase = cost_of_purchase / 2
 
     backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
 
