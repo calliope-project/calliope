@@ -20,15 +20,6 @@ from calliope.analysis.plotting.timeseries import plot_timeseries
 from calliope.analysis.plotting.transmission import plot_transmission
 
 
-PLOTLY_KWARGS = dict(
-    show_link=False,
-    config={
-        'displaylogo': False,
-        'modeBarButtonsToRemove': ['sendDataToCloud'],
-    }
-)
-
-
 def plot_summary(model, out_file=None, mapbox_access_token=None):
     """
     Plot a summary containing timeseries, installed capacities, and
@@ -78,6 +69,15 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
 
 
 def _plot(data, layout, html_only=False, save_svg=False, **kwargs):
+
+    PLOTLY_KWARGS = dict(
+        show_link=False,
+        config={
+            'displaylogo': False,
+            'modeBarButtonsToRemove': ['sendDataToCloud'],
+        }
+    )
+
     if html_only:
         return pltly.plot(
             {'data': data, 'layout': layout},
