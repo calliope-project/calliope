@@ -6,6 +6,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 import ruamel.yaml
 
 from calliope.core.util.tools import log_time
+from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope import exceptions
 from calliope.backend import checks
 
@@ -48,6 +49,12 @@ def run(model_data, timings, build_only=False):
 
     elif model_data.attrs['run.mode'] == 'operate':
         results, backend = run_operate(
+            model_data, timings,
+            backend=BACKEND[run_backend], build_only=build_only
+        )
+
+    elif model_data.attrs['run.mode'] == 'robust_plan':
+        results, backend = run_robust_plan(
             model_data, timings,
             backend=BACKEND[run_backend], build_only=build_only
         )
@@ -356,3 +363,90 @@ def run_operate(model_data, timings, backend, build_only):
         )
 
     return results, backend_model
+
+
+def run_robust_plan(model_data, timings, backend, build_only, backend_rerun=False):
+
+    log_time(timings, 'run_start', comment='Backend: starting model run')
+
+    if 'probability' not in model_data.data_vars.keys() or model_data.probability.sum() != 1:
+        raise exceptions.ModelError(
+            'Cannot run a robust model if probabilities not defined, or sum of '
+            'probabilities is not 1.'
+        )
+
+    # All timeseries data needs a scenario dimension, even if there is no
+    # difference between scenarios
+    timeseries_vars = [
+        k for k, v in model_data.data_vars.items()
+        if 'timesteps' in v.dims and 'scenarios' not in v.dims and
+        k not in ['timestep_resolution', 'timestep_weights']
+    ]
+
+    model_data.update(xr.broadcast(model_data[timeseries_vars], model_data.scenarios)[0])
+    model_data = reorganise_dataset_dimensions(model_data)
+
+    # FIXME: Currently hardcoded to use 'robust_optimal_cost_minimization' as the
+    # objective
+    if model_data.attrs['run.objective'] != 'robust_optimal_cost_minimization':
+        exceptions.ModelWarning(
+            'Updating objective from {} to robust_optimal_cost_minimization'
+            .format(model_data.attrs['run.objective'])
+        )
+        model_data.attrs['run.objective'] = 'robust_optimal_cost_minimization'
+
+    if not backend_rerun:
+        backend_model = backend.generate_model(model_data)
+
+        log_time(
+            timings, 'run_backend_model_generated', time_since_start=True,
+            comment='Backend: model generated'
+        )
+
+    else:
+        backend_model = backend_rerun
+
+    solver = model_data.attrs['run.solver']
+    solver_io = model_data.attrs.get('run.solver_io', None)
+    solver_options = {
+        k.split('.')[-1]: v
+        for k, v in model_data.attrs.items() if '.solver_options.' in k
+    }
+    save_logs = model_data.attrs.get('run.save_logs', None)
+
+    if build_only:
+        results = xr.Dataset()
+
+    else:
+        log_time(
+            timings, 'run_solver_start',
+            comment='Backend: sending model to solver'
+        )
+
+        results = backend.solve_model(
+            backend_model, solver=solver,
+            solver_io=solver_io, solver_options=solver_options, save_logs=save_logs
+        )
+
+        log_time(
+            timings, 'run_solver_exit', time_since_start=True,
+            comment='Backend: solver finished running'
+        )
+
+        termination = backend.load_results(backend_model, results)
+
+        log_time(
+            timings, 'run_results_loaded',
+            comment='Backend: loaded results'
+        )
+
+        results = backend.get_result_array(backend_model, model_data)
+        results.attrs['termination_condition'] = termination
+
+        log_time(
+            timings, 'run_solution_returned', time_since_start=True,
+            comment='Backend: generated solution array'
+        )
+
+    return results, backend_model
+

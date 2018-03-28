@@ -24,6 +24,7 @@ def load_constraints(backend_model):
         backend_model.cost_constraint = po.Constraint(
             backend_model.costs,
             backend_model.loc_techs_cost,
+            backend_model.scenarios,
             rule=cost_constraint_rule
         )
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
@@ -46,7 +47,7 @@ def load_constraints(backend_model):
         backend_model.cost_var_rhs = po.Expression(
             backend_model.costs,
             backend_model.loc_techs_om_cost,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             initialize=0.0
         )
     if 'loc_techs_cost_var_constraint' in sets:
@@ -55,12 +56,12 @@ def load_constraints(backend_model):
         backend_model.cost_var_constraint = po.Constraint(
             backend_model.costs,
             backend_model.loc_techs_cost_var_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=cost_var_constraint_rule
         )
 
 
-def cost_constraint_rule(backend_model, cost, loc_tech):
+def cost_constraint_rule(backend_model, cost, loc_tech, scenario):
     """
     Combine investment and time varying costs into one cost per technology
     """
@@ -71,13 +72,13 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
         cost_investment = 0
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_om_cost'):
-        cost_var = sum(backend_model.cost_var[cost, loc_tech, timestep]
+        cost_var = sum(backend_model.cost_var[cost, loc_tech, scenario, timestep]
                        for timestep in backend_model.timesteps)
     else:
         cost_var = 0
 
     return (
-        backend_model.cost[cost, loc_tech] == cost_investment + cost_var
+        backend_model.cost[cost, loc_tech, scenario] == cost_investment + cost_var
     )
 
 
@@ -139,7 +140,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     )
 
 
-def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
+def cost_var_constraint_rule(backend_model, cost, loc_tech, scenario, timestep):
     """
     Calculate costs from time-varying decision variables
 
@@ -150,34 +151,34 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
     """
     model_data_dict = backend_model.__calliope_model_data__
 
-    cost_om_prod = get_param(backend_model, 'cost_om_prod', (cost, loc_tech, timestep))
-    cost_om_con = get_param(backend_model, 'cost_om_con', (cost, loc_tech, timestep))
+    cost_om_prod = get_param(backend_model, 'cost_om_prod', (cost, loc_tech, scenario, timestep))
+    cost_om_con = get_param(backend_model, 'cost_om_con', (cost, loc_tech, scenario, timestep))
     weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier = model_data_dict['data']['lookup_loc_techs'][loc_tech]
 
     if po.value(cost_om_prod):
-        cost_prod = cost_om_prod * weight * backend_model.carrier_prod[loc_tech_carrier, timestep]
+        cost_prod = cost_om_prod * weight * backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     else:
         cost_prod = 0
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and cost_om_con:
-        resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
+        resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, scenario, timestep))
         if po.value(resource_eff) > 0:  # In case resource_eff is zero, to avoid an infinite value
             # Dividing by r_eff here so we get the actual r used, not the r
             # moved into storage...
-            cost_con = cost_om_con * weight * (backend_model.resource_con[loc_tech, timestep] / resource_eff)
+            cost_con = cost_om_con * weight * (backend_model.resource_con[loc_tech, scenario, timestep] / resource_eff)
         else:
             cost_con = 0
     elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and cost_om_con:
-        energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
+        energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, scenario, timestep))
         if po.value(energy_eff) > 0:  # in case energy_eff is zero, to avoid an infinite value
-            cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff)
+            cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, scenario, timestep] / energy_eff)
         else:
             cost_con = 0
     else:
         cost_con = 0
 
-    backend_model.cost_var_rhs[cost, loc_tech, timestep].expr = cost_prod + cost_con
-    return (backend_model.cost_var[cost, loc_tech, timestep] ==
-            backend_model.cost_var_rhs[cost, loc_tech, timestep])
+    backend_model.cost_var_rhs[cost, loc_tech, scenario, timestep].expr = cost_prod + cost_con
+    return (backend_model.cost_var[cost, loc_tech, scenario, timestep] ==
+            backend_model.cost_var_rhs[cost, loc_tech, scenario, timestep])

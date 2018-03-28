@@ -32,7 +32,10 @@ def get_param(backend_model, var, dims):
     except KeyError:  # try removing timestep
         try:
             if len(dims) > 2:
-                return getattr(backend_model, var)[dims[:-1]]
+                if backend_model.mode == 'robust_plan':
+                    return getattr(backend_model, var)[dims[:-2]]
+                else:
+                    return getattr(backend_model, var)[dims[:-1]]
             else:
                 return getattr(backend_model, var)[dims[0]]
         except KeyError:  # Static default value

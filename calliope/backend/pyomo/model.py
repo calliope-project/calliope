@@ -85,6 +85,8 @@ def generate_model(model_data):
                 backend_model, k,
                 po.Param(backend_model.timesteps, initialize=v, mutable=True)
             )
+        # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
+        # so add those in.
         elif mode == 'operate' and model_data[k].attrs.get('operate_param') == 1:
             setattr(
                 backend_model, k,
@@ -92,11 +94,30 @@ def generate_model(model_data):
                          initialize=v, mutable=True)
             )
 
+    if mode == 'robust_plan':
+        # Load custom sets/parameters specific to robust optimisation
+        backend_model.beta = po.Param(
+            initialize=model_data_dict['attrs']['run.beta'], mutable=True
+        )
+        backend_model.alpha = po.Param(
+            initialize=model_data_dict['attrs']['run.alpha'], mutable=True
+        )
+        backend_model.probability = po.Param(
+            *[getattr(backend_model, i) for i in model_data_dict['dims']['probability']],
+            initialize=model_data_dict['data']['probability'], mutable=True
+        )
+    if not hasattr(backend_model, 'scenarios'):
+        backend_model.scenarios = po.Set(initialize=[1], ordered=True)
 
     # Variables
     load_function(
         'calliope.backend.pyomo.variables.initialize_decision_variables'
     )(backend_model)
+
+    if mode == 'robust_plan':
+        load_function(
+            'calliope.backend.pyomo.variables.initialize_robust_decision_variables'
+        )(backend_model)
 
     # Constraints
     constraints_to_add = [
@@ -124,16 +145,18 @@ def generate_model(model_data):
     if hasattr(backend_model, 'loc_techs_export'):
         constraints_to_add.append('export.load_constraints')
 
+    if mode == 'robust_plan':
+        constraints_to_add.append('uncertainty.load_constraints')
+
     for c in constraints_to_add:
         load_function(
             'calliope.backend.pyomo.constraints.' + c
         )(backend_model)
 
-    # FIXME: Optional constraints
-    # optional_constraints = model_data.attrs['constraints']
-    # if optional_constraints:
-    #     for c in optional_constraints:
-    #         self.add_constraint(load_function(c))
+    # FIXME: Add tests for optional constraints
+    if 'model.constraints' in model_data.attrs.keys():
+        for c in model_data.attrs['model.constraints']:
+            load_function(c)(backend_model)
 
     # Objective function
     objective_name = model_data.attrs['run.objective']

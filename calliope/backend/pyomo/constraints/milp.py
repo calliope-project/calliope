@@ -26,7 +26,8 @@ def load_constraints(backend_model):
 
     if 'loc_techs_milp' in sets:
         backend_model.unit_commitment_constraint = po.Constraint(
-            backend_model.loc_techs_unit_commitment_constraint, backend_model.timesteps,
+            backend_model.loc_techs_unit_commitment_constraint,
+            backend_model.scenarios, backend_model.timesteps,
             rule=unit_commitment_constraint_rule
         )
         backend_model.unit_capacity_constraint = po.Constraint(
@@ -37,35 +38,35 @@ def load_constraints(backend_model):
     if 'loc_tech_carriers_carrier_production_max_milp_constraint' in sets:
         backend_model.carrier_production_max_milp_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_production_max_milp_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_production_max_milp_constraint_rule
         )
 
     if 'loc_techs_carrier_production_max_conversion_plus_milp_constraint' in sets:
         backend_model.carrier_production_max_conversion_plus_milp_constraint = po.Constraint(
             backend_model.loc_techs_carrier_production_max_conversion_plus_milp_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_production_max_conversion_plus_milp_constraint_rule
         )
 
     if 'loc_tech_carriers_carrier_consumption_max_milp_constraint' in sets:
         backend_model.carrier_consumption_max_milp_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_consumption_max_milp_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_consumption_max_milp_constraint_rule
         )
 
     if 'loc_tech_carriers_carrier_production_min_milp_constraint' in sets:
         backend_model.carrier_production_min_milp_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_production_min_milp_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_production_min_milp_constraint_rule
         )
 
     if 'loc_techs_carrier_production_min_conversion_plus_milp_constraint' in sets:
         backend_model.carrier_production_min_conversion_plus_milp_constraint = po.Constraint(
             backend_model.loc_techs_carrier_production_min_conversion_plus_milp_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_production_min_conversion_plus_milp_constraint_rule
         )
 
@@ -118,7 +119,7 @@ def load_constraints(backend_model):
         )
 
 
-def unit_commitment_constraint_rule(backend_model, loc_tech, timestep):
+def unit_commitment_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
     Constraining the number of integer units
     :math:`operating_units(loc_tech, timestep)` of a technology which
@@ -136,7 +137,7 @@ def unit_commitment_constraint_rule(backend_model, loc_tech, timestep):
 
     """
 
-    return (backend_model.operating_units[loc_tech, timestep]
+    return (backend_model.operating_units[loc_tech, scenario, timestep]
             <= backend_model.units[loc_tech])
 
 
@@ -169,7 +170,7 @@ def unit_capacity_constraint_rule(backend_model, loc_tech):
     return get_capacity_constraint(backend_model, 'units', loc_tech)
 
 
-def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set maximum carrier production of MILP techs that aren't conversion plus
 
@@ -187,18 +188,18 @@ def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier,
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
 
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
+    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, scenario, timestep))
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
 
     return carrier_prod <= (
-        backend_model.operating_units[loc_tech, timestep] *
+        backend_model.operating_units[loc_tech, scenario, timestep] *
         timestep_resolution * energy_cap * parasitic_eff
     )
 
 
-def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, loc_tech, timestep):
+def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
     Set maximum carrier production of conversion_plus MILP techs
 
@@ -221,16 +222,16 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, l
         split_comma_list(model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech])
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
                        for loc_tech_carrier in loc_tech_carriers_out)
 
     return carrier_prod <= (
-        backend_model.operating_units[loc_tech, timestep] *
+        backend_model.operating_units[loc_tech, scenario, timestep] *
         timestep_resolution * energy_cap
     )
 
 
-def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set minimum carrier production of MILP techs that aren't conversion plus
 
@@ -245,18 +246,18 @@ def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier,
             \\quad \\forall loc::tech \\in loc::techs_{milp}, \\forall timestep \\in timesteps
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
+    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, scenario, timestep))
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
 
     return carrier_prod >= (
-        backend_model.operating_units[loc_tech, timestep] *
+        backend_model.operating_units[loc_tech, scenario, timestep] *
         timestep_resolution * energy_cap * min_use
     )
 
 
-def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, loc_tech, timestep):
+def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
     Set minimum carrier production of conversion_plus MILP techs
 
@@ -275,21 +276,21 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, l
     model_data_dict = backend_model.__calliope_model_data__['data']
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
-    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
+    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, scenario, timestep))
     loc_tech_carriers_out = (
         split_comma_list(model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech])
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
                        for loc_tech_carrier in loc_tech_carriers_out)
 
     return carrier_prod >= (
-        backend_model.operating_units[loc_tech, timestep] *
+        backend_model.operating_units[loc_tech, scenario, timestep] *
         timestep_resolution * energy_cap * min_use
     )
 
 
-def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set maximum carrier consumption of demand, storage, and transmission MILP techs
 
@@ -305,12 +306,12 @@ def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier
 
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
+    carrier_con = backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
 
     return carrier_con >= (-1 *
-        backend_model.operating_units[loc_tech, timestep] *
+        backend_model.operating_units[loc_tech, scenario, timestep] *
         timestep_resolution * energy_cap
     )
 

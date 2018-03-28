@@ -22,32 +22,35 @@ def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data__['sets']
 
     if 'loc_carriers_update_system_balance_constraint' in sets:
-        for loc_carrier, timestep in (
+        for loc_carrier, scenario, timestep in (
             backend_model.loc_carriers_update_system_balance_constraint
+            * backend_model.scenarios
             * backend_model.timesteps):
-            update_system_balance_constraint(backend_model, loc_carrier, timestep)
+            update_system_balance_constraint(backend_model, loc_carrier, scenario, timestep)
 
     if 'loc_tech_carriers_export_balance_constraint' in sets:
         backend_model.export_balance_constraint = po.Constraint(
             backend_model.loc_tech_carriers_export_balance_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=export_balance_constraint_rule
         )
 
     if 'loc_techs_update_costs_var_constraint' in sets:
-        for cost, loc_tech, timestep in (backend_model.costs
+        for cost, loc_tech, scenario, timestep in (backend_model.costs
             * backend_model.loc_techs_update_costs_var_constraint
+            * backend_model.scenarios
             * backend_model.timesteps):
-            update_costs_var_constraint(backend_model, cost, loc_tech, timestep)
+            update_costs_var_constraint(backend_model, cost, loc_tech, scenario, timestep)
 
     if 'loc_tech_carriers_export_max_constraint' in sets:
         backend_model.export_max_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_export_max_constraint, backend_model.timesteps,
+            backend_model.loc_tech_carriers_export_max_constraint,
+            backend_model.scenarios, backend_model.timesteps,
             rule=export_max_constraint_rule
         )
 
 
-def update_system_balance_constraint(backend_model, loc_carrier, timestep):
+def update_system_balance_constraint(backend_model, loc_carrier, scenario, timestep):
     """
     Update system balance constraint (from energy_balance.py) to include export
 
@@ -55,15 +58,15 @@ def update_system_balance_constraint(backend_model, loc_carrier, timestep):
     """
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
-    backend_model.system_balance[loc_carrier, timestep].expr += -1 * (
-        sum(backend_model.carrier_export[loc_tech_carrier, timestep]
+    backend_model.system_balance[loc_carrier, scenario, timestep].expr += -1 * (
+        sum(backend_model.carrier_export[loc_tech_carrier, scenario, timestep]
             for loc_tech_carrier in export)
     )
 
     return None
 
 
-def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def export_balance_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Ensure no technology can 'pass' its export capability to another technology
     with the same carrier_out, by limiting its export to the capacity of its production
@@ -79,11 +82,11 @@ def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
             \\forall timestep \in timesteps
     """
 
-    return (backend_model.carrier_prod[loc_tech_carrier, timestep] >=
-            backend_model.carrier_export[loc_tech_carrier, timestep])
+    return (backend_model.carrier_prod[loc_tech_carrier, scenario, timestep] >=
+            backend_model.carrier_export[loc_tech_carrier, scenario, timestep])
 
 
-def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
+def update_costs_var_constraint(backend_model, cost, loc_tech, scenario, timestep):
     """
     Update time varying cost constraint (from costs.py) to include export
 
@@ -105,15 +108,15 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
     weight = backend_model.timestep_weights[timestep]
 
     cost_export = (
-        get_param(backend_model, 'cost_export', (cost, loc_tech, timestep))
-        * backend_model.carrier_export[loc_tech_carrier, timestep]
+        get_param(backend_model, 'cost_export', (cost, loc_tech, scenario, timestep))
+        * backend_model.carrier_export[loc_tech_carrier, scenario, timestep]
         * weight
     )
 
-    backend_model.cost_var_rhs[cost, loc_tech, timestep].expr += cost_export
+    backend_model.cost_var_rhs[cost, loc_tech, scenario, timestep].expr += cost_export
 
 
-def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def export_max_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set maximum export. All exporting technologies.
 
@@ -142,10 +145,10 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     loc_tech = get_loc_tech(loc_tech_carrier)
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp'):
-        operating_units = backend_model.operating_units[loc_tech, timestep]
+        operating_units = backend_model.operating_units[loc_tech, scenario, timestep]
     else:
         operating_units = 1
 
     export_cap = get_param(backend_model, 'export_cap', loc_tech)
-    return (backend_model.carrier_export[loc_tech_carrier, timestep] <=
+    return (backend_model.carrier_export[loc_tech_carrier, scenario, timestep] <=
             export_cap * operating_units)

@@ -31,32 +31,8 @@ _DEFAULT_PALETTE = [
 ]
 
 
-def model_run_from_yaml(model_file, override_file=None, override_dict=None):
-    """
-    Generate processed ModelRun configuration from a
-    YAML model configuration file.
-
-    Parameters
-    ----------
-    model_file : str
-        Path to YAML file with model configuration.
-    override_file : str, optional
-        Path to YAML file with model configuration overrides and the override
-        group to use, separated by ':', e.g. 'overrides.yaml:group1'.
-    override_dict : dict or AttrDict, optional
-
-    """
-    config = AttrDict.from_yaml(model_file)
-    config.config_path = model_file
-
-    config_with_overrides, debug_comments = apply_overrides(
-        config, override_file=override_file, override_dict=override_dict
-    )
-
-    return generate_model_run(config_with_overrides, debug_comments)
-
-
-def model_run_from_dict(config_dict, override_dict=None):
+def model_run_from_dict(config_dict, override_file=None,
+                        override_dict=None, scenario_file=None):
     """
     Generate processed ModelRun configuration from a
     model configuration dictionary.
@@ -64,17 +40,58 @@ def model_run_from_dict(config_dict, override_dict=None):
     Parameters
     ----------
     config_dict : dict or AttrDict
+        Result of applying AttrDict.from_yaml(model_file) or a directly applied
+        dictionary describing the model
+    override_file : str, optional
+        Overrides to apply to config_dict, having been loaded from file into an
+        AttrDict. Required in the form ``file.yaml:overrides`` where overrides
+        is a string concatenated list of the top-level keys in the YAML file that
+        the user wishes to be applied as overrides.
     override_dict : dict or AttrDict, optional
+        overrides to apply to config_dict. Will update the dictionary
+    scenario_file : str, optional
+        Scenarios to create. If given, multiple model_runs will be produced and
+        returned. Required in the form ``file.yaml:scenarios`` where scenarios
+        is a string concatenated list of the top-level keys in the YAML file that
+        the user wishes to be independent scenarios. Scenarios will be applied
+        in the same way as override_file, but applied to a new config_dict each
+        time
 
+    Returns
+    -------
+    model_run : AttrDict
+    debug_data : AttrDict
     """
     config = config_dict
-    config.config_path = None
+    config.config_path = config.get('config_path', None)
 
-    config_with_overrides, debug_comments = apply_overrides(
-        config, override_dict=override_dict
-    )
+    if scenario_file:
+        scenario_file_path, scenario_groups = util.split_filename_overrides(scenario_file)
+        model_runs = {}
+        debug_data = {}
+        for scenario in scenario_groups.split(','):
+            scenario_override = combine_overrides(scenario_file_path, scenario)
+            if override_dict is not None:
+                override_dict.update(scenario_override)
+            else:
+                override_dict = scenario_override
 
-    return generate_model_run(config_with_overrides, debug_comments)
+            config_with_overrides, debug_comments = apply_overrides(
+                config, override_file=override_file, override_dict=override_dict
+            )
+
+            model_runs[scenario], debug_data[scenario] = (
+                generate_model_run(config_with_overrides, debug_comments)
+            )
+
+        return model_runs, debug_data
+
+    else:
+        config_with_overrides, debug_comments = apply_overrides(
+            config, override_file=override_file, override_dict=override_dict
+        )
+
+        return generate_model_run(config_with_overrides, debug_comments)
 
 
 def combine_overrides(override_file_path, override_groups):
@@ -168,10 +185,7 @@ def apply_overrides(config, override_file=None, override_dict=None):
         # override_file into `path_to_file`, `file.yaml` and `override` before
         # merging `path_to_file` and `file.yaml` back together
 
-        path_to_file, override_file_with_group = os.path.split(override_file)
-        override_file, override_groups = override_file_with_group.split(':')
-        override_file_path = os.path.join(path_to_file, override_file)
-
+        override_file_path, override_groups = util.split_filename_overrides(override_file)
         override_from_file = combine_overrides(override_file_path, override_groups)
 
         check_and_remove_coordinates(config_model, override_from_file)
@@ -409,7 +423,7 @@ def process_timeseries_data(config_model, model_run):
 
             # Don't allow slicing outside the range of input data
             if (subset_time[0].date() < datetime_range[0].date() or
-                subset_time[1].date() > datetime_range[-1].date()):
+                    subset_time[1].date() > datetime_range[-1].date()):
 
                 raise exceptions.ModelError(
                     'subset time range {} is outside the input data time range '

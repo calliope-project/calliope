@@ -24,82 +24,84 @@ def load_constraints(backend_model):
     if 'loc_tech_carriers_carrier_production_max_constraint' in sets:
         backend_model.carrier_production_max_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_production_max_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_production_max_constraint_rule
         )
     if 'loc_tech_carriers_carrier_production_min_constraint' in sets:
         backend_model.carrier_production_min_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_production_min_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_production_min_constraint_rule
         )
     if 'loc_tech_carriers_carrier_consumption_max_constraint' in sets:
         backend_model.carrier_consumption_max_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_consumption_max_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=carrier_consumption_max_constraint_rule
         )
 
     if 'loc_techs_resource_max_constraint' in sets:
         backend_model.resource_max_constraint = po.Constraint(
             backend_model.loc_techs_resource_max_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=resource_max_constraint_rule
         )
 
     if 'loc_techs_storage_max_constraint' in sets:
         backend_model.storage_max_constraint = po.Constraint(
             backend_model.loc_techs_storage_max_constraint,
-            backend_model.timesteps,
+            backend_model.scenarios, backend_model.timesteps,
             rule=storage_max_constraint_rule
         )
 
     if 'loc_tech_carriers_ramping_constraint' in sets:
         backend_model.ramping_up_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_ramping_constraint, backend_model.timesteps,
+            backend_model.loc_tech_carriers_ramping_constraint,
+            backend_model.scenarios, backend_model.timesteps,
             rule=ramping_up_constraint_rule
         )
 
         backend_model.ramping_down_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_ramping_constraint, backend_model.timesteps,
+            backend_model.loc_tech_carriers_ramping_constraint,
+            backend_model.scenarios, backend_model.timesteps,
             rule=ramping_down_constraint_rule
         )
 
 
-def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set maximum carrier production. All technologies.
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
+    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, scenario, timestep))
 
     return carrier_prod <= (
         backend_model.energy_cap[loc_tech] * timestep_resolution * parasitic_eff
     )
 
 
-def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set minimum carrier production. All technologies except conversion_plus
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
+    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, scenario, timestep))
 
     return carrier_prod >= (
         backend_model.energy_cap[loc_tech] * timestep_resolution * min_use
     )
 
 
-def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set maximum carrier consumption for demand, storage, and transmission techs
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
+    carrier_con = backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
     return carrier_con >= (
@@ -107,32 +109,32 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
     )
 
 
-def resource_max_constraint_rule(backend_model, loc_tech, timestep):
+def resource_max_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
     Set maximum resource consumed by supply_plus techs
     """
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
-    return backend_model.resource_con[loc_tech, timestep] <= (
+    return backend_model.resource_con[loc_tech, scenario, timestep] <= (
         timestep_resolution * backend_model.resource_cap[loc_tech])
 
 
-def storage_max_constraint_rule(backend_model, loc_tech, timestep):
+def storage_max_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
     Set maximum stored energy. Supply_plus & storage techs only.
     """
-    return backend_model.storage[loc_tech, timestep] <= backend_model.storage_cap[loc_tech]
+    return backend_model.storage[loc_tech, scenario, timestep] <= backend_model.storage_cap[loc_tech]
 
 
-def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):
-    return _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=0)
+def ramping_up_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
+    return _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep, direction=0)
 
 
-def ramping_down_constraint_rule(backend_model, loc_tech_carrier, timestep):
-    return _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=1)
+def ramping_down_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
+    return _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep, direction=1)
 
 
-def _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=0):
+def _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep, direction=0):
     """
     Ramping rate constraints.
 
@@ -149,18 +151,18 @@ def _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, directio
         time_res_prev = backend_model.timestep_resolution[previous_step]
         loc_tech = loc_tech_carrier.rsplit('::', 1)[0]
         # Ramping rate (fraction of installed capacity per hour)
-        ramping_rate = get_param(backend_model, 'energy_ramping', (loc_tech, timestep))
+        ramping_rate = get_param(backend_model, 'energy_ramping', (loc_tech, scenario, timestep))
 
         try:
-            prod_this = backend_model.carrier_prod[loc_tech_carrier, timestep]
-            prod_prev = backend_model.carrier_prod[loc_tech_carrier, previous_step]
+            prod_this = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
+            prod_prev = backend_model.carrier_prod[loc_tech_carrier, scenario, previous_step]
         except KeyError:
             prod_this = 0
             prod_prev = 0
 
         try:
-            con_this = backend_model.carrier_con[loc_tech_carrier, timestep]
-            con_prev = backend_model.carrier_con[loc_tech_carrier, previous_step]
+            con_this = backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
+            con_prev = backend_model.carrier_con[loc_tech_carrier, scenario, previous_step]
         except KeyError:
             con_this = 0
             con_prev = 0

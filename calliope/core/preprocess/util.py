@@ -3,6 +3,7 @@ Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
+import os
 
 import numpy as np
 
@@ -111,6 +112,14 @@ def get_systemwide_constraints(tech_config):
         constraints = AttrDict({})
 
     return constraints
+
+
+def split_filename_overrides(override_file):
+    path_to_file, override_file_with_group = os.path.split(override_file)
+    override_file, override_groups = override_file_with_group.split(':')
+    override_file_path = os.path.join(path_to_file, override_file)
+
+    return override_file_path, override_groups
 
 
 def vincenty(coord1, coord2):

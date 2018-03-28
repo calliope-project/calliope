@@ -8,20 +8,23 @@ model.py
 Implements the core Model class.
 
 """
+import os
 
 import numpy as np
+import xarray as xr
+import pandas as pd
 
 from calliope.analysis import plotting, postprocess
 from calliope.core import debug, io
 from calliope.core.preprocess import \
-    model_run_from_yaml, \
     model_run_from_dict, \
     build_model_data, \
     apply_time_clustering, \
     final_timedimension_processing
 from calliope.core.util.tools import log_time
-from calliope.core.util.dataset import split_loc_techs
+from calliope.core.util.dataset import split_loc_techs, reorganise_dataset_dimensions
 from calliope import exceptions
+from calliope.core.attrdict import AttrDict
 from calliope.backend.run import run as run_backend
 
 
@@ -58,20 +61,31 @@ class Model(object):
         """
         self._timings = {}
         log_time(self._timings, 'model_creation')
-        if isinstance(config, str):
-            model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
-            self._init_from_model_run(model_run, debug_data)
-        elif isinstance(config, dict):
-            model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
-            self._init_from_model_run(model_run, debug_data)
-        elif model_data is not None and config is None:
+        if config is not None:
+            if isinstance(config, str):
+                model_file = config
+                config = AttrDict.from_yaml(model_file)
+                config.config_path = model_file
+            if isinstance(config, dict):
+                model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
+            else:
+                # expected input is a string pointing to a YAML file of the run
+                # configuration or a dict/AttrDict in which the run and model
+                # configurations are defined
+                raise ValueError(
+                    'Input configuration must either be a string or a dictionary.'
+                )
+
+            if 'scenario_file' in kwargs.keys():
+                self._init_multiple_runs(model_run, debug_data)
+            else:
+                self._init_from_model_run(model_run, debug_data)
+        elif model_data is not None:
             self._init_from_model_data(model_data)
         else:
-            # expected input is a string pointing to a YAML file of the run
-            # configuration or a dict/AttrDict in which the run and model
-            # configurations are defined
             raise ValueError(
-                'Input configuration must either be a string or a dictionary.'
+                'config (str or dict) or model_data (xarray Dataset) must be '
+                'given to initialise model'
             )
 
         self.plot = plotting.ModelPlotMethods(self)
@@ -97,6 +111,50 @@ class Model(object):
                 self._model_data_original, model_run
             )
         self._model_data = final_timedimension_processing(_model_data)
+        log_time(self._timings, 'model_data_creation', time_since_start=True)
+
+        for var in self._model_data.data_vars:
+            self._model_data[var].attrs['is_result'] = 0
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
+
+    def _init_multiple_runs(self, model_run, debug_data):
+        self._model_run = model_run
+        self._debug_data = debug_data
+        log_time(self._timings, 'model_run_creation')
+
+        model_data_original = []
+        model_data = []
+
+        for scenario_num, scenario in model_run.items():
+            _model_data_original = build_model_data(scenario)
+            if 'model.probability' in _model_data_original.attrs.keys():
+                _model_data_original['probability'] = xr.DataArray(
+                    data=[_model_data_original.attrs.pop('model.probability')],
+                    dims='scenarios'
+                )
+            random_seed = scenario.get_key('model.random_seed', None)
+            if random_seed:
+                np.random.seed(seed=random_seed)
+            time_config = scenario.model.get('time', None)
+            if not time_config:
+                _model_data = _model_data_original
+            else:
+                _model_data = apply_time_clustering(
+                    _model_data_original, scenario
+                )
+            model_data_original.append(_model_data_original)
+            model_data.append(final_timedimension_processing(_model_data))
+
+        self._model_data_original = reorganise_dataset_dimensions(xr.concat(
+            model_data_original, data_vars='different',
+            dim=pd.Index(data=model_run.keys(), name='scenarios')
+        ))
+
+        self._model_data = reorganise_dataset_dimensions(xr.concat(
+            model_data, data_vars='different',
+            dim=pd.Index(data=model_run.keys(), name='scenarios')
+        ))
+
         log_time(self._timings, 'model_data_creation', time_since_start=True)
 
         for var in self._model_data.data_vars:
