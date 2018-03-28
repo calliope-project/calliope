@@ -31,12 +31,18 @@ def CVaR_constraint_rule(backend_model, scenario):
 
     """
 
-    def _cost_equation(backend_model, scenario):
-        return sum(
+    if hasattr(backend_model, 'unmet_demand'):
+        unmet_demand = sum(
+            backend_model.unmet_demand[loc_carrier, scenario, timestep]
+            for loc_carrier in backend_model.loc_carriers
+            for timestep in backend_model.timesteps
+        ) * backend_model.bigM
+    else:
+        unmet_demand = 0
+
+    cost_sum = sum(
         backend_model.cost['monetary', loc_tech, scenario]
         for loc_tech in backend_model.loc_techs_cost
-    )
-
-    cost_sum = _cost_equation(backend_model, scenario)
+    ) + unmet_demand
 
     return cost_sum - backend_model.xi <= backend_model.eta[scenario]
