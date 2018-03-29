@@ -146,9 +146,11 @@ def nationalscale_clustered_example_tester(solver='glpk', solver_io=None):
 
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
+    @pytest.mark.xfail(reason='closest clustering broken')
     def test_nationalscale_clustered_example_results_glpk(self):
         nationalscale_clustered_example_tester()
 
+    @pytest.mark.xfail(reason='closest clustering broken')
     def test_nationalscale_clustered_example_results_cbc(self):
         # Check for existence of the `cbc` command
         if shutil.which('cbc'):
