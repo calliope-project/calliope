@@ -16,7 +16,7 @@ def subset_sum_squeeze(data, subset={}, sum_dims=None, squeeze=False):
         allowed_items = {}
 
         for k, v in allowed_subsets.items():
-            if isinstance(v, str):
+            if not hasattr(v, '__iter__') or isinstance(v, str):
                 v = [v]
             allowed_items[k] = [i for i in v if i in data[k].values]
 

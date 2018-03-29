@@ -83,28 +83,16 @@ def robust_optimal_cost_minimization(backend_model):
     # Risk (VaR)
     alpha = backend_model.alpha
 
-    def cost_equation(backend_model, scenario):
-        if hasattr(backend_model, 'unmet_demand'):
-            unmet_demand = sum(
-                backend_model.unmet_demand[loc_carrier, scenario, timestep]
-                for loc_carrier in backend_model.loc_carriers
-                for timestep in backend_model.timesteps
-            ) * backend_model.bigM
-        else:
-            unmet_demand = 0
+    def cost_equation(backend_model):
 
         return sum(
-            backend_model.cost['monetary', loc_tech, scenario]
-            for loc_tech in backend_model.loc_techs_cost
-        ) + unmet_demand
+            backend_model.cost_investment['monetary', loc_tech]
+            for loc_tech in backend_model.loc_techs_investment_cost
+        )
 
     def obj_rule(backend_model):
         return (
-            sum(
-                backend_model.probability[scenario]
-                * cost_equation(backend_model, scenario)
-                for scenario in backend_model.scenarios
-            ) + beta * (
+            cost_equation(backend_model) + beta * (
                 backend_model.xi + 1 / (1 - alpha) *
                 sum(
                     backend_model.probability[scenario] *

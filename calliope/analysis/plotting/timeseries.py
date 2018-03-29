@@ -122,7 +122,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
                     'unmet_demand', index=['locs', 'carriers'], fillna=0
                 ).loc[dict(carriers=var)],
                 subset, sum_dims, squeeze=False
-            )
+            ).squeeze('scenarios')
 
     # array flow for storage tracks stored energy. carrier_flow is
     # charge/discharge (including resource consumed for supply_plus techs)
