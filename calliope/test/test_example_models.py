@@ -81,6 +81,24 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip('CBC not installed')
 
+class TestNationalScaleExampleModelInfeasibility:
+    def example_tester(self):
+        override = {
+            'run.ensure_feasibility': False,
+            'run.objective': 'check_feasibility',
+            'model.subset_time': '2005-01-04',
+        }
+
+        model = calliope.examples.national_scale(override_dict=override)
+        model.run()
+
+        assert model.results.attrs['termination_condition'] == 'other'
+
+        assert 'systemwide_levelised_cost' not in model.results.data_vars
+        assert 'systemwide_capacity_factor' not in model.results.data_vars
+
+    def test_nationalscale_example_results_glpk(self):
+        self.example_tester()
 
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):
@@ -140,30 +158,30 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
     def example_tester_closest(self, solver='glpk', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
 
-        assert float(model.results.cost.sum()) == approx(17587619.280)
+        assert float(model.results.cost.sum()) == approx(51360119.432)
 
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.054588, abs=0.000001)  # pre- approx(0.084837, abs=0.000001)
+        ) == approx(0.102287, abs=0.000001)  # pre- approx(0.084837, abs=0.000001)
 
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.152121, abs=0.000001)  # pre- approx(0.099366, abs=0.000001)
+        ) == approx(0.095058, abs=0.000001)  # pre- approx(0.099366, abs=0.000001)
 
     def example_tester_mean(self, solver='glpk', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
 
-        assert float(model.results.cost.sum()) == approx(45597207.385)
+        assert float(model.results.cost.sum()) == approx(44804593.637)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.092517, abs=0.000001)
+        ) == approx(0.08474, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.0665808, abs=0.000001)
+        ) == approx(0.0708262, abs=0.000001)
 
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         self.example_tester_closest()

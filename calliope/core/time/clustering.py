@@ -14,6 +14,7 @@ import xarray as xr
 
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
+from sklearn.metrics import mean_squared_error
 from sklearn import cluster as sk_cluster
 
 from calliope import exceptions
@@ -124,8 +125,8 @@ def reshape_clustered(clustered, data, loc_techs=None, variables=None):
         dates = np.unique(timesteps.date)
         times = np.unique(timesteps.time)
     else: # mean_data from get_closest_days_from_clusters is in the format cluster-timestep
-        dates = [i.split('-')[0] for i in timesteps]
-        times = [i.split('-')[1] for i in timesteps]
+        dates = np.unique([i.split('-')[0] for i in timesteps])
+        times = np.unique([i.split('-')[1] for i in timesteps])
 
     clusters = clustered.shape[0]
 
@@ -202,15 +203,14 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
         '{}-{}'.format(cid, t) for cid in cluster_map for t in range(timesteps_per_day)
     ]
     for var in data.data_vars:
-        array = data[var].copy()
-        clustered_array = array[:, :len(t_coords)]
+        clustered_array = data[var][:, :len(t_coords)].copy()
         clustered_array['timesteps'] = t_coords
         for cluster_id, cluster_members in cluster_map.items():
             current_cluster = [
                 i for i in t_coords if i.startswith('{}-'.format(cluster_id))
             ]
             clustered_array.loc[{'timesteps': current_cluster}] = (
-                array.loc[{'timesteps': cluster_members}]
+                data[var].loc[{'timesteps': cluster_members}]
                 .groupby('timesteps.hour').mean(dim='timesteps').values
             )
         ds[var] = clustered_array
@@ -218,12 +218,69 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
     return ds
 
 
-def find_nearest_vector_index(array, value):
-    return np.array([np.linalg.norm(sum(y)) for y in array - value]).argmin()
+def find_nearest_vector_index(array, value, metric='rmse'):
+    """
+    compares the data for one cluster to every day in the timeseries, to find the
+    day which most closely matches.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        full timeseries array,
+        shape = (num_dates, num_loc_techs * num_vars * num_timesteps_per_day)
+        The shape is acheived by running a dataset through clustering.reshape_for_clustering
+    value : np.ndarray
+        one cluster of data,
+        shape = (1, num_loc_techs * num_vars * num_timesteps_per_day)
+        The shape is acheived by running the mean clustered dataset,
+        subset over one cluster, through clustering.reshape_for_clustering
+    metric : str, default = 'rmse'
+        Error metric with which to compare the array and the values.
+        If 'rmse', will compare the root mean square error between `value` and
+        each date in `array`.
+        If 'abs' will compare the absolute difference between `value` and
+        each date in `array`.
+    """
+    if metric == 'rmse':
+        error = np.array([mean_squared_error(i, value[0]) for i in array])
+    elif metric == 'abs':
+        error = np.array([np.linalg.norm(sum(y)) for y in array - value])
+    else:
+        raise ValueError(
+            'Error metric can only be `rmse` or `abs`, {} given'.format(metric)
+        )
+
+    return error.argmin()
 
 
 def get_closest_days_from_clusters(data, mean_data, clusters, timesteps_per_day):
+    """
+    Given a set of mean cluster timeseries profiles, find the day in the full
+    timeseries that matches each cluster profile most closely.
 
+    Parameters
+    ----------
+    data : xarray Dataset
+        Input model data, with all non-timeseries data vars dropped
+    mean_data : xarray Dataset
+        Mean per cluster of input model data, resulting timeseries is of the form
+        X-Y where X is the cluster number and Y is the timestep (both integers)
+    clusters : pd.Series
+        Cluster to which each date is aligned.
+        Index = dates of the full timeseries, values = cluster number
+    timesteps_per_day : int
+        Number of timesteps in a day. We expect uniform timesteps between days,
+        which is checked prior to reaching this function.
+
+    Returns
+        new_data : xarray Dataset
+            data, indexed over only the timesteps within the days that most
+            closely match the cluster means.
+            Number of timesteps = timesteps_per_day * num_clusters. May be lower
+            than this if many cluster means match with the same day
+        chosen_day_timestepas : dict
+            The day assigned to each cluster. key = cluster number, value = date.
+    """
     dtindex = data['timesteps'].to_index()
 
     chosen_days = {}
