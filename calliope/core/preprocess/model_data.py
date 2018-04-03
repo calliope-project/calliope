@@ -255,7 +255,7 @@ def costs_to_dataset(model_run):
                 cost_value = np.nan if not cost_dict else cost_dict.get(cost, np.nan)
                 # add the value for the particular location & technology combination to the correct cost class list
                 cost_class_array.append(cost_value)
-        data_dict['cost_' + cost]['data'].append(cost_class_array)
+            data_dict['cost_' + cost]['data'].append(cost_class_array)
 
     return data_dict
 

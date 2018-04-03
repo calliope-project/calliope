@@ -84,7 +84,77 @@ class TestPlotting:
     def test_subset_plotting(self, national_scale_example):
         model = national_scale_example
 
-        model.plot.capacity(html_only=True, subset={'timeseries': ['2015-01-01 01:00']})
+        model.plot.capacity(
+            html_only=True, subset={'timeseries': ['2015-01-01 01:00']}
+        )
+
+    def test_subset_array(self, national_scale_example):
+        model = national_scale_example
+
+        model.plot.capacity(html_only=True, array='inputs')
+        model.plot.capacity(html_only=True, array='results')
+        model.plot.capacity(html_only=True, array='energy_cap')
+        model.plot.capacity(html_only=True, array='storage_cap')
+        model.plot.capacity(
+            html_only=True, array=['systemwide_levelised_cost', 'storage_cap']
+        )
+
+        model.plot.timeseries(html_only=True, array='inputs')
+        model.plot.timeseries(html_only=True, array='results')
+        model.plot.timeseries(html_only=True, array='power')
+        model.plot.timeseries(html_only=True, array='resource')
+        model.plot.timeseries(
+            html_only=True, array=['resource_con', 'cost_var']
+        )
+
+    def test_long_name(self, national_scale_example):
+            model = national_scale_example
+            model._model_data['names'] = model._model_data.names.astype('<U100')
+            model._model_data.names.loc['ccgt'] = (
+                'a long name for a technology, longer than 30 characters'
+            )
+            model._model_data.names.loc['csp'] = (
+                'a really very long name for a technology that is longer than 60 characters'
+            )
+            model._model_data.names.loc['battery'] = (
+                'another_long_name_but_without_space_to_break_at'
+            )
+            model._model_data.names.loc['ac_transmission'] = (
+                'long_transmission_name_which_has two break types in technology name'
+            )
+
+            broken_names = [
+                'a long name for a technology,<br>longer than 30 characters',
+                'another_long_name_but_without_...<br>space_to_break_at',
+                'a really very long name for a<br>technology that is longer<br>than 60 characters'
+            ]
+
+            html_cap = model.plot.capacity(html_only=True)
+            html_timeseries = model.plot.timeseries(html_only=True)
+            html_transmission = model.plot.transmission(html_only=True)
+            for i in broken_names:
+                assert i in html_cap
+                assert i in html_timeseries
+            assert (
+                'long_transmission_name_which_h...<br>as two break types in<br>technology name'
+                in html_transmission
+            )
+
+    def test_plot_cost(self):
+        model = calliope.examples.national_scale(
+            override_dict={
+                'techs.ccgt.costs.carbon': {'energy_cap': 10, 'interest_rate': 0.01}
+            }
+        )
+        model.run()
+        # should fail, multiple costs provided, can only plot one
+        with pytest.raises(exceptions.ModelError):
+            model.plot.capacity(html_only=True, array='results')
+
+        # should succeed, multiple costs provided, subset to one
+        model.plot.capacity(
+            html_only=True, array='results', subset={'costs': 'carbon'}
+        )
 
         # FIXME: sum_dims doesn't seem to work at all
         # model.plot.capacity(html_only=True, sum_dims=['locs'])

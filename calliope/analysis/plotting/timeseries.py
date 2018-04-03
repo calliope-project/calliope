@@ -15,7 +15,7 @@ import plotly.graph_objs as go
 
 from calliope import exceptions
 from calliope.analysis.util import subset_sum_squeeze
-from calliope.analysis.plotting.util import get_data_layout, hex_to_rgba
+from calliope.analysis.plotting.util import get_data_layout, hex_to_rgba, break_name
 
 
 def _get_relevant_vars(model, dataset, array):
@@ -152,21 +152,13 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         if 'techs_transmission' in dataset and tech in dataset.techs_transmission.values:
             base_tech = 'transmission'
             color = dataset.colors.loc[{'techs': tech.split(':')[0]}].item()
-            name = dataset.names.loc[{'techs': tech.split(':')[0]}].item()
+            name = break_name(dataset.names.loc[{'techs': tech.split(':')[0]}].item())
             if var in carriers:
                 continue  # no transmission in carrier flow
         else:
             base_tech = dataset.inheritance.loc[tech_dict].item().split('.')[0]
             color = dataset.colors.loc[tech_dict].item()
-            name = dataset.names.loc[tech_dict].item()
-
-        # Wrap legend items longer than 30 characters, preferably at a space
-        if len(name) > 30:
-            breakpoint = name.rfind(' ', int(len(name) / 3), 35)
-            if breakpoint:
-                name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
-            else:
-                name = name[:30].rstrip() + '...<br>' + name[30:].lstrip()
+            name = break_name(dataset.names.loc[tech_dict].item())
 
         if base_tech == 'demand':
             # Always insert demand at position 0 in the list, to make

@@ -114,7 +114,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_om_annual = get_param(backend_model, 'cost_om_annual', (cost, loc_tech))
 
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
+    depreciation_rate = model_data_dict['data']['cost_depreciation_rate'].get((cost, loc_tech), 0)
 
     cost_con = (
         depreciation_rate * ts_weight *

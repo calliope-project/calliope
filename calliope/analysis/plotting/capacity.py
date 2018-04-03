@@ -15,7 +15,7 @@ import plotly.graph_objs as go
 
 from calliope import exceptions
 from calliope.analysis.util import subset_sum_squeeze
-from calliope.analysis.plotting.util import get_data_layout
+from calliope.analysis.plotting.util import get_data_layout, break_name
 
 
 def _get_relevant_vars(dataset, array):
@@ -106,14 +106,8 @@ def _get_var_data(
 
         if array_cap.loc[{'techs': tech}].sum() > 0:
             x = array_cap.loc[{'techs': tech}].values
-            name = model._model_data.names.loc[{'techs': tech}].item()
-            # Wrap legend items longer than 30 characters, preferably at a space
-            if len(name) > 30:
-                breakpoint = name.rfind(' ', int(len(name) / 3), 35)
-                if breakpoint:
-                    name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
-                else:
-                    name = name[:30].rstrip() + '...<br>' + name[30:].lstrip()
+            name = break_name(model._model_data.names.loc[{'techs': tech}].item())
+            print(name)
             if 'systemwide' in cap:
                 y = array_cap.carriers.values
             else:

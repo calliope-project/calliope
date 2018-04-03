@@ -13,7 +13,7 @@ import pandas as pd
 import xarray as xr
 
 from calliope.core.preprocess.util import vincenty
-
+from calliope.analysis.plotting.util import break_name
 
 def _get_zoom(coordinate_array, width):
     """
@@ -226,7 +226,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
                 v_coord: v_edge[i],
                 'showlegend': showlegend,
                 'legendgroup': tech,
-                'name': names.loc[dict(techs=tech)].item(),
+                'name': break_name(names.loc[dict(techs=tech)].item()),
                 'line': {'color': colors.loc[dict(techs=tech)].item()}
             }})
             showlegend = False

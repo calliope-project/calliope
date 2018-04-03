@@ -73,3 +73,25 @@ def hex_to_rgba(hex_color, opacity):
     hex_color = hex_color.lstrip('#')
     rgb = [_HEXDEC[hex_color[0:2]], _HEXDEC[hex_color[2:4]], _HEXDEC[hex_color[4:6]]]
     return 'rgba({1}, {2}, {3}, {0})'.format(opacity, *rgb)
+
+
+def break_name(name):
+    """Take a long technology name string and break it across multiple lines"""
+    name_breaks = len(name) / 30
+    if name_breaks > 1:
+        initial_name = name
+        break_buffer = 0
+        for name_break in range(1, int(name_breaks) + 1):
+            # preferably break at a space
+            breakpoint = initial_name.rfind(' ', name_break * 30 - 10, name_break * 30)
+            # -1 means rfind failed to find any space
+            if breakpoint != -1:
+                breakpoint += break_buffer
+                name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
+                break_buffer += 4
+            else:
+                breakpoint = 30 * name_break + break_buffer
+                name = name[:breakpoint].rstrip() + '...<br>' + name[breakpoint:].lstrip()
+                break_buffer += 7
+
+    return name
