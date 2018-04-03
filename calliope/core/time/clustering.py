@@ -17,7 +17,7 @@ from scipy.spatial.distance import pdist
 from sklearn import cluster as sk_cluster
 
 from calliope import exceptions
-from calliope.core.util.dataset import get_loc_techs
+
 
 def _stack_data(data, dates, times):
     """
@@ -30,9 +30,10 @@ def _stack_data(data, dates, times):
     if len(non_date_dims) >= 2:
         stacked_var = data_to_stack.stack(stacked=non_date_dims)
     else:
-        e = exceptions.ModelError
-        raise e("Cannot conduct time clustering with variable {} as it has no "
-        "non-time dimensions.".format(data.name))
+        raise exceptions.ModelError(
+            "Cannot conduct time clustering with variable {} as it has no "
+            "non-time dimensions.".format(data.name)
+        )
     return stacked_var
 
 
@@ -221,12 +222,9 @@ def find_nearest_vector_index(array, value):
     return np.array([np.linalg.norm(sum(y)) for y in array - value]).argmin()
 
 
-def get_closest_days_from_clusters(data, mean_data, clusters):
+def get_closest_days_from_clusters(data, mean_data, clusters, timesteps_per_day):
 
     dtindex = data['timesteps'].to_index()
-    timesteps_per_day = len(data.attrs['_daily_timesteps'])
-    #FIXME: Why do we have 'days' if it's unused?
-    days = int(len(data['timesteps']) / timesteps_per_day)
 
     chosen_days = {}
 
@@ -253,14 +251,15 @@ def get_closest_days_from_clusters(data, mean_data, clusters):
 
 
 def _hourly_from_daily_index(idx):
-    dtrange = lambda i: pd.date_range(i, i + pd.Timedelta('1D'),
-                                      freq='1H')[:-1]
+    dtrange = lambda i: pd.date_range(
+        i, i + pd.Timedelta('1D'), freq='1H'
+    )[:-1]
     new_idx = pd.concat([pd.Series(1, dtrange(i))
                          for i in idx]).index
     return new_idx
 
 
-def map_clusters_to_data(data, clusters, how):
+def map_clusters_to_data(data, clusters, how, daily_timesteps):
     """
     Returns a copy of data that has been clustered.
 
@@ -274,7 +273,7 @@ def map_clusters_to_data(data, clusters, how):
     # FIXME hardcoded time intervals ('1H', '1D')
 
     # Get all timesteps, not just the first per day
-    timesteps_per_day = len(data.attrs['_daily_timesteps'])
+    timesteps_per_day = len(daily_timesteps)
     idx = clusters.index
     new_idx = _hourly_from_daily_index(idx)
     clusters_timeseries = (clusters.reindex(new_idx)
@@ -308,7 +307,7 @@ def map_clusters_to_data(data, clusters, how):
             'counts': value_counts}).set_index('dates')['counts']
 
     elif how == 'closest':
-        new_data, chosen_ts = get_closest_days_from_clusters(data, new_data, clusters)
+        new_data, chosen_ts = get_closest_days_from_clusters(data, new_data, clusters, timesteps_per_day)
         # Deal with the case where more than one cluster has the same closest day
         # An easy way is to rename the original clusters with the chosen days
         # So at this point, clusterdays_timeseries maps all timesteps to the day
@@ -330,19 +329,23 @@ def map_clusters_to_data(data, clusters, how):
     new_data['timestep_weights'] = xr.DataArray(weights, dims=['timesteps'])
     days = np.unique(new_data.timesteps.to_index().date)
     new_data['timestep_resolution'] = (
-        xr.DataArray(np.repeat(data.attrs['_daily_timesteps'], len(days)),
+        xr.DataArray(np.repeat(daily_timesteps, len(days)),
                      dims=['timesteps'],
                      coords={'timesteps': new_data['timesteps']})
     )
     return new_data
 
 
-def get_clusters_kmeans(data, tech=None, timesteps=None, k=None, variables=None):
+def get_clusters_kmeans(
+        data, timesteps_per_day,
+        tech=None, timesteps=None, k=None, variables=None
+    ):
     """
     Parameters
     ----------
     data : xarray.Dataset
         Should be normalized
+    timesteps_per_day
     tech : list, optional
         list of strings referring to technologies by which clustering is undertaken.
         If none (default), all technologies within timeseries variables will be used.
@@ -363,7 +366,6 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=None, variables=None)
     centroids
 
     """
-    timesteps_per_day = len(data.attrs['_daily_timesteps'])
 
     if timesteps is not None:
         data = data.loc[{'timesteps': timesteps}]
@@ -374,7 +376,11 @@ def get_clusters_kmeans(data, tech=None, timesteps=None, k=None, variables=None)
 
     if not k:
         k = hartigan_n_clusters(X)
-        exceptions.warn('Used Hartigan rule to get {} kmeans clusters'.format(k))
+        exceptions.warn(
+            'Used Hartigan\'s rule to determine '
+            '{} is a good number of clusters.'.format(k)
+        )
+
     clustered_data = sk_cluster.KMeans(k).fit(X)
 
     # Determine the cluster membership of each day
@@ -427,12 +433,16 @@ def hartigan_n_clusters(X, threshold=10):
 
 # TODO get hierarchical clusters using scikitlearn too
 # TODO change scipy for scikitlearn in Calliope requirements
-def get_clusters_hierarchical(data, tech=None, max_d=None, k=None, variables=None):
+def get_clusters_hierarchical(
+        data, timesteps_per_day,
+        tech=None, max_d=None, k=None, variables=None
+        ):
     """
     Parameters
     ----------
     data : xarray.Dataset
         Should be normalized
+    timesteps_per_day
     tech : list, optional
         list of strings referring to technologies by which clustering is undertaken.
         If none (default), all technologies within timeseries variables will be used.
@@ -464,11 +474,15 @@ def get_clusters_hierarchical(data, tech=None, max_d=None, k=None, variables=Non
         # Get clusters based on number of desired clusters
         clusters = hierarchy.fcluster(Z, k, criterion='maxclust')
     else:
-        clusters = None
+        k = hartigan_n_clusters(X)
+        exceptions.warn(
+            'Used Hartigan\'s rule to determine '
+            '{} is a good number of clusters.'.format(k)
+        )
+        clusters = hierarchy.fcluster(Z, k, criterion='maxclust')
 
     # Make sure clusters are a pd.Series with a datetime index
     if clusters is not None:
-        timesteps_per_day = len(data.attrs['_daily_timesteps'])
         timesteps = data.coords['timesteps'].values  # All timesteps
 
         clusters = pd.Series(clusters, index=timesteps[::timesteps_per_day])

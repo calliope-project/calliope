@@ -28,133 +28,160 @@ class TestModelPreproccesing:
         calliope.examples.operate()
 
 
-def nationalscale_example_tester(solver='glpk', solver_io=None):
-    override = {
-        'model.subset_time': '2005-01-01',
-        'model.solver': solver,
-    }
-
-    if solver_io:
-        override['model.solver_io'] = solver_io
-
-    model = calliope.examples.national_scale(override_dict=override)
-    model.run()
-
-    assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(45129.950)
-    assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6675.173)
-
-    assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(4626.588)
-    assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
-    assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
-
-    assert float(model.results.cost.sum()) == approx(38997.3544)
-
-    assert float(
-        model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-    ) == approx(0.063543, abs=0.000001)
-    assert float(
-        model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-    ) == approx(0.2642256, abs=0.000001)
-
-
 class TestNationalScaleExampleModelSenseChecks:
+    def example_tester(self, solver='glpk', solver_io=None):
+        override = {
+            'model.subset_time': '2005-01-01',
+            'model.solver': solver,
+        }
+
+        if solver_io:
+            override['model.solver_io'] = solver_io
+
+        model = calliope.examples.national_scale(override_dict=override)
+        model.run()
+
+        assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(45129.950)
+        assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6675.173)
+
+        assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(4626.588)
+        assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
+        assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
+
+        assert float(model.results.cost.sum()) == approx(38997.3544)
+
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.063543, abs=0.000001)
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.2642256, abs=0.000001)
+
     def test_nationalscale_example_results_glpk(self):
-        nationalscale_example_tester()
+        self.example_tester()
 
     def test_nationalscale_example_results_gurobi(self):
         try:
             import gurobipy
-            nationalscale_example_tester(solver='gurobi', solver_io='python')
+            self.example_tester(solver='gurobi', solver_io='python')
         except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_nationalscale_example_results_cplex(self):
         # Check for existence of the `cplex` command
         if shutil.which('cplex'):
-            nationalscale_example_tester(solver='cplex')
+            self.example_tester(solver='cplex')
         else:
             pytest.skip('CPLEX not installed')
 
     def test_nationalscale_example_results_cbc(self):
         # Check for existence of the `cbc` command
         if shutil.which('cbc'):
-            nationalscale_example_tester(solver='cbc')
+            self.example_tester(solver='cbc')
         else:
             pytest.skip('CBC not installed')
 
 
-def nationalscale_resampled_example_tester(solver='glpk', solver_io=None):
-    override = {
-        'model.subset_time': '2005-01-01',
-        'model.solver': solver,
-    }
-
-    if solver_io:
-        override['model.solver_io'] = solver_io
-
-    model = calliope.examples.time_resampling(override_dict=override)
-    model.run()
-
-    assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(23563.444)
-    assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6315.78947)
-
-    assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(1440.8377)
-    assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
-    assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
-
-    assert float(model.results.cost.sum()) == approx(37344.221869)
-
-
 class TestNationalScaleResampledExampleModelSenseChecks:
+    def example_tester(self, solver='glpk', solver_io=None):
+        override = {
+            'model.subset_time': '2005-01-01',
+            'model.solver': solver,
+        }
+
+        if solver_io:
+            override['model.solver_io'] = solver_io
+
+        model = calliope.examples.time_resampling(override_dict=override)
+        model.run()
+
+        assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(23563.444)
+        assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6315.78947)
+
+        assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(1440.8377)
+        assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
+        assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
+
+        assert float(model.results.cost.sum()) == approx(37344.221869)
+
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.063543, abs=0.000001)
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.25, abs=0.000001)
+
     def test_nationalscale_resampled_example_results_glpk(self):
-        nationalscale_resampled_example_tester()
+        self.example_tester()
 
     def test_nationalscale_resampled_example_results_cbc(self):
         # Check for existence of the `cbc` command
         if shutil.which('cbc'):
-            nationalscale_resampled_example_tester(solver='cbc')
+            self.example_tester(solver='cbc')
         else:
             pytest.skip('CBC not installed')
 
 
-def nationalscale_clustered_example_tester(solver='glpk', solver_io=None):
-    override = {
-        'model.solver': solver,
-    }
-
-    if solver_io:
-        override['model.solver_io'] = solver_io
-
-    model = calliope.examples.time_clustering(override_dict=override)
-    model.run()
-
-    # assert model.results.storage_cap.to_pandas()['region1-1::csp'] == approx(23563.444)
-    # assert model.results.storage_cap.to_pandas()['region2::battery'] == approx(6315.78947)
-
-    # assert model.results.energy_cap.to_pandas()['region1-1::csp'] == approx(1440.8377)
-    # assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
-    # assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
-
-    # assert float(model.results.cost.sum()) == approx(37344.221869)
-
-    assert float(
-        model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-    ) == approx(0.084837, abs=0.000001)
-    assert float(
-        model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-    ) == approx(0.099366, abs=0.000001)
-
-
 class TestNationalScaleClusteredExampleModelSenseChecks:
-    @pytest.mark.xfail(reason='closest clustering broken')
-    def test_nationalscale_clustered_example_results_glpk(self):
-        nationalscale_clustered_example_tester()
+    def model_runner(self, solver='glpk', solver_io=None, how='closest'):
+        override = {
+            'model.solver': solver,
+            'model.time.function_options.how': how
+        }
 
-    @pytest.mark.xfail(reason='closest clustering broken')
-    def test_nationalscale_clustered_example_results_cbc(self):
+        if solver_io:
+            override['model.solver_io'] = solver_io
+
+        model = calliope.examples.time_clustering(override_dict=override)
+        model.run()
+
+        return model
+
+    def example_tester_closest(self, solver='glpk', solver_io=None):
+        model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
+
+        assert float(model.results.cost.sum()) == approx(17587619.280)
+
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.054588, abs=0.000001)  # pre- approx(0.084837, abs=0.000001)
+
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.152121, abs=0.000001)  # pre- approx(0.099366, abs=0.000001)
+
+    def example_tester_mean(self, solver='glpk', solver_io=None):
+        model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
+
+        assert float(model.results.cost.sum()) == approx(45597207.385)
+
+        # Full 1-hourly model run: 0.296973
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.092517, abs=0.000001)
+
+        # Full 1-hourly model run: 0.064362
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.0665808, abs=0.000001)
+
+    def test_nationalscale_clustered_example_closest_results_glpk(self):
+        self.example_tester_closest()
+
+    def test_nationalscale_clustered_example_closest_results_cbc(self):
         # Check for existence of the `cbc` command
         if shutil.which('cbc'):
-            nationalscale_clustered_example_tester(solver='cbc')
+            self.example_tester_closest(solver='cbc')
+        else:
+            pytest.skip('CBC not installed')
+
+    def test_nationalscale_clustered_example_mean_results_glpk(self):
+        self.example_tester_mean()
+
+    def test_nationalscale_clustered_example_mean_results_cbc(self):
+        # Check for existence of the `cbc` command
+        if shutil.which('cbc'):
+            self.example_tester_mean(solver='cbc')
         else:
             pytest.skip('CBC not installed')
 
@@ -194,7 +221,6 @@ class TestUrbanScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(522.829998)
 
     def test_operate_example_results(self):
-
         model = calliope.examples.operate(
             override_dict={'model.subset_time': ['2005-07-01', '2005-07-04']}
         )

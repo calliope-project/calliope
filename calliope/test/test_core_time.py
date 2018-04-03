@@ -2,18 +2,102 @@ import pandas as pd
 import pytest  # pylint: disable=unused-import
 
 import calliope
+from calliope import exceptions
 from calliope.core.time import clustering, funcs, masks
+
+
+class TestClustering:
+    @pytest.fixture
+    def model_national(self, scope='module'):
+        return calliope.examples.national_scale(
+            override_dict={
+                'model.random_seed': 23,
+                'model.subset_time': ['2005-01-01', '2005-03-31']
+            }
+        )
+
+        # FIXME
+
+    def test_kmeans_mean(self, model_national):
+        data = model_national._model_data
+
+        data_clustered = funcs.apply_clustering(
+            data,
+            timesteps=None,
+            clustering_func='get_clusters_kmeans',
+            how='mean',
+            normalize=True,
+            k=5
+        )
+
+        # FIXME
+
+    def test_kmeans_closest(self, model_national):
+        data = model_national._model_data
+
+        data_clustered = funcs.apply_clustering(
+            data,
+            timesteps=None,
+            clustering_func='get_clusters_kmeans',
+            how='closest',
+            normalize=True,
+            k=5
+        )
+
+    def test_hierarchical_mean(self, model_national):
+        data = model_national._model_data
+
+        data_clustered = funcs.apply_clustering(
+            data,
+            timesteps=None,
+            clustering_func='get_clusters_kmeans',
+            how='closest',
+            normalize=True,
+            k=5
+        )
+
+        # FIXME
+
+    def test_hierarchical_closest(self, model_national):
+        data = model_national._model_data
+
+        data_clustered = funcs.apply_clustering(
+            data,
+            timesteps=None,
+            clustering_func='get_clusters_kmeans',
+            how='closest',
+            normalize=True,
+            k=5
+        )
+
+        # FIXME
+
+    def test_hartigans_rule(self, model_national):
+        data = model_national._model_data
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            funcs.apply_clustering(
+                data,
+                timesteps=None,
+                clustering_func='get_clusters_kmeans',
+                how='mean',
+                normalize=True
+            )
+
+        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
+
+        assert '5 is a good number of clusters' in all_warnings
 
 
 class TestMasks:
     @pytest.fixture
-    def model_national(self):
+    def model_national(self, scope='module'):
         return calliope.examples.national_scale(
             override_dict={'model.subset_time': ['2005-01-01', '2005-01-31']}
         )
 
     @pytest.fixture
-    def model_urban(self):
+    def model_urban(self, scope='module'):
         return calliope.examples.urban_scale(
             override_dict={'model.subset_time': ['2005-01-01', '2005-01-31']}
         )
@@ -156,3 +240,33 @@ class TestMasks:
                 data, 'csp', var='resource', how='max',
                 length='2D', n=1, padding='calendar_week'
             )
+
+
+class TestFuncs:
+    @pytest.fixture
+    def model_national(self, scope='module'):
+        return calliope.examples.national_scale(
+            override_dict={
+                'model.subset_time': '2005-01'
+            }
+        )
+
+    def test_drop_invalid_timesteps(self, model_national):
+        data = model_national._model_data_original.copy()
+        timesteps = ['XXX2005-01-01 23:00']
+
+        with pytest.raises(exceptions.ModelError):
+            funcs.drop(data, timesteps)
+
+    def test_drop(self, model_national):
+        data = model_national._model_data_original.copy()
+        timesteps = ['2005-01-01 23:00', '2005-01-01 22:00']
+
+        data_dropped = funcs.drop(data, timesteps)
+
+        assert len(data_dropped.timesteps) == 742
+
+        result_timesteps = list(data_dropped.coords['timesteps'].values)
+
+        assert '2005-01-01 21:00' not in result_timesteps
+        assert '2005-01-01 22:00' not in result_timesteps

@@ -63,15 +63,6 @@ def apply_time_clustering(model_data, model_run):
 
     data = model_data.copy(deep=True)
 
-    # Add temporary 'timesteps per day' attribute
-    daily_timesteps = [
-        data.timestep_resolution.loc[i].values
-        for i in np.unique(data.timesteps.to_index().strftime('%Y-%m-%d'))
-    ]
-    if not np.all(daily_timesteps == daily_timesteps[0]):
-        raise exceptions.ModelError('For clustering, timestep resolution must be uniform.')
-    data.attrs['_daily_timesteps'] = daily_timesteps[0]
-
     ##
     # Process masking and get list of timesteps to keep at high res
     ##
@@ -100,12 +91,6 @@ def apply_time_clustering(model_data, model_run):
             time_config.function, builtin_module='calliope.core.time.funcs')
         func_kwargs = time_config.get('function_options', {})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
-
-    # Temporary timesteps per day attribute is no longer needed
-    try:
-        del data.attrs['_daily_timesteps']
-    except KeyError:
-        pass
 
     return data
 

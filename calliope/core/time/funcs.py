@@ -11,12 +11,29 @@ Functions to process time series data.
 
 import logging
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope import exceptions
 from calliope.core.util.tools import plugin_load
 from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
+
+
+def get_daily_timesteps(data, check_uniformity=False):
+    daily_timesteps = [
+        data.timestep_resolution.loc[i].values
+        for i in np.unique(data.timesteps.to_index().strftime('%Y-%m-%d'))
+    ]
+
+    if check_uniformity:
+        if not np.all(daily_timesteps == daily_timesteps[0]):
+            raise exceptions.ModelError(
+                'For clustering, timestep resolution must be uniform.'
+            )
+
+    return daily_timesteps[0]
 
 
 def normalized_copy(data):
@@ -105,6 +122,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
 
     """
 
+    assert how in ['mean', 'closest']
+
+    daily_timesteps = get_daily_timesteps(data, check_uniformity=True)
+    timesteps_per_day = len(daily_timesteps)
+
     # Save all coordinates, to ensure they can be added back in after clustering
     data_coords = data.copy().coords
     del data_coords['timesteps']
@@ -131,11 +153,13 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     # Get function from `clustering_func` string
     func = plugin_load(clustering_func, builtin_module='calliope.core.time.clustering')
 
-    result = func(data_normalized, **kwargs)
+    result = func(data_normalized, timesteps_per_day=timesteps_per_day, **kwargs)
     clusters = result[0]  # Ignore other stuff returned
 
-    data_new = clustering.map_clusters_to_data(data_to_cluster, clusters,
-                                               how=how)
+    data_new = clustering.map_clusters_to_data(
+        data_to_cluster, clusters,
+        how=how, daily_timesteps=daily_timesteps
+    )
 
     if timesteps is None:
         data_new = _copy_non_t_vars(data, data_new)
@@ -231,39 +255,32 @@ def resample(data, timesteps, resolution):
     return data_rs
 
 
-def drop(data, timesteps, padding=None):
+def drop(data, timesteps):
     """
-    Drop timesteps from data, with optional padding
-    around into the contiguous areas encompassed by the timesteps.
+    Drop timesteps from data, adjusting the timestep weight of remaining
+    timesteps accordingly. Returns updated dataset.
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+        Calliope model data.
+    timestesp : str or list or other iterable
+        Pandas-compatible timestep strings.
 
     """
-    if padding:
-        timesteps_per_day = len(data.attrs['_daily_timesteps'])
-        freq = '{}H'.format(24 / timesteps_per_day)
-
-        # Series of 1 where timesteps 'exist' and 0 where they don't
-        s = (pd.Series(1, index=timesteps)
-               .reindex(pd.date_range(timesteps[0], timesteps[-1], freq=freq))
-               .fillna(0))
-
-        # Blocks of contiguous 1's in the series
-        blocks = (s != s.shift()).cumsum().drop(s[s==0].index)
-
-        # Groups of contiguous areas
-        groups = blocks.groupby(blocks).apply(lambda x: (x.index[0], x.index[-1]))
-
-        # Reduce size of each block by `padding` on both sides
-        padding = pd.Timedelta(padding)
-        dt_indices = [pd.date_range(g[0] + padding, g[1] - padding, freq=freq)
-                      for g in groups]
-
-        # Concatenate the DatetimeIndexes by using dummy Series
-        timesteps = pd.concat([pd.Series(0, index=i) for i in dt_indices]).index
+    # Turn timesteps into a pandas datetime index for subsetting, which also
+    # checks whether they are actually valid
+    try:
+        timesteps_pd = pd.to_datetime(timesteps)
+    except Exception as e:
+        raise exceptions.ModelError(
+            'Invalid timesteps: {}'.format(timesteps)
+        )
 
     # 'Distribute weight' of the dropped timesteps onto the remaining ones
-    dropped_weight = data.timestep_weights.loc[{'timesteps': timesteps}].sum()
+    dropped_weight = data.timestep_weights.loc[{'timesteps': timesteps_pd}].sum()
 
-    data = data.drop(timesteps, dim='timesteps')
+    data = data.drop(timesteps_pd, dim='timesteps')
 
     data['timestep_weights'] = data['timestep_weights'] + (dropped_weight / len(data['timestep_weights']))
 

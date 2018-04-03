@@ -40,7 +40,7 @@ class TestCLI:
             model_file = os.path.join(tempdir, 'model.nc')
             out_file = os.path.join(tempdir, 'output.nc')
             model.to_netcdf(model_file)
-            result = runner.invoke(cli.run, [model_file, '--debug', '--save_netcdf=output.nc'])
+            result = runner.invoke(cli.run, [model_file, '--save_netcdf=output.nc'])
             assert result.exit_code == 0
             assert os.path.isfile(out_file)
 
@@ -81,6 +81,16 @@ class TestCLI:
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
             assert os.path.isfile(os.path.join(tempdir, 'test.sh.array.sh'))
+
+    def test_debug(self):
+        runner = CliRunner()
+        result = runner.invoke(cli.run, ['foo.yaml', '--debug'])
+        assert result.exit_code == 1
+        assert 'Traceback (most recent call last)' in result.output
+
+        result = runner.invoke(cli.run, ['foo.yaml'])
+        assert result.exit_code == 1
+        assert 'Traceback (most recent call last)' not in result.output
 
     def test_convert(self):
         runner = CliRunner()

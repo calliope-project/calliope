@@ -12,11 +12,16 @@ HTML_STRINGS = AttrDict.from_yaml(
 
 
 class TestPlotting:
-
-    def test_national_scale_plotting(self):
-        override = {'model.subset_time': '2005-01-01'}
-        model = calliope.examples.national_scale(override_dict=override)
+    @pytest.fixture(scope="module")
+    def national_scale_example(self):
+        model = calliope.examples.national_scale(
+            override_dict={'model.subset_time': '2005-01-01'}
+        )
         model.run()
+        return model
+
+    def test_national_scale_plotting(self, national_scale_example):
+        model = national_scale_example
 
         plot_html_outputs = {
             'capacity': model.plot.capacity(html_only=True),
@@ -49,10 +54,8 @@ class TestPlotting:
         # Also just try plotting the summary
         model.plot.summary()
 
-    def test_failed_cap_plotting(self):
-        override = {'model.subset_time': '2005-01-01'}
-        model = calliope.examples.national_scale(override_dict=override)
-        model.run()
+    def test_failed_cap_plotting(self, national_scale_example):
+        model = national_scale_example
 
         # should fail, not in array
         with pytest.raises(exceptions.ModelError):
@@ -61,10 +64,8 @@ class TestPlotting:
             # orient has to be 'v', 'vertical', 'h', or 'horizontal'
             model.plot.capacity(orient='g')
 
-    def test_failed_timeseries_plotting(self):
-        override = {'model.subset_time': '2005-01-01'}
-        model = calliope.examples.national_scale(override_dict=override)
-        model.run()
+    def test_failed_timeseries_plotting(self, national_scale_example):
+        model = national_scale_example
 
         # should fail, not in array
         with pytest.raises(exceptions.ModelError):
@@ -79,3 +80,14 @@ class TestPlotting:
         plot_html = model.plot.timeseries(html_only=True)
         for string in HTML_STRINGS['clustering']['timeseries']:
             assert string in plot_html
+
+    def test_subset_plotting(self, national_scale_example):
+        model = national_scale_example
+
+        model.plot.capacity(html_only=True, subset={'timeseries': ['2015-01-01 01:00']})
+
+        # FIXME: sum_dims doesn't seem to work at all
+        # model.plot.capacity(html_only=True, sum_dims=['locs'])
+
+        # FIXME: this should raise an error!
+        # model.plot.capacity(html_only=True, subset={'timeseries': ['2016-01-01 01:00']})

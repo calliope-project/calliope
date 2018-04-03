@@ -24,9 +24,8 @@ def generate_runs(model_file, override_file, groups=None, additional_args=None):
     if groups not specified, use all groups in the override_file, one by one
 
     """
-    overrides = AttrDict.from_yaml(override_file)
-
     if groups is None:
+        overrides = AttrDict.from_yaml(override_file)
         runs = overrides.keys()
     else:
         runs = groups.split(';')
