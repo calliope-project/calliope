@@ -4,9 +4,20 @@ Analysing a model
 
 Calliope inputs and results are designed for easy handling. Whatever software you prefer to use for data processing, either the NetCDF or CSV output options should provide a path to importing your Calliope results. If you prefer to not worry about writing your own scripts, then we have that covered too! The built-in plotting functions in :class:`~calliope.Model.plot` are built on `Plotly <https://plot.ly/>`_'s interactive visualisation tools to bring your data to life.
 
-Within the xarray Datasets of ``model.inputs`` and ``model.results``, variables are indexed over concatenated sets. For instance, if a technology ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then we will specify parameters for just the `loc::tech` ``X1::boiler``. This can be extended to parameters which also consider ``carriers``, such that we would have a ``loc::tech::carrier`` ``X1::boiler::heat`` (avoiding empty parameter values for ``power``, as the boiler never considers that enery carrier). If a user knows the name of this concatenated set and indeces, they can index by those (e.g. ``resource_area`` is indexed over the set ``loc_techs_area``, within which are all `loc::techs` which receive their resource over an area). Otherwise, ``model.get_formatted_array('name of variable')`` can be used to produce an xarray DataArray, indexed over seperated indeces: any of `techs`, `locs`, `carriers`, `costs`, `timesteps`. This for analysis per technology, location, etc.
+--------------------------------
+Accessing model data and results
+--------------------------------
 
-.. note:: On saving to CSV, all variables are formatted to separate concatenated sets.
+A model which solved successfully has two primary Datasets with data of interest:
+
+* ``model.inputs``: contains all input data, such as renewable resource capacity factors
+* ``model.results``: contains all results data, such as dispatch decisions and installed capacities
+
+In both of these, variables are indexed over concatenated sets of locations and technologies, over a dimension we call ``loc_techs``. For example, if a technology called ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then it will have a single entry in the loc_techs dimension called ``X1::boiler``. For parameters which also consider different energy carriers, we use a ``loc_tech_carrier`` dimension, such that we would have, in the case of the prior boiler example, ``X1::boiler::heat``.
+
+This concatenated set formulation is memory-efficient but cumbersome to deal with, so the ``model.get_formatted_array(name_of_variable)`` function can be used to retrieve a DataArray indexed over separate dimensions (any of `techs`, `locs`, `carriers`, `costs`, `timesteps`, depending on the desired variable).
+
+.. note:: On saving to CSV (see the :ref:`command-line interface documentation <running_cli>`), all variables are saved to a single file each, which are always indexed over all dimensions rather than just the concatenated dimensions.
 
 -------------------
 Visualising results
@@ -14,7 +25,7 @@ Visualising results
 
 In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. ``summary`` can also be accessed from the command line interface, to gain access to result visualisation without the need to interact with Python.
 
-Refer to the :ref:`API documentation for the analysis module<api_analysis>` for an overview of available analysis functionality.
+Refer to the :ref:`API documentation for the analysis module <api_analysis>` for an overview of available analysis functionality.
 
 Refer to the :doc:`tutorials <tutorials>` for some basic analysis techniques.
 
