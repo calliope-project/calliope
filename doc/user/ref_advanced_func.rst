@@ -137,18 +137,21 @@ The available options include:
 The ``conversion_plus`` tech
 ----------------------------
 
-The ``plus`` tech groups offer complex functionality, for technologies which cannot be described easily. ``Conversion_plus`` allows several carriers to be converted to several other carriers. Describing such a technology requires that the user understands the ``carrier_ratios``, i.e. the interactions and relative efficiency of carrier input/output.
+The ``plus`` tech groups offer complex functionality, for technologies which cannot be described easily. ``Conversion_plus`` allows several carriers to be converted to several other carriers. Describing such a technology requires that the user understands the ``carrier_ratios``, i.e. the interactions and relative efficiencies of carrier inputs and outputs.
 
 .. figure:: images/conversion_plus.*
    :alt: conversion_plus
 
    Representation of the most complex conversion plus technology available
 
-The efficiency of a ``conversion_plus`` tech dictates how many units of `carrier_out` are produced per unit of consumed `carrier_in`. A unit of `carrier_out_2` and of `carrier_out_3` is produced each time a unit of `carrier_out` is produced. Similarly, a unit of `Carrier_in_2` and of `carrier_in_3` is consumed each time a unit of `carrier_in` is consumed. With a carrier group (e.g. `carrier_out_2`) any number of carriers can meet this one unit. The ``carrier_ratio`` of any carrier compares it either to the production of one unit of `carrier_out` or to the consumption of one unit of `carrier_in`.
+The ``conversion_plus`` technologies allows for up to three **carrier groups** as inputs (``carrier_in``, ``carrier_in_2`` and ``carrier_in_3``) and up to three carrier groups as outputs (``carrier_out``, ``carrier_out_2`` and ``carrier_out_3``). A carrier group can contain any number of carriers.
+
+The efficiency of a ``conversion_plus`` tech dictates how many units of `carrier_out` are produced per unit of consumed `carrier_in`. A unit of `carrier_out_2` and of `carrier_out_3` is produced each time a unit of `carrier_out` is produced. Similarly, a unit of `Carrier_in_2` and of `carrier_in_3` is consumed each time a unit of `carrier_in` is consumed. Within a given carrier group (e.g. `carrier_out_2`) any number of carriers can meet this one unit. The ``carrier_ratio`` of any carrier compares it either to the production of one unit of `carrier_out` or to the consumption of one unit of `carrier_in`.
 
 In this section, we give examples of a few ``conversion_plus`` technologies alongside the YAML formulation required to construct them:
 
-1. Combined heat and power
+Combined heat and power
+^^^^^^^^^^^^^^^^^^^^^^^
 
 A combined heat and power plant produces electricity, in this case from natural gas. Waste heat that is produced can be used to meet nearby heat demand (e.g. via district heating network). For every unit of electricity produced, 0.8 units of heat are always produced. This is analogous to the heat to power ratio (HTP). Here, the HTP is 0.8.
 
@@ -175,9 +178,10 @@ A combined heat and power plant produces electricity, in this case from natural 
                     carrier_ratios.carrier_out_2.heat: 0.8
 
 
-2. Air source heat pump
+Air source heat pump
+^^^^^^^^^^^^^^^^^^^^
 
-The output energy from the heat pump can be _either_ heat or coolth, simulating a heat pump that can be useful in both summer and winter. For each unit of electricity input, one unit of output is produced. Within this one unit of carrier_out, there can be a combination of heat and coolth. Heat is produced with a COP of 5, coolth with a COP of 3. If only heat were produced in a timestep, 5 units of it would be available in carrier_out; similarly 3 units for coolth. In a timestep, both heat and coolth might be produced, e.g. 2.5 units heat + 1.5 units coolth = 1 unit carrier_out.
+The output energy from the heat pump can be *either* heat or cooling, simulating a heat pump that can be useful in both summer and winter. For each unit of electricity input, one unit of output is produced. Within this one unit of ``carrier_out``, there can be a combination of heat and cooling. Heat is produced with a COP of 5, cooling with a COP of 3. If only heat were produced in a timestep, 5 units of it would be available in carrier_out; similarly 3 units for cooling. In another timestep, both heat and cooling might be produced with e.g. 2.5 units heat + 1.5 units cooling = 1 unit of carrier_out.
 
 .. figure:: images/conversion_plus_ahp.*
 
@@ -187,7 +191,7 @@ The output energy from the heat pump can be _either_ heat or coolth, simulating 
         essentials:
             name: Air source heat pump
             carrier_in: electricity
-            carrier_out: [heat, coolth]
+            carrier_out: [heat, cooling]
             primary_carrier: heat
 
         constraints:
@@ -196,11 +200,16 @@ The output energy from the heat pump can be _either_ heat or coolth, simulating 
             carrier_ratios:
                 carrier_out:
                     heat: 5
-                    coolth: 3
+                    cooling: 3
 
-3. Combined cooling, heat and power (CCHP)
+Combined cooling, heat and power (CCHP)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A CCHP plant can use generated heat to produce coolth, via an absorption chiller. As with the CHP, electricity is produced at 45% efficiency.  For every unit of electricity produced, 1 unit of carrier_out_2 must be produced, which can be a combination of 0.8 units of heat and 0.5 units of coolth. E.g. 1 unit gas -> 0.45 units electricity + (0.8 * 0.45) units heat, or 1 unit gas -> 0.45 units electricity + (0.5 * 0.45) units coolth, or 1 unit gas -> 0.45 units electricity + (0.3 * 0.8 * 0.45) units heat + (0.7 * 0.5 * 0.45) units coolth.
+A CCHP plant can use generated heat to produce cooling via an absorption chiller. As with the CHP plant, electricity is produced at 45% efficiency.  For every unit of electricity produced, 1 unit of ``carrier_out_2`` must be produced, which can be a combination of 0.8 units of heat and 0.5 units of cooling. Some example ways in which the model could decide to operate this unit in a given time step are:
+
+* 1 unit of gas (``carrier_in``) is converted to 0.45 units of electricity (``carrier_out``) and (0.8 * 0.45) units of heat (``carrier_out_2``)
+* 1 unit of gas is converted to 0.45 units electricity and (0.5 * 0.45) units of cooling
+* 1 unit of gas is converted to 0.45 units electricity, (0.3 * 0.8 * 0.45) units of heat, and (0.7 * 0.5 * 0.45) units of cooling
 
 .. container:: twocol
 
@@ -217,17 +226,18 @@ A CCHP plant can use generated heat to produce coolth, via an absorption chiller
                     name: Combined cooling, heat and power
                     carrier_in: gas
                     carrier_out: electricity
-                    carrier_out_2: [heat, coolth]
+                    carrier_out_2: [heat, cooling]
                     primary_carrier: electricity
 
                 constraints:
                     energy_eff: 0.45
                     energy_cap_max: 100
-                    carrier_ratios.carrier_out_2: {heat: 0.8, coolth: 0.5}
+                    carrier_ratios.carrier_out_2: {heat: 0.8, cooling: 0.5}
 
-4. Advanced gas turbine
+Advanced gas turbine
+^^^^^^^^^^^^^^^^^^^^
 
-This technology can choose to burn methane (CH:sub:`4`) or send Hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (energy_eff). If all Hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (energy_eff * hydrogen carrier ratio).
+This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (energy_eff). If all hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (energy_eff * hydrogen carrier ratio).
 
 .. figure:: images/conversion_plus_gas.*
 
@@ -245,9 +255,10 @@ This technology can choose to burn methane (CH:sub:`4`) or send Hydrogen (H:sub:
             carrier_ratios:
                 carrier_in: {methane: 1, hydrogen: 0.5}
 
-5. Complex fictional technology
+Complex fictional technology
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are few instances where using the full capacity of a converion_plus tech is physically possible. Here we have a fictional technology that combines fossil fuels with biomass/waste to produce heat, coolth, and electricity. Different 'grades' of heat can be produced, the higher grades having an alternative. High grade heat (``high_T_heat``) is produced and can be used directly, or used to produce electricity (via e.g. organic rankine cycle). `Carrier_out` is thus a combination of these two. `Carrier_out_2` can be 0.3 units mid grade heat for every unit `carrier_out` or 0.2 units coolth. Finally, 0.1 units `carrier_out`, low grade heat, is produced for every unit of `carrier_out`.
+There are few instances where using the full capacity of a conversion_plus tech is physically possible. Here, we have a fictional technology that combines fossil fuels with biomass/waste to produce heat, cooling, and electricity. Different 'grades' of heat can be produced, the higher grades having an alternative. High grade heat (``high_T_heat``) is produced and can be used directly, or used to produce electricity (via e.g. organic rankine cycle). ``carrier_out`` is thus a combination of these two. `carrier_out_2` can be 0.3 units mid grade heat for every unit `carrier_out` or 0.2 units cooling. Finally, 0.1 units ``carrier_out_3``, low grade heat, is produced for every unit of `carrier_out`.
 
 .. container:: twocol
 
@@ -265,7 +276,7 @@ There are few instances where using the full capacity of a converion_plus tech i
                     carrier_in: [coal, gas, oil]
                     carrier_in_2: [biomass, waste]
                     carrier_out: [high_T_heat, electricity]
-                    carrier_out_2: [mid_T_heat, coolth]
+                    carrier_out_2: [mid_T_heat, cooling]
                     carrier_out_3: low_T_heat
                     primary_carrier: electricity
 
@@ -276,12 +287,12 @@ There are few instances where using the full capacity of a converion_plus tech i
                         carrier_in: {coal: 1.2, gas: 1, oil: 1.6}
                         carrier_in_2: {biomass: 1, waste: 1.25}
                         carrier_out: {high_T_heat: 0.8, electricity: 0.6}
-                        carrier_out_2: {mid_T_heat: 0.3, coolth: 0.2}
+                        carrier_out_2: {mid_T_heat: 0.3, cooling: 0.2}
                         carrier_out_3.low_T_heat: 0.15
 
 A ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers). The chosen carrier will be the one to which costs are applied.
 
-.. note:: Conversion_plus technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
+.. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
 
 Revenue and export
 ------------------
