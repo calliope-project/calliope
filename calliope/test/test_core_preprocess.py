@@ -310,6 +310,49 @@ class TestChecks:
         with pytest.raises(KeyError):
             build_model(override_dict=override, override_groups='simple_supply,one_day')
 
+    def test_tech_as_parent(self):
+        """
+        All technologies and technology groups must specify a parent
+        """
+
+        override1 = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_tech_parent:
+                    essentials:
+                        name: Supply tech
+                        carrier: gas
+                        parent: test_supply_elec
+                    constraints:
+                        energy_cap_max: 10
+                        resource: .inf
+            locations.1.test_supply_tech_parent:
+            """
+        )
+
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+        check_error_or_warning(error, 'tech `test_supply_tech_parent` has another tech as a parent')
+
+        override2 = AttrDict.from_yaml_string(
+            """
+            tech_groups.test_supply_group:
+                    essentials:
+                        carrier: gas
+                        parent: test_supply_elec
+                    constraints:
+                        energy_cap_max: 10
+                        resource: .inf
+            techs.test_supply_tech_parent.essentials:
+                        name: Supply tech
+                        parent: test_supply_group
+            locations.1.test_supply_tech_parent:
+            """
+        )
+
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override2, override_groups='simple_supply,one_day')
+        check_error_or_warning(error, 'tech_group `test_supply_group` has a tech as a parent')
+
     def test_resource_as_carrier(self):
         """
         No carrier in technology or technology group can be called `resource`

@@ -1,4 +1,4 @@
-name: calliope_master
+name: calliope_latest
 channels:
     - conda-forge
     - anaconda

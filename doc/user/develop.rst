@@ -19,11 +19,11 @@ Installing a development version
 As when installing a stable version, using ``conda`` is recommended.
 
 If you only want to track the latest commit, without having a local Calliope
-repository, then just download `this requirements file <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements_git_master.yml>`_ and then run::
+repository, then just download `this requirements file <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements_latest.yml>`_ and then run::
 
-    $ conda env create -f requirements_git_master.yml
+    $ conda env create -f requirements_latest.yml
 
-This will create a conda environment called ``calliope_master``.
+This will create a conda environment called ``calliope_latest``.
 
 To contribute to Calliope code, you'll instead want to clone the repository. This will provide you with the master branch in a known on your local device.
 

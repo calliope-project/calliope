@@ -140,6 +140,7 @@ def check_initial(config_model):
 
     # Checks for techs and tech_groups:
     # * All user-defined tech and tech_groups must specify a parent
+    # * techs cannot be parents, only tech groups can
     # * No carrier may be called 'resource'
     default_tech_groups = list(defaults_model.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
@@ -149,6 +150,11 @@ def check_initial(config_model):
             errors.append(
                 'tech_group {} does not define '
                 '`essentials.parent`'.format(tg_name)
+            )
+        elif tg_config.get_key('essentials.parent') in config_model.techs.keys():
+            errors.append(
+                'tech_group `{}` has a tech as a parent, only another tech_group '
+                'is allowed'.format(tg_name)
             )
         if 'resource' in get_all_carriers(tg_config.essentials):
             errors.append(
@@ -161,6 +167,11 @@ def check_initial(config_model):
             errors.append(
                 'tech {} does not define '
                 '`essentials.parent`'.format(t_name)
+            )
+        elif t_config.get_key('essentials.parent') in config_model.techs.keys():
+            errors.append(
+                'tech `{}` has another tech as a parent, only a tech_group '
+                'is allowed'.format(tg_name)
             )
         if 'resource' in get_all_carriers(t_config.essentials):
             errors.append(
