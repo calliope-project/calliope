@@ -27,6 +27,8 @@ class TestModelPreproccesing:
     def test_preprocess_operate(self):
         calliope.examples.operate()
 
+    def test_preprocess_time_masking(self):
+        calliope.examples.time_masking()
 
 class TestNationalScaleExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):

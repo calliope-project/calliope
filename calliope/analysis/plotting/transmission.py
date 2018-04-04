@@ -11,6 +11,7 @@ Plot transmission data.
 
 import pandas as pd
 import xarray as xr
+import numpy as np
 
 from calliope.core.preprocess.util import vincenty
 from calliope.analysis.plotting.util import break_name
@@ -91,7 +92,8 @@ def _fill_scatter(coordinates, energy_cap, scatter_dict, dict_entry, tech):
             if e_cap:
                 links.append([loc_from, loc_to])
                 if dict_entry == 'text':
-                    filled_list.append('{} capacity: {}'.format(tech, int(e_cap.item())))
+                    e_cap = 'inf' if np.isinf(e_cap.item()) else int(e_cap.item())
+                    filled_list.append('{} capacity: {}'.format(tech, e_cap))
                 else:
                     filled_list.append(
                         edge(loc_from, loc_to)

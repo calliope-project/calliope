@@ -81,6 +81,10 @@ class TestPlotting:
         for string in HTML_STRINGS['clustering']['timeseries']:
             assert string in plot_html
 
+        # While we have a model that hasn't been run, try plotting transmission and capacity
+        model.plot.transmission(html_only=True)
+        model.plot.capacity(html_only=True)
+
     def test_subset_plotting(self, national_scale_example):
         model = national_scale_example
 
