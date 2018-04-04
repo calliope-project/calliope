@@ -29,7 +29,7 @@ class TestExistsFalse():
     def test_tech_exists_false(self):
         overrides = {'techs.test_storage.exists': False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            model = build_model(overrides, 'simple_storage,one_day')
+            model = build_model(overrides, 'simple_storage,one_day,investment_costs')
         model.run()
 
         # Ensure what should be gone is gone
@@ -42,7 +42,7 @@ class TestExistsFalse():
     def test_location_exists_false(self):
         overrides = {'locations.1.exists': False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            model = build_model(overrides, 'simple_storage,one_day')
+            model = build_model(overrides, 'simple_storage,one_day,investment_costs')
         model.run()
 
         # Ensure what should be gone is gone
@@ -54,7 +54,7 @@ class TestExistsFalse():
 
     def test_location_tech_exists_false(self):
         overrides = {'locations.1.techs.test_storage.exists': False}
-        model = build_model(overrides, 'simple_storage,one_day')
+        model = build_model(overrides, 'simple_storage,one_day,investment_costs')
         model.run()
 
         # Ensure what should be gone is gone
@@ -63,7 +63,7 @@ class TestExistsFalse():
     def test_link_exists_false(self):
         overrides = {'links.0,1.exists': False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            model = build_model(overrides, 'simple_storage,one_day')
+            model = build_model(overrides, 'simple_storage,one_day,investment_costs')
         model.run()
 
         # Ensure what should be gone is gone
@@ -75,7 +75,7 @@ class TestExistsFalse():
 
     def test_link_tech_exists_false(self):
         overrides = {'links.0,1.techs.test_transmission_elec.exists': False}
-        model = build_model(overrides, 'simple_storage,one_day')
+        model = build_model(overrides, 'simple_storage,one_day,investment_costs')
         model.run()
 
         # Ensure what should be gone is gone

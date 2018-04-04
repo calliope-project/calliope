@@ -281,6 +281,24 @@ def plot_timeseries(
         ]
         layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
         layout['xaxis']['title'] = 'Clusters'
+
+        # Make rectangles to fit in the background over every other cluster,
+        # to distinguish them
+        layout['shapes'] = []
+        shape_template = {
+            'type': 'rect', 'xref': 'x', 'yref': 'paper', 'y0': 0, 'y1': 1,
+            'line': {'width': 0}, 'layer': 'below'
+        }
+
+        for cluster in clusters.keys():
+            x0 = clusters[cluster][0]
+            x1 = clusters[cluster][-1]
+            opacity = 0.3 * (cluster % 2)
+            day_shape = {'x0': x0, 'x1': x1, 'fillcolor': 'grey', 'opacity': opacity}
+
+            shape_template.update(day_shape)
+            layout['shapes'].append(shape_template.copy())
+
     relevant_vars = _get_relevant_vars(model, dataset, array)
 
     data, layout = get_data_layout(

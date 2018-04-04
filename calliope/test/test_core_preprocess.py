@@ -75,42 +75,34 @@ class TestModelRun:
         """
 
         # should pass: changing datetime format from default
-        override1 = AttrDict.from_yaml_string(
-            """
-            model.timeseries_dateformat: "%d/%m/%Y %H:%M:%S"
-            techs.test_demand_heat.constraints.resource: file=demand_heat_diff_dateformat.csv
-            techs.test_demand_elec.constraints.resource: file=demand_heat_diff_dateformat.csv
-            """
-        )
+        override1 = {
+            'model.timeseries_dateformat': "%d/%m/%Y %H:%M:%S",
+            'techs.test_demand_heat.constraints.resource': 'file=demand_heat_diff_dateformat.csv',
+            'techs.test_demand_elec.constraints.resource': 'file=demand_heat_diff_dateformat.csv'
+        }
         model = build_model(override_dict=override1, override_groups='simple_conversion')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-02-01 23:00:00', freq='H'))
 
         # should fail: wrong dateformat input for one file
-        override2 = AttrDict.from_yaml_string(
-            """
-            techs.test_demand_heat.constraints.resource: file=demand_heat_diff_dateformat.csv
-            """
-        )
+        override2 = {
+            'techs.test_demand_heat.constraints.resource': 'file=demand_heat_diff_dateformat.csv'
+        }
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override2, override_groups='simple_conversion')
 
         # should fail: wrong dateformat input for all files
-        override3 = AttrDict.from_yaml_string(
-            """
-            model.timeseries_dateformat: "%d/%m/%Y %H:%M:%S"
-            """
-        )
+        override3 = {
+            'model.timeseries_dateformat': "%d/%m/%Y %H:%M:%S"
+        }
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override3, override_groups='simple_supply')
 
         # should fail: one value wrong in file
-        override4 = AttrDict.from_yaml_string(
-            """
-            techs.test_demand_heat.constraints.resource: file=demand_heat_wrong_dateformat.csv
-            """
-        )
+        override4 = {
+            'techs.test_demand_heat.constraints.resource': 'file=demand_heat_wrong_dateformat.csv'
+        }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override4, override_groups='simple_conversion')
@@ -121,11 +113,9 @@ class TestModelRun:
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
-        override1 = AttrDict.from_yaml_string(
-            """
-            techs.test_demand_heat.constraints.resource: file=demand_heat_wrong_length.csv
-            """
-        )
+        override1 = {
+            'techs.test_demand_heat.constraints.resource': 'file=demand_heat_wrong_length.csv'
+        }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override1, override_groups='simple_conversion')
@@ -148,15 +138,88 @@ class TestModelRun:
         Raise error on attempted overwrite of information regarding a recently
         exploded location
         """
-        override = AttrDict.from_yaml_string(
-            """
-            locations.0.test_supply_elec.constraints.resource: 10
-            locations.0,1.test_supply_elec.constraints.resource: 15
-            """
-        )
+        override = {
+            'locations.0.test_supply_elec.constraints.resource': 10,
+            'locations.0,1.test_supply_elec.constraints.resource': 15
+        }
 
         with pytest.raises(KeyError):
             build_model(override_dict=override, override_groups='simple_supply,one_day')
+
+    def test_calculate_depreciation(self):
+        """
+        Technologies which define investment costs *must* define lifetime and
+        interest rate, so that a depreciation rate can be calculated.
+        If lifetime == inf and interested > 0, depreciation rate will be inf, so
+        we want to avoid that too.
+        """
+
+        override1 = {
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+        assert check_error_or_warning(
+            error, 'Must specify constraints.lifetime and costs.monetary.interest_rate'
+        )
+
+        override2 = {
+            'techs.test_supply_elec.constraints.lifetime': 10,
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override2, override_groups='simple_supply,one_day')
+        assert check_error_or_warning(
+            error, 'Must specify constraints.lifetime and costs.monetary.interest_rate'
+        )
+
+        override3 = {
+            'techs.test_supply_elec.costs.monetary.interest_rate': 0.1,
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override3, override_groups='simple_supply,one_day')
+        assert check_error_or_warning(
+            error, 'Must specify constraints.lifetime and costs.monetary.interest_rate'
+        )
+
+        override4 = {
+            'techs.test_supply_elec.constraints.lifetime': 10,
+            'techs.test_supply_elec.costs.monetary.interest_rate': 0,
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override4, override_groups='simple_supply,one_day')
+        assert check_error_or_warning(excinfo, '`monetary` interest rate of zero')
+
+        override5 = {
+            'techs.test_supply_elec.constraints.lifetime': np.inf,
+            'techs.test_supply_elec.costs.monetary.interest_rate': 0,
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override5, override_groups='simple_supply,one_day')
+        assert check_error_or_warning(
+            excinfo, 'No investment monetary cost will be incurred for `test_supply_elec`'
+        )
+
+        override6 = {
+            'techs.test_supply_elec.constraints.lifetime': np.inf,
+            'techs.test_supply_elec.costs.monetary.interest_rate': 0.1,
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override6, override_groups='simple_supply,one_day')
+        assert check_error_or_warning(
+            excinfo, 'No investment monetary cost will be incurred for `test_supply_elec`'
+        )
+
+        override7 = {
+            'techs.test_supply_elec.constraints.lifetime': 10,
+            'techs.test_supply_elec.costs.monetary.interest_rate': 0.1,
+            'techs.test_supply_elec.costs.monetary.energy_cap': 10
+        }
+        build_model(override_dict=override7, override_groups='simple_supply,one_day')
 
 
 class TestChecks:
@@ -448,31 +511,46 @@ class TestChecks:
         defined, they must be in the same coordinate system (lat/lon or x/y)
         """
 
-        override = lambda param0, param1: AttrDict.from_yaml_string(
-            """
-            locations:
-                0.coordinates: {}
-                1.coordinates: {}
-            """.format(param0, param1)
-        )
+        def _override(param0, param1):
+            override = {}
+            if param0 is not None:
+                override.update({'locations.0.coordinates': param0})
+            if param1 is not None:
+                override.update({'locations.1.coordinates': param1})
+            return override
+
         cartesian0 = {'x': 0, 'y': 1}
         cartesian1 = {'x': 1, 'y': 1}
         geographic0 = {'lat': 0, 'lon': 1}
         geographic1 = {'lat': 1, 'lon': 1}
+        fictional0 = {'a': 0, 'b': 1}
+        fictional1 = {'a': 1, 'b': 1}
 
         # should fail: cannot have locations in one place and not in another
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override(cartesian0, 'null'), override_groups='simple_storage,one_day')
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=_override(cartesian0, None), override_groups='simple_storage,one_day')
+        check_error_or_warning(error, "Either all or no locations must have `coordinates` defined")
 
         # should fail: cannot have cartesian coordinates in one place and geographic in another
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override(cartesian0, geographic1), override_groups='simple_storage,one_day')
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=_override(cartesian0, geographic1), override_groups='simple_storage,one_day')
+        check_error_or_warning(error, "All locations must use the same coordinate format")
+
+        # should fail: cannot use a non-cartesian or non-geographic coordinate system
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=_override(fictional0, fictional1), override_groups='simple_storage,one_day')
+        check_error_or_warning(error, "Unidentified coordinate system")
+
+        # should fail: coordinates must be given as key:value pairs
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=_override([0, 1], [1, 1]), override_groups='simple_storage,one_day')
+        check_error_or_warning(error, "Coordinates must be given in the format")
 
         # should pass: cartesian coordinates in both places
-        build_model(override_dict=override(cartesian0, cartesian1), override_groups='simple_storage,one_day')
+        build_model(override_dict=_override(cartesian0, cartesian1), override_groups='simple_storage,one_day')
 
         # should pass: geographic coordinates in both places
-        build_model(override_dict=override(geographic0, geographic1), override_groups='simple_storage,one_day')
+        build_model(override_dict=_override(geographic0, geographic1), override_groups='simple_storage,one_day')
 
     def test_milp_constraints(self):
         """
@@ -513,6 +591,33 @@ class TestChecks:
             '`test_supply_elec` at `0` defines force_resource but not a finite resource'
         )
 
+    def test_override_coordinates(self):
+        """
+        Check that warning is raised if we are completely overhauling the
+        coordinate system with an override
+        """
+        override = {
+            'locations': {
+                'X1.coordinates': {'lat': 51.4596158, 'lon': -0.1613446},
+                'X2.coordinates': {'lat': 51.4652373, 'lon': -0.1141548},
+                'X3.coordinates': {'lat': 51.4287016, 'lon': -0.1310635},
+                'N1.coordinates': {'lat': 51.4450766, 'lon': -0.1247183}
+            },
+            'links': {
+                'X1,X2.techs.power_lines.distance': 10,
+                'X1,X3.techs.power_lines.istance': 5,
+                'X1,N1.techs.heat_pipes.distance': 3,
+                'N1,X2.techs.heat_pipes.distance': 3,
+                'N1,X3.techs.heat_pipes.distance': 4
+            }
+        }
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            calliope.examples.urban_scale(override_dict=override)
+
+        assert check_error_or_warning(
+            excinfo,
+            "Updated from coordinate system"
+        )
 
 
 class TestDataset:

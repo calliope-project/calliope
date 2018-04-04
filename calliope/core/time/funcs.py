@@ -98,7 +98,7 @@ def _combine_datasets(data0, data1):
     return data_new
 
 
-def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kwargs):
+def apply_clustering(data, timesteps, clustering_func, how, normalize=True, scale_clusters='mean', **kwargs):
     """
     Apply the given clustering function to the given data.
 
@@ -113,6 +113,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     normalize : bool, optional
         If True (default), data is normalized before clustering is applied,
         using :func:`~calliope.core.time.funcs.normalized_copy`.
+    scale_clusters : str or None, default = 'mean'
+        Scale the results of clustering such that the clusters match the metric
+        given by scale_clusters. For example, 'mean' scales along each loc_tech
+        and variable to match inputs and outputs. Other options for matching
+        include 'sum', 'max', and 'min'. If None, no scaling occurs.
     **kwargs : optional
         Arguments passed to clustering_func.
 
@@ -173,17 +178,21 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     # loc_tech sets that aren't used to index a variable in the DataArray)
     data_new.update(data_coords)
 
-    # Scale the new/combined data so that the mean for each (x, y, variable)
+    # Scale the new/combined data so that the mean for each (loc_tech, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
-    data_vars_in_t = [
-        v for v in data_new.data_vars
-        if 'timesteps' in data_new[v].dims and
-        'timestep_' not in v and v != 'clusters']
-    for var in data_vars_in_t:
-        scale_to_match_mean = (data[var].mean(dim='timesteps') /
-            data_new[var].mean(dim='timesteps')).fillna(0)
-        data_new_scaled[var] = data_new[var] * scale_to_match_mean
+    if scale_clusters:
+        data_vars_in_t = [
+            v for v in data_new.data_vars
+            if 'timesteps' in data_new[v].dims and
+            'timestep_' not in v and v != 'clusters'
+        ]
+        for var in data_vars_in_t:
+            scale = (
+                getattr(data[var], scale_clusters)(dim='timesteps') /
+                getattr(data_new[var], scale_clusters)(dim='timesteps')
+            )
+            data_new_scaled[var] = data_new[var] * scale.fillna(0)
 
     return data_new_scaled
 

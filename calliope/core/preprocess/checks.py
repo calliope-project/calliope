@@ -10,6 +10,7 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
+import logging
 
 import numpy as np
 import xarray as xr
@@ -27,6 +28,55 @@ _defaults_files = {
 }
 defaults = AttrDict.from_yaml(_defaults_files['defaults'])
 defaults_model = AttrDict.from_yaml(_defaults_files['model'])
+
+
+def check_overrides(config_model, override):
+    """
+    Perform checks on the override dict and override file inputs to ensure they
+    are not doing something silly.
+    """
+    warnings = []
+    info = []
+    for key in override.as_dict_flat().keys():
+        if key in config_model.as_dict_flat().keys():
+            info.append(
+                'Override applied to {}: {} -> {}'
+                .format(key, config_model.get_key(key), override.get_key(key))
+            )
+        else:
+            info.append(
+                '`{}`:{} applied from override as new configuration'
+                .format(key, override.get_key(key))
+            )
+
+    # Check if overriding coordinates are in the same coordinate system. If not,
+    # delete all incumbent coordinates, ready for the new coordinates to come in
+    if (any(['coordinates' in k for k in config_model.as_dict_flat().keys()]) and
+            any(['coordinates' in k for k in override.as_dict_flat().keys()])):
+
+        # get keys that might be deleted and incumbent coordinate system
+        config_keys = [k for k in config_model.as_dict_flat().keys() if 'coordinates.' in k]
+        config_coordinates = set([k.split('coordinates.')[-1] for k in config_keys])
+
+        # get overriding coordinate system
+        override_coordinates = set(
+            k.split('coordinates.')[-1] for k in override.as_dict_flat().keys()
+            if 'coordinates.' in k
+        )
+
+        # compare overriding and incumbent, deleting incumbent if overriding is different
+        if config_coordinates != override_coordinates:
+            for key in config_keys:
+                config_model.del_key(key)
+            warnings.append(
+                'Updated from coordinate system {} to {}, using overrides'
+                .format(config_coordinates, override_coordinates)
+            )
+
+    if info:
+        logging.info('\n'.join(info))
+
+    return warnings
 
 
 def check_initial(config_model):
@@ -357,7 +407,7 @@ def check_model_data(model_data):
             dict(loc_techs_finite_resource=relevant_loc_techs)
         ]
         conflict = forced_resource.where(forced_resource == np.inf).to_pandas().dropna()
-        if conflict.values:
+        if not conflict.empty:
             errors.append(
                 'loc_tech(s) {} cannot have `force_resource` set as infinite '
                 'resource values are given'.format(', '.join(conflict.index))

@@ -157,20 +157,22 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
     def example_tester_closest(self, solver='glpk', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
-
+        # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(51360119.432)
 
+        # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.102287, abs=0.000001)  # pre- approx(0.084837, abs=0.000001)
 
+        # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.095058, abs=0.000001)  # pre- approx(0.099366, abs=0.000001)
 
     def example_tester_mean(self, solver='glpk', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
-
+        # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(44804593.637)
 
         # Full 1-hourly model run: 0.296973

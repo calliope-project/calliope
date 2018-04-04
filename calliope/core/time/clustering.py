@@ -323,8 +323,8 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps):
     Parameters
     ----------
     how : str
-        How to select data from clusters.
-        Can be mean (centroid) or closest.
+        How to select data from clusters. Can be mean (centroid) or closest real
+        day to the mean (by root mean square error).
 
     """
     # FIXME hardcoded time intervals ('1H', '1D')

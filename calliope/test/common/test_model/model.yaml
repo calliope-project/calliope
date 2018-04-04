@@ -7,46 +7,7 @@ run:
     mode: plan
     solver: glpk
 
-tech_groups:
-    supply:
-        constraints:
-            lifetime: 25
-        costs:
-            monetary:
-                interest_rate: 0.1
-                energy_cap: 10
-    supply_plus:
-        constraints:
-            lifetime: 25
-        costs:
-            monetary:
-                interest_rate: 0.1
-                energy_cap: 10
-    storage:
-        constraints:
-            lifetime: 25
-        costs:
-            monetary:
-                interest_rate: 0.1
-                energy_cap: 10
-    conversion:
-        constraints:
-            lifetime: 25
-        costs:
-            monetary:
-                interest_rate: 0.1
-                energy_cap: 10
-    conversion_plus:
-        constraints:
-            lifetime: 25
-        costs:
-            monetary:
-                interest_rate: 0.1
-                energy_cap: 10
-
-
 techs:
-
     test_supply_gas:
         essentials:
             name: Supply tech
