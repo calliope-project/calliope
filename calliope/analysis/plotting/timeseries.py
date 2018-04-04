@@ -148,7 +148,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         tech_dict = {'techs': tech}
         if not array_flow.loc[tech_dict].sum():
             continue
-        # We allow transmisison tech information to show up in some cases
+        # We allow transmission tech information to show up in some cases
         if 'techs_transmission' in dataset and tech in dataset.techs_transmission.values:
             base_tech = 'transmission'
             color = dataset.colors.loc[{'techs': tech.split(':')[0]}].item()
@@ -243,7 +243,7 @@ def plot_timeseries(
         User can specify 'all' for all input/results timeseries plots, 'inputs'
         for just input timeseries, 'results' for just results timeseries, or the
         name of any data array to plot (in either inputs or results).
-        In all but the last case, arrays can be picked from dropdown in visualisaiton.
+        In all but the last case, arrays can be picked from dropdown in visualisation.
         In the last case, output can be saved to SVG and a rangeslider can be used.
 
     timesteps_zoom : int, optional

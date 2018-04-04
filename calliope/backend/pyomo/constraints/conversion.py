@@ -63,7 +63,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
     """
     Add time-varying conversion technology costs
 
-    .. container:: srolling-wrapper
+    .. container:: scrolling-wrapper
 
         .. math::
 

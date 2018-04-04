@@ -69,6 +69,14 @@ def load_constraints(backend_model):
 def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
     Set maximum carrier production. All technologies.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep) \\leq energy_{cap}(loc::tech)
+            \\times timestep\_resolution(timestep) \\times parasitic\_eff(loc::tec)
+
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
@@ -82,7 +90,15 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
 
 def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
-    Set minimum carrier production. All technologies except conversion_plus
+    Set minimum carrier production. All technologies except ``conversion_plus``.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep) \\geq energy_{cap}(loc::tech)
+            \\times timestep\_resolution(timestep) \\times energy_{cap,min\_use}(loc::tec)
+
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
@@ -96,7 +112,16 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
 
 def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
-    Set maximum carrier consumption for demand, storage, and transmission techs
+    Set maximum carrier consumption for demand, storage, and transmission techs.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\geq
+            -1 \\times energy_{cap}(loc::tech)
+            \\times timestep\_resolution(timestep)
+
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
@@ -109,7 +134,15 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
 
 def resource_max_constraint_rule(backend_model, loc_tech, timestep):
     """
-    Set maximum resource consumed by supply_plus techs
+    Set maximum resource consumed by supply_plus techs.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{resource_{con}}(loc::tech, timestep) \\leq
+            timestep\_resolution(timestep) \\times resource_{cap}(loc::tech)
+
     """
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
@@ -120,23 +153,64 @@ def resource_max_constraint_rule(backend_model, loc_tech, timestep):
 def storage_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     Set maximum stored energy. Supply_plus & storage techs only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep) \\leq
+            storage_{cap}(loc::tech)
+
     """
     return backend_model.storage[loc_tech, timestep] <= backend_model.storage_cap[loc_tech]
 
 
 def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):
-    return _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=0)
+    """
+    Ramping up constraint.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            diff(loc::tech::carrier, timestep) \\leq max\_ramping\_rate(loc::tech::carrier, timestep)
+
+    """
+    return ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0)
 
 
 def ramping_down_constraint_rule(backend_model, loc_tech_carrier, timestep):
-    return _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=1)
+    """
+    Ramping down constraint.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            -1 \\times max\_ramping\_rate(loc::tech::carrier, timestep) \\leq diff(loc::tech::carrier, timestep)
+
+    """
+    return ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=1)
 
 
-def _ramping_constraint_rule(backend_model, loc_tech_carrier, timestep, direction=0):
+def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
     """
     Ramping rate constraints.
 
     Direction: 0 is up, 1 is down.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{max\_ramping\_rate}(loc::tech::carrier, timestep) =
+            energy_{ramping}(loc::tech, timestep) \\times energy_{cap}(loc::tech)
+
+            \\boldsymbol{diff}(loc::tech::carrier, timestep) =
+            (carrier_{prod}(loc::tech::carrier, timestep) + carrier_{con}(loc::tech::carrier, timestep))
+            / timestep\_resolution(timestep) -
+            (carrier_{prod}(loc::tech::carrier, timestep-1) + carrier_{con}(loc::tech::carrier, timestep-1))
+            / timestep\_resolution(timestep-1)
 
     """
 

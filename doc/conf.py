@@ -65,7 +65,7 @@ MOCK_MODULES = [
     'numpy.random', 'numpy.fft', 'numpy.lib', 'numpy.lib.scimath',
     'scipy', 'scipy.cluster', 'scipy.cluster.vq',
     'scipy.spatial', 'scipy.spatial.distance',
-    'sklearn',
+    'sklearn', 'sklearn.metrics',
     'bokeh', 'bokeh.plotting', 'bokeh.models', 'bokeh.core.properties',
     'plotly', 'plotly.offline', 'plotly.graph_objs'
 ]

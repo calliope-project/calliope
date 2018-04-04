@@ -5,12 +5,32 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
 
 
 def initialize_decision_variables(backend_model):
     """
-    Defines variables
+    Defines decision variables.
+
+    ==================== ========================================
+    Variable             Dimensions
+    ==================== ========================================
+    energy_cap           loc_techs
+    carrier_prod         loc_tech_carriers_prod, timesteps
+    carrier_con          loc_tech_carriers_con, timesteps
+    cost                 costs, loc_techs_cost
+    resource_area        loc_techs_area,
+    storage_cap          loc_techs_store
+    storage              loc_techs_store, timesteps
+    resource_con         loc_techs_supply_plus, timesteps
+    resource_cap         loc_techs_supply_plus
+    carrier_export       loc_tech_carriers_export, timesteps
+    cost_var             costs, loc_techs_om_cost, timesteps
+    cost_investment      costs, loc_techs_investment_cost
+    purchased            loc_techs_purchase
+    units                loc_techs_milp
+    operating\_units     loc_techs_milp, timesteps
+    unmet\_demand        loc_carriers, timesteps
+    ==================== ========================================
 
     """
     model_data_dict = backend_model.__calliope_model_data__

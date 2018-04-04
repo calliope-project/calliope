@@ -324,9 +324,6 @@ img.screenshot {
 
 table.docutils {
     border: 1px solid #888;
-    -moz-box-shadow: 2px 2px 4px #eee;
-    -webkit-box-shadow: 2px 2px 4px #eee;
-    box-shadow: 2px 2px 4px #eee;
 }
 
 table.docutils td, table.docutils th {
@@ -336,9 +333,6 @@ table.docutils td, table.docutils th {
 
 table.field-list, table.footnote {
     border: none;
-    -moz-box-shadow: none;
-    -webkit-box-shadow: none;
-    box-shadow: none;
 }
 
 table.footnote {
@@ -400,7 +394,6 @@ table.citation td.label {
 
 table.citation, table.citation td, table.citation th {
     border: none;
-    box-shadow: none;
     padding: 0;
 }
 
@@ -727,4 +720,45 @@ a:hover tt {
   text-align: center;
   display: flex;
   margin: 0 auto;
+}
+
+/* API */
+
+dl.function {
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    /* font-size: 14px; */
+}
+
+h2 + span + dl.function, h2 + dl.function {
+    padding-top: 20px;
+}
+
+dl.function dd {
+    padding-top: 5px;
+}
+
+.function code {
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+code.descclassname {
+    color: #c5c5c5;
+    margin-top: 20px;
+    font-size: 90%;
+}
+
+code.descclassname:after {
+    content:"\a";
+    white-space: pre;
+}
+
+code.descname {
+    font-size: 100%;
+}
+
+.scrolling-wrapper .math {
+    font-size: 90%
 }

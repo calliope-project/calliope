@@ -16,12 +16,13 @@ def cost_minimization(backend_model):
     """
     Minimizes total system monetary cost.
 
-    .. math::
+    .. container:: scrolling-wrapper
 
-        min: z = \sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{monetary}))
+        .. math::
+
+            min: z = \sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{monetary})) + \sum_{loc::carrier,timestep} unmet\_demand(loc::carrier, timestep) \\times bigM
 
     """
-
     def obj_rule(backend_model):
         if hasattr(backend_model, 'unmet_demand'):
             unmet_demand = sum(
@@ -46,8 +47,14 @@ def cost_minimization(backend_model):
 def check_feasibility(backend_model):
     """
     Dummy objective, to check that there are no conflicting constraints.
-    """
 
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            min: z = 1
+
+    """
     def obj_rule(backend_model):
         return 1
 
