@@ -70,7 +70,7 @@ After instantiating the ``Model`` object, and before calling the ``run()`` metho
 After the model has been solved, an xarray Dataset containing results (``model.results``) can be accessed. At this point, the model can be saved with either :meth:`~calliope.Model.to_csv` or :meth:`~calliope.Model.to_netcdf`, which saves all inputs and results, and is equivalent to the corresponding ``--save`` options of the command-line tool.
 
 .. seealso::
-    An example of interactive running in a Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the :nbviewer_docs:`Calliope interactive national-scale example notebook <_static/notebooks/tutorial.ipynb>`. You can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed).
+    An example of interactive running in a Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the :doc:`tutorials <tutorial>`. You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
 Overrides
 ---------

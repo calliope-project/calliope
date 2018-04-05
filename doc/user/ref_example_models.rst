@@ -3,7 +3,7 @@
 Built-in example models
 -----------------------
 
-This section gives a listing of all the YAML configuration files included in the built-in example models. Refer to the :doc:`tutorials section <tutorials>` for a brief overview of how these parts together provide a working model.
+This section gives a listing of all the YAML configuration files included in the built-in example models. Refer to the :doc:`tutorials section <tutorial>` for a brief overview of how these parts together provide a working model.
 
 The example models are accessible in the :mod:`calliope.examples` module. To create an instance of an example model, call its constructor function, e.g.::
 

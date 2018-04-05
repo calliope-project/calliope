@@ -36,7 +36,7 @@ def get_section(commented_map):
 
 
 def write_csv(filename, iterable):
-    with open(filename, 'w', newline='') as f:
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerows(iterable)
 

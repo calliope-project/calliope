@@ -108,9 +108,9 @@ mathjax_path = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?
 
 numpydoc_show_class_members = False   # numpydoc: don't do autosummary
 
-nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
+#nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
 
-extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
+#extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -156,7 +156,7 @@ release = __version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

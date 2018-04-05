@@ -148,7 +148,11 @@ def generate_model(model_data):
 def solve_model(backend_model, solver,
                 solver_io=None, solver_options=None, save_logs=False,
                 **solve_kwargs):
+    """
+    Solve a Pyomo model using the chosen solver and all necessary solver options
 
+    Returns a Pyomo results object
+    """
     opt = SolverFactory(solver, solver_io=solver_io)
 
     if solver_options:
@@ -202,6 +206,12 @@ def load_results(backend_model, results):
 
 
 def get_result_array(backend_model, model_data):
+    """
+    From a Pyomo model object, extract decision variable data and return it as
+    an xarray Dataset. Any rogue input parameters that are constructed inside
+    the backend (instead of being passed by calliope.Model().inputs) are also
+    added to calliope.Model()._model_data in-place.
+    """
     all_variables = {
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
         if isinstance(i, po.base.var.IndexedVar)

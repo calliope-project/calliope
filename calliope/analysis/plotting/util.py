@@ -18,6 +18,10 @@ def get_data_layout(
         subset, sum_dims, squeeze,
         get_var_data_kwargs={},
         get_var_layout_kwargs={}):
+    """
+    For each dropdown dataset in capacity and timeseries plotting, build the
+    plotly data dictionary and the plotly layout dictionary.
+    """
     # data_len is used to populate visibility of traces, for dropdown
     data_len = [0]
     data = []
@@ -68,6 +72,7 @@ def get_data_layout(
 
 
 def hex_to_rgba(hex_color, opacity):
+    """Embed opacity in a colour by converting calliope HEX colours to an RGBA"""
     _NUMERALS = '0123456789abcdefABCDEF'
     _HEXDEC = {v: int(v, 16) for v in (x + y for x in _NUMERALS for y in _NUMERALS)}
     hex_color = hex_color.lstrip('#')

@@ -132,7 +132,7 @@ Only the ``monetary`` cost class is entered into the default objective function.
 
 .. seealso::
 
-    :ref:`config_reference_constraints`, :ref:`config_reference_costs`, :doc:`tutorials <tutorials>`, :doc:`built-in examples <ref_example_models>`
+    :ref:`config_reference_constraints`, :ref:`config_reference_costs`, :doc:`tutorials <tutorial>`, :doc:`built-in examples <ref_example_models>`
 
 Allowing for unmet demand
 -------------------------

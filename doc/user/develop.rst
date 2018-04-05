@@ -56,7 +56,7 @@ As of version 0.6.0, dynamic loading of custom constraint generator extensions h
 Time functions and masks
 ------------------------
 
-Custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.core.time.masks` or :mod:`calliope.core.time.funcs` module, and if not, attempts to load the function from an importable module:
+Custom functions that adjust time resolution can be loaded dynamically during model initialisation. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.core.time.masks` or :mod:`calliope.core.time.funcs` module, and if not, attempts to load the function from an importable module:
 
 .. code-block:: yaml
 
@@ -71,7 +71,7 @@ Custom functions that adjust time resolution can be loaded dynamically during mo
 Profiling
 ---------
 
-To profile a Calliope run with the built-in national-scale example model, then visualize the results with snakeviz:
+To profile a Calliope run with the built-in national-scale example model, then visualise the results with snakeviz:
 
 .. code-block:: shell
 
@@ -81,9 +81,9 @@ To profile a Calliope run with the built-in national-scale example model, then v
 
 Use ``mprof plot`` to plot memory use.
 
-Other options for visualizing:
+Other options for visualising:
 
-* Interactive visualization with `KCachegrind <https://kcachegrind.github.io/>`_ (on macOS, use QCachegrind, installed e.g. with ``brew install qcachegrind``)
+* Interactive visualisation with `KCachegrind <https://kcachegrind.github.io/>`_ (on macOS, use QCachegrind, installed e.g. with ``brew install qcachegrind``)
 
    .. code-block:: shell
 

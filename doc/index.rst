@@ -1,8 +1,8 @@
 .. automodule:: calliope
 
-=================================================================
-Calliope: a multi-scale energy systems (MUSES) modeling framework
-=================================================================
+==================================================================
+Calliope: a multi-scale energy systems (MUSES) modelling framework
+==================================================================
 
 v\ |version| (:doc:`Release history <history>`)
 
@@ -20,7 +20,7 @@ Calliope is developed in the open `on GitHub <https://github.com/calliope-projec
 
 Main features:
 
-* Generic technology definition allows modeling any mix of production, storage and consumption
+* Generic technology definition allows modelling any mix of production, storage and consumption
 * Resolved in space: define locations with individual resource potentials
 * Resolved in time: read time series with arbitrary resolution
 * Model specification in an easy-to-read and machine-processable YAML format
@@ -44,7 +44,7 @@ User guide
    user/building
    user/running
    user/analysing
-   user/tutorials
+   user/tutorial
    user/more_info
    user/develop
 

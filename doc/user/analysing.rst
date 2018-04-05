@@ -27,7 +27,7 @@ In an interactive Python session, there are four primary visualisation functions
 
 Refer to the :ref:`API documentation for the analysis module <api_analysis>` for an overview of available analysis functionality.
 
-Refer to the :doc:`tutorials <tutorials>` for some basic analysis techniques.
+Refer to the :doc:`tutorials <tutorial>` for some basic analysis techniques.
 
 Plotting time series
 --------------------
