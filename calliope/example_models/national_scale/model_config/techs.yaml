@@ -2,11 +2,15 @@
 # TECHNOLOGY DEFINITIONS
 ##
 
+# Note: '-start' and '-end' is used in tutorial documentation only
+
 techs:
 
     ##
     # Supply
     ##
+
+    # ccgt-start
     ccgt:
         essentials:
             name: 'Combined cycle gas turbine'
@@ -25,6 +29,9 @@ techs:
                 interest_rate: 0.10
                 energy_cap: 750  # USD per kW
                 om_con: 0.02  # USD per kWh
+    # ccgt-end
+
+    # csp-start
     csp:
         essentials:
             name: 'Concentrating solar power'
@@ -49,10 +56,12 @@ techs:
                 resource_cap: 200
                 energy_cap: 1000
                 om_prod: 0.002
+    # csp-end
 
     ##
     # Storage
     ##
+    # battery-start
     battery:
         essentials:
             name: 'Battery storage'
@@ -70,19 +79,25 @@ techs:
             monetary:
                 interest_rate: 0.10
                 storage_cap: 200  # USD per kWh storage capacity
+    # battery-end
+
     ##
     # Demand
     ##
+    # demand-start
     demand_power:
         essentials:
             name: 'Power demand'
             color: '#072486'
             parent: demand
             carrier: power
+    # demand-end
 
     ##
     # Transmission
     ##
+
+    # transmission-start
     ac_transmission:
         essentials:
             name: 'AC power transmission'
@@ -97,6 +112,7 @@ techs:
                 interest_rate: 0.10
                 energy_cap: 200
                 om_prod: 0.002
+
     free_transmission:
         essentials:
             name: 'Local power transmission'
@@ -109,3 +125,4 @@ techs:
         costs:
             monetary:
                 om_prod: 0
+    # transmission-end

@@ -3,6 +3,7 @@
 ##
 
 locations:
+    # region-1-start
     region1:
         coordinates: {lat: 40, lon: -2}
         techs:
@@ -12,7 +13,8 @@ locations:
             ccgt:
                 constraints:
                     energy_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
-
+    # region-1-end
+    # other-locs-start
     region2:
         coordinates: {lat: 40, lon: -8}
         techs:
@@ -28,12 +30,14 @@ locations:
     region1-1, region1-2, region1-3:
         techs:
             csp:
+    # other-locs-end
 
 ##
 # TRANSMISSION CAPACITIES
 ##
 
 links:
+    # links-start
     region1,region2:
         techs:
             ac_transmission:
@@ -48,3 +52,4 @@ links:
     region1,region1-3:
         techs:
             free_transmission:
+    # links-end
