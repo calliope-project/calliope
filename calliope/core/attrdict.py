@@ -231,7 +231,9 @@ class AttrDict(dict):
             d[k] = self.get_key(k)
         return d
 
-    def to_yaml(self, path=None, convert_objects=True, **kwargs):
+    def to_yaml(
+            self, path=None, convert_objects=True, format_lists=True,
+            **kwargs):
         """
         Saves the AttrDict to the given path as a YAML file.
 
@@ -245,8 +247,10 @@ class AttrDict(dict):
         they are properly displayed in the resulting YAML output.
 
         """
+        result = self.copy()
+        y = yaml.YAML()
+
         if convert_objects:
-            result = self.copy()
             for k in result.keys_nested():
                 # Convert numpy numbers to regular python ones
                 v = result.get_key(k)
@@ -254,14 +258,20 @@ class AttrDict(dict):
                     result.set_key(k, float(v))
                 elif isinstance(v, np.integer):
                     result.set_key(k, int(v))
-            result = result.as_dict()
-        else:
-            result = self.as_dict()
+
+        if format_lists:
+            for k in result.keys_nested():
+                v = result.get_key(k)
+                if isinstance(v, list):
+                    result.set_key(k, y.seq(v))
+
+        result = result.as_dict()
+
         if path is not None:
             with open(path, 'w') as f:
-                yaml.dump(result, f, **kwargs)
+                yaml.dump(result, f, indent=4, Dumper=yaml.RoundTripDumper, **kwargs)
         else:
-            return yaml.dump(result, **kwargs)
+            return yaml.dump(result, indent=4, Dumper=yaml.RoundTripDumper, **kwargs)
 
     def keys_nested(self, subkeys_as='list'):
         """
