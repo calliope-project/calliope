@@ -1,3 +1,4 @@
+import os
 import shutil
 
 import pytest
@@ -29,6 +30,7 @@ class TestModelPreproccesing:
 
     def test_preprocess_time_masking(self):
         calliope.examples.time_masking()
+
 
 class TestNationalScaleExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):
@@ -83,15 +85,14 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip('CBC not installed')
 
+
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
-        override = {
-            'run.ensure_feasibility': False,
-            'run.objective': 'check_feasibility',
-            'model.subset_time': '2005-01-04',
-        }
-
-        model = calliope.examples.national_scale(override_dict=override)
+        override_file = os.path.join(
+            calliope.examples._PATHS['national_scale'],
+            'overrides.yaml'
+        )
+        model = calliope.examples.national_scale(override_file=override_file + ':check_feasibility')
         model.run()
 
         assert model.results.attrs['termination_condition'] == 'other'
@@ -101,6 +102,7 @@ class TestNationalScaleExampleModelInfeasibility:
 
     def test_nationalscale_example_results_glpk(self):
         self.example_tester()
+
 
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):

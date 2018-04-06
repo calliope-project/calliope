@@ -197,10 +197,16 @@ class Model(object):
         """
         io.save_netcdf(self._model_data, path)
 
-    def to_csv(self, path):
+    def to_csv(self, path, dropna=True):
         """
         Save complete model data (inputs and, if available, results)
         as a set of CSV files to the given ``path``.
 
+        Parameters
+        ----------
+        dropna : bool, optional
+            If True (default), NaN values are dropped when saving,
+            resulting in significantly smaller CSV files.
+
         """
-        io.save_csv(self._model_data, path)
+        io.save_csv(self._model_data, path, dropna)

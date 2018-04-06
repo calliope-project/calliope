@@ -4,6 +4,7 @@ import tempfile
 import pytest  # pylint: disable=unused-import
 
 import calliope
+from calliope import exceptions
 
 
 class TestIO:
@@ -53,6 +54,30 @@ class TestIO:
             ]
             for f in csv_files:
                 assert os.path.isfile(os.path.join(out_path, f))
+
+            with open(os.path.join(out_path, 'inputs_energy_cap_max_systemwide.csv'), 'r') as f:
+                assert 'demand_power' not in f.read()
+
+    def test_save_csv_no_dropna(self, model):
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'out_dir')
+            model.to_csv(out_path, dropna=False)
+
+            with open(os.path.join(out_path, 'inputs_energy_cap_max_systemwide.csv'), 'r') as f:
+                assert 'demand_power' in f.read()
+
+    def test_save_csv_not_optimal(self):
+        override_file = os.path.join(
+            calliope.examples._PATHS['national_scale'],
+            'overrides.yaml'
+        )
+        model = calliope.examples.national_scale(override_file=override_file + ':check_feasibility')
+        model.run()
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'out_dir')
+            with pytest.warns(exceptions.ModelWarning):
+                model.to_csv(out_path, dropna=False)
 
     def test_solve_save_read_netcdf(self, model):
         model.run()

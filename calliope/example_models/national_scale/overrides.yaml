@@ -29,6 +29,13 @@ operate_mode:
     techs.csp.constraints.energy_cap_max: null
     techs.battery.constraints.storage_cap_max: null
 
+check_feasibility:
+    run:
+        ensure_feasibility: False
+        objective: 'check_feasibility'
+    model:
+        subset_time: '2005-01-04'
+
 ##
 # Overrides to demonstrate the run generator ("calliope generate_runs")
 ##
