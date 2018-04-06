@@ -19,13 +19,13 @@ Installing a development version
 As when installing a stable version, using ``conda`` is recommended.
 
 If you only want to track the latest commit, without having a local Calliope
-repository, then just download `this requirements file <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements_latest.yml>`_ and then run::
+repository, then just download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ and `latest.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/latest.yml>`_ requirements files and then run (assuming both are saved into a directory called requirements)::
 
-    $ conda env create -f requirements_latest.yml
+    $ conda create -n calliope_latest --file=requirements/base.yml --file=requirements/latest.yml
 
 This will create a conda environment called ``calliope_latest``.
 
-To contribute to Calliope code, you'll instead want to clone the repository. This will provide you with the master branch in a known on your local device.
+To actively contribute to Calliope development, you'll instead want to clone the repository, giving you an editable copy. This will provide you with the master branch in a known on your local device.
 
 First, clone the repository::
 
@@ -33,19 +33,17 @@ First, clone the repository::
 
 Using Anaconda/conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
 
-   $ conda env create -f ./calliope/requirements_dev.yml -n calliope_dev
+   $ conda env create -f ./calliope/requirements/base.yml -n calliope_dev
    $ source activate calliope_dev
 
 On Windows::
 
-   $ conda env create -f ./calliope/requirements_dev.yml -n calliope_dev
+   $ conda env create -f ./calliope/requirements/base.yml -n calliope_dev
    $ activate calliope_dev
 
 Then install Calliope itself with pip::
 
    $ pip install -e ./calliope
-
-.. note:: `requirements_dev.yml` includes additional packages for successfully joining Calliope development, including `py.test`, `pylint`, and memory profilers.
 
 ---------------------------
 Creating modular extensions

@@ -1,12 +1,13 @@
-name: calliope_latest
+name: calliope
+
 channels:
     - conda-forge
     - anaconda
+
 dependencies:
     - python=3.6
     - bottleneck
     - click
-    - git
     - glpk=4.61
     - hdf5
     - jinja2

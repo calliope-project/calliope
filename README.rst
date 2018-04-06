@@ -42,6 +42,11 @@ Documentation is available on Read the Docs:
 * `Read the documentation online (recommended) <https://calliope.readthedocs.io/en/stable/>`_
 * `Download all documentation in a single PDF file <https://readthedocs.org/projects/calliope/downloads/pdf/stable/>`_
 
+Contributing
+------------
+
+Calliope is developed in the open and contributions are very welcome. See our `contribution guidelines <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_, `code of conduct <https://github.com/calliope-project/calliope/blob/master/CODE_OF_CONDUCT.md>`_, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+
 What's new
 ----------
 
