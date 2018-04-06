@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # TODO: remove 'border' from table and set border properties for rendered_html th, tr, and td
 
     basepath = os.path.dirname(__file__)
-    tutorial_path = os.path.join(basepath, '..', 'user', 'tutorials')
+    tutorial_path = os.path.join(basepath, '..', '_static', 'notebooks')
     tutorials = [i for i in os.listdir(tutorial_path) if i.endswith('.ipynb')]
 
 
