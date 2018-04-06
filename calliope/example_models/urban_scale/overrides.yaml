@@ -5,6 +5,7 @@
 milp:
     model.name: 'Urban-scale example model with MILP'
     techs:
+        # chp-start
         chp:
             constraints:
                 units_max: 4
@@ -14,11 +15,14 @@ milp:
                 monetary:
                     energy_cap: 700
                     purchase: 40000
+        # chp-end
+        # boiler-start
         boiler:
             costs:
                 monetary:
                     energy_cap: 35
                     purchase: 2000
+        # boiler-end
 
 mapbox_ready:
     locations:

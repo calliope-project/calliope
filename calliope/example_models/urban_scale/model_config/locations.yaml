@@ -1,4 +1,5 @@
 locations:
+    # X1-start
     X1:
         techs:
             chp:
@@ -12,7 +13,8 @@ locations:
                 constraints.resource: file=demand_heat.csv
         available_area: 500
         coordinates: {x: 2, y: 7}
-
+    # X1-end
+    # other-locs-start
     X2:
         techs:
             boiler:
@@ -45,11 +47,14 @@ locations:
                 constraints.resource: file=demand_heat.csv
         available_area: 900
         coordinates: {x: 5, y: 3}
-
+    # other-locs-end
+    # N1-start
     N1: # location for branching heat transmission network
         coordinates: {x: 5, y: 7}
+    # N1-end
 
 links:
+    # links-start
     X1,X2:
         techs:
             power_lines:
@@ -66,3 +71,4 @@ links:
     N1,X3:
         techs:
             heat_pipes:
+    # links-end

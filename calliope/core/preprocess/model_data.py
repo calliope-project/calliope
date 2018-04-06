@@ -343,6 +343,10 @@ def location_specific_to_dataset(model_run):
             .format(**split_loc_techs_transmission(loc_tech)), np.nan)
         for loc_tech in model_run.sets['loc_techs_transmission']
     ])
+    # If there is no distance information stored, distance array is deleted
+    if data_dict['distance']['data'].count(np.nan) == len(data_dict['distance']['data']):
+        del data_dict['distance']
+
     data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission',
         data=concat_iterable([(k['loc_to'], k['tech'], k['loc_from'])
             for k in [split_loc_techs_transmission(loc_tech)
