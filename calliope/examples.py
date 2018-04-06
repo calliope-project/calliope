@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 examples.py
@@ -11,42 +11,65 @@ Example models.
 
 import os
 
-from . import core
+from calliope.core.model import Model
 
 
-PATHS = {
-    'NationalScale': os.path.join(os.path.dirname(__file__), 'example_models', 'national_scale'),
-    'UrbanScale': os.path.join(os.path.dirname(__file__), 'example_models', 'urban_scale')
+_PATHS = {
+    'national_scale': os.path.join(os.path.dirname(__file__), 'example_models', 'national_scale'),
+    'urban_scale': os.path.join(os.path.dirname(__file__), 'example_models', 'urban_scale')
 }
 
 
-class NationalScale(core.Model):
-    """
-    National-scale example model.
-
-    """
-
-    def __init__(self, override=None):
-        config_run = os.path.join(PATHS['NationalScale'], 'run.yaml')
-        super().__init__(config_run=config_run, override=override)
+def national_scale(*args, **kwargs):
+    """Returns the built-in national-scale example model."""
+    return Model(os.path.join(_PATHS['national_scale'], 'model.yaml'), *args, **kwargs)
 
 
-class UrbanScale(core.Model):
-    """
-    Urban-scale example model.
+def time_clustering(*args, **kwargs):
+    """Returns the built-in national-scale example model with time clustering."""
+    return Model(
+        os.path.join(_PATHS['national_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_clustering'),
+        *args, **kwargs
+    )
 
-    """
 
-    def __init__(self, override=None):
-        config_run = os.path.join(PATHS['UrbanScale'], 'run.yaml')
-        super().__init__(config_run=config_run, override=override)
+def time_resampling(*args, **kwargs):
+    """Returns the built-in national-scale example model with time resampling."""
+    return Model(
+        os.path.join(_PATHS['national_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_resampling'),
+        *args, **kwargs
+    )
 
-class MILP(core.Model):
-    """
-    Mixed Integer Linear Programming (MILP) functionality example model.
 
-    """
+def urban_scale(*args, **kwargs):
+    """Returns the built-in urban-scale example model."""
+    return Model(os.path.join(_PATHS['urban_scale'], 'model.yaml'), *args, **kwargs)
 
-    def __init__(self, override=None):
-        config_run = os.path.join(PATHS['UrbanScale'], 'run_milp.yaml')
-        super().__init__(config_run=config_run, override=override)
+
+def milp(*args, **kwargs):
+    """Returns the built-in urban-scale example model with MILP constraints enabled."""
+    return Model(
+        os.path.join(_PATHS['urban_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:milp'),
+        *args, **kwargs
+    )
+
+
+def operate(*args, **kwargs):
+    """Returns the built-in urban-scale example model in operate mode."""
+    return Model(
+        os.path.join(_PATHS['urban_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:operate'),
+        *args, **kwargs
+    )
+
+
+def time_masking(*args, **kwargs):
+    """Returns the built-in urban-scale example model with time masking."""
+    return Model(
+        os.path.join(_PATHS['urban_scale'], 'model.yaml'),
+        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:time_masking'),
+        *args, **kwargs
+    )

@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2017 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 cli.py
@@ -20,10 +20,10 @@ import traceback
 
 import click
 
-from . import core
-from . import examples
-from . import _version
-from .parallel import Parallelizer
+from calliope import Model, read_netcdf, examples, _time_format
+from calliope.core.util.convert import convert_model
+from calliope.core.util.generate_runs import generate
+from calliope._version import __version__
 
 
 _debug = click.option(
@@ -49,7 +49,7 @@ _profile_filename = click.option(
 
 logging.basicConfig(stream=sys.stderr,
                     format='[%(asctime)s] %(levelname)-8s %(message)s',
-                    datefmt=core._time_format)
+                    datefmt=_time_format)
 logger = logging.getLogger()
 
 
@@ -99,13 +99,13 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
 def print_end_time(start_time, msg='complete'):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
-    tend = end_time.strftime(core._time_format)
+    tend = end_time.strftime(_time_format)
     print('\nCalliope run {}. '
           'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
 
 def _get_version():
-    return 'Version {}'.format(_version.__version__)
+    return 'Version {}'.format(__version__)
 
 
 @click.group(invoke_without_command=True)
@@ -120,7 +120,7 @@ def cli(ctx, version):
         print(_get_version())
 
 
-@cli.command(short_help='create model')
+@cli.command(short_help='Create a new model based on a built-in example.')
 @click.argument('path')
 @click.option('--template', type=str, default=None)
 @_debug
@@ -132,71 +132,156 @@ def new(path, template, debug):
     """
     if debug:
         print(_get_version())
-    if template is None:
-        template = 'NationalScale'
-    source_path = examples.PATHS[template]
-    click.echo('Copying {} template to target directory: {}'.format(template, path))
-    shutil.copytree(source_path, path)
+    with format_exceptions(debug):
+        if template is None:
+            template = 'national_scale'
+        source_path = examples._PATHS[template]
+        click.echo('Copying {} template to target directory: {}'.format(template, path))
+        shutil.copytree(source_path, path)
 
 
-@cli.command(short_help='directly run single model')
-@click.argument('run_config')
+@cli.command(short_help='Run a model.')
+@click.argument('model_file')
+@click.option('--override_file')
+@click.option('--save_netcdf')
+@click.option('--save_csv')
+@click.option('--save_plots')
+@click.option('--save_logs')
+@click.option('--model_format')
 @_debug
 @_pdb
 @_profile
 @_profile_filename
-def run(run_config, debug, pdb, profile, profile_filename):
-    """Execute the given RUN_CONFIG run configuration file."""
+def run(model_file, override_file, save_netcdf, save_csv, save_plots,
+        save_logs, model_format,
+        debug, pdb, profile, profile_filename):
+    """
+    Execute the given model. Tries to guess from the file extension whether
+    ``model_file`` is a YAML file or a pre-built model saved to NetCDF.
+    This can also explicitly be set with the --model_format=yaml or
+    --model_format=netcdf option.
+
+    """
     if debug:
         print(_get_version())
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
-        tstart = start_time.strftime(core._time_format)
+        if save_csv is None and save_netcdf is None:
+            print(
+                '!!!\nWARNING: Neither save_csv nor save_netcdf have been '
+                'specified. Model will run without saving results!\n!!!\n'
+            )
+        tstart = start_time.strftime(_time_format)
         print('Calliope run starting at {}\n'.format(tstart))
-        model = core.Model(config_run=run_config)
-        model.verbose = True  # Enables some print calls inside Model
-        model_name = model.config_model.get_key('name', default='None')
-        run_name = model.config_run.get_key('name', default='None')
+
+        # Try to determine model file type if not given explicitly
+        if model_format is None:
+            if model_file.split('.')[-1] in ['yaml', 'yml']:
+                model_format = 'yaml'
+            elif model_file.split('.')[-1] in ['nc', 'nc4', 'netcdf']:
+                model_format = 'netcdf'
+            else:
+                raise ValueError(
+                    'Cannot determine model file format based on file '
+                    'extension for "{}". Set format explicitly with '
+                    '--model_format.'.format(model_file)
+                )
+
+        if model_format == 'yaml':
+            override_dict = {
+                'run.save_logs': save_logs
+            }
+            model = Model(
+                model_file, override_file=override_file, override_dict=override_dict
+            )
+        elif model_format == 'netcdf':
+            if override_file is not None:
+                raise ValueError(
+                    'Overrides cannot be applied when loading a pre-built '
+                    'model from NetCDF. Please run without --override options.'
+                )
+            model = read_netcdf(model_file)
+            if save_logs is not None:
+                model._model_data.attrs['run.save_logs'] = save_logs
+        else:
+            raise ValueError('Invalid model format: {}'.format(model_format))
+
+        # FIXME: get this from model._model_data rather than _model_run
+        model_name = model._model_data.attrs.get('model.name', 'None')
         print('Model name:   {}'.format(model_name))
-        print('Run name:     {}'.format(run_name))
-        num_techs = (len(model.config_model.techs)
-                     - len(core.get_default_techs()))
-        msize = '{x} locations, {y} technologies, {t} timesteps'.format(
-            x=len(model._sets['x']),
-            y=num_techs,
-            t=len(model._sets['t']))
+        msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
+            locs=len(model._model_data.coords['locs'].values),
+            techs=(
+                len(model._model_data.coords['techs_non_transmission'].values) +
+                len(model._model_data.coords['techs_transmission_names'].values)
+            ),
+            times=len(model._model_data.coords['timesteps'].values))
         print('Model size:   {}\n'.format(msize))
-        if not profile:
-            model.config_run.set_key('output.save', True)  # Always save output
+        print('Starting model run...')
         model.run()
+        if save_csv:
+            print('Saving CSV results to directory: {}'.format(save_csv))
+            model.to_csv(save_csv)
+        if save_netcdf:
+            print('Saving NetCDF results to file: {}'.format(save_netcdf))
+            model.to_netcdf(save_netcdf)
+        if save_plots:
+            print('Saving HTML file with plots to: {}'.format(save_plots))
+            model.plot.summary(out_file=save_plots)
         print_end_time(start_time)
 
 
-@cli.command(short_help='generate parallel runs')
-@click.argument('run_config')
-@click.argument('path', default='runs')
-@click.option('--silent', is_flag=True, default=False,
-              help='Be less verbose.')
+@cli.command(short_help='Generate a script to run multiple models.')
+@click.argument('model_file')
+@click.argument('out_file')
+@click.option('--kind', help='One of: "bash", "bsub".')
+@click.option('--override_file')
+@click.option('--groups')
+@click.option('--cluster_threads', default=1)
+@click.option('--cluster_mem')
+@click.option('--cluster_time')
+@click.option(
+    '--additional_args', default='',
+    help='Any additional arguments to pass directly on to `calliope run`.')
 @_debug
 @_pdb
-def generate(run_config, path, silent, debug, pdb):
+def generate_runs(
+    model_file, out_file, kind, override_file, groups, additional_args,
+    cluster_threads, cluster_mem, cluster_time,
+    debug, pdb):
+        kwargs = dict(
+            model_file=model_file,
+            out_file=out_file,
+            override_file=override_file,
+            groups=groups,
+            additional_args=additional_args,
+            cluster_mem=cluster_mem,
+            cluster_time=cluster_time,
+            cluster_threads=cluster_threads,
+        )
+        with format_exceptions(debug, pdb):
+            generate(kind, **kwargs)
+
+
+@cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
+@click.argument('run_config_path')
+@click.argument('model_config_path')
+@click.argument('out_path')
+@_debug
+@_pdb
+def convert(
+        run_config_path, model_config_path, out_path,
+        debug, pdb):
     """
-    Generate parallel runs based on the given RUN_CONFIG configuration
-    file, saving them in the given PATH, which is a path to a
-    directory that must not yet exist (PATH defaults to 'runs'
-    if not specified).
+    Convert a Calliope 0.5.x model specified by its run and model
+    configurations to a Calliope 0.6.0 model.
+
+    The input model is not modified; the converted version of the model
+    is saved to ``out_path``.
+
     """
-    if debug:
-        print(_get_version())
-    logging.captureWarnings(True)
     with format_exceptions(debug, pdb):
-        parallelizer = Parallelizer(target_dir=path, config_run=run_config)
-        if not silent and 'name' not in parallelizer.config.parallel:
-            click.echo('`' + run_config +
-                       '` does not specify a `parallel.name`' +
-                       'and was skipped.')
-            return
-        click.echo('Generating runs from config '
-                   '`{}` inside `{}`'.format(run_config, path))
-        parallelizer.generate_runs()
+        print('Converting model...')
+        convert_model(run_config_path, model_config_path, out_path)
+        print('Done. Results saved to: {}'.format(out_path))

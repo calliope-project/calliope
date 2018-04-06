@@ -1,0 +1,89 @@
+##
+# Overrides for different example model configuratiions
+##
+
+profiling:
+    model.name: 'National-scale example model (profiling run)'
+    model.subset_time: ['2005-01-01', '2005-01-15']
+    run.solver: glpk
+
+time_resampling:
+    model.name: 'National-scale example model with time resampling'
+    model.subset_time: '2005-01'
+    # Resample time resolution to 6-hourly
+    model.time: {function: resample, function_options: {'resolution': '6H'}}
+
+time_clustering:
+    model.random_seed: 23
+    model.name: 'National-scale example model with time clustering'
+    model.subset_time: null  # No time subsetting
+    # Cluster timesteps using k-means
+    model.time: {function: apply_clustering, function_options: {clustering_func: 'get_clusters_kmeans', how: 'closest', k: 10}}
+
+operate_mode:
+    run.mode: operate
+    run.operation:
+            window: 12
+            horizon: 24
+    techs.csp.constraints.charge_rate: 0.0162857697 # energy_cap_max / storage_cap_max
+    techs.csp.constraints.energy_cap_max: null
+    techs.battery.constraints.storage_cap_max: null
+
+check_feasibility:
+    run:
+        ensure_feasibility: False
+        objective: 'check_feasibility'
+    model:
+        subset_time: '2005-01-04'
+
+##
+# Overrides to demonstrate the run generator ("calliope generate_runs")
+##
+
+run1:
+    model.subset_time: ['2005-01-01', '2005-01-31']
+run2:
+    model.subset_time: ['2005-02-01', '2005-02-31']
+run3:
+    model.subset_time: ['2005-01-01', '2005-01-31']
+    locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+run4:
+    subset_time: ['2005-02-01', '2005-02-31']
+    locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+
+##
+# Overrides to demonstrate the group_share constraints
+##
+
+cold_fusion:  # Defines a hypothetical cold fusion tech to use in group_share
+    techs:
+        cold_fusion:
+            essentials:
+                name: 'Cold fusion'
+                color: '#233B39'
+                parent: supply
+                carrier_out: power
+            constraints:
+                energy_cap_max: 10000
+                lifetime: 50
+            costs:
+                monetary:
+                    interest_rate: 0.20
+                    energy_cap: 100
+    locations.region1.techs.cold_fusion: null
+    locations.region2.techs.cold_fusion: null
+
+group_share_cold_fusion_prod:
+    model:
+        group_share:
+            # At least 85% of power supply must come from CSP and cold fusion together
+            csp,cold_fusion:
+                carrier_prod_min:
+                    power: 0.85
+
+group_share_cold_fusion_cap:
+    model:
+        group_share:
+            # At most 20% of total energy_cap can come from CSP and cold fusion together
+            csp,cold_fusion:
+                energy_cap_max: 0.20

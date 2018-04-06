@@ -1,99 +1,167 @@
-# import matplotlib
-# matplotlib.use('Qt5Agg')  # Prevents `Invalid DISPLAY variable` errors
+import os
+import calliope
+import pytest  # pylint: disable=unused-import
 
-import pytest
-import tempfile
-
-from calliope import examples
-from calliope.utils import AttrDict
-
-from calliope import analysis
-
-from . import common
-from .common import assert_almost_equal, solver, solver_io
-
-import matplotlib.pyplot as plt
-plt.switch_backend('agg')  # Prevents `Invalid DISPLAY variable` errors
+from calliope.core.attrdict import AttrDict
+import calliope.exceptions as exceptions
 
 
-class TestModel:
-    @pytest.fixture(scope='module')
-    def model(self):
-        locations = """
-            locations:
-                1:
-                    techs: ['ccgt', 'demand_power']
-                    override:
-                        ccgt:
-                            constraints:
-                                e_cap.max: 100
-                        demand_power:
-                            constraints:
-                                r: -50
-            metadata:
-                map_boundary:
-                    lower_left: {lat: 35, lon: -10}
-                    upper_right: {lat: 45, lon: 5}
-                location_coordinates:
-                    1: {lat: 40, lon: -2}
-            links:
-        """
-        config_run = """
-            mode: plan
-            model: ['{techs}', '{locations}']
-            subset_t: ['2005-01-01', '2005-01-02']
-        """
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            f.write(locations.encode('utf-8'))
-            f.read()
-            override_dict = AttrDict({
-                'solver': solver,
-                'solver_io': solver_io,
-            })
-            model = common.simple_model(config_run=config_run,
-                                        config_locations=f.name,
-                                        override=override_dict)
+HTML_STRINGS = AttrDict.from_yaml(
+    os.path.join(os.path.dirname(__file__), 'common', 'html_strings.yaml')
+)
+
+
+class TestPlotting:
+    @pytest.fixture(scope="module")
+    def national_scale_example(self):
+        model = calliope.examples.national_scale(
+            override_dict={'model.subset_time': '2005-01-01'}
+        )
         model.run()
         return model
 
-    @pytest.fixture(scope='module')
-    def builtin_model(self):
-        model = examples.NationalScale()
+    def test_national_scale_plotting(self, national_scale_example):
+        model = national_scale_example
+
+        plot_html_outputs = {
+            'capacity': model.plot.capacity(html_only=True),
+            'timeseries': model.plot.timeseries(html_only=True),
+            'transmission': model.plot.transmission(html_only=True),
+        }
+
+        for plot_type in HTML_STRINGS['national_scale']:
+            for string in HTML_STRINGS['national_scale'][plot_type]:
+                assert string in plot_html_outputs[plot_type]
+
+        # Also just try plotting the summary
+        model.plot.summary()
+
+    def test_milp_plotting(self):
+        override = {'model.subset_time': '2005-01-01'}
+        model = calliope.examples.milp(override_dict=override)
         model.run()
-        return model
 
-    def test_plot_carrier_production(self, model):
-        # Just make sure this doesn't raise any exceptions
-        analysis.plot_carrier_production(model.solution)
+        plot_html_outputs = {
+            'capacity': model.plot.capacity(html_only=True),
+            'timeseries': model.plot.timeseries(html_only=True),
+            'transmission': model.plot.transmission(html_only=True),
+        }
 
-    def test_plot_timeseries(self, model):
-        # Just make sure this doesn't raise any exceptions
-        analysis.plot_timeseries(model.solution,
-                                 model.solution['e'].loc[dict(c='power')].sum(dim='x'),
-                                 carrier='power', demand='demand_power')
+        for plot_type in HTML_STRINGS['milp']:
+            for string in HTML_STRINGS['milp'][plot_type]:
+                assert string in plot_html_outputs[plot_type]
 
-    def test_plot_installed_capacities(self, model):
-        # Just make sure this doesn't raise any exceptions
-        analysis.plot_installed_capacities(model.solution)
+        # Also just try plotting the summary
+        model.plot.summary()
 
-    def test_plot_transmission(self, model):
-        # Just make sure this doesn't raise any exceptions
-        analysis.plot_transmission(model.solution, map_resolution='c')
+    def test_failed_cap_plotting(self, national_scale_example):
+        model = national_scale_example
 
-    def test_get_delivered_cost(self, model):
-        # TODO this should be tested with a more complex model
-        assert_almost_equal(analysis.get_delivered_cost(model.solution), 0.1)
+        # should fail, not in array
+        with pytest.raises(exceptions.ModelError):
+            model.plot.capacity(array='carrier_prod')
+            model.plot.capacity(array=['energy_eff', 'energy_cap'])
+            # orient has to be 'v', 'vertical', 'h', or 'horizontal'
+            model.plot.capacity(orient='g')
 
-    def test_get_levelized_cost(self, model):
-        lcoe = analysis.get_levelized_cost(model.solution)
-        assert_almost_equal(lcoe.at['ccgt'], 0.1)
+    def test_failed_timeseries_plotting(self, national_scale_example):
+        model = national_scale_example
 
-    def test_get_group_share(self, model,):
-        # TODO this should be tested with a more complex model
-        share = analysis.get_group_share(model.solution, techs=['ccgt'], group='supply')
-        assert share == 1.0
+        # should fail, not in array
+        with pytest.raises(exceptions.ModelError):
+            model.plot.timeseries(array='energy_cap')
+            model.plot.timeseries(squeeze=False)
+            model.plot.timeseries(sum_dims=None)
 
-    def test_get_unmet_demand_hours(self, builtin_model):
-        # TODO this should be tested with a more complex model
-        unmet = analysis.get_unmet_demand_hours(builtin_model.solution)
-        assert unmet == 1
+    def test_clustered_plotting(self):
+        override = {'model.time.function_options.k': 2}
+        model = calliope.examples.time_clustering(override_dict=override)
+
+        plot_html = model.plot.timeseries(html_only=True)
+        for string in HTML_STRINGS['clustering']['timeseries']:
+            assert string in plot_html
+
+        # While we have a model that hasn't been run, try plotting transmission and capacity
+        model.plot.transmission(html_only=True)
+        model.plot.capacity(html_only=True)
+
+    def test_subset_plotting(self, national_scale_example):
+        model = national_scale_example
+
+        model.plot.capacity(
+            html_only=True, subset={'timeseries': ['2015-01-01 01:00']}
+        )
+
+    def test_subset_array(self, national_scale_example):
+        model = national_scale_example
+
+        model.plot.capacity(html_only=True, array='inputs')
+        model.plot.capacity(html_only=True, array='results')
+        model.plot.capacity(html_only=True, array='energy_cap')
+        model.plot.capacity(html_only=True, array='storage_cap')
+        model.plot.capacity(
+            html_only=True, array=['systemwide_levelised_cost', 'storage_cap']
+        )
+
+        model.plot.timeseries(html_only=True, array='inputs')
+        model.plot.timeseries(html_only=True, array='results')
+        model.plot.timeseries(html_only=True, array='power')
+        model.plot.timeseries(html_only=True, array='resource')
+        model.plot.timeseries(
+            html_only=True, array=['resource_con', 'cost_var']
+        )
+
+    def test_long_name(self, national_scale_example):
+            model = national_scale_example
+            model._model_data['names'] = model._model_data.names.astype('<U100')
+            model._model_data.names.loc['ccgt'] = (
+                'a long name for a technology, longer than 30 characters'
+            )
+            model._model_data.names.loc['csp'] = (
+                'a really very long name for a technology that is longer than 60 characters'
+            )
+            model._model_data.names.loc['battery'] = (
+                'another_long_name_but_without_space_to_break_at'
+            )
+            model._model_data.names.loc['ac_transmission'] = (
+                'long_transmission_name_which_has two break types in technology name'
+            )
+
+            broken_names = [
+                'a long name for a technology,<br>longer than 30 characters',
+                'another_long_name_but_without_...<br>space_to_break_at',
+                'a really very long name for a<br>technology that is longer<br>than 60 characters'
+            ]
+
+            html_cap = model.plot.capacity(html_only=True)
+            html_timeseries = model.plot.timeseries(html_only=True)
+            html_transmission = model.plot.transmission(html_only=True)
+            for i in broken_names:
+                assert i in html_cap
+                assert i in html_timeseries
+            assert (
+                'long_transmission_name_which_h...<br>as two break types in<br>technology name'
+                in html_transmission
+            )
+
+    def test_plot_cost(self):
+        model = calliope.examples.national_scale(
+            override_dict={
+                'techs.ccgt.costs.carbon': {'energy_cap': 10, 'interest_rate': 0.01}
+            }
+        )
+        model.run()
+        # should fail, multiple costs provided, can only plot one
+        with pytest.raises(exceptions.ModelError):
+            model.plot.capacity(html_only=True, array='results')
+
+        # should succeed, multiple costs provided, subset to one
+        model.plot.capacity(
+            html_only=True, array='results', subset={'costs': 'carbon'}
+        )
+
+        # FIXME: sum_dims doesn't seem to work at all
+        # model.plot.capacity(html_only=True, sum_dims=['locs'])
+
+        # FIXME: this should raise an error!
+        # model.plot.capacity(html_only=True, subset={'timeseries': ['2016-01-01 01:00']})

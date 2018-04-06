@@ -1,12 +1,10 @@
 .. automodule:: calliope
 
-=================================================================
-Calliope: a multi-scale energy systems (MUSES) modeling framework
-=================================================================
+==================================================================
+Calliope: a multi-scale energy systems (MUSES) modelling framework
+==================================================================
 
 v\ |version| (:doc:`Release history <history>`)
-
-Calliope is a framework to develop energy system models using a modern and open source Python-based toolchain.
 
 ------------
 
@@ -14,7 +12,7 @@ This is the documentation for version |version|. See the `main project website <
 
 ------------
 
-Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
+Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimization problem, solves it, and reports results in the form of `xarray Datasets <http://xarray.pydata.org/en/stable/>`_ which in turn can easily be converted into `Pandas <http://pandas.pydata.org/>`_ data structures, for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
 
@@ -22,7 +20,7 @@ Calliope is developed in the open `on GitHub <https://github.com/calliope-projec
 
 Main features:
 
-* Generic technology definition allows modeling any mix of production, storage and consumption
+* Generic technology definition allows modelling any mix of production, storage and consumption
 * Resolved in space: define locations with individual resource potentials
 * Resolved in time: read time series with arbitrary resolution
 * Model specification in an easy-to-read and machine-processable YAML format
@@ -42,15 +40,12 @@ User guide
 
    user/introduction
    user/installation
-   user/components
-   user/tutorials
-   user/formulation
-   user/configuration
-   user/run_configuration
+   user/whatsnew
+   user/building
    user/running
-   user/analysis
-   user/configuration_reference
-   user/example_models
+   user/analysing
+   user/tutorial
+   user/more_info
    user/develop
 
 -----------------
@@ -81,7 +76,7 @@ Release history
 License
 -------
 
-Copyright 2013-2017 Calliope contributors listed in AUTHORS
+Copyright 2013-2018 Calliope contributors listed in AUTHORS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

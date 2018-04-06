@@ -1,0 +1,64 @@
+------------------------
+Mathematical formulation
+------------------------
+
+This section details the mathematical formulation of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
+
+Decision variables
+------------------
+
+.. automodule:: calliope.backend.pyomo.variables
+    :members:
+
+Objective functions
+-------------------
+
+.. automodule:: calliope.backend.pyomo.objective
+    :members:
+
+.. _api_constraints:
+
+Constraints
+===========
+
+Energy Balance
+--------------
+
+.. automodule:: calliope.backend.pyomo.constraints.energy_balance
+    :members:
+
+Capacity
+--------
+
+.. automodule:: calliope.backend.pyomo.constraints.capacity
+    :members:
+
+Dispatch
+--------
+
+.. automodule:: calliope.backend.pyomo.constraints.dispatch
+    :members:
+
+Export
+------
+
+.. automodule:: calliope.backend.pyomo.constraints.export
+    :members:
+
+MILP
+----
+
+.. automodule:: calliope.backend.pyomo.constraints.milp
+    :members:
+
+Conversion
+----------
+
+.. automodule:: calliope.backend.pyomo.constraints.conversion
+    :members:
+
+Conversion_plus
+---------------
+
+.. automodule:: calliope.backend.pyomo.constraints.conversion_plus
+    :members:

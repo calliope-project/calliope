@@ -1,0 +1,267 @@
+simple_supply:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_demand_elec:
+
+        1:
+            techs:
+                test_supply_elec:
+                test_demand_elec:
+
+simple_supply_plus: # does not have a solution
+    locations:
+        0:
+            techs:
+                test_supply_plus:
+                test_demand_elec:
+
+        1:
+            techs:
+                test_supply_plus:
+                test_demand_elec:
+
+simple_supply_and_supply_plus:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_plus:
+                test_demand_elec:
+
+        1:
+            techs:
+                test_supply_elec:
+                test_supply_plus:
+                test_demand_elec:
+
+supply_and_supply_plus_milp:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_plus:
+                    constraints:
+                        units_max: 1
+                        energy_cap_per_unit: 15
+                        storage_cap_per_unit: 15
+                    costs.monetary: {purchase: 1, energy_cap: 0}
+                test_demand_elec:
+
+    links.0,1.exists: false
+
+supply_purchase:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                    costs.monetary.purchase: 1
+                    costs.monetary.energy_cap: 0
+                test_demand_elec:
+
+    links.0,1.exists: false
+
+supply_milp:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                    constraints:
+                        units_max: 1
+                        energy_cap_per_unit: 15
+                test_demand_elec:
+        1.exists: false
+    links.0,1.exists: false
+
+supply_export:
+    techs:
+        test_supply_elec:
+            constraints.export_carrier: electricity
+            costs.monetary.export: 0.01
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_demand_elec:
+
+        1:
+            techs:
+                test_supply_elec:
+                test_demand_elec:
+
+simple_conversion:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_gas:
+                test_conversion:
+                test_demand_elec:
+                test_demand_heat:
+
+        1:
+            techs:
+                test_supply_elec:
+                test_supply_gas:
+                test_conversion:
+                test_demand_elec:
+                test_demand_heat:
+
+conversion_and_conversion_plus:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_gas:
+                test_conversion:
+                test_conversion_plus:
+                test_demand_elec:
+                test_demand_heat:
+
+    links.0,1.exists: false
+
+conversion_plus_milp:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_gas:
+                test_conversion_plus:
+                    constraints:
+                        units_max: 2
+                        energy_cap_per_unit: 15
+                test_demand_elec:
+                test_demand_heat:
+
+    links.0,1.exists: false
+
+conversion_plus_purchase:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_gas:
+                test_conversion_plus:
+                    costs:
+                        monetary:
+                            purchase: 1
+                test_demand_elec:
+                test_demand_heat:
+
+    links.0,1.exists: false
+
+simple_conversion_plus:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_supply_gas:
+                test_supply_coal:
+                test_conversion_plus:
+                test_demand_elec:
+                test_demand_heat:
+
+    links.0,1.exists: false
+
+simple_storage:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_storage:
+                test_demand_elec:
+
+        1:
+            techs:
+                test_supply_elec:
+                test_storage:
+                test_demand_elec:
+
+storage_milp:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_storage:
+                    constraints:
+                        units_max: 2
+                        energy_cap_per_unit: 10
+                        storage_cap_per_unit: 15
+                test_demand_elec:
+
+    links.0,1.exists: false
+
+storage_purchase:
+    locations:
+        0:
+            techs:
+                test_supply_elec:
+                test_storage:
+                    costs.monetary: {purchase: 1}
+                test_demand_elec:
+
+    links.0,1.exists: false
+
+group_share_energy_cap_min:
+    model.group_share.test_supply_elec,test_supply_gas.energy_cap_min: 0.5
+
+group_share_energy_cap_max:
+    model.group_share.test_supply_elec,test_supply_gas.energy_cap_max: 0.5
+
+group_share_energy_cap_equals:
+    model.group_share.test_supply_elec,test_supply_gas.energy_cap_equals: 0.5
+
+group_share_carrier_prod_min:
+    model.group_share.test_supply_elec,test_conversion.carrier_prod_min.electricity: 0.5
+
+group_share_carrier_prod_max:
+    model.group_share.test_supply_elec,test_conversion.carrier_prod_max.electricity: 0.5
+
+group_share_carrier_prod_equals:
+    model.group_share.test_conversion.carrier_prod_equals.heat: 0.5
+
+one_day:
+    model.subset_time: '2005-01-01'
+
+two_hours:
+    model.subset_time: ['2005-01-01 00:00:00', '2005-01-01 01:00:00']
+
+investment_costs:
+    tech_groups:
+        supply:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        supply_plus:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        storage:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        conversion:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        conversion_plus:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+

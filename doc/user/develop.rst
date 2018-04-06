@@ -1,4 +1,3 @@
-
 =================
 Development guide
 =================
@@ -9,7 +8,9 @@ Development takes place in the ``master`` branch. Stable versions are tagged off
 
 Tests are included and can be run with ``py.test`` from the project's root directory.
 
-See the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+See our `contributors guide on GitHub <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_.
+
+Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
 
 --------------------------------
 Installing a development version
@@ -17,18 +18,27 @@ Installing a development version
 
 As when installing a stable version, using ``conda`` is recommended.
 
+If you only want to track the latest commit, without having a local Calliope
+repository, then just download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ and `latest.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/latest.yml>`_ requirements files and then run (assuming both are saved into a directory called requirements)::
+
+    $ conda create -n calliope_latest --file=requirements/base.yml --file=requirements/latest.yml
+
+This will create a conda environment called ``calliope_latest``.
+
+To actively contribute to Calliope development, you'll instead want to clone the repository, giving you an editable copy. This will provide you with the master branch in a known on your local device.
+
 First, clone the repository::
 
    $ git clone https://github.com/calliope-project/calliope
 
 Using Anaconda/conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
 
-   $ conda env create -f ./calliope/requirements.yml -n calliope_dev
+   $ conda env create -f ./calliope/requirements/base.yml -n calliope_dev
    $ source activate calliope_dev
 
 On Windows::
 
-   $ conda env create -f ./calliope/requirements.yml -n calliope_dev
+   $ conda env create -f ./calliope/requirements/base.yml -n calliope_dev
    $ activate calliope_dev
 
 Then install Calliope itself with pip::
@@ -39,54 +49,12 @@ Then install Calliope itself with pip::
 Creating modular extensions
 ---------------------------
 
-Constraint generator functions
-------------------------------
-
-By making use of the ability to load custom constraint generator functions (see :ref:`loading_optional_constraints`), a Calliope model can be extended by additional constraints easily without modifying the core code.
-
-Constraint generator functions are called during construction of the model with the :class:`~calliope.Model` object passed as the only parameter.
-
-The ``Model`` object provides, amongst other things:
-
-* The Pyomo model instance, under the property ``m``
-* The model data under the ``data`` property
-* An easy way to access model configuration with the :meth:`~calliope.Model.get_option` method
-
-A constraint generator function can add constraints, parameters, and variables directly to the Pyomo model instance (``Model.m``). Refer to the `Pyomo documentation <https://software.sandia.gov/trac/pyomo/>`_ for information on how to construct these model components.
-
-The default cost-minimizing objective function provides a good example:
-
-.. literalinclude:: ../../calliope/constraints/objective.py
-   :language: python
-   :lines: 12-
-
-See the source code of the :func:`~calliope.constraints.optional.ramping_rate` function for a more elaborate example.
-
-The process of including custom, optional constraints is as follows:
-
-First, create the source code (see e.g. the above example for the ``ramping_rate`` function) in a file, for example ``my_constraints.py``
-
-Then, assuming your custom constraint generator function is called ``my_first_custom_constraint`` and is defined in ``my_constraints.py``, you can tell Calliope to load it by adding it to the list of optional constraints in your model configuration as follows::
-
-  constraints:
-      - constraints.optional.ramping_rate
-      - my_constraints.my_first_custom_constraint
-
-This assumes that the file ``my_constraints.py`` is importable when the model is run. It must therefore either be in the directory from which the model is run, installed as a Python module (see `this document <https://python-packaging.readthedocs.io/en/latest/index.html>`_ on how to create importable and installable Python packages), or the Python import path has to be adjusted according to the `official Python documentation <https://docs.python.org/3/tutorial/modules.html#the-module-search-path>`_.
-
-Subsets
--------
-
-Calliope internally builds many subsets to better manage constraints, in particular, subsets of different groups of technologies. These subsets can be used in the definition of constraints and are used extensively in the definition of Calliope's built-in constraints. See the detailed definitions in :mod:`calliope.sets`, an overview of which is included here.
-
-.. include:: ../../calliope/sets.py
-   :start-after: ###PART TO INCLUDE IN DOCUMENTATION STARTS HERE###
-   :end-before: ###PART TO INCLUDE IN DOCUMENTATION ENDS HERE###
+As of version 0.6.0, dynamic loading of custom constraint generator extensions has been removed due it not not being used by users of Calliope. The ability to dynamically load custom functions to adjust time resolution remains (see below).
 
 Time functions and masks
 ------------------------
 
-Like custom constraint generator functions, custom functions that adjust time resolution can be loaded dynamically during model initialization. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.time_masks` or :mod:`calliope.time_functions` module, and if not, attempts to load the function from an importable module:
+Custom functions that adjust time resolution can be loaded dynamically during model initialisation. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.core.time.masks` or :mod:`calliope.core.time.funcs` module, and if not, attempts to load the function from an importable module:
 
 .. code-block:: yaml
 
@@ -101,7 +69,7 @@ Like custom constraint generator functions, custom functions that adjust time re
 Profiling
 ---------
 
-To profile a Calliope run with the built-in national-scale example model, then visualize the results with snakeviz:
+To profile a Calliope run with the built-in national-scale example model, then visualise the results with snakeviz:
 
 .. code-block:: shell
 
@@ -111,9 +79,9 @@ To profile a Calliope run with the built-in national-scale example model, then v
 
 Use ``mprof plot`` to plot memory use.
 
-Other options for visualizing:
+Other options for visualising:
 
-* Interactive visualization with `KCachegrind <https://kcachegrind.github.io/>`_ (on macOS, use QCachegrind, installed e.g. with ``brew install qcachegrind``)
+* Interactive visualisation with `KCachegrind <https://kcachegrind.github.io/>`_ (on macOS, use QCachegrind, installed e.g. with ``brew install qcachegrind``)
 
    .. code-block:: shell
 
@@ -135,6 +103,7 @@ Pre-release
 -----------
 
 * Make sure all unit tests pass
+* Build up-to-date Plotly plots for the documentation with (``make doc-plots`` or ``make.bat doc-plots``)
 * Make sure documentation builds without errors
 * Make sure the release notes are up-to-date, especially that new features and backward incompatible changes are clearly marked
 

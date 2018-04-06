@@ -12,7 +12,7 @@ init-hook="import calliope"
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
-ignore=nx_pylab.py
+ignore=
 
 # Pickle collected data for later comparisons.
 persistent=no
@@ -85,11 +85,11 @@ enable=import-error,
        trailing-whitespace,
        trailing-newlines,
        missing-final-newline,
-       # unused-variable
+       unused-variable,
+       undefined-variable
 
 # Things we'd like to enable someday:
 # redefined-outer-name (requires a bunch of work to clean up our code first)
-# undefined-variable (re-enable when pylint fixes https://github.com/PyCQA/pylint/issues/760)
 # no-name-in-module (giving us spurious warnings https://github.com/PyCQA/pylint/issues/73)
 # unused-argument (need to clean up or code a lot, e.g. prefix unused_?)
 

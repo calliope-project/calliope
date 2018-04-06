@@ -1,0 +1,29 @@
+name: calliope
+
+channels:
+    - conda-forge
+    - anaconda
+
+dependencies:
+    - python=3.6
+    - bottleneck
+    - click
+    - glpk=4.61
+    - hdf5
+    - jinja2
+    - jupyter
+    - libnetcdf
+    - netcdf4
+    - numexpr
+    - numpy=1.14.1
+    - pandas=0.22
+    - plotly
+    - pyomo=5.4.3
+    - pytest
+    - pytest-cov
+    - ruamel.yaml<=0.15
+    - scikit-learn
+    - scipy
+    - xarray=0.10.1
+    - pip:
+        - "git+https://github.com/calliope-project/calliope.git"

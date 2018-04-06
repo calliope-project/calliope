@@ -1,21 +1,30 @@
-{%- extends "basic/layout.html" %}
-{%- block extrahead %}
-  {{ super() }}
-  {% if theme_touch_icon %}
-  <link rel="apple-touch-icon" href="{{ pathto('_static/' ~ theme_touch_icon, 1) }}" />
-  {% endif %}
+{% extends "basic/layout.html" %}
+
+{# Plotly must load before MathJax or MathJax breaks #}
+{% set script_files = ["https://cdn.plot.ly/plotly-latest.min.js"] + script_files %}
+
+{% block extrahead %}
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
-  <link href='https://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css'>
-  <script src="{{ pathto('_static/jquery.sticky.js', 1) }}"></script>
+  <link href="https://fonts.googleapis.com/css?family=EB+Garamond" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        "HTML-CSS": {
+            scale: 90
+        },
+     showMathMenu: true
+    });
+</script>
 {% endblock %}
-{%- block relbar2 %}{% endblock %}
+
 {% block header %}
   {{ super() }}
   {% if pagename == 'index' %}
   <div class=indexwrapper>
   {% endif %}
 {% endblock %}
-{%- block footer %}
+
+{% block footer %}
   <div class="footer">
     &copy; Copyright {{ copyright }}.
     <br><br>Documentation created with <a href="http://sphinx-doc.org/">Sphinx</a>, hosted by <a href="http://www.readthedocs.org">Read the Docs</a>.
@@ -23,20 +32,4 @@
   {% if pagename == 'index' %}
   </div>
   {% endif %}
-  <script>
-    var stickySidebartoc = function() {
-      if ( $(window).height() >= $("#sidebartoc").height() + 10 ) {
-        $("#sidebartoc").sticky({topSpacing:0});
-      } else {
-        $("#sidebartoc").unstick();
-      }
-    };
-
-    $(document).ready(function(){
-      stickySidebartoc();
-    });
-    $(window).on('resize', function(){
-      stickySidebartoc();
-    });
-  </script>
-{%- endblock %}
+{% endblock %}

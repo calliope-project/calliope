@@ -18,7 +18,7 @@ def get_subdirs(path, glob_string):
 def find_calliope_package_data():
     """Returns a list of found directories with package data files"""
     path = Path('./calliope')
-    package_data = ['config/*.yaml', 'test/common/*.yaml']
+    package_data = ['config/*.yaml', 'config/*.html', 'test/common/*.yaml']
     for subdir_level in ['*', '*/*', '*/*/*']:
         for example_dir in get_subdirs(path, 'example_models/' + subdir_level):
             package_data.append(str(example_dir) + '/*.csv')
@@ -33,7 +33,7 @@ def find_calliope_package_data():
 setup(
     name='calliope',
     version=__version__,
-    author='Stefan Pfenninger and Calliope contributors listed in AUTHORS',
+    author='Calliope contributors listed in AUTHORS',
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
     license='Apache 2.0',
@@ -45,11 +45,13 @@ setup(
         "click >= 3.3",
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
-        "numpy >= 1.12",
-        "pandas >= 0.19, < 0.20",
-        "pyomo >= 5.2, < 5.3",
+        "numpy >= 1.14",
+        "pandas >= 0.22, < 0.23",
+        "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
-        "xarray >= 0.9.5, < 0.10",
+        "xarray >= 0.10.0, < 0.11",
+        "plotly >= 2.2.3",
+        "jinja2 >= 2.10"
     ],
     entry_points={
         'console_scripts': [

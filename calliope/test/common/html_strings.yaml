@@ -1,0 +1,31 @@
+national_scale:
+    capacity:
+        # - '[{"type": "bar", "x": [null, null, null, null, 1000.0], "y": ["region1", "region1-1", "region1-2", "region1-3", "region2"], "visible": true, "name": "Battery storage", "legendgroup": "storage", "text": "battery", "hoverinfo": "x+y+name",'
+        # - '{"label": "systemwide_levelised_cost", "method": "update", "args": [{"visible": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true]}, {"yaxis": {"title": "Carrier"}, "xaxis": {"title": "Systemwide levelised cost"}, "title": "Systemwide levelised cost"}]}],'
+        - '"type": "dropdown", "xanchor": "left", "x": 0, "y": 1.13, "pad": {"t": 0.05, "b": 0.05, "l": 0.05, "r": 0.05}}]}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+    timeseries:
+        - '[{"type": "scatter", "x": ["2005-01-01", "2005-01-01 01:00:00",'
+        - '"y": [27538.578, 26518.588, 25820.82,'
+        - '"legendgroup": "csp", "text": "csp charge (+) / discharge (-)", "hoverinfo": "x+y+text"}], {"barmode": "relative", "xaxis": {}, "autosize": true, "legend": {"traceorder": "reversed", "xanchor": "left"}, "hovermode": "x", "title": "Carrier flow: power",'
+        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+    transmission:
+        - '[{"type": "scattergeo", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "lat": [40, 40, null], "lon": [-2, -8, null], "showlegend": true, "legendgroup": "ac_transmission", "name": "AC power transmission",'
+        - '{"geo": {"scope": "world", "projection": {"type": "mercator", "scale": 1}, "showland": true, "showcountries": true, "showsubunits": true, "showocean": true, "showrivers": true, "showlakes": true,'
+        - '"autosize": true, "hovermode": "closest", "showlegend": true}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+
+milp:
+    capacity:
+        # - '[{"type": "bar", "x": [null, null, 382.449614049993, 0.0], "y": ["N1", "X1", "X2", "X3"], "visible": true, "name": "Natural gas boiler", "legendgroup": "conversion", "text": "boiler", "hoverinfo": "x+y+name",'
+        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+    timeseries:
+        - '[{"type": "scatter", "x": ["2005-01-01", "2005-01-01 01:00:00",'
+        - '{"type": "bar", "x": ["2005-01-01", "2005-01-01 01:00:00",'
+        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+    transmission:
+        - '[{"type": "scatter", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "x": [5, 2, null], "y": [7, 7, null], "showlegend": true, "legendgroup": "heat_pipes", "name": "District heat distribution",'
+        - '"name": "Locations", "type": "scatter", "legendgroup": "locations", "mode": "markers", "hoverinfo": "text"'
+        - '{"autosize": true, "hovermode": "closest", "showlegend": true}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+
+clustering:
+    timeseries:
+        - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters", "rangeslider": {}}'

@@ -6,7 +6,8 @@
  * :license: Flask Design License, see LICENSE for details.
  */
 
-{% set page_width = '940px' %}
+{% set page_width_min = '940px' %}
+{% set page_width_max = '1080px' %}
 {% set sidebar_width = '220px' %}
 {% set sidebar_width_withoutpadding = '200px' %}
 
@@ -24,7 +25,8 @@ body {
 }
 
 div.document {
-    width: {{ page_width }};
+    min-width: {{ page_width_min }};
+    max-width: {{ page_width_max }};
     margin: 30px auto 0 auto;
 }
 
@@ -39,6 +41,10 @@ div.bodywrapper {
 
 div.sphinxsidebar {
     width: {{ sidebar_width }};
+    position: sticky;
+    top: 35px;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 div#sidebartoc{
@@ -61,7 +67,8 @@ img.floatingflask {
 }
 
 div.footer {
-    width: {{ page_width }};
+    min-width: {{ page_width_min }};
+    max-width: {{ page_width_max }};
     margin: 20px auto 30px auto;
     font-size: 14px;
     color: #888;
@@ -151,6 +158,24 @@ div.sphinxsidebar input {
     border: 1px solid #ccc;
     font-family: 'Georgia', serif;
     font-size: 1em;
+}
+
+div.twocol {
+    display: flex;
+    align-items: center;
+}
+
+div.leftside {
+    width: 50%;
+    padding: 0 15px 0 0;
+}
+
+div.rightside {
+    width: 50%;
+}
+
+div.scrolling-wrapper {
+  overflow-x: scroll;
 }
 
 /* -- body styles ----------------------------------------------------------- */
@@ -299,9 +324,6 @@ img.screenshot {
 
 table.docutils {
     border: 1px solid #888;
-    -moz-box-shadow: 2px 2px 4px #eee;
-    -webkit-box-shadow: 2px 2px 4px #eee;
-    box-shadow: 2px 2px 4px #eee;
 }
 
 table.docutils td, table.docutils th {
@@ -311,9 +333,6 @@ table.docutils td, table.docutils th {
 
 table.field-list, table.footnote {
     border: none;
-    -moz-box-shadow: none;
-    -webkit-box-shadow: none;
-    box-shadow: none;
 }
 
 table.footnote {
@@ -375,7 +394,6 @@ table.citation td.label {
 
 table.citation, table.citation td, table.citation th {
     border: none;
-    box-shadow: none;
     padding: 0;
 }
 
@@ -412,6 +430,16 @@ pre {
     padding: 7px 30px;
     margin: 15px -30px;
     line-height: 1.3em;
+}
+
+.pre {
+    font-family: monospace;
+    background: #FAFCEF;
+    padding: 2px;
+}
+
+.admonition .pre {
+    background: transparent;
 }
 
 dl pre, blockquote pre, li pre {
@@ -692,4 +720,45 @@ a:hover tt {
   text-align: center;
   display: flex;
   margin: 0 auto;
+}
+
+/* API */
+
+dl.function {
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    /* font-size: 14px; */
+}
+
+h2 + span + dl.function, h2 + dl.function {
+    padding-top: 20px;
+}
+
+dl.function dd {
+    padding-top: 5px;
+}
+
+.function code {
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+code.descclassname {
+    color: #c5c5c5;
+    margin-top: 20px;
+    font-size: 90%;
+}
+
+code.descclassname:after {
+    content:"\a";
+    white-space: pre;
+}
+
+code.descname {
+    font-size: 100%;
+}
+
+.scrolling-wrapper .math {
+    font-size: 90%
 }

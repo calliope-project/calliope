@@ -1,0 +1,109 @@
+#
+# NB Parts of this file are automatically parsed and extracted for the configuration reference documentation.
+# See `doc/user/configuration_reference.rst` and `doc/generate_tables.py`, which populates
+# the `doc/user/includes` directory
+#
+
+##
+# Model-wide default settings
+##
+name: null
+
+run:
+    backend: pyomo  # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
+    solver: glpk  # Which solver to use
+    solver_options: null  # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent
+    solver_io: null  # What method the Pyomo backend should use to communicate with the solver
+    save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
+    bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
+    ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
+    operation:  # Settings for operational mode
+        window: null
+        horizon: null
+        use_cap_results: false
+    objective: 'cost_minimization'  # Objective function to use. As of v0.6.0, this has no effect.
+    mode: plan  # Which mode to run the model in: 'plan' or 'operation'
+    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
+
+model:
+    timeseries_data_path: null  # Path to time series data
+    timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
+    timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
+    subset_time: null  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
+    reserve_margin:  {} # Per-carrier system-wide reserve margins
+    random_seed: null  # Seed for random number generator used during clustering
+    time: {}  # Settings to adjust time resolution, see :ref:`time_clustering` for the available options
+
+##
+# Base technology groups
+##
+
+tech_groups:
+    supply:
+        required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
+        allowed_constraints: ['energy_prod', 'lifetime', 'resource', 'force_resource', 'resource_min_use', 'resource_unit', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_scale', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_eff_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'resource_area', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
+        essentials:
+            parent: null
+        constraints:
+            resource: inf
+            resource_unit: power
+            energy_prod: true
+    supply_plus:
+        required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
+        allowed_constraints: ['energy_prod', 'lifetime', 'resource', 'force_resource', 'resource_min_use', 'resource_unit', 'resource_eff', 'resource_area_min', 'resource_area_max', 'resource_area_equals', 'resource_area_per_energy_cap', 'resource_cap_min', 'resource_cap_max', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_scale', 'parasitic_eff', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_eff_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals', 'storage_initial', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss']
+        allowed_costs: ['interest_rate', 'storage_cap', 'resource_area', 'resource_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
+        essentials:
+            parent: null
+        constraints:
+            resource: inf
+            resource_unit: power
+            resource_eff: 1.0
+            energy_prod: true
+    demand:
+        required_constraints: ['resource']
+        allowed_constraints: ['energy_con', 'resource', 'force_resource', 'resource_unit', 'resource_scale', 'resource_area_equals']
+        allowed_costs: []
+        essentials:
+            parent: null
+        constraints:
+            resource_unit: power
+            force_resource: true
+            energy_con: true
+    storage:
+        required_constraints: [['energy_cap_max', 'energy_cap_equals', 'storage_cap_max', 'storage_cap_equals', 'energy_cap_per_unit'], 'charge_rate']
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'storage_initial', 'storage_cap_min', 'storage_cap_max', 'storage_cap_equals', 'storage_cap_per_unit', 'charge_rate', 'storage_time_max', 'storage_loss', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'storage_cap', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod','export', 'purchase', 'depreciation_rate']
+        essentials:
+            parent: null
+        constraints:
+            energy_prod: true
+            energy_con: true
+            storage_cap_max: inf
+    transmission:
+        required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_con', 'energy_prod', 'energy_eff_per_distance', 'energy_eff', 'one_way']
+        allowed_costs: ['interest_rate', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'purchase_per_distance', 'depreciation_rate']
+        essentials:
+                parent: null
+        constraints:
+            energy_prod: true
+            energy_con: true
+    conversion:
+        required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_eff_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
+        essentials:
+            parent: null
+        constraints:
+            energy_prod: true
+            energy_con: true
+    conversion_plus:
+        required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
+        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'carrier_ratios', 'energy_eff', 'energy_cap_min', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_max_systemwide', 'energy_cap_equals_systemwide', 'energy_cap_scale', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_ramping', 'energy_eff_per_distance', 'export_cap', 'export_carrier', 'units_min', 'units_max', 'units_equals']
+        allowed_costs: ['interest_rate', 'energy_cap', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'om_con', 'export', 'purchase', 'depreciation_rate']
+        essentials:
+            parent: null
+        constraints:
+            energy_prod: true
+            energy_con: true

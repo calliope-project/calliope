@@ -14,12 +14,21 @@
 import sys
 import os
 
+# Append the local _extensions dir to module search path
+sys.path.append(os.path.abspath('_extensions'))
+sys.path.append(os.path.abspath('helpers'))
+
+from sphinx.builders.html import StandaloneHTMLBuilder, SingleFileHTMLBuilder
+
+import generate_tables  # from helpers
+# import convert_images  # from helpers
+
 __version__ = None
 # Sets the __version__ variable
 exec(open('../calliope/_version.py').read())
 
 # Generates the tables and source code files
-exec(open('generate_tables.py').read())
+generate_tables.process()
 
 
 ##
@@ -55,11 +64,20 @@ MOCK_MODULES = [
     'click', 'xarray', 'dask', 'xarray.ufuncs',
     'numpy.random', 'numpy.fft', 'numpy.lib', 'numpy.lib.scimath',
     'scipy', 'scipy.cluster', 'scipy.cluster.vq',
-    'scipy.spatial', 'scipy.spatial.distance'
+    'scipy.spatial', 'scipy.spatial.distance',
+    'sklearn', 'sklearn.metrics',
+    'bokeh', 'bokeh.plotting', 'bokeh.models', 'bokeh.core.properties',
+    'plotly', 'plotly.offline', 'plotly.graph_objs'
 ]
 
 for m in MOCK_MODULES:
     sys.modules[m] = Mock()
+
+
+# Redefine supported_image_types for the HTML builder to prefer PNG over SVG
+image_types = ['image/png', 'image/svg+xml', 'image/gif', 'image/jpeg']
+StandaloneHTMLBuilder.supported_image_types = image_types
+SingleFileHTMLBuilder.supported_image_types = image_types
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -77,9 +95,6 @@ else:
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 
-# Append the local _extensions dir to module search path
-# sys.path.append(os.path.abspath('_extensions'))
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
@@ -93,9 +108,9 @@ mathjax_path = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?
 
 numpydoc_show_class_members = False   # numpydoc: don't do autosummary
 
-nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
+#nbviewer_url = 'https://nbviewer.ipython.org/url/calliope.readthedocs.io/'
 
-extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
+#extlinks = {'nbviewer_docs': (nbviewer_url + docs_base_url + '%s', None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -118,7 +133,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Calliope'
-copyright = '2013–2017 Calliope contributors listed in AUTHORS (Apache 2.0 licensed)'
+copyright = '2013–2018 Calliope contributors listed in AUTHORS (Apache 2.0 licensed)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -141,7 +156,7 @@ release = __version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -211,8 +226,8 @@ html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
-    'index': ['sidebar_intro.html', 'globaltoc.html'],
-    '**': ['sidebar_default.html', 'globaltoc.html']  # 'relations.html']
+    'index': ['sidebar_intro.html', 'search_and_toc.html'],  #'searchbox.html', 'globaltoc.html'],
+    '**': ['sidebar_default.html', 'search_and_toc.html']  # 'relations.html']
 }
 
 # Additional templates that should be rendered to pages, maps page names to
@@ -331,6 +346,9 @@ texinfo_documents = [
 def remove_module_docstring(app, what, name, obj, options, lines):
     if what == "module":
         del lines[:]
+
+
+autodoc_member_order = "bysource"
 
 
 def setup(app):

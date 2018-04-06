@@ -8,84 +8,104 @@ techs:
     # Supply
     ##
     ccgt:
-        name: 'Combined cycle gas turbine'
-        color: '#FDC97D'
-        stack_weight: 200
-        parent: supply
-        carrier_out: power
+        essentials:
+            name: 'Combined cycle gas turbine'
+            color: '#E37A72'
+            parent: supply
+            carrier_out: power
         constraints:
-            r: inf
-            e_eff: 0.5
-            e_cap.max: 40000  # kW
+            resource: inf
+            energy_eff: 0.5
+            energy_cap_max: 40000  # kW
+            energy_cap_max_systemwide: 100000  # kW
+            energy_ramping: 0.8
+            lifetime: 25
         costs:
             monetary:
-                e_cap: 750  # USD per kW
-                om_fuel: 0.02  # USD per kWh
+                interest_rate: 0.10
+                energy_cap: 750  # USD per kW
+                om_con: 0.02  # USD per kWh
     csp:
-        name: 'Concentrating solar power'
-        color: '#99CB48'
-        stack_weight: 100
-        parent: supply_plus
-        carrier_out: power
+        essentials:
+            name: 'Concentrating solar power'
+            color: '#F9CF22'
+            parent: supply_plus
+            carrier_out: power
         constraints:
-            use_s_time: true
-            s_time.max: 24
-            s_loss: 0.002
-            r: file  # Will look for `csp_r.csv` in data directory
-            e_eff: 0.4
-            p_eff: 0.9
-            r_area.max: inf
-            e_cap.max: 10000
+            storage_cap_max: 614033
+            charge_rate: 1
+            storage_loss: 0.002
+            resource: file=csp_resource.csv
+            energy_eff: 0.4
+            parasitic_eff: 0.9
+            resource_area_max: inf
+            energy_cap_max: 10000
+            lifetime: 25
         costs:
             monetary:
-                s_cap: 50
-                r_area: 200
-                r_cap: 200
-                e_cap: 1000
-                om_var: 0.002
-        depreciation:
-            monetary:
-                interest: 0.12
+                interest_rate: 0.10
+                storage_cap: 50
+                resource_area: 200
+                resource_cap: 200
+                energy_cap: 1000
+                om_prod: 0.002
 
     ##
     # Storage
     ##
     battery:
-        name: 'Battery storage'
-        color: '#DC5CE5'
-        parent: storage
-        carrier: power
+        essentials:
+            name: 'Battery storage'
+            color: '#3B61E3'
+            parent: storage
+            carrier: power
         constraints:
-            e_cap.max: 1000  # kW
-            s_cap.max: inf
-            c_rate: 4
-            e_eff: 0.95  # 0.95 * 0.95 = 0.9025 round trip efficiency
-            s_loss: 0  # No loss over time assumed
+            energy_cap_max: 1000  # kW
+            storage_cap_max: inf
+            charge_rate: 4
+            energy_eff: 0.95  # 0.95 * 0.95 = 0.9025 round trip efficiency
+            storage_loss: 0  # No loss over time assumed
+            lifetime: 25
         costs:
             monetary:
-                s_cap: 200  # USD per kWh storage capacity
+                interest_rate: 0.10
+                storage_cap: 200  # USD per kWh storage capacity
     ##
     # Demand
     ##
     demand_power:
-        name: 'Power demand'
-        parent: demand
-        carrier: power
-    unmet_demand_power:
-        name: 'Unmet power demand'
-        parent: unmet_demand
-        carrier: power
+        essentials:
+            name: 'Power demand'
+            color: '#072486'
+            parent: demand
+            carrier: power
 
     ##
     # Transmission
     ##
     ac_transmission:
-        name: 'AC power transmission'
-        parent: transmission
-        carrier: power
+        essentials:
+            name: 'AC power transmission'
+            color: '#8465A9'
+            parent: transmission
+            carrier: power
         constraints:
-            e_eff: 0.85
+            energy_eff: 0.85
+            lifetime: 25
         costs:
             monetary:
-                e_cap: 200
-                om_var: 0.002
+                interest_rate: 0.10
+                energy_cap: 200
+                om_prod: 0.002
+    free_transmission:
+        essentials:
+            name: 'Local power transmission'
+            color: '#6783E3'
+            parent: transmission
+            carrier: power
+        constraints:
+            energy_cap_max: inf
+            energy_eff: 1.0
+        costs:
+            monetary:
+                om_prod: 0

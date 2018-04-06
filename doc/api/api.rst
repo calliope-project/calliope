@@ -9,57 +9,40 @@ Model class
 .. autoclass:: calliope.Model
     :members:
 
-Constraints
-===========
-
-.. automodule:: calliope.constraints.objective
-    :members:
-
-.. automodule:: calliope.constraints.base
-    :members:
-
-.. automodule:: calliope.constraints.planning
-    :members:
-
-.. automodule:: calliope.constraints.optional
-    :members:
-
-
 .. _api_time_masks:
 
 Time series
 ===========
 
-.. automodule:: calliope.time_funcs
-    :members:
+.. automodule:: calliope.core.time.clustering
+    :members: get_clusters_kmeans, get_clusters_hierarchical
 
-.. automodule:: calliope.time_masks
-    :members:
+.. automodule:: calliope.core.time.masks
+    :members: extreme, extreme_diff
 
-.. automodule:: calliope.time_clustering
-    :members:
-
-Reading results
-===============
-
-.. automodule:: calliope.read
-    :members:
+.. automodule:: calliope.core.time.funcs
+    :members: resample
 
 .. _api_analysis:
 
-Analyzing results
-=================
+Analyzing models
+================
 
-.. automodule:: calliope.analysis
-    :members:
+.. autoclass:: calliope.analysis.plotting.plotting.ModelPlotMethods
+    :members: timeseries, capacity, transmission, summary
 
-Utility classes: AttrDict, Parallelizer, Exceptions
-===================================================
+.. _backend_interface_api:
 
-.. autoclass:: calliope.utils.AttrDict
-    :members:
+Pyomo backend interface
+=======================
 
-.. autoclass:: calliope.Parallelizer
+.. autoclass:: calliope.backend.pyomo.interface.BackendInterfaceMethods
+    :members: access_model_inputs, update_param, activate_constraint, rerun
+
+Utility classes: AttrDict, Exceptions
+=====================================
+
+.. autoclass:: calliope.core.attrdict.AttrDict
     :members:
 
 .. automodule:: calliope.exceptions
