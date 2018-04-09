@@ -39,6 +39,12 @@ Dispatch
 .. automodule:: calliope.backend.pyomo.constraints.dispatch
     :members:
 
+Costs
+-----
+
+.. automodule:: calliope.backend.pyomo.constraints.costs
+    :members:
+
 Export
 ------
 
@@ -61,4 +67,16 @@ Conversion_plus
 ---------------
 
 .. automodule:: calliope.backend.pyomo.constraints.conversion_plus
+    :members:
+
+Network
+-------
+
+.. automodule:: calliope.backend.pyomo.constraints.network
+    :members:
+
+Policy
+------
+
+.. automodule:: calliope.backend.pyomo.constraints.policy
     :members:

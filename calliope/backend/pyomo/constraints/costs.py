@@ -63,6 +63,14 @@ def load_constraints(backend_model):
 def cost_constraint_rule(backend_model, cost, loc_tech):
     """
     Combine investment and time varying costs into one cost per technology
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{cost}(cost, loc::tech) = cost_{investment}(cost, loc::tech)
+            + \\sum_{timestep \\in timesteps} cost_{var}(cost, loc::tech, timestep)
+
     """
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost') and backend_model.mode != 'operate':
@@ -83,11 +91,33 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     """
-    Calculate costs from capacity decision variables
+    Calculate costs from capacity decision variables.
+
+    Transmission technologies "exist" at two locations, so their cost
+    is divided by 2.
 
     .. container:: scrolling-wrapper
 
         .. math::
+
+            \\boldsymbol{cost_{investment}}(cost, loc::tech) =
+            cost_{fractional\\_om}(cost, loc::tech) +
+            cost_{fixed\\_om}(cost, loc::tech) + cost_{con}(cost, loc::tech)
+
+            \\boldsymbol{cost_{con}}(cost, loc::tech) =
+            depreciation\\_rate * ts\\_weight *
+            (cost_{energy\\_cap}(cost, loc::tech) + cost_{storage\\_cap}(cost, loc::tech) +
+            cost_{resource\\_cap}(cost, loc::tech) + cost_{resource\\_area}(cost, loc::tech))
+
+            depreciation\\_rate =
+            \\begin{cases}
+                = 1 / plant\\_life,&
+                    \\text{if } interest\\_rate = 0\\\\
+                = \\frac{interest\\_rate \\times (1 + interest\\_rate)^{plant\\_life}}{(1 + interest\\_rate)^{plant\\_life} - 1},&
+                    \\text{if } interest\\_rate \\gt 0\\\\
+            \\end{cases}
+
+            ts\\_weight = \\sum_{timestep \\in timesteps} (time\\_res(timestep) \\times weight(timestep)) \\times \\frac{1}{8760}
 
     """
     model_data_dict = backend_model.__calliope_model_data__
@@ -146,6 +176,20 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
     .. container:: scrolling-wrapper
 
         .. math::
+
+            cost_{var}(cost, loc::tech, timestep) = cost_{prod}(cost, loc::tech, timestep) + cost_{con}(cost, loc::tech, timestep)
+
+            cost_{prod}(cost, loc::tech, timestep) = cost_{om\\_prod}(cost, loc::tech, timestep) \\times weight(timestep) \\times carrier_{prod}(loc::tech::carrier, timestep)
+
+            prod\\_con\\_eff =
+            \\begin{cases}
+                = resource_{con}(loc::tech, timestep) \\times resource_eff(loc::tech, timestep),&
+                    \\text{if } loc::tech \\in loc\\_techs\\_supply\\_plus \\\\
+                = carrier_prod(loc::tech::carrier, timestep) \\times energy_eff(loc::tech, timestep),&
+                    \\text{if } loc::tech \\in loc\\_techs\\_supply \\\\
+            \\end{cases}
+
+            cost_{con}(cost, loc::tech, timestep) = cost_{om\\_con}(cost, loc::tech, timestep) \\times weight(timestep) \\times prod\\_con\\_eff
 
     """
     model_data_dict = backend_model.__calliope_model_data__
