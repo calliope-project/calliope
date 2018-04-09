@@ -9,3 +9,4 @@ dependencies:
     - sphinx>=1.5
     - numpydoc
     - ruamel.yaml<=0.15
+    - nbconvert  # To generate HTML files from example notebooks

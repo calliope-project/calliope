@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath('helpers'))
 from sphinx.builders.html import StandaloneHTMLBuilder, SingleFileHTMLBuilder
 
 import generate_tables  # from helpers
-# import convert_images  # from helpers
+import generate_tutorials  # from helpers
 
 __version__ = None
 # Sets the __version__ variable
@@ -29,6 +29,9 @@ exec(open('../calliope/_version.py').read())
 
 # Generates the tables and source code files
 generate_tables.process()
+
+# Generate tutorial HTML files from notebooks
+generate_tutorials.generate_tutorials()
 
 
 ##

@@ -9,21 +9,15 @@ Generate HTML for Jupyter notebook tutorials.
 
 """
 
-if __name__ == '__main__':
-    import os
-    import nbconvert
-    import nbformat
+import os
+import nbconvert
+import nbformat
 
-    # TODO: remove padding from #notebook-container
-    # TODO: set width of #notebook-container.container to 100%
-    # TODO: set div#notebook font-size to 12px?
-    # TODO: remove .prompt padding-left and padding-right & set wdith to 10ex
-    # TODO: remove 'border' from table and set border properties for rendered_html th, tr, and td
 
+def generate_tutorials():
     basepath = os.path.dirname(__file__)
     tutorial_path = os.path.join(basepath, '..', '_static', 'notebooks')
     tutorials = [i for i in os.listdir(tutorial_path) if i.endswith('.ipynb')]
-
 
     for k in tutorials:
         notebook_path = os.path.join(tutorial_path, k)
@@ -33,19 +27,42 @@ if __name__ == '__main__':
         html, resource = nbconvert.exporters.export(nbconvert.exporters.get_exporter('html'), nb)
 
         # Remove plotly javascript
-        start = html.find(
-            """<div class="output_html rendered_html output_subarea ">\n<script type='text/javascript'>if(!window.Plotly)"""
-        )
-        end = html.find(
-            """});require(['plotly'], function(Plotly) {window.Plotly = Plotly;});}</script>\n</div>"""
-        )
+        start_string = """<div class="output_html rendered_html output_subarea ">\n<script type='text/javascript'>if(!window.Plotly)"""
+        start = html.find(start_string)
+        end_string = """});require(['plotly'], function(Plotly) {window.Plotly = Plotly;});}</script>\n</div>"""
+        end = html.find(end_string)
 
-        html_new = html[:start] + html[end + 85:]
+        html_new = html[:start] + html[end + len(end_string):]
 
         # remove call to internal javascript from plotly plots
         html_new = html_new.replace('require(["plotly"], function(Plotly) {', '')
         html_new = html_new.replace(')});</script>', ');</script>')
 
+        # Also get rid of table borders
+        html_new = html_new.replace('border="1" ', '')
+
+        # Remove all inline CSS styles
+        # NOTE: this only works if <style> and </style> are on lines of their own
+        html_lines = html_new.split('\n')
+        start_lines = []
+        end_lines = []
+        for i, line in enumerate(html_lines):
+            if '<style' in line:
+                start_lines.append(i)
+            if '</style>' in line:
+                end_lines.append(i)
+
+        assert len(start_lines) == len(end_lines)
+
+        for i, line in enumerate(start_lines):
+            del html_lines[line:end_lines[i]]
+
+        html_new = '\n'.join(html_lines)
+
         # Write to file
         with open(html_path, 'w', encoding="utf-8") as file:
             file.write(html_new)
+
+
+if __name__ == '__main__':
+    generate_tutorials()
