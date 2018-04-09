@@ -40,7 +40,7 @@ MILP functionality can be easily applied, but convergence is slower as a result 
 Running the model
 =================
 
-We now take you through running the model in a Jupyter notebook, which is included fully below. To download and run the notebook yourself, you can find it :nbviewer_docs:`here <user/tutorials/milp.ipynb>`. You will need to have Calliope installed.
+We now take you through running the model in a Jupyter notebook, which is included fully below. To download and run the notebook yourself, you can find it :nbviewer_docs:`here <_static/notebooks/milp.ipynb>`. You will need to have Calliope installed.
 
 .. raw:: html
-   :file: tutorials/milp.html
+   :file: ../_static/notebooks/milp.html

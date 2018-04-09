@@ -195,7 +195,7 @@ The revenue from PV export varies depending on location, emulating the different
 Running the model
 =================
 
-We now take you through running the model in a Jupyter notebook, which is included fully below. To download and run the notebook yourself, you can find it :nbviewer_docs:`here <user/tutorials/urban_scale.ipynb>`. You will need to have Calliope installed.
+We now take you through running the model in a Jupyter notebook, which is included fully below. To download and run the notebook yourself, you can find it :nbviewer_docs:`here <_static/notebooks/urban_scale.ipynb>`. You will need to have Calliope installed.
 
 .. raw:: html
-   :file: tutorials/urban_scale.html
+   :file: ../_static/notebooks/urban_scale.html

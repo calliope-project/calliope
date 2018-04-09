@@ -160,7 +160,7 @@ We are able to override constraints for transmission technologies at this point,
 Running the model
 =================
 
-We now take you through running the model in a Jupyter notebook, which is included fully below. To download and run the notebook yourself, you can find it :nbviewer_docs:`here <user/tutorials/national_scale.ipynb>`. You will need to have Calliope installed.
+We now take you through running the model in a Jupyter notebook, which is included fully below. To download and run the notebook yourself, you can find it :nbviewer_docs:`here <_static/notebooks/national_scale.ipynb>`. You will need to have Calliope installed.
 
 .. raw:: html
-   :file: tutorials/national_scale.html
+   :file: ../_static/notebooks/national_scale.html
