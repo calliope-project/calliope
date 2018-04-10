@@ -48,8 +48,7 @@ class TestIO:
                 'inputs_energy_cap_max.csv', 'inputs_timestep_weights.csv', 'inputs_cost_storage_cap.csv',
                 'inputs_cost_resource_cap.csv', 'inputs_cost_depreciation_rate.csv', 'inputs_energy_prod.csv',
                 'inputs_cost_resource_area.csv', 'inputs_cost_om_prod.csv', 'inputs_lookup_loc_techs.csv',
-                'inputs_cost_energy_cap.csv', 'inputs_colors.csv', 'inputs_distance.csv',
-                'inputs_resource_unit.csv', 'inputs_lookup_remotes.csv', 'inputs_inheritance.csv',
+                'inputs_cost_energy_cap.csv', 'inputs_colors.csv', 'inputs_resource_unit.csv', 'inputs_inheritance.csv',
                 'inputs_energy_ramping.csv', 'inputs_resource_area_max.csv', 'inputs_force_resource.csv'
             ]
             for f in csv_files:

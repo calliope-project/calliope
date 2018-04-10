@@ -62,16 +62,11 @@ class TestExistsFalse():
 
     def test_link_exists_false(self):
         overrides = {'links.0,1.exists': False}
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            model = build_model(overrides, 'simple_storage,one_day,investment_costs')
+        model = build_model(overrides, 'simple_storage,one_day,investment_costs')
         model.run()
 
         # Ensure what should be gone is gone
         assert 'loc_techs_transmission' not in model._model_data
-
-        # Ensure warnings were raised
-        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
-        assert 'dimension loc_techs_transmission and associated variables distance, lookup_remotes were empty, so have been deleted' in all_warnings
 
     def test_link_tech_exists_false(self):
         overrides = {'links.0,1.techs.test_transmission_elec.exists': False}

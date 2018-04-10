@@ -1,5 +1,3 @@
-This page provides a summary of information from the full :doc:`release history <../history>`.
-
 =============
 New in v0.6.0
 =============
@@ -112,7 +110,7 @@ To solve a model, point to the `model.yaml` file, e.g.: ``calliope run path/to/m
 Overrides
 =========
 
-Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a seperate YAML file, called for example `overrides.yaml`.
+Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a separate YAML file, called for example `overrides.yaml`.
 
 Each group defines any number of overrides to the technology, location, link, model, or run definitions. One or several such groups can then be applied when solving a model, e.g.:
 
@@ -419,6 +417,27 @@ New:
                 demand_power:
             coordinates: {x: 8, y: 7}
 
+
+``group_share`` constraint
+==========================
+
+The ``group_fraction`` constraint is now called ``group_share`` and has a different formulation more in line with the rest of the tech-specific constraints::
+
+    group_share:
+        csp,ccgt:
+            energy_cap_min: 0.5
+            energy_cap_max: 0.9
+            carrier_prod_min:
+                power: 0.5
+
+In the process of making these updates, the ``demand_power_peak`` and (undocumented) ``ignored_techs`` options were removed from ``group_share``.
+
+``charge_rate``
+===============
+
+FIXME
+
+
 Pre-processed data
 ==================
 
@@ -483,3 +502,12 @@ Pyomo warmstart
 Warmstart functionality can be used in solvers other than GLPK. They allow a previously constructed model to be changed slightly without having to be fully rebuilt. This can speed up re-running a model when you have just a few input parameters you would like to change (the cost of a technology, for instance).
 
 Although the use of warmstart existed in operational mode in version `0.5`, now it extends to all possible parameters in all models. This functionality is currently undocumented in Calliope, but the Pyomo documentation provides some information and the Pyomo model built by Calliope can be accessed by `model._backend_model`.
+
+--------
+Also see
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   conversion_0.6.0

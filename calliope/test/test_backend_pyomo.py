@@ -259,16 +259,14 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_investment_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(
-                {'techs.test_supply_elec.constraints.lifetime': 10,
-                 'techs.test_supply_elec.costs.monetary.interest_rate': 0.1},
-                'supply_purchase,two_hours'
-            )
-            m.run(build_only=True)
+        m = build_model(
+            {'techs.test_supply_elec.constraints.lifetime': 10,
+                'techs.test_supply_elec.costs.monetary.interest_rate': 0.1},
+            'supply_purchase,two_hours'
+        )
+        m.run(build_only=True)
 
-            assert hasattr(m._backend_model, 'cost_investment_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        assert hasattr(m._backend_model, 'cost_investment_constraint')
 
     def test_loc_techs_cost_var_constraint(self):
         """
@@ -287,17 +285,14 @@ class TestConstraints:
         assert hasattr(m._backend_model, 'cost_var_rhs')
         assert not hasattr(m._backend_model, 'cost_var_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(
-                {'techs.test_conversion_plus.costs.monetary.om_prod': 1},
-                'simple_conversion_plus,two_hours'
-            )
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.costs.monetary.om_prod': 1},
+            'simple_conversion_plus,two_hours'
+        )
 
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'cost_var_rhs')
-            assert not hasattr(m._backend_model, 'cost_var_constraint')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'cost_var_rhs')
+        assert not hasattr(m._backend_model, 'cost_var_constraint')
 
         m = build_model(
             {'techs.test_supply_elec.costs.monetary.om_prod': 1},
@@ -432,12 +427,9 @@ class TestConstraints:
         assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
 
         # constraint should exist in the MILP case too
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_and_supply_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
-
-        assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_and_supply_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
 
     def test_loc_techs_resource_capacity_constraint(self):
         """
@@ -595,13 +587,10 @@ class TestConstraints:
             m._backend_model.energy_capacity_constraint['0::test_supply_elec'].upper() * 5
         )
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')  # demand still is in loc_techs
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_constraint')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')  # demand still is in loc_techs
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_constraint')
 
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
         # Check that setting `_equals` to infinity is caught:
         override = {'locations.0.techs.test_supply_elec.constraints.energy_cap_equals': np.inf}
         with pytest.raises(exceptions.ModelError) as error:
@@ -676,13 +665,10 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'carrier_production_max_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_max_constraint')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_max_constraint')
 
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
 
     def test_loc_tech_carriers_carrier_production_min_constraint(self):
         """
@@ -702,20 +688,17 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'carrier_production_min_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_constraint')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_constraint')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
-                'supply_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_constraint')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
+            'supply_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_constraint')
 
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
 
     def test_loc_tech_carriers_carrier_consumption_max_constraint(self):
         """
@@ -729,12 +712,10 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'carrier_consumption_max_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'carrier_consumption_max_constraint')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'carrier_consumption_max_constraint')
 
-            assert check_standard_warning(excinfo, 'transmission')
 
     def test_loc_techs_resource_max_constraint(self):
         """
@@ -806,17 +787,13 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'unit_commitment_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'unit_commitment_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'unit_commitment_constraint')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'unit_commitment_constraint')
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'unit_commitment_constraint')
 
     def test_loc_techs_unit_capacity_constraint(self):
         """
@@ -825,17 +802,14 @@ class TestConstraints:
         m = build_model({}, 'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'unit_capacity_constraint')
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'unit_capacity_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'unit_capacity_constraint')
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'unit_capacity_constraint')
+
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'unit_capacity_constraint')
 
     def test_loc_tech_carriers_carrier_production_max_milp_constraint(self):
         """
@@ -846,22 +820,18 @@ class TestConstraints:
         m = build_model({}, 'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
-            # Ensure warnings were raised
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
+
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_max_milp_constraint')
 
     def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(self):
         """
@@ -874,38 +844,34 @@ class TestConstraints:
             m._backend_model,
             'carrier_production_max_conversion_plus_milp_constraint'
         )
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(
-                m._backend_model,
-                'carrier_production_max_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(
-                m._backend_model,
-                'carrier_production_max_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(
+            m._backend_model,
+            'carrier_production_max_conversion_plus_milp_constraint'
+        )
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(
-                m._backend_model,
-                'carrier_production_max_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(
+            m._backend_model,
+            'carrier_production_max_conversion_plus_milp_constraint'
+        )
 
-            m = build_model({}, 'conversion_plus_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(
-                m._backend_model,
-                'carrier_production_max_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(
+            m._backend_model,
+            'carrier_production_max_conversion_plus_milp_constraint'
+        )
+
+        m = build_model({}, 'conversion_plus_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(
+            m._backend_model,
+            'carrier_production_max_conversion_plus_milp_constraint'
+        )
 
     def test_loc_tech_carriers_carrier_production_min_milp_constraint(self):
         """
@@ -920,38 +886,34 @@ class TestConstraints:
         )
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
-                'supply_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
-                'supply_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
+            'supply_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
-                'conversion_plus_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
+            'supply_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-                'conversion_plus_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
+            'conversion_plus_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
+            'conversion_plus_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_milp_constraint')
 
     def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(self):
         """
@@ -968,50 +930,46 @@ class TestConstraints:
             m._backend_model,
             'carrier_production_min_conversion_plus_milp_constraint'
         )
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
-                'supply_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(
-                m._backend_model,
-                'carrier_production_min_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
-                'conversion_plus_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(
-                m._backend_model,
-                'carrier_production_min_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
+            'supply_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(
+            m._backend_model,
+            'carrier_production_min_conversion_plus_milp_constraint'
+        )
 
-            m = build_model(
-                {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-                'conversion_plus_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(
-                m._backend_model,
-                'carrier_production_min_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min_use': 0.1},
+            'conversion_plus_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(
+            m._backend_model,
+            'carrier_production_min_conversion_plus_milp_constraint'
+        )
 
-            m = build_model(
-                {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-                'conversion_plus_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(
-                m._backend_model,
-                'carrier_production_min_conversion_plus_milp_constraint'
-            )
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
+            'conversion_plus_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(
+            m._backend_model,
+            'carrier_production_min_conversion_plus_milp_constraint'
+        )
+
+        m = build_model(
+            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
+            'conversion_plus_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(
+            m._backend_model,
+            'carrier_production_min_conversion_plus_milp_constraint'
+        )
 
     def test_loc_tech_carriers_carrier_consumption_max_milp_constraint(self):
         """
@@ -1024,21 +982,17 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
 
-            m = build_model({}, 'storage_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'storage_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_consumption_max_milp_constraint')
 
     def test_loc_techs_energy_capacity_units_constraint(self):
         """
@@ -1050,21 +1004,17 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'energy_capacity_units_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_units_constraint')
 
-            m = build_model({}, 'storage_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'storage_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_units_constraint')
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_units_constraint')
 
     def test_loc_techs_storage_capacity_units_constraint(self):
         """
@@ -1074,26 +1024,21 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'storage_capacity_units_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_units_constraint')
 
-            m = build_model({}, 'storage_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'storage_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'storage_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'storage_capacity_units_constraint')
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_units_constraint')
 
-            m = build_model({}, 'supply_and_supply_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'storage_capacity_units_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_and_supply_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'storage_capacity_units_constraint')
 
     def test_loc_techs_energy_capacity_max_purchase_constraint(self):
         """
@@ -1105,24 +1050,20 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints': {'energy_cap_max': None, 'energy_cap_equals': 15}},
-                'supply_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints': {'energy_cap_max': None, 'energy_cap_equals': 15}},
+            'supply_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_max_purchase_constraint')
 
     def test_loc_techs_energy_capacity_min_purchase_constraint(self):
         """
@@ -1134,32 +1075,27 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints': {'energy_cap_max': None, 'energy_cap_equals': 15}},
-                'supply_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints': {'energy_cap_max': None, 'energy_cap_equals': 15}},
+            'supply_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
 
-            m = build_model(
-                {'techs.test_supply_elec.constraints.energy_cap_min': 10},
-                'supply_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_min': 10},
+            'supply_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_min_purchase_constraint')
 
     def test_loc_techs_storage_capacity_max_purchase_constraint(self):
         """
@@ -1169,21 +1105,17 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'storage_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'storage_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
 
-            m = build_model({}, 'storage_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'storage_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_max_purchase_constraint')
 
     def test_loc_techs_storage_capacity_min_purchase_constraint(self):
         """
@@ -1199,35 +1131,30 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(
-                {'techs.test_storage.constraints.storage_cap_min': 10},
-                'storage_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_storage.constraints.storage_cap_min': 10},
+            'storage_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
 
-            m = build_model({}, 'storage_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'storage_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
 
-            m = build_model(
-                {'techs.test_storage.constraints.storage_cap_min': 10},
-                'storage_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_storage.constraints.storage_cap_min': 10},
+            'storage_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
 
-            m = build_model(
-                {'techs.test_storage.constraints': {'storage_cap_equals': 10, 'storage_cap_min': 10}},
-                'storage_purchase,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_storage.constraints': {'storage_cap_equals': 10, 'storage_cap_min': 10}},
+            'storage_purchase,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'storage_capacity_min_purchase_constraint')
 
     def test_loc_techs_update_costs_investment_units_constraint(self):
         """
@@ -1241,33 +1168,28 @@ class TestConstraints:
         assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
         assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'supply_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
-            assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
+        assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
 
-            m = build_model(
-                {'techs.test_supply_elec.costs.monetary.purchase': 1},
-                'supply_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
-            assert check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_supply_elec.costs.monetary.purchase': 1},
+            'supply_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
+        assert check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
 
     def test_loc_techs_update_costs_investment_purchase_constraint(self):
         """
         sets.loc_techs_purchase,
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
 
-            m = build_model({}, 'supply_purchase,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
-            assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'supply_purchase,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
+        assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
 
     # conversion.py
     def test_loc_techs_balance_conversion_constraint(self):
@@ -1281,11 +1203,10 @@ class TestConstraints:
         m = build_model({}, 'simple_conversion,two_hours,investment_costs')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_conversion_constraint')
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'balance_conversion_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'balance_conversion_constraint')
 
     def test_loc_techs_cost_var_conversion_constraint(self):
         """
@@ -1324,43 +1245,38 @@ class TestConstraints:
         m = build_model({}, 'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_out': ['electricity', 'heat']},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_in': ['coal', 'gas']},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_out': ['electricity', 'heat']},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_in': ['coal', 'gas']},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
 
     def test_loc_techs_carrier_production_max_conversion_plus_constraint(self):
         """
         i for i in sets.loc_techs_conversion_plus
         if i not in sets.loc_techs_milp
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'carrier_production_max_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_max_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'carrier_production_max_conversion_plus_constraint')
+
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_max_conversion_plus_constraint')
 
     def test_loc_techs_carrier_production_min_conversion_plus_constraint(self):
         """
@@ -1368,32 +1284,28 @@ class TestConstraints:
         if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
         and i not in sets.loc_techs_milp
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-                'conversion_plus_milp,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
+            'conversion_plus_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
 
     def test_loc_techs_cost_var_conversion_plus_constraint(self):
         """
@@ -1414,119 +1326,106 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_conversion_plus.costs.monetary.om_prod': 0.1},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.costs.monetary.om_con': 0.1},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.costs.monetary.om_prod': 0.1},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.costs.monetary.om_con': 0.1},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
     def test_loc_techs_balance_conversion_plus_in_2_constraint(self):
         """
         sets.loc_techs_in_2,
         """
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_in_2': 'coal'},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_in_2': ['coal', 'heat']},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_in_2': 'coal'},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_in_2': ['coal', 'heat']},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
 
     def test_loc_techs_balance_conversion_plus_in_3_constraint(self):
         """
         sets.loc_techs_in_3,
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_in_3': 'coal'},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_in_3': ['coal', 'heat']},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_in_3': 'coal'},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_in_3': ['coal', 'heat']},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
 
     def test_loc_techs_balance_conversion_plus_out_2_constraint(self):
         """
         sets.loc_techs_out_2,
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_out_2': ['coal', 'heat']},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_out_2_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_out_2': ['coal', 'heat']},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_out_2_constraint')
 
     def test_loc_techs_balance_conversion_plus_out_3_constraint(self):
         """
         sets.loc_techs_out_3,
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_out_3': 'coal'},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
 
-            m = build_model(
-                {'techs.test_conversion_plus.essentials.carrier_out_3': ['coal', 'heat']},
-                'simple_conversion_plus,two_hours,investment_costs'
-            )
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_out_3': 'coal'},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
+
+        m = build_model(
+            {'techs.test_conversion_plus.essentials.carrier_out_3': ['coal', 'heat']},
+            'simple_conversion_plus,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
 
     # network.py
     def test_loc_techs_symmetric_transmission_constraint(self):
@@ -1537,11 +1436,10 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'symmetric_transmission_constraint')
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'symmetric_transmission_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+
+        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'symmetric_transmission_constraint')
 
     # policy.py
     def test_techlists_group_share_energy_cap_min_constraint(self):
@@ -1585,13 +1483,12 @@ class TestConstraints:
         for carrier in sets.carriers
         if carrier in model_run.model.get_key('group_share.{}.carrier_prod_min'.format(i), {}).keys()
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'conversion_and_conversion_plus,group_share_carrier_prod_min,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
-            assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
-            assert not hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+
+        m = build_model({}, 'conversion_and_conversion_plus,group_share_carrier_prod_min,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
+        assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
+        assert not hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
 
     def test_techlists_carrier_group_share_carrier_prod_max_constraint(self):
         """
@@ -1601,13 +1498,12 @@ class TestConstraints:
         for carrier in sets.carriers
         if carrier in model_run.model.get_key('group_share.{}.carrier_prod_max'.format(i), {}).keys()
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'conversion_and_conversion_plus,group_share_carrier_prod_max,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
-            assert hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
-            assert not hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+
+        m = build_model({}, 'conversion_and_conversion_plus,group_share_carrier_prod_max,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
+        assert hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
+        assert not hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
 
     def test_techlists_carrier_group_share_carrier_prod_equals_constraint(self):
         """
@@ -1617,10 +1513,9 @@ class TestConstraints:
         for carrier in sets.carriers
         if carrier in model_run.model.get_key('group_share.{}.carrier_prod_equals'.format(i), {}).keys()
         """
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model({}, 'conversion_and_conversion_plus,group_share_carrier_prod_equals,two_hours,investment_costs')
-            m.run(build_only=True)
-            assert not hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
-            assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
-            assert hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
-            assert check_standard_warning(excinfo, 'transmission')
+
+        m = build_model({}, 'conversion_and_conversion_plus,group_share_carrier_prod_equals,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
+        assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
+        assert hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')

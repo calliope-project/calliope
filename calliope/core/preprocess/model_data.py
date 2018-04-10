@@ -347,13 +347,19 @@ def location_specific_to_dataset(model_run):
     if data_dict['distance']['data'].count(np.nan) == len(data_dict['distance']['data']):
         del data_dict['distance']
 
-    data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission',
-        data=concat_iterable([(k['loc_to'], k['tech'], k['loc_from'])
-            for k in [split_loc_techs_transmission(loc_tech)
+    data_dict['lookup_remotes'] = dict(
+        dims='loc_techs_transmission',
+        data=concat_iterable([
+            (k['loc_to'], k['tech'], k['loc_from'])
+            for k in [
+                split_loc_techs_transmission(loc_tech)
                 for loc_tech in model_run.sets['loc_techs_transmission']
             ]
         ], ['::', ':'])
     )
+    # If there are no remote locations stored, lookup_remotes array is deleted
+    if data_dict['lookup_remotes']['data'].count(np.nan) == len(data_dict['lookup_remotes']['data']):
+        del data_dict['lookup_remotes']
 
     data_dict['available_area'] = dict(dims='locs', data=[
         model_run.locations[loc].get('available_area', np.nan)
