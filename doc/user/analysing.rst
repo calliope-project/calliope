@@ -32,6 +32,8 @@ Refer to the :doc:`tutorials <tutorials>` for some basic analysis techniques.
 Plotting time series
 --------------------
 
+The following example shows a timeseries plot of the built-in urban scale example model:
+
 .. raw:: html
    :file: images/plot_timeseries.html
 
@@ -63,10 +65,17 @@ The data used to build the plots can also be subset and ordered by using the ``s
     # specifying `subset` lets us order them in the stacked barchart
     model.plot.timeseries(subset={'techs': ['ccgt', 'battery', 'csp']})
 
+When aggregating model timesteps with clustering methods, the timeseries plots are adjusted accordingly (example from the built-in ``time_clustering`` example model):
+
+.. raw:: html
+   :file: images/clustered_plot_timeseries.html
+
 .. seealso:: :ref:`API documentation for the analysis module<api_analysis>`
 
 Plotting capacities
 -------------------
+
+The following example shows a capacity plot of the built-in urban scale example model:
 
 .. raw:: html
    :file: images/plot_capacity.html
@@ -76,10 +85,12 @@ Functionality is similar to timeseries, this time called by ``model.plot.capacit
 Plotting transmission
 ---------------------
 
+The following example shows a transmission plot of the built-in urban scale example model:
+
 .. raw:: html
    :file: images/plot_transmission_token.html
 
-by calling ``model.plot.transmission()`` you will see installed links, their capacities (on hover), and the locations of the nodes. This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location.
+By calling ``model.plot.transmission()`` you will see installed links, their capacities (on hover), and the locations of the nodes. This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location.
 
 The above plot uses `Mapbox <https://www.mapbox.com/>`_ to overlay our transmission plot on Openstreetmap. By creating an account at Mapbox and acquiring a Mapbox access token, you can also create similar visualisations by giving the token to the plotting function: ``model.plot.transmission(mapbox_access_token='your token here')``.
 
