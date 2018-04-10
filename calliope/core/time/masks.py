@@ -204,14 +204,14 @@ def _extreme_with_padding(arr, how, length, n, groupby_length, padding):
         days = list(result.groupby(result.dayofyear).values())
         weeks = pd.DatetimeIndex(days[0])
         for d in days:
-            weeks = weeks.union(_calendar_week_padding(d,arr['t'].to_pandas()))
+            weeks = weeks.union(_calendar_week_padding(d,arr))
         # concatenate the weeks into one index and drop possible duplicates
         return pd.DatetimeIndex(weeks).drop_duplicates()
     else:
         return _extreme(arr, how, length, n, groupby_length, padding)
 
 
-def _calendar_week_padding(day,ts_series):
+def _calendar_week_padding(day,arr):
     """
     Given a day, returns the whole calendar week which contains that day
 
@@ -231,8 +231,8 @@ def _calendar_week_padding(day,ts_series):
     # Turn it into a week
     start_time = day[0] - pd.Timedelta('{}D'.format(days_before))
     end_time = day[-1] + pd.Timedelta('{}D'.format(days_after))
-    before = ts_series[start_time : day[0]].index[:-1]
-    after = ts_series[day[-1] : end_time].index[1:]
+    before = arr[start_time : day[0]].index[:-1]
+    after = arr[day[-1] : end_time].index[1:]
     result_week = before.append(day).append(after)
 
     return result_week
