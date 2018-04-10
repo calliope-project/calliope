@@ -74,7 +74,7 @@ def _get_minmax_timestamps(series, length, n, how='max', padding=None):
         if padding is not None:
             ts -= pd.Timedelta(padding)
             ts_end += pd.Timedelta(padding)
-        ts_range = pd.date_range(ts, ts_end, freq='1H')[:-1]
+        ts_range = series[ts:ts_end].index[:-1]
         full_timesteps.append(ts_range)
 
     ts_index = _concat_indices(full_timesteps)
@@ -204,14 +204,14 @@ def _extreme_with_padding(arr, how, length, n, groupby_length, padding):
         days = list(result.groupby(result.dayofyear).values())
         weeks = pd.DatetimeIndex(days[0])
         for d in days:
-            weeks = weeks.union(_calendar_week_padding(d))
+            weeks = weeks.union(_calendar_week_padding(d,arr))
         # concatenate the weeks into one index and drop possible duplicates
         return pd.DatetimeIndex(weeks).drop_duplicates()
     else:
         return _extreme(arr, how, length, n, groupby_length, padding)
 
 
-def _calendar_week_padding(day):
+def _calendar_week_padding(day,arr):
     """
     Given a day, returns the whole calendar week which contains that day
 
@@ -229,11 +229,10 @@ def _calendar_week_padding(day):
     days_after = 6 - days_before
 
     # Turn it into a week
-    # FIXME: assumes 1H timestep length
-    start_hour = day[0] - pd.Timedelta('{}D'.format(days_before))
-    end_hour = day[-1] + pd.Timedelta('{}D'.format(days_after))
-    before = pd.date_range(start_hour, day[0], freq='1H')[:-1]
-    after = pd.date_range(day[-1], end_hour, freq='1H')[1:]
+    start_time = day[0] - pd.Timedelta('{}D'.format(days_before))
+    end_time = day[-1] + pd.Timedelta('{}D'.format(days_after))
+    before = arr[start_time : day[0]].index[:-1]
+    after = arr[day[-1] : end_time].index[1:]
     result_week = before.append(day).append(after)
 
     return result_week
