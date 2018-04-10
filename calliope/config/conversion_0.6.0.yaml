@@ -1,3 +1,9 @@
+# Structure of this file:
+# Each major section of model / run configuration has its own top-level key.
+# Within each top-level section, changes are given as ``old name: new name``,
+# and if the specific setting has been removed, the new name is ``null``,
+# possibly with a comment indicating
+
 run_config:
     import: null  # use import statements in model configuration file instead
     subset_y: null
