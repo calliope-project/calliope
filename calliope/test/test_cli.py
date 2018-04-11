@@ -21,7 +21,7 @@ class TestCLI:
             new_path = os.path.join(tempdir, 'test')
             result = runner.invoke(cli.new, [new_path])
             assert result.exit_code == 0
-            # Assert that `run.yaml` in the target dir exists
+            # Assert that `model.yaml` in the target dir exists
             assert os.path.isfile(os.path.join(tempdir, 'test', 'model.yaml'))
 
     def test_run_from_yaml(self):
@@ -30,6 +30,7 @@ class TestCLI:
 
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.run, [_MODEL_NATIONAL, '--save_netcdf=output.nc'])
+            assert calliope._logger.level == 30
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'output.nc'))
 

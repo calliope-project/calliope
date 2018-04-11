@@ -23,7 +23,8 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var
-from calliope.core.util.tools import load_function, LogWriter
+from calliope.core.util.tools import load_function
+from calliope.core.util.logging import LogWriter
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope import exceptions
 
@@ -173,7 +174,7 @@ def solve_model(backend_model, solver,
         )
         del solve_kwargs['warmstart']
 
-    with redirect_stdout(LogWriter('info', strip=True)):
+    with redirect_stdout(LogWriter('solver', strip=True)):
         with redirect_stderr(LogWriter('error', strip=True)):
             results = opt.solve(backend_model, tee=True, **solve_kwargs)
 

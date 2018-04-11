@@ -6,7 +6,7 @@ from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
 
 from calliope.core.util.dataset import reorganise_dataset_dimensions
-from calliope.core.util.tools import log_time
+from calliope.core.util.logging import log_time
 from calliope import exceptions
 
 

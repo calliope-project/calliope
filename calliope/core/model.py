@@ -19,7 +19,7 @@ from calliope.core.preprocess import \
     build_model_data, \
     apply_time_clustering, \
     final_timedimension_processing
-from calliope.core.util.tools import log_time
+from calliope.core.util.logging import log_time, set_handler
 from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
@@ -57,6 +57,9 @@ class Model(object):
 
         """
         self._timings = {}
+        # try to set logging output format assuming python interactive. Will
+        # use CLI logging format if model called from CLI
+        set_handler('python')
         log_time(self._timings, 'model_creation')
         if isinstance(config, str):
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)

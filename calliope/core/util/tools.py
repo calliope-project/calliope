@@ -5,16 +5,13 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 from copy import deepcopy
-import datetime
 import functools
 import importlib
-import logging
 import os
 import sys
 
 
 memoize = functools.lru_cache(maxsize=2048)
-
 
 class memoize_instancemethod(object):
     """
@@ -105,30 +102,3 @@ def flatten_list(nested):
             l = sublist + l
         else:
             yield sublist
-
-
-def log_time(timings, identifier, comment=None, level='info', time_since_start=False):
-    if comment is None:
-        comment = identifier
-
-    timings[identifier] = now = datetime.datetime.now()
-
-    getattr(logging, level)('[{}] {}'.format(now, comment))
-    if time_since_start:
-        time_diff = now - timings['model_creation']
-        getattr(logging, level)('[{}] Time since start: {}'.format(now, time_diff))
-
-
-class LogWriter:
-    def __init__(self, level, strip=False):
-        self.level = level
-        self.strip = strip
-
-    def write(self, message):
-        if message != '\n':
-            if self.strip:
-                message = message.strip()
-            getattr(logging, self.level)(message)
-
-    def flush(self):
-        pass

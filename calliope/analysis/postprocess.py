@@ -13,7 +13,7 @@ import xarray as xr
 import numpy as np
 
 from calliope.core.util.dataset import split_loc_techs
-from calliope.core.util.tools import log_time
+from calliope.core.util.logging import log_time
 
 
 def postprocess_model_results(results, model_data, timings):
