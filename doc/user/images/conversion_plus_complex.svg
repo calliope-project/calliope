@@ -9,12 +9,12 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="122.74325mm"
-   height="73.435875mm"
-   viewBox="0 0 122.74327 73.435874"
+   width="125.98257mm"
+   height="77.435875mm"
+   viewBox="0 0 125.98259 77.435874"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
+   inkscape:version="0.92.2 5c3e80d, 2017-08-06"
    sodipodi:docname="conversion_plus_complex.svg"
    inkscape:export-filename="C:\Users\bp325\OneDrive\Engineering\PhD\GitHub\calliope\doc\user\images\conversion_plus_complex.png"
    inkscape:export-xdpi="400"
@@ -2220,21 +2220,21 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.8284273"
-     inkscape:cx="164.38118"
-     inkscape:cy="157.35472"
+     inkscape:cx="172.26836"
+     inkscape:cy="224.9632"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
-     fit-margin-top="0"
-     fit-margin-left="0"
-     fit-margin-right="0"
-     fit-margin-bottom="0"
-     inkscape:window-width="2520"
-     inkscape:window-height="1481"
-     inkscape:window-x="1564"
-     inkscape:window-y="402"
+     fit-margin-top="2"
+     fit-margin-left="2"
+     fit-margin-right="2"
+     fit-margin-bottom="2"
+     inkscape:window-width="1440"
+     inkscape:window-height="856"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1" />
   <metadata
      id="metadata5">
@@ -2252,7 +2252,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-24.366926,-51.328103)">
+     transform="translate(-22.28011,-49.328103)">
     <path
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:normal;font-family:sans-serif;font-variant-ligatures:normal;font-variant-position:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-alternates:normal;font-feature-settings:normal;text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:normal;word-spacing:normal;text-transform:none;writing-mode:lr-tb;direction:ltr;text-orientation:mixed;dominant-baseline:auto;baseline-shift:baseline;text-anchor:start;white-space:normal;shape-padding:0;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;vector-effect:none;fill:#36d8e9;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:5.29133844;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
        d="m 235.25781,1.1367188 c -5.61208,0 -10.63279,2.913131 -14.10742,7.3515624 -3.47463,4.4384358 -5.5293,10.4202118 -5.5293,16.9863278 V 233.50977 c 0,6.56613 2.05467,12.54791 5.5293,16.98632 3.47463,4.43845 8.49534,7.35938 14.10742,7.35938 h 3.97461 c 0.51769,-0.67438 0.99125,-1.23557 1.26953,-1.55078 l 1.24805,-1.41602 1.25195,1.41602 c 0.27931,0.31521 0.75185,0.87659 1.26953,1.55078 h 3.98633 c 5.61208,0 10.62499,-2.92093 14.09961,-7.35938 3.47463,-4.43841 5.52735,-10.42019 5.52735,-16.98632 V 25.474609 c 0,-6.566116 -2.05272,-12.547892 -5.52735,-16.9863278 -3.47462,-4.4384314 -8.48753,-7.3515624 -14.09961,-7.3515624 z m 0,5.2910156 h 13 c 3.79828,0 7.26966,1.9188606 9.93555,5.3242186 2.66589,3.405362 4.40039,8.268137 4.40039,13.722656 V 233.50977 c 0,5.45453 -1.7345,10.3173 -4.40039,13.72265 -2.66589,3.40536 -6.13727,5.33008 -9.93555,5.33008 h -13 c -3.79828,0 -7.27747,-1.92472 -9.94336,-5.33008 -2.66588,-3.40535 -4.40039,-8.26812 -4.40039,-13.72265 V 25.474609 c 0,-5.454519 1.73451,-10.317294 4.40039,-13.722656 2.66589,-3.405358 6.14508,-5.3242186 9.94336,-5.3242186 z"
@@ -2302,7 +2302,7 @@
        inkscape:connector-curvature="0" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="32.728172"
        y="58.088097"
        id="text27635"><tspan
@@ -2310,10 +2310,10 @@
          id="tspan27633"
          x="32.728172"
          y="58.088097"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">coal</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">coal</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#dba21f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#dba21f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="33.858852"
        y="63.340141"
        id="text27635-8"><tspan
@@ -2321,10 +2321,10 @@
          id="tspan27633-6"
          x="33.858852"
          y="63.340141"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#dba21f;fill-opacity:1;stroke-width:0.26458332">gas</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#dba21f;fill-opacity:1;stroke-width:0.26458332">gas</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#977e37;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#977e37;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="36.027195"
        y="68.571358"
        id="text27635-3"><tspan
@@ -2332,7 +2332,7 @@
          id="tspan27633-5"
          x="36.027195"
          y="68.571358"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#977e37;fill-opacity:1;stroke-width:0.26458332">oil</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#977e37;fill-opacity:1;stroke-width:0.26458332">oil</tspan></text>
     <path
        style="fill:none;stroke:#dddee0;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleOutS-6-0-23-0-29)"
        d="m 41.400169,81.533546 c 8.459076,0 8.459076,0 8.459076,0"
@@ -2345,7 +2345,7 @@
        inkscape:connector-curvature="0" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#24a91d;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#24a91d;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="24.003124"
        y="82.659477"
        id="text27635-2"><tspan
@@ -2353,10 +2353,10 @@
          id="tspan27633-8"
          x="24.003124"
          y="82.659477"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#24a91d;fill-opacity:1;stroke-width:0.26458332">biomass</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#24a91d;fill-opacity:1;stroke-width:0.26458332">biomass</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#2d0055;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#2d0055;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="29.048809"
        y="93.491806"
        id="text27635-5"><tspan
@@ -2364,10 +2364,10 @@
          id="tspan27633-2"
          x="29.048809"
          y="93.491806"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#2d0055;fill-opacity:1;stroke-width:0.26458332">waste</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#2d0055;fill-opacity:1;stroke-width:0.26458332">waste</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="56.608677"
        y="57.400024"
        id="text27635-2-17"><tspan
@@ -2375,13 +2375,13 @@
          id="tspan27633-8-2"
          x="56.608677"
          y="57.400024"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan28510"
    dy="0.5">in</tspan></tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="56.608681"
        y="80.910141"
        id="text27635-2-17-4-3"><tspan
@@ -2389,11 +2389,11 @@
          id="tspan27633-8-2-8-1"
          x="56.608681"
          y="80.910141"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan28510-4-1"
    dy="0.5 0 1">in2<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans'"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans'"
    id="tspan11614" /></tspan></tspan></text>
     <g
        transform="translate(23.87175,17.705231)"
@@ -2423,7 +2423,7 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="56.647949"
        y="73.431656"
        id="text27635-2-17-9-5-2-6"><tspan
@@ -2431,14 +2431,14 @@
          id="tspan27633-8-2-9-0-61-7"
          x="56.647949"
          y="73.431656"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">and</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">and</tspan></text>
     <text
        id="text27635-0-9-5"
        y="87.660164"
        x="35.729538"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
          y="87.660164"
          x="35.729538"
          id="tspan27633-7-7-3"
@@ -2447,9 +2447,9 @@
        id="text27635-0-9-5-7"
        y="66.000885"
        x="42.850651"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
          y="66.000885"
          x="42.850651"
          id="tspan27633-7-7-3-2"
@@ -2458,9 +2458,9 @@
        id="text27635-0-9-5-8"
        y="60.748844"
        x="42.850651"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
          y="60.748844"
          x="42.850651"
          id="tspan27633-7-7-3-9"
@@ -2477,7 +2477,7 @@
        inkscape:connector-curvature="0" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#ff0004;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#ff0004;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="125.24898"
        y="58.084637"
        id="text27635-9"><tspan
@@ -2485,10 +2485,10 @@
          id="tspan27633-42"
          x="125.24898"
          y="58.084637"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#ff0004;fill-opacity:1;stroke-width:0.26458332">high T heat</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#ff0004;fill-opacity:1;stroke-width:0.26458332">high T heat</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#08b41c;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#08b41c;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="125.37507"
        y="68.567894"
        id="text27635-3-6"><tspan
@@ -2496,7 +2496,7 @@
          id="tspan27633-5-1"
          x="125.37507"
          y="68.567894"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#08b41c;fill-opacity:1;stroke-width:0.26458332">electricity</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#08b41c;fill-opacity:1;stroke-width:0.26458332">electricity</tspan></text>
     <g
        id="g25314-3"
        transform="translate(101.99625,-5.5414771)">
@@ -2513,7 +2513,7 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#c13735;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#c13735;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="125.24898"
        y="82.375305"
        id="text27635-2-1"><tspan
@@ -2521,10 +2521,10 @@
          id="tspan27633-8-6"
          x="125.24898"
          y="82.375305"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#c13735;fill-opacity:1;stroke-width:0.26458332">mid T heat</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#c13735;fill-opacity:1;stroke-width:0.26458332">mid T heat</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#1a4c8a;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#1a4c8a;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="125.37507"
        y="92.879387"
        id="text27635-51-1"><tspan
@@ -2532,7 +2532,7 @@
          id="tspan27633-4-1"
          x="125.37507"
          y="92.879387"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#1a4c8a;fill-opacity:1;stroke-width:0.26458332">cooling</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#1a4c8a;fill-opacity:1;stroke-width:0.26458332">cooling</tspan></text>
     <g
        id="g35299"
        transform="translate(14.267526,-6.8498045)"
@@ -2541,9 +2541,9 @@
          id="text27635-0-9"
          y="119.77969"
          x="98.776131"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#d96924;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#d96924;fill-opacity:1;stroke:none;stroke-width:0.26458332"
          xml:space="preserve"><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#d96924;fill-opacity:1;stroke-width:0.26458332"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#d96924;fill-opacity:1;stroke-width:0.26458332"
            y="119.77969"
            x="98.776131"
            id="tspan27633-7-7"
@@ -2551,7 +2551,7 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="90.778206"
        y="57.400024"
        id="text27635-2-17-9"><tspan
@@ -2559,8 +2559,8 @@
          id="tspan27633-8-2-9"
          x="90.778206"
          y="57.400024"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan34189"
    dy="0.5">out</tspan></tspan></text>
     <g
@@ -2610,7 +2610,7 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="90.778206"
        y="80.727081"
        id="text27635-2-17-9-5"><tspan
@@ -2618,11 +2618,11 @@
          id="tspan27633-8-2-9-0"
          x="90.778206"
          y="80.727081"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan34189-4"
    dy="0.5 0 0 1">out2<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan35120" /></tspan></tspan></text>
     <g
        transform="translate(19.858117,17.705231)"
@@ -2661,7 +2661,7 @@
        style="fill:#dddee0;fill-opacity:1;fill-rule:evenodd;stroke:#dddee0;stroke-width:0.30000005pt;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="90.778206"
        y="106.35384"
        id="text27635-2-17-9-5-6"><tspan
@@ -2669,15 +2669,15 @@
          id="tspan27633-8-2-9-0-6"
          x="90.778206"
          y="106.35384"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.75166631px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan34189-4-2"
    dy="0.5 0 0 1">out3<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
    id="tspan35251" /></tspan></tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="90.817482"
        y="73.431656"
        id="text27635-2-17-9-5-2"><tspan
@@ -2685,10 +2685,10 @@
          id="tspan27633-8-2-9-0-61"
          x="90.817482"
          y="73.431656"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">and</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">and</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="90.817482"
        y="99.242683"
        id="text27635-2-17-9-5-2-7"><tspan
@@ -2696,14 +2696,14 @@
          id="tspan27633-8-2-9-0-61-8"
          x="90.817482"
          y="99.242683"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">and</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332">and</tspan></text>
     <text
        id="text27635-0-9-5-3"
        y="87.607315"
        x="125.43502"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
          y="87.607315"
          x="125.43502"
          id="tspan27633-7-7-3-5"
@@ -2712,9 +2712,9 @@
        id="text27635-0-9-5-4"
        y="63.304562"
        x="125.43502"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans','arial','helvetica','sans-serif';-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';stroke-width:0.26458332"
          y="63.304562"
          x="125.43502"
          id="tspan27633-7-7-3-1"
