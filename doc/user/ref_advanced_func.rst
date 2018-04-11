@@ -116,11 +116,11 @@ The available options include:
 
 .. code-block:: yaml
 
-   model:
+    model:
         time:
             masks:
-                - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'max'}}
-                - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'min'}}
+                - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'max'}}
+                - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'min'}}
             function: resample
             function_options: {'resolution': '6H'}
 
@@ -132,6 +132,24 @@ The available options include:
 
   See the implementation of constraints in :mod:`calliope.backend.pyomo.constraints` for more detail on timestep weights and how they affect model constraints.
 
+.. _supply_plus:
+
+The ``supply_plus`` tech
+------------------------
+
+The ``plus`` tech groups offer complex functionality, for technologies which cannot be described easily. ``Supply_plus`` allows a supply technology with internal storage of resource before conversion to the carrier happens. This could be emulated with dummy carriers and a combination of supply, storage, and conversion techs, but the ``supply_plus`` tech allows for concise and mathematically more efficient formulation.
+
+.. figure:: images/supply_plus.*
+   :alt: supply_plus
+
+   Representation of the ``supply_plus`` technology
+
+An example use of ``supply_plus`` is to define a concentrating solar power (CSP) technology which consumes a solar resource, has built-in thermal storage, and produces electricity. See the :doc:`national-scale built-in example model <tutorials_01_national>` for an application of this.
+
+See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitions>` in the abstract base tech group definitions for the additional constraints that are possible.
+
+.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``resource_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``energy_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``carrier_prod`` in the same time step.
+
 .. _conversion_plus:
 
 The ``conversion_plus`` tech
@@ -142,7 +160,7 @@ The ``plus`` tech groups offer complex functionality, for technologies which can
 .. figure:: images/conversion_plus.*
    :alt: conversion_plus
 
-   Representation of the most complex conversion plus technology available
+   Representation of the most complex ``conversion_plus`` technology available
 
 The ``conversion_plus`` technologies allows for up to three **carrier groups** as inputs (``carrier_in``, ``carrier_in_2`` and ``carrier_in_3``) and up to three carrier groups as outputs (``carrier_out``, ``carrier_out_2`` and ``carrier_out_3``). A carrier group can contain any number of carriers.
 
