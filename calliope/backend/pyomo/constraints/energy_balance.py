@@ -267,7 +267,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
         .. math::
 
             available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
+            \\times resource_{scale}(loc::tech)
 
     if :math:`loc::tech` is in :math:`loc::techs_{area}`:
 
@@ -276,19 +276,18 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
         .. math::
 
             available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
+            \\times resource_{scale}(loc::tech)
             \\times resource_{area}(loc::tech)
 
     """
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
-    resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
-        available_resource = resource * resource_scale * backend_model.resource_area[loc_tech] * resource_eff
+        available_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
-        available_resource = resource * resource_scale * resource_eff
+        available_resource = resource * resource_scale
 
     if po.value(force_resource):
         return backend_model.resource_con[loc_tech, timestep] == available_resource
@@ -346,7 +345,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
             \\boldsymbol{storage}(loc::tech, timestep) =
             \\boldsymbol{storage}(loc::tech, timestep_{previous})
             \\times (1 - storage\_loss(loc::tech, timestep))^{timestep\_resolution(timestep)} +
-            \\boldsymbol{resource_{con}}(loc::tech, timestep) -
+            \\boldsymbol{resource_{con}}(loc::tech, timestep) \\times \\eta_{resource}(loc::tech, timestep) -
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
 
@@ -356,7 +355,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            \\boldsymbol{resource_{con}}(loc::tech, timestep) =
+            \\boldsymbol{resource_{con}}(loc::tech, timestep) \\times \\eta_{resource}(loc::tech, timestep) =
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
 
@@ -364,6 +363,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 
     model_data_dict = backend_model.__calliope_model_data__['data']
 
+    resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
     total_eff = energy_eff * parasitic_eff
@@ -376,11 +376,11 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 
     # A) Case where no storage allowed
     if not loc_tech_is_in(backend_model, loc_tech, 'loc_techs_store'):
-        return backend_model.resource_con[loc_tech, timestep] == carrier_prod
+        return backend_model.resource_con[loc_tech, timestep] * resource_eff == carrier_prod
 
     # B) Case where storage is allowed
     else:
-        resource = backend_model.resource_con[loc_tech, timestep]
+        resource = backend_model.resource_con[loc_tech, timestep] * resource_eff
         if backend_model.timesteps.order_dict[timestep] == 0:
             storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
         else:

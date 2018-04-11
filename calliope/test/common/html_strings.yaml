@@ -6,7 +6,7 @@ national_scale:
     timeseries:
         - '[{"type": "scatter", "x": ["2005-01-01", "2005-01-01 01:00:00",'
         - '"y": [27538.578, 26518.588, 25820.82,'
-        - '"legendgroup": "csp", "text": "csp charge (+) / discharge (-)", "hoverinfo": "x+y+text"}], {"barmode": "relative", "xaxis": {}, "autosize": true, "legend": {"traceorder": "reversed", "xanchor": "left"}, "hovermode": "x", "title": "Carrier flow: power",'
+        - '"legendgroup": "csp", "text": "csp discharge", "hoverinfo": "x+y+text", "showlegend": false}], {"barmode": "relative", "xaxis": {}, "autosize": true, "legend": {"traceorder": "reversed", "xanchor": "left"}, "hovermode": "x", "title": "Carrier flow: power",'
         - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     transmission:
         - '[{"type": "scattergeo", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "lat": [40, 40, null], "lon": [-2, -8, null], "showlegend": true, "legendgroup": "ac_transmission", "name": "AC power transmission",'

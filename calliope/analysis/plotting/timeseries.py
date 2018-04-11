@@ -128,8 +128,18 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     # charge/discharge (including resource consumed for supply_plus techs)
     elif var == 'storage':
         array_flow = _get_reindexed_array('storage')
-        carrier_flow = (array_prod.sum('carriers') + array_con.sum('carriers') - resource_con)
-        carrier_flow = subset_sum_squeeze(carrier_flow, subset, sum_dims, squeeze)
+
+        if 'resource_eff' in dataset.data_vars:
+            resource_eff = _get_reindexed_array('resource_eff', fillna=1)
+        else: resource_eff = 1
+
+        charge = subset_sum_squeeze(
+            -array_con.sum('carriers') + resource_con * resource_eff,
+            subset, sum_dims, squeeze=False
+        )
+        discharge = -subset_sum_squeeze(
+            array_prod.sum('carriers'), subset, sum_dims, squeeze=False
+        )
 
     elif var == 'resource_con':
         array_flow = resource_con
@@ -177,9 +187,14 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
                 legendgroup=tech)
             )
             data.append(go.Bar(
-                x=timesteps, y=_get_y_vals(-carrier_flow.loc[tech_dict]), visible=visible,
+                x=timesteps, y=_get_y_vals(charge.loc[tech_dict]), visible=visible,
                 name=name, marker=dict(color=color), legendgroup=tech,
-                text=tech + ' charge (+) / discharge (-)', hoverinfo='x+y+text'
+                text=tech + ' charge', hoverinfo='x+y+text'
+            ))
+            data.append(go.Bar(
+                x=timesteps, y=_get_y_vals(discharge.loc[tech_dict]), visible=visible,
+                name=name, marker=dict(color=color, opacity=0.8), legendgroup=tech,
+                text=tech + ' discharge', hoverinfo='x+y+text', showlegend=False
             ))
 
         else:

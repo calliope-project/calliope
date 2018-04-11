@@ -100,7 +100,7 @@ The available options include:
 
 1. Uniform time resolution reduction through the ``resample`` function, which takes a `pandas-compatible rule describing the target resolution <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ (see above example).
 
-2. Deriving representative days from the input time series, by applying one of the clustering methods implemented in :mod:`calliope.time.clustering`, for example:
+2. Deriving representative days from the input time series, by applying the clustering method implemented in :mod:`calliope.time.clustering`, for example:
 
 .. code-block:: yaml
 
@@ -108,7 +108,7 @@ The available options include:
         time:
             function: apply_clustering
             function_options:
-                clustering_func: get_clusters_kmeans
+                clustering_func: kmeans
                 how: mean
                 k: 20
 

@@ -15,7 +15,7 @@ Time series
 ===========
 
 .. automodule:: calliope.core.time.clustering
-    :members: get_clusters_kmeans, get_clusters_hierarchical
+    :members: get_clusters
 
 .. automodule:: calliope.core.time.masks
     :members: extreme, extreme_diff

@@ -84,7 +84,7 @@ def _get_minmax_timestamps(series, length, n, how='max', padding=None):
 
 def extreme(data, tech, var='resource', how='max',
             length='1D', n=1, groupby_length=None,
-            padding=None, **kwargs):
+            padding=None, normalize=True, **kwargs):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
     ``tech`` across the given list of ``locations`` is either minimal
@@ -119,7 +119,13 @@ def extreme(data, tech, var='resource', how='max',
         dimensions will be flattened by mean
 
     """
-    arr = _get_array(data, var, tech, **kwargs)
+    if normalize:
+        # Only normalise the desired var as rest of data may contain
+        # non-numeric variables!
+        data_n = funcs.normalized_copy(data[var].to_dataset(name=var))
+    else:
+        data_n = data
+    arr = _get_array(data_n, var, tech, **kwargs)
     return _extreme_with_padding(arr, how, length, n, groupby_length, padding)
 
 

@@ -155,10 +155,10 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, scal
     else:
         data_normalized = data_to_cluster
 
-    # Get function from `clustering_func` string
-    func = plugin_load(clustering_func, builtin_module='calliope.core.time.clustering')
-
-    result = func(data_normalized, timesteps_per_day=timesteps_per_day, **kwargs)
+    result = clustering.get_clusters(
+        data_normalized, clustering_func, timesteps_per_day=timesteps_per_day,
+        **kwargs
+    )
     clusters = result[0]  # Ignore other stuff returned
 
     data_new = clustering.map_clusters_to_data(

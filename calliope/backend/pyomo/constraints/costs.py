@@ -68,8 +68,8 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
 
         .. math::
 
-            \\boldsymbol{cost}(cost, loc::tech) = cost_{investment}(cost, loc::tech)
-            + \\sum_{timestep \\in timesteps} cost_{var}(cost, loc::tech, timestep)
+            \\boldsymbol{cost}(cost, loc::tech) = \\boldsymbol{cost_{investment}}(cost, loc::tech)
+            + \\sum_{timestep \\in timesteps} \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
 
     """
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
@@ -104,10 +104,12 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
             cost_{fractional\\_om}(cost, loc::tech) +
             cost_{fixed\\_om}(cost, loc::tech) + cost_{con}(cost, loc::tech)
 
-            \\boldsymbol{cost_{con}}(cost, loc::tech) =
+            cost_{con}(cost, loc::tech) =
             depreciation\\_rate * ts\\_weight *
-            (cost_{energy\\_cap}(cost, loc::tech) + cost_{storage\\_cap}(cost, loc::tech) +
-            cost_{resource\\_cap}(cost, loc::tech) + cost_{resource\\_area}(cost, loc::tech))
+            (cost_{energy\\_cap}(cost, loc::tech) \\times \\boldsymbol{energy_{cap}}(loc::tech)
+            + cost_{storage\\_cap}(cost, loc::tech) \\times \\boldsymbol{storage_{cap}}(loc::tech)
+            + cost_{resource\\_cap}(cost, loc::tech) \\times \\boldsymbol{resource_{cap}}(loc::tech)
+            + cost_{resource\\_area}(cost, loc::tech)) \\times \\boldsymbol{resource_{area}}(loc::tech)
 
             depreciation\\_rate =
             \\begin{cases}
@@ -177,15 +179,15 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
 
         .. math::
 
-            cost_{var}(cost, loc::tech, timestep) = cost_{prod}(cost, loc::tech, timestep) + cost_{con}(cost, loc::tech, timestep)
+            \\boldsymbol{cost_{var}}(cost, loc::tech, timestep) = cost_{prod}(cost, loc::tech, timestep) + cost_{con}(cost, loc::tech, timestep)
 
-            cost_{prod}(cost, loc::tech, timestep) = cost_{om\\_prod}(cost, loc::tech, timestep) \\times weight(timestep) \\times carrier_{prod}(loc::tech::carrier, timestep)
+            cost_{prod}(cost, loc::tech, timestep) = cost_{om\\_prod}(cost, loc::tech, timestep) \\times weight(timestep) \\times \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
 
             prod\\_con\\_eff =
             \\begin{cases}
-                = resource_{con}(loc::tech, timestep) \\times resource_eff(loc::tech, timestep),&
+                = \\boldsymbol{resource_{con}}(loc::tech, timestep),&
                     \\text{if } loc::tech \\in loc\\_techs\\_supply\\_plus \\\\
-                = carrier_prod(loc::tech::carrier, timestep) \\times energy_eff(loc::tech, timestep),&
+                = \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{energy_eff(loc::tech, timestep)},&
                     \\text{if } loc::tech \\in loc\\_techs\\_supply \\\\
             \\end{cases}
 
@@ -206,13 +208,7 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
         cost_prod = 0
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and cost_om_con:
-        resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, timestep))
-        if po.value(resource_eff) > 0:  # In case resource_eff is zero, to avoid an infinite value
-            # Dividing by r_eff here so we get the actual r used, not the r
-            # moved into storage...
-            cost_con = cost_om_con * weight * (backend_model.resource_con[loc_tech, timestep] / resource_eff)
-        else:
-            cost_con = 0
+        cost_con = cost_om_con * weight * backend_model.resource_con[loc_tech, timestep]
     elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and cost_om_con:
         energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
         if po.value(energy_eff) > 0:  # in case energy_eff is zero, to avoid an infinite value

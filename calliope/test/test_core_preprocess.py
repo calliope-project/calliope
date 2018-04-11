@@ -606,10 +606,10 @@ class TestChecks:
         removed_con_links = ['N1::heat_pipes:X1', 'X2::heat_pipes:N1', 'X3::heat_pipes:N1']
 
         for link in removed_prod_links:
-            assert link not in m._model_data.loc_tech_carriers_prod
+            assert link not in m._model_data.loc_tech_carriers_prod.values
 
         for link in removed_con_links:
-            assert link not in m._model_data.loc_tech_carriers_con
+            assert link not in m._model_data.loc_tech_carriers_con.values
 
     def test_milp_constraints(self):
         """
@@ -786,6 +786,15 @@ class TestDataset:
         model1 = calliope.examples.time_masking()
         assert model1.model_data.attrs['allow_operate_mode'] == 0
 
+    def test_15min_timesteps(self):
+
+        override = {
+            'techs.test_demand_elec.constraints.resource': 'file=demand_elec_15mins.csv',
+        }
+
+        model = build_model(override, override_groups='simple_supply,one_day')
+
+        assert model.inputs.timestep_resolution.to_pandas().unique() == [0.25]
 
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):
