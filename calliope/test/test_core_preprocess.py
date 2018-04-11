@@ -590,6 +590,27 @@ class TestChecks:
         # should pass: geographic coordinates in both places
         build_model(override_dict=_override(geographic0, geographic1), override_groups='simple_storage,one_day')
 
+    def test_one_way(self):
+        """
+        With one_way transmission, we remove one direction of a link from
+        loc_tech_carriers_prod and the other from loc_tech_carriers_con.
+        """
+        override = {
+            'links.X1,N1.techs.heat_pipes.constraints.one_way': True,
+            'links.N1,X2.techs.heat_pipes.constraints.one_way': True,
+            'links.N1,X3.techs.heat_pipes.constraints.one_way': True,
+            'model.subset_time': '2005-01-01'
+        }
+        m = calliope.examples.urban_scale(override_dict=override)
+        removed_prod_links = ['X1::heat_pipes:N1', 'N1::heat_pipes:X2', 'N1::heat_pipes:X3']
+        removed_con_links = ['N1::heat_pipes:X1', 'X2::heat_pipes:N1', 'X3::heat_pipes:N1']
+
+        for link in removed_prod_links:
+            assert link not in m._model_data.loc_tech_carriers_prod
+
+        for link in removed_con_links:
+            assert link not in m._model_data.loc_tech_carriers_con
+
     def test_milp_constraints(self):
         """
         If `units` is defined, but not `energy_cap_per_unit`, throw an error
@@ -771,11 +792,37 @@ class TestUtil():
         """
         All iterables must have the same length
         """
+        iterables = [('1', '2', '3'), ('4', '5')]
+        iterables_swapped = [('4', '5'), ('1', '2', '3')]
+        iterables_correct = [('1', '2', '3'), ('4', '5', '6')]
+        concatenator = [':', '::']
+
+        with pytest.raises(AssertionError):
+            calliope.core.preprocess.util.concat_iterable(iterables, concatenator)
+            calliope.core.preprocess.util.concat_iterable(iterables_swapped, concatenator)
+
+        concatenated = calliope.core.preprocess.util.concat_iterable(iterables_correct, concatenator)
+        assert concatenated == ['1:2::3', '4:5::6']
 
     def test_concat_iterable_check_concatenators(self):
         """
         Contatenators should be one shorter than the length of each iterable
         """
+        iterables = [('1', '2', '3'), ('4', '5', '6')]
+        concat_one = [':']
+        concat_two_diff = [':', '::']
+        concat_two_same = [':', ':']
+        concat_three = [':', ':', ':']
+
+        with pytest.raises(AssertionError):
+            calliope.core.preprocess.util.concat_iterable(iterables, concat_one)
+            calliope.core.preprocess.util.concat_iterable(iterables, concat_three)
+
+        concatenated1 = calliope.core.preprocess.util.concat_iterable(iterables, concat_two_diff)
+        assert concatenated1 == ['1:2::3', '4:5::6']
+
+        concatenated2 = calliope.core.preprocess.util.concat_iterable(iterables, concat_two_same)
+        assert concatenated2 == ['1:2:3', '4:5:6']
 
     def test_vincenty(self):
         # London to Paris: about 344 km

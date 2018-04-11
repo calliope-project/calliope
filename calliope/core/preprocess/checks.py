@@ -381,7 +381,7 @@ def check_final(model_run):
     # Ensure that timeseries have no non-unique index values
     for k, df in model_run['timeseries_data'].items():
         if df.index.duplicated().any():
-            errors.append('Time series `{}` contains non-unique timestap values.'.format(k))
+            errors.append('Time series `{}` contains non-unique timestamp values.'.format(k))
 
     # FIXME:
     # make sure `comments` is at the the base level:
