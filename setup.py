@@ -51,7 +51,9 @@ setup(
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
         "plotly >= 2.2.3",
-        "jinja2 >= 2.10"
+        "jinja2 >= 2.10",
+        "cufflinks >= 0.12.1",
+        "scikit-learn >= 0.19.1"
     ],
     entry_points={
         'console_scripts': [

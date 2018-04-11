@@ -8,7 +8,7 @@ dependencies:
     - python=3.6
     - bottleneck
     - click
-    - cufflinks-py
+    - cufflinks-py=0.12.1
     - glpk=4.61
     - hdf5
     - jinja2
@@ -23,7 +23,7 @@ dependencies:
     - pytest
     - pytest-cov
     - ruamel.yaml<=0.15
-    - scikit-learn
+    - scikit-learn=0.19.1
     - xarray=0.10.1
     - pip:
         - "git+https://github.com/calliope-project/calliope.git"
