@@ -4,8 +4,9 @@ import pytest  # pylint: disable=unused-import
 
 import calliope
 from calliope import exceptions
-from calliope.core.time import clustering, funcs, masks
+from calliope.core.time import funcs, masks
 from calliope.test.common.util import build_test_model, check_error_or_warning
+
 
 class TestClustering:
     @pytest.fixture

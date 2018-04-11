@@ -12,6 +12,21 @@ Exceptions and Warnings.
 import warnings
 
 
+# Enable simple format when printing ModelWarnings
+formatwarning_orig = warnings.formatwarning
+
+
+def _formatwarning(message, category, filename, lineno, line=None):
+    """Formats ModelWarnings as "Warning: message" without extra crud"""
+    if category == ModelWarning:
+        return 'Warning: ' + str(message) + '\n'
+    else:
+        return formatwarning_orig(message, category, filename, lineno, line)
+
+
+warnings.formatwarning = _formatwarning
+
+
 class ModelError(Exception):
     """
     ModelErrors should stop execution of the model, e.g. due to a problem

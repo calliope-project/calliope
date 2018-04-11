@@ -20,10 +20,13 @@ import traceback
 
 import click
 
-from calliope import Model, read_netcdf, examples, _time_format
+from calliope import Model, read_netcdf, examples
 from calliope.core.util.convert import convert_model
 from calliope.core.util.generate_runs import generate
 from calliope._version import __version__
+
+
+_time_format = '%Y-%m-%d %H:%M:%S'
 
 
 _debug = click.option(

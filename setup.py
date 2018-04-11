@@ -50,7 +50,7 @@ setup(
         "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
         "xarray >= 0.10.0, < 0.11",
-        "plotly >= 2.2.3",
+        "plotly >= 2.5",
         "jinja2 >= 2.10",
         "cufflinks >= 0.12.1",
         "scikit-learn >= 0.19.1"
