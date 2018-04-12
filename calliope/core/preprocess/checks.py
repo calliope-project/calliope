@@ -105,6 +105,13 @@ def check_initial(config_model):
                     model_version, __version__)
             )
 
+    # Check top-level keys
+    for k in config_model.keys():
+        if k not in ['model', 'run', 'locations', 'tech_groups', 'techs', 'links', 'config_path']:
+            warnings.append(
+                'Unrecognised top-level configuration item: {}'.format(k)
+            )
+
     # Check run configuration
     # Exclude solver_options from checks, as we don't know all possible
     # options for all solvers
@@ -112,7 +119,14 @@ def check_initial(config_model):
         if (k not in defaults_model['run'].keys_nested() and
                 'solver_options' not in k):
             warnings.append(
-                'Unrecognized setting in run configuration: {}'.format(k)
+                'Unrecognised setting in run configuration: {}'.format(k)
+            )
+
+    # Check model configuration, but top-level keys only
+    for k in config_model['model'].keys():
+        if k not in defaults_model['model'].keys():
+            warnings.append(
+                'Unrecognised setting in model configuration: {}'.format(k)
             )
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']

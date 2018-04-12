@@ -36,11 +36,11 @@ class TestNationalScaleExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):
         override = {
             'model.subset_time': '2005-01-01',
-            'model.solver': solver,
+            'run.solver': solver,
         }
 
         if solver_io:
-            override['model.solver_io'] = solver_io
+            override['run.solver_io'] = solver_io
 
         model = calliope.examples.national_scale(override_dict=override)
         model.run()
@@ -108,11 +108,11 @@ class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):
         override = {
             'model.subset_time': '2005-01-01',
-            'model.solver': solver,
+            'run.solver': solver,
         }
 
         if solver_io:
-            override['model.solver_io'] = solver_io
+            override['run.solver_io'] = solver_io
 
         model = calliope.examples.time_resampling(override_dict=override)
         model.run()
@@ -147,12 +147,12 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 class TestNationalScaleClusteredExampleModelSenseChecks:
     def model_runner(self, solver='glpk', solver_io=None, how='closest'):
         override = {
-            'model.solver': solver,
-            'model.time.function_options.how': how
+            'model.time.function_options.how': how,
+            'run.solver': solver
         }
 
         if solver_io:
-            override['model.solver_io'] = solver_io
+            override['run.solver_io'] = solver_io
 
         model = calliope.examples.time_clustering(override_dict=override)
         model.run()

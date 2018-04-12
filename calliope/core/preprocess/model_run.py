@@ -435,8 +435,8 @@ def generate_model_run(config, debug_comments):
 
     Parameters
     ----------
-    config_run : AttrDict
-    config_model : AttrDict
+    config : AttrDict
+    debug_comments : AttrDict
 
     """
     model_run = AttrDict()
@@ -468,7 +468,6 @@ def generate_model_run(config, debug_comments):
     # 6) Grab additional relevant bits from run and model config
     model_run['run'] = config['run']
     model_run['model'] = config['model']
-    model_run['name'] = config['name']
 
     # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)

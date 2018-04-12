@@ -7,8 +7,6 @@
 ##
 # Model-wide default settings
 ##
-name: null
-
 run:
     backend: pyomo  # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
     solver: glpk  # Which solver to use
@@ -26,13 +24,16 @@ run:
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
 
 model:
+    name: null  # Model name
+    calliope_version: null  # Calliope framework version this model is intended for
     timeseries_data_path: null  # Path to time series data
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
     subset_time: null  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
     reserve_margin:  {} # Per-carrier system-wide reserve margins
     random_seed: null  # Seed for random number generator used during clustering
-    time: {}  # Settings to adjust time resolution, see :ref:`time_clustering` for the available options
+    time: {}  # Optional settings to adjust time resolution, see :ref:`time_clustering` for the available options
+    group_share: {}  # Optional settings for the group_share constraint
 
 ##
 # Base technology groups
