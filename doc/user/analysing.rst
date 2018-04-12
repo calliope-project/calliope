@@ -23,7 +23,7 @@ This concatenated set formulation is memory-efficient but cumbersome to deal wit
 Visualising results
 -------------------
 
-In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. ``summary`` can also be accessed from the command line interface, to gain access to result visualisation without the need to interact with Python.
+In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. To gain access to result visualisation without the need to interact with Python, the ``summary`` plot can also be accessed from the command line interface (:ref:`see below <summary_plots>`).
 
 Refer to the :ref:`API documentation for the analysis module <api_analysis>` for an overview of available analysis functionality.
 
@@ -101,9 +101,13 @@ Without the token, the plot will fall back on simple country-level outlines. In 
 
 .. note:: If the coordinates were in `x` and `y`, not `lat` and `lon`, the transmission trace would be given on a cartesian plot.
 
+.. _summary_plots:
+
 Summary plots
 -------------
-If you want all the data in one place, you can run ``model.plot.summary(out_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to ``out_file``. By clocking on this HTML file, a browser tab will pop up with the plots. This funcionality is made avaiable in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
+If you want all the data in one place, you can run ``model.plot.summary(out_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to ``out_file``. This HTML file can be opened in a web browser to show all the plots. This funcionality is made avaiable in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
+
+See an `example of such a HTML plot here <../_static/plot_summary.html>`_.
 
 .. seealso:: :ref:`running_cli`
 
