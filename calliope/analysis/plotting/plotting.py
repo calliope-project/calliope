@@ -15,6 +15,7 @@ import re
 import plotly.offline as pltly
 import jinja2
 
+from calliope.exceptions import warn
 from calliope.analysis.plotting.capacity import plot_capacity
 from calliope.analysis.plotting.timeseries import plot_timeseries
 from calliope.analysis.plotting.transmission import plot_transmission
@@ -102,25 +103,35 @@ class ModelPlotMethods:
     def __init__(self, model):
         self._model = model
 
+    def check_optimality(self):
+        termination = self._model._model_data.attrs.get(
+            'termination_condition', 'unknown')
+        if termination != 'optimal':
+            warn('Model termination condition is not optimal. Plotting may fail!')
+
     def timeseries(self, **kwargs):
+        self.check_optimality()
         data, layout = plot_timeseries(self._model, **kwargs)
         return _plot(data, layout, **kwargs)
 
     timeseries.__doc__ = plot_timeseries.__doc__
 
     def capacity(self, **kwargs):
+        self.check_optimality()
         data, layout = plot_capacity(self._model, **kwargs)
         return _plot(data, layout, **kwargs)
 
     capacity.__doc__ = plot_capacity.__doc__
 
     def transmission(self, **kwargs):
+        self.check_optimality()
         data, layout = plot_transmission(self._model, **kwargs)
         return _plot(data, layout, **kwargs)
 
     transmission.__doc__ = plot_transmission.__doc__
 
     def summary(self, **kwargs):
+        self.check_optimality()
         return plot_summary(self._model, **kwargs)
 
     summary.__doc__ = plot_summary.__doc__

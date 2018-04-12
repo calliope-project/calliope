@@ -174,9 +174,10 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
         if save_csv is None and save_netcdf is None:
-            print(
-                '!!!\nWARNING: Neither save_csv nor save_netcdf have been '
-                'specified. Model will run without saving results!\n!!!\n'
+            click.secho(
+                '\n!!!\nWARNING: No options to save results have been '
+                'specified.\nModel will run without saving results!\n!!!\n',
+                fg='red', bold=True
             )
         tstart = start_time.strftime(_time_format)
         print('Calliope run starting at {}\n'.format(tstart))
@@ -226,6 +227,8 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
         print('Model size:   {}\n'.format(msize))
         print('Starting model run...')
         model.run()
+        termination = model._model_data.attrs.get(
+            'termination_condition', 'unknown')
         if save_csv:
             print('Saving CSV results to directory: {}'.format(save_csv))
             model.to_csv(save_csv)
@@ -233,8 +236,14 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
             print('Saving NetCDF results to file: {}'.format(save_netcdf))
             model.to_netcdf(save_netcdf)
         if save_plots:
-            print('Saving HTML file with plots to: {}'.format(save_plots))
-            model.plot.summary(out_file=save_plots)
+            if termination == 'optimal':
+                print('Saving HTML file with plots to: {}'.format(save_plots))
+                model.plot.summary(out_file=save_plots)
+            else:
+                click.secho(
+                    'Model termination condition non-optimal, not saving plots',
+                    fg='red', bold=True
+                )
         print_end_time(start_time)
 
 
