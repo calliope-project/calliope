@@ -105,9 +105,9 @@ class ModelPlotMethods:
 
     def check_optimality(self):
         termination = self._model._model_data.attrs.get(
-            'termination_condition', 'unknown')
-        if termination != 'optimal':
-            warn('Model termination condition is not optimal. Plotting may fail!')
+            'termination_condition', 'did_not_yet_run')
+        if termination not in ['optimal', 'did_not_yet_run']:
+            warn('Model termination condition was not optimal. Plotting may fail!')
 
     def timeseries(self, **kwargs):
         self.check_optimality()

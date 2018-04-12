@@ -10,6 +10,7 @@ used for managing model configuration.
 
 """
 
+import copy
 import logging
 
 import numpy as np
@@ -68,9 +69,12 @@ class AttrDict(dict):
         if isinstance(source_dict, dict):
             self.init_from_dict(source_dict)
 
-    def copy(self):
+    def copy(self, deep=False):
         """Override copy method so that it returns an AttrDict"""
-        return AttrDict(dict(self).copy())
+        if deep:
+            return AttrDict(copy.deepcopy(self.as_dict()))
+        else:
+            return AttrDict(self.as_dict().copy())
 
     def init_from_dict(self, d):
         """
@@ -207,10 +211,10 @@ class AttrDict(dict):
         necessary).
 
         """
-        if not flat:
-            return self.as_dict_nested()
-        else:
+        if flat:
             return self.as_dict_flat()
+        else:
+            return self.as_dict_nested()
 
     def as_dict_nested(self):
         d = {}
@@ -296,7 +300,10 @@ class AttrDict(dict):
                 keys.append(k)
         return keys
 
-    def union(self, other, allow_override=False, allow_replacement=False):
+    def union(
+            self, other,
+            allow_override=False, allow_replacement=False,
+            allow_subdict_override_with_none=False):
         """
         Merges the AttrDict in-place with the passed ``other``
         AttrDict. Keys in ``other`` take precedence, and nested keys
@@ -308,21 +315,32 @@ class AttrDict(dict):
         If ``allow_replacement``, allow "_REPLACE_" key to replace an
         entire sub-dict.
 
+        If ``allow_subdict_override_with_none`` is False (default),
+        a key of the form ``this.that: None`` in other will be ignored
+        if subdicts exist in self like ``this.that.foo: 1``, rather
+        than wiping them.
+
         """
+        self_keys = self.keys_nested()
+        other_keys = other.keys_nested()
         if allow_replacement:
             WIPE_KEY = '_REPLACE_'
-            override_keys = [k for k in other.keys_nested()
+            override_keys = [k for k in other_keys
                              if WIPE_KEY not in k]
             wipe_keys = [k.split('.' + WIPE_KEY)[0]
-                         for k in other.keys_nested()
+                         for k in other_keys
                          if WIPE_KEY in k]
         else:
-            override_keys = other.keys_nested()
+            override_keys = other_keys
             wipe_keys = []
         for k in override_keys:
-            if not allow_override and k in self.keys_nested():
+            if not allow_override and k in self_keys:
                 raise KeyError('Key defined twice: {}'.format(k))
             else:
-                self.set_key(k, other.get_key(k))
+                other_value = other.get_key(k)
+                # If other value is None, and would overwrite an entire subdict,
+                # we skip it
+                if not (other_value is None and isinstance(self.get_key(k, None), AttrDict)):
+                    self.set_key(k, other_value)
         for k in wipe_keys:
             self.set_key(k, other.get_key(k + '.' + WIPE_KEY))

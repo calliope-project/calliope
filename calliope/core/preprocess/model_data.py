@@ -415,8 +415,9 @@ def tech_specific_to_dataset(model_run):
             'essentials.color'))
         data_dict['inheritance']['data'].append('.'.join(
             model_run.techs[tech].get_key('inheritance')))
-        data_dict['names']['data'].append(model_run.techs[tech].get_key(
-            'essentials.name'))
+        data_dict['names']['data'].append(
+            # Default to tech ID if no name is set
+            model_run.techs[tech].get_key('essentials.name', tech))
         for k in systemwide_constraints:
             data_dict[k]['data'].append(
                 model_run.techs[tech].constraints.get_key(k, np.nan)

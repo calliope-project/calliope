@@ -10,6 +10,7 @@ Functions to deal with locations and their configuration.
 """
 
 import math
+
 from calliope.exceptions import ModelError, warn
 from calliope.core.attrdict import AttrDict
 from calliope.core.preprocess.util import vincenty

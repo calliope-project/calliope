@@ -238,7 +238,7 @@ def convert_model(run_config_path, model_config_path, out_path):
     merged_model_config = AttrDict.from_yaml(model_config_path)
     run_config_overrides = AttrDict.from_yaml(run_config_path).get_key('override', None)
     if run_config_overrides:
-        merged_model_config.union(run_config_overrides)
+        merged_model_config.union(run_config_overrides, allow_override=True)
     tech_groups = set()
     for tech, tech_dict in merged_model_config.techs.items():
         parent = tech_dict.get('parent', None)
@@ -255,7 +255,7 @@ def convert_model(run_config_path, model_config_path, out_path):
 
     # README: For future use we probably want a configuration to specify
     # a calliope version it's compatible with / built for
-    new_model_config[model_config_path]['calliope_version'] = '0.6.0'
+    new_model_config[model_config_path].set_key('model.calliope_version', '0.6.0')
 
     # README: adding top-level interest_rate and lifetime definitions
     # for all techs EXCEPT demand,
@@ -280,6 +280,7 @@ def convert_model(run_config_path, model_config_path, out_path):
             f.replace(os.path.commonpath([model_config_path, f]), '.')
         )
         if f == model_config_path:
+            out_dir_model_config_path = out_dir
             out_filename = os.path.basename(model_config_path)
         out_file = os.path.join(out_path, out_dir, out_filename)
         os.makedirs(os.path.join(out_path, out_dir), exist_ok=True)
@@ -287,7 +288,7 @@ def convert_model(run_config_path, model_config_path, out_path):
 
     # Read each CSV file in the model data dir and apply index
     full_new_config = AttrDict.from_yaml(
-        os.path.join(out_path, out_dir, os.path.basename(model_config_path))
+        os.path.join(out_path, out_dir_model_config_path, os.path.basename(model_config_path))
     )
     ts_dir = full_new_config.get_key('model.timeseries_data_path')
     ts_path_in = os.path.join(

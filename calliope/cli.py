@@ -241,7 +241,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
                 model.plot.summary(out_file=save_plots)
             else:
                 click.secho(
-                    'Model termination condition non-optimal, not saving plots',
+                    'Model termination condition non-optimal. Not saving plots',
                     fg='red', bold=True
                 )
         print_end_time(start_time)

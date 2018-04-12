@@ -27,7 +27,7 @@ run_config:
 model_config:
     opmode: null
     startup_time: null
-    name: name
+    name: model.name
     data_path: model.timeseries_data_path
     objective: null  # custom objective not implemented yet
     constraints: null  # custom constraints not implemented yet
@@ -38,6 +38,7 @@ model_config:
 
 tech_config:
     parent: essentials.parent
+    group: null  # Use tech_groups to specify groups
     name: essentials.name
     stack_weight: null  # stack_weight is no longer supported
     color: essentials.color
@@ -86,6 +87,7 @@ tech_config:
     constraints.e_cap_total.equals: constraints.energy_cap_equals_systemwide
     constraints.e_cap_scale: constraints.energy_cap_scale
     constraints.e_cap.min_use: constraints.energy_cap_min_use
+    constraints.e_cap_min_use: constraints.energy_cap_min_use
     constraints.e_cap_per_unit: constraints.energy_cap_per_unit
     constraints.e_ramping: constraints.energy_ramping
     constraints.export_cap: constraints.export_cap
@@ -116,8 +118,8 @@ tech_costs_config:
     r_cap: resource_cap
     r2_cap: null
     e_cap: energy_cap
-    om_frac: om_fractional
-    om_fixed: om_fixed
+    om_frac: om_annual_investment_fraction
+    om_fixed: om_annual
     om_var: om_prod
     om_fuel: om_con
     export: export
