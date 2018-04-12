@@ -2,6 +2,7 @@ import pytest  # pylint: disable=unused-import
 import calliope
 import logging
 import datetime
+import pyomo
 
 from calliope.core.util import dataset
 
@@ -9,7 +10,7 @@ from calliope.core.util.tools import \
     memoize, \
     memoize_instancemethod
 
-from calliope.core.util.logging import log_time, set_handler
+from calliope.core.util.logging import log_time
 
 class TestDataset:
     @pytest.fixture()
@@ -64,16 +65,15 @@ class TestMemoization:
 
 class TestLogging:
     def test_set_log_level(self):
-        # calliope initialises with default logger level of WARNING (30), until
-        # the first model is called, at which point it changes to INFO (20)
-        assert calliope._logger.level == 30
 
-        set_handler('python')
-        assert calliope._logger.level == 20
+        # We assign a handler to the Calliope logger on loading calliope
+        assert calliope._logger.hasHandlers() is True
+        assert len(calliope._logger.handlers) == 1
 
         for level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
             calliope.set_log_level(level)
             assert calliope._logger.level == getattr(logging, level)
+
         # We have a custom level 'SOLVER' at level 19
         calliope.set_log_level('SOLVER')
         assert calliope._logger.level == 19

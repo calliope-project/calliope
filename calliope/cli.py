@@ -23,7 +23,7 @@ import click
 from calliope import Model, read_netcdf, examples
 from calliope.core.util.convert import convert_model
 from calliope.core.util.generate_runs import generate
-from calliope.core.util.logging import logger, set_handler
+from calliope.core.util.logging import logger
 from calliope._version import __version__
 
 
@@ -51,7 +51,12 @@ _profile_filename = click.option(
     help='Filename to save profile to if enabled --profile.'
 )
 
-set_handler('cli', _time_format)
+logger.setLevel(logging.WARNING)
+formatter = logging.Formatter(
+    '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format
+)
+logger.stream = sys.stderr
+logger.formatter = formatter
 
 
 @contextlib.contextmanager

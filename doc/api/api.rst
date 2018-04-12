@@ -39,11 +39,14 @@ Pyomo backend interface
 .. autoclass:: calliope.backend.pyomo.interface.BackendInterfaceMethods
     :members: access_model_inputs, update_param, activate_constraint, rerun
 
-Utility classes: AttrDict, Exceptions
-=====================================
+Utility classes: AttrDict, Exceptions, Logging
+==============================================
 
 .. autoclass:: calliope.core.attrdict.AttrDict
     :members:
 
 .. automodule:: calliope.exceptions
     :members:
+
+.. automodule:: calliope.core.util.logging
+    :members: set_log_level
