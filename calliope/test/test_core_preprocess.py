@@ -223,23 +223,75 @@ class TestModelRun:
 
 
 class TestChecks:
+
+    def test_unrecognised_config_keys(self):
+        """
+        Check that the only top level keys can be 'model', 'run', 'locations',
+        'techs', 'tech_groups' (+ 'config_path', but that is an internal addition)
+        """
+        override = {'nonsensical_key': 'random_string'}
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo, 'Unrecognised top-level configuration item: nonsensical_key'
+        )
+
+    def test_unrecognised_model_run_keys(self):
+        """
+        Check that the only keys allowed in 'model' and 'run' are those in the
+        model defaults
+        """
+        override1 = {'model.nonsensical_key': 'random_string'}
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override1, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo, 'Unrecognised setting in model configuration: nonsensical_key'
+        )
+
+        override2 = {'run.nonsensical_key': 'random_string'}
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override2, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo, 'Unrecognised setting in run configuration: nonsensical_key'
+        )
+
+        # A key that should be in run but is given in model
+        override3 = {'model.solver': 'glpk'}
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override3, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo, 'Unrecognised setting in model configuration: solver'
+        )
+
+        # A key that should be in model but is given in run
+        override4 = {'run.subset_time': None}
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override4, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo, 'Unrecognised setting in run configuration: subset_time'
+        )
+
     def test_model_version_mismatch(self):
         """
         Model config says model.calliope_version = 0.1, which is not what we
         are running, so we want a warning.
         """
-        override = AttrDict.from_yaml_string(
-            """
-            model.calliope_version: 0.1
-            """
-        )
+        override = {'model.calliope_version': 0.1}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override, override_groups='simple_supply,one_day')
 
-        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
-
-        assert 'Model configuration specifies calliope_version' in all_warnings
+        assert check_error_or_warning(excinfo, 'Model configuration specifies calliope_version')
 
     def test_unknown_carrier_tier(self):
         """
