@@ -9,6 +9,7 @@ Convert Calliope model configurations from 0.5.x to 0.6.0.
 
 """
 
+import logging
 import os
 import glob
 
@@ -46,7 +47,7 @@ def convert_run_dict(in_dict, conversion_dict):
     return convert_subdict(in_dict, conversion_dict['run_config'])
 
 
-def convert_model_dict(in_dict, conversion_dict, tech_groups=None):
+def convert_model_dict(in_dict, conversion_dict, state, tech_groups=None):
     out_dict = AttrDict()
 
     # process techs
@@ -57,6 +58,9 @@ def convert_model_dict(in_dict, conversion_dict, tech_groups=None):
             if (v.get('parent', '') in ['unmet_demand', 'unmet_demand_as_supply_tech'] or
                     'unmet_demand_' in k):
                 out_dict.set_key('__disabled.techs.{}'.format(k), v)
+                # We will want to enable ``ensure_feasibility`` to replace
+                # ``unmet_demand``
+                state['ensure_feasibility'] = True
                 continue
 
             new_tech_config = convert_subdict(v, conversion_dict['tech_config'])
@@ -223,6 +227,7 @@ def convert_model(run_config_path, model_config_path, out_path):
     None
 
     """
+    state = {'ensure_feasibility': False}
     converted_run_config = AttrDict()
     run_config = load_with_import_resolution(run_config_path)
     for k, v in run_config.items():
@@ -247,7 +252,7 @@ def convert_model(run_config_path, model_config_path, out_path):
 
     for k, v in model_config.items():
         new_model_config[k] = convert_model_dict(
-            v, _CONVERSIONS, tech_groups=tech_groups
+            v, _CONVERSIONS, tech_groups=tech_groups, state=state
         )
 
     # Merge run_config into main model config file
@@ -256,6 +261,15 @@ def convert_model(run_config_path, model_config_path, out_path):
     # README: For future use we probably want a configuration to specify
     # a calliope version it's compatible with / built for
     new_model_config[model_config_path].set_key('model.calliope_version', '0.6.0')
+
+    # Set ensure_feasibility if the old model used unmet_demand
+    if state['ensure_feasibility']:
+        new_model_config[model_config_path].set_key('run.ensure_feasibility', True)
+        print(
+            'Found no longer supported `unmet_demand` techs, setting `run.ensure_feasibility` \n'
+            'to True to replace them. See the docs for more info:\n'
+            'https://calliope.readthedocs.io/en/stable/user/building.html#allowing-for-unmet-demand'
+        )
 
     # README: adding top-level interest_rate and lifetime definitions
     # for all techs EXCEPT demand,

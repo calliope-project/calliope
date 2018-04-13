@@ -10,7 +10,7 @@ Tests are included and can be run with ``py.test`` from the project's root direc
 
 See our `contributors guide on GitHub <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_.
 
-Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_,  planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ and `projects <https://github.com/calliope-project/calliope/projects>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
 
 --------------------------------
 Installing a development version

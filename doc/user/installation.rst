@@ -71,16 +71,12 @@ Another commercial alternative is `CPLEX <https://www.ibm.com/products/ilog-cple
 Python module requirements
 ==========================
 
-The following Python modules and their dependencies are required:
+Refer to `requirements/base.yml <https://github.com/calliope-project/calliope/blob/master/requirements/base.yml>`_ in the Calliope repository for a full and up-to-date listing of required third-party packages.
 
-* `Pyomo <https://software.sandia.gov/trac/pyomo/wiki/Pyomo>`_
+Some of the key packages Calliope relies on are:
+
+* `Pyomo <https://www.pyomo.org/>`_
 * `Pandas <http://pandas.pydata.org/>`_
 * `Xarray <http://xarray.pydata.org/>`_
-* `NetCDF4 <https://github.com/Unidata/netcdf4-python>`_
-* `Numexpr <https://github.com/pydata/numexpr>`_
-* `ruamel.yaml <https://yaml.readthedocs.io/en/latest/>`_
-* `Click <http://click.pocoo.org/>`_
-
-`Plotly <https://plot.ly/>`_ is optional but necessary to graphically display results.
-
-`Jupyter <http://jupyter.org/>`_ is optional and used for the example notebook in the tutorial.
+* `Plotly <https://plot.ly/>`_
+* `Jupyter <https://jupyter.org/>`_ (optional, but highly recommended, and used for the example notebooks in the tutorials)
