@@ -30,7 +30,7 @@ class TestCLI:
 
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.run, [_MODEL_NATIONAL, '--save_netcdf=output.nc'])
-            assert calliope._logger.level == 30
+            assert calliope._logger.level == 19
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'output.nc'))
 

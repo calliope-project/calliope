@@ -9,7 +9,7 @@ Convert Calliope model configurations from 0.5.x to 0.6.0.
 
 """
 
-import logging
+from calliope.core.util.logging import logger
 import os
 import glob
 
@@ -265,7 +265,7 @@ def convert_model(run_config_path, model_config_path, out_path):
     # Set ensure_feasibility if the old model used unmet_demand
     if state['ensure_feasibility']:
         new_model_config[model_config_path].set_key('run.ensure_feasibility', True)
-        print(
+        logger.info(
             'Found no longer supported `unmet_demand` techs, setting `run.ensure_feasibility` \n'
             'to True to replace them. See the docs for more info:\n'
             'https://calliope.readthedocs.io/en/stable/user/building.html#allowing-for-unmet-demand'

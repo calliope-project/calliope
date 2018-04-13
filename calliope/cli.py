@@ -23,7 +23,7 @@ import click
 from calliope import Model, read_netcdf, examples
 from calliope.core.util.convert import convert_model
 from calliope.core.util.generate_runs import generate
-from calliope.core.util.logging import logger
+from calliope.core.util.logging import logger, set_log_level
 from calliope._version import __version__
 
 
@@ -33,6 +33,12 @@ _time_format = '%Y-%m-%d %H:%M:%S'
 _debug = click.option(
     '--debug', is_flag=True, default=False,
     help='Print debug information when encountering errors.'
+)
+
+_quiet = click.option(
+    '--quiet', is_flag=True, default=False,
+    help='Be less verbose about what is happening, including hiding '
+         'solver output.'
 )
 
 _pdb = click.option(
@@ -62,7 +68,7 @@ logger.formatter = formatter
 @contextlib.contextmanager
 def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=None, start_time=None):
     if debug:
-        logger.setLevel('DEBUG')
+        set_log_level('DEBUG')
 
     try:
         if profile:
@@ -100,6 +106,13 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
             if start_time:
                 print_end_time(start_time, msg='aborted due to an error')
         sys.exit(1)
+
+
+def set_quietness_level(quiet):
+    if quiet:
+        set_log_level('WARNING')
+    else:
+        set_log_level('SOLVER')
 
 
 def print_end_time(start_time, msg='complete'):
@@ -155,12 +168,13 @@ def new(path, template, debug):
 @click.option('--save_logs')
 @click.option('--model_format')
 @_debug
+@_quiet
 @_pdb
 @_profile
 @_profile_filename
 def run(model_file, override_file, save_netcdf, save_csv, save_plots,
         save_logs, model_format,
-        debug, pdb, profile, profile_filename):
+        debug, quiet, pdb, profile, profile_filename):
     """
     Execute the given model. Tries to guess from the file extension whether
     ``model_file`` is a YAML file or a pre-built model saved to NetCDF.
@@ -170,6 +184,9 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
     """
     if debug:
         print(_get_version())
+
+    set_quietness_level(quiet)
+
     logging.captureWarnings(True)
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
@@ -260,23 +277,28 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
     '--additional_args', default='',
     help='Any additional arguments to pass directly on to `calliope run`.')
 @_debug
+@_quiet
 @_pdb
 def generate_runs(
-    model_file, out_file, kind, override_file, groups, additional_args,
-    cluster_threads, cluster_mem, cluster_time,
-    debug, pdb):
-        kwargs = dict(
-            model_file=model_file,
-            out_file=out_file,
-            override_file=override_file,
-            groups=groups,
-            additional_args=additional_args,
-            cluster_mem=cluster_mem,
-            cluster_time=cluster_time,
-            cluster_threads=cluster_threads,
-        )
-        with format_exceptions(debug, pdb):
-            generate(kind, **kwargs)
+        model_file, out_file, kind, override_file, groups, additional_args,
+        cluster_threads, cluster_mem, cluster_time,
+        debug, quiet, pdb):
+
+    set_quietness_level(quiet)
+
+    kwargs = dict(
+        model_file=model_file,
+        out_file=out_file,
+        override_file=override_file,
+        groups=groups,
+        additional_args=additional_args,
+        cluster_mem=cluster_mem,
+        cluster_time=cluster_time,
+        cluster_threads=cluster_threads,
+    )
+
+    with format_exceptions(debug, pdb):
+        generate(kind, **kwargs)
 
 
 @cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
@@ -284,10 +306,11 @@ def generate_runs(
 @click.argument('model_config_path')
 @click.argument('out_path')
 @_debug
+@_quiet
 @_pdb
 def convert(
         run_config_path, model_config_path, out_path,
-        debug, pdb):
+        debug, quiet, pdb):
     """
     Convert a Calliope 0.5.x model specified by its run and model
     configurations to a Calliope 0.6.0 model.
@@ -296,6 +319,7 @@ def convert(
     is saved to ``out_path``.
 
     """
+    set_quietness_level(quiet)
     with format_exceptions(debug, pdb):
         print('Converting model...')
         convert_model(run_config_path, model_config_path, out_path)
