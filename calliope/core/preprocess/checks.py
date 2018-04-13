@@ -20,7 +20,7 @@ from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
 from calliope.core.preprocess.util import get_all_carriers
-
+from calliope.core.util.logging import logger
 
 _defaults_files = {
     k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
@@ -74,7 +74,7 @@ def check_overrides(config_model, override):
             )
 
     if info:
-        logging.info('\n'.join(info))
+        logger.info('\n'.join(info))
 
     return warnings
 

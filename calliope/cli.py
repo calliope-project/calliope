@@ -17,7 +17,6 @@ import pstats
 import shutil
 import sys
 import traceback
-
 import click
 
 from calliope import Model, read_netcdf, examples
@@ -57,13 +56,16 @@ _profile_filename = click.option(
     help='Filename to save profile to if enabled --profile.'
 )
 
-logger.setLevel(logging.WARNING)
+if logger.hasHandlers():
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
 formatter = logging.Formatter(
     '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format
 )
-logger.stream = sys.stderr
-logger.formatter = formatter
-
+console = logging.StreamHandler(stream=sys.stderr)
+console.setFormatter(formatter)
+logger.addHandler(console)
 
 @contextlib.contextmanager
 def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=None, start_time=None):
@@ -188,6 +190,9 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
     set_quietness_level(quiet)
 
     logging.captureWarnings(True)
+    pywarning_logger = logging.getLogger('py.warnings')
+    pywarning_logger.addHandler(console)
+
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
         if save_csv is None and save_netcdf is None:

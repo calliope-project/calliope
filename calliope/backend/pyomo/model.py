@@ -24,7 +24,7 @@ from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var
 from calliope.core.util.tools import load_function
-from calliope.core.util.logging import LogWriter
+from calliope.core.util.logging import LogWriter, logger
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope import exceptions
 
@@ -189,12 +189,12 @@ def load_results(backend_model, results):
     this_result = backend_model.solutions.load_from(results)
 
     if this_result is False or not_optimal:
-        logging.critical('Problem status:')
+        logger.critical('Problem status:')
         for l in str(results.Problem).split('\n'):
-            logging.critical(l)
-        logging.critical('Solver status:')
+            logger.critical(l)
+        logger.critical('Solver status:')
         for l in str(results.Solver).split('\n'):
-            logging.critical(l)
+            logger.critical(l)
 
         if not_optimal:
             message = 'Model solution was non-optimal.'

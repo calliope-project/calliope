@@ -19,7 +19,7 @@ from calliope import exceptions
 from calliope.core.util.tools import plugin_load
 from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
-
+from calliope.core.util.logging import logger
 
 def get_daily_timesteps(data, check_uniformity=False):
     daily_timesteps = [
@@ -241,7 +241,7 @@ def resample(data, timesteps, resolution):
                 )
             except TypeError:
                 # If the var has a datatype of strings, it can't be resampled
-                logging.error('Dropping {} because it has a {} data type when '
+                logger.error('Dropping {} because it has a {} data type when '
                               'integer or float is expected for timeseries '
                               'resampling.'.format(var, data_rs[var].dtype))
                 data_rs = data_rs.drop(var)

@@ -17,7 +17,7 @@ import numpy as np
 import ruamel.yaml as yaml
 
 from calliope.core.util.tools import relative_path
-
+from calliope.core.util.logging import logger
 
 class __Missing(object):
     def __repr__(self):
@@ -45,7 +45,7 @@ def _yaml_load(src):
     try:
         return yaml.safe_load(src)
     except yaml.YAMLError:
-        logging.error('Parser error when reading YAML from {}.'.format(src_name))
+        logger.error('Parser error when reading YAML from {}.'.format(src_name))
         raise
 
 

@@ -24,7 +24,9 @@ if logger.hasHandlers():
     for handler in logger.handlers:
         logger.removeHandler(handler)
 
-formatter = logging.Formatter('%(levelname)s: %(message)s')
+formatter = logging.Formatter(
+    '[%(asctime)s] %(levelname)s: %(message)s',
+    datefmt="%Y-%m-%d %H:%M:%S")
 console = logging.StreamHandler(stream=sys.stdout)
 console.setFormatter(formatter)
 logger.addHandler(console)
@@ -61,10 +63,11 @@ def log_time(timings, identifier, comment=None, level='info', time_since_start=F
 
     timings[identifier] = now = datetime.datetime.now()
 
-    getattr(logger, level)('[{}] {}'.format(now, comment))
     if time_since_start:
         time_diff = now - timings['model_creation']
-        getattr(logger, level)('[{}] Time since start: {}'.format(now, time_diff))
+        comment += '. Time since start: {}'.format(time_diff)
+
+    getattr(logger, level)(comment)
 
 
 class LogWriter:

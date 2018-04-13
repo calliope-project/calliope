@@ -11,6 +11,7 @@ import pandas as pd
 import xarray as xr
 
 from calliope.core.util.tools import memoize
+from calliope.core.util.logging import logger
 from calliope import exceptions
 
 
@@ -30,7 +31,7 @@ def get_param(backend_model, var, dims):
     try:
         return getattr(backend_model, var)[dims]
     except AttributeError:  # i.e. parameter doesn't exist at all
-        logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+        logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
         return backend_model.__calliope_defaults__[var]
     except KeyError:  # try removing timestep
         try:
@@ -39,7 +40,7 @@ def get_param(backend_model, var, dims):
             else:
                 return getattr(backend_model, var)[dims[0]]
         except KeyError:  # Static default value
-            logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+            logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
             return backend_model.__calliope_defaults__[var]
 
 
