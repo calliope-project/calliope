@@ -36,6 +36,10 @@ class TestPlotting:
         # Also just try plotting the summary
         model.plot.summary()
 
+        # Testing that the model can handle not having supply_plus technologies
+        model._model_data = model._model_data.drop('resource_con')
+        model.plot.timeseries()
+
     def test_milp_plotting(self):
         override = {'model.subset_time': '2005-01-01'}
         model = calliope.examples.milp(override_dict=override)
