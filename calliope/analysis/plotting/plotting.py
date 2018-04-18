@@ -37,8 +37,10 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
         (by default), a more simple built-in map.
 
     """
-    timeseries = _plot(*plot_timeseries(model), html_only=True)
-    capacity = _plot(*plot_capacity(model), html_only=True)
+    subset = {'costs': ['monetary']}
+
+    timeseries = _plot(*plot_timeseries(model, subset=subset), html_only=True)
+    capacity = _plot(*plot_capacity(model, subset=subset), html_only=True)
     transmission = _plot(*plot_transmission(
         model, html_only=True, mapbox_access_token=mapbox_access_token
     ), html_only=True)
@@ -79,29 +81,36 @@ def _plot(data, layout, html_only=False, save_svg=False, **kwargs):
         }
     )
 
-    if html_only:
-        return pltly.plot(
-            {'data': data, 'layout': layout},
-            include_plotlyjs=False, output_type='div',
-            **PLOTLY_KWARGS
-        )
-
     if save_svg:
         if 'updatemenus' in layout:
-            print('Unable to save multiple arrays to SVG, pick one array only')
+            raise ValueError('Unable to save multiple arrays to SVG, pick one array only')
         else:
             PLOTLY_KWARGS.update(image='svg')
 
     if data:
-        pltly.iplot({'data': data, 'layout': layout}, **PLOTLY_KWARGS)
-
+        if html_only:
+            return pltly.plot(
+                {'data': data, 'layout': layout},
+                include_plotlyjs=False, output_type='div',
+                **PLOTLY_KWARGS
+            )
+        else:
+            pltly.iplot({'data': data, 'layout': layout}, **PLOTLY_KWARGS)
     else:
-        print('No data to plot')
+        raise ValueError('No data to plot.')
 
 
 class ModelPlotMethods:
     def __init__(self, model):
         self._model = model
+
+    _docstring_additions = """
+    html_only : bool, optional, default = False
+        Returns a html string for embedding the plot in a webpage
+    save_svg : bool, optional; default = false
+        Will save plot to svg on rendering
+
+    """
 
     def check_optimality(self):
         termination = self._model._model_data.attrs.get(
@@ -114,21 +123,21 @@ class ModelPlotMethods:
         data, layout = plot_timeseries(self._model, **kwargs)
         return _plot(data, layout, **kwargs)
 
-    timeseries.__doc__ = plot_timeseries.__doc__
+    timeseries.__doc__ = plot_timeseries.__doc__.rstrip() + _docstring_additions
 
     def capacity(self, **kwargs):
         self.check_optimality()
         data, layout = plot_capacity(self._model, **kwargs)
         return _plot(data, layout, **kwargs)
 
-    capacity.__doc__ = plot_capacity.__doc__
+    capacity.__doc__ = plot_capacity.__doc__.rstrip() + _docstring_additions
 
     def transmission(self, **kwargs):
         self.check_optimality()
         data, layout = plot_transmission(self._model, **kwargs)
         return _plot(data, layout, **kwargs)
 
-    transmission.__doc__ = plot_transmission.__doc__
+    transmission.__doc__ = plot_transmission.__doc__.rstrip() + _docstring_additions
 
     def summary(self, **kwargs):
         self.check_optimality()

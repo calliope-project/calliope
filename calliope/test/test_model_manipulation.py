@@ -4,6 +4,8 @@ import pytest  # pylint: disable=unused-import
 
 import calliope
 from calliope import exceptions
+from calliope.test.common.util import check_error_or_warning
+
 
 
 def build_model(override_dict, override_groups):
@@ -36,8 +38,9 @@ class TestExistsFalse():
         assert 'test_storage' not in model.results.coords['techs'].values
 
         # Ensure warnings were raised
-        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
-        assert 'Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at location 0.' in all_warnings
+        assert check_error_or_warning(
+            excinfo,
+            'Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at location 0.')
 
     def test_location_exists_false(self):
         overrides = {'locations.1.exists': False}
@@ -49,8 +52,9 @@ class TestExistsFalse():
         assert '1' not in model._model_data.coords['locs'].values
 
         # Ensure warnings were raised
-        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
-        assert 'Not building the link 0,1 because one or both of its locations have been removed from the model by setting ``exists: false``' in all_warnings
+        assert check_error_or_warning(
+            excinfo,
+            'Not building the link 0,1 because one or both of its locations have been removed from the model by setting ``exists: false``')
 
     def test_location_tech_exists_false(self):
         overrides = {'locations.1.techs.test_storage.exists': False}

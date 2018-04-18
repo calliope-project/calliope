@@ -174,8 +174,8 @@ def _get_var_layout(
 
 def plot_capacity(
         model, orient='h', array='all',
-        subset={'costs': ['monetary']}, sum_dims=None,
-        squeeze=True, html_only=False, save_svg=False):
+        subset={}, sum_dims=None,
+        squeeze=True, **kwargs):
     """
     Parameters
     ----------
@@ -192,15 +192,10 @@ def plot_capacity(
     subset : dict, optional
         Dictionary by which data is selected (using xarray indexing `loc[]`).
         Keys any of ['timeseries', 'locs', 'techs', 'carriers', 'costs']).
-        Defaults to select only the `monetary` cost class.
     sum_dims : str, optional
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions containing only single values.
-    html_only : bool, optional, default = False
-        Returns a html string for embedding the plot in a webpage
-    save_svg : bool, optional; default = false
-        Will save plot to svg on rendering
 
     """
     dataset = model._model_data.copy()

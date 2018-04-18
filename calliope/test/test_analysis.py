@@ -4,6 +4,7 @@ import pytest  # pylint: disable=unused-import
 
 from calliope.core.attrdict import AttrDict
 import calliope.exceptions as exceptions
+from calliope.test.common.util import check_error_or_warning
 
 
 HTML_STRINGS = AttrDict.from_yaml(
@@ -93,8 +94,16 @@ class TestPlotting:
         model = national_scale_example
 
         model.plot.capacity(
-            html_only=True, subset={'timeseries': ['2015-01-01 01:00']}
+            html_only=True, subset={'timesteps': ['2015-01-01 01:00']}
         )
+
+        # should raise, subsetting with a tech that does not exist
+        with pytest.raises(ValueError) as excinfo:
+            model.plot.capacity(
+                html_only=True, subset={'techs': ['foobar']}
+            )
+
+        assert check_error_or_warning(excinfo, 'No data to plot')
 
     def test_subset_array(self, national_scale_example):
         model = national_scale_example
@@ -154,7 +163,9 @@ class TestPlotting:
                 'techs.ccgt.costs.carbon': {'energy_cap': 10, 'interest_rate': 0.01}
             }
         )
+
         model.run()
+
         # should fail, multiple costs provided, can only plot one
         with pytest.raises(exceptions.ModelError):
             model.plot.capacity(html_only=True, array='results')
@@ -166,6 +177,3 @@ class TestPlotting:
 
         # FIXME: sum_dims doesn't seem to work at all
         # model.plot.capacity(html_only=True, sum_dims=['locs'])
-
-        # FIXME: this should raise an error!
-        # model.plot.capacity(html_only=True, subset={'timeseries': ['2016-01-01 01:00']})

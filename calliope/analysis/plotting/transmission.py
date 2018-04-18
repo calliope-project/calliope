@@ -113,7 +113,7 @@ def _get_centre(coordinates):
                 lon=centre.loc[dict(coordinates='lon')].item())
 
 
-def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg=False):
+def plot_transmission(model, mapbox_access_token=None, **kwargs):
     """
     Parameters
     ----------
@@ -121,11 +121,6 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
         If given and a valid Mapbox API key, a Mapbox map is drawn
         for lat-lon coordinates, else (by default), a more simple
         built-in map.
-    html_only : bool, optional, default = False
-        Returns a html string for embedding the plot in a webpage
-    save_svg: bool, optional, default = False
-        Saves the plot to svg, if True. Mapbox backgrounds are saved as a static
-        image in this case.
 
     """
     coordinates = model._model_data.loc_coordinates.sortby('locs')
@@ -258,7 +253,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
         showlegend=True
     ))
 
-    if html_only:
+    if kwargs.get('html_only', False):
         del layout_dict['title']
         del layout_dict['width']
 

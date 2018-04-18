@@ -249,8 +249,8 @@ def _get_var_layout(var, dataset):
 
 def plot_timeseries(
         model, array='all', timesteps_zoom=None,
-        subset={'costs': ['monetary']}, sum_dims='locs',
-        squeeze=True, html_only=False, save_svg=False):
+        subset={}, sum_dims='locs',
+        squeeze=True, **kwargs):
     """
     Parameters
     ----------
@@ -270,15 +270,10 @@ def plot_timeseries(
     subset : dict, optional
         Dictionary by which data is subset (uses xarray `loc` indexing). Keys
         any of ['timeseries', 'locs', 'techs', 'carriers', 'costs'].
-        Defaults to select only the `monetary` cost class.
     sum_dims : str, optional
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions of length = 1.
-    html_only : bool, optional, default = False
-        Returns a html string for embedding the plot in a webpage
-    save_svg : bool, optional; default = false
-        Will save plot to svg on rendering
 
     """
 

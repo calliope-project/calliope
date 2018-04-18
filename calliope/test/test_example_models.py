@@ -3,10 +3,10 @@ import shutil
 
 import pytest
 from pytest import approx
+import pandas as pd
 
 import calliope
-
-import pandas as pd
+from calliope.test.common.util import check_error_or_warning
 
 
 class TestModelPreproccesing:
@@ -251,13 +251,12 @@ class TestUrbanScaleExampleModelSenseChecks:
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model.run()
 
-        all_warnings = ','.join(str(excinfo.list[i]) for i in range(len(excinfo.list)))
-
         expected_warnings = [
             'Energy capacity constraint removed',
             'Resource capacity constraint defined and set to infinity for all supply_plus techs',
             'Resource capacity constraint removed'
         ]
 
-        assert all(warning in all_warnings for warning in expected_warnings)
+        assert check_error_or_warning(excinfo, expected_warnings)
+
         assert all(model.results.timesteps == pd.date_range('2005-07', '2005-07-04 23:00:00', freq='H'))
