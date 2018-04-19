@@ -70,7 +70,8 @@ MOCK_MODULES = [
     'scipy.spatial', 'scipy.spatial.distance',
     'sklearn', 'sklearn.metrics',
     'bokeh', 'bokeh.plotting', 'bokeh.models', 'bokeh.core.properties',
-    'plotly', 'plotly.offline', 'plotly.graph_objs'
+    'plotly', 'plotly.offline', 'plotly.graph_objs',
+    'natsort'
 ]
 
 for m in MOCK_MODULES:

@@ -60,6 +60,8 @@ The most basic way to run a model programmatically from within a Python interpre
 
 .. note:: If ``config`` is not specified (i.e. ``model = Model()``), an error is raised. See :doc:`ref_example_models` for information on instantiating a simple example model without specifying a custom model configuration.
 
+.. note:: Calliope logs useful progress information to the INFO log level, but does not change the default log level from WARNING. To see progress information when running interactively, call ``calliope.set_log_level('INFO')`` immediately after importing Calliope.
+
 Other ways to load a model interactively are:
 
 * Passing an :class:`~calliope.AttrDict` or standard Python dictionary to the :class:`~calliope.Model` constructor, with the same nested format as the YAML model configuration (top-level keys: ``model``, ``run``, ``locations``, ``techs``).

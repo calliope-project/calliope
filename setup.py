@@ -44,7 +44,7 @@ setup(
     install_requires=[
         "click >= 3.3",
         "netcdf4 >= 1.2.2",
-        "natsort >= 5.2"
+        "natsort >= 5.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.14",
         "pandas >= 0.22, < 0.23",
