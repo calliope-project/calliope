@@ -14,6 +14,7 @@ dependencies:
     - jinja2
     - jupyter
     - libnetcdf
+    - natsort
     - netcdf4
     - numexpr
     - numpy=1.14.1

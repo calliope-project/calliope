@@ -12,8 +12,8 @@ Plot capacity data.
 from itertools import product
 
 import plotly.graph_objs as go
+from natsort import natsorted
 
-from calliope import exceptions
 from calliope.analysis.util import subset_sum_squeeze
 from calliope.analysis.plotting.util import get_data_layout, break_name
 
@@ -34,18 +34,18 @@ def _get_relevant_vars(dataset, array):
             set(array) != set(allowed_input_vars + allowed_result_vars)) or
         (isinstance(array, str) and
             array not in allowed_input_vars + allowed_result_vars)):
-        raise exceptions.ModelError(
+        raise ValueError(
             'Cannot plot array={}. as one or more of the elements is not considered '
             'to be a capacity'.format(array)
         )
 
     # relevant_vars are all variables relevant to this plotting instance
     if array == 'results':
-        relevant_vars = sorted(allowed_result_vars)
+        relevant_vars = natsorted(allowed_result_vars)
     elif array == 'inputs':
-        relevant_vars = sorted(allowed_input_vars)
+        relevant_vars = natsorted(allowed_input_vars)
     elif array == 'all':
-        relevant_vars = sorted(allowed_result_vars + allowed_input_vars)
+        relevant_vars = natsorted(allowed_result_vars + allowed_input_vars)
     elif isinstance(array, list):
         relevant_vars = array
     elif isinstance(array, str):
@@ -66,7 +66,7 @@ def _get_var_data(
         if 'costs' in array_cap.dims and len(array_cap['costs']) == 1:
             array_cap = array_cap.squeeze('costs')
         elif 'costs' in array_cap.dims and len(array_cap['costs']) > 1:
-            raise exceptions.ModelError(
+            raise ValueError(
                 'Cannot plot {} without subsetting to pick one cost type '
                 'of interest'.format(cap)
             )
@@ -78,14 +78,13 @@ def _get_var_data(
         array_cap = subset_sum_squeeze(array_cap, subset, sum_dims, squeeze)
 
     if len(array_cap.dims) > 2:
-        raise exceptions.ModelError(
+        raise ValueError(
             'Maximum two dimensions allowed for plotting capacity, but {} '
             'given as dimensions for {}'.format(array_cap.dims, cap)
         )
 
     if 'techs' not in array_cap.dims:
-        e = exceptions.ModelError
-        raise e('Cannot plot capacity without `techs` in dimensions')
+        raise ValueError('Cannot plot capacity without `techs` in dimensions')
 
     elif 'techs' not in subset.keys():
         array_cap = array_cap.sortby('techs')
@@ -108,15 +107,16 @@ def _get_var_data(
             x = array_cap.loc[{'techs': tech}].values
             name = break_name(model._model_data.names.loc[{'techs': tech}].item())
             if 'systemwide' in cap:
-                y = array_cap.carriers.values
+                y = natsorted(array_cap.carriers.values)
             else:
-                y = array_cap.locs.values
+                y = natsorted(array_cap.locs.values)
 
             if orientation == 'v':
                 x, y = y, x  # Flip axes
                 hoverinfo = 'y+name'
             else:
                 hoverinfo = 'x+name'
+                y = y[::-1]  # Make sure that sorting is from bottom down
 
             data.append(go.Bar(
                 x=x, y=y, visible=visible,
@@ -199,7 +199,7 @@ def plot_capacity(
 
     """
     dataset = model._model_data.copy()
-    locations = sorted(list(dataset.locs.values))
+    locations = natsorted(list(dataset.locs.values))
 
     if orient in ['horizontal', 'h']:
         orientation = 'h'
@@ -213,7 +213,10 @@ def plot_capacity(
         raise ValueError('Orient must be `v`/`vertical` or `h`/`horizontal`')
 
     layout = {
-        location_axis: dict(title='Location'),
+        location_axis: dict(
+            title='Location',
+            showticklabels=True,  # FIXME: Ensure labels do not get hidden if little vertical space
+        ),
         'legend': (dict(traceorder='reversed')),
         'autosize': True,
         'hovermode': 'closest'

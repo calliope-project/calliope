@@ -16,6 +16,7 @@ import numpy as np
 from calliope.core.preprocess.util import vincenty
 from calliope.analysis.plotting.util import break_name
 
+
 def _get_zoom(coordinate_array, width):
     """
     If mapbox is being used for tranmission plotting, get the zoom based on the

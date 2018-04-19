@@ -21,6 +21,7 @@ def get_data_layout(
     """
     For each dropdown dataset in capacity and timeseries plotting, build the
     plotly data dictionary and the plotly layout dictionary.
+
     """
     # data_len is used to populate visibility of traces, for dropdown
     data_len = [0]

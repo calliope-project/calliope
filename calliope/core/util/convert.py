@@ -66,6 +66,9 @@ def convert_model_dict(in_dict, conversion_dict, state, tech_groups=None):
             new_tech_config = convert_subdict(v, conversion_dict['tech_config'])
 
             if 'constraints_per_distance' in v:
+                # Convert loss to efficiency
+                if 'e_loss' in v.constraints_per_distance:
+                    v.constraints_per_distance.e_loss = 1 - v.constraints_per_distance.e_loss
                 new_tech_config.update(
                     convert_subdict(
                         v.constraints_per_distance,
@@ -104,6 +107,13 @@ def convert_model_dict(in_dict, conversion_dict, state, tech_groups=None):
 
             if new_cost_dict:
                 new_tech_config['costs'] = new_cost_dict
+
+            # After conversion, remove legacy _per_distance top-level entries
+            try:
+                del new_tech_config['constraints_per_distance']
+                del new_tech_config['costs_per_distance']
+            except KeyError:
+                pass
 
             # Assign converted techs to either tech_groups or techs
             if tech_groups and k in tech_groups:

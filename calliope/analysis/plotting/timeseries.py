@@ -13,7 +13,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objs as go
 
-from calliope import exceptions
 from calliope.analysis.util import subset_sum_squeeze
 from calliope.analysis.plotting.util import get_data_layout, hex_to_rgba, break_name
 
@@ -34,7 +33,7 @@ def _get_relevant_vars(model, dataset, array):
             set(array).intersection(allowed_input_vars + allowed_result_vars + carriers)) or
         (isinstance(array, str) and
             array not in allowed_input_vars + allowed_result_vars + carriers)):
-        raise exceptions.ModelError(
+        raise ValueError(
             'Cannot plot array={}. If you want carrier flow (_prod, _con, _export) '
             'then specify the name of the energy carrier as array'.format(array)
         )
@@ -133,7 +132,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
 
         if 'resource_eff' in dataset.data_vars:
             resource_eff = _get_reindexed_array('resource_eff', fillna=1)
-        else: resource_eff = 1
+        else:
+            resource_eff = 1
 
         charge = subset_sum_squeeze(
             -array_con.sum('carriers') + resource_con * resource_eff,
@@ -151,12 +151,33 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
 
     array_flow = subset_sum_squeeze(array_flow, subset, sum_dims, squeeze)
 
-    if 'timesteps' not in array_flow.dims or len(array_flow.dims) > 2:
-        e = exceptions.ModelError
-        raise e('Cannot plot timeseries for variable `{}` with subset `{}`'
-                'and `sum_dims: {}`'.format(var, subset, sum_dims))
+    err_details = ' (variable: `{}`, subset: `{}`, sum_dims: `{}`.'.format(var, subset, sum_dims)
 
-    for tech in array_flow.techs.values:
+    if 'timesteps' not in array_flow.dims:
+        raise ValueError(
+            '`timestesp` not in plotting data, cannot proceed' + err_details
+        )
+
+    if len(array_flow.dims) > 2:
+        if 'costs' in array_flow.dims:
+            err_details = err_details + (' Try subsetting to select a cost class, '
+                "e.g. subset={'costs': ['monetary']}.")
+        raise ValueError(
+            'Too many dimensions to plot: `{}`'.format(array_flow.dims) + err_details
+        )
+
+    # If techs not given as a subset (implying a desire to order manually),
+    # sort techs such that those varying output least are at the bottom of the stack
+    if subset.get('techs', None):
+        sorted_techs = array_flow.techs.values
+    else:
+        sorted_techs = [
+            array_flow.techs.values[i]
+            for i in array_flow.var(dim='timesteps').argsort()
+        ]
+
+    # for tech in array_flow.techs.values:
+    for tech in sorted_techs:
         tech_dict = {'techs': tech}
         if not array_flow.loc[tech_dict].sum():
             continue

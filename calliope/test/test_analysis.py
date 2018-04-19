@@ -3,7 +3,6 @@ import calliope
 import pytest  # pylint: disable=unused-import
 
 from calliope.core.attrdict import AttrDict
-import calliope.exceptions as exceptions
 from calliope.test.common.util import check_error_or_warning
 
 
@@ -63,7 +62,7 @@ class TestPlotting:
         model = national_scale_example
 
         # should fail, not in array
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValueError):
             model.plot.capacity(array='carrier_prod')
             model.plot.capacity(array=['energy_eff', 'energy_cap'])
             # orient has to be 'v', 'vertical', 'h', or 'horizontal'
@@ -73,7 +72,7 @@ class TestPlotting:
         model = national_scale_example
 
         # should fail, not in array
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValueError):
             model.plot.timeseries(array='energy_cap')
             model.plot.timeseries(squeeze=False)
             model.plot.timeseries(sum_dims=None)
@@ -167,7 +166,7 @@ class TestPlotting:
         model.run()
 
         # should fail, multiple costs provided, can only plot one
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValueError):
             model.plot.capacity(html_only=True, array='results')
 
         # should succeed, multiple costs provided, subset to one

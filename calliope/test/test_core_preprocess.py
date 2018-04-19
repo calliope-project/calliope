@@ -1,11 +1,11 @@
-
-import calliope
 import pytest  # pylint: disable=unused-import
-
-from calliope.core.attrdict import AttrDict
-import calliope.exceptions as exceptions
 import pandas as pd
 import numpy as np
+
+import calliope
+import calliope.exceptions as exceptions
+from calliope.core.attrdict import AttrDict
+from calliope.core.preprocess import time
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import \
@@ -848,6 +848,7 @@ class TestDataset:
 
         assert model.inputs.timestep_resolution.to_pandas().unique() == [0.25]
 
+
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):
         """
@@ -890,3 +891,25 @@ class TestUtil():
         coords = [(51.507222, -0.1275), (48.8567, 2.3508)]
         distance = calliope.core.preprocess.util.vincenty(coords[0], coords[1])
         assert distance == pytest.approx(343834)  # in meters
+
+
+class TestTime:
+    @pytest.fixture
+    def model(self):
+        return calliope.examples.urban_scale(
+            override_dict={'model.subset_time': ['2005-01-01', '2005-01-10']}
+        )
+
+    def test_add_max_demand_timesteps(self, model):
+        data = model._model_data_original.copy()
+        data = time.add_max_demand_timesteps(data)
+
+        assert (
+            data['max_demand_timesteps'].loc[dict(carriers='heat')].values ==
+            np.datetime64('2005-01-05T07:00:00')
+        )
+
+        assert (
+            data['max_demand_timesteps'].loc[dict(carriers='electricity')].values ==
+            np.datetime64('2005-01-10T09:00:00')
+        )
