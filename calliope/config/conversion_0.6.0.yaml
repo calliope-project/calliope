@@ -106,6 +106,7 @@ tech_config:
     constraints.r2_cap_follow_mode: null
     constraints.s_time.max: null
     weight: null
+    per_distance: null
 
 
 tech_constraints_per_distance_config:

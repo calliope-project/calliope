@@ -177,7 +177,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
             # sure it appears on top in the legend
             data.insert(0, go.Scatter(
                 x=timesteps, y=_get_y_vals(-array_flow.loc[tech_dict]),
-                visible=visible, line=dict(color=color), name=name)
+                visible=visible, line=dict(color=color), name=name,
+                legendgroup=tech)
             )
 
         elif var == 'storage':
@@ -214,7 +215,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     if var in carriers and 'unmet_demand' in dataset:
         data.append(go.Bar(
             x=timesteps, y=_get_y_vals(unmet_flow), visible=visible,
-            name='Unmet ' + var + ' demand', legendgroup=tech,
+            name='Unmet ' + var + ' demand', legendgroup='unmet_demand',
             marker=dict(color='grey')
         ))
 

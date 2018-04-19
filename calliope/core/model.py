@@ -133,7 +133,8 @@ class Model(object):
 
         """
 
-        if hasattr(self, 'results') and not force_rerun:
+        # Check that results exist and are non-empty
+        if hasattr(self, 'results') and self.results.data_vars and not force_rerun:
             raise exceptions.ModelError(
                 'This model object already has results. '
                 'Use model.run(force_rerun=True) to force'
