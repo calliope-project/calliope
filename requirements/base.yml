@@ -11,8 +11,8 @@ dependencies:
     - cufflinks-py=0.12.1
     - glpk=4.61
     - hdf5
+    - ipython
     - jinja2
-    - jupyter
     - libnetcdf
     - natsort
     - netcdf4
