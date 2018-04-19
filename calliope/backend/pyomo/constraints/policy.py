@@ -153,11 +153,11 @@ def reserve_margin_constraint_rule(backend_model, carrier):
 
         .. math::
 
+            \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_supply\\_all} energy_{cap}(loc::tech::carrier, timestep_{max\\_demand})
+            \\geq
             \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_demand} carrier_{con}(loc::tech::carrier, timestep_{max\\_demand})
             \\times -1 \\times \\frac{1}{time\\_resolution_{max\\_demand}}
             \\times (1 + reserve\\_margin)
-            \\geq
-            \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_supply\\_all} energy_{cap}(loc::tech::carrier, timestep_{max\\_demand})
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -167,15 +167,15 @@ def reserve_margin_constraint_rule(backend_model, carrier):
     max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
 
     return (
-        sum(  # Sum all demand for this carrier and timestep
-            backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
-            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
-            if loc_tech_carrier.split('::')[-1] == carrier
-        ) * -1 * (1 / max_demand_time_res) * (1 + reserve_margin)
-        >=
         sum(  # Sum all supply capacity for this carrier
             backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
             for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
             if loc_tech_carrier.split('::')[-1] == carrier
         )
+        >=
+        sum(  # Sum all demand for this carrier and timestep
+            backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
+            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
+            if loc_tech_carrier.split('::')[-1] == carrier
+        ) * -1 * (1 / max_demand_time_res) * (1 + reserve_margin)
     )

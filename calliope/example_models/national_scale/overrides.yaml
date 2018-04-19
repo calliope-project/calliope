@@ -36,6 +36,15 @@ check_feasibility:
     model:
         subset_time: '2005-01-04'
 
+reserve_margin:
+    model:
+        # Model-wide settings for the system-wide reserve margin
+        # Even setting a reserve margin of zero activates the constraint,
+        # forcing enough installed capacity to cover demand in
+        # the maximum demand timestep
+        reserve_margin:
+            power: 0.10  # 10% reserve margin for power
+
 ##
 # Overrides to demonstrate the run generator ("calliope generate_runs")
 ##
@@ -87,3 +96,9 @@ group_share_cold_fusion_cap:
             # At most 20% of total energy_cap can come from CSP and cold fusion together
             csp,cold_fusion:
                 energy_cap_max: 0.20
+    locations:
+        region1:
+            techs:
+                ccgt:
+                    constraints:
+                        energy_cap_max: 100000  # Increased to keep model feasible

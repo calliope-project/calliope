@@ -2,7 +2,6 @@ import pytest
 from pytest import approx
 
 import calliope
-from calliope.test.common.util import build_test_model as build_model
 
 _OVERRIDE_FILE = calliope.examples._PATHS['national_scale'] + '/overrides.yaml'
 
@@ -49,3 +48,17 @@ class TestNationalScaleExampleModelSenseChecks:
         assert (
             model.get_formatted_array('energy_cap').loc[{'techs': 'ccgt'}].sum() == 10000
         )
+
+    def test_reserve_margin(self):
+        model = calliope.examples.national_scale(
+            override_file=_OVERRIDE_FILE + ':reserve_margin'
+        )
+
+        model.run()
+
+        # constraint_string = '-Inf : -1.1 * ( carrier_con[region1::demand_power::power,2005-01-05 16:00:00] + carrier_con[region2::demand_power::power,2005-01-05 16:00:00] ) / timestep_resolution[2005-01-05 16:00:00] - energy_cap[region1::ccgt] - energy_cap[region1-3::csp] - energy_cap[region1-2::csp] - energy_cap[region1-1::csp] :   0.0'
+
+        # FIXME: capture Pyomo's print output...
+        # assert constraint_string in model._backend_model.reserve_margin_constraint.pprint()
+
+        assert float(model.results.cost.sum()) == approx(282487.35489)
