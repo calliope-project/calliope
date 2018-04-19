@@ -19,6 +19,7 @@ from calliope.exceptions import warn
 from calliope.analysis.plotting.capacity import plot_capacity
 from calliope.analysis.plotting.timeseries import plot_timeseries
 from calliope.analysis.plotting.transmission import plot_transmission
+from calliope.analysis.plotting.util import type_of_script
 
 
 def plot_summary(model, out_file=None, mapbox_access_token=None):
@@ -71,9 +72,8 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
         return html
 
 
-def _plot(data, layout, html_only=False, save_svg=False, **kwargs):
-
-    PLOTLY_KWARGS = dict(
+def _plot(data, layout, html_only=False, to_file=False, **kwargs):
+    plotly_kwargs = dict(
         show_link=False,
         config={
             'displaylogo': False,
@@ -81,21 +81,38 @@ def _plot(data, layout, html_only=False, save_svg=False, **kwargs):
         }
     )
 
-    if save_svg:
+    if type_of_script() == 'jupyter':
+        plotter = pltly.iplot
+        plotly_filename_key = 'filename'
+        pltly.init_notebook_mode(connected=True)
+    else:
+        plotter = pltly.plot
+        plotly_filename_key = 'image_filename'
+        plotly_kwargs['auto_open'] = kwargs.get('auto_open', True)
+
+    if to_file:
+        filename, image_type = to_file.rsplit('.', 1)
+        # Plotly can only save certain file types
+        if image_type not in ['png', 'jpeg', 'svg', 'webp']:
+            raise TypeError(
+                'Unable to save plot as `{}`, choose from '
+                '[`png`, `jpeg`, `svg`, `webp`]'.format(image_type)
+            )
         if 'updatemenus' in layout:
             raise ValueError('Unable to save multiple arrays to SVG, pick one array only')
         else:
-            PLOTLY_KWARGS.update(image='svg')
+            plotly_kwargs.update(image=image_type)
+            plotly_kwargs[plotly_filename_key] = filename
 
     if data:
         if html_only:
             return pltly.plot(
                 {'data': data, 'layout': layout},
                 include_plotlyjs=False, output_type='div',
-                **PLOTLY_KWARGS
+                **plotly_kwargs
             )
         else:
-            pltly.iplot({'data': data, 'layout': layout}, **PLOTLY_KWARGS)
+            plotter({'data': data, 'layout': layout}, **plotly_kwargs)
     else:
         raise ValueError('No data to plot.')
 
@@ -105,10 +122,12 @@ class ModelPlotMethods:
         self._model = model
 
     _docstring_additions = """
-    html_only : bool, optional, default = False
+    html_only : bool, optional; default = False
         Returns a html string for embedding the plot in a webpage
-    save_svg : bool, optional; default = false
-        Will save plot to svg on rendering
+    to_file : False or str, optional; default = False
+        Will save plot to file, with name and extension given in the string.
+        E.g. `save='plot.svg'` to save to svg, `save='plot.png' for static image
+        Allowed extensions are: ['png', 'jpeg', 'svg', 'webp'].
 
     """
 

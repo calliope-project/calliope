@@ -1,6 +1,7 @@
 import os
 import calliope
 import pytest  # pylint: disable=unused-import
+import tempfile
 
 from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import check_error_or_warning
@@ -38,7 +39,7 @@ class TestPlotting:
 
         # Testing that the model can handle not having supply_plus technologies
         model._model_data = model._model_data.drop('resource_con')
-        model.plot.timeseries()
+        model.plot.timeseries(auto_open=False)
 
     def test_milp_plotting(self):
         override = {'model.subset_time': '2005-01-01'}
@@ -176,3 +177,23 @@ class TestPlotting:
 
         # FIXME: sum_dims doesn't seem to work at all
         # model.plot.capacity(html_only=True, sum_dims=['locs'])
+
+    def test_to_file(self, national_scale_example):
+        model = national_scale_example
+
+        # should fail, 'gif' not in allowed extensions
+        with pytest.raises(TypeError):
+            model.plot.capacity(to_file='plot_to_save.gif', auto_open=False)
+
+        # FIXME: currently throws up save dialogue rather than just
+        # saving the file
+
+        #with tempfile.TemporaryDirectory() as tempdir:
+        #    for extension in ['png', 'jpeg', 'svg', 'webp']:
+        #        out_path = os.path.join(tempdir, 'plot_to_save.' + extension)
+        #        model.plot.capacity(array='energy_cap', to_file=out_path, auto_open=False)
+        #        assert os.path.isfile(out_path)
+
+        # should fail, cannot save a plot with multiple DataArrays being plotted
+        with pytest.raises(ValueError):
+            model.plot.capacity(to_file='plot_to_save.svg', auto_open=False)

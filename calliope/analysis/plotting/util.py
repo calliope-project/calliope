@@ -10,6 +10,18 @@ Plotting util functions.
 """
 
 import numpy as np
+from IPython import get_ipython
+
+
+def type_of_script():
+    try:
+        ipy_str = str(type(get_ipython()))
+        if 'zmqshell' in ipy_str:
+            return 'jupyter'
+        if 'terminal' in ipy_str:
+            return 'ipython'
+    except TypeError:
+        return 'terminal'
 
 
 def get_data_layout(
