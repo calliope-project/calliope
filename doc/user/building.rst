@@ -17,7 +17,7 @@ The terminology defined here is used throughout the documentation and the model 
 * **Resource**: a source or sink of energy that can (or must) be used by a technology to introduce into or remove energy from the system
 * **Carrier**: an energy carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
 
-As more generally in constrained optimization, the following terms are also used:
+As more generally in constrained optimisation, the following terms are also used:
 
 * Parameter: a fixed coefficient that enters into model equations
 * Variable: a variable coefficient (decision variable) that enters into model equations

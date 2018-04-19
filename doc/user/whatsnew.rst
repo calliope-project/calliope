@@ -46,11 +46,6 @@ Removed functionality
 
 If you require any of the removed functionality, we recommend you `open an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ for it to be built into a later revision of `0.6`.
 
-Location and technology subsets
-===============================
-
-In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `subset_time`, does still exist.
-
 Technology constraints
 ======================
 
@@ -166,6 +161,15 @@ As in version `0.5`, overrides can be applied when creating a `Model` object, vi
     }
 
     model = calliope.Model('model.yaml', override_dict=higher_costs)
+
+Location and technology subsets
+===============================
+
+In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `subset_time`, does still exist.
+
+To remove specific technologies or locations from a model, the new and much more powerful ``exists`` option can be used.
+
+.. seealso:: :ref:`removing_techs_locations`
 
 Technology definition
 =====================
