@@ -44,7 +44,7 @@ setup(
     install_requires=[
         "click >= 3.3",
         "cufflinks >= 0.12.1",
-        "ipython >= 6.2.1"
+        "ipython >= 6.2.1",
         "jinja2 >= 2.10",
         "natsort >= 5.2",
         "netcdf4 >= 1.2.2",
@@ -54,7 +54,7 @@ setup(
         "plotly >= 2.5",
         "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
-        "scikit-learn >= 0.19.1"
+        "scikit-learn >= 0.19.1",
         "xarray >= 0.10.0, < 0.11",
     ],
     entry_points={
