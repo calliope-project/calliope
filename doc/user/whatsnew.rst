@@ -32,6 +32,14 @@ Functionality which is not converted, has been removed in version 0.6.0, or keys
 
 The script also adds ``interest_rate`` and ``lifetime`` for each technology, using the implicit default values from Calliope 0.5 (25 years lifetime, a 0.10 interest rate for the monetary cost class and 0 for other cost classes).
 
+
+.. seealso::
+
+    .. toctree::
+        :maxdepth: 2
+
+        conversion_0.6.0
+
 ---------------------
 Removed functionality
 ---------------------
@@ -68,7 +76,7 @@ Updated functionality
 Verbosity
 =========
 
-Almost all sets, constraints, costs, and variables have been updated be more verbose, making models more readable. The primary updates are:
+Almost all sets, constraints, costs, and variables have been updated to be more verbose, making models more readable. The primary updates are:
 
 Sets
 ----
@@ -435,8 +443,9 @@ In the process of making these updates, the ``demand_power_peak`` and (undocumen
 ``charge_rate``
 ===============
 
-FIXME
+When first introduced, charge rate was used to hard-link `energy_cap` and `storage_cap` for a storage/supply_plus technology. This meant that on defining ``energy_cap_max`` and ``charge_rate``, a user was implicitly defining ``storage_cap_max``. This hard-link has now been removed, replaced with only one constraint concerning charge rate: :math:`storage_{cap}(loc::tech) \geq energy_{cap}(loc:tech) \times charge\_rate(loc:tech)`.
 
+.. seealso:: :ref:`constraint_capacity`
 
 Pre-processed data
 ==================
@@ -457,19 +466,22 @@ Plotting functions can now be called directly on the model and now use `Plotly <
 
 Changes are:
 
-Old: ``calliope.analysis.plot_capacity(model.solution)``
-New: ``model.plot.capacity(cap_type='energy_cap')``
+* ``calliope.analysis.plot_capacity(model.solution)`` to ``model.plot.capacity()``
 
-Old: ``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')``
-New: ``model.plot.transmission()``
+* ``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')`` to ``model.plot.transmission()``
 
-Old: ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')``
-New: ``model.plot.timeseries(loc=dict(carriers='power'))``
+* ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')`` to ``model.plot.timeseries()``
+
+All available data is plotted, with dropdown menus available for a user to move between plots. A summary of all plotting can also be produced using ``model.plot.summary()``, a function that is also available via the command line interface.
+
+.. seealso:: :ref:`api_model`
 
 Operational mode
 ================
 
 In `0.6`, running in operational mode changes capacities from decision variables to parameters, preventing various issues that plagued operational mode in prior versions. Additional sense checks were added to ensure that functionality incompatible with operational mode, such as time clustering, is not accidentally used together with it.
+
+.. seealso:: :ref:`operational_mode`
 
 -----------------
 New functionality
@@ -503,11 +515,16 @@ Warmstart functionality can be used in solvers other than GLPK. They allow a pre
 
 Although the use of warmstart existed in operational mode in version `0.5`, now it extends to all possible parameters in all models. This functionality is currently undocumented in Calliope, but the Pyomo documentation provides some information and the Pyomo model built by Calliope can be accessed by `model._backend_model`.
 
---------
-Also see
---------
+Backend interface
+=================
 
-.. toctree::
-   :maxdepth: 2
+Once the backend model has been built, it can be accessed by a user, via Calliope. Parameters can be checked and changed, constraints can be activated/deactivated and a model can be re run, all without having to build the backend again. User who are familiar with building large models with Pyomo will be aware of the time penalty associated with processing the model in Pyomo. This additional functionality helps mitigate this, as changing a few parameters need not require complete model rebuild.
 
-   conversion_0.6.0
+.. seealso:: :ref:`api_backend_interface`
+
+Logging
+=======
+
+In an interactive Python session (e.g. using Jupyter notebook), output from Calliope can be triggered at different levels of verbosity. By default on building the model (``calliope.Model()``) and running it (``model.run()``), there is no logging displayed unless it is at least a `WARNING`. For helpful information on where the model is in its pre-processing and running in the solver, verbosity can be increased using ``calliope.set_log_level()``.
+
+.. seealso:: :ref:`api_utility_classes`

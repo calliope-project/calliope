@@ -27,6 +27,8 @@ Energy Balance
 .. automodule:: calliope.backend.pyomo.constraints.energy_balance
     :members:
 
+.. _constraint_capacity:
+
 Capacity
 --------
 

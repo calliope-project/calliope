@@ -3,6 +3,8 @@
 API Documentation
 =================
 
+.. _api_model:
+
 Model class
 ===========
 
@@ -31,13 +33,15 @@ Analyzing models
 .. autoclass:: calliope.analysis.plotting.plotting.ModelPlotMethods
     :members: timeseries, capacity, transmission, summary
 
-.. _backend_interface_api:
+.. _api_backend_interface:
 
 Pyomo backend interface
 =======================
 
 .. autoclass:: calliope.backend.pyomo.interface.BackendInterfaceMethods
     :members: access_model_inputs, update_param, activate_constraint, rerun
+
+.. _api_utility_classes:
 
 Utility classes: AttrDict, Exceptions, Logging
 ==============================================

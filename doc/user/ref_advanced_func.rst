@@ -530,7 +530,7 @@ You can use this interface to:
 
 .. note:: By calling ``model.run(force_rerun=True)`` any updates you have made to the backend will be overwritten.
 
-.. seealso:: :ref:`backend_interface_api`
+.. seealso:: :ref:`api_backend_interface`
 
 .. _debugging_runs_config:
 
