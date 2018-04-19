@@ -461,13 +461,13 @@ This functionality can be used together with the ``calliope generate_runs`` comm
 * the name of the script to create
 * ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, and ``bsub`` creates a submission script for a bsub-based high-performance cluster.
 * ``--override_file``: The file that specifies override groups.
-* ``--groups``: A comma-separated list of override groups to generate scripts for, for example, ``run1,run2``. A semi-colon can be used to group override groups together into a single model -- for example, ``run1;high_costs,run1;low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
+* ``--groups``: A semicolon-separated list of override groups to generate scripts for, for example, ``run1;run2``. A comma is used to group override groups together into a single model -- for example, ``run1,high_costs;run1,low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
 
 A fully-formed command generating a Windows batch script to run a model four times with each of the override groups "run1", "run2", "run3", and "run4":
 
 .. code-block:: shell
 
-    calliope generate_runs model.yaml run_model.bat --kind=windows --override_file=overrides.yaml --groups "run1,run2,run3,run4"
+    calliope generate_runs model.yaml run_model.bat --kind=windows --override_file=overrides.yaml --groups "run1;run2;run3;run4"
 
 Optional arguments are:
 

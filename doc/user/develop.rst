@@ -21,7 +21,7 @@ As when installing a stable version, using ``conda`` is recommended.
 If you only want to track the latest commit, without having a local Calliope
 repository, then just download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ and `latest.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/latest.yml>`_ requirements files and run (assuming both are saved into a directory called requirements)::
 
-    $ conda create -n calliope_latest --file=requirements/base.yml --file=requirements/latest.yml
+    $ conda env create -n calliope_latest --file=requirements/base.yml --file=requirements/latest.yml
 
 This will create a conda environment called ``calliope_latest``.
 

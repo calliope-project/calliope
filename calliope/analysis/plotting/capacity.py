@@ -121,7 +121,7 @@ def _get_var_data(
             data.append(go.Bar(
                 x=x, y=y, visible=visible,
                 name=name,
-                legendgroup=base_tech,
+                legendgroup=tech,
                 text=tech,
                 hoverinfo=hoverinfo,
                 marker=dict(color=model._model_data.colors.loc[{'techs': tech}].item()),
