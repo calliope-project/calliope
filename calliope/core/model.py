@@ -221,3 +221,17 @@ class Model(object):
 
         """
         io.save_csv(self._model_data, path, dropna)
+
+    def info(self):
+        info_strings = []
+        model_name = self._model_data.attrs.get('model.name', 'None')
+        info_strings.append('Model name:   {}'.format(model_name))
+        msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
+            locs=len(self._model_data.coords['locs'].values),
+            techs=(
+                len(self._model_data.coords['techs_non_transmission'].values) +
+                len(self._model_data.coords['techs_transmission_names'].values)
+            ),
+            times=len(self._model_data.coords['timesteps'].values))
+        info_strings.append('Model size:   {}'.format(msize))
+        return '\n'.join(info_strings)

@@ -236,19 +236,10 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
         else:
             raise ValueError('Invalid model format: {}'.format(model_format))
 
-        # FIXME: get this from model._model_data rather than _model_run
-        model_name = model._model_data.attrs.get('model.name', 'None')
-        print('Model name:   {}'.format(model_name))
-        msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
-            locs=len(model._model_data.coords['locs'].values),
-            techs=(
-                len(model._model_data.coords['techs_non_transmission'].values) +
-                len(model._model_data.coords['techs_transmission_names'].values)
-            ),
-            times=len(model._model_data.coords['timesteps'].values))
-        print('Model size:   {}\n'.format(msize))
+        print(model.info() + '\n')
         print('Starting model run...')
         model.run()
+
         termination = model._model_data.attrs.get(
             'termination_condition', 'unknown')
         if save_csv:
