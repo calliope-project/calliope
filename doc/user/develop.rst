@@ -103,7 +103,8 @@ Pre-release
 -----------
 
 * Make sure all unit tests pass
-* Build up-to-date Plotly plots for the documentation with (``make doc-plots`` or ``make.bat doc-plots``)
+* Build up-to-date Plotly plots for the documentation with (``make doc-plots``)
+* Re-run tutorial Jupyter notebooks, found in `doc/_static/notebooks`
 * Make sure documentation builds without errors
 * Make sure the release notes are up-to-date, especially that new features and backward incompatible changes are clearly marked
 
