@@ -22,15 +22,15 @@ from calliope.analysis.plotting.transmission import plot_transmission
 from calliope.analysis.plotting.util import type_of_script
 
 
-def plot_summary(model, out_file=None, mapbox_access_token=None):
+def plot_summary(model, to_file=False, mapbox_access_token=None):
     """
     Plot a summary containing timeseries, installed capacities, and
-    transmission plots. Returns a HTML string if ``out_file`` not
-    given, else None.
+    transmission plots. Returns a HTML string by default, returns None if
+    ``to_file`` given (and saves the HTML string to file).
 
     Parameters
     ----------
-    out_file : str, optional
+    to_file : str, optional
         Path to output file to save HTML to.
     mapbox_access_token : str, optional
         (passed to plot_transmission) If given and a valid Mapbox API
@@ -65,8 +65,8 @@ def plot_summary(model, out_file=None, mapbox_access_token=None):
     # Strip plotly-inserted style="..." attributes
     html = re.sub(r'style=".+?"', '', html)
 
-    if out_file:
-        with open(out_file, 'w') as f:
+    if to_file:
+        with open(to_file, 'w') as f:
             f.write(html)
     else:
         return html
@@ -89,6 +89,7 @@ def _plot(data, layout, html_only=False, to_file=False, **kwargs):
         plotter = pltly.plot
         plotly_filename_key = 'image_filename'
         plotly_kwargs['auto_open'] = kwargs.get('auto_open', True)
+        plotly_kwargs['filename'] = kwargs.get('filename', 'temp_plot.html')
 
     if to_file:
         filename, image_type = to_file.rsplit('.', 1)

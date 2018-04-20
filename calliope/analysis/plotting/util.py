@@ -14,13 +14,13 @@ from IPython import get_ipython
 
 
 def type_of_script():
-    try:
+    if get_ipython() is not None:
         ipy_str = str(type(get_ipython()))
         if 'zmqshell' in ipy_str:
             return 'jupyter'
         if 'terminal' in ipy_str:
             return 'ipython'
-    except TypeError:
+    else:
         return 'terminal'
 
 

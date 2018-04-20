@@ -38,11 +38,14 @@ class TestPlotting:
         model.plot.summary()
 
         # Testing that the model can handle not having supply_plus technologies
+        # Wrapped in temporary directory as we can't stop it saving an HTML file
         model._model_data = model._model_data.drop('resource_con')
-        model.plot.timeseries(auto_open=False)
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'test_plot.html')
+            model.plot.timeseries(auto_open=False, filename=out_path)
 
     def test_milp_plotting(self):
-        override = {'model.subset_time': '2005-01-01'}
+        override = {'model.subset_time': '2005-07-01'}
         model = calliope.examples.milp(override_dict=override)
         model.run()
 
@@ -197,3 +200,9 @@ class TestPlotting:
         # should fail, cannot save a plot with multiple DataArrays being plotted
         with pytest.raises(ValueError):
             model.plot.capacity(to_file='plot_to_save.svg', auto_open=False)
+
+        # test saving summary to file
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'test_summary.html')
+            model.plot.summary(to_file=out_path)
+            assert os.path.isfile(out_path)

@@ -18,8 +18,8 @@ milp:
         # - '[{"type": "bar", "x": [null, null, 382.449614049993, 0.0], "y": ["N1", "X1", "X2", "X3"], "visible": true, "name": "Natural gas boiler", "legendgroup": "conversion", "text": "boiler", "hoverinfo": "x+y+name",'
         - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     timeseries:
-        - '[{"type": "scatter", "x": ["2005-01-01", "2005-01-01 01:00:00",'
-        - '{"type": "bar", "x": ["2005-01-01", "2005-01-01 01:00:00",'
+        - '[{"type": "scatter", "x": ["2005-07-01", "2005-07-01 01:00:00",'
+        - '{"type": "bar", "x": ["2005-07-01", "2005-07-01 01:00:00",'
         - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     transmission:
         - '[{"type": "scatter", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "x": [5, 2, null], "y": [7, 7, null], "showlegend": true, "legendgroup": "heat_pipes", "name": "District heat distribution",'
