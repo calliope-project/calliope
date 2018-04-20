@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.0 (dev)
------------
+0.6.0 (2018-04-20)
+------------------
 
 Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/whatsnew` for a more detailed description of the many changes.
 
