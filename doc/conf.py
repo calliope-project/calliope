@@ -71,7 +71,7 @@ MOCK_MODULES = [
     'sklearn', 'sklearn.metrics',
     'bokeh', 'bokeh.plotting', 'bokeh.models', 'bokeh.core.properties',
     'plotly', 'plotly.offline', 'plotly.graph_objs',
-    'natsort'
+    'natsort', 'IPython'
 ]
 
 for m in MOCK_MODULES:

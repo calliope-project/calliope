@@ -125,9 +125,10 @@ class ModelPlotMethods:
     html_only : bool, optional; default = False
         Returns a html string for embedding the plot in a webpage
     to_file : False or str, optional; default = False
-        Will save plot to file, with name and extension given in the string.
-        E.g. `save='plot.svg'` to save to svg, `save='plot.png' for static image
-        Allowed extensions are: ['png', 'jpeg', 'svg', 'webp'].
+        Will save plot to file with the given name and extension.
+        `to_file='plot.svg'` to save to SVG, `to_file='plot.png'` for
+        a static PNG image.
+        Allowed file extensions are: ['png', 'jpeg', 'svg', 'webp'].
 
     """
 

@@ -162,6 +162,13 @@ As in version `0.5`, overrides can be applied when creating a `Model` object, vi
 
     model = calliope.Model('model.yaml', override_dict=higher_costs)
 
+Parallel runs
+=============
+
+Building on the simplified way to define overrides (see above) and on lessons learnt during the development of Calliope so far, the functionality to generate multiple runs to run either on a single machine or in parallel on a high-performance cluster has been greatly simplified and improved.
+
+.. seealso:: :ref:`generating_scripts`
+
 Location and technology subsets
 ===============================
 
