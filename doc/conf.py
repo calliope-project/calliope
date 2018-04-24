@@ -285,7 +285,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
     ('index', 'Calliope.tex', 'Calliope Documentation',
-     'Stefan Pfenninger', 'manual'),
+     'Calliope contributors', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -315,7 +315,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'calliope', 'Calliope Documentation',
-     ['Stefan Pfenninger'], 1)
+     ['Calliope contributors'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -329,7 +329,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'Calliope', 'Calliope Documentation',
-     'Stefan Pfenninger', 'Calliope', 'One line description of project.',
+     'Calliope contributors', 'Calliope', 'One line description of project.',
      'Miscellaneous'),
 ]
 

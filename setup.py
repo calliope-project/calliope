@@ -7,6 +7,9 @@ from setuptools import setup, find_packages
 # Sets the __version__ variable
 exec(open('calliope/_version.py').read())
 
+with open('README.rst') as f:
+    long_description = f.read()
+
 
 def get_subdirs(path, glob_string):
     return [
@@ -36,6 +39,7 @@ setup(
     author='Calliope contributors listed in AUTHORS',
     author_email='stefan@pfenninger.org',
     description='A multi-scale energy systems (MUSES) modeling framework',
+    long_description=long_description,
     license='Apache 2.0',
     url='https://www.callio.pe/',
     download_url='https://github.com/calliope-project/calliope/releases',
