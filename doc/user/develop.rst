@@ -129,4 +129,6 @@ Post-release
 
 * Update changelog, adding a new vXXXX-dev heading, and update ``_version.py`` accordingly, in preparation for the next master commit
 
+* Update the ``calliope_version`` setting in all example models to match the new version, but without the ``-dev`` string (so ``0.6.0-dev`` is ``0.6.0`` for the example models)
+
 .. Note:: Adding '-dev' to the version string, such as ``__version__ = '0.1.0-dev'``, is required for the custom code in ``doc/conf.py`` to work when building in-development versions of the documentation.
