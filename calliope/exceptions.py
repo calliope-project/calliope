@@ -9,6 +9,7 @@ Exceptions and Warnings.
 
 """
 
+import textwrap
 import warnings
 
 
@@ -70,13 +71,13 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
     if warnings:
         warn(
             'Possible issues found during model processing:\n' +
-            '\n'.join(sorted(list(set(warnings))))
+            textwrap.indent('\n'.join(sorted(list(set(warnings)))), ' * ')
         )
 
     if errors:
         raise ModelError(
             'Errors during model processing:\n' +
-            '\n'.join(sorted(list(set(errors))))
+            textwrap.indent('\n'.join(sorted(list(set(errors)))), ' * ')
         )
 
     return None
