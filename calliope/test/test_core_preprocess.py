@@ -281,6 +281,18 @@ class TestChecks:
             excinfo, 'Unrecognised setting in run configuration: subset_time'
         )
 
+        override5 = {'run.objective': 'minmax_cost_optimization',
+                    'run.objective_options': {'cost_class': 'monetary',
+                                              'sense': 'minimize',
+                                              'unused_option': 'some_value'}}
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override5, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
+        )
+
     def test_model_version_mismatch(self):
         """
         Model config says model.calliope_version = 0.1, which is not what we
@@ -730,22 +742,6 @@ class TestChecks:
             "Updated from coordinate system"
         )
 
-    def test_unused_objective_config(self):
-        """
-        Check that a warning is returned when objective options are set but
-        not used
-        """
-        override = {'run.objective': 'minmax_cost_optimization',
-                    'run.objective_options': {'cost_class': 'monetary',
-                                              'sense': 'minimize',
-                                              'unused_option': 'some_value'}}
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override, override_groups='simple_supply')
-
-        assert check_error_or_warning(
-            excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
-        )
 
 class TestDataset:
 
