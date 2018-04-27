@@ -102,3 +102,32 @@ group_share_cold_fusion_cap:
                 ccgt:
                     constraints:
                         energy_cap_max: 100000  # Increased to keep model feasible
+
+minimize_emissions_costs:
+    run:
+        objective_options:
+            cost_class: emissions
+    techs:
+        ccgt:
+            costs:
+                emissions:
+                    om_prod: 100 # kgCO2/kWh
+        csp:
+            costs:
+                emissions:
+                    om_prod: 10 # kgCO2/kWh
+
+maximize_utility_costs:
+    run:
+        objective_options:
+            cost_class: utility
+            sense: maximize
+    techs:
+        ccgt:
+              costs:
+                  utility:
+                      om_prod: 10 # arbitrary utility value
+        csp:
+              costs:
+                  utility:
+                      om_prod: 100 # arbitrary utility value

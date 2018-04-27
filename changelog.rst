@@ -6,6 +6,8 @@ Release History
 0.6.1-dev
 ---------
 
+|changed| Cost class and sense (maximize/minimize) for objective function may now be specified in run configuration (default remains monetary cost minimization)
+
 0.6.0 (2018-04-20)
 ------------------
 

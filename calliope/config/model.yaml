@@ -19,7 +19,8 @@ run:
         window: null
         horizon: null
         use_cap_results: false
-    objective: 'cost_minimization'  # Objective function to use. As of v0.6.0, this has no effect.
+    objective:  minmax_cost_optimization # Name of internal objective function to use, currently only min/max cost-based optimisation is available
+    objective_options: {'cost_class': 'monetary', 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
 
