@@ -49,7 +49,8 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
             ) + unmet_demand
         )
 
-    backend_model.obj = po.Objective(sense=load_function('pyomo.core.'+sense), rule=obj_rule)
+    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + sense),
+                                     rule=obj_rule)
     backend_model.obj.domain = po.Reals
 
 

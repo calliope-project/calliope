@@ -224,7 +224,7 @@ def check_initial(config_model):
         if arg not in objective_args_expected:
             warnings.append(
                 'Objective function argument `{}` given but not used by objective function `{}`'
-                .format(arg,config_model.run.objective)
+                .format(arg, config_model.run.objective)
             )
 
     return warnings, errors
