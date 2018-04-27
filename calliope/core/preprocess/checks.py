@@ -15,12 +15,15 @@ import logging
 import numpy as np
 import xarray as xr
 
+from inspect import signature
+
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
 from calliope.core.preprocess.util import get_all_carriers
 from calliope.core.util.logging import logger
+from calliope.core.util.tools import load_function
 
 _defaults_files = {
     k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
@@ -203,6 +206,25 @@ def check_initial(config_model):
                     'Cannot load `{}` from file for configuration {}'
                     .format(constraint_name, k)
                 )
+
+    # Check the objective function being used has all the appropriate
+    # options set in objective_options, and that no options are unused
+    objective_function = 'calliope.backend.pyomo.objective.' + config_model.run.objective
+    objective_args_expected = list(signature(load_function(objective_function)).parameters.keys())
+    objective_args_expected = [arg for arg in objective_args_expected
+                               if arg not in ['backend_model', 'kwargs']]
+    for arg in objective_args_expected:
+        if arg not in config_model.run.objective_options:
+            errors.append(
+                'Objective function argument `{}` not found in run.objective_options'
+                .format(arg)
+            )
+    for arg in config_model.run.objective_options:
+        if arg not in objective_args_expected:
+            warnings.append(
+                'Objective function argument `{}` given but not used by objective function `{}`'
+                .format(arg, config_model.run.objective)
+            )
 
     return warnings, errors
 

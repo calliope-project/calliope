@@ -128,7 +128,7 @@ The ``constraints`` section gives all constraints for the technology, such as al
 
 The ``costs`` section gives costs for the technology. Calliope uses the concept of "cost classes" to allow accounting for more than just monetary costs. The above example specifies only the ``monetary`` cost class, but any number of other classes could be used, for example ``co2`` to account for emissions.
 
-Only the ``monetary`` cost class is entered into the default objective function. Additional cost classes can be created simply by adding them to the definition of costs for a technology.
+By default the ``monetary`` cost class is used in the objective function, which seeks to minimize total costs. Additional cost classes can be created simply by adding them to the definition of costs for a technology. To use an alternative cost class and/or sense (minimize/maximize) in the objective function, the ``objective_options`` parameter can be set in the run configuration, e.g. ``objective_options: {'cost_class': 'emissions', 'sense': 'minimize'}``.
 
 .. seealso::
 

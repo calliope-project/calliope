@@ -137,9 +137,18 @@ def generate_model(model_data):
     #         self.add_constraint(load_function(c))
 
     # Objective function
-    objective_name = model_data.attrs['run.objective']
-    objective_function = 'calliope.backend.pyomo.objective.' + objective_name
-    load_function(objective_function)(backend_model)
+    # FIXME re-enable loading custom objectives
+
+    # fetch objective function by name, pass through objective options
+    # if they are present
+    objective_function = ('calliope.backend.pyomo.objective.' +
+                          model_data.attrs['run.objective'])
+    objective_args = dict([(k.split('.')[-1], v)
+                          for k, v in model_data.attrs.items()
+                          if (k.startswith('run.objective_options'))
+                           ])
+    load_function(objective_function)(backend_model, **objective_args)
+
 
     # delattr(backend_model, '__calliope_model_data__')
 
