@@ -270,7 +270,7 @@ def _get_var_layout(var, dataset):
 
 
 def plot_timeseries(
-        model, array='all', timesteps_zoom=None,
+        model, array='all', timesteps_zoom=None, rangeslider=False,
         subset={}, sum_dims='locs',
         squeeze=True, **kwargs):
     """
@@ -289,6 +289,9 @@ def plot_timeseries(
     timesteps_zoom : int, optional
         Number of timesteps to show initially on the x-axis (if not
         given, the full time range is shown by default).
+    rangeslider : bool, optional
+        If True, displays a range slider underneath the plot for navigating
+        (helpful primarily in interactive use).
     subset : dict, optional
         Dictionary by which data is subset (uses xarray `loc` indexing). Keys
         any of ['timeseries', 'locs', 'techs', 'carriers', 'costs'].
@@ -343,10 +346,7 @@ def plot_timeseries(
         subset, sum_dims, squeeze,
     )
 
-    # If there are multiple vars to plot, use dropdowns via 'updatemenus'
-    if len(relevant_vars) == 1:
-        # If there is one var, rangeslider can be added without the ensuing plot
-        # running too slowly
+    if rangeslider:
         layout['xaxis']['rangeslider'] = {}
 
     if timesteps_zoom:

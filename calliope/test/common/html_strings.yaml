@@ -28,4 +28,4 @@ milp:
 
 clustering:
     timeseries:
-        - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters", "rangeslider": {}}'
+        - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters"}'

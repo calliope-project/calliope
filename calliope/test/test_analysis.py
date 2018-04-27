@@ -42,7 +42,9 @@ class TestPlotting:
         model._model_data = model._model_data.drop('resource_con')
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, 'test_plot.html')
-            model.plot.timeseries(auto_open=False, filename=out_path)
+            model.plot.timeseries(
+                plotly_kwarg_updates={'auto_open': False, 'filename': out_path}
+            )
 
     def test_milp_plotting(self):
         override = {'model.subset_time': '2005-07-01'}
@@ -186,7 +188,9 @@ class TestPlotting:
 
         # should fail, 'gif' not in allowed extensions
         with pytest.raises(TypeError):
-            model.plot.capacity(to_file='plot_to_save.gif', auto_open=False)
+            model.plot.capacity(
+                to_file='plot_to_save.gif',
+                plotly_kwarg_updates={'auto_open': False})
 
         # FIXME: currently throws up save dialogue rather than just
         # saving the file
@@ -199,7 +203,9 @@ class TestPlotting:
 
         # should fail, cannot save a plot with multiple DataArrays being plotted
         with pytest.raises(ValueError):
-            model.plot.capacity(to_file='plot_to_save.svg', auto_open=False)
+            model.plot.capacity(
+                to_file='plot_to_save.svg',
+                plotly_kwarg_updates={'auto_open': False})
 
         # test saving summary to file
         with tempfile.TemporaryDirectory() as tempdir:
