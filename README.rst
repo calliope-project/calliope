@@ -45,7 +45,16 @@ Documentation is available on Read the Docs:
 Contributing
 ------------
 
-Calliope is developed in the open and contributions are very welcome. See our `contribution guidelines <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_, `code of conduct <https://github.com/calliope-project/calliope/blob/master/CODE_OF_CONDUCT.md>`_, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+To contribute changes:
+
+1. Fork the project on GitHub
+2. Create a feature branch to work on in your fork (``git checkout -b new-feature``)
+3. Add your name to the AUTHORS file
+4. Commit your changes to the feature branch
+5. Push the branch to GitHub (``git push origin my-new-feature``)
+6. On GitHub, create a new pull request from the feature branch
+
+See our `contribution guidelines <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_ for more information -- and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
 
 What's new
 ----------
