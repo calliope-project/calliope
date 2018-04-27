@@ -537,7 +537,11 @@ You can use this interface to:
 Debugging failing runs
 ----------------------
 
-Several settings can aid in debugging failing models:
+A Calliope model provides a method to save a fully built and commented model to a single YAML file with ``Model.save_commented_model_yaml(path)``. Comments in the resulting YAML file indicate where values were overridden.
+
+Because this is Calliope's internal representation of a model directly before the ``model_data`` ``xarray.Dataset`` is built, it can be useful for debugging possible issues in the model formulation, for example, undesired constraints that exist at specific locations because they were specified model-wide without having been superseded by location-specific settings.
+
+Two configuration settings can further aid in debugging failing models:
 
 ``model.subset_time`` allows specifying a subset of timesteps to be used. This can be useful for debugging purposes as it can dramatically speed up model solution times. The timestep subset can be specified as ``[startdate, enddate]``, e.g. ``['2005-01-01', '2005-01-31']``, or as a single time period, such as ``2005-01`` to select January only. The subsets are processed before building the model and applying time resolution adjustments, so time resolution reduction functions will only see the reduced set of data.
 

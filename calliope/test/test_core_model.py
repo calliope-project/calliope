@@ -6,10 +6,10 @@ import tempfile
 import calliope
 
 
-class TestDebug:
-    def test_save_debug(self):
+class TestModel:
+    def test_save_commented_model_yaml(self):
         model = calliope.examples.national_scale()
         with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, 'debug.yaml')
-            model.save_debug_data(out_path)
+            out_path = os.path.join(tempdir, 'model_debug.yaml')
+            model.save_commented_model_yaml(out_path)
             assert os.path.isfile(out_path)

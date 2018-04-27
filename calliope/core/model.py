@@ -10,9 +10,10 @@ Implements the core Model class.
 """
 
 import numpy as np
+import ruamel.yaml as ruamel_yaml
 
 from calliope.analysis import plotting, postprocess
-from calliope.core import debug, io
+from calliope.core import io
 from calliope.core.preprocess import \
     model_run_from_yaml, \
     model_run_from_dict, \
@@ -21,6 +22,7 @@ from calliope.core.preprocess import \
     final_timedimension_processing
 from calliope.core.util.logging import log_time
 from calliope.core.util.dataset import split_loc_techs
+from calliope.core.util.tools import apply_to_dict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
 
@@ -124,13 +126,43 @@ class Model(object):
             time_since_start=True
         )
 
-    def save_debug_data(self, path):
+    def save_commented_model_yaml(self, path):
         """
-        Save fully built and commented model_run to a YAML file at the
-        given path, for debug purposes.
+        Save a fully built and commented version of the model to a YAML file
+        at the given ``path``. Comments in the file indicate where values
+        were overridden. This is Calliope's internal representation of
+        a model directly before the model_data xarray.Dataset is built,
+        and can be useful for debugging possible issues in the model
+        formulation.
 
         """
-        debug.save_debug_data(self._model_run, self._debug_data, path)
+        # README: currently based on ruamel.yaml 0.15 which is a mix of old
+        # and new API - possibly needs a bit of rewriting once ruamel.yaml
+        # has progressed a bit further
+        yaml = ruamel_yaml.YAML()
+
+        model_run_debug = self._model_run.copy()
+        del model_run_debug['timeseries_data']  # Can't be serialised!
+
+        # Turn sets in model_run into lists for YAML serialization
+        for k, v in model_run_debug.sets.items():
+            model_run_debug.sets[k] = list(v)
+
+        debug_comments = self._debug_data['comments']
+        debug_yaml = yaml.load(yaml.dump(model_run_debug.as_dict()))
+        for k in debug_comments.model_run.keys_nested():
+            v = debug_comments.model_run.get_key(k)
+            keys = k.split('.')
+            apply_to_dict(debug_yaml, keys[:-1], 'yaml_add_eol_comment', (v, keys[-1]))
+
+        dumper = ruamel_yaml.dumper.RoundTripDumper
+        dumper.ignore_aliases = lambda self, data: True
+
+        with open(path, 'w') as f:
+            ruamel_yaml.dump(
+                debug_yaml, f,
+                Dumper=dumper, default_flow_style=False
+            )
 
     def run(self, force_rerun=False, **kwargs):
         """

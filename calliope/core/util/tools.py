@@ -7,8 +7,17 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 from copy import deepcopy
 import functools
 import importlib
+import operator
 import os
 import sys
+
+
+def get_from_dict(data_dict, map_list):
+    return functools.reduce(operator.getitem, map_list, data_dict)
+
+
+def apply_to_dict(data_dict, map_list, func, args):
+    getattr(get_from_dict(data_dict, map_list[:-1])[map_list[-1]], func)(*args)
 
 
 memoize = functools.lru_cache(maxsize=2048)
