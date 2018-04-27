@@ -282,9 +282,9 @@ class TestChecks:
         )
 
         override5 = {'run.objective': 'minmax_cost_optimization',
-                    'run.objective_options': {'cost_class': 'monetary',
-                                              'sense': 'minimize',
-                                              'unused_option': 'some_value'}}
+                     'run.objective_options': {'cost_class': 'monetary',
+                                               'sense': 'minimize',
+                                               'unused_option': 'user_value'}}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override5, override_groups='simple_supply')
