@@ -28,7 +28,7 @@ def read_netcdf(path):
         if not str(calliope_version) in __version__:
             exceptions.warn(
                 'This model data was created with Calliope version {}, '
-                'but you are running {}. Proceed with caution!'
+                'but you are running {}. Proceed with caution!'.format(calliope_version, __version__)
             )
 
     # FIXME some checks for consistency
