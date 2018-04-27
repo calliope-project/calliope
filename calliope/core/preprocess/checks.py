@@ -209,11 +209,10 @@ def check_initial(config_model):
 
     # Check the objective function being used has all the appropriate
     # options set in objective_options, and that no options are unused
-    objective_function = 'calliope.backend.pyomo.objective.' + \
-                        config_model.run.objective
+    objective_function = 'calliope.backend.pyomo.objective.' + config_model.run.objective
     objective_args_expected = list(signature(load_function(objective_function)).parameters.keys())
     objective_args_expected = [arg for arg in objective_args_expected
-                                if arg not in ['backend_model','kwargs']]
+                               if arg not in ['backend_model', 'kwargs']]
     for arg in objective_args_expected:
         if arg not in config_model.run.objective_options:
             errors.append(
