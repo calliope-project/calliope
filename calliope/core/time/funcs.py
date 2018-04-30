@@ -184,11 +184,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
 
         # Check there weren't instances of more than one cluster assigned to a day
         # or days with no information assigned
-        if any([len(i)==0 for i in clusters.values]):
+        if any([len(i) == 0 for i in clusters.values]):
             raise exceptions.ModelError(
                 'Missing cluster days in `{}:{}`.'.format(file, column)
             )
-        elif any([len(i)>1 for i in clusters.values]):
+        elif any([len(i) > 1 for i in clusters.values]):
             raise exceptions.ModelError(
                 'More than one cluster value assigned to a day in `{}:{}`. '
                 'Unique clusters per day: {}'.format(file, column, clusters)
