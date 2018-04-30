@@ -1,0 +1,28 @@
+{
+  "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+    {
+      "@id": "https://orcid.org/0000-0002-8420-9498",
+      "@type": "Person",
+      "name": "Stefan Pfenninger",
+      "affiliation": "ETH Zürich"
+    },
+    {
+      "@id": "https://orcid.org/0000-0003-4044-6587",
+      "@type": "Person",
+      "name": "Bryn Pickering",
+      "affiliation": "University of Cambridge"
+    }
+  ],
+  "identifier": "https://doi.org/10.5281/zenodo.593292",
+  "codeRepository": "https://github.com/calliope-project/calliope",
+  "datePublished": "2018-04-30",
+  "dateModified": "2018-04-30",
+  "dateCreated": "2018-04-30",
+  "description": "A multi-scale energy systems modeling framework",
+  "keywords": "python, energy, optimisation, energy-system",
+  "license": "Apache 2.0",
+  "title": "Calliope",
+  "version": "0.6.0"
+}
