@@ -6,6 +6,8 @@ Release History
 0.6.1-dev
 ---------
 
+|new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
+
 |changed| Cost class and sense (maximize/minimize) for objective function may now be specified in run configuration (default remains monetary cost minimization)
 
 0.6.0 (2018-04-20)

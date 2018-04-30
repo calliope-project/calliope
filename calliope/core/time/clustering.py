@@ -121,7 +121,7 @@ def get_mean_from_clusters(data, clusters, timesteps_per_day):
         '{}-{}'.format(cid, t) for cid in cluster_map for t in range(timesteps_per_day)
     ]
     for var in data.data_vars:
-        clustered_array = data[var][:, :len(t_coords)].copy()
+        clustered_array = data[var].loc[{'timesteps': data.timesteps[:len(t_coords)]}].copy()
         clustered_array['timesteps'] = t_coords
         for cluster_id, cluster_members in cluster_map.items():
             current_cluster = [

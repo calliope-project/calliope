@@ -88,8 +88,11 @@ def apply_time_clustering(model_data, model_run):
     ##
     if 'function' in time_config:
         func = plugin_load(
-            time_config.function, builtin_module='calliope.core.time.funcs')
+            time_config.function, builtin_module='calliope.core.time.funcs'
+        )
         func_kwargs = time_config.get('function_options', {})
+        if 'file=' in func_kwargs.get('clustering_func', ''):
+            func_kwargs.update({'model_run': model_run})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
 
     return data

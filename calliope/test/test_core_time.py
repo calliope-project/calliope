@@ -186,6 +186,81 @@ class TestClustering:
             ]
         )
 
+    def test_predefined_clusters(self):
+        override = {
+            'model.subset_time':['2005-01-01','2005-01-04'],
+            'model.time': {
+                'function':'apply_clustering',
+                'function_options': {
+                    'clustering_func': 'file=clusters.csv:0', 'how': 'mean'
+                }
+            }
+        }
+
+        model = build_test_model(override, override_groups='simple_supply')
+
+        assert np.array_equal(model.inputs.clusters.to_pandas().unique(), [0, 1, 2])
+
+        override2 = {**override, **{
+            'model.time.function_options.clustering_func': 'file=cluster_days.csv:1'
+        }}
+
+        model = build_test_model(override2, override_groups='simple_supply')
+
+        assert np.array_equal(model.inputs.clusters.to_pandas().unique(), [0, 1, 2])
+
+    def test_predefined_clusters_fail(self):
+        override = {
+            'model.subset_time':['2005-01-01','2005-01-04'],
+            'model.time': {
+                'function':'apply_clustering',
+                'function_options': {
+                    'clustering_func': 'file=clusters.csv:0', 'how': 'mean'
+                }
+            }
+        }
+        # should fail - no CSV data column defined
+        override1 = {**override, **{
+            'model.time.function_options.clustering_func': 'file=clusters.csv'
+        }}
+        with pytest.raises(exceptions.ModelError) as error:
+            model = build_test_model(override1, override_groups='simple_supply')
+
+        assert check_error_or_warning(error, 'No time clustering column given')
+
+        # should fail - unknown CSV data column defined
+        override2 = {**override, **{
+            'model.time.function_options.clustering_func': 'file=clusters.csv:1'
+        }}
+
+        with pytest.raises(KeyError) as error:
+            model = build_test_model(override2, override_groups='simple_supply')
+
+        assert check_error_or_warning(error, 'time clustering column 1 not found')
+
+        # should fail - more than one cluster given to any one day
+        override3 = {**override, **{
+            'model.time.function_options.clustering_func': 'file=clusters.csv:b'
+        }}
+
+        with pytest.raises(exceptions.ModelError) as error:
+            model = build_test_model(override3, override_groups='simple_supply')
+
+        assert check_error_or_warning(
+            error, 'More than one cluster value assigned to a day in `clusters.csv:b`'
+        )
+
+        # should fail - not enough data in clusters.csv to cover subset_time
+        override4 = {**override, **{
+            'model.subset_time':['2005-01-01','2005-01-06'],
+            'model.time.function_options.clustering_func': 'file=cluster_days.csv:1'
+        }}
+
+        with pytest.raises(exceptions.ModelError) as error:
+            model = build_test_model(override4, override_groups='simple_supply')
+
+        assert check_error_or_warning(error, 'Missing cluster days')
+
 
 class TestMasks:
     @pytest.fixture

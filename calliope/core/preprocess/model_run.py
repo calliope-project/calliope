@@ -345,13 +345,20 @@ def process_timeseries_data(config_model, model_run):
         dtformat = config_model.model['timeseries_dateformat']
 
         # Generate the set of all files we want to read from file
-        flattened_config = model_run.locations.as_dict_flat()
-        csv_files = set([
-            v.split('=')[1].rsplit(':', 1)[0]
-            for v in flattened_config.values() if 'file=' in str(v)
-        ])
+        location_config = model_run.locations.as_dict_flat()
+        model_config = config_model.model.as_dict_flat()
 
-        for file in csv_files:
+        get_filenames = lambda config: set([
+            v.split('=')[1].rsplit(':', 1)[0]
+            for v in config.values() if 'file=' in str(v)
+        ])
+        constraint_filenames = get_filenames(location_config)
+        cluster_filenames = get_filenames(model_config)
+
+        datetime_min = []
+        datetime_max = []
+
+        for file in constraint_filenames | cluster_filenames:
             file_path = os.path.join(config_model.model.timeseries_data_path, file)
             # load the data, without parsing the dates, to catch errors in the data
             df = pd.read_csv(file_path, index_col=0)
@@ -372,7 +379,8 @@ def process_timeseries_data(config_model, model_run):
                 )
             timeseries_data[file] = df
 
-        datetime_range = df.index
+            datetime_min.append(df.index[0].date())
+            datetime_max.append(df.index[-1].date())
 
     # Apply time subsetting, if supplied in model_run
     subset_time_config = config_model.model.subset_time
@@ -391,14 +399,14 @@ def process_timeseries_data(config_model, model_run):
             time_slice = slice(subset_time_config[0], subset_time_config[1])
 
             # Don't allow slicing outside the range of input data
-            if (subset_time[0].date() < datetime_range[0].date() or
-                subset_time[1].date() > datetime_range[-1].date()):
+            if (subset_time[0].date() < max(datetime_min) or
+                    subset_time[1].date() > min(datetime_max)):
 
                 raise exceptions.ModelError(
                     'subset time range {} is outside the input data time range '
                     '[{}, {}]'.format(subset_time_config,
-                                      datetime_range[0].strftime('%Y-%m-%d'),
-                                      datetime_range[-1].strftime('%Y-%m-%d'))
+                                      max(datetime_min).strftime('%Y-%m-%d'),
+                                      min(datetime_max).strftime('%Y-%m-%d'))
                 )
         elif isinstance(subset_time_config, list):
             raise exceptions.ModelError(
@@ -416,7 +424,10 @@ def process_timeseries_data(config_model, model_run):
                 )
 
     # Ensure all timeseries have the same index
-    indices = [(file, df.index) for file, df in timeseries_data.items()]
+    indices = [
+        (file, df.index) for file, df in timeseries_data.items()
+        if file not in cluster_filenames
+    ]
     first_file, first_index = indices[0]
     for file, idx in indices[1:]:
         if not first_index.equals(idx):
@@ -425,7 +436,7 @@ def process_timeseries_data(config_model, model_run):
                 'between {} and {}'.format(first_file, file)
             )
 
-    return timeseries_data
+    return timeseries_data, first_index
 
 
 def generate_model_run(config, debug_comments):
@@ -463,7 +474,9 @@ def generate_model_run(config, debug_comments):
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
-    model_run['timeseries_data'] = process_timeseries_data(config, model_run)
+    model_run['timeseries_data'], model_run['timesteps'] = (
+        process_timeseries_data(config, model_run)
+    )
 
     # 6) Grab additional relevant bits from run and model config
     model_run['run'] = config['run']
