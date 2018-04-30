@@ -9,6 +9,9 @@ Some of the resources to look at if you're interested in contributing:
 * Look at [open issues tagged with "help wanted"](https://github.com/calliope-project/calliope/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and ["good first issue"](https://github.com/calliope-project/calliope/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 * Look at the [development guide in our documentation](http://calliope.readthedocs.io/en/latest/user/develop.html)
 
+## Licensing
+
+By contributing to Calliope, e.g. through opening a pull request or submitting a patch, you represent that your contributions are your own original work and that you have the right to license them, and you agree that your contributions are licensed under the Apache 2.0 license.
 
 ## Submitting bug reports
 
@@ -68,7 +71,7 @@ Start reading our code and you'll get the hang of it.
 
 We mostly follow the official [Style Guide for Python Code (PEP8)](https://www.python.org/dev/peps/pep-0008/).
 
-We prefer line lenghts below 80 characters, but do not enforce this militantly. Readability of code is more important than strict adherence to this line length.
+We prefer line lengths below 80 characters, but do not enforce this militantly. Readability of code is more important than strict adherence to this line length.
 
 This is open source software. Consider the people who will read your code, and make it look nice for them. It's sort of like driving a car: Perhaps you love doing donuts when you're alone, but with passengers the goal is to make the ride as smooth as possible.
 
