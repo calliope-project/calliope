@@ -1520,18 +1520,26 @@ class TestConstraints:
         assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
         assert hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
 
-    # clustering constraints
-    def test_cluster_storage_constraints(self):
+
+# clustering constraints
+class TestClusteringConstraints:
+
+    def cluster_model(self, last_day='2005-01-04', how='mean', storage_inter_cluster=True):
         override = {
-            'model.subset_time': ['2005-01-01', '2005-01-04'],
+            'model.subset_time': ['2005-01-01', last_day],
             'model.time': {
                 'function': 'apply_clustering',
                 'function_options': {
-                    'clustering_func': 'file=cluster_days.csv:0', 'how': 'closest'
+                    'clustering_func': 'file=cluster_days.csv:0', 'how': how,
+                    'storage_inter_cluster': storage_inter_cluster
                 }
             }
         }
-        m = build_model(override, 'simple_storage')
+        return build_model(override, 'simple_storage,investment_costs')
+
+    def test_cluster_storage_constraints(self):
+        m = self.cluster_model()
+        m.run(build_only=True)
 
         decision_variables = [
             'storage_inter_cluster',
@@ -1541,7 +1549,7 @@ class TestConstraints:
             assert hasattr(m._backend_model, variable)
 
         constraints = [
-            'storage_inter_cluster', 'balance_inter_cluster_storage_constraint',
+            'balance_inter_cluster_storage_constraint',
             'balance_initial_cluster_storage_constraint',
             'storage_intra_max_constraint', 'storage_intra_min_constraint',
             'storage_inter_max_constraint', 'storage_inter_min_constraint'
@@ -1552,17 +1560,8 @@ class TestConstraints:
         assert not hasattr(m._backend_model, 'storage_max_constraint')
 
     def test_no_cluster_storage_constraints(self):
-        override = {
-            'model.subset_time': ['2005-01-01', '2005-01-04'],
-            'model.time': {
-                'function': 'apply_clustering',
-                'function_options': {
-                    'clustering_func': 'file=cluster_days.csv:0',
-                    'how': 'closest', 'storage_inter_cluster': False
-                }
-            }
-        }
-        m = build_model(override, 'simple_storage')
+        m = self.cluster_model(storage_inter_cluster=False)
+        m.run(build_only=True)
 
         decision_variables = [
             'storage_inter_cluster',

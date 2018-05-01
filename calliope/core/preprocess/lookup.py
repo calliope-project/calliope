@@ -233,6 +233,7 @@ def lookup_clusters(dataset):
     1. the first timestep of the cluster,
     2. the cluster corresponding to a date in the original timeseries
     """
+
     data_dict1 = dict(dims=['timesteps'], data=[])
     for timestep in dataset.timesteps:
         t = pd.to_datetime(timestep.item()).date().strftime('%Y-%m-%d')
