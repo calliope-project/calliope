@@ -180,10 +180,18 @@ class Model(object):
         """
         debug.save_debug_data(self._model_run, self._debug_data, path)
 
-    def run(self, force_rerun=False, **kwargs):
+    def run(self, force_rerun=False, scenario=None, **kwargs):
         """
-        Run the model. If ``force_rerun`` is True, any existing results
-        will be overwritten.
+        Run the model.
+
+        Parameters
+        ----------
+        force_rerun : bool, default = False
+            If True, any existing results will be overwritten
+        scenario : str, int, or None, default = None
+            If not None and model._model_data has a scenario dimension,
+            the model will be sliced on that scenario before being sent to the
+            backend. ``scenario`` must match an entry in the scenario dimension.
 
         Additional kwargs are passed to the backend.
 
@@ -203,8 +211,21 @@ class Model(object):
                 'there exist non-uniform timesteps (e.g. from time masking)'
             )
 
+        if scenario is not None:
+            if 'scenarios' not in self._model_data.dims:
+                raise exceptions.ModelError(
+                    'Unable to slice on scenario {} as the model data does not '
+                    'have a scenario dimension'
+                )
+            elif scenario not in self._model_data.scenarios.values:
+                raise KeyError('Scenario {} not in model_data scenarios dimension')
+            else:
+                model_data = self._model_data.loc[{'scenarios': scenario}]
+        else:
+            model_data = self._model_data
+
         results, self._backend_model, interface = run_backend(
-            self._model_data, self._timings, **kwargs
+            model_data, self._timings, **kwargs
         )
 
         # Add additional post-processed result variables to results

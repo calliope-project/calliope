@@ -24,20 +24,18 @@ def get_param(backend_model, var, dims):
     dims : single value or tuple
 
     """
+
     try:
         return getattr(backend_model, var)[dims]
     except AttributeError:  # i.e. parameter doesn't exist at all
         logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
         return backend_model.__calliope_defaults__[var]
-    except KeyError:  # try removing timestep
+    except KeyError:  # try removing redundant dimensions
+        # Get the discrepency between number of queried dims and number of available dims
+        dim_dict = backend_model.__calliope_model_data__['dims']
+        dim_length_diff = len(dims) - len(dim_dict[var])
         try:
-            if len(dims) > 2:
-                if backend_model.mode == 'robust_plan': # need to remove 'scenario' dim too
-                    return getattr(backend_model, var)[dims[:-2]]
-                else:
-                    return getattr(backend_model, var)[dims[:-1]]
-            else:
-                return getattr(backend_model, var)[dims[0]]
+            return getattr(backend_model, var)[dims[:-dim_length_diff]]
         except KeyError:  # Static default value
             logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
             return backend_model.__calliope_defaults__[var]
