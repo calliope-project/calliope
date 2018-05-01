@@ -104,7 +104,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         array_con = _get_reindexed_array('carrier_con', index=['locs', 'techs', 'carriers'], fillna=0)
         if 'resource_con' in dataset.data_vars:
             resource_con = _get_reindexed_array('resource_con', fillna=0)
-        else: resource_con = 0
+        else:
+            resource_con = 0
 
     # carrier flow is a combination of carrier_prod, carrier_con and
     # carrier_export for a given energy carrier

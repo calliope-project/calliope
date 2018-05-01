@@ -160,7 +160,8 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
         file = clustering_func.split('=')[1]
         if ':' in file:
             file, column = file.rsplit(':', 1)
-        else: column = None
+        else:
+            column = None
 
         df = model_run.timeseries_data[file]
         if isinstance(df, pd.Series) and column is not None:

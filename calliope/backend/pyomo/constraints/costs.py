@@ -133,7 +133,8 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
             _cost = (getattr(backend_model, capacity_decision_variable)[loc_tech] *
                 get_param(backend_model, 'cost_' + capacity_decision_variable, (cost, loc_tech)))
             return _cost
-        else: return 0
+        else:
+            return 0
 
     cost_energy_cap = (backend_model.energy_cap[loc_tech]
         * get_param(backend_model, 'cost_energy_cap', (cost, loc_tech)))
