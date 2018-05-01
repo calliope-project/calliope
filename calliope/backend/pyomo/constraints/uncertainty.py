@@ -5,8 +5,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 uncertainty.py
 ~~~~~~~~~
 
-Constraints specific to robust optimisation, which deals with uncertainty between
-porbabilistic scenarios.
+Constraints to handle uncertainty, currently specific to probabilistic scenarios
 
 """
 import pyomo.core as po

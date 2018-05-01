@@ -34,7 +34,7 @@ def generate_model(model_data):
 
     """
     backend_model = po.ConcreteModel()
-    mode = model_data.attrs['run.mode']  # 'plan' or 'operate'
+    mode = model_data.attrs['run.mode']  # 'robust_plan', 'plan', or 'operate'
     backend_model.mode = mode
 
     # Sets
@@ -116,7 +116,7 @@ def generate_model(model_data):
 
     if mode == 'robust_plan':
         load_function(
-            'calliope.backend.pyomo.variables.initialize_robust_decision_variables'
+            'calliope.backend.pyomo.variables.initialize_cvar_decision_variables'
         )(backend_model)
 
     # Constraints

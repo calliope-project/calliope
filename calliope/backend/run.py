@@ -371,8 +371,8 @@ def run_robust_plan(model_data, timings, backend, build_only, backend_rerun=Fals
 
     if 'probability' not in model_data.data_vars.keys() or model_data.probability.sum() != 1:
         raise exceptions.ModelError(
-            'Cannot run a robust model if probabilities not defined, or sum of '
-            'probabilities is not 1.'
+            'Cannot run a scenario-based robust model if probabilities not '
+            'defined, or sum of probabilities is not 1.'
         )
 
     # All timeseries data needs a scenario dimension, even if there is no
@@ -388,12 +388,12 @@ def run_robust_plan(model_data, timings, backend, build_only, backend_rerun=Fals
 
     # FIXME: Currently hardcoded to use 'robust_optimal_cost_minimization' as the
     # objective
-    if model_data.attrs['run.objective'] != 'robust_optimal_cost_minimization':
+    if model_data.attrs['run.objective'] != 'risk_aware_cost_minimization':
         exceptions.ModelWarning(
-            'Updating objective from {} to robust_optimal_cost_minimization'
+            'Updating objective from {} to risk_aware_cost_minimization'
             .format(model_data.attrs['run.objective'])
         )
-        model_data.attrs['run.objective'] = 'robust_optimal_cost_minimization'
+        model_data.attrs['run.objective'] = 'risk_aware_cost_minimization'
 
     if not backend_rerun:
         backend_model = backend.generate_model(model_data)

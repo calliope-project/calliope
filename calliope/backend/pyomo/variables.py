@@ -5,7 +5,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
 
 
 def initialize_decision_variables(backend_model):
@@ -68,9 +67,9 @@ def initialize_decision_variables(backend_model):
         backend_model.bigM = model_data_dict['attrs'].get('run.bigM')
 
 
-def initialize_robust_decision_variables(backend_model):
+def initialize_cvar_decision_variables(backend_model):
     """
-    Define decision variables specific to robust optimisation
+    Define decision variables specific to managing conditional value at risk
     (function is triggered if user selects 'robust_plan' as the model mode)
     """
     # Load auxiliary decision variables used to calculate the CVaR
