@@ -54,7 +54,13 @@ def initialize_decision_variables(backend_model):
     if 'loc_techs_store' in model_data_dict['sets']:
         if backend_model.mode != 'operate':
             backend_model.storage_cap = po.Var(backend_model.loc_techs_store, within=po.NonNegativeReals)
-        backend_model.storage = po.Var(backend_model.loc_techs_store, backend_model.timesteps, within=po.NonNegativeReals)
+        if hasattr(backend_model, 'clusters') and hasattr(backend_model, 'datesteps'):
+            backend_model.storage_inter_cluster = po.Var(backend_model.loc_techs_store, backend_model.datesteps, within=po.NonNegativeReals)
+            backend_model.storage_intra_cluster_max = po.Var(backend_model.loc_techs_store, backend_model.clusters, within=po.Reals)
+            backend_model.storage_intra_cluster_min = po.Var(backend_model.loc_techs_store, backend_model.clusters, within=po.Reals)
+            storage_within = po.Reals
+        else: storage_within = po.NonNegativeReals
+        backend_model.storage = po.Var(backend_model.loc_techs_store, backend_model.timesteps, within=storage_within)
 
     if 'loc_techs_supply_plus' in model_data_dict['sets']:
         backend_model.resource_con = po.Var(backend_model.loc_techs_supply_plus, backend_model.timesteps, within=po.NonNegativeReals)

@@ -76,6 +76,17 @@ def load_constraints(backend_model):
             rule=balance_storage_constraint_rule
         )
 
+    if 'clusters' in sets and 'datesteps' in sets:
+        backend_model.balance_inter_cluster_storage_constraint = po.Constraint(
+            backend_model.loc_techs_balance_inter_cluster_storage_constraint,
+            backend_model.datesteps,
+            rule=balance_inter_cluster_storage_rule
+        )
+        backend_model.balance_initial_cluster_storage_constraint = po.Constraint(
+            backend_model.loc_techs_balance_initial_cluster_storage_constraint,
+            rule=balance_initial_cluster_storage_rule
+        )
+
 
 def system_balance_constraint_rule(backend_model, loc_carrier, timestep):
     """
@@ -383,9 +394,12 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
         resource = backend_model.resource_con[loc_tech, timestep] * resource_eff
         if backend_model.timesteps.order_dict[timestep] == 0:
             storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+        elif (hasattr(backend_model, 'storage_inter_cluster') and
+                model_data_dict['lookup_cluster_first_timestep'][timestep]):
+            return backend_model.storage[loc_tech, timestep] == 0
         else:
             storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
-            previous_step = get_previous_timestep(backend_model, timestep)
+            previous_step = get_previous_timestep(backend_model.timesteps, timestep)
             time_resolution = backend_model.timestep_resolution[previous_step]
             storage_previous_step = (
                 ((1 - storage_loss) ** time_resolution) *
@@ -429,9 +443,12 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
     if backend_model.timesteps.order_dict[timestep] == 0:
         storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+    elif (hasattr(backend_model, 'storage_inter_cluster') and
+            model_data_dict['lookup_cluster_first_timestep'][timestep]):
+        return backend_model.storage[loc_tech, timestep] == 0
     else:
         storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
-        previous_step = get_previous_timestep(backend_model, timestep)
+        previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         time_resolution = backend_model.timestep_resolution[previous_step]
         storage_previous_step = (
             ((1 - storage_loss) ** time_resolution) *
@@ -441,4 +458,70 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
     return (
         backend_model.storage[loc_tech, timestep] ==
         storage_previous_step - carrier_prod - carrier_con
+    )
+
+
+def balance_inter_cluster_storage_rule(backend_model, loc_tech, datestep):
+    """
+    When clustering days, to reduce the timeseries length, balance the daily stored
+    energy across all days of the original timeseries.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep) =
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep_{previous})
+            \\times (1 - storage\_loss(loc::tech, timestep))^{24}
+            + \\boldsymbol{storage}(loc::tech, timestep_{final, cluster(datestep))})
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
+
+    Where :math:`timestep_{final, cluster(datestep_{previous}))}` is the final timestep of the
+    cluster in the clustered timeseries corresponding to the previous day
+    """
+
+    storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
+
+    if backend_model.datesteps.order_dict[datestep] == 0:
+        previous_step = backend_model.datesteps[-1]
+    else:
+        previous_step = get_previous_timestep(backend_model.datesteps, datestep)
+
+    final_timestep = (
+        backend_model.__calliope_model_data__
+        ['data']['lookup_cluster_last_timestep'][previous_step]
+    )
+    storage_intra = backend_model.storage[loc_tech, final_timestep]
+    storage_previous_step = (
+        ((1 - storage_loss) ** 24) *
+        backend_model.storage_inter_cluster[loc_tech, previous_step]
+    )
+
+    return (
+        backend_model.storage_inter_cluster[loc_tech, datestep] ==
+        storage_previous_step + storage_intra
+    )
+
+
+def balance_initial_cluster_storage_rule(backend_model, loc_tech):
+    """
+    When clustering days, to reduce the timeseries length, set the initial storage
+    capacity for the whole timeseries
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep_{initial}) =
+            storage_{initial}(loc::tech) \\quad \\forall loc::tech
+            \\in loc::techs_{store}, \\forall datestep \\in datesteps
+
+    Where :math:`datestep_{initial}` is the first datestep of the timeseries
+    """
+
+    storage_initial = get_param(backend_model, 'storage_initial', loc_tech)
+
+    return (
+        backend_model.storage_inter_cluster[loc_tech, backend_model.datesteps[1]]
+        == storage_initial
     )

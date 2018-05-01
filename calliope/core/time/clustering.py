@@ -236,7 +236,7 @@ def _timesteps_from_daily_index(idx, daily_timesteps):
     return new_idx
 
 
-def map_clusters_to_data(data, clusters, how, daily_timesteps):
+def map_clusters_to_data(data, clusters, how, daily_timesteps, storage_inter_cluster=True):
     """
     Returns a copy of data that has been clustered.
 
@@ -245,7 +245,9 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps):
     how : str
         How to select data from clusters. Can be mean (centroid) or closest real
         day to the mean (by root mean square error).
-
+    storage_inter_cluster : bool, default=True
+        If True, add `datesteps` to model_data, for use in the backend to build
+        inter_cluster storage decision variables and constraints
     """
     # FIXME hardcoded time intervals ('1H', '1D')
 
@@ -268,7 +270,6 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps):
         new_data.coords['timesteps'] = _timesteps_from_daily_index(
             pd.Index(timestamps.values), daily_timesteps
         )
-
         # Generate weights
         # weight of each timestep = number of timesteps in this timestep's cluster
         # divided by timesteps per day (since we're grouping days together and
@@ -294,9 +295,10 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps):
         dims='timesteps',
         coords={'timesteps': new_data.timesteps.values}
     )
+
     for cluster in timestamps.index:
         _clusters.loc[_clusters.timesteps.to_index().date == timestamps[cluster].date()] = cluster
-    new_data['clusters'] = _clusters.astype(int)
+    new_data['timestep_cluster'] = _clusters.astype(int)
     weights = (value_counts.reindex(_timesteps_from_daily_index(value_counts.index, daily_timesteps))
                            .fillna(method='ffill'))
     new_data['timestep_weights'] = xr.DataArray(weights, dims=['timesteps'])
@@ -306,6 +308,12 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps):
                      dims=['timesteps'],
                      coords={'timesteps': new_data['timesteps']})
     )
+
+    if storage_inter_cluster:
+        clusters.index.name = 'datesteps'
+        new_data['lookup_datestep_cluster'] = xr.DataArray.from_series(clusters)
+    new_data.coords['clusters'] = timestamps.index
+
     return new_data
 
 

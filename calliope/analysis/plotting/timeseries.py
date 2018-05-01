@@ -14,7 +14,8 @@ import numpy as np
 import plotly.graph_objs as go
 
 from calliope.analysis.util import subset_sum_squeeze
-from calliope.analysis.plotting.util import get_data_layout, hex_to_rgba, break_name
+from calliope.analysis.plotting.util import \
+    get_data_layout, hex_to_rgba, break_name, get_clustered_layout
 
 
 def _get_relevant_vars(model, dataset, array):
@@ -25,9 +26,10 @@ def _get_relevant_vars(model, dataset, array):
         k for k, v in model.inputs.data_vars.items()
         if 'timesteps' in v.dims and len(v.dims) > 1
     ]
-    allowed_result_vars = (
-        ['results', 'inputs', 'all', 'storage', 'resource_con', 'cost_var']
-    )
+    allowed_result_vars = [
+        'results', 'inputs', 'all', 'storage', 'storage_inter_cluster',
+        'resource_con', 'cost_var'
+    ]
 
     if ((isinstance(array, list) and not
             set(array).intersection(allowed_input_vars + allowed_result_vars + carriers)) or
@@ -67,8 +69,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     data = []
 
     # Clustered data does not get plotted on a datetime axis
-    if hasattr(dataset, 'clusters'):
-        clusters = dataset.clusters.to_pandas()
+    if 'clusters' in dataset.dims:
+        clusters = dataset.timestep_cluster.to_pandas()
         cluster_groups = clusters.groupby(clusters).groups
         # Add an extra timestep at the end of each cluster, so we can break
         # scatter lines with a NaN between each cluster
@@ -81,6 +83,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         # replace dummy timestep with NaN
         timesteps[pd.Index(reindexing_timesteps).nanosecond == 100] = np.nan
         timesteps = pd.to_datetime(timesteps, errors='ignore')
+        datesteps = pd.to_datetime(model._model_data.datesteps.values)
     else:
         timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
@@ -93,8 +96,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         else:
             return formatted_array.reindex(**reindexer)
 
-    def _get_y_vals(array):
-        if hasattr(dataset, 'clusters'):
+    def _get_y_vals(array, ignore_clustering=False):
+        if 'clusters' in dataset.dims and not ignore_clustering:
             return array.to_pandas().reindex(reindexing_timesteps).values
         else:
             return array.values
@@ -154,9 +157,9 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
 
     err_details = ' (variable: `{}`, subset: `{}`, sum_dims: `{}`.'.format(var, subset, sum_dims)
 
-    if 'timesteps' not in array_flow.dims:
+    if 'timesteps' not in array_flow.dims and 'datesteps' not in array_flow.dims:
         raise ValueError(
-            '`timestesp` not in plotting data, cannot proceed' + err_details
+            '`timesteps` not in plotting data, cannot proceed' + err_details
         )
 
     if len(array_flow.dims) > 2:
@@ -169,7 +172,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
 
     # If techs not given as a subset (implying a desire to order manually),
     # sort techs such that those varying output least are at the bottom of the stack
-    if subset.get('techs', None):
+    if subset.get('techs', None) or var == 'storage_inter_cluster':
         sorted_techs = array_flow.techs.values
     else:
         sorted_techs = [
@@ -222,6 +225,14 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
                 text=tech + ' discharge', hoverinfo='x+y+text', showlegend=False
             ))
 
+        elif var == 'storage_inter_cluster':
+            data.append(go.Scatter(
+                x=datesteps, y=_get_y_vals(array_flow.loc[tech_dict], ignore_clustering=True),
+                visible=visible, line=dict(color=color), mode='lines',
+                name=name, showlegend=False, text=tech, hoverinfo='x+y+text',
+                legendgroup=tech
+            ))
+
         else:
             data.append(go.Bar(
                 x=timesteps, y=_get_y_vals(array_flow.loc[tech_dict]), visible=visible,
@@ -263,8 +274,16 @@ def _get_var_layout(var, dataset):
     elif var == 'cost_var':
         title = 'Variable costs'
         y_axis_title = 'Cost'
+    elif var == 'storage_inter_cluster':
+        title = 'Storage at start of each day in unclustered timeseries'
+        y_axis_title = 'Stored energy'
+        args.update({'xaxis': {'type': 'date'}})
     else:
         title = y_axis_title = '{}'.format(var).capitalize()
+
+    if 'clusters' in dataset.dims and var != 'storage_inter_cluster':
+        args.update(get_clustered_layout(dataset))
+
     args.update({'yaxis': dict(title=y_axis_title), 'title': title})
 
     return args
@@ -312,32 +331,8 @@ def plot_timeseries(
         legend=(dict(traceorder='reversed', xanchor='left')), hovermode='x'
     )
     # Clustered data does not get plotted on a datetime axis
-    if hasattr(dataset, 'clusters'):
-        clusters = dataset.clusters.to_pandas().groupby(dataset.clusters.to_pandas()).groups
-        layout['xaxis']['type'] = 'category'
-        layout['xaxis']['tickvals'] = [
-            (2 * (k - min(clusters.keys())) + 1) * len(v) / 2 - 0.5
-            for k, v in clusters.items()
-        ]
-        layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
-        layout['xaxis']['title'] = 'Clusters'
-
-        # Make rectangles to fit in the background over every other cluster,
-        # to distinguish them
-        layout['shapes'] = []
-        shape_template = {
-            'type': 'rect', 'xref': 'x', 'yref': 'paper', 'y0': 0, 'y1': 1,
-            'line': {'width': 0}, 'layer': 'below'
-        }
-
-        for cluster in clusters.keys():
-            x0 = clusters[cluster][0]
-            x1 = clusters[cluster][-1]
-            opacity = 0.3 * (cluster % 2)
-            day_shape = {'x0': x0, 'x1': x1, 'fillcolor': 'grey', 'opacity': opacity}
-
-            shape_template.update(day_shape)
-            layout['shapes'].append(shape_template.copy())
+    if 'clusters' in dataset.dims:
+        layout.update(get_clustered_layout(dataset))
 
     relevant_vars = _get_relevant_vars(model, dataset, array)
 

@@ -113,3 +113,36 @@ def break_name(name):
                 break_buffer += 7
 
     return name
+
+
+def get_clustered_layout(dataset):
+    layout = {}
+    timestep_cluster = dataset.timestep_cluster.to_pandas()
+    clusters = timestep_cluster.groupby(timestep_cluster).groups
+    layout['xaxis'] = {}
+    layout['xaxis']['type'] = 'category'
+    layout['xaxis']['tickvals'] = [
+        (2 * (k - min(clusters.keys())) + 1) * len(v) / 2 - 0.5
+        for k, v in clusters.items()
+    ]
+    layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
+    layout['xaxis']['title'] = 'Clusters'
+
+    # Make rectangles to fit in the background over every other cluster,
+    # to distinguish them
+    layout['shapes'] = []
+    shape_template = {
+        'type': 'rect', 'xref': 'x', 'yref': 'paper', 'y0': 0, 'y1': 1,
+        'line': {'width': 0}, 'layer': 'below'
+    }
+
+    for cluster in clusters.keys():
+        x0 = clusters[cluster][0]
+        x1 = clusters[cluster][-1]
+        opacity = 0.3 * (cluster % 2)
+        day_shape = {'x0': x0, 'x1': x1, 'fillcolor': 'grey', 'opacity': opacity}
+
+        shape_template.update(day_shape)
+        layout['shapes'].append(shape_template.copy())
+
+    return layout

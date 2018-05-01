@@ -864,6 +864,23 @@ class TestDataset:
 
         assert model.inputs.timestep_resolution.to_pandas().unique() == [0.25]
 
+    def test_clustering(self):
+        """
+        On clustering, there are a few new dimensions in the model_data, and a
+        few new lookup arrays
+        """
+        model = calliope.examples.time_clustering()
+
+        assert 'clusters' in model._model_data.dims
+        assert 'lookup_cluster_first_timestep' in model._model_data.data_vars
+        assert 'lookup_cluster_last_timestep' in model._model_data.data_vars
+        assert 'lookup_datestep_cluster' in model._model_data.data_vars
+        assert 'timestep_cluster' in model._model_data.data_vars
+
+        datesteps = model.inputs.datesteps.to_index().strftime('%Y-%m-%d')
+        daterange = pd.date_range('2005-01-01', '2005-12-31', freq='1D').strftime('%Y-%m-%d')
+        assert np.array_equal(datesteps, daterange)
+
 
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):

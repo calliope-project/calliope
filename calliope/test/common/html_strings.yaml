@@ -29,3 +29,4 @@ milp:
 clustering:
     timeseries:
         - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters"}'
+        - '{"xaxis": {"type": "date"}, "yaxis": {"title": "Stored energy"}, "title": "Storage at start of each day in unclustered timeseries"}'

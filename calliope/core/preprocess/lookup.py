@@ -13,6 +13,7 @@ and loc_tech_carriers, to avoid string operations during backend operations.
 
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 from calliope import exceptions
 
@@ -222,5 +223,35 @@ def lookup_loc_techs_area(dataset):
         data_dict['data'].append(','.join(relevant_loc_techs))
 
     dataset['lookup_loc_techs_area'] = xr.DataArray.from_dict(data_dict)
+
+    return None
+
+
+def lookup_clusters(dataset):
+    """
+    For any given timestep in a time clustered model, get:
+    1. the first timestep of the cluster,
+    2. the cluster corresponding to a date in the original timeseries
+    """
+    data_dict1 = dict(dims=['timesteps'], data=[])
+    for timestep in dataset.timesteps:
+        t = pd.to_datetime(timestep.item()).date().strftime('%Y-%m-%d')
+        timestep_first = dataset.timesteps.loc[t][0]
+        if timestep == timestep_first:
+            data_dict1['data'].append(1)
+        else:
+            data_dict1['data'].append(0)
+
+    data_dict2 = dict(dims=['datesteps'], data=[])
+    cluster_date = dataset.timestep_cluster.to_pandas().resample('1D').mean()
+    for datestep in dataset.datesteps.to_index():
+        cluster = dataset.lookup_datestep_cluster.loc[datestep.strftime('%Y-%m-%d')].item()
+        data_dict2['data'].append(pd.datetime.combine(
+            cluster_date[cluster_date == cluster].index[0].date(),
+            dataset.timesteps.to_index().time[-1]
+        ))
+
+    dataset['lookup_cluster_first_timestep'] = xr.DataArray.from_dict(data_dict1)
+    dataset['lookup_cluster_last_timestep'] = xr.DataArray.from_dict(data_dict2)
 
     return None
