@@ -59,7 +59,8 @@ def initialize_decision_variables(backend_model):
             backend_model.storage_intra_cluster_max = po.Var(backend_model.loc_techs_store, backend_model.clusters, within=po.Reals)
             backend_model.storage_intra_cluster_min = po.Var(backend_model.loc_techs_store, backend_model.clusters, within=po.Reals)
             storage_within = po.Reals
-        else: storage_within = po.NonNegativeReals
+        else:
+            storage_within = po.NonNegativeReals
         backend_model.storage = po.Var(backend_model.loc_techs_store, backend_model.timesteps, within=storage_within)
 
     if 'loc_techs_supply_plus' in model_data_dict['sets']:

@@ -145,9 +145,11 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
-    def model_runner(self, solver='glpk', solver_io=None, how='closest'):
+    def model_runner(self, solver='glpk', solver_io=None, how='closest', storage_inter_cluster=False):
         override = {
-            'model.time.function_options.how': how,
+            'model.time.function_options': {
+                'how': how, 'storage_inter_cluster': storage_inter_cluster
+            },
             'run.solver': solver
         }
 
@@ -189,6 +191,21 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.0707936, abs=0.000001)
 
+    def example_tester_storage_inter_cluster(self):
+        model = self.model_runner(storage_inter_cluster=True)
+        # Full 1-hourly model run: 22312488.670967
+        assert float(model.results.cost.sum()) == approx(51500198.3128)
+
+        # Full 1-hourly model run: 0.296973
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.051912, abs=0.000001)
+
+        # Full 1-hourly model run: 0.064362
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.119512, abs=0.000001)
+
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         self.example_tester_closest()
 
@@ -208,6 +225,9 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             self.example_tester_mean(solver='cbc')
         else:
             pytest.skip('CBC not installed')
+
+    def test_nationalscale_clustered_example_storage_inter_cluster(self):
+        self.example_tester_storage_inter_cluster()
 
 
 class TestUrbanScaleExampleModelSenseChecks:

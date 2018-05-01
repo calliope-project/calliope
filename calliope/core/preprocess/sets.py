@@ -488,6 +488,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     if (model_run.model.get_key('time.function', None) == 'apply_clustering'
             and model_run.model.get_key('time.function_options.storage_inter_cluster', True)):
         sets.loc_techs_store_clustered = sets.loc_techs_store.copy()
-    else: sets.loc_techs_store_clustered = set()
+    else:
+        sets.loc_techs_store_clustered = set()
 
     return sets

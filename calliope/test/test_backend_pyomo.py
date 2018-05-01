@@ -1581,4 +1581,3 @@ class TestConstraints:
             assert not hasattr(m._backend_model, constraint)
 
         assert hasattr(m._backend_model, 'storage_max_constraint')
-
