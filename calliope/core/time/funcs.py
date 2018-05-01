@@ -9,17 +9,15 @@ Functions to process time series data.
 
 """
 
-import logging
-
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.core.util.tools import plugin_load
 from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
 from calliope.core.util.logging import logger
+
 
 def get_daily_timesteps(data, check_uniformity=False):
     daily_timesteps = [
@@ -98,7 +96,8 @@ def _combine_datasets(data0, data1):
     return data_new
 
 
-def apply_clustering(data, timesteps, clustering_func, how, normalize=True, scale_clusters='mean', **kwargs):
+def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
+                     scale_clusters='mean', model_run=None, **kwargs):
     """
     Apply the given clustering function to the given data.
 
@@ -107,7 +106,9 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, scal
     data : xarray.Dataset
     timesteps : pandas.DatetimeIndex or list of timesteps or None
     clustering_func : str
-        Name of clustering function.
+        Name of clustering function. Can be `file=....csv:column_name`
+        if loading custom clustering. Custom clustering index = timeseries days.
+        If no column_name, the CSV file must have only one column of data.
     how : str
         How to map clusters to data. 'mean' or 'closest'.
     normalize : bool, optional
@@ -155,11 +156,53 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, scal
     else:
         data_normalized = data_to_cluster
 
-    result = clustering.get_clusters(
-        data_normalized, clustering_func, timesteps_per_day=timesteps_per_day,
-        **kwargs
-    )
-    clusters = result[0]  # Ignore other stuff returned
+    if 'file=' in clustering_func:
+        file = clustering_func.split('=')[1]
+        if ':' in file:
+            file, column = file.rsplit(':', 1)
+        else:
+            column = None
+
+        df = model_run.timeseries_data[file]
+        if isinstance(df, pd.Series) and column is not None:
+            raise exceptions.ModelWarning(
+                '{} given as time clustering column, but only one column to '
+                'choose from in {}.'.format(column, file)
+            )
+            clusters = df.resample('1D').mean()
+        elif isinstance(df, pd.DataFrame) and column is None:
+            raise exceptions.ModelError(
+                'No time clustering column given, but multiple columns found in '
+                '{0}. Choose one column and add it to {1} as {1}:name_of_column.'
+                .format(file, clustering_func)
+            )
+        elif isinstance(df, pd.DataFrame) and column not in df.columns:
+            raise KeyError(
+                'time clustering column {} not found in {}.'.format(column, file)
+            )
+        elif isinstance(df, pd.DataFrame):
+            clusters = df.loc[:, column].groupby(pd.Grouper(freq='1D')).unique()
+
+        # Check there weren't instances of more than one cluster assigned to a day
+        # or days with no information assigned
+        if any([len(i) == 0 for i in clusters.values]):
+            raise exceptions.ModelError(
+                'Missing cluster days in `{}:{}`.'.format(file, column)
+            )
+        elif any([len(i) > 1 for i in clusters.values]):
+            raise exceptions.ModelError(
+                'More than one cluster value assigned to a day in `{}:{}`. '
+                'Unique clusters per day: {}'.format(file, column, clusters)
+            )
+        else:
+            clusters.loc[:] = [i[0] for i in clusters.values]
+
+    else:
+        result = clustering.get_clusters(
+            data_normalized, clustering_func, timesteps_per_day=timesteps_per_day,
+            **kwargs
+        )
+        clusters = result[0]  # Ignore other stuff returned
 
     data_new = clustering.map_clusters_to_data(
         data_to_cluster, clusters,

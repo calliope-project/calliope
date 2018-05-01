@@ -144,11 +144,9 @@ def generate_simple_sets(model_run):
     if coordinates:
         sets.coordinates = coordinates
 
-    # `timesteps` set is built from the first key in timeseries_data,
-    # since we already ensure in process_timeseries_data() that all
-    # timeseries have the exact same index
-    first_key = list(model_run.timeseries_data.keys())[0]
-    sets.timesteps = list(model_run.timeseries_data[first_key].index.astype(str))
+    # `timesteps` set is built from the results of timeseries_data processing
+    sets.timesteps = list(model_run.timesteps.astype(str))
+    model_run.del_key('timesteps')
 
     # `techlists` are strings with comma-separated techs used for grouping in
     # some model-wide constraints
