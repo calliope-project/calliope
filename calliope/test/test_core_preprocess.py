@@ -746,6 +746,20 @@ class TestChecks:
             "Updated from coordinate system"
         )
 
+    def test_clustering_and_cyclic_storage(self):
+        """
+        Don't allow time clustering with cyclic storage if not also using
+        storage_inter_cluster
+        """
+        override = {
+            'model.time.function_options.storage_inter_cluster': True,
+            'run.cyclic_storage': True}
+
+        with pytest.raises(exceptions.ModelError) as error:
+            calliope.examples.time_clustering(override_dict=override)
+
+        assert check_error_or_warning(error, 'cannot have cyclic storage')
+
 
 class TestDataset:
 

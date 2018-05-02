@@ -241,8 +241,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
             )
             data_new_scaled[var] = data_new[var] * scale.fillna(0)
 
-    if storage_inter_cluster:
-        lookup_clusters(data_new_scaled)
+    lookup_clusters(data_new_scaled)
 
     return data_new_scaled
 

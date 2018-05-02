@@ -14,6 +14,7 @@ from calliope.core.preprocess.util import constraint_exists
 
 import numpy as np
 
+
 def generate_constraint_sets(model_run):
     """
     Generate loc-tech sets for a given pre-processed ``model_run``
@@ -35,13 +36,21 @@ def generate_constraint_sets(model_run):
     constraint_sets['loc_techs_balance_transmission_constraint'] = sets.loc_techs_transmission
     constraint_sets['loc_techs_balance_supply_plus_constraint'] = sets.loc_techs_supply_plus
     constraint_sets['loc_techs_balance_storage_constraint'] = sets.loc_techs_storage
+    if model_run.run.cyclic_storage is True:
+        constraint_sets['loc_techs_storage_initial_constraint'] = [
+            i for i in sets.loc_techs_store
+            if constraint_exists(model_run, i, 'constraints.storage_initial') is not None
+        ]
     constraint_sets['carriers_reserve_margin_constraint'] = [
         i for i in sets.carriers
         if i in model_run.model.get_key('reserve_margin', {}).keys()
     ]
     # clustering-specific balance constraints
-    constraint_sets['loc_techs_balance_inter_cluster_storage_constraint'] = sets.loc_techs_store_clustered
-    constraint_sets['loc_techs_balance_initial_cluster_storage_constraint'] = sets.loc_techs_store_clustered
+    if (model_run.model.get_key('time.function', None) == 'apply_clustering' and
+            model_run.model.get_key('time.function_options.storage_inter_cluster', True)):
+        set_name = 'loc_techs_balance_storage_inter_cluster_constraint'
+        constraint_sets[set_name] = sets.loc_techs_store
+
     # costs.py
     constraint_sets['loc_techs_cost_constraint'] = sets.loc_techs_cost
     constraint_sets['loc_techs_cost_investment_constraint'] = sets.loc_techs_investment_cost
@@ -134,11 +143,12 @@ def generate_constraint_sets(model_run):
         if i.rsplit('::', 1)[0] in sets.loc_techs_ramping
     ]
     # clustering-specific dispatch constraints
-    if len(sets.loc_techs_store_clustered) > 0:
-        constraint_sets['loc_techs_storage_intra_max_constraint'] = sets.loc_techs_store_clustered
-        constraint_sets['loc_techs_storage_intra_min_constraint'] = sets.loc_techs_store_clustered
-        constraint_sets['loc_techs_storage_inter_max_constraint'] = sets.loc_techs_store_clustered
-        constraint_sets['loc_techs_storage_inter_min_constraint'] = sets.loc_techs_store_clustered
+    if (model_run.model.get_key('time.function', None) == 'apply_clustering' and
+            model_run.model.get_key('time.function_options.storage_inter_cluster', True)):
+        constraint_sets['loc_techs_storage_intra_max_constraint'] = sets.loc_techs_store
+        constraint_sets['loc_techs_storage_intra_min_constraint'] = sets.loc_techs_store
+        constraint_sets['loc_techs_storage_inter_max_constraint'] = sets.loc_techs_store
+        constraint_sets['loc_techs_storage_inter_min_constraint'] = sets.loc_techs_store
     else:
         constraint_sets['loc_techs_storage_max_constraint'] = sets.loc_techs_store
 

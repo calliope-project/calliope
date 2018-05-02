@@ -145,12 +145,14 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
-    def model_runner(self, solver='glpk', solver_io=None, how='closest', storage_inter_cluster=False):
+    def model_runner(self, solver='glpk', solver_io=None,
+                     how='closest', storage_inter_cluster=False, cyclic=False):
         override = {
             'model.time.function_options': {
                 'how': how, 'storage_inter_cluster': storage_inter_cluster
             },
-            'run.solver': solver
+            'run.solver': solver,
+            'run.cyclic_storage': cyclic
         }
 
         if solver_io:
@@ -164,47 +166,62 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
     def example_tester_closest(self, solver='glpk', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(51424318.278)
+        assert float(model.results.cost.sum()) == approx(51711873.203096)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.102287, abs=0.000001)
+        ) == approx(0.111456, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.095058, abs=0.000001)
+        ) == approx(0.074809, abs=0.000001)
 
     def example_tester_mean(self, solver='glpk', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(44865350.191)
+        assert float(model.results.cost.sum()) == approx(45110415.5627)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.084608, abs=0.000001)
+        ) == approx(0.126099, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.0707936, abs=0.000001)
+        ) == approx(0.047596, abs=0.000001)
 
     def example_tester_storage_inter_cluster(self):
         model = self.model_runner(storage_inter_cluster=True)
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(51500198.3128)
+        assert float(model.results.cost.sum()) == approx(33353390.222036)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.051912, abs=0.000001)
+        ) == approx(0.115866, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.119512, abs=0.000001)
+        ) == approx(0.074167, abs=0.000001)
+
+    def example_tester_storage_inter_cluster_cyclic(self):
+        model = self.model_runner(storage_inter_cluster=True, cyclic=True)
+        # Full 1-hourly model run: 22312488.670967
+        assert float(model.results.cost.sum()) == approx(18838244.087694)
+
+        # Full 1-hourly model run: 0.296973
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.133111, abs=0.000001)
+
+        # Full 1-hourly model run: 0.064362
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.071411, abs=0.000001)
 
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         self.example_tester_closest()

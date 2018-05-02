@@ -83,7 +83,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         # replace dummy timestep with NaN
         timesteps[pd.Index(reindexing_timesteps).nanosecond == 100] = np.nan
         timesteps = pd.to_datetime(timesteps, errors='ignore')
-        datesteps = pd.to_datetime(model._model_data.datesteps.values)
+        if var == 'storage_inter_cluster':
+            datesteps = pd.to_datetime(model._model_data.datesteps.values)
     else:
         timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
