@@ -152,8 +152,9 @@ class Model(object):
         debug_yaml = yaml.load(yaml.dump(model_run_debug.as_dict()))
         for k in debug_comments.model_run.keys_nested():
             v = debug_comments.model_run.get_key(k)
-            keys = k.split('.')
-            apply_to_dict(debug_yaml, keys[:-1], 'yaml_add_eol_comment', (v, keys[-1]))
+            if v:
+                keys = k.split('.')
+                apply_to_dict(debug_yaml, keys[:-1], 'yaml_add_eol_comment', (v, keys[-1]))
 
         dumper = ruamel_yaml.dumper.RoundTripDumper
         dumper.ignore_aliases = lambda self, data: True

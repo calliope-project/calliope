@@ -8,7 +8,19 @@ Release History
 
 |new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
 
+|new| Added ``layout_updates`` and ``plotly_kwarg_updates`` parameters to plotting functions to override the generated Plotly configuration and layout
+
 |changed| Cost class and sense (maximize/minimize) for objective function may now be specified in run configuration (default remains monetary cost minimization)
+
+|changed| Cleaned up and documented ``Model.save_commented_model_yaml()`` method
+
+|fixed| Fixed error when calling ``--save_plots`` in CLI
+
+|fixed| Minor improvements to warnings
+
+|fixed| Pure dicts can be used to create a ``Model`` instance
+
+|fixed| ``AttrDict.union`` failed on all-empty nested dicts
 
 0.6.0 (2018-04-20)
 ------------------
