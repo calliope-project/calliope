@@ -1,4 +1,6 @@
 import pytest  # pylint: disable=unused-import
+import os
+
 import pandas as pd
 import numpy as np
 
@@ -13,6 +15,29 @@ from calliope.test.common.util import \
 
 
 class TestModelRun:
+    def test_model_from_dict(self):
+        """
+        Test loading a file from dict/AttrDict instead of from YAML
+        """
+        this_path = os.path.dirname(__file__)
+        model_location = os.path.join(this_path, 'common', 'test_model', 'model.yaml')
+        model_dict = AttrDict.from_yaml(model_location)
+        location_dict = AttrDict({
+            'locations': {
+                '0': {'techs': {'test_supply_elec': {}, 'test_demand_elec': {}}},
+                '1': {'techs': {'test_supply_elec': {}, 'test_demand_elec': {}}}
+            }
+        })
+        model_dict.union(location_dict)
+        model_dict.model['timeseries_data_path'] = os.path.join(
+            this_path, 'common', 'test_model', model_dict.model['timeseries_data_path']
+        )
+        # test as AttrDict
+        calliope.Model(model_dict)
+
+        # test as dict
+        calliope.Model(model_dict.as_dict())
+
     def test_undefined_carriers(self):
         """
         Test that user has input either carrier or carrier_in/_out for each tech

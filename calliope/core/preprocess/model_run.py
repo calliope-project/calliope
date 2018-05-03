@@ -67,7 +67,10 @@ def model_run_from_dict(config_dict, override_dict=None):
     override_dict : dict or AttrDict, optional
 
     """
-    config = config_dict
+    if not isinstance(config_dict, AttrDict):
+        config = AttrDict(config_dict)
+    else:
+        config = config_dict
     config.config_path = None
 
     config_with_overrides, debug_comments = apply_overrides(
