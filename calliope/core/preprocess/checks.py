@@ -228,8 +228,10 @@ def check_initial(config_model):
 
     # Don't allow time clustering with cyclic storage if not also using
     # storage_inter_cluster
-    if (config_model.get_key('run.cyclic_storage', False) and
-            config_model.model.get_key('time.function_options.storage_inter_cluster', True)):
+    storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
+    if (config_model.get_key('model.time.function', None) == 'apply_clustering'
+            and config_model.get_key('run.cyclic_storage', False)
+            and not config_model.get_key(storage_inter_cluster, True)):
         errors.append(
             'When time clustering, cannot have cyclic storage constraints if '
             '`storage_inter_cluster` decision variable is not activated.'

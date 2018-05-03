@@ -751,12 +751,21 @@ class TestChecks:
         Don't allow time clustering with cyclic storage if not also using
         storage_inter_cluster
         """
+
         override = {
-            'model.time.function_options.storage_inter_cluster': True,
-            'run.cyclic_storage': True}
+            'model.subset_time': ['2005-01-01', '2005-01-04'],
+            'model.time': {
+                'function': 'apply_clustering',
+                'function_options': {
+                    'clustering_func': 'file=cluster_days.csv:0', 'how': 'mean',
+                    'storage_inter_cluster': False
+                }
+            },
+            'run.cyclic_storage': True
+        }
 
         with pytest.raises(exceptions.ModelError) as error:
-            calliope.examples.time_clustering(override_dict=override)
+            build_model(override, override_groups='simple_supply')
 
         assert check_error_or_warning(error, 'cannot have cyclic storage')
 
@@ -883,7 +892,17 @@ class TestDataset:
         On clustering, there are a few new dimensions in the model_data, and a
         few new lookup arrays
         """
-        model = calliope.examples.time_clustering()
+        override = {
+            'model.subset_time': ['2005-01-01', '2005-01-04'],
+            'model.time': {
+                'function': 'apply_clustering',
+                'function_options': {
+                    'clustering_func': 'file=cluster_days.csv:0', 'how': 'mean'
+                }
+            }
+        }
+
+        model = build_model(override, override_groups='simple_supply')
 
         assert 'clusters' in model._model_data.dims
         assert 'lookup_cluster_first_timestep' in model._model_data.data_vars
@@ -892,7 +911,7 @@ class TestDataset:
         assert 'timestep_cluster' in model._model_data.data_vars
 
         datesteps = model.inputs.datesteps.to_index().strftime('%Y-%m-%d')
-        daterange = pd.date_range('2005-01-01', '2005-12-31', freq='1D').strftime('%Y-%m-%d')
+        daterange = pd.date_range('2005-01-01', '2005-01-04', freq='1D').strftime('%Y-%m-%d')
         assert np.array_equal(datesteps, daterange)
 
 
