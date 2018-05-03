@@ -291,7 +291,9 @@ class AttrDict(dict):
         """
         keys = []
         for k, v in sorted(self.items()):
-            if isinstance(v, AttrDict) or isinstance(v, dict):
+            # Check if dict instance (which AttrDict is too),
+            # and for non-emptyness of the dict
+            if isinstance(v, dict) and v:
                 if subkeys_as == 'list':
                     keys.extend([k + '.' + kk for kk in v.keys_nested()])
                 elif subkeys_as == 'dict':
