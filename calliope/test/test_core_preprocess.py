@@ -907,6 +907,7 @@ class TestDataset:
         assert 'clusters' in model._model_data.dims
         assert 'lookup_cluster_first_timestep' in model._model_data.data_vars
         assert 'lookup_cluster_last_timestep' in model._model_data.data_vars
+        assert 'lookup_datestep_last_cluster_timestep' in model._model_data.data_vars
         assert 'lookup_datestep_cluster' in model._model_data.data_vars
         assert 'timestep_cluster' in model._model_data.data_vars
 
@@ -914,6 +915,31 @@ class TestDataset:
         daterange = pd.date_range('2005-01-01', '2005-01-04', freq='1D').strftime('%Y-%m-%d')
         assert np.array_equal(datesteps, daterange)
 
+    def test_clustering_no_datestep(self):
+        """
+        On clustering, there are a few new dimensions in the model_data, and a
+        few new lookup arrays
+        """
+        override = {
+            'model.subset_time': ['2005-01-01', '2005-01-04'],
+            'model.time': {
+                'function': 'apply_clustering',
+                'function_options': {
+                    'clustering_func': 'file=cluster_days.csv:0', 'how': 'mean',
+                    'storage_inter_cluster': False
+                }
+            }
+        }
+
+        model = build_model(override, override_groups='simple_supply')
+
+        assert 'clusters' in model._model_data.dims
+        assert 'datesteps' not in model._model_data.dims
+        assert 'lookup_cluster_first_timestep' in model._model_data.data_vars
+        assert 'lookup_cluster_last_timestep' in model._model_data.data_vars
+        assert 'lookup_datestep_last_cluster_timestep' not in model._model_data.data_vars
+        assert 'lookup_datestep_cluster' not in model._model_data.data_vars
+        assert 'timestep_cluster' in model._model_data.data_vars
 
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):

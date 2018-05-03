@@ -484,6 +484,8 @@ def balance_storage_inter_cluster_rule(backend_model, loc_tech, datestep):
     When clustering days, to reduce the timeseries length, balance the daily stored
     energy across all days of the original timeseries.
 
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
     .. container:: scrolling-wrapper
 
         .. math::
@@ -515,7 +517,7 @@ def balance_storage_inter_cluster_rule(backend_model, loc_tech, datestep):
         )
         final_timestep = (
             backend_model.__calliope_model_data__
-            ['data']['lookup_cluster_last_timestep'][previous_step]
+            ['data']['lookup_datestep_last_cluster_timestep'][previous_step]
         )
         storage_intra = backend_model.storage[loc_tech, final_timestep]
     return (

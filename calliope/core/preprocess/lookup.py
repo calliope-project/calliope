@@ -231,7 +231,7 @@ def lookup_clusters(dataset):
     """
     For any given timestep in a time clustered model, get:
     1. the first and last timestep of the cluster,
-    2. the cluster corresponding to a date in the original timeseries
+    2. the last timestep of the cluster corresponding to a date in the original timeseries
     """
 
     data_dict_first = dict(dims=['timesteps'], data=[])
@@ -250,14 +250,14 @@ def lookup_clusters(dataset):
     dataset['lookup_cluster_last_timestep'] = xr.DataArray.from_dict(data_dict_last)
 
     if 'datesteps' in dataset.dims:
-        data_dict2 = dict(dims=['datesteps'], data=[])
+        last_timesteps = dict(dims=['datesteps'], data=[])
         cluster_date = dataset.timestep_cluster.to_pandas().resample('1D').mean()
         for datestep in dataset.datesteps.to_index():
             cluster = dataset.lookup_datestep_cluster.loc[datestep.strftime('%Y-%m-%d')].item()
-            data_dict2['data'].append(pd.datetime.combine(
+            last_timesteps['data'].append(pd.datetime.combine(
                 cluster_date[cluster_date == cluster].index[0].date(),
                 dataset.timesteps.to_index().time[-1]
             ))
-        dataset['lookup_cluster_last_timestep'] = xr.DataArray.from_dict(data_dict2)
+        dataset['lookup_datestep_last_cluster_timestep'] = xr.DataArray.from_dict(last_timesteps)
 
     return None

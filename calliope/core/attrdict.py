@@ -105,7 +105,7 @@ class AttrDict(dict):
         file object ``f``, which must point to a YAML file.
 
         If ``resolve_imports`` is True, ``import:`` statements are
-        resolved cyclicly, else they are treated like any other key.
+        resolved recursively, else they are treated like any other key.
 
         When resolving import statements, anything defined locally
         overrides definitions in the imported file.

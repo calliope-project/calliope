@@ -273,8 +273,8 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
 def storage_intra_max_rule(backend_model, loc_tech, timestep):
     """
     When clustering days, to reduce the timeseries length, set limits on
-    intra-cluster auxilliary maximum storage decision variable.
-    `Ref: DOI <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+    intra-cluster auxiliary maximum storage decision variable.
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
 
     .. container:: scrolling-wrapper
 
@@ -297,8 +297,8 @@ def storage_intra_max_rule(backend_model, loc_tech, timestep):
 def storage_intra_min_rule(backend_model, loc_tech, timestep):
     """
     When clustering days, to reduce the timeseries length, set limits on
-    intra-cluster auxilliary minimum storage decision variable.
-    `Ref: DOI <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+    intra-cluster auxiliary minimum storage decision variable.
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
 
     .. container:: scrolling-wrapper
 
@@ -324,7 +324,7 @@ def storage_inter_max_rule(backend_model, loc_tech, datestep):
     the intra-cluster and inter-date stored energy.
     intra-cluster = all timesteps in a single cluster
     datesteps = all dates in the unclustered timeseries (each has a corresponding cluster)
-    `Ref: DOI <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
 
     .. container:: scrolling-wrapper
 
@@ -352,7 +352,7 @@ def storage_inter_min_rule(backend_model, loc_tech, datestep):
     the intra-cluster and inter-date stored energy.
     intra-cluster = all timesteps in a single cluster
     datesteps = all dates in the unclustered timeseries (each has a corresponding cluster)
-    `Ref: DOI <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
 
     .. container:: scrolling-wrapper
 
