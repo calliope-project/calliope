@@ -42,9 +42,12 @@ def plot_summary(model, to_file=False, mapbox_access_token=None):
 
     timeseries = _plot(*plot_timeseries(model, subset=subset), html_only=True)
     capacity = _plot(*plot_capacity(model, subset=subset), html_only=True)
-    transmission = _plot(*plot_transmission(
-        model, html_only=True, mapbox_access_token=mapbox_access_token
-    ), html_only=True)
+    if 'loc_coordinates' in model._model_data:
+        transmission = _plot(*plot_transmission(
+            model, html_only=True, mapbox_access_token=mapbox_access_token
+        ), html_only=True)
+    else:
+        transmission = '<br><br><p>No location coordinates defined -<br>not plotting transmission.</p>'
 
     template_path = os.path.join(
         os.path.dirname(__file__), '..', '..', 'config', 'plots_template.html'
@@ -52,11 +55,19 @@ def plot_summary(model, to_file=False, mapbox_access_token=None):
     with open(template_path, 'r') as f:
         html_template = jinja2.Template(f.read())
 
+    if 'solution_time' in model._model_data.attrs:
+        solution_time = model._model_data.attrs['solution_time'] / 60
+        time_finished = model._model_data.attrs['time_finished']
+        result_stats = 'taking {:.2f} minutes to solve, completed at {}'.format(
+            solution_time, time_finished
+        )
+    else:
+        result_stats = 'inputs only'
+
     html = html_template.render(
         model_name=model._model_data.attrs['model.name'],
         calliope_version=model._model_data.attrs['calliope_version'],
-        solution_time=(model._model_data.attrs['solution_time'] / 60),
-        time_finished=model._model_data.attrs['time_finished'],
+        result_stats=result_stats,
         top=timeseries,
         bottom_left=capacity,
         bottom_right=transmission,

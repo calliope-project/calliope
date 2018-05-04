@@ -1,0 +1,32 @@
+model:
+    name: Minimal test model
+
+    timeseries_data_path: 'timeseries_data'
+
+run:
+    mode: plan
+    solver: glpk
+
+techs:
+    test_supply_elec:
+        essentials:
+            name: Supply tech
+            carrier: electricity
+            parent: supply
+        constraints:
+            energy_cap_max: 10
+            resource: .inf
+            energy_eff: 0.9
+    test_demand_elec:
+        essentials:
+            name: Demand elec tech
+            carrier: electricity
+            parent: demand
+        constraints:
+            resource: file=demand_elec.csv
+
+locations:
+    0:
+        techs:
+            test_supply_elec:
+            test_demand_elec:

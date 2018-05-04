@@ -10,6 +10,11 @@ Release History
 
 |new| On clustering timeseries into representative days, an additional set of decision variables and constraints is generated. This addition allows for tracking stored energy between clusters, by considering storage between every `datestep` of the original (unclustered) timeseries as well as storage variation within a cluster.
 
+|fixed| Fix CLI error when running a model without transmission technologies
+
+|fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
+
+
 0.6.1 (2018-05-04)
 ------------------
 

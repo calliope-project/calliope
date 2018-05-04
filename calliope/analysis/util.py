@@ -41,6 +41,7 @@ def subset_sum_squeeze(data, subset={}, sum_dims=None, squeeze=False):
         data, subset={'techs': ['ccgt', 'csp']}, sum_dims='locs', squeeze=True
     )
     (out) data = carrier_prod, dimensions = (techs: 2, timesteps: 100)
+
     """
     if subset:  # first, subset the data
         allowed_subsets = {k: v for k, v in subset.items() if k in data.dims}

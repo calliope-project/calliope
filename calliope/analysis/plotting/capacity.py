@@ -109,7 +109,10 @@ def _get_var_data(
             if 'systemwide' in cap:
                 y = natsorted(array_cap.carriers.values)
             else:
-                y = natsorted(array_cap.locs.values)
+                if 'locs' in array_cap.dims:
+                    y = natsorted(array_cap.locs.values)
+                else:  # Single location
+                    y = [array_cap.locs.values]
 
             if orientation == 'v':
                 x, y = y, x  # Flip axes
