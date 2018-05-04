@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.1-dev
----------
+0.6.1 (2018-05-04)
+------------------
 
 |new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
 
