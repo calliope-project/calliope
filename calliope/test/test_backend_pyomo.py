@@ -173,6 +173,18 @@ class TestInterface:
         assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
 
 
+class TestChecks:
+    def test_operate_cyclic_storage(self):
+        """Cannot have cyclic storage in operate mode"""
+        override = {'run.cyclic_storage': True}
+        m = build_model(override, 'simple_supply,operate,investment_costs')
+        assert m._model_data.attrs['run.cyclic_storage'] is True
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.run(build_only=True)
+        assert check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
+        assert m._model_data.attrs['run.cyclic_storage'] is False
+
+
 class TestBalanceConstraints:
 
     def test_loc_carriers_system_balance_constraint(self):

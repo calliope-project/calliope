@@ -127,8 +127,8 @@ def check_operate_params(model_data):
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
 
-    window = model_data.attrs['run.operation.window']
-    horizon = model_data.attrs['run.operation.horizon']
+    window = model_data.attrs.get('run.operation.window', None)
+    horizon = model_data.attrs.get('run.operation.horizon', None)
     if not window or not horizon:
         errors.append(
             'Operational mode requires a timestep window and horizon to be '
@@ -139,5 +139,15 @@ def check_operate_params(model_data):
             'Iteration horizon must be larger than iteration window, '
             'for operational mode'
         )
+
+    # Cyclic storage isn't really valid in operate mode, so we ignore it, using
+    # initial_storage instead (allowing us to pass storage between operation windows)
+    # TODO: update default to True for 0.6.3
+    if model_data.attrs.get('run.cyclic_storage', False):
+        warnings.append(
+            'Storage cannot be cyclic in operate run mode, setting '
+            '`run.cyclic_storage` to False for this run'
+        )
+        model_data.attrs['run.cyclic_storage'] = False
 
     return comments, warnings, errors
