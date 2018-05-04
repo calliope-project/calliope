@@ -38,7 +38,7 @@ setup(
     version=__version__,
     author='Calliope contributors listed in AUTHORS',
     author_email='stefan@pfenninger.org',
-    description='A multi-scale energy systems (MUSES) modeling framework',
+    description='A multi-scale energy systems modelling framework',
     long_description=long_description,
     license='Apache 2.0',
     url='https://www.callio.pe/',

@@ -92,7 +92,16 @@ class TestNationalScaleExampleModelInfeasibility:
             calliope.examples._PATHS['national_scale'],
             'overrides.yaml'
         )
-        model = calliope.examples.national_scale(override_file=override_file + ':check_feasibility')
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            model = calliope.examples.national_scale(override_file=override_file + ':check_feasibility')
+
+        expected_warnings = [
+            'Objective function argument `cost_class` given but not used by objective function `check_feasibility`',
+            'Objective function argument `sense` given but not used by objective function `check_feasibility`'
+        ]
+
+        assert check_error_or_warning(excinfo, expected_warnings)
+
         model.run()
 
         assert model.results.attrs['termination_condition'] == 'other'

@@ -70,7 +70,15 @@ class TestIO:
             calliope.examples._PATHS['national_scale'],
             'overrides.yaml'
         )
-        model = calliope.examples.national_scale(override_file=override_file + ':check_feasibility')
+
+        # Not checking for content of warnings here, since
+        # check_feasibility-related warnings are tested for in
+        # test_example_models
+        with pytest.warns(exceptions.ModelWarning):
+            model = calliope.examples.national_scale(
+                override_file=override_file + ':check_feasibility'
+            )
+
         model.run()
 
         with tempfile.TemporaryDirectory() as tempdir:

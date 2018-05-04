@@ -3,16 +3,31 @@
 Release History
 ===============
 
-0.6.1-dev
+0.6.2-dev
 ---------
 
 |new| Storage can be set to cyclic using ``run.cyclic_storage``. The last timestep in the series will then be used as the 'previous day' conditions for the first timestep in the series. This also applies to ``storage_inter_cluster``, if clustering. Defaults to False, with intention of defaulting to True in 0.6.2.
 
 |new| On clustering timeseries into representative days, an additional set of decision variables and constraints is generated. This addition allows for tracking stored energy between clusters, by considering storage between every `datestep` of the original (unclustered) timeseries as well as storage variation within a cluster.
 
+0.6.1 (2018-05-04)
+------------------
+
 |new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
 
+|new| Added ``layout_updates`` and ``plotly_kwarg_updates`` parameters to plotting functions to override the generated Plotly configuration and layout
+
 |changed| Cost class and sense (maximize/minimize) for objective function may now be specified in run configuration (default remains monetary cost minimization)
+
+|changed| Cleaned up and documented ``Model.save_commented_model_yaml()`` method
+
+|fixed| Fixed error when calling ``--save_plots`` in CLI
+
+|fixed| Minor improvements to warnings
+
+|fixed| Pure dicts can be used to create a ``Model`` instance
+
+|fixed| ``AttrDict.union`` failed on all-empty nested dicts
 
 0.6.0 (2018-04-20)
 ------------------

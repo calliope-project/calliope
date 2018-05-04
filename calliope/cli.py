@@ -134,7 +134,7 @@ def _get_version():
 @click.option('--version', is_flag=True, default=False,
               help='Display version.')
 def cli(ctx, version):
-    """Calliope: a multi-scale energy systems (MUSES) modeling framework"""
+    """Calliope: a multi-scale energy systems modelling framework"""
     if ctx.invoked_subcommand is None and not version:
         print(ctx.get_help())
     if version:
@@ -251,7 +251,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
         if save_plots:
             if termination == 'optimal':
                 print('Saving HTML file with plots to: {}'.format(save_plots))
-                model.plot.summary(out_file=save_plots)
+                model.plot.summary(to_file=save_plots)
             else:
                 click.secho(
                     'Model termination condition non-optimal. Not saving plots',

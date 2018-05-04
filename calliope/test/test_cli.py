@@ -26,13 +26,13 @@ class TestCLI:
 
     def test_run_from_yaml(self):
         runner = CliRunner()
-        this_dir = os.path.dirname(__file__)
 
         with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(cli.run, [_MODEL_NATIONAL, '--save_netcdf=output.nc'])
+            result = runner.invoke(cli.run, [_MODEL_NATIONAL, '--save_netcdf=output.nc', '--save_plots=results.html'])
             assert calliope._logger.level == 19
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'output.nc'))
+            assert os.path.isfile(os.path.join(tempdir, 'results.html'))
 
     def test_run_from_netcdf(self):
         runner = CliRunner()
