@@ -8,6 +8,7 @@ Release History
 
 |fixed| Fix CLI error when running a model without transmission technologies
 
+|fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
 
 0.6.1 (2018-05-04)
 ------------------

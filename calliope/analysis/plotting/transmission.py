@@ -124,7 +124,13 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
         built-in map.
 
     """
-    coordinates = model._model_data.loc_coordinates.sortby('locs')
+    try:
+        coordinates = model._model_data.loc_coordinates.sortby('locs')
+    except AttributeError:
+        raise ValueError(
+            'Model does not define location coordinates '
+            '- no transmission plotting possible.'
+        )
 
     colors = model._model_data.colors
     names = model._model_data.names
