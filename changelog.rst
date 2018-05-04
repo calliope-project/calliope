@@ -6,6 +6,8 @@ Release History
 0.6.2-dev
 ---------
 
+|fixed| Fix CLI error when running a model without transmission technologies
+
 
 0.6.1 (2018-05-04)
 ------------------

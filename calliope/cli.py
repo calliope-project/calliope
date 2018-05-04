@@ -202,7 +202,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
                 fg='red', bold=True
             )
         tstart = start_time.strftime(_time_format)
-        print('Calliope run starting at {}\n'.format(tstart))
+        print('Calliope {} starting at {}\n'.format(__version__, tstart))
 
         # Try to determine model file type if not given explicitly
         if model_format is None:

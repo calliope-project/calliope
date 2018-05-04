@@ -37,6 +37,13 @@ On Windows::
 
 You are now ready to use Calliope together with the free and open source GLPK solver. Read the next section for more information on alternative solvers.
 
+Updating an existing installation
+=================================
+
+If following the recommended installation method above, the following command, assuming the conda environment is active, will update Calliope to the newest version:
+
+   $ conda update -c conda-forge calliope
+
 Solvers
 =======
 
