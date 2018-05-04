@@ -444,7 +444,8 @@ def add_attributes(model_run):
 
     # Anything empty or None in the flattened dict is also killed
     for k in list(attr_dict.keys()):
-        if attr_dict[k] is None:
+        val = attr_dict[k]
+        if val is None or (hasattr(val, '__iter__') and not val):
             del attr_dict[k]
 
     attr_dict['calliope_version'] = __version__
