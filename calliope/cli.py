@@ -134,7 +134,7 @@ def _get_version():
 @click.option('--version', is_flag=True, default=False,
               help='Display version.')
 def cli(ctx, version):
-    """Calliope: a multi-scale energy systems (MUSES) modeling framework"""
+    """Calliope: a multi-scale energy systems modelling framework"""
     if ctx.invoked_subcommand is None and not version:
         print(ctx.get_help())
     if version:

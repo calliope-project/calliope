@@ -4,7 +4,7 @@
 
 .. image:: https://raw.githubusercontent.com/calliope-project/calliope/master/doc/_static/logo.png
 
-*A multi-scale energy systems (MUSES) modeling framework* | `www.callio.pe <http://www.callio.pe/>`_
+*A multi-scale energy systems modelling framework* | `www.callio.pe <http://www.callio.pe/>`_
 
 -----
 
