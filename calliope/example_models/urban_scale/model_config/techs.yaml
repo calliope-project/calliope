@@ -87,6 +87,7 @@ techs:
         costs:
             monetary:
                 interest_rate: 0.10
+                om_con: 0.004  # .4p/kWh
     # boiler-end
 
 # Conversion_plus
@@ -110,7 +111,7 @@ techs:
             monetary:
                 interest_rate: 0.10
                 energy_cap: 750
-                om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
+                om_prod: 0.004  # .4p/kWh for 4500 operating hours/year
                 export: file=export_power.csv
     # chp-end
 

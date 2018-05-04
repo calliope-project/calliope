@@ -14,6 +14,7 @@ Release History
 
 |fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
 
+|fixed| Fixed negative ``om_con`` costs in conversion and conversion_plus technologies
 
 0.6.1 (2018-05-04)
 ------------------
