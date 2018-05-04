@@ -6,9 +6,14 @@ Release History
 0.6.2-dev
 ---------
 
+|new| Storage can be set to cyclic using ``run.cyclic_storage``. The last timestep in the series will then be used as the 'previous day' conditions for the first timestep in the series. This also applies to ``storage_inter_cluster``, if clustering. Defaults to False, with intention of defaulting to True in 0.6.2.
+
+|new| On clustering timeseries into representative days, an additional set of decision variables and constraints is generated. This addition allows for tracking stored energy between clusters, by considering storage between every `datestep` of the original (unclustered) timeseries as well as storage variation within a cluster.
+
 |fixed| Fix CLI error when running a model without transmission technologies
 
 |fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
+
 
 0.6.1 (2018-05-04)
 ------------------

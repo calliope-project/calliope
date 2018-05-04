@@ -173,7 +173,19 @@ class TestInterface:
         assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
 
 
-class TestConstraints:
+class TestChecks:
+    def test_operate_cyclic_storage(self):
+        """Cannot have cyclic storage in operate mode"""
+        override = {'run.cyclic_storage': True}
+        m = build_model(override, 'simple_supply,operate,investment_costs')
+        assert m._model_data.attrs['run.cyclic_storage'] is True
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.run(build_only=True)
+        assert check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
+        assert m._model_data.attrs['run.cyclic_storage'] is False
+
+
+class TestBalanceConstraints:
 
     def test_loc_carriers_system_balance_constraint(self):
         """
@@ -233,6 +245,28 @@ class TestConstraints:
         m = build_model({}, 'simple_storage,two_hours,investment_costs')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_storage_constraint')
+        assert not hasattr(m._backend_model, 'storage_initial_constraint')
+
+    def test_storage_initial_constraint(self):
+        """
+        sets.loc_techs_store,
+        """
+        m = build_model(
+            {'run.cyclic_storage': True},
+            'simple_storage,one_day,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'balance_storage_constraint')
+        assert not hasattr(m._backend_model, 'storage_initial_constraint')
+
+        m2 = build_model(
+            {'run.cyclic_storage': True,
+             'techs.test_storage.constraints.storage_initial': 0},
+            'simple_storage,one_day,investment_costs'
+        )
+        m2.run(build_only=True)
+        assert hasattr(m2._backend_model, 'balance_storage_constraint')
+        assert hasattr(m2._backend_model, 'storage_initial_constraint')
 
     def test_carriers_reserve_margin_constraint(self):
         """
@@ -242,6 +276,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'reserve_margin_constraint')
 
+
+class TestCostConstraints:
     # costs.py
     def test_loc_techs_cost_constraint(self):
         """
@@ -315,6 +351,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_constraint')
 
+
+class TestExportConstraints:
     # export.py
     def test_loc_carriers_update_system_balance_constraint(self):
         """
@@ -384,6 +422,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'export_max_constraint')
 
+
+class TestCapacityConstraints:
     # capacity.py
     def test_loc_techs_storage_capacity_constraint(self):
         """
@@ -654,6 +694,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
 
+
+class TestDispatchConstraints:
     # dispatch.py
     def test_loc_tech_carriers_carrier_production_max_constraint(self):
         """
@@ -668,7 +710,6 @@ class TestConstraints:
         m = build_model({}, 'supply_milp,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'carrier_production_max_constraint')
-
 
     def test_loc_tech_carriers_carrier_production_min_constraint(self):
         """
@@ -699,7 +740,6 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'carrier_production_min_constraint')
 
-
     def test_loc_tech_carriers_carrier_consumption_max_constraint(self):
         """
         i for i in sets.loc_tech_carriers_con
@@ -715,7 +755,6 @@ class TestConstraints:
         m = build_model({}, 'supply_milp,two_hours,investment_costs')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'carrier_consumption_max_constraint')
-
 
     def test_loc_techs_resource_max_constraint(self):
         """
@@ -778,6 +817,8 @@ class TestConstraints:
         assert hasattr(m._backend_model, 'ramping_up_constraint')
         assert hasattr(m._backend_model, 'ramping_down_constraint')
 
+
+class TestMILPConstraints:
     # milp.py
     def test_loc_techs_unit_commitment_constraint(self):
         """
@@ -1191,6 +1232,8 @@ class TestConstraints:
         assert check_variable_exists(m._backend_model, 'cost_investment_constraint', 'purchased')
         assert not check_variable_exists(m._backend_model, 'cost_investment_constraint', 'units')
 
+
+class TestConversionConstraints:
     # conversion.py
     def test_loc_techs_balance_conversion_constraint(self):
         """
@@ -1237,6 +1280,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_conversion_constraint')
 
+
+class TestConversionPlusConstraints:
     # conversion_plus.py
     def test_loc_techs_balance_conversion_plus_primary_constraint(self):
         """
@@ -1326,7 +1371,6 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
-
         m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
@@ -1349,7 +1393,6 @@ class TestConstraints:
         """
         sets.loc_techs_in_2,
         """
-
 
         m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
         m.run(build_only=True)
@@ -1427,6 +1470,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
 
+
+class TestNetworkConstraints:
     # network.py
     def test_loc_techs_symmetric_transmission_constraint(self):
         """
@@ -1441,6 +1486,8 @@ class TestConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'symmetric_transmission_constraint')
 
+
+class TestPolicyConstraints:
     # policy.py
     def test_techlists_group_share_energy_cap_min_constraint(self):
         """
@@ -1519,3 +1566,71 @@ class TestConstraints:
         assert not hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
         assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
         assert hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
+
+
+# clustering constraints
+class TestClusteringConstraints:
+
+    def constraints(self):
+        return ['balance_storage_inter_cluster_constraint',
+                'storage_intra_max_constraint', 'storage_intra_min_constraint',
+                'storage_inter_max_constraint', 'storage_inter_min_constraint']
+
+    def decision_variables(self):
+        return ['storage_inter_cluster',
+                'storage_intra_cluster_max', 'storage_intra_cluster_min']
+
+    def cluster_model(self, how='mean', storage_inter_cluster=True,
+                      cyclic=False, storage_initial=False):
+        override = {
+            'model.subset_time': ['2005-01-01', '2005-01-04'],
+            'model.time': {
+                'function': 'apply_clustering',
+                'function_options': {
+                    'clustering_func': 'file=cluster_days.csv:0', 'how': how,
+                    'storage_inter_cluster': storage_inter_cluster
+                }
+            },
+            'run.cyclic_storage': cyclic
+        }
+        if storage_initial:
+            override.update({'techs.test_storage.constraints.storage_initial': 0})
+        return build_model(override, 'simple_storage,investment_costs')
+
+    def test_cluster_storage_constraints(self):
+        m = self.cluster_model()
+        m.run(build_only=True)
+
+        for variable in self.decision_variables():
+            assert hasattr(m._backend_model, variable)
+
+        for constraint in self.constraints():
+            assert hasattr(m._backend_model, constraint)
+
+        assert not hasattr(m._backend_model, 'storage_max_constraint')
+        assert not hasattr(m._backend_model, 'storage_initial_constraint')
+
+    def test_cluster_cyclic_storage_constraints(self):
+        m = self.cluster_model(cyclic=True)
+        m.run(build_only=True)
+
+        for variable in self.decision_variables():
+            assert hasattr(m._backend_model, variable)
+
+        for constraint in self.constraints():
+            assert hasattr(m._backend_model, constraint)
+
+        assert not hasattr(m._backend_model, 'storage_max_constraint')
+        assert not hasattr(m._backend_model, 'storage_initial_constraint')
+
+    def test_no_cluster_storage_constraints(self):
+        m = self.cluster_model(storage_inter_cluster=False)
+        m.run(build_only=True)
+
+        for variable in self.decision_variables():
+            assert not hasattr(m._backend_model, variable)
+
+        for constraint in self.constraints():
+            assert not hasattr(m._backend_model, constraint)
+
+        assert hasattr(m._backend_model, 'storage_max_constraint')

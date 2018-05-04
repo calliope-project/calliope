@@ -87,13 +87,14 @@ class TestPlotting:
         override = {'model.time.function_options.k': 2}
         model = calliope.examples.time_clustering(override_dict=override)
 
-        plot_html = model.plot.timeseries(html_only=True)
-        for string in HTML_STRINGS['clustering']['timeseries']:
-            assert string in plot_html
-
         # While we have a model that hasn't been run, try plotting transmission and capacity
         model.plot.transmission(html_only=True)
         model.plot.capacity(html_only=True)
+
+        model.run()
+        plot_html = model.plot.timeseries(html_only=True)
+        for string in HTML_STRINGS['clustering']['timeseries']:
+            assert string in plot_html
 
     def test_subset_plotting(self, national_scale_example):
         model = national_scale_example

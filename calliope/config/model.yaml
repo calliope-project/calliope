@@ -23,6 +23,7 @@ run:
     objective_options: {'cost_class': 'monetary', 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
+    cyclic_storage: false # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
 
 model:
     name: null  # Model name

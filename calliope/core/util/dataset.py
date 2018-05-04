@@ -130,10 +130,11 @@ def reorganise_dataset_dimensions(dataset):
     Reorganise the Dataset dimensions to be alphabetical *except*
     `timesteps`, which must always come last in any DataArray's dimensions
     """
+    steps = ['datesteps', 'timesteps'] if 'datesteps' in dataset.dims else ['timesteps']
 
     new_dims = (
-        sorted(list(set(dataset.dims.keys()) - set(['timesteps'])))
-    ) + ['timesteps']
+        sorted(list(set(dataset.dims.keys()) - set(steps)))
+    ) + steps
 
     updated_dataset = dataset.transpose(*new_dims).reindex(
         {k:dataset[k] for k in new_dims})

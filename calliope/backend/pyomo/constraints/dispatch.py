@@ -65,6 +65,24 @@ def load_constraints(backend_model):
             rule=ramping_down_constraint_rule
         )
 
+    if 'clusters' in sets and 'datesteps' in sets:
+        backend_model.storage_intra_max_constraint = po.Constraint(
+            backend_model.loc_techs_storage_intra_max_constraint, backend_model.timesteps,
+            rule=storage_intra_max_rule
+        )
+        backend_model.storage_intra_min_constraint = po.Constraint(
+            backend_model.loc_techs_storage_intra_min_constraint, backend_model.timesteps,
+            rule=storage_intra_min_rule
+        )
+        backend_model.storage_inter_max_constraint = po.Constraint(
+            backend_model.loc_techs_storage_inter_max_constraint, backend_model.datesteps,
+            rule=storage_inter_max_rule
+        )
+        backend_model.storage_inter_min_constraint = po.Constraint(
+            backend_model.loc_techs_storage_inter_min_constraint, backend_model.datesteps,
+            rule=storage_inter_min_rule
+        )
+
 
 def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
     """
@@ -218,7 +236,7 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
     if backend_model.timesteps.order_dict[timestep] == 0:
         return po.Constraint.NoConstraint
     else:
-        previous_step = get_previous_timestep(backend_model, timestep)
+        previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         time_res = backend_model.timestep_resolution[timestep]
         time_res_prev = backend_model.timestep_resolution[previous_step]
         loc_tech = loc_tech_carrier.rsplit('::', 1)[0]
@@ -250,3 +268,108 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
             return diff <= max_ramping_rate
         else:
             return -1 * max_ramping_rate <= diff
+
+
+def storage_intra_max_rule(backend_model, loc_tech, timestep):
+    """
+    When clustering days, to reduce the timeseries length, set limits on
+    intra-cluster auxiliary maximum storage decision variable.
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep) \\leq
+            \\boldsymbol{storage_{intra\_cluster, max}}(loc::tech, cluster(timestep))
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
+
+    Where :math:`cluster(timestep)` is the cluster number in which the timestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['timestep_cluster'][timestep]
+    return (
+        backend_model.storage[loc_tech, timestep] <=
+        backend_model.storage_intra_cluster_max[loc_tech, cluster]
+    )
+
+
+def storage_intra_min_rule(backend_model, loc_tech, timestep):
+    """
+    When clustering days, to reduce the timeseries length, set limits on
+    intra-cluster auxiliary minimum storage decision variable.
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep) \\geq
+            \\boldsymbol{storage_{intra\_cluster, min}}(loc::tech, cluster(timestep))
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
+
+    Where :math:`cluster(timestep)` is the cluster number in which the timestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['timestep_cluster'][timestep]
+    return (
+        backend_model.storage[loc_tech, timestep] >=
+        backend_model.storage_intra_cluster_min[loc_tech, cluster]
+    )
+
+
+def storage_inter_max_rule(backend_model, loc_tech, datestep):
+    """
+    When clustering days, to reduce the timeseries length, set maximum limit on
+    the intra-cluster and inter-date stored energy.
+    intra-cluster = all timesteps in a single cluster
+    datesteps = all dates in the unclustered timeseries (each has a corresponding cluster)
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep) +
+            \\boldsymbol{storage_{intra\_cluster, max}}(loc::tech, cluster(datestep))
+            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\quad \\forall
+            loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
+
+    Where :math:`cluster(datestep)` is the cluster number in which the datestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
+    return (
+        backend_model.storage_inter_cluster[loc_tech, datestep] +
+        backend_model.storage_intra_cluster_max[loc_tech, cluster] <=
+        backend_model.storage_cap[loc_tech]
+    )
+
+
+def storage_inter_min_rule(backend_model, loc_tech, datestep):
+    """
+    When clustering days, to reduce the timeseries length, set minimum limit on
+    the intra-cluster and inter-date stored energy.
+    intra-cluster = all timesteps in a single cluster
+    datesteps = all dates in the unclustered timeseries (each has a corresponding cluster)
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep)
+            \\times (1 - storage\_loss(loc::tech, timestep))^{24} +
+            \\boldsymbol{storage_{intra\_cluster, min}}(loc::tech, cluster(datestep))
+            \\geq 0 \\quad \\forall loc::tech \\in loc::techs_{store},
+            \\forall datestep \\in datesteps
+
+    Where :math:`cluster(datestep)` is the cluster number in which the datestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
+    storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
+    return (
+        backend_model.storage_inter_cluster[loc_tech, datestep] * ((1 - storage_loss) ** 24) +
+        backend_model.storage_intra_cluster_min[loc_tech, cluster] >= 0
+    )

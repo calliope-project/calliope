@@ -44,11 +44,11 @@ def get_param(backend_model, var, dims):
             return backend_model.__calliope_defaults__[var]
 
 
-def get_previous_timestep(backend_model, timestep):
+def get_previous_timestep(timesteps, timestep):
     """Get the timestamp for the timestep previous to the input timestep"""
     # order_dict starts numbering at zero, timesteps is one-indexed, so we do not need
     # to subtract 1 to get to previous_step -- it happens "automagically"
-    return backend_model.timesteps[backend_model.timesteps.order_dict[timestep]]
+    return timesteps[timesteps.order_dict[timestep]]
 
 
 @memoize

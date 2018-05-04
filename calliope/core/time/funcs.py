@@ -17,6 +17,8 @@ from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
 from calliope.core.util.logging import logger
+from calliope.core.preprocess.lookup import lookup_clusters
+
 
 
 def get_daily_timesteps(data, check_uniformity=False):
@@ -97,7 +99,8 @@ def _combine_datasets(data0, data1):
 
 
 def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
-                     scale_clusters='mean', model_run=None, **kwargs):
+                     scale_clusters='mean', storage_inter_cluster=True,
+                     model_run=None, **kwargs):
     """
     Apply the given clustering function to the given data.
 
@@ -206,7 +209,8 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
 
     data_new = clustering.map_clusters_to_data(
         data_to_cluster, clusters,
-        how=how, daily_timesteps=daily_timesteps
+        how=how, daily_timesteps=daily_timesteps,
+        storage_inter_cluster=storage_inter_cluster
     )
 
     if timesteps is None:
@@ -217,7 +221,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
         data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
         data_new = _copy_non_t_vars(data, data_new)
 
-    # It's now safe to add the original coordiantes back in (preserving all the
+    # It's now safe to add the original coordinates back in (preserving all the
     # loc_tech sets that aren't used to index a variable in the DataArray)
     data_new.update(data_coords)
 
@@ -236,6 +240,8 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
                 getattr(data_new[var], scale_clusters)(dim='timesteps')
             )
             data_new_scaled[var] = data_new[var] * scale.fillna(0)
+
+    lookup_clusters(data_new_scaled)
 
     return data_new_scaled
 
@@ -316,7 +322,7 @@ def drop(data, timesteps):
     ----------
     data : xarray.Dataset
         Calliope model data.
-    timestesp : str or list or other iterable
+    timesteps : str or list or other iterable
         Pandas-compatible timestep strings.
 
     """

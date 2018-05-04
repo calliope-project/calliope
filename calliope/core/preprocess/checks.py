@@ -226,6 +226,17 @@ def check_initial(config_model):
                 .format(arg, config_model.run.objective)
             )
 
+    # Don't allow time clustering with cyclic storage if not also using
+    # storage_inter_cluster
+    storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
+    if (config_model.get_key('model.time.function', None) == 'apply_clustering'
+            and config_model.get_key('run.cyclic_storage', False)
+            and not config_model.get_key(storage_inter_cluster, True)):
+        errors.append(
+            'When time clustering, cannot have cyclic storage constraints if '
+            '`storage_inter_cluster` decision variable is not activated.'
+        )
+
     return warnings, errors
 
 
@@ -335,6 +346,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                     '`{}` at `{}` defines non-allowed '
                     '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
                 )
+
     return warnings, errors
 
 

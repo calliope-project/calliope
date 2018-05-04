@@ -199,7 +199,7 @@ class TestClustering:
 
         model = build_test_model(override, override_groups='simple_supply')
 
-        assert np.array_equal(model.inputs.clusters.to_pandas().unique(), [0, 1, 2])
+        assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0, 1, 2])
 
         override2 = {**override, **{
             'model.time.function_options.clustering_func': 'file=cluster_days.csv:1'
@@ -207,7 +207,16 @@ class TestClustering:
 
         model = build_test_model(override2, override_groups='simple_supply')
 
-        assert np.array_equal(model.inputs.clusters.to_pandas().unique(), [0, 1, 2])
+        assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0, 1, 2])
+
+        override3 = {**override, **{
+            'model.time.function_options.clustering_func': 'file=cluster_days.csv:1',
+            'model.time.function_options.how': 'closest'
+        }}
+
+        model = build_test_model(override3, override_groups='simple_supply')
+
+        assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0])
 
     def test_predefined_clusters_fail(self):
         override = {
