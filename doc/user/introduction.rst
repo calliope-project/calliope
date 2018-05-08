@@ -76,7 +76,7 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
 References
 ----------
 
-.. [Fripp2012] Fripp, M., 2012. Switch: A Planning Tool for Power Systems with Large Shares of Intermittent Renewable Energy. Environ. Sci. Technol., 46(11), p.6371–6378. `DOI: 10.1021/es204645c <http://dx.doi.org/10.1021/es204645c>`_
-.. [Heussen2010] Heussen, K. et al., 2010. Energy storage in power system operation: The power nodes modeling framework. In Innovative Smart Grid Technologies Conference Europe (ISGT Europe), 2010 IEEE PES. pp. 1–8. `DOI: 10.1109/ISGTEUROPE.2010.5638865 <http://dx.doi.org/10.1109/ISGTEUROPE.2010.5638865>`_
-.. [Howells2011] Howells, M. et al., 2011. OSeMOSYS: The Open Source Energy Modeling System: An introduction to its ethos, structure and development. Energy Policy, 39(10), p.5850–5870. `DOI: 10.1016/j.enpol.2011.06.033 <http://dx.doi.org/10.1016/j.enpol.2011.06.033>`_
-.. [Hunter2013] Hunter, K., Sreepathi, S. & DeCarolis, J.F., 2013. Modeling for insight using Tools for Energy Model Optimization and Analysis (Temoa). Energy Economics, 40, p.339–349. `DOI: 10.1016/j.eneco.2013.07.014 <http://dx.doi.org/10.1016/j.eneco.2013.07.014>`_
+.. [Fripp2012] Fripp, M., 2012. Switch: A Planning Tool for Power Systems with Large Shares of Intermittent Renewable Energy. Environ. Sci. Technol., 46(11), p.6371–6378. `DOI: 10.1021/es204645c <https://doi.org/10.1021/es204645c>`_
+.. [Heussen2010] Heussen, K. et al., 2010. Energy storage in power system operation: The power nodes modeling framework. In Innovative Smart Grid Technologies Conference Europe (ISGT Europe), 2010 IEEE PES. pp. 1–8. `DOI: 10.1109/ISGTEUROPE.2010.5638865 <https://doi.org/10.1109/ISGTEUROPE.2010.5638865>`_
+.. [Howells2011] Howells, M. et al., 2011. OSeMOSYS: The Open Source Energy Modeling System: An introduction to its ethos, structure and development. Energy Policy, 39(10), p.5850–5870. `DOI: 10.1016/j.enpol.2011.06.033 <https://doi.org/10.1016/j.enpol.2011.06.033>`_
+.. [Hunter2013] Hunter, K., Sreepathi, S. & DeCarolis, J.F., 2013. Modeling for insight using Tools for Energy Model Optimization and Analysis (Temoa). Energy Economics, 40, p.339–349. `DOI: 10.1016/j.eneco.2013.07.014 <https://doi.org/10.1016/j.eneco.2013.07.014>`_
