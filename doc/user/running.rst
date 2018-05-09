@@ -60,6 +60,8 @@ The most basic way to run a model programmatically from within a Python interpre
 
 .. note:: If ``config`` is not specified (i.e. ``model = Model()``), an error is raised. See :doc:`ref_example_models` for information on instantiating a simple example model without specifying a custom model configuration.
 
+.. note:: Calliope logs useful progress information to the INFO log level, but does not change the default log level from WARNING. To see progress information when running interactively, call ``calliope.set_log_level('INFO')`` immediately after importing Calliope.
+
 Other ways to load a model interactively are:
 
 * Passing an :class:`~calliope.AttrDict` or standard Python dictionary to the :class:`~calliope.Model` constructor, with the same nested format as the YAML model configuration (top-level keys: ``model``, ``run``, ``locations``, ``techs``).
@@ -70,7 +72,7 @@ After instantiating the ``Model`` object, and before calling the ``run()`` metho
 After the model has been solved, an xarray Dataset containing results (``model.results``) can be accessed. At this point, the model can be saved with either :meth:`~calliope.Model.to_csv` or :meth:`~calliope.Model.to_netcdf`, which saves all inputs and results, and is equivalent to the corresponding ``--save`` options of the command-line tool.
 
 .. seealso::
-    An example of interactive running in a Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the :nbviewer_docs:`Calliope interactive national-scale example notebook <_static/notebooks/tutorial.ipynb>`. You can download and run this notebook on your own machine (if both Calliope and the Jupyter Notebook are installed).
+    An example of interactive running in a Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the :doc:`tutorials <tutorials>`. You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
 Overrides
 ---------
@@ -185,4 +187,4 @@ What will typically go wrong, in order of decreasing likelihood:
    * The model is consistent and properly defined but infeasible. Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
    * There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
 
-Calliope provides some run configuration options to make it easier to determine the cause of the first two of these possibilities. See the :ref:`debugging options described in the full configuration listing <debugging_runs_config>`.
+Calliope provides help in diagnosing model issues. See the section on :ref:`debugging failing runs <debugging_runs_config>`.

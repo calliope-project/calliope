@@ -400,30 +400,42 @@ def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
     cost_classes = tech_config.get('costs', {}).keys()
     for cost in cost_classes:
         plant_life = tech_config.constraints.get_key('lifetime', 0)
-        if plant_life == 0:
-            if any(any(i in j for j in ['_area', '_cap', 'purchase'])
-                    for i in tech_config.costs[cost].keys()):
+        interest = tech_config.costs[cost].get_key('interest_rate', None)
+
+        # Only need depreciation rate for technologies that have investment costs
+        if any(any(j in i for j in ['_area', '_cap', 'purchase'])
+                for i in tech_config.costs[cost].keys()):
+            # MUST define lifetime and interest_rate for these technologies
+            if plant_life == 0 or interest is None:
                 errors.append(
-                    'Must specify a lifetime when specifying '
-                    'fixed `{}` costs for `{}`'.format(cost, tech_id)
+                    'Must specify constraints.lifetime and costs.{0}.interest_rate '
+                    'when specifying fixed `{0}` costs for `{1}`. Set lifetime to 1 '
+                    'and interest rate to 0 if you do not want them to have an effect'.format(cost, tech_id)
                 )
-            continue
+                continue
+            # interest rate = 0 -> simple depreciation
+            if interest == 0:
+                warnings.append(
+                    '`{}` interest rate of zero for technology {}, setting '
+                    'depreciation rate as 1/lifetime.'.format(cost, tech_id)
+                )
+                dep = 1 / plant_life
+            # interest rate > 0 -> annualised depreciation
+            else:
+                dep = (
+                    (interest * ((1 + interest) ** plant_life)) /
+                    (((1 + interest) ** plant_life) - 1)
+                )
 
-        interest = tech_config.costs[cost].get_key('interest_rate', 0)
+            if math.isnan(dep) or dep == 0:
+                warnings.append(
+                    'No investment {0} cost will be incurred for `{1}` as '
+                    'depreciation rate is 0 or NaN. Probably caused by '
+                    'inifinte plant life'.format(cost, tech_id)
+                )
+                dep = 0
 
-        if interest == 0:
-            warnings.append(
-                '{} does not specify an interest rate for {} - '
-                'setting interest rate to zero.'.format(tech_id, cost)
-            )
-            dep = 1 / plant_life
-        else:
-            dep = (
-                (interest * (1 + interest) ** plant_life) /
-                (((1 + interest) ** plant_life) - 1)
-            )
-
-        tech_config.costs[cost]['depreciation_rate'] = dep
+            tech_config.costs[cost]['depreciation_rate'] = dep
         try:
             del tech_config.costs[cost]['interest_rate']
         except KeyError:

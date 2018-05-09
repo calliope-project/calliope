@@ -4,7 +4,7 @@
 
 .. image:: https://raw.githubusercontent.com/calliope-project/calliope/master/doc/_static/logo.png
 
-*A multi-scale energy systems (MUSES) modeling framework* | `www.callio.pe <http://www.callio.pe/>`_
+*A multi-scale energy systems modelling framework* | `www.callio.pe <http://www.callio.pe/>`_
 
 -----
 
@@ -42,6 +42,20 @@ Documentation is available on Read the Docs:
 * `Read the documentation online (recommended) <https://calliope.readthedocs.io/en/stable/>`_
 * `Download all documentation in a single PDF file <https://readthedocs.org/projects/calliope/downloads/pdf/stable/>`_
 
+Contributing
+------------
+
+To contribute changes:
+
+1. Fork the project on GitHub
+2. Create a feature branch to work on in your fork (``git checkout -b new-feature``)
+3. Add your name to the AUTHORS file
+4. Commit your changes to the feature branch
+5. Push the branch to GitHub (``git push origin my-new-feature``)
+6. On GitHub, create a new pull request from the feature branch
+
+See our `contribution guidelines <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_ for more information -- and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+
 What's new
 ----------
 
@@ -52,7 +66,7 @@ Citing Calliope
 
 If you use Calliope, please cite the following paper:
 
-Stefan Pfenninger (2017). Dealing with multiple decades of hourly wind and PV time series in energy models: a comparison of methods to reduce time resolution and the planning implications of inter-annual variability. *Applied Energy*. `doi: 10.1016/j.apenergy.2017.03.051 <https://dx.doi.org/10.1016/j.apenergy.2017.03.051>`_
+Stefan Pfenninger (2017). Dealing with multiple decades of hourly wind and PV time series in energy models: a comparison of methods to reduce time resolution and the planning implications of inter-annual variability. *Applied Energy*. `doi: 10.1016/j.apenergy.2017.03.051 <https://doi.org/10.1016/j.apenergy.2017.03.051>`_
 
 All Calliope releases are archived on Zenodo, and can be referred to by the overall concept DOI `10.5281/zenodo.593292 <https://doi.org/10.5281/zenodo.593292>`_. Each version also has its own specific DOI `listed on Zenodo <https://doi.org/10.5281/zenodo.593292>`_.
 

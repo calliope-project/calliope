@@ -9,17 +9,26 @@ Convert Calliope model configurations from 0.5.x to 0.6.0.
 
 """
 
+from calliope.core.util.logging import logger
 import os
 import glob
 
 import pandas as pd
 
-from calliope.core.attrdict import AttrDict
+from calliope.core.attrdict import AttrDict, __Missing
+
+_MISSING = __Missing()
 
 
 _CONVERSIONS = AttrDict.from_yaml(
     os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'conversion_0.6.0.yaml')
 )
+
+_TECH_GROUPS = [
+    'supply', 'supply_plus',
+    'conversion', 'conversion_plus',
+    'demand', 'transmission', 'storage'
+]
 
 
 def load_with_import_resolution(in_path):
@@ -38,20 +47,33 @@ def convert_run_dict(in_dict, conversion_dict):
     return convert_subdict(in_dict, conversion_dict['run_config'])
 
 
-def convert_model_dict(in_dict, conversion_dict):
+def convert_model_dict(in_dict, conversion_dict, state, tech_groups=None):
     out_dict = AttrDict()
 
     # process techs
     if 'techs' in in_dict:
         for k, v in in_dict.techs.items():
+
+            # Remove now unsupported `unmet_demand` techs
+            if (v.get('parent', '') in ['unmet_demand', 'unmet_demand_as_supply_tech'] or
+                    'unmet_demand_' in k):
+                out_dict.set_key('__disabled.techs.{}'.format(k), v)
+                # We will want to enable ``ensure_feasibility`` to replace
+                # ``unmet_demand``
+                state['ensure_feasibility'] = True
+                continue
+
             new_tech_config = convert_subdict(v, conversion_dict['tech_config'])
 
             if 'constraints_per_distance' in v:
+                # Convert loss to efficiency
+                if 'e_loss' in v.constraints_per_distance:
+                    v.constraints_per_distance.e_loss = 1 - v.constraints_per_distance.e_loss
                 new_tech_config.update(
                     convert_subdict(
                         v.constraints_per_distance,
                         conversion_dict['tech_constraints_per_distance_config']
-                       )
+                    )
                 )
 
             # Costs are a little more involved -- need to get each cost class
@@ -63,7 +85,7 @@ def convert_model_dict(in_dict, conversion_dict):
             if 'costs_per_distance' in v:
                 for cost_class in v.costs_per_distance:
                     # FIXME update not overwrite
-                    per_distance_config = convert_subdict(v.costs_per_distance[cost_class], conversion_dict['tech_costs_config'])
+                    per_distance_config = convert_subdict(v.costs_per_distance[cost_class], conversion_dict['tech_costs_per_distance_config'])
                     if cost_class in new_cost_dict:
                         new_cost_dict[cost_class].union(per_distance_config)
                     else:
@@ -86,7 +108,20 @@ def convert_model_dict(in_dict, conversion_dict):
             if new_cost_dict:
                 new_tech_config['costs'] = new_cost_dict
 
-            out_dict.set_key('techs.{}'.format(k), new_tech_config)
+            # After conversion, remove legacy _per_distance top-level entries
+            try:
+                del new_tech_config['constraints_per_distance']
+                del new_tech_config['costs_per_distance']
+            except KeyError:
+                pass
+
+            # Assign converted techs to either tech_groups or techs
+            if tech_groups and k in tech_groups:
+                out_key = 'tech_groups.{}'.format(k)
+            else:
+                out_key = 'techs.{}'.format(k)
+
+            out_dict.set_key(out_key, new_tech_config)
 
         del in_dict['techs']
 
@@ -109,8 +144,33 @@ def convert_model_dict(in_dict, conversion_dict):
             for tech in missing_techs:
                 new_locations_dict[k].set_key('techs.{}'.format(tech), None)
 
+        # Remove now unsupported `unmet_demand` techs
+        for k, v in new_locations_dict.items():
+            for tech in list(v.techs.keys()):
+                parent = v.get_key('techs.{}.parent'.format(tech), '')
+                if (parent in ['unmet_demand', 'unmet_demand_as_supply_tech']
+                        or 'unmet_demand_' in tech):
+                    new_locations_dict[k].del_key('techs.{}'.format(tech))
+                    if '__disabled.techs' in new_locations_dict[k]:
+                        new_locations_dict[k].get_key('__disabled.techs').append(tech)
+                    else:
+                        new_locations_dict[k].set_key('__disabled.techs', [tech])
+
         out_dict['locations'] = new_locations_dict
         del in_dict['locations']
+
+    # process links
+    if 'links' in in_dict:
+        new_links_dict = AttrDict()
+        for k, v in in_dict.links.items():
+            for tech, tech_dict in v.items():
+                new_links_dict.set_key(
+                    '{}.techs.{}'.format(k, tech),
+                    convert_subdict(tech_dict, conversion_dict['tech_config'])
+                )
+
+        out_dict['links'] = new_links_dict
+        del in_dict['links']
 
     # process metadata
     if 'metadata' in in_dict:
@@ -124,6 +184,12 @@ def convert_model_dict(in_dict, conversion_dict):
                 in_dict.set_key('locations.{}.coordinates'.format(k), new_coords)
         del in_dict['metadata']
 
+    # Fix up any 'resource' keys that refer to 'file' only
+    for k in [i for i in out_dict.keys_nested() if i.endswith('.resource')]:
+        if out_dict.get_key(k) == 'file':
+            tech = k.split('techs.')[-1].split('.')[0]
+            out_dict.set_key(k, 'file={}_r.csv'.format(tech))
+
     # process remaining top-level entries
     out_dict.union(convert_subdict(in_dict, conversion_dict['model_config']))
 
@@ -135,9 +201,9 @@ def convert_subdict(in_dict, conversion_dict):
 
     for old_k in conversion_dict.keys_nested():
         new_k = conversion_dict.get_key(old_k)
-        value = in_dict.get_key(old_k, None)
+        value = in_dict.get_key(old_k, _MISSING)
 
-        if value:
+        if value != _MISSING:
             if new_k is None:
                 out_dict.set_key('__disabled.{}'.format(old_k), value)
             else:
@@ -149,7 +215,7 @@ def convert_subdict(in_dict, conversion_dict):
     return out_dict
 
 
-def convert_model(run_config_path, model_config_path, out_path, override_run_config_paths=None):
+def convert_model(run_config_path, model_config_path, out_path):
     """
     Convert a model specified by a model YAML file
 
@@ -165,15 +231,13 @@ def convert_model(run_config_path, model_config_path, out_path, override_run_con
         files imported by it -- recreates original directory structure
         at that location, so recommendation is to specify an empty
         subdirectory or a new directory (will be created)
-    override_run_config_paths: list of strs, optional
-        any additional run configuration files given are converted
-        into override groups in a single overrides.yaml in the out_path
 
     Returns
     -------
     None
 
     """
+    state = {'ensure_feasibility': False}
     converted_run_config = AttrDict()
     run_config = load_with_import_resolution(run_config_path)
     for k, v in run_config.items():
@@ -185,26 +249,48 @@ def convert_model(run_config_path, model_config_path, out_path, override_run_con
     new_model_config = AttrDict()
     model_config = load_with_import_resolution(model_config_path)
 
+    # Get all techs from old model that need to be tech_groups in the new one
+    merged_model_config = AttrDict.from_yaml(model_config_path)
+    run_config_overrides = AttrDict.from_yaml(run_config_path).get_key('override', None)
+    if run_config_overrides:
+        merged_model_config.union(run_config_overrides, allow_override=True)
+    tech_groups = set()
+    for tech, tech_dict in merged_model_config.techs.items():
+        parent = tech_dict.get('parent', None)
+        if parent and parent not in _TECH_GROUPS:
+            tech_groups.add(parent)
+
     for k, v in model_config.items():
-        new_model_config[k] = convert_model_dict(v, _CONVERSIONS)
+        new_model_config[k] = convert_model_dict(
+            v, _CONVERSIONS, tech_groups=tech_groups, state=state
+        )
 
     # Merge run_config into main model config file
     new_model_config[model_config_path].union(converted_run_config)
 
     # README: For future use we probably want a configuration to specify
     # a calliope version it's compatible with / built for
-    new_model_config[model_config_path]['calliope_version'] = '0.6.0'
+    new_model_config[model_config_path].set_key('model.calliope_version', '0.6.0')
+
+    # Set ensure_feasibility if the old model used unmet_demand
+    if state['ensure_feasibility']:
+        new_model_config[model_config_path].set_key('run.ensure_feasibility', True)
+        logger.info(
+            'Found no longer supported `unmet_demand` techs, setting `run.ensure_feasibility` \n'
+            'to True to replace them. See the docs for more info:\n'
+            'https://calliope.readthedocs.io/en/stable/user/building.html#allowing-for-unmet-demand'
+        )
 
     # README: adding top-level interest_rate and lifetime definitions
-    # for all techs, to mirror the fact that there used to be defaults
+    # for all techs EXCEPT demand,
+    # to mirror the fact that there used to be defaults
     defaults_v05 = AttrDict()
-    tech_groups = ['supply', 'supply_plus', 'demand', 'transmission', 'conversion', 'conversion_plus']
     cost_classes = [  # Get a list of all cost classes in model
         k.split('costs.', 1)[-1].split('.', 1)[0]
         for k in new_model_config.keys_nested()
         if 'costs.' in k
     ]
-    for t in tech_groups:
+    for t in [i for i in _TECH_GROUPS if i != 'demand']:
         defaults_v05.set_key('tech_groups.{}.constraints.lifetime'.format(t), 25)
         for cc in cost_classes:
             interest = 0.1 if cc == 'monetary' else 0
@@ -218,13 +304,17 @@ def convert_model(run_config_path, model_config_path, out_path, override_run_con
             f.replace(os.path.commonpath([model_config_path, f]), '.')
         )
         if f == model_config_path:
+            out_dir_model_config_path = out_dir
             out_filename = os.path.basename(model_config_path)
         out_file = os.path.join(out_path, out_dir, out_filename)
         os.makedirs(os.path.join(out_path, out_dir), exist_ok=True)
         new_model_config[f].to_yaml(out_file)
 
     # Read each CSV file in the model data dir and apply index
-    ts_dir = new_model_config[model_config_path].get_key('model.timeseries_data_path')
+    full_new_config = AttrDict.from_yaml(
+        os.path.join(out_path, out_dir_model_config_path, os.path.basename(model_config_path))
+    )
+    ts_dir = full_new_config.get_key('model.timeseries_data_path')
     ts_path_in = os.path.join(
         os.path.dirname(model_config_path), ts_dir
     )

@@ -7,6 +7,9 @@ from setuptools import setup, find_packages
 # Sets the __version__ variable
 exec(open('calliope/_version.py').read())
 
+with open('README.rst') as f:
+    long_description = f.read()
+
 
 def get_subdirs(path, glob_string):
     return [
@@ -35,7 +38,8 @@ setup(
     version=__version__,
     author='Calliope contributors listed in AUTHORS',
     author_email='stefan@pfenninger.org',
-    description='A multi-scale energy systems (MUSES) modeling framework',
+    description='A multi-scale energy systems modelling framework',
+    long_description=long_description,
     license='Apache 2.0',
     url='https://www.callio.pe/',
     download_url='https://github.com/calliope-project/calliope/releases',
@@ -43,15 +47,19 @@ setup(
     package_data={'calliope': find_calliope_package_data()},
     install_requires=[
         "click >= 3.3",
+        "cufflinks >= 0.12.1",
+        "ipython >= 6.2.1",
+        "jinja2 >= 2.10",
+        "natsort >= 5.2",
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.14",
         "pandas >= 0.22, < 0.23",
+        "plotly >= 2.5",
         "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
+        "scikit-learn >= 0.19.1",
         "xarray >= 0.10.0, < 0.11",
-        "plotly >= 2.2.3",
-        "jinja2 >= 2.10"
     ],
     entry_points={
         'console_scripts': [

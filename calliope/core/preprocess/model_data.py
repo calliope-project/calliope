@@ -255,7 +255,7 @@ def costs_to_dataset(model_run):
                 cost_value = np.nan if not cost_dict else cost_dict.get(cost, np.nan)
                 # add the value for the particular location & technology combination to the correct cost class list
                 cost_class_array.append(cost_value)
-        data_dict['cost_' + cost]['data'].append(cost_class_array)
+            data_dict['cost_' + cost]['data'].append(cost_class_array)
 
     return data_dict
 
@@ -343,13 +343,23 @@ def location_specific_to_dataset(model_run):
             .format(**split_loc_techs_transmission(loc_tech)), np.nan)
         for loc_tech in model_run.sets['loc_techs_transmission']
     ])
-    data_dict['lookup_remotes'] = dict(dims='loc_techs_transmission',
-        data=concat_iterable([(k['loc_to'], k['tech'], k['loc_from'])
-            for k in [split_loc_techs_transmission(loc_tech)
+    # If there is no distance information stored, distance array is deleted
+    if data_dict['distance']['data'].count(np.nan) == len(data_dict['distance']['data']):
+        del data_dict['distance']
+
+    data_dict['lookup_remotes'] = dict(
+        dims='loc_techs_transmission',
+        data=concat_iterable([
+            (k['loc_to'], k['tech'], k['loc_from'])
+            for k in [
+                split_loc_techs_transmission(loc_tech)
                 for loc_tech in model_run.sets['loc_techs_transmission']
             ]
         ], ['::', ':'])
     )
+    # If there are no remote locations stored, lookup_remotes array is deleted
+    if data_dict['lookup_remotes']['data'].count(np.nan) == len(data_dict['lookup_remotes']['data']):
+        del data_dict['lookup_remotes']
 
     data_dict['available_area'] = dict(dims='locs', data=[
         model_run.locations[loc].get('available_area', np.nan)
@@ -405,8 +415,9 @@ def tech_specific_to_dataset(model_run):
             'essentials.color'))
         data_dict['inheritance']['data'].append('.'.join(
             model_run.techs[tech].get_key('inheritance')))
-        data_dict['names']['data'].append(model_run.techs[tech].get_key(
-            'essentials.name'))
+        data_dict['names']['data'].append(
+            # Default to tech ID if no name is set
+            model_run.techs[tech].get_key('essentials.name', tech))
         for k in systemwide_constraints:
             data_dict[k]['data'].append(
                 model_run.techs[tech].constraints.get_key(k, np.nan)
@@ -433,7 +444,8 @@ def add_attributes(model_run):
 
     # Anything empty or None in the flattened dict is also killed
     for k in list(attr_dict.keys()):
-        if not attr_dict[k]:
+        val = attr_dict[k]
+        if val is None or (hasattr(val, '__iter__') and not val):
             del attr_dict[k]
 
     attr_dict['calliope_version'] = __version__

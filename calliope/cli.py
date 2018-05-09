@@ -17,18 +17,27 @@ import pstats
 import shutil
 import sys
 import traceback
-
 import click
 
-from calliope import Model, read_netcdf, examples, _time_format
+from calliope import Model, read_netcdf, examples
 from calliope.core.util.convert import convert_model
 from calliope.core.util.generate_runs import generate
+from calliope.core.util.logging import logger, set_log_level
 from calliope._version import __version__
+
+
+_time_format = '%Y-%m-%d %H:%M:%S'
 
 
 _debug = click.option(
     '--debug', is_flag=True, default=False,
     help='Print debug information when encountering errors.'
+)
+
+_quiet = click.option(
+    '--quiet', is_flag=True, default=False,
+    help='Be less verbose about what is happening, including hiding '
+         'solver output.'
 )
 
 _pdb = click.option(
@@ -47,16 +56,21 @@ _profile_filename = click.option(
     help='Filename to save profile to if enabled --profile.'
 )
 
-logging.basicConfig(stream=sys.stderr,
-                    format='[%(asctime)s] %(levelname)-8s %(message)s',
-                    datefmt=_time_format)
-logger = logging.getLogger()
+if logger.hasHandlers():
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
 
+formatter = logging.Formatter(
+    '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format
+)
+console = logging.StreamHandler(stream=sys.stderr)
+console.setFormatter(formatter)
+logger.addHandler(console)
 
 @contextlib.contextmanager
 def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=None, start_time=None):
     if debug:
-        logger.setLevel('DEBUG')
+        set_log_level('DEBUG')
 
     try:
         if profile:
@@ -96,6 +110,13 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
         sys.exit(1)
 
 
+def set_quietness_level(quiet):
+    if quiet:
+        set_log_level('WARNING')
+    else:
+        set_log_level('SOLVER')
+
+
 def print_end_time(start_time, msg='complete'):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
@@ -113,7 +134,7 @@ def _get_version():
 @click.option('--version', is_flag=True, default=False,
               help='Display version.')
 def cli(ctx, version):
-    """Calliope: a multi-scale energy systems (MUSES) modeling framework"""
+    """Calliope: a multi-scale energy systems modelling framework"""
     if ctx.invoked_subcommand is None and not version:
         print(ctx.get_help())
     if version:
@@ -149,12 +170,13 @@ def new(path, template, debug):
 @click.option('--save_logs')
 @click.option('--model_format')
 @_debug
+@_quiet
 @_pdb
 @_profile
 @_profile_filename
 def run(model_file, override_file, save_netcdf, save_csv, save_plots,
         save_logs, model_format,
-        debug, pdb, profile, profile_filename):
+        debug, quiet, pdb, profile, profile_filename):
     """
     Execute the given model. Tries to guess from the file extension whether
     ``model_file`` is a YAML file or a pre-built model saved to NetCDF.
@@ -164,16 +186,23 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
     """
     if debug:
         print(_get_version())
+
+    set_quietness_level(quiet)
+
     logging.captureWarnings(True)
+    pywarning_logger = logging.getLogger('py.warnings')
+    pywarning_logger.addHandler(console)
+
     start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
         if save_csv is None and save_netcdf is None:
-            print(
-                '!!!\nWARNING: Neither save_csv nor save_netcdf have been '
-                'specified. Model will run without saving results!\n!!!\n'
+            click.secho(
+                '\n!!!\nWARNING: No options to save results have been '
+                'specified.\nModel will run without saving results!\n!!!\n',
+                fg='red', bold=True
             )
         tstart = start_time.strftime(_time_format)
-        print('Calliope run starting at {}\n'.format(tstart))
+        print('Calliope {} starting at {}\n'.format(__version__, tstart))
 
         # Try to determine model file type if not given explicitly
         if model_format is None:
@@ -207,19 +236,12 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
         else:
             raise ValueError('Invalid model format: {}'.format(model_format))
 
-        # FIXME: get this from model._model_data rather than _model_run
-        model_name = model._model_data.attrs.get('model.name', 'None')
-        print('Model name:   {}'.format(model_name))
-        msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
-            locs=len(model._model_data.coords['locs'].values),
-            techs=(
-                len(model._model_data.coords['techs_non_transmission'].values) +
-                len(model._model_data.coords['techs_transmission_names'].values)
-            ),
-            times=len(model._model_data.coords['timesteps'].values))
-        print('Model size:   {}\n'.format(msize))
+        print(model.info() + '\n')
         print('Starting model run...')
         model.run()
+
+        termination = model._model_data.attrs.get(
+            'termination_condition', 'unknown')
         if save_csv:
             print('Saving CSV results to directory: {}'.format(save_csv))
             model.to_csv(save_csv)
@@ -227,8 +249,14 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
             print('Saving NetCDF results to file: {}'.format(save_netcdf))
             model.to_netcdf(save_netcdf)
         if save_plots:
-            print('Saving HTML file with plots to: {}'.format(save_plots))
-            model.plot.summary(out_file=save_plots)
+            if termination == 'optimal':
+                print('Saving HTML file with plots to: {}'.format(save_plots))
+                model.plot.summary(to_file=save_plots)
+            else:
+                click.secho(
+                    'Model termination condition non-optimal. Not saving plots',
+                    fg='red', bold=True
+                )
         print_end_time(start_time)
 
 
@@ -245,23 +273,28 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
     '--additional_args', default='',
     help='Any additional arguments to pass directly on to `calliope run`.')
 @_debug
+@_quiet
 @_pdb
 def generate_runs(
-    model_file, out_file, kind, override_file, groups, additional_args,
-    cluster_threads, cluster_mem, cluster_time,
-    debug, pdb):
-        kwargs = dict(
-            model_file=model_file,
-            out_file=out_file,
-            override_file=override_file,
-            groups=groups,
-            additional_args=additional_args,
-            cluster_mem=cluster_mem,
-            cluster_time=cluster_time,
-            cluster_threads=cluster_threads,
-        )
-        with format_exceptions(debug, pdb):
-            generate(kind, **kwargs)
+        model_file, out_file, kind, override_file, groups, additional_args,
+        cluster_threads, cluster_mem, cluster_time,
+        debug, quiet, pdb):
+
+    set_quietness_level(quiet)
+
+    kwargs = dict(
+        model_file=model_file,
+        out_file=out_file,
+        override_file=override_file,
+        groups=groups,
+        additional_args=additional_args,
+        cluster_mem=cluster_mem,
+        cluster_time=cluster_time,
+        cluster_threads=cluster_threads,
+    )
+
+    with format_exceptions(debug, pdb):
+        generate(kind, **kwargs)
 
 
 @cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
@@ -269,10 +302,11 @@ def generate_runs(
 @click.argument('model_config_path')
 @click.argument('out_path')
 @_debug
+@_quiet
 @_pdb
 def convert(
         run_config_path, model_config_path, out_path,
-        debug, pdb):
+        debug, quiet, pdb):
     """
     Convert a Calliope 0.5.x model specified by its run and model
     configurations to a Calliope 0.6.0 model.
@@ -281,6 +315,7 @@ def convert(
     is saved to ``out_path``.
 
     """
+    set_quietness_level(quiet)
     with format_exceptions(debug, pdb):
         print('Converting model...')
         convert_model(run_config_path, model_config_path, out_path)

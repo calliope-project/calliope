@@ -5,8 +5,8 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 import ruamel.yaml
 
-from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import reorganise_dataset_dimensions
+from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.backend import checks
 

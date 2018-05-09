@@ -18,7 +18,7 @@ time_clustering:
     model.name: 'National-scale example model with time clustering'
     model.subset_time: null  # No time subsetting
     # Cluster timesteps using k-means
-    model.time: {function: apply_clustering, function_options: {clustering_func: 'get_clusters_kmeans', how: 'closest', k: 10}}
+    model.time: {function: apply_clustering, function_options: {clustering_func: 'kmeans', how: 'closest', k: 10}}
 
 operate_mode:
     run.mode: operate
@@ -28,6 +28,22 @@ operate_mode:
     techs.csp.constraints.charge_rate: 0.0162857697 # energy_cap_max / storage_cap_max
     techs.csp.constraints.energy_cap_max: null
     techs.battery.constraints.storage_cap_max: null
+
+check_feasibility:
+    run:
+        ensure_feasibility: False
+        objective: 'check_feasibility'
+    model:
+        subset_time: '2005-01-04'
+
+reserve_margin:
+    model:
+        # Model-wide settings for the system-wide reserve margin
+        # Even setting a reserve margin of zero activates the constraint,
+        # forcing enough installed capacity to cover demand in
+        # the maximum demand timestep
+        reserve_margin:
+            power: 0.10  # 10% reserve margin for power
 
 ##
 # Overrides to demonstrate the run generator ("calliope generate_runs")
@@ -80,3 +96,38 @@ group_share_cold_fusion_cap:
             # At most 20% of total energy_cap can come from CSP and cold fusion together
             csp,cold_fusion:
                 energy_cap_max: 0.20
+    locations:
+        region1:
+            techs:
+                ccgt:
+                    constraints:
+                        energy_cap_max: 100000  # Increased to keep model feasible
+
+minimize_emissions_costs:
+    run:
+        objective_options:
+            cost_class: emissions
+    techs:
+        ccgt:
+            costs:
+                emissions:
+                    om_prod: 100 # kgCO2/kWh
+        csp:
+            costs:
+                emissions:
+                    om_prod: 10 # kgCO2/kWh
+
+maximize_utility_costs:
+    run:
+        objective_options:
+            cost_class: utility
+            sense: maximize
+    techs:
+        ccgt:
+              costs:
+                  utility:
+                      om_prod: 10 # arbitrary utility value
+        csp:
+              costs:
+                  utility:
+                      om_prod: 100 # arbitrary utility value

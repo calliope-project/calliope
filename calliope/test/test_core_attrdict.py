@@ -204,3 +204,12 @@ class TestAttrDict:
         """)
         d.union(d_new, allow_override=True, allow_replacement=True)
         assert d.c == 'foo'
+
+    def test_union_empty_dicts(self, attr_dict):
+        d = attr_dict
+        d_new = AttrDict({
+            '1': {'foo': {}},
+            'baz': {'bar': {}},
+        })
+        d.union(d_new)
+        assert d.baz.bar == {}

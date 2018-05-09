@@ -64,6 +64,14 @@ def load_constraints(backend_model):
 def cost_constraint_rule(backend_model, cost, loc_tech, scenario):
     """
     Combine investment and time varying costs into one cost per technology
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{cost}(cost, loc::tech) = \\boldsymbol{cost_{investment}}(cost, loc::tech)
+            + \\sum_{timestep \\in timesteps} \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
+
     """
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost') and backend_model.mode != 'operate':
@@ -84,11 +92,35 @@ def cost_constraint_rule(backend_model, cost, loc_tech, scenario):
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     """
-    Calculate costs from capacity decision variables
+    Calculate costs from capacity decision variables.
+
+    Transmission technologies "exist" at two locations, so their cost
+    is divided by 2.
 
     .. container:: scrolling-wrapper
 
         .. math::
+
+            \\boldsymbol{cost_{investment}}(cost, loc::tech) =
+            cost_{fractional\\_om}(cost, loc::tech) +
+            cost_{fixed\\_om}(cost, loc::tech) + cost_{con}(cost, loc::tech)
+
+            cost_{con}(cost, loc::tech) =
+            depreciation\\_rate * ts\\_weight *
+            (cost_{energy\\_cap}(cost, loc::tech) \\times \\boldsymbol{energy_{cap}}(loc::tech)
+            + cost_{storage\\_cap}(cost, loc::tech) \\times \\boldsymbol{storage_{cap}}(loc::tech)
+            + cost_{resource\\_cap}(cost, loc::tech) \\times \\boldsymbol{resource_{cap}}(loc::tech)
+            + cost_{resource\\_area}(cost, loc::tech)) \\times \\boldsymbol{resource_{area}}(loc::tech)
+
+            depreciation\\_rate =
+            \\begin{cases}
+                = 1 / plant\\_life,&
+                    \\text{if } interest\\_rate = 0\\\\
+                = \\frac{interest\\_rate \\times (1 + interest\\_rate)^{plant\\_life}}{(1 + interest\\_rate)^{plant\\_life} - 1},&
+                    \\text{if } interest\\_rate \\gt 0\\\\
+            \\end{cases}
+
+            ts\\_weight = \\sum_{timestep \\in timesteps} (time\\_res(timestep) \\times weight(timestep)) \\times \\frac{1}{8760}
 
     """
     model_data_dict = backend_model.__calliope_model_data__
@@ -102,7 +134,8 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
             _cost = (getattr(backend_model, capacity_decision_variable)[loc_tech] *
                 get_param(backend_model, 'cost_' + capacity_decision_variable, (cost, loc_tech)))
             return _cost
-        else: return 0
+        else:
+            return 0
 
     cost_energy_cap = (backend_model.energy_cap[loc_tech]
         * get_param(backend_model, 'cost_energy_cap', (cost, loc_tech)))
@@ -115,7 +148,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_om_annual = get_param(backend_model, 'cost_om_annual', (cost, loc_tech))
 
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
+    depreciation_rate = model_data_dict['data']['cost_depreciation_rate'].get((cost, loc_tech), 0)
 
     cost_con = (
         depreciation_rate * ts_weight *
@@ -148,6 +181,20 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, scenario, timestep):
 
         .. math::
 
+            \\boldsymbol{cost_{var}}(cost, loc::tech, timestep) = cost_{prod}(cost, loc::tech, timestep) + cost_{con}(cost, loc::tech, timestep)
+
+            cost_{prod}(cost, loc::tech, timestep) = cost_{om\\_prod}(cost, loc::tech, timestep) \\times weight(timestep) \\times \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
+
+            prod\\_con\\_eff =
+            \\begin{cases}
+                = \\boldsymbol{resource_{con}}(loc::tech, timestep),&
+                    \\text{if } loc::tech \\in loc\\_techs\\_supply\\_plus \\\\
+                = \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{energy_eff(loc::tech, timestep)},&
+                    \\text{if } loc::tech \\in loc\\_techs\\_supply \\\\
+            \\end{cases}
+
+            cost_{con}(cost, loc::tech, timestep) = cost_{om\\_con}(cost, loc::tech, timestep) \\times weight(timestep) \\times prod\\_con\\_eff
+
     """
     model_data_dict = backend_model.__calliope_model_data__
 
@@ -163,13 +210,7 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, scenario, timestep):
         cost_prod = 0
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and cost_om_con:
-        resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, scenario, timestep))
-        if po.value(resource_eff) > 0:  # In case resource_eff is zero, to avoid an infinite value
-            # Dividing by r_eff here so we get the actual r used, not the r
-            # moved into storage...
-            cost_con = cost_om_con * weight * (backend_model.resource_con[loc_tech, scenario, timestep] / resource_eff)
-        else:
-            cost_con = 0
+        cost_con = cost_om_con * weight * backend_model.resource_con[loc_tech, scenario, timestep]
     elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and cost_om_con:
         energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, scenario, timestep))
         if po.value(energy_eff) > 0:  # in case energy_eff is zero, to avoid an infinite value

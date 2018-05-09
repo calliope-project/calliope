@@ -1,5 +1,8 @@
 import pytest  # pylint: disable=unused-import
-
+import calliope
+import logging
+import datetime
+import pyomo
 
 from calliope.core.util import dataset
 
@@ -7,6 +10,7 @@ from calliope.core.util.tools import \
     memoize, \
     memoize_instancemethod
 
+from calliope.core.util.logging import log_time
 
 class TestDataset:
     @pytest.fixture()
@@ -57,3 +61,32 @@ class TestMemoization:
     def test_memoize_instancemethod(self):
         assert self.instance_method(1, 2) == 3
         assert self.instance_method(1, 2) == 3
+
+
+class TestLogging:
+    def test_set_log_level(self):
+
+        # We assign a handler to the Calliope logger on loading calliope
+        assert calliope._logger.hasHandlers() is True
+        assert len(calliope._logger.handlers) == 1
+
+        for level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+            calliope.set_log_level(level)
+            assert calliope._logger.level == getattr(logging, level)
+
+        # We have a custom level 'SOLVER' at level 19
+        calliope.set_log_level('SOLVER')
+        assert calliope._logger.level == 19
+
+    def test_timing_log(self):
+        timings = {'model_creation': datetime.datetime.now()}
+
+        # TODO: capture logging output and check that comment is in string
+        log_time(timings, 'test', comment='test_comment', level='info')
+        assert isinstance(timings['test'], datetime.datetime)
+
+        log_time(timings, 'test2', comment=None, level='info')
+        assert isinstance(timings['test2'], datetime.datetime)
+
+        # TODO: capture logging output and check that time_since_start is in the string
+        log_time(timings, 'test', comment=None, level='info', time_since_start=True)

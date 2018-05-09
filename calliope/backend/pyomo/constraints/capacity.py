@@ -93,9 +93,7 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
             _equals *= scale
         return decision_variable[loc_tech] == _equals
     else:
-        if np.isinf(po.value(_max)):
-            _max = None  # to disable upper bound
-        if po.value(_min) == 0 and po.value(_max) is None:
+        if po.value(_min) == 0 and np.isinf(po.value(_max)):
             return po.Constraint.NoConstraint
         else:
             if scale:

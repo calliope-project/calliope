@@ -3,37 +3,60 @@
 Release History
 ===============
 
-0.6.0 (dev)
------------
+0.6.2-dev
+---------
 
-Version 0.6.0 is an almost complete rewrite of most of Calliope's internals.
+|new| Storage can be set to cyclic using ``run.cyclic_storage``. The last timestep in the series will then be used as the 'previous day' conditions for the first timestep in the series. This also applies to ``storage_inter_cluster``, if clustering. Defaults to False, with intention of defaulting to True in 0.6.2.
+
+|new| On clustering timeseries into representative days, an additional set of decision variables and constraints is generated. This addition allows for tracking stored energy between clusters, by considering storage between every `datestep` of the original (unclustered) timeseries as well as storage variation within a cluster.
+
+|fixed| Fix CLI error when running a model without transmission technologies
+
+|fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
+
+
+0.6.1 (2018-05-04)
+------------------
+
+|new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
+
+|new| Added ``layout_updates`` and ``plotly_kwarg_updates`` parameters to plotting functions to override the generated Plotly configuration and layout
+
+|changed| Cost class and sense (maximize/minimize) for objective function may now be specified in run configuration (default remains monetary cost minimization)
+
+|changed| Cleaned up and documented ``Model.save_commented_model_yaml()`` method
+
+|fixed| Fixed error when calling ``--save_plots`` in CLI
+
+|fixed| Minor improvements to warnings
+
+|fixed| Pure dicts can be used to create a ``Model`` instance
+
+|fixed| ``AttrDict.union`` failed on all-empty nested dicts
+
+0.6.0 (2018-04-20)
+------------------
+
+Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/whatsnew` for a more detailed description of the many changes.
 
 Major changes
 ~~~~~~~~~~~~~
 
-|changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files
+|changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files. See :doc:`user/conversion_0.6.0` for a full list of changes.
 
-|changed| |backwards-incompatible| Complete rewrite of Pyomo backend
+|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see :doc:`user/whatsnew`).
 
-|new| Experimental Julia/JuMP backend
+|new| Addition of a ``calliope convert`` CLI tool to convert 0.5.x models to 0.6.0.
 
-|changed| |backwards-incompatible| ``group_fraction`` constraint is now called ``group_share`` and has a different formulation more in line with the rest of the tech-specific constraints::
+|new| Experimental ability to link to non-Pyomo backends.
 
-    group_share:
-        csp,ccgt:
-            energy_cap_min: 0.5
-            energy_cap_max: 0.9
-            carrier_prod_min:
-                power: 0.5
+|new| New constraints: ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs.
 
-Also removed the ``demand_power_peak`` and (undocumented) ``ignored_techs`` options from ``group_share``.
+|changed| |backwards-incompatible| Removal of settings and constraints includes ``subset_x``, ``subset_y``, ``s_time``, ``r2``, ``r_scale_to_peak``, ``weight``. See :doc:`user/conversion_0.6.0` for a full list.
 
-Minor changes
-~~~~~~~~~~~~~
+|changed| |backwards-incompatible| ``system_margin`` constraint replaced with ``reserve_margin`` constraint.
 
-* |changed| ``system_margin`` constraint is now called ``reserve_margin`` and has a different implementation: FIXME
-* |new| Add ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs
-* |new| Add ``calliope convert`` command to convert 0.5.x models to 0.6.0 format. Does not preserve comments for now.
+|changed| |backwards-incompatible| Removed the ability to load additional custom constraints or objectives.
 
 0.5.5 (2018-02-28)
 ------------------

@@ -67,10 +67,40 @@ def load_constraints(backend_model):
             rule=ramping_down_constraint_rule
         )
 
+    if 'clusters' in sets and 'datesteps' in sets:
+        backend_model.storage_intra_max_constraint = po.Constraint(
+            backend_model.loc_techs_storage_intra_max_constraint,
+            backend_model.scenarios, backend_model.timesteps,
+            rule=storage_intra_max_rule
+        )
+        backend_model.storage_intra_min_constraint = po.Constraint(
+            backend_model.loc_techs_storage_intra_min_constraint,
+            backend_model.scenarios, backend_model.timesteps,
+            rule=storage_intra_min_rule
+        )
+        backend_model.storage_inter_max_constraint = po.Constraint(
+            backend_model.loc_techs_storage_inter_max_constraint,
+            backend_model.scenarios, backend_model.datesteps,
+            rule=storage_inter_max_rule
+        )
+        backend_model.storage_inter_min_constraint = po.Constraint(
+            backend_model.loc_techs_storage_inter_min_constraint,
+            backend_model.scenarios, backend_model.datesteps,
+            rule=storage_inter_min_rule
+        )
+
 
 def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
     Set maximum carrier production. All technologies.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep) \\leq energy_{cap}(loc::tech)
+            \\times timestep\_resolution(timestep) \\times parasitic\_eff(loc::tec)
+
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
@@ -84,7 +114,15 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, scen
 
 def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
-    Set minimum carrier production. All technologies except conversion_plus
+    Set minimum carrier production. All technologies except ``conversion_plus``.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep) \\geq energy_{cap}(loc::tech)
+            \\times timestep\_resolution(timestep) \\times energy_{cap,min\_use}(loc::tec)
+
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
@@ -98,7 +136,16 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, scen
 
 def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
     """
-    Set maximum carrier consumption for demand, storage, and transmission techs
+    Set maximum carrier consumption for demand, storage, and transmission techs.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\geq
+            -1 \\times energy_{cap}(loc::tech)
+            \\times timestep\_resolution(timestep)
+
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_con = backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
@@ -111,7 +158,15 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, sce
 
 def resource_max_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
-    Set maximum resource consumed by supply_plus techs
+    Set maximum resource consumed by supply_plus techs.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{resource_{con}}(loc::tech, timestep) \\leq
+            timestep\_resolution(timestep) \\times resource_{cap}(loc::tech)
+
     """
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
@@ -122,23 +177,64 @@ def resource_max_constraint_rule(backend_model, loc_tech, scenario, timestep):
 def storage_max_constraint_rule(backend_model, loc_tech, scenario, timestep):
     """
     Set maximum stored energy. Supply_plus & storage techs only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep) \\leq
+            storage_{cap}(loc::tech)
+
     """
     return backend_model.storage[loc_tech, scenario, timestep] <= backend_model.storage_cap[loc_tech]
 
 
 def ramping_up_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
-    return _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep, direction=0)
+    """
+    Ramping up constraint.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            diff(loc::tech::carrier, timestep) \\leq max\_ramping\_rate(loc::tech::carrier, timestep)
+
+    """
+    return ramping_constraint(backend_model, loc_tech_carrier, scenario, timestep, direction=0)
 
 
 def ramping_down_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep):
-    return _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep, direction=1)
+    """
+    Ramping down constraint.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            -1 \\times max\_ramping\_rate(loc::tech::carrier, timestep) \\leq diff(loc::tech::carrier, timestep)
+
+    """
+    return ramping_constraint(backend_model, loc_tech_carrier, scenario, timestep, direction=1)
 
 
-def _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep, direction=0):
+def ramping_constraint(backend_model, loc_tech_carrier, scenario, timestep, direction=0):
     """
     Ramping rate constraints.
 
     Direction: 0 is up, 1 is down.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{max\_ramping\_rate}(loc::tech::carrier, timestep) =
+            energy_{ramping}(loc::tech, timestep) \\times energy_{cap}(loc::tech)
+
+            \\boldsymbol{diff}(loc::tech::carrier, timestep) =
+            (carrier_{prod}(loc::tech::carrier, timestep) + carrier_{con}(loc::tech::carrier, timestep))
+            / timestep\_resolution(timestep) -
+            (carrier_{prod}(loc::tech::carrier, timestep-1) + carrier_{con}(loc::tech::carrier, timestep-1))
+            / timestep\_resolution(timestep-1)
 
     """
 
@@ -146,7 +242,7 @@ def _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep
     if backend_model.timesteps.order_dict[timestep] == 0:
         return po.Constraint.NoConstraint
     else:
-        previous_step = get_previous_timestep(backend_model, timestep)
+        previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         time_res = backend_model.timestep_resolution[timestep]
         time_res_prev = backend_model.timestep_resolution[previous_step]
         loc_tech = loc_tech_carrier.rsplit('::', 1)[0]
@@ -178,3 +274,108 @@ def _ramping_constraint_rule(backend_model, loc_tech_carrier, scenario, timestep
             return diff <= max_ramping_rate
         else:
             return -1 * max_ramping_rate <= diff
+
+
+def storage_intra_max_rule(backend_model, loc_tech, scenario, timestep):
+    """
+    When clustering days, to reduce the timeseries length, set limits on
+    intra-cluster auxiliary maximum storage decision variable.
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep) \\leq
+            \\boldsymbol{storage_{intra\_cluster, max}}(loc::tech, cluster(timestep))
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
+
+    Where :math:`cluster(timestep)` is the cluster number in which the timestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['timestep_cluster'][timestep]
+    return (
+        backend_model.storage[loc_tech, scenario, timestep] <=
+        backend_model.storage_intra_cluster_max[loc_tech, cluster, scenario]
+    )
+
+
+def storage_intra_min_rule(backend_model, loc_tech, scenario, timestep):
+    """
+    When clustering days, to reduce the timeseries length, set limits on
+    intra-cluster auxiliary minimum storage decision variable.
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep) \\geq
+            \\boldsymbol{storage_{intra\_cluster, min}}(loc::tech, cluster(timestep))
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
+
+    Where :math:`cluster(timestep)` is the cluster number in which the timestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['timestep_cluster'][timestep]
+    return (
+        backend_model.storage[loc_tech, scenario, timestep] >=
+        backend_model.storage_intra_cluster_min[loc_tech, cluster, scenario]
+    )
+
+
+def storage_inter_max_rule(backend_model, loc_tech, scenario, datestep):
+    """
+    When clustering days, to reduce the timeseries length, set maximum limit on
+    the intra-cluster and inter-date stored energy.
+    intra-cluster = all timesteps in a single cluster
+    datesteps = all dates in the unclustered timeseries (each has a corresponding cluster)
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep) +
+            \\boldsymbol{storage_{intra\_cluster, max}}(loc::tech, cluster(datestep))
+            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\quad \\forall
+            loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
+
+    Where :math:`cluster(datestep)` is the cluster number in which the datestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
+    return (
+        backend_model.storage_inter_cluster[loc_tech, scenario, datestep] +
+        backend_model.storage_intra_cluster_max[loc_tech, cluster, scenario] <=
+        backend_model.storage_cap[loc_tech]
+    )
+
+
+def storage_inter_min_rule(backend_model, loc_tech, scenario, datestep):
+    """
+    When clustering days, to reduce the timeseries length, set minimum limit on
+    the intra-cluster and inter-date stored energy.
+    intra-cluster = all timesteps in a single cluster
+    datesteps = all dates in the unclustered timeseries (each has a corresponding cluster)
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep)
+            \\times (1 - storage\_loss(loc::tech, timestep))^{24} +
+            \\boldsymbol{storage_{intra\_cluster, min}}(loc::tech, cluster(datestep))
+            \\geq 0 \\quad \\forall loc::tech \\in loc::techs_{store},
+            \\forall datestep \\in datesteps
+
+    Where :math:`cluster(datestep)` is the cluster number in which the datestep
+    is located.
+    """
+    cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
+    storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
+    return (
+        backend_model.storage_inter_cluster[loc_tech, scenario, datestep] * ((1 - storage_loss) ** 24) +
+        backend_model.storage_intra_cluster_min[loc_tech, cluster, scenario] >= 0
+    )

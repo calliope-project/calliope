@@ -18,9 +18,9 @@ before_install:
   - conda info -a
 
 install:
-  - conda env create -n calliope --file requirements.yml
+  - conda env create -n calliope --file requirements/base.yml
   - source activate calliope
-  - conda env update --file requirements_travis.yml
+  - conda env update --file requirements/travis.yml
   - pip install --no-cache-dir .
 
 script: "make ci"

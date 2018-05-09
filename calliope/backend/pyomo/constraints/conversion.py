@@ -64,7 +64,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, scenario,
     """
     Add time-varying conversion technology costs
 
-    .. container:: srolling-wrapper
+    .. container:: scrolling-wrapper
 
         .. math::
 
@@ -88,18 +88,20 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, scenario,
     )
 
     cost_om_prod = get_param(backend_model, 'cost_om_prod',
-                                (cost, loc_tech, scenario, timestep))
+                             (cost, loc_tech, scenario, timestep))
     cost_om_con = get_param(backend_model, 'cost_om_con',
                             (cost, loc_tech, scenario, timestep))
     if po.value(cost_om_prod):
         cost_prod = (cost_om_prod * weight *
-            backend_model.carrier_prod[loc_tech_carrier_out, scenario, timestep])
-    else: cost_prod = 0
+                     backend_model.carrier_prod[loc_tech_carrier_out, scenario, timestep])
+    else:
+        cost_prod = 0
 
     if po.value(cost_om_con):
-        cost_con = (cost_om_con * weight *
-            backend_model.carrier_con[loc_tech_carrier_in, scenario, timestep])
-    else: cost_con = 0
+        cost_con = (-1 * cost_om_con * weight *
+                    backend_model.carrier_con[loc_tech_carrier_in, scenario, timestep])
+    else:
+        cost_con = 0
 
     backend_model.cost_var_rhs[cost, loc_tech, scenario, timestep] = cost_prod + cost_con
 

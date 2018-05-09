@@ -28,7 +28,7 @@ def read_netcdf(path):
         if not str(calliope_version) in __version__:
             exceptions.warn(
                 'This model data was created with Calliope version {}, '
-                'but you are running {}. Proceed with caution!'
+                'but you are running {}. Proceed with caution!'.format(calliope_version, __version__)
             )
 
     # FIXME some checks for consistency
@@ -67,11 +67,27 @@ def save_netcdf(model_data, path):
             model_data.attrs[k] = None
 
 
-def save_csv(model_data, path):
+def save_csv(model_data, path, dropna=True):
+    """
+    If termination condition was not optimal, filters inputs only, and
+    warns that results will not be saved.
+
+    """
     os.makedirs(path, exist_ok=False)
 
-    for var in model_data.data_vars:
+    if ('termination_condition' not in model_data.attrs or
+            model_data.attrs['termination_condition'] == 'optimal'):
+        data_vars = model_data.data_vars
+    else:
+        data_vars = model_data.filter_by_attrs(is_result=0).data_vars
+        exceptions.warn(
+            'Model termination condition was not optimal, saving inputs only.'
+        )
+
+    for var in data_vars:
         in_out = 'results' if model_data[var].attrs['is_result'] else 'inputs'
         out_path = os.path.join(path, '{}_{}.csv'.format(in_out, var))
         series = split_loc_techs(model_data[var], as_='Series')
+        if dropna:
+            series = series.dropna()
         series.to_csv(out_path)

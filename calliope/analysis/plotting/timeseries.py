@@ -13,9 +13,9 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objs as go
 
-from calliope import exceptions
 from calliope.analysis.util import subset_sum_squeeze
-from calliope.analysis.plotting.util import get_data_layout, hex_to_rgba
+from calliope.analysis.plotting.util import \
+    get_data_layout, hex_to_rgba, break_name, get_clustered_layout
 
 
 def _get_relevant_vars(model, dataset, array):
@@ -26,15 +26,16 @@ def _get_relevant_vars(model, dataset, array):
         k for k, v in model.inputs.data_vars.items()
         if 'timesteps' in v.dims and len(v.dims) > 1
     ]
-    allowed_result_vars = (
-        ['results', 'inputs', 'all', 'storage', 'resource_con', 'cost_var']
-    )
+    allowed_result_vars = [
+        'results', 'inputs', 'all', 'storage', 'storage_inter_cluster',
+        'resource_con', 'cost_var'
+    ]
 
     if ((isinstance(array, list) and not
             set(array).intersection(allowed_input_vars + allowed_result_vars + carriers)) or
         (isinstance(array, str) and
             array not in allowed_input_vars + allowed_result_vars + carriers)):
-        raise exceptions.ModelError(
+        raise ValueError(
             'Cannot plot array={}. If you want carrier flow (_prod, _con, _export) '
             'then specify the name of the energy carrier as array'.format(array)
         )
@@ -68,8 +69,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     data = []
 
     # Clustered data does not get plotted on a datetime axis
-    if hasattr(dataset, 'clusters'):
-        clusters = dataset.clusters.to_pandas()
+    if 'clusters' in dataset.dims:
+        clusters = dataset.timestep_cluster.to_pandas()
         cluster_groups = clusters.groupby(clusters).groups
         # Add an extra timestep at the end of each cluster, so we can break
         # scatter lines with a NaN between each cluster
@@ -82,6 +83,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         # replace dummy timestep with NaN
         timesteps[pd.Index(reindexing_timesteps).nanosecond == 100] = np.nan
         timesteps = pd.to_datetime(timesteps, errors='ignore')
+        if var == 'storage_inter_cluster':
+            datesteps = pd.to_datetime(model._model_data.datesteps.values)
     else:
         timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
@@ -94,8 +97,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         else:
             return formatted_array.reindex(**reindexer)
 
-    def _get_y_vals(array):
-        if hasattr(dataset, 'clusters'):
+    def _get_y_vals(array, ignore_clustering=False):
+        if 'clusters' in dataset.dims and not ignore_clustering:
             return array.to_pandas().reindex(reindexing_timesteps).values
         else:
             return array.values
@@ -103,7 +106,10 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     if hasattr(model, 'results'):
         array_prod = _get_reindexed_array('carrier_prod', index=['locs', 'techs', 'carriers'], fillna=0)
         array_con = _get_reindexed_array('carrier_con', index=['locs', 'techs', 'carriers'], fillna=0)
-        resource_con = _get_reindexed_array('resource_con', fillna=0)
+        if 'resource_con' in dataset.data_vars:
+            resource_con = _get_reindexed_array('resource_con', fillna=0)
+        else:
+            resource_con = 0
 
     # carrier flow is a combination of carrier_prod, carrier_con and
     # carrier_export for a given energy carrier
@@ -128,8 +134,19 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     # charge/discharge (including resource consumed for supply_plus techs)
     elif var == 'storage':
         array_flow = _get_reindexed_array('storage')
-        carrier_flow = (array_prod.sum('carriers') + array_con.sum('carriers') - resource_con)
-        carrier_flow = subset_sum_squeeze(carrier_flow, subset, sum_dims, squeeze)
+
+        if 'resource_eff' in dataset.data_vars:
+            resource_eff = _get_reindexed_array('resource_eff', fillna=1)
+        else:
+            resource_eff = 1
+
+        charge = subset_sum_squeeze(
+            -array_con.sum('carriers') + resource_con * resource_eff,
+            subset, sum_dims, squeeze=False
+        )
+        discharge = -subset_sum_squeeze(
+            array_prod.sum('carriers'), subset, sum_dims, squeeze=False
+        )
 
     elif var == 'resource_con':
         array_flow = resource_con
@@ -139,41 +156,55 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
 
     array_flow = subset_sum_squeeze(array_flow, subset, sum_dims, squeeze)
 
-    if 'timesteps' not in array_flow.dims or len(array_flow.dims) > 2:
-        e = exceptions.ModelError
-        raise e('Cannot plot timeseries for variable `{}` with subset `{}`'
-                'and `sum_dims: {}`'.format(var, subset, sum_dims))
+    err_details = ' (variable: `{}`, subset: `{}`, sum_dims: `{}`.'.format(var, subset, sum_dims)
 
-    for tech in array_flow.techs.values:
+    if 'timesteps' not in array_flow.dims and 'datesteps' not in array_flow.dims:
+        raise ValueError(
+            '`timesteps` not in plotting data, cannot proceed' + err_details
+        )
+
+    if len(array_flow.dims) > 2:
+        if 'costs' in array_flow.dims:
+            err_details = err_details + (' Try subsetting to select a cost class, '
+                "e.g. subset={'costs': ['monetary']}.")
+        raise ValueError(
+            'Too many dimensions to plot: `{}`'.format(array_flow.dims) + err_details
+        )
+
+    # If techs not given as a subset (implying a desire to order manually),
+    # sort techs such that those varying output least are at the bottom of the stack
+    if subset.get('techs', None) or var == 'storage_inter_cluster':
+        sorted_techs = array_flow.techs.values
+    else:
+        sorted_techs = [
+            array_flow.techs.values[i]
+            for i in array_flow.var(dim='timesteps').argsort()
+        ]
+
+    # for tech in array_flow.techs.values:
+    for tech in sorted_techs:
         tech_dict = {'techs': tech}
         if not array_flow.loc[tech_dict].sum():
             continue
-        # We allow transmisison tech information to show up in some cases
+        # We allow transmission tech information to show up in some cases
         if 'techs_transmission' in dataset and tech in dataset.techs_transmission.values:
             base_tech = 'transmission'
             color = dataset.colors.loc[{'techs': tech.split(':')[0]}].item()
-            name = dataset.names.loc[{'techs': tech.split(':')[0]}].item()
+            name = break_name(dataset.names.loc[{'techs': tech.split(':')[0]}].item())
             if var in carriers:
                 continue  # no transmission in carrier flow
         else:
             base_tech = dataset.inheritance.loc[tech_dict].item().split('.')[0]
             color = dataset.colors.loc[tech_dict].item()
-            name = dataset.names.loc[tech_dict].item()
-
-        # Wrap legend items longer than 30 characters, preferably at a space
-        if len(name) > 30:
-            breakpoint = name.rfind(' ', int(len(name) / 3), 35)
-            if breakpoint:
-                name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
-            else:
-                name = name[:30].rstrip() + '...<br>' + name[30:].lstrip()
+            name = break_name(dataset.names.loc[tech_dict].item())
 
         if base_tech == 'demand':
             # Always insert demand at position 0 in the list, to make
             # sure it appears on top in the legend
             data.insert(0, go.Scatter(
                 x=timesteps, y=_get_y_vals(-array_flow.loc[tech_dict]),
-                visible=visible, line=dict(color=color), name=name)
+                visible=visible, line=dict(color=color), name=name,
+                legendgroup=tech)
             )
 
         elif var == 'storage':
@@ -185,9 +216,22 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
                 legendgroup=tech)
             )
             data.append(go.Bar(
-                x=timesteps, y=_get_y_vals(-carrier_flow.loc[tech_dict]), visible=visible,
+                x=timesteps, y=_get_y_vals(charge.loc[tech_dict]), visible=visible,
                 name=name, marker=dict(color=color), legendgroup=tech,
-                text=tech + ' charge (+) / discharge (-)', hoverinfo='x+y+text'
+                text=tech + ' charge', hoverinfo='x+y+text'
+            ))
+            data.append(go.Bar(
+                x=timesteps, y=_get_y_vals(discharge.loc[tech_dict]), visible=visible,
+                name=name, marker=dict(color=color, opacity=0.8), legendgroup=tech,
+                text=tech + ' discharge', hoverinfo='x+y+text', showlegend=False
+            ))
+
+        elif var == 'storage_inter_cluster':
+            data.append(go.Scatter(
+                x=datesteps, y=_get_y_vals(array_flow.loc[tech_dict], ignore_clustering=True),
+                visible=visible, line=dict(color=color), mode='lines',
+                name=name, showlegend=False, text=tech, hoverinfo='x+y+text',
+                legendgroup=tech
             ))
 
         else:
@@ -205,7 +249,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     if var in carriers and 'unmet_demand' in dataset:
         data.append(go.Bar(
             x=timesteps, y=_get_y_vals(unmet_flow), visible=visible,
-            name='Unmet ' + var + ' demand', legendgroup=tech,
+            name='Unmet ' + var + ' demand', legendgroup='unmet_demand',
             marker=dict(color='grey')
         ))
 
@@ -231,16 +275,25 @@ def _get_var_layout(var, dataset):
     elif var == 'cost_var':
         title = 'Variable costs'
         y_axis_title = 'Cost'
+    elif var == 'storage_inter_cluster':
+        title = 'Storage at start of each day in unclustered timeseries'
+        y_axis_title = 'Stored energy'
+        args.update({'xaxis': {'type': 'date'}})
     else:
         title = y_axis_title = '{}'.format(var).capitalize()
+
+    if 'clusters' in dataset.dims and var != 'storage_inter_cluster':
+        args.update(get_clustered_layout(dataset))
+
     args.update({'yaxis': dict(title=y_axis_title), 'title': title})
 
     return args
 
 
 def plot_timeseries(
-        model, array='all', timesteps_zoom=None, subset=dict(), sum_dims='locs',
-        squeeze=True, html_only=False, save_svg=False):
+        model, array='all', timesteps_zoom=None, rangeslider=False,
+        subset={}, sum_dims='locs',
+        squeeze=True, **kwargs):
     """
     Parameters
     ----------
@@ -251,12 +304,15 @@ def plot_timeseries(
         User can specify 'all' for all input/results timeseries plots, 'inputs'
         for just input timeseries, 'results' for just results timeseries, or the
         name of any data array to plot (in either inputs or results).
-        In all but the last case, arrays can be picked from dropdown in visualisaiton.
+        In all but the last case, arrays can be picked from dropdown in visualisation.
         In the last case, output can be saved to SVG and a rangeslider can be used.
 
     timesteps_zoom : int, optional
         Number of timesteps to show initially on the x-axis (if not
         given, the full time range is shown by default).
+    rangeslider : bool, optional
+        If True, displays a range slider underneath the plot for navigating
+        (helpful primarily in interactive use).
     subset : dict, optional
         Dictionary by which data is subset (uses xarray `loc` indexing). Keys
         any of ['timeseries', 'locs', 'techs', 'carriers', 'costs'].
@@ -264,10 +320,6 @@ def plot_timeseries(
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
         Whether to squeeze out dimensions of length = 1.
-    html_only : bool, optional, default = False
-        Returns a html string for embedding the plot in a webpage
-    save_svg : bool, optional; default = false
-        Will save plot to svg on rendering
 
     """
 
@@ -280,15 +332,9 @@ def plot_timeseries(
         legend=(dict(traceorder='reversed', xanchor='left')), hovermode='x'
     )
     # Clustered data does not get plotted on a datetime axis
-    if hasattr(dataset, 'clusters'):
-        clusters = dataset.clusters.to_pandas().groupby(dataset.clusters.to_pandas()).groups
-        layout['xaxis']['type'] = 'category'
-        layout['xaxis']['tickvals'] = [
-            (2 * (k - min(clusters.keys())) + 1) * len(v) / 2 - 0.5
-            for k, v in clusters.items()
-        ]
-        layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
-        layout['xaxis']['title'] = 'Clusters'
+    if 'clusters' in dataset.dims:
+        layout.update(get_clustered_layout(dataset))
+
     relevant_vars = _get_relevant_vars(model, dataset, array)
 
     data, layout = get_data_layout(
@@ -297,10 +343,7 @@ def plot_timeseries(
         subset, sum_dims, squeeze,
     )
 
-    # If there are multiple vars to plot, use dropdowns via 'updatemenus'
-    if len(relevant_vars) == 1:
-        # If there is one var, rangeslider can be added without the ensuing plot
-        # running too slowly
+    if rangeslider:
         layout['xaxis']['rangeslider'] = {}
 
     if timesteps_zoom:

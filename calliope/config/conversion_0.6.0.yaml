@@ -1,3 +1,9 @@
+# Structure of this file:
+# Each major section of model / run configuration has its own top-level key.
+# Within each top-level section, changes are given as ``old name: new name``,
+# and if the specific setting has been removed, the new name is ``null``,
+# possibly with a comment indicating
+
 run_config:
     import: null  # use import statements in model configuration file instead
     subset_y: null
@@ -15,6 +21,7 @@ run_config:
     override: null  # now achieved with override groups, see override.yaml in examples
     parallel: null
     random_seed: model.random_seed
+    debug: null  # no longer available
 
 
 model_config:
@@ -31,10 +38,12 @@ model_config:
 
 tech_config:
     parent: essentials.parent
+    group: null  # Use tech_groups to specify groups
     name: essentials.name
     stack_weight: null  # stack_weight is no longer supported
     color: essentials.color
     x_map: null  # now achieved by directly specifying file=filename.csv:column
+    carrier: essentials.carrier
     primary_carrier: essentials.primary_carrier
     carrier_in: essentials.carrier_in # If conversion_plus, now a list of carrier names. Ratios between carriers found in constraints.carrier_ratios
     carrier_in_2: essentials.carrier_in_2 # If conversion_plus, now a list of carrier names. Ratios between carriers found in constraints.carrier_ratios
@@ -63,7 +72,8 @@ tech_config:
     constraints.s_cap.equals: constraints.storage_cap_equals
     constraints.s_cap_per_unit: constraints.storage_cap_per_unit
     constraints.c_rate: constraints.charge_rate
-    constraints.s_time.max: constraints.storage_time_max
+    constraints.s_time.max: null
+    constraints.use_s_time: null
     constraints.s_loss: constraints.storage_loss
     constraints.e_prod: constraints.energy_prod
     constraints.e_con: constraints.energy_con
@@ -77,6 +87,7 @@ tech_config:
     constraints.e_cap_total.equals: constraints.energy_cap_equals_systemwide
     constraints.e_cap_scale: constraints.energy_cap_scale
     constraints.e_cap.min_use: constraints.energy_cap_min_use
+    constraints.e_cap_min_use: constraints.energy_cap_min_use
     constraints.e_cap_per_unit: constraints.energy_cap_per_unit
     constraints.e_ramping: constraints.energy_ramping
     constraints.export_cap: constraints.export_cap
@@ -95,6 +106,7 @@ tech_config:
     constraints.r2_cap_follow_mode: null
     constraints.s_time.max: null
     weight: null
+    per_distance: null
 
 
 tech_constraints_per_distance_config:
@@ -107,8 +119,8 @@ tech_costs_config:
     r_cap: resource_cap
     r2_cap: null
     e_cap: energy_cap
-    om_frac: om_fractional
-    om_fixed: om_fixed
+    om_frac: om_annual_investment_fraction
+    om_fixed: om_annual
     om_var: om_prod
     om_fuel: om_con
     export: export

@@ -4,22 +4,35 @@ Analysing a model
 
 Calliope inputs and results are designed for easy handling. Whatever software you prefer to use for data processing, either the NetCDF or CSV output options should provide a path to importing your Calliope results. If you prefer to not worry about writing your own scripts, then we have that covered too! The built-in plotting functions in :class:`~calliope.Model.plot` are built on `Plotly <https://plot.ly/>`_'s interactive visualisation tools to bring your data to life.
 
-Within the xarray Datasets of ``model.inputs`` and ``model.results``, variables are indexed over concatenated sets. For instance, if a technology ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then we will specify parameters for just the `loc::tech` ``X1::boiler``. This can be extended to parameters which also consider ``carriers``, such that we would have a ``loc::tech::carrier`` ``X1::boiler::heat`` (avoiding empty parameter values for ``power``, as the boiler never considers that enery carrier). If a user knows the name of this concatenated set and indeces, they can index by those (e.g. ``resource_area`` is indexed over the set ``loc_techs_area``, within which are all `loc::techs` which receive their resource over an area). Otherwise, ``model.get_formatted_array('name of variable')`` can be used to produce an xarray DataArray, indexed over seperated indeces: any of `techs`, `locs`, `carriers`, `costs`, `timesteps`. This for analysis per technology, location, etc.
+--------------------------------
+Accessing model data and results
+--------------------------------
 
-.. note:: On saving to CSV, all variables are formatted to separate concatenated sets.
+A model which solved successfully has two primary Datasets with data of interest:
+
+* ``model.inputs``: contains all input data, such as renewable resource capacity factors
+* ``model.results``: contains all results data, such as dispatch decisions and installed capacities
+
+In both of these, variables are indexed over concatenated sets of locations and technologies, over a dimension we call ``loc_techs``. For example, if a technology called ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then it will have a single entry in the loc_techs dimension called ``X1::boiler``. For parameters which also consider different energy carriers, we use a ``loc_tech_carrier`` dimension, such that we would have, in the case of the prior boiler example, ``X1::boiler::heat``.
+
+This concatenated set formulation is memory-efficient but cumbersome to deal with, so the ``model.get_formatted_array(name_of_variable)`` function can be used to retrieve a DataArray indexed over separate dimensions (any of `techs`, `locs`, `carriers`, `costs`, `timesteps`, depending on the desired variable).
+
+.. note:: On saving to CSV (see the :ref:`command-line interface documentation <running_cli>`), all variables are saved to a single file each, which are always indexed over all dimensions rather than just the concatenated dimensions.
 
 -------------------
 Visualising results
 -------------------
 
-In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. ``summary`` can also be accessed from the command line interface, to gain access to result visualisation without the need to interact with Python.
+In an interactive Python session, there are four primary visualisation functions: ``capacity``, ``timeseries``, ``transmission``, and ``summary``. To gain access to result visualisation without the need to interact with Python, the ``summary`` plot can also be accessed from the command line interface (:ref:`see below <summary_plots>`).
 
-Refer to the :ref:`API documentation for the analysis module<api_analysis>` for an overview of available analysis functionality.
+Refer to the :ref:`API documentation for the analysis module <api_analysis>` for an overview of available analysis functionality.
 
 Refer to the :doc:`tutorials <tutorials>` for some basic analysis techniques.
 
 Plotting time series
 --------------------
+
+The following example shows a timeseries plot of the built-in urban scale example model:
 
 .. raw:: html
    :file: images/plot_timeseries.html
@@ -52,10 +65,17 @@ The data used to build the plots can also be subset and ordered by using the ``s
     # specifying `subset` lets us order them in the stacked barchart
     model.plot.timeseries(subset={'techs': ['ccgt', 'battery', 'csp']})
 
+When aggregating model timesteps with clustering methods, the timeseries plots are adjusted accordingly (example from the built-in ``time_clustering`` example model):
+
+.. raw:: html
+   :file: images/clustered_plot_timeseries.html
+
 .. seealso:: :ref:`API documentation for the analysis module<api_analysis>`
 
 Plotting capacities
 -------------------
+
+The following example shows a capacity plot of the built-in urban scale example model:
 
 .. raw:: html
    :file: images/plot_capacity.html
@@ -65,10 +85,12 @@ Functionality is similar to timeseries, this time called by ``model.plot.capacit
 Plotting transmission
 ---------------------
 
+The following example shows a transmission plot of the built-in urban scale example model:
+
 .. raw:: html
    :file: images/plot_transmission_token.html
 
-by calling ``model.plot.transmission()`` you will see installed links, their capacities (on hover), and the locations of the nodes. This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location.
+By calling ``model.plot.transmission()`` you will see installed links, their capacities (on hover), and the locations of the nodes. This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location.
 
 The above plot uses `Mapbox <https://www.mapbox.com/>`_ to overlay our transmission plot on Openstreetmap. By creating an account at Mapbox and acquiring a Mapbox access token, you can also create similar visualisations by giving the token to the plotting function: ``model.plot.transmission(mapbox_access_token='your token here')``.
 
@@ -79,9 +101,13 @@ Without the token, the plot will fall back on simple country-level outlines. In 
 
 .. note:: If the coordinates were in `x` and `y`, not `lat` and `lon`, the transmission trace would be given on a cartesian plot.
 
+.. _summary_plots:
+
 Summary plots
 -------------
-If you want all the data in one place, you can run ``model.plot.summary(out_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to ``out_file``. By clocking on this HTML file, a browser tab will pop up with the plots. This funcionality is made avaiable in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
+If you want all the data in one place, you can run ``model.plot.summary(out_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to ``out_file``. This HTML file can be opened in a web browser to show all the plots. This funcionality is made avaiable in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
+
+See an `example of such a HTML plot here <../_static/plot_summary.html>`_.
 
 .. seealso:: :ref:`running_cli`
 

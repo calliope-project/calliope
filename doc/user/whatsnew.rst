@@ -1,5 +1,3 @@
-This page provides a summary of information from the full :doc:`release history <../history>`.
-
 =============
 New in v0.6.0
 =============
@@ -34,16 +32,19 @@ Functionality which is not converted, has been removed in version 0.6.0, or keys
 
 The script also adds ``interest_rate`` and ``lifetime`` for each technology, using the implicit default values from Calliope 0.5 (25 years lifetime, a 0.10 interest rate for the monetary cost class and 0 for other cost classes).
 
+
+.. seealso::
+
+    .. toctree::
+        :maxdepth: 2
+
+        conversion_0.6.0
+
 ---------------------
 Removed functionality
 ---------------------
 
 If you require any of the removed functionality, we recommend you `open an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ for it to be built into a later revision of `0.6`.
-
-Location and technology subsets
-===============================
-
-In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `subset_time`, does still exist.
 
 Technology constraints
 ======================
@@ -70,7 +71,7 @@ Updated functionality
 Verbosity
 =========
 
-Almost all sets, constraints, costs, and variables have been updated be more verbose, making models more readable. The primary updates are:
+Almost all sets, constraints, costs, and variables have been updated to be more verbose, making models more readable. The primary updates are:
 
 Sets
 ----
@@ -112,7 +113,7 @@ To solve a model, point to the `model.yaml` file, e.g.: ``calliope run path/to/m
 Overrides
 =========
 
-Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a seperate YAML file, called for example `overrides.yaml`.
+Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a separate YAML file, called for example `overrides.yaml`.
 
 Each group defines any number of overrides to the technology, location, link, model, or run definitions. One or several such groups can then be applied when solving a model, e.g.:
 
@@ -160,6 +161,22 @@ As in version `0.5`, overrides can be applied when creating a `Model` object, vi
     }
 
     model = calliope.Model('model.yaml', override_dict=higher_costs)
+
+Parallel runs
+=============
+
+Building on the simplified way to define overrides (see above) and on lessons learnt during the development of Calliope so far, the functionality to generate multiple runs to run either on a single machine or in parallel on a high-performance cluster has been greatly simplified and improved.
+
+.. seealso:: :ref:`generating_scripts`
+
+Location and technology subsets
+===============================
+
+In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `subset_time`, does still exist.
+
+To remove specific technologies or locations from a model, the new and much more powerful ``exists`` option can be used.
+
+.. seealso:: :ref:`removing_techs_locations`
 
 Technology definition
 =====================
@@ -419,6 +436,28 @@ New:
                 demand_power:
             coordinates: {x: 8, y: 7}
 
+
+``group_share`` constraint
+==========================
+
+The ``group_fraction`` constraint is now called ``group_share`` and has a different formulation more in line with the rest of the tech-specific constraints::
+
+    group_share:
+        csp,ccgt:
+            energy_cap_min: 0.5
+            energy_cap_max: 0.9
+            carrier_prod_min:
+                power: 0.5
+
+In the process of making these updates, the ``demand_power_peak`` and (undocumented) ``ignored_techs`` options were removed from ``group_share``.
+
+``charge_rate``
+===============
+
+When first introduced, charge rate was used to hard-link `energy_cap` and `storage_cap` for a storage/supply_plus technology. This meant that on defining ``energy_cap_max`` and ``charge_rate``, a user was implicitly defining ``storage_cap_max``. This hard-link has now been removed, replaced with only one constraint concerning charge rate: :math:`storage_{cap}(loc::tech) \geq energy_{cap}(loc:tech) \times charge\_rate(loc:tech)`.
+
+.. seealso:: :ref:`constraint_capacity`
+
 Pre-processed data
 ==================
 
@@ -438,19 +477,22 @@ Plotting functions can now be called directly on the model and now use `Plotly <
 
 Changes are:
 
-Old: ``calliope.analysis.plot_capacity(model.solution)``
-New: ``model.plot.capacity(cap_type='energy_cap')``
+* ``calliope.analysis.plot_capacity(model.solution)`` to ``model.plot.capacity()``
 
-Old: ``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')``
-New: ``model.plot.transmission()``
+* ``calliope.analysis.plot_transmission(model.solution, carrier='power', tech='ac_transmission')`` to ``model.plot.transmission()``
 
-Old: ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')``
-New: ``model.plot.timeseries(loc=dict(carriers='power'))``
+* ``calliope.analysis.plot_carrier_production(model.solution, carrier='power')`` to ``model.plot.timeseries()``
+
+All available data is plotted, with dropdown menus available for a user to move between plots. A summary of all plotting can also be produced using ``model.plot.summary()``, a function that is also available via the command line interface.
+
+.. seealso:: :ref:`api_model`
 
 Operational mode
 ================
 
 In `0.6`, running in operational mode changes capacities from decision variables to parameters, preventing various issues that plagued operational mode in prior versions. Additional sense checks were added to ensure that functionality incompatible with operational mode, such as time clustering, is not accidentally used together with it.
+
+.. seealso:: :ref:`operational_mode`
 
 -----------------
 New functionality
@@ -483,3 +525,17 @@ Pyomo warmstart
 Warmstart functionality can be used in solvers other than GLPK. They allow a previously constructed model to be changed slightly without having to be fully rebuilt. This can speed up re-running a model when you have just a few input parameters you would like to change (the cost of a technology, for instance).
 
 Although the use of warmstart existed in operational mode in version `0.5`, now it extends to all possible parameters in all models. This functionality is currently undocumented in Calliope, but the Pyomo documentation provides some information and the Pyomo model built by Calliope can be accessed by `model._backend_model`.
+
+Backend interface
+=================
+
+Once the backend model has been built, it can be accessed by a user, via Calliope. Parameters can be checked and changed, constraints can be activated/deactivated and a model can be re run, all without having to build the backend again. User who are familiar with building large models with Pyomo will be aware of the time penalty associated with processing the model in Pyomo. This additional functionality helps mitigate this, as changing a few parameters need not require complete model rebuild.
+
+.. seealso:: :ref:`api_backend_interface`
+
+Logging
+=======
+
+In an interactive Python session (e.g. using Jupyter notebook), output from Calliope can be triggered at different levels of verbosity. By default on building the model (``calliope.Model()``) and running it (``model.run()``), there is no logging displayed unless it is at least a `WARNING`. For helpful information on where the model is in its pre-processing and running in the solver, verbosity can be increased using ``calliope.set_log_level()``.
+
+.. seealso:: :ref:`api_utility_classes`

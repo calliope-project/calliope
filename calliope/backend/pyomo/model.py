@@ -23,7 +23,8 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var
-from calliope.core.util.tools import load_function, LogWriter
+from calliope.core.util.tools import load_function
+from calliope.core.util.logging import LogWriter, logger
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope import exceptions
 
@@ -159,9 +160,18 @@ def generate_model(model_data):
             load_function(c)(backend_model)
 
     # Objective function
-    objective_name = model_data.attrs['run.objective']
-    objective_function = 'calliope.backend.pyomo.objective.' + objective_name
-    load_function(objective_function)(backend_model)
+    # FIXME re-enable loading custom objectives
+
+    # fetch objective function by name, pass through objective options
+    # if they are present
+    objective_function = ('calliope.backend.pyomo.objective.' +
+                          model_data.attrs['run.objective'])
+    objective_args = dict([(k.split('.')[-1], v)
+                          for k, v in model_data.attrs.items()
+                          if (k.startswith('run.objective_options'))
+                           ])
+    load_function(objective_function)(backend_model, **objective_args)
+
 
     # delattr(backend_model, '__calliope_model_data__')
 
@@ -171,7 +181,11 @@ def generate_model(model_data):
 def solve_model(backend_model, solver,
                 solver_io=None, solver_options=None, save_logs=False,
                 **solve_kwargs):
+    """
+    Solve a Pyomo model using the chosen solver and all necessary solver options
 
+    Returns a Pyomo results object
+    """
     opt = SolverFactory(solver, solver_io=solver_io)
 
     if solver_options:
@@ -192,7 +206,7 @@ def solve_model(backend_model, solver,
         )
         del solve_kwargs['warmstart']
 
-    with redirect_stdout(LogWriter('info', strip=True)):
+    with redirect_stdout(LogWriter('solver', strip=True)):
         with redirect_stderr(LogWriter('error', strip=True)):
             results = opt.solve(backend_model, tee=True, **solve_kwargs)
 
@@ -207,12 +221,12 @@ def load_results(backend_model, results):
     this_result = backend_model.solutions.load_from(results)
 
     if this_result is False or not_optimal:
-        logging.critical('Problem status:')
+        logger.critical('Problem status:')
         for l in str(results.Problem).split('\n'):
-            logging.critical(l)
-        logging.critical('Solver status:')
+            logger.critical(l)
+        logger.critical('Solver status:')
         for l in str(results.Solver).split('\n'):
-            logging.critical(l)
+            logger.critical(l)
 
         if not_optimal:
             message = 'Model solution was non-optimal.'
@@ -225,6 +239,12 @@ def load_results(backend_model, results):
 
 
 def get_result_array(backend_model, model_data):
+    """
+    From a Pyomo model object, extract decision variable data and return it as
+    an xarray Dataset. Any rogue input parameters that are constructed inside
+    the backend (instead of being passed by calliope.Model().inputs) are also
+    added to calliope.Model()._model_data in-place.
+    """
     all_variables = {
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
         if isinstance(i, po.base.var.IndexedVar)

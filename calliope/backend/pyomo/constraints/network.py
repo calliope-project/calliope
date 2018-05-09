@@ -25,6 +25,13 @@ def load_constraints(backend_model):
 def symmetric_transmission_constraint_rule(backend_model, loc_tech):
     """
     Constrain e_cap symmetrically for transmission nodes. Transmission techs only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            energy_{cap}(loc1::tech:loc2) = energy_{cap}(loc2::tech:loc1)
+
     """
     lookup = backend_model.__calliope_model_data__['data']['lookup_remotes']
     loc_tech_remote = lookup[loc_tech]

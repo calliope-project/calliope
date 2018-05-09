@@ -15,12 +15,12 @@ Energy system models
 
 Energy system models allow analysts to form internally coherent scenarios of how energy is extracted, converted, transported, and used, and how these processes might change in the future. These models have been gaining renewed importance as methods to help navigate the climate policy-driven transformation of the energy system.
 
-Calliope is an attempt to design an energy system model from the ground of up with specific design goals in mind (see below). Therefore, the model approach and data format layout may be different from approaches used in other models. The design of the nodes approach used in Calliope was influenced by the power nodes modeling framework by [Heussen2010]_.
+Calliope is an attempt to design an energy system model from the ground of up with specific design goals in mind (see below). Therefore, the model approach and data format layout may be different from approaches used in other models. The design of the nodes approach used in Calliope was influenced by the power nodes modelling framework by [Heussen2010]_.
 
-Calliope was designed to address questions around the transition to renewable energy, so there are tools that are likely to be more suitable for other types of questions. In particular, the following related energy modeling systems are available under open source or free software licenses:
+Calliope was designed to address questions around the transition to renewable energy, so there are tools that are likely to be more suitable for other types of questions. In particular, the following related energy modelling systems are available under open source or free software licenses:
 
-* `SWITCH <http://switch-model.org/>`_: A power system model focused on renewables integration, using multi-stage stochastic linear optimization, as well as hourly resource potential and demand data. Written in the commercial AMPL language and GPL-licensed [Fripp2012]_.
-* `Temoa <http://temoaproject.org/>`_: An energy system model with multi-stage stochastic optimization functionality which can be deployed to computing clusters, to address parametric uncertainty. Written in Python/Pyomo and AGPL-licensed [Hunter2013]_.
+* `SWITCH <http://switch-model.org/>`_: A power system model focused on renewables integration, using multi-stage stochastic linear optimisation, as well as hourly resource potential and demand data. Written in the commercial AMPL language and GPL-licensed [Fripp2012]_.
+* `Temoa <http://temoaproject.org/>`_: An energy system model with multi-stage stochastic optimisation functionality which can be deployed to computing clusters, to address parametric uncertainty. Written in Python/Pyomo and AGPL-licensed [Hunter2013]_.
 * `OSeMOSYS <http://www.osemosys.org/>`_: A simplified energy system model similar to the MARKAL/TIMES model families, which can be used as a stand-alone tool or integrated in the `LEAP energy model <http://www.energycommunity.org/LEAP/>`_. Written in GLPK, a free subset of the commercial AMPL language, and Apache 2.0-licensed [Howells2011]_.
 
 Additional energy models that are partially or fully open can be found on the `Open Energy Modelling Initiative's wiki <http://wiki.openmod-initiative.org/wiki/Model_fact_sheets>`_.
@@ -76,7 +76,7 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
 References
 ----------
 
-.. [Fripp2012] Fripp, M., 2012. Switch: A Planning Tool for Power Systems with Large Shares of Intermittent Renewable Energy. Environ. Sci. Technol., 46(11), p.6371–6378. `DOI: 10.1021/es204645c <http://dx.doi.org/10.1021/es204645c>`_
-.. [Heussen2010] Heussen, K. et al., 2010. Energy storage in power system operation: The power nodes modeling framework. In Innovative Smart Grid Technologies Conference Europe (ISGT Europe), 2010 IEEE PES. pp. 1–8. `DOI: 10.1109/ISGTEUROPE.2010.5638865 <http://dx.doi.org/10.1109/ISGTEUROPE.2010.5638865>`_
-.. [Howells2011] Howells, M. et al., 2011. OSeMOSYS: The Open Source Energy Modeling System: An introduction to its ethos, structure and development. Energy Policy, 39(10), p.5850–5870. `DOI: 10.1016/j.enpol.2011.06.033 <http://dx.doi.org/10.1016/j.enpol.2011.06.033>`_
-.. [Hunter2013] Hunter, K., Sreepathi, S. & DeCarolis, J.F., 2013. Modeling for insight using Tools for Energy Model Optimization and Analysis (Temoa). Energy Economics, 40, p.339–349. `DOI: 10.1016/j.eneco.2013.07.014 <http://dx.doi.org/10.1016/j.eneco.2013.07.014>`_
+.. [Fripp2012] Fripp, M., 2012. Switch: A Planning Tool for Power Systems with Large Shares of Intermittent Renewable Energy. Environ. Sci. Technol., 46(11), p.6371–6378. `DOI: 10.1021/es204645c <https://doi.org/10.1021/es204645c>`_
+.. [Heussen2010] Heussen, K. et al., 2010. Energy storage in power system operation: The power nodes modeling framework. In Innovative Smart Grid Technologies Conference Europe (ISGT Europe), 2010 IEEE PES. pp. 1–8. `DOI: 10.1109/ISGTEUROPE.2010.5638865 <https://doi.org/10.1109/ISGTEUROPE.2010.5638865>`_
+.. [Howells2011] Howells, M. et al., 2011. OSeMOSYS: The Open Source Energy Modeling System: An introduction to its ethos, structure and development. Energy Policy, 39(10), p.5850–5870. `DOI: 10.1016/j.enpol.2011.06.033 <https://doi.org/10.1016/j.enpol.2011.06.033>`_
+.. [Hunter2013] Hunter, K., Sreepathi, S. & DeCarolis, J.F., 2013. Modeling for insight using Tools for Energy Model Optimization and Analysis (Temoa). Energy Economics, 40, p.339–349. `DOI: 10.1016/j.eneco.2013.07.014 <https://doi.org/10.1016/j.eneco.2013.07.014>`_

@@ -11,12 +11,16 @@ import pandas as pd
 import xarray as xr
 
 from calliope.core.util.tools import memoize
+from calliope.core.util.logging import logger
 from calliope import exceptions
 
 
 @memoize
 def get_param(backend_model, var, dims):
     """
+    Get an input parameter held in a Pyomo object, or held in the defaults
+    dictionary if that Pyomo object doesn't exist.
+
     Parameters
     ----------
     backend_model : Pyomo model instance
@@ -28,7 +32,7 @@ def get_param(backend_model, var, dims):
     try:
         return getattr(backend_model, var)[dims]
     except AttributeError:  # i.e. parameter doesn't exist at all
-        logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+        logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
         return backend_model.__calliope_defaults__[var]
     except KeyError:  # try removing redundant dimensions
         # Get the discrepency between number of queried dims and number of available dims
@@ -37,19 +41,24 @@ def get_param(backend_model, var, dims):
         try:
             return getattr(backend_model, var)[dims[:-dim_length_diff]]
         except KeyError:  # Static default value
-            logging.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+            logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
             return backend_model.__calliope_defaults__[var]
 
 
-def get_previous_timestep(backend_model, timestep):
+def get_previous_timestep(timesteps, timestep):
+    """Get the timestamp for the timestep previous to the input timestep"""
     # order_dict starts numbering at zero, timesteps is one-indexed, so we do not need
     # to subtract 1 to get to previous_step -- it happens "automagically"
-    return backend_model.timesteps[backend_model.timesteps.order_dict[timestep]]
+    return timesteps[timesteps.order_dict[timestep]]
 
 
 @memoize
 def get_loc_tech_carriers(backend_model, loc_carrier):
-
+    """
+    For a given loc_carrier concatenation, get lists of the relevant
+    loc_tech_carriers which produce energy (loc_tech_carriers_prod), consume
+    energy (loc_tech_carriers_con) and export energy (loc_tech_carriers_export)
+    """
     lookup = backend_model.__calliope_model_data__['data']['lookup_loc_carriers']
     loc_tech_carriers = split_comma_list(lookup[loc_carrier])
 
@@ -77,11 +86,21 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
 
 @memoize
 def get_loc_tech(loc_tech_carrier):
+    """
+    Split the string of a loc_tech_carrier (e.g. `region1::ccgt::power`) to get
+    just the loc_tech (e.g. `region1::ccgt`)
+    """
     return loc_tech_carrier.rsplit('::', 1)[0]
 
 
 @memoize
 def get_timestep_weight(backend_model):
+    """
+    Get the total number of years this model considers, by summing all
+    timestep resolution with timestep weight (a weight/resolution of 1 = 1 hour)
+    and divide it by number of hours in the year. Weight/resolution will almost
+    always be 1 per step, unless time clustering/masking/resampling has taken place.
+    """
     model_data_dict = backend_model.__calliope_model_data__
     time_res = list(model_data_dict['data']['timestep_resolution'].values())
     weights = list(model_data_dict['data']['timestep_weights'].values())
@@ -171,8 +190,7 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
     model_set : string
     """
 
-    if hasattr(backend_model, model_set) and (
-        loc_tech in getattr(backend_model, model_set)):
+    if hasattr(backend_model, model_set) and loc_tech in getattr(backend_model, model_set):
         return True
     else:
         return False

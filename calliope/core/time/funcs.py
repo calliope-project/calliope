@@ -9,14 +9,31 @@ Functions to process time series data.
 
 """
 
-import logging
-
+import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope.core.util.tools import plugin_load
+from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
+from calliope.core.util.logging import logger
+from calliope.core.preprocess.lookup import lookup_clusters
+
+
+
+def get_daily_timesteps(data, check_uniformity=False):
+    daily_timesteps = [
+        data.timestep_resolution.loc[i].values
+        for i in np.unique(data.timesteps.to_index().strftime('%Y-%m-%d'))
+    ]
+
+    if check_uniformity:
+        if not np.all(daily_timesteps == daily_timesteps[0]):
+            raise exceptions.ModelError(
+                'For clustering, timestep resolution must be uniform.'
+            )
+
+    return daily_timesteps[0]
 
 
 def normalized_copy(data):
@@ -81,7 +98,9 @@ def _combine_datasets(data0, data1):
     return data_new
 
 
-def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kwargs):
+def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
+                     scale_clusters='mean', storage_inter_cluster=True,
+                     model_run=None, **kwargs):
     """
     Apply the given clustering function to the given data.
 
@@ -90,12 +109,19 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     data : xarray.Dataset
     timesteps : pandas.DatetimeIndex or list of timesteps or None
     clustering_func : str
-        Name of clustering function.
+        Name of clustering function. Can be `file=....csv:column_name`
+        if loading custom clustering. Custom clustering index = timeseries days.
+        If no column_name, the CSV file must have only one column of data.
     how : str
         How to map clusters to data. 'mean' or 'closest'.
     normalize : bool, optional
         If True (default), data is normalized before clustering is applied,
         using :func:`~calliope.core.time.funcs.normalized_copy`.
+    scale_clusters : str or None, default = 'mean'
+        Scale the results of clustering such that the clusters match the metric
+        given by scale_clusters. For example, 'mean' scales along each loc_tech
+        and variable to match inputs and outputs. Other options for matching
+        include 'sum', 'max', and 'min'. If None, no scaling occurs.
     **kwargs : optional
         Arguments passed to clustering_func.
 
@@ -104,6 +130,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     data_new_scaled : xarray.Dataset
 
     """
+
+    assert how in ['mean', 'closest']
+
+    daily_timesteps = get_daily_timesteps(data, check_uniformity=True)
+    timesteps_per_day = len(daily_timesteps)
 
     # Save all coordinates, to ensure they can be added back in after clustering
     data_coords = data.copy().coords
@@ -128,14 +159,59 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
     else:
         data_normalized = data_to_cluster
 
-    # Get function from `clustering_func` string
-    func = plugin_load(clustering_func, builtin_module='calliope.core.time.clustering')
+    if 'file=' in clustering_func:
+        file = clustering_func.split('=')[1]
+        if ':' in file:
+            file, column = file.rsplit(':', 1)
+        else:
+            column = None
 
-    result = func(data_normalized, **kwargs)
-    clusters = result[0]  # Ignore other stuff returned
+        df = model_run.timeseries_data[file]
+        if isinstance(df, pd.Series) and column is not None:
+            raise exceptions.ModelWarning(
+                '{} given as time clustering column, but only one column to '
+                'choose from in {}.'.format(column, file)
+            )
+            clusters = df.resample('1D').mean()
+        elif isinstance(df, pd.DataFrame) and column is None:
+            raise exceptions.ModelError(
+                'No time clustering column given, but multiple columns found in '
+                '{0}. Choose one column and add it to {1} as {1}:name_of_column.'
+                .format(file, clustering_func)
+            )
+        elif isinstance(df, pd.DataFrame) and column not in df.columns:
+            raise KeyError(
+                'time clustering column {} not found in {}.'.format(column, file)
+            )
+        elif isinstance(df, pd.DataFrame):
+            clusters = df.loc[:, column].groupby(pd.Grouper(freq='1D')).unique()
 
-    data_new = clustering.map_clusters_to_data(data_to_cluster, clusters,
-                                               how=how)
+        # Check there weren't instances of more than one cluster assigned to a day
+        # or days with no information assigned
+        if any([len(i) == 0 for i in clusters.values]):
+            raise exceptions.ModelError(
+                'Missing cluster days in `{}:{}`.'.format(file, column)
+            )
+        elif any([len(i) > 1 for i in clusters.values]):
+            raise exceptions.ModelError(
+                'More than one cluster value assigned to a day in `{}:{}`. '
+                'Unique clusters per day: {}'.format(file, column, clusters)
+            )
+        else:
+            clusters.loc[:] = [i[0] for i in clusters.values]
+
+    else:
+        result = clustering.get_clusters(
+            data_normalized, clustering_func, timesteps_per_day=timesteps_per_day,
+            **kwargs
+        )
+        clusters = result[0]  # Ignore other stuff returned
+
+    data_new = clustering.map_clusters_to_data(
+        data_to_cluster, clusters,
+        how=how, daily_timesteps=daily_timesteps,
+        storage_inter_cluster=storage_inter_cluster
+    )
 
     if timesteps is None:
         data_new = _copy_non_t_vars(data, data_new)
@@ -145,21 +221,27 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True, **kw
         data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
         data_new = _copy_non_t_vars(data, data_new)
 
-    # It's now safe to add the original coordiantes back in (preserving all the
+    # It's now safe to add the original coordinates back in (preserving all the
     # loc_tech sets that aren't used to index a variable in the DataArray)
     data_new.update(data_coords)
 
-    # Scale the new/combined data so that the mean for each (x, y, variable)
+    # Scale the new/combined data so that the mean for each (loc_tech, variable)
     # combination matches that from the original data
     data_new_scaled = data_new.copy(deep=True)
-    data_vars_in_t = [
-        v for v in data_new.data_vars
-        if 'timesteps' in data_new[v].dims and
-        'timestep_' not in v and v != 'clusters']
-    for var in data_vars_in_t:
-        scale_to_match_mean = (data[var].mean(dim='timesteps') /
-            data_new[var].mean(dim='timesteps')).fillna(0)
-        data_new_scaled[var] = data_new[var] * scale_to_match_mean
+    if scale_clusters:
+        data_vars_in_t = [
+            v for v in data_new.data_vars
+            if 'timesteps' in data_new[v].dims and
+            'timestep_' not in v and v != 'clusters'
+        ]
+        for var in data_vars_in_t:
+            scale = (
+                getattr(data[var], scale_clusters)(dim='timesteps') /
+                getattr(data_new[var], scale_clusters)(dim='timesteps')
+            )
+            data_new_scaled[var] = data_new[var] * scale.fillna(0)
+
+    lookup_clusters(data_new_scaled)
 
     return data_new_scaled
 
@@ -208,7 +290,7 @@ def resample(data, timesteps, resolution):
                 )
             except TypeError:
                 # If the var has a datatype of strings, it can't be resampled
-                logging.error('Dropping {} because it has a {} data type when '
+                logger.error('Dropping {} because it has a {} data type when '
                               'integer or float is expected for timeseries '
                               'resampling.'.format(var, data_rs[var].dtype))
                 data_rs = data_rs.drop(var)
@@ -231,39 +313,32 @@ def resample(data, timesteps, resolution):
     return data_rs
 
 
-def drop(data, timesteps, padding=None):
+def drop(data, timesteps):
     """
-    Drop timesteps from data, with optional padding
-    around into the contiguous areas encompassed by the timesteps.
+    Drop timesteps from data, adjusting the timestep weight of remaining
+    timesteps accordingly. Returns updated dataset.
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+        Calliope model data.
+    timesteps : str or list or other iterable
+        Pandas-compatible timestep strings.
 
     """
-    if padding:
-        timesteps_per_day = len(data.attrs['_daily_timesteps'])
-        freq = '{}H'.format(24 / timesteps_per_day)
-
-        # Series of 1 where timesteps 'exist' and 0 where they don't
-        s = (pd.Series(1, index=timesteps)
-               .reindex(pd.date_range(timesteps[0], timesteps[-1], freq=freq))
-               .fillna(0))
-
-        # Blocks of contiguous 1's in the series
-        blocks = (s != s.shift()).cumsum().drop(s[s==0].index)
-
-        # Groups of contiguous areas
-        groups = blocks.groupby(blocks).apply(lambda x: (x.index[0], x.index[-1]))
-
-        # Reduce size of each block by `padding` on both sides
-        padding = pd.Timedelta(padding)
-        dt_indices = [pd.date_range(g[0] + padding, g[1] - padding, freq=freq)
-                      for g in groups]
-
-        # Concatenate the DatetimeIndexes by using dummy Series
-        timesteps = pd.concat([pd.Series(0, index=i) for i in dt_indices]).index
+    # Turn timesteps into a pandas datetime index for subsetting, which also
+    # checks whether they are actually valid
+    try:
+        timesteps_pd = pd.to_datetime(timesteps)
+    except Exception as e:
+        raise exceptions.ModelError(
+            'Invalid timesteps: {}'.format(timesteps)
+        )
 
     # 'Distribute weight' of the dropped timesteps onto the remaining ones
-    dropped_weight = data.timestep_weights.loc[{'timesteps': timesteps}].sum()
+    dropped_weight = data.timestep_weights.loc[{'timesteps': timesteps_pd}].sum()
 
-    data = data.drop(timesteps, dim='timesteps')
+    data = data.drop(timesteps_pd, dim='timesteps')
 
     data['timestep_weights'] = data['timestep_weights'] + (dropped_weight / len(data['timestep_weights']))
 

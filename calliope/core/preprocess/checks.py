@@ -10,16 +10,20 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
+import logging
 
 import numpy as np
 import xarray as xr
+
+from inspect import signature
 
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import flatten_list
 from calliope.core.preprocess.util import get_all_carriers
-
+from calliope.core.util.logging import logger
+from calliope.core.util.tools import load_function
 
 _defaults_files = {
     k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
@@ -27,6 +31,55 @@ _defaults_files = {
 }
 defaults = AttrDict.from_yaml(_defaults_files['defaults'])
 defaults_model = AttrDict.from_yaml(_defaults_files['model'])
+
+
+def check_overrides(config_model, override):
+    """
+    Perform checks on the override dict and override file inputs to ensure they
+    are not doing something silly.
+    """
+    warnings = []
+    info = []
+    for key in override.as_dict_flat().keys():
+        if key in config_model.as_dict_flat().keys():
+            info.append(
+                'Override applied to {}: {} -> {}'
+                .format(key, config_model.get_key(key), override.get_key(key))
+            )
+        else:
+            info.append(
+                '`{}`:{} applied from override as new configuration'
+                .format(key, override.get_key(key))
+            )
+
+    # Check if overriding coordinates are in the same coordinate system. If not,
+    # delete all incumbent coordinates, ready for the new coordinates to come in
+    if (any(['coordinates' in k for k in config_model.as_dict_flat().keys()]) and
+            any(['coordinates' in k for k in override.as_dict_flat().keys()])):
+
+        # get keys that might be deleted and incumbent coordinate system
+        config_keys = [k for k in config_model.as_dict_flat().keys() if 'coordinates.' in k]
+        config_coordinates = set([k.split('coordinates.')[-1] for k in config_keys])
+
+        # get overriding coordinate system
+        override_coordinates = set(
+            k.split('coordinates.')[-1] for k in override.as_dict_flat().keys()
+            if 'coordinates.' in k
+        )
+
+        # compare overriding and incumbent, deleting incumbent if overriding is different
+        if config_coordinates != override_coordinates:
+            for key in config_keys:
+                config_model.del_key(key)
+            warnings.append(
+                'Updated from coordinate system {} to {}, using overrides'
+                .format(config_coordinates, override_coordinates)
+            )
+
+    if info:
+        logger.info('\n'.join(info))
+
+    return warnings
 
 
 def check_initial(config_model):
@@ -55,6 +108,13 @@ def check_initial(config_model):
                     model_version, __version__)
             )
 
+    # Check top-level keys
+    for k in config_model.keys():
+        if k not in ['model', 'run', 'locations', 'tech_groups', 'techs', 'links', 'config_path']:
+            warnings.append(
+                'Unrecognised top-level configuration item: {}'.format(k)
+            )
+
     # Check run configuration
     # Exclude solver_options from checks, as we don't know all possible
     # options for all solvers
@@ -62,7 +122,14 @@ def check_initial(config_model):
         if (k not in defaults_model['run'].keys_nested() and
                 'solver_options' not in k):
             warnings.append(
-                'Unrecognized setting in run configuration: {}'.format(k)
+                'Unrecognised setting in run configuration: {}'.format(k)
+            )
+
+    # Check model configuration, but top-level keys only
+    for k in config_model['model'].keys():
+        if k not in defaults_model['model'].keys():
+            warnings.append(
+                'Unrecognised setting in model configuration: {}'.format(k)
             )
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
@@ -90,6 +157,7 @@ def check_initial(config_model):
 
     # Checks for techs and tech_groups:
     # * All user-defined tech and tech_groups must specify a parent
+    # * techs cannot be parents, only tech groups can
     # * No carrier may be called 'resource'
     default_tech_groups = list(defaults_model.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
@@ -99,6 +167,11 @@ def check_initial(config_model):
             errors.append(
                 'tech_group {} does not define '
                 '`essentials.parent`'.format(tg_name)
+            )
+        elif tg_config.get_key('essentials.parent') in config_model.techs.keys():
+            errors.append(
+                'tech_group `{}` has a tech as a parent, only another tech_group '
+                'is allowed'.format(tg_name)
             )
         if 'resource' in get_all_carriers(tg_config.essentials):
             errors.append(
@@ -111,6 +184,11 @@ def check_initial(config_model):
             errors.append(
                 'tech {} does not define '
                 '`essentials.parent`'.format(t_name)
+            )
+        elif t_config.get_key('essentials.parent') in config_model.techs.keys():
+            errors.append(
+                'tech `{}` has another tech as a parent, only a tech_group '
+                'is allowed'.format(tg_name)
             )
         if 'resource' in get_all_carriers(t_config.essentials):
             errors.append(
@@ -128,6 +206,36 @@ def check_initial(config_model):
                     'Cannot load `{}` from file for configuration {}'
                     .format(constraint_name, k)
                 )
+
+    # Check the objective function being used has all the appropriate
+    # options set in objective_options, and that no options are unused
+    objective_function = 'calliope.backend.pyomo.objective.' + config_model.run.objective
+    objective_args_expected = list(signature(load_function(objective_function)).parameters.keys())
+    objective_args_expected = [arg for arg in objective_args_expected
+                               if arg not in ['backend_model', 'kwargs']]
+    for arg in objective_args_expected:
+        if arg not in config_model.run.objective_options:
+            errors.append(
+                'Objective function argument `{}` not found in run.objective_options'
+                .format(arg)
+            )
+    for arg in config_model.run.objective_options:
+        if arg not in objective_args_expected:
+            warnings.append(
+                'Objective function argument `{}` given but not used by objective function `{}`'
+                .format(arg, config_model.run.objective)
+            )
+
+    # Don't allow time clustering with cyclic storage if not also using
+    # storage_inter_cluster
+    storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
+    if (config_model.get_key('model.time.function', None) == 'apply_clustering'
+            and config_model.get_key('run.cyclic_storage', False)
+            and not config_model.get_key(storage_inter_cluster, True)):
+        errors.append(
+            'When time clustering, cannot have cyclic storage constraints if '
+            '`storage_inter_cluster` decision variable is not activated.'
+        )
 
     return warnings, errors
 
@@ -238,6 +346,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                     '`{}` at `{}` defines non-allowed '
                     '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
                 )
+
     return warnings, errors
 
 
@@ -320,7 +429,7 @@ def check_final(model_run):
     # Ensure that timeseries have no non-unique index values
     for k, df in model_run['timeseries_data'].items():
         if df.index.duplicated().any():
-            errors.append('Time series `{}` contains non-unique timestap values.'.format(k))
+            errors.append('Time series `{}` contains non-unique timestamp values.'.format(k))
 
     # FIXME:
     # make sure `comments` is at the the base level:
@@ -357,7 +466,7 @@ def check_model_data(model_data):
             dict(loc_techs_finite_resource=relevant_loc_techs)
         ]
         conflict = forced_resource.where(forced_resource == np.inf).to_pandas().dropna()
-        if conflict.values:
+        if not conflict.empty:
             errors.append(
                 'loc_tech(s) {} cannot have `force_resource` set as infinite '
                 'resource values are given'.format(', '.join(conflict.index))

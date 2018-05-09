@@ -6,14 +6,10 @@ model:
     name: National-scale example model
 
     # What version of Calliope this model is intended for
-    calliope_version: 0.6.0
+    calliope_version: 0.6.2
 
     # Time series data path - can either be a path relative to this file, or an absolute path
     timeseries_data_path: 'timeseries_data'
-
-    # Model-wide settings for the system-wide reserve margin
-    reserve_margin:
-        power: 0
 
     subset_time: ['2005-01-01', '2005-01-05']  # Subset of timesteps
 

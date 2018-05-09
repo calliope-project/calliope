@@ -9,12 +9,12 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="127.54182mm"
-   height="22.652769mm"
-   viewBox="0 0 127.54183 22.652769"
+   width="133.73538mm"
+   height="26.544792mm"
+   viewBox="0 0 133.73539 26.544792"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
+   inkscape:version="0.92.2 5c3e80d, 2017-08-06"
    sodipodi:docname="supply_plus.svg"
    inkscape:export-filename="C:\Users\bp325\OneDrive\Engineering\PhD\GitHub\calliope\doc\user\images\supply_plus.png"
    inkscape:export-xdpi="400"
@@ -1710,24 +1710,24 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.8284271"
-     inkscape:cx="315.14973"
-     inkscape:cy="104.92306"
+     inkscape:cx="180.13306"
+     inkscape:cy="112.24978"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
-     fit-margin-top="0"
-     fit-margin-left="0"
-     fit-margin-right="0"
-     fit-margin-bottom="0"
-     inkscape:window-width="2520"
-     inkscape:window-height="1481"
-     inkscape:window-x="1564"
-     inkscape:window-y="402"
+     fit-margin-top="2"
+     fit-margin-left="2"
+     fit-margin-right="2"
+     fit-margin-bottom="2"
+     inkscape:window-width="1440"
+     inkscape:window-height="856"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1">
     <sodipodi:guide
-       position="93.133093,9.1006094"
+       position="98.926145,11.039138"
        orientation="1,0"
        id="guide1762"
        inkscape:locked="false" />
@@ -1748,7 +1748,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-9.8530189,-57.780787)">
+     transform="translate(-4.0599695,-55.827296)">
     <path
        inkscape:connector-curvature="0"
        id="rect815-3"
@@ -1789,15 +1789,18 @@
        style="fill:#dddee0;fill-opacity:1;fill-rule:evenodd;stroke:#dddee0;stroke-width:0.40000001;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="9.4892168"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="5.7850509"
        y="70.234474"
        id="text27635-2-17"><tspan
          sodipodi:role="line"
          id="tspan27633-8-2"
-         x="9.4892168"
+         x="5.7850509"
          y="70.234474"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">resource</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">resource<tspan
+   style="font-size:64.99999762%;baseline-shift:sub"
+   id="tspan288"
+   dy="0.5">con</tspan></tspan></text>
     <path
        inkscape:connector-curvature="0"
        id="path34422"
@@ -1812,28 +1815,28 @@
        id="text27635-2-17-4-3-8"
        y="78.802773"
        x="63.159664"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="78.802773"
          x="63.159664"
          id="tspan27633-8-2-8-1-8"
          sodipodi:role="line">loss<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub"
    id="tspan28140"
    dy="0.5">storage</tspan></tspan></text>
     <text
        id="text27635-2-17-4-3-8-2"
        y="59.51136"
        x="59.378582"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="59.51136"
          x="59.378582"
          id="tspan27633-8-2-8-1-8-3"
          sodipodi:role="line">cap<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub"
    id="tspan28138"
    dy="0.5">storage</tspan></tspan></text>
     <g
@@ -1862,28 +1865,28 @@
        id="text27635-2-17-4-3-8-1-7"
        y="72.264633"
        x="37.589069"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="72.264633"
          x="37.589069"
          id="tspan27633-8-2-8-1-8-9-2"
          sodipodi:role="line">η<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub"
    id="tspan29882"
    dy="0.5">resource</tspan></tspan></text>
     <text
        id="text27635-2-17-4-3-8-2-6-6"
        y="65.745926"
        x="38.684608"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="65.745926"
          x="38.684608"
          id="tspan27633-8-2-8-1-8-3-7-9"
          sodipodi:role="line">cap<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub"
    id="tspan29880"
    dy="0.5">resource</tspan></tspan></text>
     <path
@@ -1943,7 +1946,7 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="118.46773"
        y="70.234474"
        id="text27635-2-17-9-5"><tspan
@@ -1951,8 +1954,8 @@
          id="tspan27633-8-2-9-6"
          x="118.46773"
          y="70.234474"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332">carrier<tspan
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub"
    id="tspan34934"
    dy="0.5">prod</tspan></tspan></text>
     <path
@@ -1969,28 +1972,28 @@
        id="text27635-2-17-4-3-8-5"
        y="78.802773"
        x="90.987152"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="78.802773"
          x="90.987152"
          id="tspan27633-8-2-8-1-8-8"
          sodipodi:role="line">η<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.06374979px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub;stroke-width:0.26458332"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.06374979px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;stroke-width:0.26458332"
    id="tspan23995-4"
    dy="0.5">energy</tspan></tspan></text>
     <text
        id="text27635-2-17-4-3-8-2-2"
        y="59.510914"
        x="87.706734"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="59.510914"
          x="87.706734"
          id="tspan27633-8-2-8-1-8-3-1"
          sodipodi:role="line">cap<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.06374979px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub;stroke-width:0.26458332"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.06374979px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub;stroke-width:0.26458332"
    id="tspan23993-2"
    dy="0.5">energy</tspan></tspan></text>
     <path
@@ -2008,14 +2011,14 @@
        id="text27635-2-17-4-3-8-1-7-9"
        y="72.263878"
        x="104.25143"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;line-height:1.25;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';letter-spacing:0px;word-spacing:0px;fill:#53585f;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        xml:space="preserve"><tspan
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';fill:#53585f;fill-opacity:1;stroke-width:0.26458332"
          y="72.263878"
          x="104.25143"
          id="tspan27633-8-2-8-1-8-9-2-0"
          sodipodi:role="line">η<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';baseline-shift:sub"
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:64.99999762%;font-family:'Open Sans', arial, helvetica, sans-serif;-inkscape-font-specification:'Open Sans';baseline-shift:sub"
    id="tspan29911"
    dy="0.5">parasitic</tspan></tspan></text>
   </g>

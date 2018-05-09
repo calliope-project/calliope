@@ -13,7 +13,7 @@ import xarray as xr
 import numpy as np
 
 from calliope.core.util.dataset import split_loc_techs
-from calliope.core.util.tools import log_time
+from calliope.core.util.logging import log_time
 
 
 def postprocess_model_results(results, model_data, timings):
@@ -21,7 +21,20 @@ def postprocess_model_results(results, model_data, timings):
     Adds additional post-processed result variables to
     the given model results in-place. Model must have solved successfully.
 
-    Returns None.
+    Parameters
+    ----------
+    results : xarray Dataset
+        Output from the solver backend
+    model_data : xarray Dataset
+        Calliope model data, stored as calliope.Model()._model_data
+    timings : dict
+        Calliope timing dictionary, stored as calliope.Model()._timings
+
+    Returns
+    -------
+    results : xarray Dataset
+        Input results Dataset, with additional DataArray variables and removed
+        all instances of unreasonably low numbers (set by zero_threshold)
 
     """
     log_time(

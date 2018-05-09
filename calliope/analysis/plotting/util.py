@@ -10,6 +10,18 @@ Plotting util functions.
 """
 
 import numpy as np
+from IPython import get_ipython
+
+
+def type_of_script():
+    if get_ipython() is not None:
+        ipy_str = str(type(get_ipython()))
+        if 'zmqshell' in ipy_str:
+            return 'jupyter'
+        if 'terminal' in ipy_str:
+            return 'ipython'
+    else:
+        return 'terminal'
 
 
 def get_data_layout(
@@ -18,6 +30,11 @@ def get_data_layout(
         subset, sum_dims, squeeze,
         get_var_data_kwargs={},
         get_var_layout_kwargs={}):
+    """
+    For each dropdown dataset in capacity and timeseries plotting, build the
+    plotly data dictionary and the plotly layout dictionary.
+
+    """
     # data_len is used to populate visibility of traces, for dropdown
     data_len = [0]
     data = []
@@ -68,8 +85,64 @@ def get_data_layout(
 
 
 def hex_to_rgba(hex_color, opacity):
+    """Embed opacity in a colour by converting calliope HEX colours to an RGBA"""
     _NUMERALS = '0123456789abcdefABCDEF'
     _HEXDEC = {v: int(v, 16) for v in (x + y for x in _NUMERALS for y in _NUMERALS)}
     hex_color = hex_color.lstrip('#')
     rgb = [_HEXDEC[hex_color[0:2]], _HEXDEC[hex_color[2:4]], _HEXDEC[hex_color[4:6]]]
     return 'rgba({1}, {2}, {3}, {0})'.format(opacity, *rgb)
+
+
+def break_name(name):
+    """Take a long technology name string and break it across multiple lines"""
+    name_breaks = len(name) / 30
+    if name_breaks > 1:
+        initial_name = name
+        break_buffer = 0
+        for name_break in range(1, int(name_breaks) + 1):
+            # preferably break at a space
+            breakpoint = initial_name.rfind(' ', name_break * 30 - 10, name_break * 30)
+            # -1 means rfind failed to find any space
+            if breakpoint != -1:
+                breakpoint += break_buffer
+                name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
+                break_buffer += 4
+            else:
+                breakpoint = 30 * name_break + break_buffer
+                name = name[:breakpoint].rstrip() + '...<br>' + name[breakpoint:].lstrip()
+                break_buffer += 7
+
+    return name
+
+
+def get_clustered_layout(dataset):
+    layout = {}
+    timestep_cluster = dataset.timestep_cluster.to_pandas()
+    clusters = timestep_cluster.groupby(timestep_cluster).groups
+    layout['xaxis'] = {}
+    layout['xaxis']['type'] = 'category'
+    layout['xaxis']['tickvals'] = [
+        (2 * (k - min(clusters.keys())) + 1) * len(v) / 2 - 0.5
+        for k, v in clusters.items()
+    ]
+    layout['xaxis']['ticktext'] = [k for k in clusters.keys()]
+    layout['xaxis']['title'] = 'Clusters'
+
+    # Make rectangles to fit in the background over every other cluster,
+    # to distinguish them
+    layout['shapes'] = []
+    shape_template = {
+        'type': 'rect', 'xref': 'x', 'yref': 'paper', 'y0': 0, 'y1': 1,
+        'line': {'width': 0}, 'layer': 'below'
+    }
+
+    for cluster in clusters.keys():
+        x0 = clusters[cluster][0]
+        x1 = clusters[cluster][-1]
+        opacity = 0.3 * (cluster % 2)
+        day_shape = {'x0': x0, 'x1': x1, 'fillcolor': 'grey', 'opacity': opacity}
+
+        shape_template.update(day_shape)
+        layout['shapes'].append(shape_template.copy())
+
+    return layout

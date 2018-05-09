@@ -204,7 +204,7 @@ Required constraints, allowed constraints, and allowed costs:
 YAML configuration file format
 ------------------------------
 
-All configuration files (with the exception of time series data files) are in the YAML format, "a human friendly data serialization standard for all programming languages".
+All configuration files (with the exception of time series data files) are in the YAML format, "a human friendly data serialisation standard for all programming languages".
 
 Configuration for Calliope is usually specified as ``option: value`` entries, where ``value`` might be a number, a text string, or a list (e.g. a list of further settings).
 

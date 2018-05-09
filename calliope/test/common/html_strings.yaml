@@ -6,7 +6,7 @@ national_scale:
     timeseries:
         - '[{"type": "scatter", "x": ["2005-01-01", "2005-01-01 01:00:00",'
         - '"y": [27538.578, 26518.588, 25820.82,'
-        - '"legendgroup": "csp", "text": "csp charge (+) / discharge (-)", "hoverinfo": "x+y+text"}], {"barmode": "relative", "xaxis": {}, "autosize": true, "legend": {"traceorder": "reversed", "xanchor": "left"}, "hovermode": "x", "title": "Carrier flow: power",'
+        - '"legendgroup": "csp", "text": "csp discharge", "hoverinfo": "x+y+text", "showlegend": false}], {"barmode": "relative", "xaxis": {}, "autosize": true, "legend": {"traceorder": "reversed", "xanchor": "left"}, "hovermode": "x", "title": "Carrier flow: power",'
         - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     transmission:
         - '[{"type": "scattergeo", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "lat": [40, 40, null], "lon": [-2, -8, null], "showlegend": true, "legendgroup": "ac_transmission", "name": "AC power transmission",'
@@ -18,8 +18,8 @@ milp:
         # - '[{"type": "bar", "x": [null, null, 382.449614049993, 0.0], "y": ["N1", "X1", "X2", "X3"], "visible": true, "name": "Natural gas boiler", "legendgroup": "conversion", "text": "boiler", "hoverinfo": "x+y+name",'
         - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     timeseries:
-        - '[{"type": "scatter", "x": ["2005-01-01", "2005-01-01 01:00:00",'
-        - '{"type": "bar", "x": ["2005-01-01", "2005-01-01 01:00:00",'
+        - '[{"type": "scatter", "x": ["2005-07-01", "2005-07-01 01:00:00",'
+        - '{"type": "bar", "x": ["2005-07-01", "2005-07-01 01:00:00",'
         - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     transmission:
         - '[{"type": "scatter", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "x": [5, 2, null], "y": [7, 7, null], "showlegend": true, "legendgroup": "heat_pipes", "name": "District heat distribution",'
@@ -28,4 +28,5 @@ milp:
 
 clustering:
     timeseries:
-        - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters", "rangeslider": {}}'
+        - '"xaxis": {"type": "category", "tickvals": [11.5, 35.5], "ticktext": [0, 1], "title": "Clusters"}'
+        - '{"xaxis": {"type": "date"}, "yaxis": {"title": "Stored energy"}, "title": "Storage at start of each day in unclustered timeseries"}'

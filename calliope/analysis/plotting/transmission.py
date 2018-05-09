@@ -11,8 +11,10 @@ Plot transmission data.
 
 import pandas as pd
 import xarray as xr
+import numpy as np
 
 from calliope.core.preprocess.util import vincenty
+from calliope.analysis.plotting.util import break_name
 
 
 def _get_zoom(coordinate_array, width):
@@ -91,7 +93,8 @@ def _fill_scatter(coordinates, energy_cap, scatter_dict, dict_entry, tech):
             if e_cap:
                 links.append([loc_from, loc_to])
                 if dict_entry == 'text':
-                    filled_list.append('{} capacity: {}'.format(tech, int(e_cap.item())))
+                    e_cap = 'inf' if np.isinf(e_cap.item()) else int(e_cap.item())
+                    filled_list.append('{} capacity: {}'.format(tech, e_cap))
                 else:
                     filled_list.append(
                         edge(loc_from, loc_to)
@@ -111,7 +114,7 @@ def _get_centre(coordinates):
                 lon=centre.loc[dict(coordinates='lon')].item())
 
 
-def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg=False):
+def plot_transmission(model, mapbox_access_token=None, **kwargs):
     """
     Parameters
     ----------
@@ -119,14 +122,15 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
         If given and a valid Mapbox API key, a Mapbox map is drawn
         for lat-lon coordinates, else (by default), a more simple
         built-in map.
-    html_only : bool, optional, default = False
-        Returns a html string for embedding the plot in a webpage
-    save_svg: bool, optional, default = False
-        Saves the plot to svg, if True. Mapbox backgrounds are saved as a static
-        image in this case.
 
     """
-    coordinates = model._model_data.loc_coordinates.sortby('locs')
+    try:
+        coordinates = model._model_data.loc_coordinates.sortby('locs')
+    except AttributeError:
+        raise ValueError(
+            'Model does not define location coordinates '
+            '- no transmission plotting possible.'
+        )
 
     colors = model._model_data.colors
     names = model._model_data.names
@@ -226,7 +230,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
                 v_coord: v_edge[i],
                 'showlegend': showlegend,
                 'legendgroup': tech,
-                'name': names.loc[dict(techs=tech)].item(),
+                'name': break_name(names.loc[dict(techs=tech)].item()),
                 'line': {'color': colors.loc[dict(techs=tech)].item()}
             }})
             showlegend = False
@@ -256,7 +260,7 @@ def plot_transmission(model, mapbox_access_token=None, html_only=False, save_svg
         showlegend=True
     ))
 
-    if html_only:
+    if kwargs.get('html_only', False):
         del layout_dict['title']
         del layout_dict['width']
 

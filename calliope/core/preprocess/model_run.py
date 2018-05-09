@@ -62,7 +62,10 @@ def model_run_from_dict(config_dict, override_file=None,
     model_run : AttrDict
     debug_data : AttrDict
     """
-    config = config_dict
+    if not isinstance(config_dict, AttrDict):
+        config = AttrDict(config_dict)
+    else:
+        config = config_dict
     config.config_path = config.get('config_path', None)
 
     if scenario_file:
@@ -157,27 +160,8 @@ def apply_overrides(config, override_file=None, override_dict=None):
         config.config_path, config.model.timeseries_data_path
     )
 
-    # Check if overriding coordinates are in the same coordinate system. If not,
-    # delete all incumbent coordinates, ready for the new coordinates to come in
-    def check_and_remove_coordinates(config_model, override):
-        if (any(['coordinates' in k for k in config_model.as_dict_flat().keys()]) and
-            any(['coordinates' in k for k in override.as_dict_flat().keys()])):
-
-            config_keys = [k for k in config_model.as_dict_flat().keys() if 'coordinates.' in k]
-            config_coordinates = [k.split('coordinates.')[-1] for k in config_keys]
-            override_coordinates = set(
-                k.split('coordinates.')[-1] for k in override.as_dict_flat().keys()
-                if 'coordinates.' in k
-            )
-            if config_coordinates != override_coordinates:
-                for key in config_keys:
-                    config_model.del_key(key)
-
     # The input files are allowed to override other model defaults
     config_model.union(config, allow_override=True)
-
-    # FIXME: if applying an override that doesn't exist in model, should warn
-    # the user about possible mis-spelling
 
     # Apply overrides via 'override_file', which contains the path to a YAML file
     if override_file:
@@ -188,7 +172,8 @@ def apply_overrides(config, override_file=None, override_dict=None):
         override_file_path, override_groups = util.split_filename_overrides(override_file)
         override_from_file = combine_overrides(override_file_path, override_groups)
 
-        check_and_remove_coordinates(config_model, override_from_file)
+        warnings = checks.check_overrides(config_model, override_from_file)
+        exceptions.print_warnings_and_raise_errors(warnings=warnings)
 
         config_model.union(
             override_from_file, allow_override=True, allow_replacement=True
@@ -203,7 +188,8 @@ def apply_overrides(config, override_file=None, override_dict=None):
         if not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
 
-        check_and_remove_coordinates(config_model, override_dict)
+        warnings = checks.check_overrides(config_model, override_dict)
+        exceptions.print_warnings_and_raise_errors(warnings=warnings)
 
         config_model.union(
             override_dict, allow_override=True, allow_replacement=True
@@ -376,13 +362,20 @@ def process_timeseries_data(config_model, model_run):
         dtformat = config_model.model['timeseries_dateformat']
 
         # Generate the set of all files we want to read from file
-        flattened_config = model_run.locations.as_dict_flat()
-        csv_files = set([
-            v.split('=')[1].rsplit(':', 1)[0]
-            for v in flattened_config.values() if 'file=' in str(v)
-        ])
+        location_config = model_run.locations.as_dict_flat()
+        model_config = config_model.model.as_dict_flat()
 
-        for file in csv_files:
+        get_filenames = lambda config: set([
+            v.split('=')[1].rsplit(':', 1)[0]
+            for v in config.values() if 'file=' in str(v)
+        ])
+        constraint_filenames = get_filenames(location_config)
+        cluster_filenames = get_filenames(model_config)
+
+        datetime_min = []
+        datetime_max = []
+
+        for file in constraint_filenames | cluster_filenames:
             file_path = os.path.join(config_model.model.timeseries_data_path, file)
             # load the data, without parsing the dates, to catch errors in the data
             df = pd.read_csv(file_path, index_col=0)
@@ -403,7 +396,8 @@ def process_timeseries_data(config_model, model_run):
                 )
             timeseries_data[file] = df
 
-        datetime_range = df.index
+            datetime_min.append(df.index[0].date())
+            datetime_max.append(df.index[-1].date())
 
     # Apply time subsetting, if supplied in model_run
     subset_time_config = config_model.model.subset_time
@@ -422,14 +416,13 @@ def process_timeseries_data(config_model, model_run):
             time_slice = slice(subset_time_config[0], subset_time_config[1])
 
             # Don't allow slicing outside the range of input data
-            if (subset_time[0].date() < datetime_range[0].date() or
-                    subset_time[1].date() > datetime_range[-1].date()):
-
+            if (subset_time[0].date() < max(datetime_min) or
+                    subset_time[1].date() > min(datetime_max)):
                 raise exceptions.ModelError(
                     'subset time range {} is outside the input data time range '
                     '[{}, {}]'.format(subset_time_config,
-                                      datetime_range[0].strftime('%Y-%m-%d'),
-                                      datetime_range[-1].strftime('%Y-%m-%d'))
+                                      max(datetime_min).strftime('%Y-%m-%d'),
+                                      min(datetime_max).strftime('%Y-%m-%d'))
                 )
         elif isinstance(subset_time_config, list):
             raise exceptions.ModelError(
@@ -447,7 +440,10 @@ def process_timeseries_data(config_model, model_run):
                 )
 
     # Ensure all timeseries have the same index
-    indices = [(file, df.index) for file, df in timeseries_data.items()]
+    indices = [
+        (file, df.index) for file, df in timeseries_data.items()
+        if file not in cluster_filenames
+    ]
     first_file, first_index = indices[0]
     for file, idx in indices[1:]:
         if not first_index.equals(idx):
@@ -456,7 +452,7 @@ def process_timeseries_data(config_model, model_run):
                 'between {} and {}'.format(first_file, file)
             )
 
-    return timeseries_data
+    return timeseries_data, first_index
 
 
 def generate_model_run(config, debug_comments):
@@ -466,8 +462,8 @@ def generate_model_run(config, debug_comments):
 
     Parameters
     ----------
-    config_run : AttrDict
-    config_model : AttrDict
+    config : AttrDict
+    debug_comments : AttrDict
 
     """
     model_run = AttrDict()
@@ -494,12 +490,13 @@ def generate_model_run(config, debug_comments):
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
-    model_run['timeseries_data'] = process_timeseries_data(config, model_run)
+    model_run['timeseries_data'], model_run['timesteps'] = (
+        process_timeseries_data(config, model_run)
+    )
 
     # 6) Grab additional relevant bits from run and model config
     model_run['run'] = config['run']
     model_run['model'] = config['model']
-    model_run['name'] = config['name']
 
     # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)

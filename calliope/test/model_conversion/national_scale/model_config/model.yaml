@@ -1,0 +1,46 @@
+##
+# IMPORT OTHER FILES
+##
+
+# Can either be paths relative to this file, or absolute paths
+
+import:
+    - 'techs.yaml'
+    - 'locations.yaml'
+
+##
+# MODEL NAME
+##
+
+name: "Test model"
+
+
+##
+# DATASET PATH
+##
+
+# Can either be a path relative to this file, or an absolute path
+
+data_path: 'data'
+
+##
+# OBJECTIVE FUNCTION
+##
+
+# 'constraints.objective.objective_cost_minimization' is used by default
+# objective:
+
+##
+# ADDITIONAL CONSTRAINTS
+##
+
+constraints:
+    - constraints.optional.ramping_rate
+
+##
+# OTHER MODEL-WIDE OPTIONS
+##
+
+system_margin:
+    power: 0
+    heat: 0

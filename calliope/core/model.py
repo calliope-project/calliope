@@ -11,18 +11,21 @@ Implements the core Model class.
 import os
 
 import numpy as np
+
 import xarray as xr
 import pandas as pd
+import ruamel.yaml as ruamel_yaml
 
 from calliope.analysis import plotting, postprocess
-from calliope.core import debug, io
+from calliope.core import io
 from calliope.core.preprocess import \
     model_run_from_dict, \
     build_model_data, \
     apply_time_clustering, \
     final_timedimension_processing
-from calliope.core.util.tools import log_time
 from calliope.core.util.dataset import split_loc_techs, reorganise_dataset_dimensions
+from calliope.core.util.logging import log_time
+from calliope.core.util.tools import apply_to_dict
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.backend.run import run as run_backend
@@ -60,7 +63,8 @@ class Model(object):
 
         """
         self._timings = {}
-        log_time(self._timings, 'model_creation')
+
+        log_time(self._timings, 'model_creation', comment='Model: initialising')
         if config is not None:
             if isinstance(config, str):
                 model_file = config
@@ -93,10 +97,10 @@ class Model(object):
     def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run
         self._debug_data = debug_data
-        log_time(self._timings, 'model_run_creation')
+        log_time(self._timings, 'model_run_creation', comment='Model: preprocessing stage 1 (model_run)')
 
         self._model_data_original = build_model_data(model_run)
-        log_time(self._timings, 'model_data_original_creation')
+        log_time(self._timings, 'model_data_original_creation', comment='Model: preprocessing stage 2 (model_data)')
 
         random_seed = self._model_run.get_key('model.random_seed', None)
         if random_seed:
@@ -111,7 +115,11 @@ class Model(object):
                 self._model_data_original, model_run
             )
         self._model_data = final_timedimension_processing(_model_data)
-        log_time(self._timings, 'model_data_creation', time_since_start=True)
+        log_time(
+            self._timings, 'model_data_creation',
+            comment='Model: preprocessing complete',
+            time_since_start=True
+        )
 
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = 0
@@ -170,15 +178,50 @@ class Model(object):
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
             self.results = results
-        log_time(self._timings, 'model_data_loaded', time_since_start=True)
+        log_time(
+            self._timings, 'model_data_loaded',
+            comment='Model: loaded model_data',
+            time_since_start=True
+        )
 
-    def save_debug_data(self, path):
+    def save_commented_model_yaml(self, path):
         """
-        Save fully built and commented model_run to a YAML file at the
-        given path, for debug purposes.
+        Save a fully built and commented version of the model to a YAML file
+        at the given ``path``. Comments in the file indicate where values
+        were overridden. This is Calliope's internal representation of
+        a model directly before the model_data xarray.Dataset is built,
+        and can be useful for debugging possible issues in the model
+        formulation.
 
         """
-        debug.save_debug_data(self._model_run, self._debug_data, path)
+        # README: currently based on ruamel.yaml 0.15 which is a mix of old
+        # and new API - possibly needs a bit of rewriting once ruamel.yaml
+        # has progressed a bit further
+        yaml = ruamel_yaml.YAML()
+
+        model_run_debug = self._model_run.copy()
+        del model_run_debug['timeseries_data']  # Can't be serialised!
+
+        # Turn sets in model_run into lists for YAML serialization
+        for k, v in model_run_debug.sets.items():
+            model_run_debug.sets[k] = list(v)
+
+        debug_comments = self._debug_data['comments']
+        debug_yaml = yaml.load(yaml.dump(model_run_debug.as_dict()))
+        for k in debug_comments.model_run.keys_nested():
+            v = debug_comments.model_run.get_key(k)
+            if v:
+                keys = k.split('.')
+                apply_to_dict(debug_yaml, keys[:-1], 'yaml_add_eol_comment', (v, keys[-1]))
+
+        dumper = ruamel_yaml.dumper.RoundTripDumper
+        dumper.ignore_aliases = lambda self, data: True
+
+        with open(path, 'w') as f:
+            ruamel_yaml.dump(
+                debug_yaml, f,
+                Dumper=dumper, default_flow_style=False
+            )
 
     def run(self, force_rerun=False, scenario=None, **kwargs):
         """
@@ -197,7 +240,8 @@ class Model(object):
 
         """
 
-        if hasattr(self, 'results') and not force_rerun:
+        # Check that results exist and are non-empty
+        if hasattr(self, 'results') and self.results.data_vars and not force_rerun:
             raise exceptions.ModelError(
                 'This model object already has results. '
                 'Use model.run(force_rerun=True) to force'
@@ -276,10 +320,30 @@ class Model(object):
         """
         io.save_netcdf(self._model_data, path)
 
-    def to_csv(self, path):
+    def to_csv(self, path, dropna=True):
         """
         Save complete model data (inputs and, if available, results)
         as a set of CSV files to the given ``path``.
 
+        Parameters
+        ----------
+        dropna : bool, optional
+            If True (default), NaN values are dropped when saving,
+            resulting in significantly smaller CSV files.
+
         """
-        io.save_csv(self._model_data, path)
+        io.save_csv(self._model_data, path, dropna)
+
+    def info(self):
+        info_strings = []
+        model_name = self._model_data.attrs.get('model.name', 'None')
+        info_strings.append('Model name:   {}'.format(model_name))
+        msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
+            locs=len(self._model_data.coords.get('locs', [])),
+            techs=(
+                len(self._model_data.coords.get('techs_non_transmission', [])) +
+                len(self._model_data.coords.get('techs_transmission_names', []))
+            ),
+            times=len(self._model_data.coords.get('timesteps', [])))
+        info_strings.append('Model size:   {}'.format(msize))
+        return '\n'.join(info_strings)

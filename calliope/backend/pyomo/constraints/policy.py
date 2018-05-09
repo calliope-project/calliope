@@ -73,7 +73,20 @@ def equalizer(lhs, rhs, sign):
         raise ValueError('Invalid sign: {}'.format(sign))
 
 
+# FIXME: docstring should show all variants: \geq, =, and \leq
 def group_share_energy_cap_constraint_rule(backend_model, scenario, techlist, what):
+    """
+    Enforce shares in energy_cap for groups of technologies. Applied
+    to ``supply`` and ``supply_plus`` technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) =
+            fraction \\times \\sum_{loc::tech \\in loc\\_techs\\_supply \\or loc\\_techs\\_supply\\_plus} energy_{cap}(loc::tech)
+
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
     sets = backend_model.__calliope_model_data__['sets']
     fraction = model_data_dict['group_share_energy_cap_{}'.format(what)][techlist]
@@ -96,8 +109,20 @@ def group_share_energy_cap_constraint_rule(backend_model, scenario, techlist, wh
 
     return equalizer(lhs, rhs, what)
 
-
 def group_share_carrier_prod_constraint_rule(backend_model, scenario, techlist_carrier, what):
+    """
+    Enforce shares in carrier_prod for groups of technologies. Applied
+    to ``loc_tech_carriers_supply_all``, which includes supply,
+    supply_plus, conversion, and conversion_plus.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) =
+            fraction \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all, timestep\\in timesteps} carrier_{prod}(loc::tech::carrier, timestep)
+
+    """
     model_data_dict = backend_model.__calliope_model_data__['data']
     techlist, carrier = techlist_carrier.split('::')
     fraction = model_data_dict['group_share_carrier_prod_{}'.format(what)][(carrier, techlist)]
@@ -124,6 +149,21 @@ def group_share_carrier_prod_constraint_rule(backend_model, scenario, techlist_c
 
 
 def reserve_margin_constraint_rule(backend_model, carrier, scenario):
+    """
+    Enforces a system reserve margin per carrier.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_supply\\_all} energy_{cap}(loc::tech::carrier, timestep_{max\\_demand})
+            \\geq
+            \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_demand} carrier_{con}(loc::tech::carrier, timestep_{max\\_demand})
+            \\times -1 \\times \\frac{1}{time\\_resolution_{max\\_demand}}
+            \\times (1 + reserve\\_margin)
+
+    """
+
     model_data_dict = backend_model.__calliope_model_data__['data']
 
     reserve_margin = model_data_dict['reserve_margin'][carrier]
@@ -131,15 +171,15 @@ def reserve_margin_constraint_rule(backend_model, carrier, scenario):
     max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
 
     return (
-        sum(  # Sum all demand for this carrier and timestep
-            backend_model.carrier_con[loc_tech_carrier, scenario, max_demand_timestep]
-            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
-            if loc_tech_carrier.split('::')[-1] == carrier
-        ) * -1 * (1 / max_demand_time_res) * (1 + reserve_margin)
-        >=
         sum(  # Sum all supply capacity for this carrier
             backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
             for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
             if loc_tech_carrier.split('::')[-1] == carrier
         )
+        >=
+        sum(  # Sum all demand for this carrier and timestep
+            backend_model.carrier_con[loc_tech_carrier, scenario, max_demand_timestep]
+            for loc_tech_carrier in backend_model.loc_tech_carriers_demand
+            if loc_tech_carrier.split('::')[-1] == carrier
+        ) * -1 * (1 / max_demand_time_res) * (1 + reserve_margin)
     )

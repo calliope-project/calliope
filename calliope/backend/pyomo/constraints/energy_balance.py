@@ -76,6 +76,21 @@ def load_constraints(backend_model):
             rule=balance_storage_constraint_rule
         )
 
+    if 'loc_techs_balance_storage_inter_cluster_constraint' in sets:
+        backend_model.balance_storage_inter_cluster_constraint = po.Constraint(
+            backend_model.loc_techs_balance_storage_inter_cluster_constraint,
+            backend_model.scenarios,
+            backend_model.datesteps,
+            rule=balance_storage_inter_cluster_rule
+        )
+
+    if 'loc_techs_storage_initial_constraint' in sets:
+        backend_model.storage_initial_constraint = po.Constraint(
+            backend_model.loc_techs_storage_initial_constraint,
+            backend_model.scenarios,
+            rule=storage_initial_rule
+        )
+
 
 def system_balance_constraint_rule(backend_model, loc_carrier, scenario, timestep):
     """
@@ -267,7 +282,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, s
         .. math::
 
             available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
+            \\times resource_{scale}(loc::tech)
 
     if :math:`loc::tech` is in :math:`loc::techs_{area}`:
 
@@ -276,19 +291,18 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, s
         .. math::
 
             available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource_{scale}(loc::tech) \\times \\eta_{resource}(loc::tech, timestep)
+            \\times resource_{scale}(loc::tech)
             \\times resource_{area}(loc::tech)
 
     """
     resource = get_param(backend_model, 'resource', (loc_tech, scenario, timestep))
-    resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, scenario, timestep))
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
 
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
-        available_resource = resource * resource_scale * backend_model.resource_area[loc_tech] * resource_eff
+        available_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
     else:
-        available_resource = resource * resource_scale * resource_eff
+        available_resource = resource * resource_scale
 
     if po.value(force_resource):
         return backend_model.resource_con[loc_tech, scenario, timestep] == available_resource
@@ -322,7 +336,7 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, scenario, time
     remote_loc_tech_carrier = model_data_dict['lookup_loc_techs'][remote_loc_tech]
 
     if (loc_tech_is_in(backend_model, remote_loc_tech, 'loc_techs_transmission')
-        and get_param(backend_model, 'energy_prod', (loc_tech)) == 1):
+            and get_param(backend_model, 'energy_prod', (loc_tech)) == 1):
         return (
             backend_model.carrier_prod[loc_tech_carrier, scenario, timestep] ==
             -1 * backend_model.carrier_con[remote_loc_tech_carrier, scenario, timestep] *
@@ -345,8 +359,8 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, scenario, times
 
             \\boldsymbol{storage}(loc::tech, timestep) =
             \\boldsymbol{storage}(loc::tech, timestep_{previous})
-            \\times (1 - storage\_loss(loc::tech, scenario, timestep))^{timestep\_resolution(timestep)} +
-            \\boldsymbol{resource_{con}}(loc::tech, timestep) -
+            \\times (1 - storage\_loss(loc::tech, timestep))^{timestep\_resolution(timestep)} +
+            \\boldsymbol{resource_{con}}(loc::tech, timestep) \\times \\eta_{resource}(loc::tech, timestep) -
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
 
@@ -356,14 +370,16 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, scenario, times
 
         .. math::
 
-            \\boldsymbol{resource_{con}}(loc::tech, timestep) =
+            \\boldsymbol{resource_{con}}(loc::tech, timestep) \\times \\eta_{resource}(loc::tech, timestep) =
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
 
     """
 
     model_data_dict = backend_model.__calliope_model_data__['data']
+    model_attrs = backend_model.__calliope_model_data__['attrs']
 
+    resource_eff = get_param(backend_model, 'resource_eff', (loc_tech, scenario, timestep))
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, scenario, timestep))
     parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, scenario, timestep))
     total_eff = energy_eff * parasitic_eff
@@ -376,16 +392,26 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, scenario, times
 
     # A) Case where no storage allowed
     if not loc_tech_is_in(backend_model, loc_tech, 'loc_techs_store'):
-        return backend_model.resource_con[loc_tech, scenario, timestep] == carrier_prod
+        return backend_model.resource_con[loc_tech, scenario, timestep] * resource_eff == carrier_prod
 
     # B) Case where storage is allowed
     else:
-        resource = backend_model.resource_con[loc_tech, scenario, timestep]
-        if backend_model.timesteps.order_dict[timestep] == 0:
+        resource = backend_model.resource_con[loc_tech, scenario, timestep] * resource_eff
+        current_timestep = backend_model.timesteps.order_dict[timestep]
+        if current_timestep == 0 and not model_attrs['run.cyclic_storage']:
             storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+        elif (hasattr(backend_model, 'storage_inter_cluster') and
+                model_data_dict['lookup_cluster_first_timestep'][timestep]):
+            storage_previous_step = 0
         else:
+            if (hasattr(backend_model, 'clusters') and
+                    model_data_dict['lookup_cluster_first_timestep'][timestep]):
+                previous_step = model_data_dict['lookup_cluster_last_timestep'][timestep]
+            elif current_timestep == 0 and model_attrs['run.cyclic_storage']:
+                previous_step = backend_model.timesteps[-1]
+            else:
+                previous_step = get_previous_timestep(backend_model.timesteps, timestep)
             storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
-            previous_step = get_previous_timestep(backend_model, timestep)
             time_resolution = backend_model.timestep_resolution[previous_step]
             storage_previous_step = (
                 ((1 - storage_loss) ** time_resolution) *
@@ -416,6 +442,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, scenario, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
+    model_attrs = backend_model.__calliope_model_data__['attrs']
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, scenario, timestep))
 
@@ -427,11 +454,21 @@ def balance_storage_constraint_rule(backend_model, loc_tech, scenario, timestep)
 
     carrier_con = backend_model.carrier_con[loc_tech_carrier, scenario, timestep] * energy_eff
 
-    if backend_model.timesteps.order_dict[timestep] == 0:
+    current_timestep = backend_model.timesteps.order_dict[timestep]
+    if current_timestep == 0 and not model_attrs['run.cyclic_storage']:
         storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+    elif (hasattr(backend_model, 'storage_inter_cluster') and
+            model_data_dict['lookup_cluster_first_timestep'][timestep]):
+        storage_previous_step = 0
     else:
+        if (hasattr(backend_model, 'clusters') and
+                model_data_dict['lookup_cluster_first_timestep'][timestep]):
+            previous_step = model_data_dict['lookup_cluster_last_timestep'][timestep]
+        elif current_timestep == 0 and model_attrs['run.cyclic_storage']:
+            previous_step = backend_model.timesteps[-1]
+        else:
+            previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
-        previous_step = get_previous_timestep(backend_model, timestep)
         time_resolution = backend_model.timestep_resolution[previous_step]
         storage_previous_step = (
             ((1 - storage_loss) ** time_resolution) *
@@ -441,4 +478,99 @@ def balance_storage_constraint_rule(backend_model, loc_tech, scenario, timestep)
     return (
         backend_model.storage[loc_tech, scenario, timestep] ==
         storage_previous_step - carrier_prod - carrier_con
+    )
+
+
+def balance_storage_inter_cluster_rule(backend_model, loc_tech, scenario, datestep):
+    """
+    When clustering days, to reduce the timeseries length, balance the daily stored
+    energy across all days of the original timeseries.
+
+    `Ref: DOI 10.1016/j.apenergy.2018.01.023 <https://doi.org/10.1016/j.apenergy.2018.01.023>`_
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep) =
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep_{previous})
+            \\times (1 - storage\_loss(loc::tech, timestep))^{24}
+            + \\boldsymbol{storage}(loc::tech, timestep_{final, cluster(datestep))})
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
+
+    Where :math:`timestep_{final, cluster(datestep_{previous}))}` is the final timestep of the
+    cluster in the clustered timeseries corresponding to the previous day
+    """
+    model_attrs = backend_model.__calliope_model_data__['attrs']
+    current_datestep = backend_model.datesteps.order_dict[datestep]
+
+    if current_datestep == 0 and not model_attrs['run.cyclic_storage']:
+        storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+        storage_intra = 0
+    else:
+        if current_datestep == 0 and model_attrs['run.cyclic_storage']:
+            previous_step = backend_model.datesteps[-1]
+        else:
+            previous_step = get_previous_timestep(backend_model.datesteps, datestep)
+        storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
+        storage_previous_step = (
+            ((1 - storage_loss) ** 24) *
+            backend_model.storage_inter_cluster[loc_tech, scenario, previous_step]
+        )
+        final_timestep = (
+            backend_model.__calliope_model_data__
+            ['data']['lookup_datestep_last_cluster_timestep'][previous_step]
+        )
+        storage_intra = backend_model.storage[loc_tech, scenario, final_timestep]
+    return (
+        backend_model.storage_inter_cluster[loc_tech, scenario, datestep] ==
+        storage_previous_step + storage_intra
+    )
+
+
+def storage_initial_rule(backend_model, loc_tech, scenario):
+    """
+    If storage is cyclic, allow an initial storage to still be set. This is
+    applied to the storage of the final timestep/datestep of the series as that,
+    in cyclic storage, is the 'storage_previous_step' for the first
+    timestep/datestep.
+
+    If clustering and ``storage_inter_cluster`` exists:
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep_{final})
+            \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
+
+    Where :math:`datestep_{final}` is the last datestep of the timeseries
+
+    Else:
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{storage}(loc::tech, timestep_{final})
+            \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
+
+    Where :math:`timestep_{final}` is the last timestep of the timeseries
+    """
+
+    storage_initial = get_param(backend_model, 'storage_initial', loc_tech)
+    storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
+    if hasattr(backend_model, 'storage_inter_cluster'):
+        storage = backend_model.storage_inter_cluster
+        final_step = backend_model.datesteps[-1]
+        time_resolution = 24
+    else:
+        storage = backend_model.storage
+        final_step = backend_model.timesteps[-1]
+        time_resolution = backend_model.timestep_resolution[final_step]
+
+    return (
+        storage[loc_tech, scenario, final_step] * ((1 - storage_loss) ** time_resolution)
+        == storage_initial
     )

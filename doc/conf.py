@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath('helpers'))
 from sphinx.builders.html import StandaloneHTMLBuilder, SingleFileHTMLBuilder
 
 import generate_tables  # from helpers
-# import convert_images  # from helpers
+import generate_tutorials  # from helpers
 
 __version__ = None
 # Sets the __version__ variable
@@ -29,6 +29,9 @@ exec(open('../calliope/_version.py').read())
 
 # Generates the tables and source code files
 generate_tables.process()
+
+# Generate tutorial HTML files from notebooks
+generate_tutorials.generate_tutorials()
 
 
 ##
@@ -65,9 +68,10 @@ MOCK_MODULES = [
     'numpy.random', 'numpy.fft', 'numpy.lib', 'numpy.lib.scimath',
     'scipy', 'scipy.cluster', 'scipy.cluster.vq',
     'scipy.spatial', 'scipy.spatial.distance',
-    'sklearn',
+    'sklearn', 'sklearn.metrics',
     'bokeh', 'bokeh.plotting', 'bokeh.models', 'bokeh.core.properties',
-    'plotly', 'plotly.offline', 'plotly.graph_objs'
+    'plotly', 'plotly.offline', 'plotly.graph_objs',
+    'natsort', 'IPython'
 ]
 
 for m in MOCK_MODULES:
@@ -156,7 +160,7 @@ release = __version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -281,7 +285,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
     ('index', 'Calliope.tex', 'Calliope Documentation',
-     'Stefan Pfenninger', 'manual'),
+     'Calliope contributors', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -311,7 +315,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'calliope', 'Calliope Documentation',
-     ['Stefan Pfenninger'], 1)
+     ['Calliope contributors'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -325,7 +329,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'Calliope', 'Calliope Documentation',
-     'Stefan Pfenninger', 'Calliope', 'One line description of project.',
+     'Calliope contributors', 'Calliope', 'One line description of project.',
      'Miscellaneous'),
 ]
 

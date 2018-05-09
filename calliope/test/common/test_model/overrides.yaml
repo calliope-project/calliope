@@ -227,3 +227,47 @@ one_day:
 two_hours:
     model.subset_time: ['2005-01-01 00:00:00', '2005-01-01 01:00:00']
 
+operate:
+    run.mode: operate
+    model.subset_time: ['2005-01-01', '2005-01-04']
+    run.operation:
+            window: 12
+            horizon: 24
+
+investment_costs:
+    tech_groups:
+        supply:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        supply_plus:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        storage:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        conversion:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10
+        conversion_plus:
+            constraints:
+                lifetime: 25
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    energy_cap: 10

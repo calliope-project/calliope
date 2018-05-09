@@ -1,0 +1,10 @@
+name: calliope
+
+channels:
+    - conda-forge
+    - anaconda
+
+dependencies:
+    - coincbc  # COIN-OR CBC LP and MILP solver for testing
+    - python-coveralls
+    - pylint=1.6

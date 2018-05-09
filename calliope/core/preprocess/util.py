@@ -17,7 +17,7 @@ def concat_iterable(iterable, concatenators):
 
     E.g.:
     ``
-    result = concat_iterable([('x', 'y', 'z'), ('1', '2', '3')], [':'])
+    result = concat_iterable([('x', 'y', 'z'), ('1', '2', '3')], [':', ':'])
     result == ['x:y:z', '1:2:3']
 
     result = concat_iterable([('x', 'y', 'z'), ('1', '2', '3')], ['::', ':'])
@@ -27,13 +27,15 @@ def concat_iterable(iterable, concatenators):
     """
     if len(iterable) == 0:
         return []
-    concatenators += ['']
+    concats = concatenators + ['']
     string_iter_len = len(iterable[0])
-    assert string_iter_len == len(concatenators)
+    assert all(len(i) == string_iter_len for i in iterable)
+    assert string_iter_len == len(concats)
 
-    return [''.join([string_iter[i] + concatenators[i]
-        for i in range(string_iter_len)])
-        for string_iter in iterable]
+    return [
+        ''.join([string_iter[i] + concats[i] for i in range(string_iter_len)])
+        for string_iter in iterable
+    ]
 
 
 def constraint_exists(model_run, loc_tech, search_entry):
