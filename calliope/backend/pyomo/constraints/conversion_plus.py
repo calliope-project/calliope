@@ -104,13 +104,13 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
     carrier_prod = sum(
-        backend_model.carrier_prod[loc_tech_carrier, timestep]
-        / get_param(backend_model, 'carrier_ratios', ('out', loc_tech_carrier))
+        backend_model.carrier_prod[loc_tech_carrier, timestep] /
+        get_param(backend_model, 'carrier_ratios', ('out', loc_tech_carrier))
         for loc_tech_carrier in loc_tech_carriers_out
     )
     carrier_con = sum(
-        backend_model.carrier_con[loc_tech_carrier, timestep]
-        * get_param(backend_model, 'carrier_ratios', ('in', loc_tech_carrier))
+        backend_model.carrier_con[loc_tech_carrier, timestep] *
+        get_param(backend_model, 'carrier_ratios', ('in', loc_tech_carrier))
         for loc_tech_carrier in loc_tech_carriers_in
     )
 
