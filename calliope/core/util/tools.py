@@ -101,13 +101,3 @@ def plugin_load(name, builtin_module):
         func_string = builtin_module + '.' + name
         func = load_function(func_string)
     return func
-
-
-def flatten_list(nested):
-    l = deepcopy(nested)
-    while l:
-        sublist = l.pop(0)
-        if isinstance(sublist, list):
-            l = sublist + l
-        else:
-            yield sublist

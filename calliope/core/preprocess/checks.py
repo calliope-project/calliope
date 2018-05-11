@@ -20,8 +20,7 @@ from inspect import signature
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.tools import flatten_list
-from calliope.core.preprocess.util import get_all_carriers
+from calliope.core.preprocess.util import get_all_carriers, flatten_list
 from calliope.core.util.logging import logger
 from calliope.core.util.tools import load_function
 

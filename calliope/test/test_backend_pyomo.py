@@ -1303,7 +1303,9 @@ class TestConversionPlusConstraints:
         assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in': ['coal', 'gas']},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in': ['coal', 'gas'], 'primary_carrier_in': 'gas'
+             }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
@@ -1399,14 +1401,18 @@ class TestConversionPlusConstraints:
         assert not hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_2': 'coal'},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_2': 'coal', 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_2': ['coal', 'heat']},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_2': ['coal', 'heat'], 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
@@ -1422,14 +1428,18 @@ class TestConversionPlusConstraints:
         assert not hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_3': 'coal'},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_3': 'coal', 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_3': ['coal', 'heat']},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_3': ['coal', 'heat'], 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
