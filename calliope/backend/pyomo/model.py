@@ -40,7 +40,7 @@ def generate_model(model_data):
 
     # Sets
     for coord in list(model_data.coords):
-        set_data = list(model_data.coords[coord].data)
+        set_data = model_data.coords[coord].values
         # Ensure that time steps are pandas.Timestamp objects
         if isinstance(set_data[0], np.datetime64):
             set_data = pd.to_datetime(set_data)
@@ -109,6 +109,18 @@ def generate_model(model_data):
         )
     if not hasattr(backend_model, 'scenarios'):
         backend_model.scenarios = po.Set(initialize=[1], ordered=True)
+
+    # ensure dimension names are consistent, e.g. loc_techs_store -> loc_techs
+    for k, v in model_data_dict['dims'].items():
+        dims = []
+        for i in v:
+            if not i.startswith('loc_techs_') and not i.startswith('loc_tech_carriers_'):
+                dims.append(i)
+            elif i.startswith('loc_techs_'):
+                dims.append('loc_techs')
+            elif i.startswith('loc_tech_carriers_'):
+                dims.append('loc_tech_carriers')
+        model_data_dict['dims'][k] = tuple(dims)
 
     # Variables
     load_function(

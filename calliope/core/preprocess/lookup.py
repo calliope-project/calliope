@@ -59,7 +59,7 @@ def lookup_loc_carriers(model_run):
             model_run.sets['loc_tech_carriers_con']
             if loc_carrier == '{0}::{2}'.format(*i.split("::"))
         ))
-        data.append(",".join(loc_tech_carrier))
+        data.append(','.join(sorted(loc_tech_carrier)))
     lookup_loc_carriers_dict['data'] = data
 
     return lookup_loc_carriers_dict
@@ -170,7 +170,7 @@ def lookup_loc_techs_conversion_plus(dataset, model_run):
 
             if relevant_carriers and isinstance(relevant_carriers, list):
                 loc_tech_carriers = ','.join([loc_tech + "::" + i
-                                              for i in relevant_carriers])
+                                              for i in sorted(relevant_carriers)])
             elif relevant_carriers:
                 loc_tech_carriers = loc_tech + "::" + relevant_carriers
             else:
@@ -220,7 +220,7 @@ def lookup_loc_techs_area(dataset):
         relevant_loc_techs = [loc_tech for loc_tech in dataset.loc_techs_area.values
                               if loc == loc_tech.split('::')[0] and
                               loc_tech not in dataset.loc_techs_demand.values]
-        data_dict['data'].append(','.join(relevant_loc_techs))
+        data_dict['data'].append(','.join(sorted(relevant_loc_techs)))
 
     dataset['lookup_loc_techs_area'] = xr.DataArray.from_dict(data_dict)
 

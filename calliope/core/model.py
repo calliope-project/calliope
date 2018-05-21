@@ -264,7 +264,7 @@ class Model(object):
             elif scenario not in self._model_data.scenarios.values:
                 raise KeyError('Scenario {} not in model_data scenarios dimension')
             else:
-                model_data = self._model_data.loc[{'scenarios': scenario}]
+                model_data = self._model_data.loc[{'scenarios': [scenario]}]
         else:
             model_data = self._model_data
 
@@ -280,8 +280,13 @@ class Model(object):
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
-
-        self._model_data.update(results)
+        if scenario is not None:
+            results = reorganise_dataset_dimensions(
+                results.loc[{'scenarios': scenario}].expand_dims('scenarios')
+            )
+            self._model_data.merge(results, inplace=True)
+        else:
+            self._model_data.update(results)
         self._model_data.attrs.update(results.attrs)
 
         if 'run_solution_returned' in self._timings.keys():

@@ -56,6 +56,11 @@ _profile_filename = click.option(
     help='Filename to save profile to if enabled --profile.'
 )
 
+_run_scenario = click.option(
+    '--run_scenario', type=str,
+    help='Single scenario to run. Slices model data on the given scenario'
+)
+
 if logger.hasHandlers():
     for handler in logger.handlers:
         logger.removeHandler(handler)
@@ -164,18 +169,20 @@ def new(path, template, debug):
 @cli.command(short_help='Run a model.')
 @click.argument('model_file')
 @click.option('--override_file')
+@click.option('--scenario_file')
 @click.option('--save_netcdf')
 @click.option('--save_csv')
 @click.option('--save_plots')
 @click.option('--save_logs')
 @click.option('--model_format')
+@click.option('--run_scenario')
 @_debug
 @_quiet
 @_pdb
 @_profile
 @_profile_filename
-def run(model_file, override_file, save_netcdf, save_csv, save_plots,
-        save_logs, model_format,
+def run(model_file, override_file, scenario_file, save_netcdf,
+        save_csv, save_plots, save_logs, model_format, run_scenario,
         debug, quiet, pdb, profile, profile_filename):
     """
     Execute the given model. Tries to guess from the file extension whether
@@ -222,7 +229,8 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
                 'run.save_logs': save_logs
             }
             model = Model(
-                model_file, override_file=override_file, override_dict=override_dict
+                model_file, override_file=override_file,
+                scenario_file=scenario_file, override_dict=override_dict
             )
         elif model_format == 'netcdf':
             if override_file is not None:
@@ -238,7 +246,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
 
         print(model.info() + '\n')
         print('Starting model run...')
-        model.run()
+        model.run(scenario=run_scenario)
 
         termination = model._model_data.attrs.get(
             'termination_condition', 'unknown')
