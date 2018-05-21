@@ -16,7 +16,7 @@ from calliope import exceptions
 
 
 @memoize
-def get_param(backend_model, var, dims):
+def get_param(backend_model, var, **dims):
     """
     Get an input parameter held in a Pyomo object, or held in the defaults
     dictionary if that Pyomo object doesn't exist.
@@ -28,20 +28,20 @@ def get_param(backend_model, var, dims):
     dims : single value or tuple
 
     """
-
+    dim_dict = backend_model.__calliope_model_data__['dims']
     try:
-        return getattr(backend_model, var)[dims]
+        return getattr(backend_model, var)[(*[dims[k] for k in dim_dict[var]],)]
     except AttributeError:  # i.e. parameter doesn't exist at all
-        logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+        logger.debug('param {} is undefined, leading to default lookup'.format(var))
         return backend_model.__calliope_defaults__[var]
-    except KeyError:  # try removing redundant dimensions
-        # Get the discrepency between number of queried dims and number of available dims
-        dim_dict = backend_model.__calliope_model_data__['dims']
-        dim_length_diff = len(dims) - len(dim_dict[var])
-        try:
-            return getattr(backend_model, var)[dims[:-dim_length_diff]]
-        except KeyError:  # Static default value
-            logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+    except KeyError:  # i.e. index does not exist in param
+        try:  # tuple key can cause issues for single item tuples, so try assuming single length tuple
+            return getattr(backend_model, var)[dims[dim_dict[var][0]]]
+        except KeyError:  # i.e. index still does not exist in param
+            logger.debug(
+                'index {} does not exist in {}, leading to default lookup'
+                .format(tuple([dims[k] for k in dim_dict[var]]), var)
+            )
             return backend_model.__calliope_defaults__[var]
 
 

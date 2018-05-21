@@ -80,11 +80,11 @@ def get_capacity_constraint(backend_model, parameter, loc_tech,
     decision_variable = getattr(backend_model, parameter)
 
     if not _equals:
-        _equals = get_param(backend_model, parameter + '_equals', loc_tech)
+        _equals = get_param(backend_model, parameter + '_equals', loc_techs=loc_tech)
     if not _max:
-        _max = get_param(backend_model, parameter + '_max', loc_tech)
+        _max = get_param(backend_model, parameter + '_max', loc_techs=loc_tech)
     if not _min:
-        _min = get_param(backend_model, parameter + '_min', loc_tech)
+        _min = get_param(backend_model, parameter + '_min', loc_techs=loc_tech)
     if po.value(_equals) is not False and po.value(_equals) is not None:
         if np.isinf(po.value(_equals)):
             e = exceptions.ModelError
@@ -148,7 +148,7 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
-    charge_rate = get_param(backend_model, 'charge_rate', loc_tech)
+    charge_rate = get_param(backend_model, 'charge_rate', loc_techs=loc_tech)
 
     return backend_model.energy_cap[loc_tech] <= (
         backend_model.storage_cap[loc_tech] * charge_rate
@@ -229,8 +229,8 @@ def resource_area_constraint_rule(backend_model, loc_tech):
             \\boldsymbol{resource_{area}}(loc::tech) \\geq resource_{area, min}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{area}
     """
-    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
-    area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
+    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_techs=loc_tech)
+    area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_techs=loc_tech)
 
     if po.value(energy_cap_max) == 0 and not po.value(area_per_energy_cap):
         # If a technology has no energy_cap here, we force resource_area to zero,
@@ -253,10 +253,10 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
             \\boldsymbol{energy_{cap}}(loc::tech) \\times area\_per\_energy\_cap(loc::tech)
             \\quad \\forall loc::tech \\in locs::techs_{area} \\text{ if } area\_per\_energy\_cap(loc::tech)
     """
-    area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
+    area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_techs=loc_tech)
 
     return (backend_model.resource_area[loc_tech] ==
-                backend_model.energy_cap[loc_tech] * area_per_energy_cap)
+            backend_model.energy_cap[loc_tech] * area_per_energy_cap)
 
 
 def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
@@ -310,7 +310,7 @@ def energy_capacity_constraint_rule(backend_model, loc_tech):
             \\geq energy_{cap, min}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs
     """
-    scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
+    scale = get_param(backend_model, 'energy_cap_scale', loc_techs=loc_tech)
     return get_capacity_constraint(backend_model, 'energy_cap', loc_tech, scale=scale)
 
 
@@ -340,8 +340,8 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
         if i.split('::')[1] == tech
     ]
 
-    max_systemwide = get_param(backend_model, 'energy_cap_max_systemwide', tech)
-    equals_systemwide = get_param(backend_model, 'energy_cap_equals_systemwide', tech)
+    max_systemwide = get_param(backend_model, 'energy_cap_max_systemwide', techs=tech)
+    equals_systemwide = get_param(backend_model, 'energy_cap_equals_systemwide', techs=tech)
 
     if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
         return po.Constraint.NoConstraint

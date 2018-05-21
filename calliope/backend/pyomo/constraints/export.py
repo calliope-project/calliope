@@ -108,9 +108,9 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, scenario, timeste
     weight = backend_model.timestep_weights[timestep]
 
     cost_export = (
-        get_param(backend_model, 'cost_export', (cost, loc_tech, scenario, timestep))
-        * backend_model.carrier_export[loc_tech_carrier, scenario, timestep]
-        * weight
+        get_param(backend_model, 'cost_export', costs=cost, loc_techs=loc_tech,
+                  scenarios=scenario, timesteps=timestep) *
+        backend_model.carrier_export[loc_tech_carrier, scenario, timestep] * weight
     )
 
     backend_model.cost_var_rhs[cost, loc_tech, scenario, timestep].expr += cost_export
@@ -149,6 +149,6 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, scenario, timest
     else:
         operating_units = 1
 
-    export_cap = get_param(backend_model, 'export_cap', loc_tech)
+    export_cap = get_param(backend_model, 'export_cap', loc_techs=loc_tech)
     return (backend_model.carrier_export[loc_tech_carrier, scenario, timestep] <=
             export_cap * operating_units)

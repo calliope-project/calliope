@@ -105,7 +105,10 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, scen
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, scenario, timestep))
+    parasitic_eff = get_param(
+        backend_model, 'parasitic_eff',
+        loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
 
     return carrier_prod <= (
         backend_model.energy_cap[loc_tech] * timestep_resolution * parasitic_eff
@@ -127,7 +130,10 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, scen
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, scenario, timestep))
+    min_use = get_param(
+        backend_model, 'energy_cap_min_use',
+        loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
 
     return carrier_prod >= (
         backend_model.energy_cap[loc_tech] * timestep_resolution * min_use
@@ -247,7 +253,10 @@ def ramping_constraint(backend_model, loc_tech_carrier, scenario, timestep, dire
         time_res_prev = backend_model.timestep_resolution[previous_step]
         loc_tech = loc_tech_carrier.rsplit('::', 1)[0]
         # Ramping rate (fraction of installed capacity per hour)
-        ramping_rate = get_param(backend_model, 'energy_ramping', (loc_tech, scenario, timestep))
+        ramping_rate = get_param(
+            backend_model, 'energy_ramping',
+            loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+        )
 
         try:
             prod_this = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]

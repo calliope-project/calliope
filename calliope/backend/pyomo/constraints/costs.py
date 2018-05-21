@@ -131,21 +131,31 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
         exists. Both inputs are strings.
         """
         if loc_tech_is_in(backend_model, loc_tech, calliope_set):
-            _cost = (getattr(backend_model, capacity_decision_variable)[loc_tech] *
-                get_param(backend_model, 'cost_' + capacity_decision_variable, (cost, loc_tech)))
+            _cost = (
+                getattr(backend_model, capacity_decision_variable)[loc_tech] *
+                get_param(backend_model, 'cost_' + capacity_decision_variable,
+                          costs=cost, loc_techs=loc_tech)
+            )
             return _cost
         else:
             return 0
 
-    cost_energy_cap = (backend_model.energy_cap[loc_tech]
-        * get_param(backend_model, 'cost_energy_cap', (cost, loc_tech)))
+    cost_energy_cap = (
+        backend_model.energy_cap[loc_tech] *
+        get_param(backend_model, 'cost_energy_cap', costs=cost, loc_techs=loc_tech)
+    )
 
     cost_storage_cap = _get_investment_cost('storage_cap', 'loc_techs_store')
     cost_resource_cap = _get_investment_cost('resource_cap', 'loc_techs_supply_plus')
     cost_resource_area = _get_investment_cost('resource_area', 'loc_techs_area')
 
-    cost_om_annual_investment_fraction = get_param(backend_model, 'cost_om_annual_investment_fraction', (cost, loc_tech))
-    cost_om_annual = get_param(backend_model, 'cost_om_annual', (cost, loc_tech))
+    cost_om_annual_investment_fraction = get_param(
+        backend_model, 'cost_om_annual_investment_fraction',
+        costs=cost, loc_techs=loc_tech
+    )
+    cost_om_annual = get_param(
+        backend_model, 'cost_om_annual', costs=cost, loc_techs=loc_tech
+    )
 
     ts_weight = get_timestep_weight(backend_model)
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'].get((cost, loc_tech), 0)
@@ -198,8 +208,14 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, scenario, timestep):
     """
     model_data_dict = backend_model.__calliope_model_data__
 
-    cost_om_prod = get_param(backend_model, 'cost_om_prod', (cost, loc_tech, scenario, timestep))
-    cost_om_con = get_param(backend_model, 'cost_om_con', (cost, loc_tech, scenario, timestep))
+    cost_om_prod = get_param(
+        backend_model, 'cost_om_prod',
+        costs=cost, loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
+    cost_om_con = get_param(
+        backend_model, 'cost_om_con',
+        costs=cost, loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
     weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier = model_data_dict['data']['lookup_loc_techs'][loc_tech]
@@ -212,7 +228,10 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, scenario, timestep):
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and cost_om_con:
         cost_con = cost_om_con * weight * backend_model.resource_con[loc_tech, scenario, timestep]
     elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and cost_om_con:
-        energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, scenario, timestep))
+        energy_eff = get_param(
+            backend_model, 'energy_eff',
+            loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+        )
         if po.value(energy_eff) > 0:  # in case energy_eff is zero, to avoid an infinite value
             cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, scenario, timestep] / energy_eff)
         else:

@@ -52,7 +52,9 @@ def balance_conversion_constraint_rule(backend_model, loc_tech, scenario, timest
     loc_tech_carrier_out = model_data_dict['lookup_loc_techs_conversion'][('out', loc_tech)]
     loc_tech_carrier_in = model_data_dict['lookup_loc_techs_conversion'][('in', loc_tech)]
 
-    energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, scenario, timestep))
+    energy_eff = get_param(
+        backend_model, 'energy_eff', loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
 
     return (
         backend_model.carrier_prod[loc_tech_carrier_out, scenario, timestep] == -1 *
@@ -87,10 +89,14 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, scenario,
         model_data_dict['data']['lookup_loc_techs_conversion'][('out', loc_tech)]
     )
 
-    cost_om_prod = get_param(backend_model, 'cost_om_prod',
-                             (cost, loc_tech, scenario, timestep))
-    cost_om_con = get_param(backend_model, 'cost_om_con',
-                            (cost, loc_tech, scenario, timestep))
+    cost_om_prod = get_param(
+        backend_model, 'cost_om_prod',
+        costs=cost, loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
+    cost_om_con = get_param(
+        backend_model, 'cost_om_con',
+        costs=cost, loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
+    )
     if po.value(cost_om_prod):
         cost_prod = (cost_om_prod * weight *
                      backend_model.carrier_prod[loc_tech_carrier_out, scenario, timestep])
