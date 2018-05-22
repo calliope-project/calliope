@@ -266,7 +266,16 @@ class Model(object):
             else:
                 model_data = self._model_data.loc[{'scenarios': [scenario]}]
         else:
-            model_data = self._model_data
+            if ('scenarios' in self._model_data.dims
+                    and self._model_data.attrs['run.mode'] != 'scenario_plan'):
+                raise exceptions.ModelError(
+                    'Unable to run this model in {} mode, as there are multiple '
+                    'scenarios defined. Run in `scenario_plan` mode or select a '
+                    'scenario on running the model `run(scenrio=...)`'
+                    .format(self._model_data.attrs['run.mode'])
+                )
+            else:
+                model_data = self._model_data
 
         results, self._backend_model, interface = run_backend(
             model_data, self._timings, **kwargs

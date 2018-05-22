@@ -383,7 +383,7 @@ def storage_inter_min_rule(backend_model, loc_tech, scenario, datestep):
     is located.
     """
     cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
-    storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
+    storage_loss = get_param(backend_model, 'storage_loss', loc_techs=loc_tech)
     return (
         backend_model.storage_inter_cluster[loc_tech, scenario, datestep] * ((1 - storage_loss) ** 24) +
         backend_model.storage_intra_cluster_min[loc_tech, cluster, scenario] >= 0

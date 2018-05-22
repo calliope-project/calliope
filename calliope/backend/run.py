@@ -53,8 +53,8 @@ def run(model_data, timings, build_only=False):
             backend=BACKEND[run_backend], build_only=build_only
         )
 
-    elif model_data.attrs['run.mode'] == 'robust_plan':
-        results, backend = run_robust_plan(
+    elif model_data.attrs['run.mode'] == 'scenario_plan':
+        results, backend = run_scenario_plan(
             model_data, timings,
             backend=BACKEND[run_backend], build_only=build_only
         )
@@ -365,7 +365,7 @@ def run_operate(model_data, timings, backend, build_only):
     return results, backend_model
 
 
-def run_robust_plan(model_data, timings, backend, build_only, backend_rerun=False):
+def run_scenario_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
     log_time(timings, 'run_start', comment='Backend: starting model run')
 

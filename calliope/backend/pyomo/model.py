@@ -35,7 +35,7 @@ def generate_model(model_data):
 
     """
     backend_model = po.ConcreteModel()
-    mode = model_data.attrs['run.mode']  # 'robust_plan', 'plan', or 'operate'
+    mode = model_data.attrs['run.mode']  # 'scenario_plan', 'plan', or 'operate'
     backend_model.mode = mode
 
     # Sets
@@ -95,7 +95,7 @@ def generate_model(model_data):
                          initialize=v, mutable=True)
             )
 
-    if mode == 'robust_plan':
+    if mode == 'scenario_plan':
         # Load custom sets/parameters specific to robust optimisation
         backend_model.beta = po.Param(
             initialize=model_data_dict['attrs']['run.beta'], mutable=True
@@ -127,7 +127,7 @@ def generate_model(model_data):
         'calliope.backend.pyomo.variables.initialize_decision_variables'
     )(backend_model)
 
-    if mode == 'robust_plan':
+    if mode == 'scenario_plan':
         load_function(
             'calliope.backend.pyomo.variables.initialize_cvar_decision_variables'
         )(backend_model)
@@ -158,7 +158,7 @@ def generate_model(model_data):
     if hasattr(backend_model, 'loc_techs_export'):
         constraints_to_add.append('export.load_constraints')
 
-    if mode == 'robust_plan':
+    if mode == 'scenario_plan':
         constraints_to_add.append('uncertainty.load_constraints')
 
     for c in constraints_to_add:
