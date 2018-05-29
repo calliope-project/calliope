@@ -369,7 +369,8 @@ def run_scenario_plan(model_data, timings, backend, build_only, backend_rerun=Fa
 
     log_time(timings, 'run_start', comment='Backend: starting model run')
 
-    if 'probability' not in model_data.data_vars.keys() or model_data.probability.sum() != 1:
+    if ('probability' not in model_data.data_vars.keys() or
+            not np.isclose(model_data.probability.sum(), 1)):
         raise exceptions.ModelError(
             'Cannot run a scenario-based robust model if probabilities not '
             'defined, or sum of probabilities is not 1.'
