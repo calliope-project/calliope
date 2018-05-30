@@ -72,7 +72,7 @@ def apply_time_clustering(model_data, model_run):
         for entry in time_config.masks:
             entry = AttrDict(entry)
             mask_func = plugin_load(entry.function, builtin_module='calliope.core.time.masks')
-            mask_kwargs = entry.get_key('options', default={})
+            mask_kwargs = entry.get_key('options', default=AttrDict()).as_dict()
             masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
         data.attrs['masks'] = masks
         # Concatenate the DatetimeIndexes by using dummy Series
@@ -90,7 +90,7 @@ def apply_time_clustering(model_data, model_run):
         func = plugin_load(
             time_config.function, builtin_module='calliope.core.time.funcs'
         )
-        func_kwargs = time_config.get('function_options', {})
+        func_kwargs = time_config.get('function_options', AttrDict()).as_dict()
         if 'file=' in func_kwargs.get('clustering_func', ''):
             func_kwargs.update({'model_run': model_run})
         data = func(data=data, timesteps=timesteps, **func_kwargs)

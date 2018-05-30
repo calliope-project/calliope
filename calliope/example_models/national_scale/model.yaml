@@ -1,7 +1,8 @@
 import:  # Import other files from paths relative to this file, or absolute paths
-    - 'model_config/techs.yaml'
-    - 'model_config/locations.yaml'
+    - 'model_config/techs.yaml'  # This file specifies the model's technologies
+    - 'model_config/locations.yaml'  # This file specifies the model's locations
 
+# Model configuration: all settings that affect the built model
 model:
     name: National-scale example model
 
@@ -13,13 +14,14 @@ model:
 
     subset_time: ['2005-01-01', '2005-01-05']  # Subset of timesteps
 
+# Run configuration: all settings that affect how the built model is run
 run:
     solver: glpk
 
-    ensure_feasibility: true # Switching on unmet demand
+    ensure_feasibility: true  # Switches on the "unmet demand" constraint
 
-    bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+    bigM: 1e6  # Sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
 
-    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+    zero_threshold: 1e-10  # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 
     mode: plan  # Choices: plan, operate
