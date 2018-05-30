@@ -49,6 +49,7 @@ setup(
         "click >= 3.3",
         "cufflinks >= 0.12.1",
         "ipython >= 6.2.1",
+        "ipdb >= 0.11",
         "jinja2 >= 2.10",
         "natsort >= 5.2",
         "netcdf4 >= 1.2.2",

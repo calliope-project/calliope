@@ -12,6 +12,7 @@ dependencies:
     - glpk=4.61
     - hdf5
     - ipython
+    - ipdb
     - jinja2
     - libnetcdf
     - natsort
