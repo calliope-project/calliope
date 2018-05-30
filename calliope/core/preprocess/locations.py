@@ -149,7 +149,7 @@ def process_locations(model_config, modelrun_techs):
             for config_key in file_configs:
                 if config_key.split('.')[-1] not in allowed_from_file:
                     # Allow any custom settings that end with _time_varying
-                    # FIXME add this to docs
+                    # FIXME: add this to docs
                     if config_key.endswith('_time_varying'):
                         warn('Using custom constraint '
                              '{} with time-varying data.'.format(config_key))

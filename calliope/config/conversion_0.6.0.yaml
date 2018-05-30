@@ -44,7 +44,7 @@ tech_config:
     color: essentials.color
     x_map: null  # now achieved by directly specifying file=filename.csv:column
     carrier: essentials.carrier
-    primary_carrier: essentials.primary_carrier
+    primary_carrier: essentials.primary_carrier_out
     carrier_in: essentials.carrier_in # If conversion_plus, now a list of carrier names. Ratios between carriers found in constraints.carrier_ratios
     carrier_in_2: essentials.carrier_in_2 # If conversion_plus, now a list of carrier names. Ratios between carriers found in constraints.carrier_ratios
     carrier_in_3: essentials.carrier_in_3 # If conversion_plus, now a list of carrier names. Ratios between carriers found in constraints.carrier_ratios

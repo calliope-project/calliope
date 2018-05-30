@@ -96,7 +96,7 @@ techs:
             name: 'Combined heat and power'
             color: '#E4AB97'
             parent: conversion_plus
-            primary_carrier: electricity
+            primary_carrier_out: electricity
             carrier_in: gas
             carrier_out: electricity
             carrier_out_2: heat
