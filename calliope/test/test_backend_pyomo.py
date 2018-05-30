@@ -1273,13 +1273,25 @@ class TestConversionConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_conversion_constraint')
 
+        assert check_variable_exists(
+            m._backend_model, 'cost_var_conversion_constraint', 'carrier_prod'
+        )
+        assert not check_variable_exists(
+            m._backend_model, 'cost_var_conversion_constraint', 'carrier_con'
+        )
+
         m = build_model(
             {'techs.test_conversion.costs.monetary.om_con': 0.1},
             'simple_conversion,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_conversion_constraint')
-
+        assert check_variable_exists(
+            m._backend_model, 'cost_var_conversion_constraint', 'carrier_con'
+        )
+        assert not check_variable_exists(
+            m._backend_model, 'cost_var_conversion_constraint', 'carrier_prod'
+        )
 
 class TestConversionPlusConstraints:
     # conversion_plus.py
@@ -1303,7 +1315,9 @@ class TestConversionPlusConstraints:
         assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in': ['coal', 'gas']},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in': ['coal', 'gas'], 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
@@ -1356,7 +1370,7 @@ class TestConversionPlusConstraints:
         """
         sets.loc_techs_om_cost_conversion_plus,
         """
-
+        # no conversion_plus = no constraint
         m = build_model(
             {'techs.test_supply_elec.costs.monetary.om_prod': 0.1},
             'simple_supply,two_hours,investment_costs'
@@ -1364,6 +1378,7 @@ class TestConversionPlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
+        # no conversion_plus = no constraint
         m = build_model(
             {'techs.test_conversion.costs.monetary.om_prod': 0.1},
             'simple_conversion,two_hours,investment_costs'
@@ -1371,23 +1386,38 @@ class TestConversionPlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
+        # no variable costs for conversion_plus = no constraint
         m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
 
+        # om_prod creates constraint and populates it with carrier_prod driven cost
         m = build_model(
             {'techs.test_conversion_plus.costs.monetary.om_prod': 0.1},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
+        assert check_variable_exists(
+            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_prod'
+        )
+        assert not check_variable_exists(
+            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_con'
+        )
 
+        # om_con creates constraint and populates it with carrier_con driven cost
         m = build_model(
             {'techs.test_conversion_plus.costs.monetary.om_con': 0.1},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
+        assert check_variable_exists(
+            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_con'
+        )
+        assert not check_variable_exists(
+            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_prod'
+        )
 
     def test_loc_techs_balance_conversion_plus_in_2_constraint(self):
         """
@@ -1399,14 +1429,18 @@ class TestConversionPlusConstraints:
         assert not hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_2': 'coal'},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_2': 'coal', 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_2': ['coal', 'heat']},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_2': ['coal', 'heat'], 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
@@ -1422,14 +1456,18 @@ class TestConversionPlusConstraints:
         assert not hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_3': 'coal'},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_3': 'coal', 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
 
         m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_in_3': ['coal', 'heat']},
+            {'techs.test_conversion_plus.essentials': {
+                'carrier_in_3': ['coal', 'heat'], 'primary_carrier_in': 'gas'
+            }},
             'simple_conversion_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)

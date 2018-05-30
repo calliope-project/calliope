@@ -229,7 +229,7 @@ Old:
         stack_weight: 100
         parent: conversion_plus
         export: true
-        primary_carrier: power
+        primary_carrier_out: power
         carrier_in: gas
         carrier_out: power
         carrier_out_2:
@@ -251,7 +251,7 @@ New:
         essentials:
             name: 'Combined heat and power'
             parent: conversion_plus
-            primary_carrier: electricity
+            primary_carrier_out: electricity
             carrier_in: gas
             carrier_out: electricity
             carrier_out_2: heat

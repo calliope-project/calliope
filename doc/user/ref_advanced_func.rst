@@ -195,7 +195,7 @@ A combined heat and power plant produces electricity, in this case from natural 
                     carrier_in: gas
                     carrier_out: electricity
                     carrier_out_2: heat
-                    primary_carrier: electricity
+                    primary_carrier_out: electricity
                 constraints:
                     energy_eff: 0.45
                     energy_cap_max: 100
@@ -216,7 +216,7 @@ The output energy from the heat pump can be *either* heat or cooling, simulating
             name: Air source heat pump
             carrier_in: electricity
             carrier_out: [heat, cooling]
-            primary_carrier: heat
+            primary_carrier_out: heat
 
         constraints:
             energy_eff: 1
@@ -251,7 +251,7 @@ A CCHP plant can use generated heat to produce cooling via an absorption chiller
                     carrier_in: gas
                     carrier_out: electricity
                     carrier_out_2: [heat, cooling]
-                    primary_carrier: electricity
+                    primary_carrier_out: electricity
 
                 constraints:
                     energy_eff: 0.45
@@ -302,7 +302,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
                     carrier_out: [high_T_heat, electricity]
                     carrier_out_2: [mid_T_heat, cooling]
                     carrier_out_3: low_T_heat
-                    primary_carrier: electricity
+                    primary_carrier_out: electricity
 
                 constraints:
                     energy_eff: 1
@@ -314,7 +314,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
                         carrier_out_2: {mid_T_heat: 0.3, cooling: 0.2}
                         carrier_out_3.low_T_heat: 0.15
 
-A ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers). The chosen carrier will be the one to which costs are applied.
+A ``primary_carrier_out`` must be defined when there are multiple ``carrier_out`` values defined, similarly ``primary_carrier_in`` can be defined for ``carrier_in``. `primary_carriers` can be defined as any carrier in a technology's input/output carriers (including secondary and tertiary carriers). The chosen output carrier will be the one to which production costs are applied (reciprocally, input carrier for consumption costs).
 
 .. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
 

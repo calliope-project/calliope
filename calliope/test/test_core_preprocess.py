@@ -58,6 +58,34 @@ class TestModelRun:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, override_groups='simple_supply,one_day')
 
+    def test_conversion_plus_primary_carriers(self):
+        """
+        Test that user has input input/output primary carriers for conversion_plus techs
+        """
+        override1 = {'techs.test_conversion_plus.essentials.carrier_in': ['gas', 'coal']}
+        override2 = {'techs.test_conversion_plus.essentials.primary_carrier_in': 'coal'}
+        override3 = {'techs.test_conversion_plus.essentials.primary_carrier_out': 'coal'}
+
+        model = build_model({}, override_groups='simple_conversion_plus,two_hours')
+        assert model._model_run.techs.test_conversion_plus.essentials.get_key(
+            'primary_carrier_in', None
+        ) == 'gas'
+
+        # should fail: multiple carriers in, but no primary_carrier_in assigned
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override1, override_groups='simple_conversion_plus,two_hours')
+        assert check_error_or_warning(error, 'Primary_carrier_in must be assigned')
+
+        # should fail: primary_carrier_in not one of the carriers_in
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override2, override_groups='simple_conversion_plus,two_hours')
+        assert check_error_or_warning(error, 'Primary_carrier_in `coal` not one')
+
+        # should fail: primary_carrier_out not one of the carriers_out
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override3, override_groups='simple_conversion_plus,two_hours')
+        assert check_error_or_warning(error, 'Primary_carrier_out `coal` not one')
+
     def test_incorrect_subset_time(self):
         """
         If subset_time is a list, it must have two entries (start_time, end_time)
