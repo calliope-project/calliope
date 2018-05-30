@@ -375,17 +375,6 @@ def run_scenario_plan(model_data, timings, backend, build_only, backend_rerun=Fa
             'defined, or sum of probabilities is not 1.'
         )
 
-    # All timeseries data needs a scenario dimension, even if there is no
-    # difference between scenarios
-    timeseries_vars = [
-        k for k, v in model_data.data_vars.items()
-        if 'timesteps' in v.dims and 'scenarios' not in v.dims and
-        k not in ['timestep_resolution', 'timestep_weights']
-    ]
-
-    model_data.update(xr.broadcast(model_data[timeseries_vars], model_data.scenarios)[0])
-    model_data = reorganise_dataset_dimensions(model_data)
-
     # FIXME: Currently hardcoded to use 'robust_optimal_cost_minimization' as the
     # objective
     if model_data.attrs['run.objective'] != 'risk_aware_cost_minimization':

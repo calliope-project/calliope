@@ -74,7 +74,7 @@ def check_feasibility(backend_model, **kwargs):
     backend_model.obj.domain = po.Reals
 
 
-def risk_aware_cost_minimization(backend_model):
+def risk_aware_cost_minimization(backend_model, cost_class, sense):
     """
     Minimizes total system monetary cost and the sum of conditional value at risk.
     Used as a default if a model does not specify another objective.
@@ -107,11 +107,13 @@ def risk_aware_cost_minimization(backend_model):
                 for loc_carrier in backend_model.loc_carriers
                 for timestep in backend_model.timesteps
             ) * backend_model.bigM
+            if sense == 'maximize':
+                unmet_demand *= -1
         else:
             unmet_demand = 0
 
         return sum(
-            backend_model.cost['monetary', loc_tech, scenario]
+            backend_model.cost[cost_class, loc_tech, scenario]
             for loc_tech in backend_model.loc_techs_cost
         ) + unmet_demand
 
@@ -131,5 +133,6 @@ def risk_aware_cost_minimization(backend_model):
             )
         )
 
-    backend_model.obj = po.Objective(sense=po.minimize, rule=obj_rule)
+    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + sense), 
+                                     rule=obj_rule)
     backend_model.obj.domain = po.Reals
