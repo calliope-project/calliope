@@ -6,16 +6,19 @@ Release History
 0.6.2-dev
 ---------
 
+|new| ``primary_carrier`` for `conversion_plus` techs is now split into ``primary_carrier_in`` and ``primary_carrier_out``. Previously, it only accounted for output costs, by separating it, `om_con` and `om_prod` are correctly accounted for. These are required conversion_plus essentials if there's more than one input and output carrier, respectively.
+
 |new| Storage can be set to cyclic using ``run.cyclic_storage``. The last timestep in the series will then be used as the 'previous day' conditions for the first timestep in the series. This also applies to ``storage_inter_cluster``, if clustering. Defaults to False, with intention of defaulting to True in 0.6.2.
 
 |new| On clustering timeseries into representative days, an additional set of decision variables and constraints is generated. This addition allows for tracking stored energy between clusters, by considering storage between every `datestep` of the original (unclustered) timeseries as well as storage variation within a cluster.
 
 |new| CLI now uses the IPython debugger rather than built-in ``pdb``, which provides highlighting, tab completion, and other UI improvements
 
+|new| AttrDict now persists comments when reading from and writing to YAML files, and gains an API to view, add and remove comments on keys
+
 |fixed| Fix CLI error when running a model without transmission technologies
 
 |fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
-
 
 0.6.1 (2018-05-04)
 ------------------

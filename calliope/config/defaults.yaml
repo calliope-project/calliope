@@ -29,7 +29,8 @@ default_tech:
         parent: null  # Parent tech_group. Must always be defined
         name: 'Default technology'  # Name of tech, used for plotting and analysis
         color: false  # Color to use when plotting results. If not defined, a random one will be chosen
-        primary_carrier: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
+        primary_carrier_out: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
+        primary_carrier_in: false  # Selects the primary input carrier to associate with costs & constraints (if multiple primary input carriers are assigned)
         carrier_in: false  # Defaults to false, allows technologies to define primary carrier(s) to consume
         carrier_in_2: false  # Defaults to false, allows technologies to define secondary carrier(s) to consume
         carrier_in_3: false  # Defaults to false, allows technologies to define tertiary carrier(s) to consume

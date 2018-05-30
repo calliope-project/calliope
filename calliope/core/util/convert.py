@@ -204,10 +204,17 @@ def convert_subdict(in_dict, conversion_dict):
         value = in_dict.get_key(old_k, _MISSING)
 
         if value != _MISSING:
+            try:
+                comments = in_dict.get_comments(old_k)
+            except KeyError:
+                comments = {}
             if new_k is None:
                 out_dict.set_key('__disabled.{}'.format(old_k), value)
             else:
-                out_dict.set_key(conversion_dict.get_key(old_k), value)
+                out_dict.set_key(new_k, value)
+                for k, v in comments.items():
+                    if v is not None:
+                        out_dict.set_comment(key=new_k, comment=v, kind=k)
             in_dict.del_key(old_k)  # Remove from in_dict
 
     out_dict.union(in_dict)  # Merge remaining (unchanged) keys
