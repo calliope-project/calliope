@@ -66,7 +66,8 @@ def _yaml_load(src):
     except ruamel_yaml.YAMLError:
         logger.error(
             'Parser error when reading YAML '
-            'from {}.'.format(src_name))
+            'from {}.'.format(src_name)
+        )
         raise
 
 
