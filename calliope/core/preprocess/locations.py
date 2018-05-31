@@ -311,6 +311,7 @@ def cleanup_undesired_keys(tech_settings):
     # We also remove any system-wide constraints here,
     # as they should not be accidentally read from or
     # changed in per-location settings later
+    # FIXME: Raise warning that these constraints are deleted?
     system_wide_keys = [
         k for k in tech_settings.constraints.keys()
         if k.endswith('_systemwide')
