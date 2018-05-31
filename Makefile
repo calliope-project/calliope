@@ -10,7 +10,7 @@ lint :
 
 .PHONY : test
 test :
-	py.test --cov calliope --cov-report term-missing
+	py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
 	# Run simple profiling job to spot major performance regressions
 	calliope run calliope/example_models/national_scale/model.yaml --override_file=calliope/example_models/national_scale/overrides.yaml:profiling --profile
 

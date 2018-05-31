@@ -10,12 +10,10 @@ AttrDict, and building of associated debug information.
 
 """
 
-import datetime
 import os
 import itertools
 
 import pandas as pd
-import numpy as np
 
 import calliope
 from calliope import exceptions
@@ -363,8 +361,8 @@ def process_timeseries_data(config_model, model_run):
     else:
         timeseries_data = config_model.model.timeseries_data
 
-    def _parser(x, format):
-        return pd.to_datetime(x, format=format, exact=False)
+    def _parser(x, dtformat):
+        return pd.to_datetime(x, format=dtformat, exact=False)
 
     if 'timeseries_data_path' in config_model.model:
         dtformat = config_model.model['timeseries_dateformat']

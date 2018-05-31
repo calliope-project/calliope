@@ -994,6 +994,15 @@ class TestDataset:
         assert 'lookup_datestep_cluster' not in model._model_data.data_vars
         assert 'timestep_cluster' in model._model_data.data_vars
 
+    def test_future_warning(self):
+        """
+        Test and warning to be removed in v0.6.3-dev
+        """
+        with pytest.warns(FutureWarning) as warning:
+            build_model({}, override_groups='simple_storage')
+        assert check_error_or_warning(warning, 'From v0.6.3, cyclic storage will default to True.')
+
+
 class TestUtil():
     def test_concat_iterable_ensures_same_length_iterables(self):
         """

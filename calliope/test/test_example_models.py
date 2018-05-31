@@ -204,6 +204,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
     def example_tester_storage_inter_cluster(self):
         model = self.model_runner(storage_inter_cluster=True)
+
         # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(33353390.222036)
 

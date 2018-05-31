@@ -13,7 +13,6 @@ Create the Calliope logger object and apply other logging tools/functionality
 import logging
 import sys
 import datetime
-import pyomo
 
 SOLVER = 19
 logging.addLevelName(SOLVER, 'SOLVER')

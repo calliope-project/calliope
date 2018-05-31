@@ -8,6 +8,7 @@ time.py
 Functionality to add and process time varying parameters
 
 """
+import warnings
 
 import xarray as xr
 import numpy as np
@@ -231,10 +232,21 @@ def add_max_demand_timesteps(model_data):
 def final_timedimension_processing(model_data):
 
     # Final checking of the data
-    model_data, final_check_comments, warnings, errors = checks.check_model_data(model_data)
-    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    model_data, final_check_comments, warns, errors = checks.check_model_data(model_data)
+    exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
     model_data = reorganise_dataset_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)
+
+
+    ## Warning that cyclic storage will default to True in 0.6.3 ####
+    # TODO: remove in v0.6.3-dev
+    if 'loc_techs_store' in model_data and not model_data.attrs.get('run.cyclic_storage', False):
+        warnings.warn(
+            'Cyclic storage, a new addition in v0.6.2, currently defaults to '
+            'False (i.e. emulating functionality prior to v0.6.2). '
+            'From v0.6.3, cyclic storage will default to True.',
+            FutureWarning
+        )
 
     return model_data

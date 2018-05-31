@@ -2,7 +2,6 @@ import pytest  # pylint: disable=unused-import
 import calliope
 import logging
 import datetime
-import pyomo
 
 from calliope.core.util import dataset
 
@@ -11,6 +10,7 @@ from calliope.core.util.tools import \
     memoize_instancemethod
 
 from calliope.core.util.logging import log_time
+
 
 class TestDataset:
     @pytest.fixture()

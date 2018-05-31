@@ -156,6 +156,15 @@ See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitio
 
 .. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``resource_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``energy_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``carrier_prod`` in the same time step.
 
+Cyclic storage
+--------------
+
+With ``storage`` and ``supply_plus`` techs, it is possible to link the storage at either end of the timeseries. This allows the user to better represent multiple years by just modelling one year. By its addition (``run.cyclic_storage: true``), the the stored energy at the end of the 'previous day' in the first ever timestep will be equal to the stored energy in at the end of the last ever timestep. Given a year, the initial storage at `Jan 1st 00:00:00` will be the storage at the end of the timestep `Dec 31st 23:00:00`. By setting ``storage_initial`` for a technology, it is also possible to fix the value in the last ever timestep. For instance, with a ``storage_initial`` of zero, the stored energy *must* be zero by the end of the time horizon.
+
+Without cyclic storage in place (as was the case prior to v0.6.2), the storage tech can have any amount of stored energy by the end of the timeseries. This may prove useful to a user, but has less physical meaning than assuming cyclic storage.
+
+.. note:: Cyclic storage also functions when time clustering, if allowing storage to be tracked between clusters (see :ref:`time_clustering`). However, it cannot be used in ``operate`` run mode.
+
 .. _conversion_plus:
 
 The ``conversion_plus`` tech
