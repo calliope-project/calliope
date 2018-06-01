@@ -10,7 +10,6 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
-import logging
 import warnings
 
 import numpy as np
@@ -537,6 +536,7 @@ def check_model_data(model_data):
             model_data.attrs['allow_operate_mode'] = 1
 
     return model_data, comments, model_warnings, errors
+
 
 def check_future_deprecation_warnings(model_run, model_data):
     """
