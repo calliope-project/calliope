@@ -267,10 +267,10 @@ class TestUrbanScaleExampleModelSenseChecks:
         assert model.results.energy_cap.to_pandas()['X1::chp'] == approx(272.227204)
         assert model.results.energy_cap.to_pandas()['X2::heat_pipes:N1'] == approx(197.908691)
 
-        assert model.results.carrier_prod.sum('timesteps').to_pandas()['X3::boiler::heat'] == approx(462.189531)
+        assert model.results.carrier_prod.sum('timesteps').to_pandas()['X3::boiler::heat'] == approx(474.720800)
         assert float(model.results.carrier_export.sum()) == approx(0)
 
-        assert float(model.results.cost.sum()) == approx(510.858739)
+        assert float(model.results.cost.sum()) == approx(528.8643154)
 
     def test_milp_example_results(self):
         model = calliope.examples.milp(
@@ -289,7 +289,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert float(model.results.operating_units.sum()) == 24
 
-        assert float(model.results.cost.sum()) == approx(522.829998)
+        assert float(model.results.cost.sum()) == approx(540.780779)
 
     def test_operate_example_results(self):
         model = calliope.examples.operate(
