@@ -74,9 +74,10 @@ Subsets that include carrier
 
 """
 
+from itertools import product
+
 import numpy as np
 
-from itertools import product
 from calliope.core.attrdict import AttrDict
 from calliope.core.preprocess.util import \
     get_all_carriers, split_loc_techs_transmission, \
