@@ -10,6 +10,7 @@ Constraints for binary and integer decision variables
 """
 
 import pyomo.core as po  # pylint: disable=import-error
+import numpy as np
 
 from calliope.backend.pyomo.util import \
     get_param, \
@@ -111,12 +112,18 @@ def load_constraints(backend_model):
             backend_model.loc_techs_storage_capacity_max_purchase_constraint,
             rule=storage_capacity_max_purchase_constraint_rule
         )
+
     if 'loc_techs_storage_capacity_min_purchase_constraint' in sets:
         backend_model.storage_capacity_min_purchase_constraint = po.Constraint(
             backend_model.loc_techs_storage_capacity_min_purchase_constraint,
             rule=storage_capacity_min_purchase_constraint_rule
         )
 
+    if 'techs_unit_capacity_systemwide_constraint' in sets:
+        backend_model.unit_capacity_systemwide_constraint = po.Constraint(
+            backend_model.techs_unit_capacity_systemwide_constraint,
+            rule=unit_capacity_systemwide_constraint_rule
+        )
 
 def unit_commitment_constraint_rule(backend_model, loc_tech, timestep):
     """
@@ -534,3 +541,58 @@ def update_costs_investment_purchase_constraint(backend_model, cost, loc_tech):
     backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
 
     return None
+
+
+def unit_capacity_systemwide_constraint_rule(backend_model, tech):
+    """
+    Set constraints to limit the number of purchased units of a single technology
+    type across all locations in the model.
+
+    The first valid case is applied:
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc}\\boldsymbol{units}(loc::tech) + \\boldsymbol{purchased}(loc::tech)
+            \\begin{cases}
+                = units_{equals, systemwide}(tech),&
+                    \\text{if } units_{equals, systemwide}(tech)\\\\
+                \\leq units_{max, systemwide}(tech),&
+                    \\text{if } units_{max, systemwide}(tech)\\\\
+                \\text{unconstrained},& \\text{otherwise}
+            \\end{cases}
+            \\forall tech \\in techs
+
+    """
+
+    all_loc_techs = [
+        i for i in backend_model.loc_techs
+        if i.split('::')[1] == tech
+    ]
+
+    max_systemwide = get_param(backend_model, 'units_max_systemwide', tech)
+    equals_systemwide = get_param(backend_model, 'units_equals_systemwide', tech)
+
+    if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
+        return po.Constraint.NoConstraint
+    elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
+        raise ValueError(
+            'Cannot use inf for energy_cap_equals_systemwide for tech `{}`'.format(tech)
+        )
+
+    sum_expr_units = sum(
+        backend_model.units[loc_tech] for loc_tech in all_loc_techs
+        if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp')
+    )
+    sum_expr_purchase = sum(
+        backend_model.purchased[loc_tech] for loc_tech in all_loc_techs
+        if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_purchase')
+    )
+
+    total_expr = equals_systemwide if equals_systemwide else max_systemwide
+
+    if equals_systemwide:
+        return sum_expr_units + sum_expr_purchase == total_expr
+    else:
+        return sum_expr_units + sum_expr_purchase <= total_expr

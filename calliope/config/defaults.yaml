@@ -80,6 +80,8 @@ default_tech:
         units_min: false  # name: Minimum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
         units_max: false  # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
         units_equals: false  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
+        units_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+        units_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a
     costs:
         default:  # These costs are used for any value not defined for a given cost class
             interest_rate: 0  # name: Interest rate ¦ unit: fraction ¦ Used when computing levelized costs
