@@ -10,7 +10,7 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
-import logging
+import warnings
 
 import numpy as np
 import xarray as xr
@@ -37,7 +37,7 @@ def check_overrides(config_model, override):
     Perform checks on the override dict and override file inputs to ensure they
     are not doing something silly.
     """
-    warnings = []
+    model_warnings = []
     info = []
     for key in override.as_dict_flat().keys():
         if key in config_model.as_dict_flat().keys():
@@ -70,7 +70,7 @@ def check_overrides(config_model, override):
         if config_coordinates != override_coordinates:
             for key in config_keys:
                 config_model.del_key(key)
-            warnings.append(
+            model_warnings.append(
                 'Updated from coordinate system {} to {}, using overrides'
                 .format(config_coordinates, override_coordinates)
             )
@@ -78,7 +78,7 @@ def check_overrides(config_model, override):
     if info:
         logger.info('\n'.join(info))
 
-    return warnings
+    return model_warnings
 
 
 def check_initial(config_model):
@@ -87,7 +87,7 @@ def check_initial(config_model):
 
     Returns
     -------
-    warnings : list
+    model_warnings : list
         possible problems that do not prevent the model run
         from continuing
     errors : list
@@ -95,13 +95,13 @@ def check_initial(config_model):
 
     """
     errors = []
-    warnings = []
+    model_warnings = []
 
     # Check for version mismatch
     model_version = config_model.model.get('calliope_version', False)
     if model_version:
         if not str(model_version) in __version__:
-            warnings.append(
+            model_warnings.append(
                 'Model configuration specifies calliope_version={}, '
                 'but you are running {}. Proceed with caution!'.format(
                     model_version, __version__)
@@ -110,7 +110,7 @@ def check_initial(config_model):
     # Check top-level keys
     for k in config_model.keys():
         if k not in ['model', 'run', 'locations', 'tech_groups', 'techs', 'links', 'config_path']:
-            warnings.append(
+            model_warnings.append(
                 'Unrecognised top-level configuration item: {}'.format(k)
             )
 
@@ -120,14 +120,14 @@ def check_initial(config_model):
     for k in config_model['run'].keys_nested():
         if (k not in defaults_model['run'].keys_nested() and
                 'solver_options' not in k):
-            warnings.append(
+            model_warnings.append(
                 'Unrecognised setting in run configuration: {}'.format(k)
             )
 
     # Check model configuration, but top-level keys only
     for k in config_model['model'].keys():
         if k not in defaults_model['model'].keys():
-            warnings.append(
+            model_warnings.append(
                 'Unrecognised setting in model configuration: {}'.format(k)
             )
 
@@ -220,7 +220,7 @@ def check_initial(config_model):
             )
     for arg in config_model.run.objective_options:
         if arg not in objective_args_expected:
-            warnings.append(
+            model_warnings.append(
                 'Objective function argument `{}` given but not used by objective function `{}`'
                 .format(arg, config_model.run.objective)
             )
@@ -236,20 +236,20 @@ def check_initial(config_model):
             '`storage_inter_cluster` decision variable is not activated.'
         )
 
-    return warnings, errors
+    return model_warnings, errors
 
 
-def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comments):
+def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors, comments):
     """
     Checks individual tech/tech groups at specific locations.
-    NOTE: Updates `warnings` and `errors` lists in-place.
+    NOTE: Updates `model_warnings` and `errors` lists in-place.
     """
     if tech_id not in model_run.techs:
-        warnings.append(
+        model_warnings.append(
             'Tech {} was removed by setting ``exists: False`` - not checking '
             'the consistency of its constraints at location {}.'.format(tech_id, loc_id)
         )
-        return warnings, errors
+        return model_warnings, errors
 
     required = model_run.techs[tech_id].required_constraints
     allowed = model_run.techs[tech_id].allowed_constraints
@@ -302,7 +302,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
     if ('force_resource' in tech_config.constraints.keys() and
             loc_id + '::' + tech_id not in model_run.sets.loc_techs_finite_resource):
 
-        warnings.append(
+        model_warnings.append(
             '`{}` at `{}` defines force_resource but not a finite resource, so '
             'force_resource will not be applied'.format(tech_id, loc_id)
         )
@@ -321,7 +321,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                 'constraint `{}`'.format(tech_id, loc_id, k)
             )
         else:
-            warnings.append(
+            model_warnings.append(
                 '`{}` at `{}` defines unrecognised '
                 'constraint `{}` - possibly a misspelling?'.format(tech_id, loc_id, k)
             )
@@ -346,7 +346,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, warnings, errors, comme
                     '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
                 )
 
-    return warnings, errors
+    return model_warnings, errors
 
 
 def check_final(model_run):
@@ -357,14 +357,14 @@ def check_final(model_run):
     -------
     comments : AttrDict
         debug output
-    warnings : list
+    model_warnings : list
         possible problems that do not prevent the model run
         from continuing
     errors : list
         serious issues that should raise a ModelError
 
     """
-    warnings, errors = [], []
+    model_warnings, errors = [], []
     comments = AttrDict()
 
     # Go through all loc-tech combinations and check validity
@@ -373,7 +373,7 @@ def check_final(model_run):
             for tech_id, tech_config in loc_config.techs.items():
                 _check_tech(
                     model_run, tech_id, tech_config, loc_id,
-                    warnings, errors, comments
+                    model_warnings, errors, comments
                 )
 
         if 'links' in loc_config:
@@ -382,7 +382,7 @@ def check_final(model_run):
                     _check_tech(
                         model_run, tech_id, tech_config,
                         'link {}:{}'.format(loc_id, link_id),
-                        warnings, errors, comments
+                        model_warnings, errors, comments
                     )
     # Either all locations or no locations must have coordinates
     all_locs = list(model_run.locations.keys())
@@ -434,7 +434,7 @@ def check_final(model_run):
     # make sure `comments` is at the the base level:
     # i.e. comments.model_run.xxxxx....
 
-    return comments, warnings, errors
+    return comments, model_warnings, errors
 
 
 def check_model_data(model_data):
@@ -445,14 +445,14 @@ def check_model_data(model_data):
     -------
     comments : AttrDict
         debug output
-    warnings : list
+    model_warnings : list
         possible problems that do not prevent the model run
         from continuing
     errors : list
         serious issues that should raise a ModelError
 
     """
-    warnings, errors = [], []
+    model_warnings, errors = [], []
     comments = AttrDict()
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
@@ -515,7 +515,7 @@ def check_model_data(model_data):
                 var for var, data in model_data.data_vars.items() if dim_name in data.dims
             ]
             model_data = model_data.drop(associated_vars)
-            warnings.append(
+            model_warnings.append(
                 'dimension {} and associated variables {} were empty, so have '
                 'been deleted'.format(dim_name, ', '.join(associated_vars))
             )
@@ -528,11 +528,30 @@ def check_model_data(model_data):
         ]
         if not np.all(daily_timesteps == daily_timesteps[0]):
             model_data.attrs['allow_operate_mode'] = 0
-            warnings.append(
+            model_warnings.append(
                 'Operational mode requires the same timestep resolution profile '
                 'to be emulated on each date'
             )
         else:
             model_data.attrs['allow_operate_mode'] = 1
 
-    return model_data, comments, warnings, errors
+    return model_data, comments, model_warnings, errors
+
+
+def check_future_deprecation_warnings(model_run, model_data):
+    """
+    Function for all FutureWarnings and DeprecationWarnings. Comment above each
+    warning should specify Calliope version in which it was added, and the
+    version in which it should be updated/removed.
+    """
+
+    # Warning that cyclic storage will default to True in 0.6.3 #
+    # Added in 0.6.2-dev, to be removed in v0.6.3-dev
+    if ('loc_techs_store' in model_data and
+            not model_data.attrs.get('run.cyclic_storage', False)):
+        warnings.warn(
+            'Cyclic storage, a new addition in v0.6.2, currently defaults to '
+            'False (i.e. emulating functionality prior to v0.6.2). '
+            'From v0.6.3, cyclic storage will default to True.',
+            FutureWarning
+        )
