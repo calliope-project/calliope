@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.2-dev
----------
+0.6.2 (2018-06-04)
+------------------
 
 |new| ``units_max_systemwide`` and ``units_equals_systemwide`` can be applied to an integer/binary constrained technology (capacity limited by ``units`` not ``energy_cap``, or has an associated ``purchase`` (binary) cost). Constraint works similarly to existing ``energy_cap_max_systemwide``, limiting the number of units of a technology that can be purchased across all locations in the model.
 
