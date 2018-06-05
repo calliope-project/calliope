@@ -10,12 +10,10 @@ AttrDict, and building of associated debug information.
 
 """
 
-import datetime
 import os
 import itertools
 
 import pandas as pd
-import numpy as np
 
 import calliope
 from calliope import exceptions
@@ -323,6 +321,28 @@ def process_techs(config_model):
                 errors.append(
                     '`carrier_out` must be defined for {}'.format(tech_id)
                 )
+        # Deal with primary carrier in/out for conversion_plus techs
+        if tech_result.inheritance[-1] == 'conversion_plus':
+            for direction in ['_in', '_out']:
+                carriers = set(util.flatten_list([
+                    v for k, v in tech_result.essentials.items()
+                    if k.startswith('carrier' + direction)
+                ]))
+                primary_carrier = tech_result.essentials.get(
+                    'primary_carrier' + direction, None
+                )
+                if primary_carrier is None and len(carriers) == 1:
+                    tech_result.essentials['primary_carrier' + direction] = carriers.pop()
+                elif primary_carrier is None and len(carriers) > 1:
+                    errors.append(
+                        'Primary_carrier{0} must be assigned for tech `{1}` as '
+                        'there are multiple carriers{0}'.format(direction, tech_id)
+                    )
+                elif primary_carrier not in carriers:
+                    errors.append(
+                        'Primary_carrier{0} `{1}` not one of the available carriers'
+                        '{0} for `{2}`'.format(direction, primary_carrier, tech_id)
+                    )
 
         # If necessary, pick a color for the tech, cycling through
         # the hardcoded default palette
@@ -355,8 +375,8 @@ def process_timeseries_data(config_model, model_run):
     else:
         timeseries_data = config_model.model.timeseries_data
 
-    def _parser(x, format):
-        return pd.to_datetime(x, format=format, exact=False)
+    def _parser(x, dtformat):
+        return pd.to_datetime(x, format=dtformat, exact=False)
 
     if 'timeseries_data_path' in config_model.model:
         dtformat = config_model.model['timeseries_dateformat']

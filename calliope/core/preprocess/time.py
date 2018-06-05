@@ -8,6 +8,7 @@ time.py
 Functionality to add and process time varying parameters
 
 """
+import warnings
 
 import xarray as xr
 import numpy as np
@@ -72,7 +73,7 @@ def apply_time_clustering(model_data, model_run):
         for entry in time_config.masks:
             entry = AttrDict(entry)
             mask_func = plugin_load(entry.function, builtin_module='calliope.core.time.masks')
-            mask_kwargs = entry.get_key('options', default={})
+            mask_kwargs = entry.get_key('options', default=AttrDict()).as_dict()
             masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
         data.attrs['masks'] = masks
         # Concatenate the DatetimeIndexes by using dummy Series
@@ -90,7 +91,7 @@ def apply_time_clustering(model_data, model_run):
         func = plugin_load(
             time_config.function, builtin_module='calliope.core.time.funcs'
         )
-        func_kwargs = time_config.get('function_options', {})
+        func_kwargs = time_config.get('function_options', AttrDict()).as_dict()
         if 'file=' in func_kwargs.get('clustering_func', ''):
             func_kwargs.update({'model_run': model_run})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
@@ -231,8 +232,8 @@ def add_max_demand_timesteps(model_data):
 def final_timedimension_processing(model_data):
 
     # Final checking of the data
-    model_data, final_check_comments, warnings, errors = checks.check_model_data(model_data)
-    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    model_data, final_check_comments, warns, errors = checks.check_model_data(model_data)
+    exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
     model_data = reorganise_dataset_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)

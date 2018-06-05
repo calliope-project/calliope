@@ -77,7 +77,7 @@ techs:
     test_conversion_plus:
         essentials:
             name: Conversion plus tech
-            primary_carrier: electricity
+            primary_carrier_out: electricity
             carrier_in: gas
             carrier_out: electricity
             carrier_out_2: heat

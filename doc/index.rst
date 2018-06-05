@@ -1,5 +1,8 @@
 .. automodule:: calliope
 
+.. raw:: html
+   :file: _static/github-ribbon.html
+
 ==================================================================
 Calliope: a multi-scale energy systems (MUSES) modelling framework
 ==================================================================

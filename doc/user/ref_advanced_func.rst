@@ -156,6 +156,17 @@ See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitio
 
 .. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``resource_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``energy_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``carrier_prod`` in the same time step.
 
+Cyclic storage
+--------------
+
+With ``storage`` and ``supply_plus`` techs, it is possible to link the storage at either end of the timeseries. This allows the user to better represent multiple years by just modelling one year. By activating cyclig storage (``run.cyclic_storage: true``), the initial stored energy for each storage technology at each location passed to the model's first timestep will be equal to the stored energy at the end of the model's last timestep.
+
+For example, for a model running over a full year at hourly resolution, the initial storage at `Jan 1st 00:00:00` will be forced equal to the storage at the end of the timestep `Dec 31st 23:00:00`. By setting ``storage_initial`` for a technology, it is also possible to fix the value in the last timestep. For instance, with ``run.cyclic_storage: true`` and a ``storage_initial`` of zero, the stored energy *must* be zero by the end of the time horizon.
+
+Without cyclic storage in place (as was the case prior to v0.6.2), the storage tech can have any amount of stored energy by the end of the timeseries. This may prove useful in some cases, but has less physical meaning than assuming cyclic storage.
+
+.. note:: Cyclic storage also functions when time clustering, if allowing storage to be tracked between clusters (see :ref:`time_clustering`). However, it cannot be used in ``operate`` run mode.
+
 .. _conversion_plus:
 
 The ``conversion_plus`` tech
@@ -195,7 +206,7 @@ A combined heat and power plant produces electricity, in this case from natural 
                     carrier_in: gas
                     carrier_out: electricity
                     carrier_out_2: heat
-                    primary_carrier: electricity
+                    primary_carrier_out: electricity
                 constraints:
                     energy_eff: 0.45
                     energy_cap_max: 100
@@ -216,7 +227,7 @@ The output energy from the heat pump can be *either* heat or cooling, simulating
             name: Air source heat pump
             carrier_in: electricity
             carrier_out: [heat, cooling]
-            primary_carrier: heat
+            primary_carrier_out: heat
 
         constraints:
             energy_eff: 1
@@ -251,7 +262,7 @@ A CCHP plant can use generated heat to produce cooling via an absorption chiller
                     carrier_in: gas
                     carrier_out: electricity
                     carrier_out_2: [heat, cooling]
-                    primary_carrier: electricity
+                    primary_carrier_out: electricity
 
                 constraints:
                     energy_eff: 0.45
@@ -302,7 +313,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
                     carrier_out: [high_T_heat, electricity]
                     carrier_out_2: [mid_T_heat, cooling]
                     carrier_out_3: low_T_heat
-                    primary_carrier: electricity
+                    primary_carrier_out: electricity
 
                 constraints:
                     energy_eff: 1
@@ -314,7 +325,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
                         carrier_out_2: {mid_T_heat: 0.3, cooling: 0.2}
                         carrier_out_3.low_T_heat: 0.15
 
-A ``primary_carrier`` must be defined when there are multiple ``carrier_out`` values defined. ``primary_carrier`` can be defined as any carrier in a technology's output carriers (including secondary and tertiary carriers). The chosen carrier will be the one to which costs are applied.
+A ``primary_carrier_out`` must be defined when there are multiple ``carrier_out`` values defined, similarly ``primary_carrier_in`` can be defined for ``carrier_in``. `primary_carriers` can be defined as any carrier in a technology's input/output carriers (including secondary and tertiary carriers). The chosen output carrier will be the one to which production costs are applied (reciprocally, input carrier for consumption costs).
 
 .. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
 

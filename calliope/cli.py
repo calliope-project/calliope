@@ -98,8 +98,8 @@ def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=No
         if debug:
             traceback.print_exc()
             if pdb:
-                import pdb
-                pdb.post_mortem(e.__traceback__)
+                import ipdb
+                ipdb.post_mortem(e.__traceback__)
         else:
             stack = traceback.extract_tb(e.__traceback__)
             # Get last stack trace entry still in Calliope

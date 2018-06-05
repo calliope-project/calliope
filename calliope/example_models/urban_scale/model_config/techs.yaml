@@ -87,6 +87,7 @@ techs:
         costs:
             monetary:
                 interest_rate: 0.10
+                om_con: 0.004  # .4p/kWh
     # boiler-end
 
 # Conversion_plus
@@ -96,7 +97,7 @@ techs:
             name: 'Combined heat and power'
             color: '#E4AB97'
             parent: conversion_plus
-            primary_carrier: electricity
+            primary_carrier_out: electricity
             carrier_in: gas
             carrier_out: electricity
             carrier_out_2: heat
@@ -110,7 +111,7 @@ techs:
             monetary:
                 interest_rate: 0.10
                 energy_cap: 750
-                om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
+                om_prod: 0.004  # .4p/kWh for 4500 operating hours/year
                 export: file=export_power.csv
     # chp-end
 

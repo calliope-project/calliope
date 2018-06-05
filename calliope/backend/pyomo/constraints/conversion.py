@@ -11,8 +11,7 @@ Conversion technology constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import \
-    get_param
+from calliope.backend.pyomo.util import get_param
 
 
 def load_constraints(backend_model):
@@ -104,8 +103,8 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, scenario,
         cost_prod = 0
 
     if po.value(cost_om_con):
-        cost_con = (-1 * cost_om_con * weight *
-                    backend_model.carrier_con[loc_tech_carrier_in, scenario, timestep])
+        cost_con = (cost_om_con * weight * -1 *
+                    backend_model.carrier_con[loc_tech_carrier_in, timestep])
     else:
         cost_con = 0
 

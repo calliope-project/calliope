@@ -23,6 +23,7 @@ from calliope.core.preprocess import \
     build_model_data, \
     apply_time_clustering, \
     final_timedimension_processing
+from calliope.core.preprocess.checks import check_future_deprecation_warnings
 from calliope.core.util.dataset import split_loc_techs, reorganise_dataset_dimensions
 from calliope.core.util.logging import log_time
 from calliope.core.util.tools import apply_to_dict
@@ -91,6 +92,7 @@ class Model(object):
                 'config (str or dict) or model_data (xarray Dataset) must be '
                 'given to initialise model'
             )
+        check_future_deprecation_warnings(self._model_run, self._model_data)
 
         self.plot = plotting.ModelPlotMethods(self)
 

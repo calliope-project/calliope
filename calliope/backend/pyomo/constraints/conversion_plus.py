@@ -105,12 +105,16 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, sce
         backend_model, 'energy_eff', loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
-                 / model_data_dict['carrier_ratios']['out', loc_tech_carrier]
-                 for loc_tech_carrier in loc_tech_carriers_out)
-    carrier_con = sum(backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
-                 * model_data_dict['carrier_ratios']['in', loc_tech_carrier]
-                 for loc_tech_carrier in loc_tech_carriers_in)
+    carrier_prod = sum(
+        backend_model.carrier_prod[loc_tech_carrier, scenario, timestep] /
+        model_data_dict['carrier_ratios']['out', loc_tech_carrier]
+        for loc_tech_carrier in loc_tech_carriers_out
+    )
+    carrier_con = sum(
+        backend_model.carrier_con[loc_tech_carrier, scenario, timestep] *
+        model_data_dict['carrier_ratios']['in', loc_tech_carrier]
+        for loc_tech_carrier in loc_tech_carriers_in
+    )
 
     return carrier_prod == -1 * carrier_con * energy_eff
 
@@ -136,8 +140,10 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
         model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
-                 for loc_tech_carrier in loc_tech_carriers_out)
+    carrier_prod = sum(
+        backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
+        for loc_tech_carrier in loc_tech_carriers_out
+    )
 
     return carrier_prod <= timestep_resolution * backend_model.energy_cap[loc_tech]
 
@@ -169,8 +175,10 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
         model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
-                       for loc_tech_carrier in loc_tech_carriers_out)
+    carrier_prod = sum(
+        sbackend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
+        for loc_tech_carrier in loc_tech_carriers_out
+    )
 
     return carrier_prod >= (
         timestep_resolution * backend_model.energy_cap[loc_tech] * min_use
@@ -196,13 +204,16 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, scen
     model_data_dict = backend_model.__calliope_model_data__['data']
     weight = backend_model.timestep_weights[timestep]
 
-    loc_tech_carrier = (
-        model_data_dict['lookup_primary_loc_tech_carriers'][loc_tech]
+    loc_tech_carrier_con = (
+        model_data_dict['lookup_primary_loc_tech_carriers_in'][loc_tech]
     )
 
+    loc_tech_carrier_prod = (
+        model_data_dict['lookup_primary_loc_tech_carriers_out'][loc_tech]
+    )
     var_cost = 0
 
-    if loc_tech_carrier in backend_model.loc_tech_carriers_prod:
+    if loc_tech_carrier_prod in backend_model.loc_tech_carriers_prod:
         cost_om_prod = get_param(
             backend_model, 'cost_om_prod', costs=cost, loc_techs=loc_tech,
             scenarios=scenario, timesteps=timestep
@@ -210,18 +221,18 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, scen
         if cost_om_prod:
             var_cost += (
                 cost_om_prod * weight *
-                backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
+                backend_model.carrier_prod[loc_tech_carrier_prod, scenario, timestep]
             )
 
-    if loc_tech_carrier in backend_model.loc_tech_carriers_con:
+    if loc_tech_carrier_con in backend_model.loc_tech_carriers_con:
         cost_om_con = get_param(
             backend_model, 'cost_om_con', costs=cost, loc_techs=loc_tech,
             scenarios=scenario, timesteps=timestep
         )
         if cost_om_con:
             var_cost += (
-                -1 * cost_om_con * weight *
-                backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
+                cost_om_con * weight * -1 *
+                backend_model.carrier_con[loc_tech_carrier_con, timestep]
             )
 
     backend_model.cost_var_rhs[cost, loc_tech, scenario, timestep] = var_cost
@@ -274,11 +285,11 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
         model_data_dict['lookup_loc_techs_conversion_plus'][tier, loc_tech]
     )
 
-    c_1 = sum(decision_variable[loc_tech_carrier, scenario, timestep]
-        / model_data_dict['carrier_ratios'][primary_tier, loc_tech_carrier]
-        for loc_tech_carrier in loc_tech_carriers_1)
-    c_2 = sum(decision_variable[loc_tech_carrier, scenario, timestep]
-        / model_data_dict['carrier_ratios'][tier, loc_tech_carrier]
-        for loc_tech_carrier in loc_tech_carriers_2)
+    c_1 = sum(decision_variable[loc_tech_carrier, scenario, timestep] /
+              model_data_dict['carrier_ratios'][primary_tier, loc_tech_carrier]
+              for loc_tech_carrier in loc_tech_carriers_1)
+    c_2 = sum(decision_variable[loc_tech_carrier, scenario, timestep] /
+              model_data_dict['carrier_ratios'][tier, loc_tech_carrier]
+              for loc_tech_carrier in loc_tech_carriers_2)
 
     return c_1 == c_2

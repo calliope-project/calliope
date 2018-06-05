@@ -14,7 +14,7 @@ if "%1" == "help" (
 )
 
 if "%1" == "test" (
-    py.test --cov calliope --cov-report term-missing
+    py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
     goto end
 )
 
