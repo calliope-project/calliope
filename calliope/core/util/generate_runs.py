@@ -126,9 +126,8 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
         '#!/bin/bash',
         '#SBATCH -J calliope',  # Name of the job
         '#SBATCH --array=1-{}'.format(len(commands)),  # How many jobs there are
-        # How many (MPI) tasks will there be in total? (<= nodes*32)
-        # The skylake/skylake-himem nodes have 32 CPUs (cores) each.
         '#SBATCH --ntasks={}'.format(cluster_threads),
+        '#SBATCH --mem={}'.format(cluster_mem),
         '#SBATCH --time={}'.format(cluster_time),  # How much wallclock time will be required
         '#SBATCH -o log_%a.log',
         '',
