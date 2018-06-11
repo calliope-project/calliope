@@ -81,7 +81,7 @@ class Model(object):
                     'Input configuration must either be a string or a dictionary.'
                 )
 
-            if 'scenario_file' in kwargs.keys():
+            if kwargs.get('scenario_file', None) is not None:
                 self._init_multiple_runs(model_run, debug_data)
             else:
                 self._init_from_model_run(model_run, debug_data)
