@@ -130,7 +130,7 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
         # The skylake/skylake-himem nodes have 32 CPUs (cores) each.
         '#SBATCH --ntasks={}'.format(cluster_threads),
         '#SBATCH --time={}'.format(cluster_time),  # How much wallclock time will be required
-        '#SBATCH -o log_${SLURM_ARRAY_TASK_ID}.log',
+        '#SBATCH -o log_%a.log',
         '',
         '#! Optional add-ins for SBATCH (uncomment and add info as necessary):',
         '##SBATCH -A project_name',  # Which project should be charged'
