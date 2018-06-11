@@ -110,18 +110,7 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
                            additional_args, cluster_mem, cluster_time,
                            cluster_threads=1, **kwargs):
     """
-    SBATCH (SLURM) script generator. This script is based on the University of
-    Cambridge high performance cluster template script. Some notes are given
-    here:
-
-    Charging is determined by core number*walltime. The --ntasks value refers to
-        the number of tasks to be launched by SLURM only. This usually equates
-        to the number of MPI tasks launched. Reduce this from nodes*32 if
-        demanded by memory requirements, or if OMP_NUM_THREADS>1. Each task is
-        allocated 1 core by default, and each core is allocated 5990MB (skylake)
-        and 12040MB (skylake-himem). If this is insufficient, also specify
-        --cpus-per-task and/or --mem (the latter specifies MB per node).
-
+    SBATCH (SLURM) script generator.
     """
 
     # We also need to generate the bash script to run on the cluster
@@ -148,16 +137,10 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
         '##SBATCH --nodes=X',  # X whole nodes should be allocated'
         '##SBATCH -p partition_name',
         '',
-        '#! Note: SLURM reproduces the environment at submission irrespective of ~/.bashrc)',
-        '#! so we have to re-load modules here'
+        '#! Insert module load commands after this line, if needed:',
+        '#! (Note: you can load this in ~.bashrc if you want them loaded every time you log in)',
         '',
-        '. /etc/profile.d/modules.sh',  # Leave this line (enables the module command)
-        'module purge',  # Removes all modules still loaded
-        'module load rhel7/default-peta4',  # REQUIRED - loads the basic environment
-        '',
-        '#! Insert module load commands after this line, if needed, e.g.:',
-        '',
-        '#! module load gurobi/glpk/cplex',
+        '#! module load gurobi (or glpk/cplex)',
         '#! module load miniconda3',
         '#! module load /path/to/miniconda3/envs/your_env_name/',
         '',
