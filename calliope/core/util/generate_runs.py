@@ -12,6 +12,7 @@ in parallel on a cluster or sequentially on any machine.
 
 import os
 
+import pandas as pd
 from calliope.core import AttrDict
 
 
@@ -71,15 +72,17 @@ def generate_bash_script(out_file, model_file, override_file, groups, additional
 
     lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)] + lines_end
 
-    with open(out_file, 'w') as f:
-        f.write('\n'.join(lines_all))
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\n'.join(lines_all), 'UTF-8'))
 
     os.chmod(out_file, 0o755)
 
     return commands
 
 
-def generate_bsub_script(out_file, model_file, override_file, groups, additional_args, cluster_mem, cluster_time, cluster_threads=1, **kwargs):
+def generate_bsub_script(out_file, model_file, override_file, groups,
+                         additional_args, cluster_mem, cluster_time,
+                         cluster_threads=1, **kwargs):
 
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + '.array.sh'
@@ -99,8 +102,72 @@ def generate_bsub_script(out_file, model_file, override_file, groups, additional
         ''
     ]
 
-    with open(out_file, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\n'.join(lines), 'UTF-8'))
+
+
+def generate_sbatch_script(out_file, model_file, override_file, groups,
+                           additional_args, cluster_mem, cluster_time,
+                           cluster_threads=1, **kwargs):
+    """
+    SBATCH (SLURM) script generator. This script is based on the University of
+    Cambridge high performance cluster template script. Some notes are given
+    here:
+
+    Charging is determined by core number*walltime. The --ntasks value refers to
+        the number of tasks to be launched by SLURM only. This usually equates
+        to the number of MPI tasks launched. Reduce this from nodes*32 if
+        demanded by memory requirements, or if OMP_NUM_THREADS>1. Each task is
+        allocated 1 core by default, and each core is allocated 5990MB (skylake)
+        and 12040MB (skylake-himem). If this is insufficient, also specify
+        --cpus-per-task and/or --mem (the latter specifies MB per node).
+
+    """
+
+    # We also need to generate the bash script to run on the cluster
+    bash_out_file = out_file + '.array.sh'
+    bash_out_file_basename = os.path.basename(bash_out_file)
+    commands = generate_bash_script(bash_out_file, model_file, override_file, groups, additional_args)
+
+    if ':' not in cluster_time:
+        # Assuming time given as minutes, so needs changing to %H:%M%S
+        cluster_time = pd.to_datetime(cluster_time, unit='m').strftime('%H:%M:%S')
+
+    lines = [
+        '#!/bin/bash',
+        '#SBATCH -J calliope',  # Name of the job
+        '#SBATCH --array=1-{}'.format(len(commands)),  # How many jobs there are
+        # How many (MPI) tasks will there be in total? (<= nodes*32)
+        # The skylake/skylake-himem nodes have 32 CPUs (cores) each.
+        '#SBATCH --ntasks={}'.format(cluster_threads),
+        '#SBATCH --time={}'.format(cluster_time),  # How much wallclock time will be required
+        '#SBATCH -o log_${SLURM_ARRAY_TASK_ID}.log',
+        '',
+        '#! Optional add-ins for SBATCH (uncomment and add info as necessary):',
+        '##SBATCH -A project_name', # Which project should be charged'
+        '##SBATCH --nodes=X', # X whole nodes should be allocated'
+        '##SBATCH -p partition_name',
+        '',
+        '#! Note: SLURM reproduces the environment at submission irrespective of ~/.bashrc)',
+        '#! so we have to re-load modules here'
+        '',
+        '. /etc/profile.d/modules.sh',  # Leave this line (enables the module command)
+        'module purge',  # Removes all modules still loaded
+        'module load rhel7/default-peta4',  # REQUIRED - loads the basic environment
+        '',
+        '#! Insert module load commands after this line, if needed, e.g.:',
+        '',
+        '#! module load gurobi/glpk/cplex',
+        '#! module load miniconda3',
+        '#! module load /path/to/miniconda3/envs/your_env_name/',
+        '',
+        'cd $SLURM_SUBMIT_DIR',
+        '',
+        './' + bash_out_file_basename + ' ${SLURM_ARRAY_TASK_ID}'
+    ]
+
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\n'.join(lines), 'UTF-8'))
 
 
 def generate_windows_script(out_file, model_file, override_file, groups, additional_args=None, **kwargs):
@@ -115,8 +182,8 @@ def generate_windows_script(out_file, model_file, override_file, groups, additio
 
     lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)]
 
-    with open(out_file, 'w') as f:
-        f.write('\r\n'.join(lines_all))
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\r\n'.join(lines_all), 'UTF-8'))
 
     os.chmod(out_file, 0o755)
 
@@ -127,6 +194,7 @@ _KINDS = {
     'bash': generate_bash_script,
     'bsub': generate_bsub_script,
     'windows': generate_windows_script,
+    'sbatch': generate_sbatch_script
 }
 
 

@@ -83,6 +83,20 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
             assert os.path.isfile(os.path.join(tempdir, 'test.sh.array.sh'))
 
+    def test_generate_runs_sbatch(self):
+        runner = CliRunner()
+
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.generate_runs, [
+                _MODEL_NATIONAL, 'test.sh', '--kind=sbatch',
+                '--groups="run1,run2,run3,run4"',
+                '--cluster_mem=1G', '--cluster_time=100',
+                '--override_file={}'.format(_OVERRIDES_NATIONAL)
+            ])
+            assert result.exit_code == 0
+            assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
+            assert os.path.isfile(os.path.join(tempdir, 'test.sh.array.sh'))
+
     def test_debug(self):
         runner = CliRunner()
         result = runner.invoke(cli.run, ['foo.yaml', '--debug'])

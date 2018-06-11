@@ -263,7 +263,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
 @cli.command(short_help='Generate a script to run multiple models.')
 @click.argument('model_file')
 @click.argument('out_file')
-@click.option('--kind', help='One of: "bash", "bsub".')
+@click.option('--kind', help='One of: "bash", "bsub", "sbatch", or "windows".')
 @click.option('--override_file')
 @click.option('--groups')
 @click.option('--cluster_threads', default=1)
