@@ -144,8 +144,8 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
         '#SBATCH -o log_${SLURM_ARRAY_TASK_ID}.log',
         '',
         '#! Optional add-ins for SBATCH (uncomment and add info as necessary):',
-        '##SBATCH -A project_name', # Which project should be charged'
-        '##SBATCH --nodes=X', # X whole nodes should be allocated'
+        '##SBATCH -A project_name',  # Which project should be charged'
+        '##SBATCH --nodes=X',  # X whole nodes should be allocated'
         '##SBATCH -p partition_name',
         '',
         '#! Note: SLURM reproduces the environment at submission irrespective of ~/.bashrc)',
