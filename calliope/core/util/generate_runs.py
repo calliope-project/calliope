@@ -12,6 +12,7 @@ in parallel on a cluster or sequentially on any machine.
 
 import os
 
+import pandas as pd
 from calliope.core import AttrDict
 
 
@@ -71,15 +72,17 @@ def generate_bash_script(out_file, model_file, override_file, groups, additional
 
     lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)] + lines_end
 
-    with open(out_file, 'w') as f:
-        f.write('\n'.join(lines_all))
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\n'.join(lines_all), 'UTF-8'))
 
     os.chmod(out_file, 0o755)
 
     return commands
 
 
-def generate_bsub_script(out_file, model_file, override_file, groups, additional_args, cluster_mem, cluster_time, cluster_threads=1, **kwargs):
+def generate_bsub_script(out_file, model_file, override_file, groups,
+                         additional_args, cluster_mem, cluster_time,
+                         cluster_threads=1, **kwargs):
 
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + '.array.sh'
@@ -99,8 +102,54 @@ def generate_bsub_script(out_file, model_file, override_file, groups, additional
         ''
     ]
 
-    with open(out_file, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\n'.join(lines), 'UTF-8'))
+
+
+def generate_sbatch_script(out_file, model_file, override_file, groups,
+                           additional_args, cluster_mem, cluster_time,
+                           cluster_threads=1, **kwargs):
+    """
+    SBATCH (SLURM) script generator.
+    """
+
+    # We also need to generate the bash script to run on the cluster
+    bash_out_file = out_file + '.array.sh'
+    bash_out_file_basename = os.path.basename(bash_out_file)
+    commands = generate_bash_script(bash_out_file, model_file, override_file, groups, additional_args)
+
+    if ':' not in cluster_time:
+        # Assuming time given as minutes, so needs changing to %H:%M%S
+        cluster_time = pd.to_datetime(cluster_time, unit='m').strftime('%H:%M:%S')
+
+    lines = [
+        '#!/bin/bash',
+        '#SBATCH -J calliope',  # Name of the job
+        '#SBATCH --array=1-{}'.format(len(commands)),  # How many jobs there are
+        '#SBATCH --ntasks={}'.format(cluster_threads),
+        '#SBATCH --mem={}'.format(cluster_mem),
+        '#SBATCH --time={}'.format(cluster_time),  # How much wallclock time will be required
+        '#SBATCH -o log_%a.log',
+        '',
+        '#! Optional add-ins for SBATCH (uncomment and add info as necessary):',
+        '##SBATCH -A project_name',  # Which project should be charged'
+        '##SBATCH --nodes=X',  # X whole nodes should be allocated'
+        '##SBATCH -p partition_name',
+        '',
+        '#! Insert module load commands after this line, if needed:',
+        '#! (Note: you can load this in ~.bashrc if you want them loaded every time you log in)',
+        '',
+        '#! module load gurobi (or glpk/cplex)',
+        '#! module load miniconda3',
+        '#! module load /path/to/miniconda3/envs/your_env_name/',
+        '',
+        'cd $SLURM_SUBMIT_DIR',
+        '',
+        './' + bash_out_file_basename + ' ${SLURM_ARRAY_TASK_ID}'
+    ]
+
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\n'.join(lines), 'UTF-8'))
 
 
 def generate_windows_script(out_file, model_file, override_file, groups, additional_args=None, **kwargs):
@@ -115,8 +164,8 @@ def generate_windows_script(out_file, model_file, override_file, groups, additio
 
     lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)]
 
-    with open(out_file, 'w') as f:
-        f.write('\r\n'.join(lines_all))
+    with open(out_file, 'wb') as f:
+        f.write(bytes('\r\n'.join(lines_all), 'UTF-8'))
 
     os.chmod(out_file, 0o755)
 
@@ -127,6 +176,7 @@ _KINDS = {
     'bash': generate_bash_script,
     'bsub': generate_bsub_script,
     'windows': generate_windows_script,
+    'sbatch': generate_sbatch_script
 }
 
 

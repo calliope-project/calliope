@@ -476,7 +476,7 @@ This functionality can be used together with the ``calliope generate_runs`` comm
 
 * the model configuration file to use
 * the name of the script to create
-* ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, and ``bsub`` creates a submission script for a bsub-based high-performance cluster.
+* ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, ``bsub`` creates a submission script for a LSF-based high-performance cluster, and ``sbatch`` creates a submission script for a SLURM-based high-performance cluster.
 * ``--override_file``: The file that specifies override groups.
 * ``--groups``: A semicolon-separated list of override groups to generate scripts for, for example, ``run1;run2``. A comma is used to group override groups together into a single model -- for example, ``run1,high_costs;run1,low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
 
