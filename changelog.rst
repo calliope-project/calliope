@@ -6,6 +6,8 @@ Release History
 0.6.3-dev
 ---------
 
+|new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
+
 0.6.2 (2018-06-04)
 ------------------
 
