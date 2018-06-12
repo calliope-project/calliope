@@ -581,8 +581,8 @@ def unit_capacity_systemwide_constraint_rule(backend_model, tech):
         if i.split('::')[1] == tech
     ]
 
-    max_systemwide = get_param(backend_model, 'units_max_systemwide', tech)
-    equals_systemwide = get_param(backend_model, 'units_equals_systemwide', tech)
+    max_systemwide = get_param(backend_model, 'units_max_systemwide', techs=tech)
+    equals_systemwide = get_param(backend_model, 'units_equals_systemwide', techs=tech)
 
     if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
         return po.Constraint.NoConstraint
