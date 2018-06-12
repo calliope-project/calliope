@@ -41,12 +41,18 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_systemwide_equals(self):
         model = calliope.examples.national_scale(
-            override_dict={'techs.ccgt.constraints.energy_cap_max_systemwide': 10000}
+            override_dict={
+                'techs.ccgt.constraints.energy_cap_max_systemwide': 10000,
+                'techs.ac_transmission.constraints.energy_cap_equals_systemwide': 6000
+            }
         )
         model.run()
         # Check that setting `_equals` to a finite value leads to forcing
         assert (
             model.get_formatted_array('energy_cap').loc[{'techs': 'ccgt'}].sum() == 10000
+        )
+        assert (
+            model.get_formatted_array('energy_cap').loc[{'techs': 'ac_transmission:region1'}].sum() == 6000
         )
 
     def test_reserve_margin(self):
