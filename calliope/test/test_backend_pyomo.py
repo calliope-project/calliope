@@ -1255,6 +1255,15 @@ class TestMILPConstraints:
             'techs.test_conversion_plus.constraints.units_equals_systemwide': np.inf,
             'locations.1.techs.test_conversion_plus.costs.monetary.purchase': 1
         }
+        override_transmission = {
+            'links.0,1.exists': True,
+            'techs.test_transmission_elec.constraints': {
+                'units_max_systemwide': 1, 'lifetime': 25
+            },
+            'techs.test_transmission_elec.costs.monetary': {
+                'purchase': 1, 'interest_rate': 0.1
+            }
+        }
 
         m = build_model(override_max, 'conversion_plus_milp,two_hours,investment_costs')
         m.run(build_only=True)
@@ -1271,6 +1280,11 @@ class TestMILPConstraints:
             m = build_model(override_equals_inf, 'conversion_plus_milp,two_hours,investment_costs')
             m.run(build_only=True)
         assert check_error_or_warning(error, 'Cannot use inf for energy_cap_equals_systemwide')
+
+        m = build_model(override_transmission, 'simple_supply,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
+        assert m._backend_model.unit_capacity_systemwide_constraint['test_transmission_elec'].upper() == 2
 
 
 class TestConversionConstraints:
