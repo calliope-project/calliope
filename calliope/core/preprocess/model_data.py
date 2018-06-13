@@ -402,11 +402,11 @@ def tech_specific_to_dataset(model_run):
         lambda: {'dims': ['techs'], 'data': []}
     )
 
-    systemwide_constraints = [
+    systemwide_constraints = set([
         k.split('.')[-1] for k in model_run.techs.keys_nested()
         if '.constraints.' in k and
         k.endswith('_systemwide')
-    ]
+    ])
 
     for tech in model_run.sets['techs']:
         if tech in model_run.sets['techs_transmission']:
