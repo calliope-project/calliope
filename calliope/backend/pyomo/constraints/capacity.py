@@ -335,10 +335,19 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
             \\forall tech \\in techs
 
     """
-    all_loc_techs = [
-        i for i in backend_model.loc_techs
-        if i.split('::')[1] == tech
-    ]
+
+    if tech in backend_model.techs_transmission_names:
+        all_loc_techs = [
+            i for i in backend_model.loc_techs_transmission
+            if i.split('::')[1].split(':')[0] == tech
+        ]
+        multiplier = 2  # there are always two technologies associated with one link
+    else:
+        all_loc_techs = [
+            i for i in backend_model.loc_techs
+            if i.split('::')[1] == tech
+        ]
+        multiplier = 1
 
     max_systemwide = get_param(backend_model, 'energy_cap_max_systemwide', techs=tech)
     equals_systemwide = get_param(backend_model, 'energy_cap_equals_systemwide', techs=tech)
@@ -351,9 +360,8 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
         )
 
     sum_expr = sum(backend_model.energy_cap[loc_tech] for loc_tech in all_loc_techs)
-    total_expr = equals_systemwide if equals_systemwide else max_systemwide
 
     if equals_systemwide:
-        return sum_expr == total_expr
+        return sum_expr == equals_systemwide * multiplier
     else:
-        return sum_expr <= total_expr
+        return sum_expr <= max_systemwide * multiplier
