@@ -20,7 +20,7 @@
 #                 one_way: false  # FIXME needs description
 
 # List of constraints allowed to specify "file="
-file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource_eff', 'resource', 'storage_loss']
+file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss']
 
 default_location:
     available_area: null
