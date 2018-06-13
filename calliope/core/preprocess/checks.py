@@ -307,9 +307,8 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
             'force_resource will not be applied'.format(tech_id, loc_id)
         )
 
-    # Flatten required list and gather remaining unallowed constraints
-    required_f = flatten_list(required)
-    remaining = set(tech_config.constraints) - set(required_f) - set(allowed)
+    # Gather remaining unallowed constraints
+    remaining = set(tech_config.constraints) - set(allowed)
 
     # Error if something is defined that's not allowed, but is in defaults
     # Warn if something is defined that's not allowed, but is not in defaults

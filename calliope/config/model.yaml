@@ -85,7 +85,7 @@ tech_groups:
             storage_cap_max: inf
     transmission:
         required_constraints: [['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']]
-        allowed_constraints: ['energy_prod', 'energy_con', 'lifetime', 'energy_con', 'energy_prod', 'energy_eff_per_distance', 'energy_eff', 'one_way', 'energy_cap_scale']
+        allowed_constraints: ['energy_con', 'energy_prod', 'energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit', 'lifetime', 'energy_eff_per_distance', 'energy_eff', 'one_way', 'energy_cap_scale']
         allowed_costs: ['interest_rate', 'energy_cap', 'energy_cap_per_distance', 'om_annual_investment_fraction', 'om_annual', 'om_prod', 'purchase', 'purchase_per_distance', 'depreciation_rate']
         essentials:
                 parent: null
