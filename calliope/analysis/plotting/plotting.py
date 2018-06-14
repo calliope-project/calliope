@@ -19,6 +19,7 @@ from calliope.exceptions import warn
 from calliope.analysis.plotting.capacity import plot_capacity
 from calliope.analysis.plotting.timeseries import plot_timeseries
 from calliope.analysis.plotting.transmission import plot_transmission
+from calliope.analysis.plotting.energy_flows import plot_energy_flows
 from calliope.analysis.plotting.util import type_of_script
 
 
@@ -190,6 +191,13 @@ class ModelPlotMethods:
         return _plot(data, layout, **kwargs)
 
     transmission.__doc__ = plot_transmission.__doc__.rstrip() + _docstring_additions
+
+    def energy_flows(self, **kwargs):
+        self.check_optimality()
+        data, layout = plot_energy_flows(self._model, **kwargs)
+        return _plot(data, layout, **kwargs)
+
+    energy_flows.__doc__ = plot_energy_flows.__doc__.rstrip() + _docstring_additions
 
     def summary(self, **kwargs):
         self.check_optimality()
