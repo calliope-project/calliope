@@ -183,12 +183,21 @@ def clean_results(results, zero_threshold, timings):
         comment='Postprocessing: ' + comment
     )
 
-    if 'unmet_demand' in results.data_vars.keys() and not results.unmet_demand.sum():
-
-        log_time(
-            timings, 'delete_unmet_demand',
-            comment='Postprocessing: Model was feasible, deleting unmet_demand variable'
+    # Combine excess_supply and unmet_demand into one variable
+    if ('unmet_demand' in results.data_vars.keys() or
+            'excess_supply' in results.data_vars.keys()):
+        results['unmet_demand'] = (
+            results.get('unmet_demand', 0) + results.get('excess_supply', 0)
         )
-        results = results.drop('unmet_demand')
+
+        results = results.drop('excess_supply')
+
+        if not results.unmet_demand.sum():
+
+            log_time(
+                timings, 'delete_unmet_demand',
+                comment='Postprocessing: Model was feasible, deleting unmet_demand variable'
+            )
+            results = results.drop('unmet_demand')
 
     return results

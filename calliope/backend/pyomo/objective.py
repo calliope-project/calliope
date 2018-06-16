@@ -33,7 +33,8 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
     def obj_rule(backend_model):
         if hasattr(backend_model, 'unmet_demand'):
             unmet_demand = sum(
-                backend_model.unmet_demand[loc_carrier, timestep]
+                backend_model.unmet_demand[loc_carrier, timestep] -
+                backend_model.excess_supply[loc_carrier, timestep]
                 for loc_carrier in backend_model.loc_carriers
                 for timestep in backend_model.timesteps
             ) * backend_model.bigM
