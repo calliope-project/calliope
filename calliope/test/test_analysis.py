@@ -28,6 +28,7 @@ class TestPlotting:
             'capacity': model.plot.capacity(html_only=True),
             'timeseries': model.plot.timeseries(html_only=True),
             'transmission': model.plot.transmission(html_only=True),
+            'energy_flows': model.plot.energy_flows(html_only=True),
         }
 
         for plot_type in HTML_STRINGS['national_scale']:
@@ -55,6 +56,7 @@ class TestPlotting:
             'capacity': model.plot.capacity(html_only=True),
             'timeseries': model.plot.timeseries(html_only=True),
             'transmission': model.plot.transmission(html_only=True),
+            'energy_flows': model.plot.energy_flows(html_only=True),
         }
 
         for plot_type in HTML_STRINGS['milp']:

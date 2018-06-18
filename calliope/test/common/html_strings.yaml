@@ -12,7 +12,10 @@ national_scale:
         - '[{"type": "scattergeo", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "lat": [40, 40, null], "lon": [-2, -8, null], "showlegend": true, "legendgroup": "ac_transmission", "name": "AC power transmission",'
         - '{"geo": {"scope": "world", "projection": {"type": "mercator", "scale": 1}, "showland": true, "showcountries": true, "showsubunits": true, "showocean": true, "showrivers": true, "showlakes": true,'
         - '"autosize": true, "hovermode": "closest", "showlegend": true}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
-
+    energy_flows:
+        - '"legendgroup": "battery", "name": "battery", "type": "scattergeo", "lon": [-8], "lat": [40]}, {"visible": false, "hoverinfo":'
+        - '{"symbol": "square", "opacity": 0, "color": "#6783E3"}, "legendgroup": "free_transmission",'
+        - '"lonaxis": {"range": [-8.7, -0.29999999999999993]}, "lataxis": {"range": [38.8, 41.2]}, "countrywidth": 0.5'
 milp:
     capacity:
         # - '[{"type": "bar", "x": [null, null, 382.449614049993, 0.0], "y": ["N1", "X1", "X2", "X3"], "visible": true, "name": "Natural gas boiler", "legendgroup": "conversion", "text": "boiler", "hoverinfo": "x+y+name",'
