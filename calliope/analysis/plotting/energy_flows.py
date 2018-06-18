@@ -12,16 +12,17 @@ Plot energy flows data.
 import pandas as pd
 
 
-def _format_date(date, format):
+def _format_date(date, timeseries_format):
     ts = pd.to_datetime(date)
-    return ts.strftime(format)
+    return ts.strftime(timeseries_format)
+
 
 def _scale_prod_factor(carrier_prod):
-    return 100/abs(carrier_prod.values.max()-carrier_prod.values.min())
+    return 100 / abs(carrier_prod.values.max() - carrier_prod.values.min())
 
 
-def _line(loc_coordinates, location, carrier, tech, prod, scale_factor,
-            techs_colors, is_initial_timestep):
+def _line(loc_coordinates, location, carrier, tech, prod,
+          scale_factor, techs_colors, is_initial_timestep):
     [transmission_type, from_location] = tech.split(":")
     hover_info = "%s>%s: %.2f by %s (%s)" % \
         (from_location, location, prod, transmission_type, carrier)
@@ -33,7 +34,7 @@ def _line(loc_coordinates, location, carrier, tech, prod, scale_factor,
         hoverinfo="text",
         text="",
         line=dict(
-            width=prod*scale_factor + 1,
+            width=prod * scale_factor + 1,
             color=techs_colors[transmission_type]
         ),
         legendgroup=transmission_type,
@@ -51,11 +52,12 @@ def _line(loc_coordinates, location, carrier, tech, prod, scale_factor,
             opacity=0,
             color=techs_colors[transmission_type]
         ),
-        legendgroup=False,
-        name=""
+        legendgroup=transmission_type,
+        name=tech,
+        showlegend=False
     )
 
-    h_coord, v_coord = "lon", "lat" # by default
+    h_coord, v_coord = "lon", "lat"  # by default
     if set(loc_coordinates.index) == set(["x", "y"]):
         h_coord, v_coord = "x", "y"
         line["type"] = "scatter"
@@ -65,24 +67,23 @@ def _line(loc_coordinates, location, carrier, tech, prod, scale_factor,
         line["type"] = "scattergeo"
         line_info_marker["type"] = "scattergeo"
 
-    line[h_coord]= [
+    line[h_coord] = [
         loc_coordinates[from_location][h_coord],
         loc_coordinates[location][h_coord]
     ]
-    line[v_coord]= [
+    line[v_coord] = [
         loc_coordinates[from_location][v_coord],
         loc_coordinates[location][v_coord]
     ]
-    line_info_marker[h_coord] = [ (1/2) * (loc_coordinates[from_location][h_coord] + \
-        loc_coordinates[location][h_coord]) ]
-    line_info_marker[v_coord] = [ (1/2) * (loc_coordinates[from_location][v_coord] + \
-        loc_coordinates[location][v_coord]) ]
+    line_info_marker[h_coord] = [(1 / 2) * (loc_coordinates[from_location][h_coord] +
+                                 loc_coordinates[location][h_coord])]
+    line_info_marker[v_coord] = [(1 / 2) * (loc_coordinates[from_location][v_coord] +
+                                 loc_coordinates[location][v_coord])]
 
     if is_initial_timestep:
-    # plot only the first timestep data when the chart is initialized
-        line["visible"]=True
-        line_info_marker["visible"]=True
-
+        # plot only the first timestep data when the chart is initialized
+        line["visible"] = True
+        line_info_marker["visible"] = True
 
     return [line, line_info_marker]
 
@@ -101,14 +102,14 @@ def _marker(loc_coordinates, location, carrier, tech, prod, scale_factor,
         marker=dict(
             symbol="dot",
             opacity=0.6,
-            size=prod*scale_factor + 1,
+            size=prod * scale_factor + 1,
             color=techs_colors[tech],
         ),
         legendgroup=tech,
         name=tech
     )
 
-    h_coord, v_coord = "lon", "lat" # by default
+    h_coord, v_coord = "lon", "lat"  # by default
     if set(loc_coordinates.index) == set(["x", "y"]):
         h_coord, v_coord = "x", "y"
         marker_dict["type"] = "scatter"
@@ -116,12 +117,12 @@ def _marker(loc_coordinates, location, carrier, tech, prod, scale_factor,
         h_coord, v_coord = "lon", "lat"
         marker_dict["type"] = "scattergeo"
 
-    marker_dict[h_coord]= [ loc_coordinates[location][h_coord] ]
-    marker_dict[v_coord]= [ loc_coordinates[location][v_coord] ]
+    marker_dict[h_coord] = [loc_coordinates[location][h_coord]]
+    marker_dict[v_coord] = [loc_coordinates[location][v_coord]]
 
     if is_initial_timestep:
-    # plot only the first timestep data when the chart is initialized
-        marker_dict["visible"]=True
+        # plot only the first timestep data when the chart is initialized
+        marker_dict["visible"] = True
 
     return marker_dict
 
@@ -137,8 +138,8 @@ def _production_data(model, timesteps, timestep):
     scale_factor = _scale_prod_factor(model.results.carrier_prod)
 
     production_data = []
-    # we iterate through each dimension for one timestep in order to
-    # add the different production sources of the location and line
+    # we iterate through each dimension for one timestep in order to
+    # add the different production sources of the location and line
     # transmissions toward it
     # Complexity: O(len(carriers)*len(techs)*len(locations)). Considering
     # len(carriers) is suppose to be small (<10), we have a large margin in
@@ -158,7 +159,7 @@ def _production_data(model, timesteps, timestep):
                         # if it gets energy from another location
                         production_data.extend(
                             # "extend" because _line() also returns a
-                            # transparent marker dict at the middle of the line
+                            # transparent marker dict at the middle of the line
                             # to display info on hover
                             _line(
                                 loc_coordinates, location,
@@ -180,9 +181,8 @@ def _production_data(model, timesteps, timestep):
     return production_data
 
 
-
-def plot_energy_flows(model,
-    timestep_cycle=1, timestep_index_subset=[], **kwargs):
+def plot_energy_flows(model, timestep_cycle=1,
+                      timestep_index_subset=[], **kwargs):
     """
     Parameters
     ----------
@@ -194,9 +194,9 @@ def plot_energy_flows(model,
         (all timesteps are shown).
     """
 
-    if len(timestep_index_subset)==2:
-        timestep_start=timestep_index_subset[0]
-        timestep_end=timestep_index_subset[1]
+    if len(timestep_index_subset) == 2:
+        timestep_start = timestep_index_subset[0]
+        timestep_end = timestep_index_subset[1]
     else:
         timestep_start, timestep_end = 0, len(model._model_data.timesteps.values)
 
@@ -209,8 +209,8 @@ def plot_energy_flows(model,
         )
 
     timesteps = model._model_data.timesteps.values[
-                    timestep_start:timestep_end:timestep_cycle
-                ] # slicing the desired timesteps
+        timestep_start:timestep_end:timestep_cycle
+    ]  # slicing the desired timesteps
     timeseries_dateformat = model._model_data.attrs["model.timeseries_dateformat"]
 
     steps_length = []
@@ -231,7 +231,7 @@ def plot_energy_flows(model,
         i_start = sum(steps_length[:i])  # visible start index
         i_end = i_start + steps_length[i]  # visible end index
         step["args"][1][i_start: i_end] = [True] * steps_length[i]
-        # we set visible to True for all the points of one timestep
+        # we set visible to True for all the points of one timestep
         steps.append(step)
 
     sliders = [dict(
@@ -267,10 +267,10 @@ def plot_energy_flows(model,
 
     # change the range of the plot whether its x,y or lat,lon coords
     if set(model.inputs.loc_coordinates.coordinates.values) == set(["x", "y"]):
-        layout["xaxis"]=dict(range=get_range("x"))
-        layout["yaxis"]=dict(range=get_range("y"))
+        layout["xaxis"] = dict(range=get_range("x"))
+        layout["yaxis"] = dict(range=get_range("y"))
     elif set(model.inputs.loc_coordinates.coordinates.values) == set(["lon", "lat"]):
-        layout["geo"]=dict(
+        layout["geo"] = dict(
             scope="world",
             showland=True,
             showcountries=True,
