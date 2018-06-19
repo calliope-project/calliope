@@ -33,7 +33,8 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
     def obj_rule(backend_model):
         if hasattr(backend_model, 'unmet_demand'):
             unmet_demand = sum(
-                backend_model.unmet_demand[loc_carrier, scenario, timestep]
+                backend_model.unmet_demand[loc_carrier, scenario, timestep] -
+                backend_model.excess_supply[loc_carrier, scenario, timestep]
                 for loc_carrier in backend_model.loc_carriers
                 for scenario in backend_model.scenarios
                 for timestep in backend_model.timesteps
@@ -133,6 +134,6 @@ def risk_aware_cost_minimization(backend_model, cost_class, sense):
             )
         )
 
-    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + sense), 
+    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + sense),
                                      rule=obj_rule)
     backend_model.obj.domain = po.Reals

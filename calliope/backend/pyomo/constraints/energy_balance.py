@@ -108,15 +108,16 @@ def system_balance_constraint_rule(backend_model, loc_carrier, scenario, timeste
 
     """
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
-    if hasattr(backend_model, 'unmet_demand'):
+    if hasattr(backend_model, 'bigM'):
         unmet_demand = backend_model.unmet_demand[loc_carrier, scenario, timestep]
+        excess_supply = backend_model.excess_supply[loc_carrier, scenario, timestep]
     else:
-        unmet_demand = 0
+        unmet_demand = excess_supply = 0
 
     backend_model.system_balance[loc_carrier, scenario, timestep].expr = (
         sum(backend_model.carrier_prod[loc_tech_carrier, scenario, timestep] for loc_tech_carrier in prod) +
         sum(backend_model.carrier_con[loc_tech_carrier, scenario, timestep] for loc_tech_carrier in con) +
-        unmet_demand
+        unmet_demand + excess_supply
     )
 
     return backend_model.system_balance[loc_carrier, scenario, timestep] == 0
