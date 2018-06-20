@@ -22,7 +22,6 @@ Time series are handled by the script: the ``set_t.csv`` required in Calliope 0.
 
 The conversion script has some important limitations:
 
-* Comments in YAML files are lost
 * Parallel run configurations are not converted to the new override group configuration format
 * The ``group_fraction`` constraint is not converted, as its formulation has changed substantially in 0.6.0
 * ``carrier_ratios`` are not converted
