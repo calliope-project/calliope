@@ -1,0 +1,12 @@
+[
+  "calliope/test/test_analysis.py::TestPlotting::()::test_national_scale_plotting",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_milp_plotting",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_failed_cap_plotting",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_failed_timeseries_plotting",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_clustered_plotting",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_subset_plotting",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_subset_array",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_long_name",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_plot_cost",
+  "calliope/test/test_analysis.py::TestPlotting::()::test_to_file"
+]

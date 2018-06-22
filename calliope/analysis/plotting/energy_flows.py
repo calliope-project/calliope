@@ -6,10 +6,56 @@ energy_flows.py
 ~~~~~~~~~~~~~~~
 
 Plot energy flows data.
-
 """
 
 import pandas as pd
+
+
+def _format_name(name, length):
+    if len(name) < length:
+        return _min_size_name(name, length) + " " * 3
+        # we add 3 spaces because break_name
+        # adds 3 points on too long names
+        # -> side effect but whatever, those functions won't be
+        # imported elsewhere
+    else:
+        return _break_name(name, length)
+
+
+def _break_name(name, length):
+    """Take a long technology name string and break it across multiple lines
+    of lenght 'length' """
+    name_breaks = len(name) / length
+    if name_breaks > 1:
+        initial_name = name
+        break_buffer = 0
+        for name_break in range(1, int(name_breaks) + 1):
+            # preferably break at a space
+            breakpoint = initial_name.rfind(
+                ' ', name_break * length - 10, name_break * length)
+            # -1 means rfind failed to find any space
+            if breakpoint != -1:
+                breakpoint += break_buffer
+                name = name[:breakpoint].rstrip() + '<br>' + \
+                    name[breakpoint:].lstrip()
+                break_buffer += 4
+            else:
+                breakpoint = length * name_break + break_buffer
+                name = name[:breakpoint].rstrip() + '...<br>' + \
+                    name[breakpoint:].lstrip()
+                # '...' is len 3
+                break_buffer += 7
+
+    return name
+
+
+def _min_size_name(name, length):
+    """ Take a tech name and a length and return the name string
+    with at least the length, adding " " when too short """
+    if len(name) < length:
+        return name + " " * (length - len(name))
+    else:
+        return name
 
 
 def _format_date(date, timeseries_format):
@@ -38,7 +84,22 @@ def _line(loc_coordinates, location, carrier, tech, prod,
             color=techs_colors[transmission_type]
         ),
         legendgroup=transmission_type,
-        name=tech,
+        name=_format_name(tech, 18),
+        opacity=0.6,
+        showlegend=False
+    )
+
+    line_legend = dict(
+        visible=False,
+        mode="lines",
+        hoverinfo="text",
+        text="",
+        line=dict(
+            width=10,
+            color=techs_colors[transmission_type]
+        ),
+        legendgroup=transmission_type,
+        name=_format_name(tech, 18),
         opacity=0.6,
     )
 
@@ -61,10 +122,12 @@ def _line(loc_coordinates, location, carrier, tech, prod,
     if set(loc_coordinates.index) == set(["x", "y"]):
         h_coord, v_coord = "x", "y"
         line["type"] = "scatter"
+        line_legend["type"] = "scatter"
         line_info_marker["type"] = "scatter"
     elif set(loc_coordinates.index) == set(["lon", "lat"]):
         h_coord, v_coord = "lon", "lat"
         line["type"] = "scattergeo"
+        line_legend["type"] = "scattergeo"
         line_info_marker["type"] = "scattergeo"
 
     line[h_coord] = [
@@ -75,6 +138,8 @@ def _line(loc_coordinates, location, carrier, tech, prod,
         loc_coordinates[from_location][v_coord],
         loc_coordinates[location][v_coord]
     ]
+    line_legend[h_coord] = [None]
+    line_legend[v_coord] = [None]
     line_info_marker[h_coord] = [(1 / 2) * (loc_coordinates[from_location][h_coord] +
                                  loc_coordinates[location][h_coord])]
     line_info_marker[v_coord] = [(1 / 2) * (loc_coordinates[from_location][v_coord] +
@@ -83,9 +148,10 @@ def _line(loc_coordinates, location, carrier, tech, prod,
     if is_initial_timestep:
         # plot only the first timestep data when the chart is initialized
         line["visible"] = True
+        line_legend["visible"] = True
         line_info_marker["visible"] = True
 
-    return [line, line_info_marker]
+    return [line, line_legend, line_info_marker]
 
 
 def _marker(loc_coordinates, location, carrier, tech, prod, scale_factor,
@@ -106,25 +172,46 @@ def _marker(loc_coordinates, location, carrier, tech, prod, scale_factor,
             color=techs_colors[tech],
         ),
         legendgroup=tech,
-        name=tech
+        name=_format_name(tech, 18),
+        showlegend=False
+    )
+
+    marker_legend = dict(
+        visible=False,
+        hoverinfo="text",
+        text=hover_info,
+        mode="markers",
+        marker=dict(
+            symbol="dot",
+            opacity=0.6,
+            size=10,
+            color=techs_colors[tech],
+        ),
+        legendgroup=tech,
+        name=_format_name(tech, 18)
     )
 
     h_coord, v_coord = "lon", "lat"  # by default
     if set(loc_coordinates.index) == set(["x", "y"]):
         h_coord, v_coord = "x", "y"
         marker_dict["type"] = "scatter"
+        marker_legend["type"] = "scatter"
     elif set(loc_coordinates.index) == set(["lon", "lat"]):
         h_coord, v_coord = "lon", "lat"
         marker_dict["type"] = "scattergeo"
+        marker_legend["type"] = "scattergeo"
 
     marker_dict[h_coord] = [loc_coordinates[location][h_coord]]
     marker_dict[v_coord] = [loc_coordinates[location][v_coord]]
+    marker_legend[h_coord] = [None]
+    marker_legend[v_coord] = [None]
 
     if is_initial_timestep:
         # plot only the first timestep data when the chart is initialized
         marker_dict["visible"] = True
+        marker_legend["visible"] = True
 
-    return marker_dict
+    return [marker_dict, marker_legend]
 
 
 def _production_data(model, timesteps, timestep):
@@ -158,9 +245,6 @@ def _production_data(model, timesteps, timestep):
                         # "transmission_type:location"
                         # if it gets energy from another location
                         production_data.extend(
-                            # "extend" because _line() also returns a
-                            # transparent marker dict at the middle of the line
-                            # to display info on hover
                             _line(
                                 loc_coordinates, location,
                                 carrier, tech, prod,
@@ -170,7 +254,7 @@ def _production_data(model, timesteps, timestep):
                         )
                     else:
                         # if the energy comes from this location
-                        production_data.append(
+                        production_data.extend(
                             _marker(
                                 loc_coordinates, location,
                                 carrier, tech, prod,
@@ -249,6 +333,9 @@ def plot_energy_flows(model, timestep_cycle=1,
     # define the map general layout here
     layout = dict(
         title="Energy Flow",
+        font=dict(
+            family="Courier New, Droid Sans Mono"
+        ),
         showlegend=True,
         width="900",
         height="700",
