@@ -105,7 +105,7 @@ def _get_var_data(
 
         if array_cap.loc[{'techs': tech}].sum() > 0:
             x = array_cap.loc[{'techs': tech}].values
-            name = break_name(model._model_data.names.loc[{'techs': tech}].item())
+            name = break_name(model._model_data.names.loc[{'techs': tech}].item(), 30)
             if 'systemwide' in cap:
                 y = natsorted(array_cap.carriers.values)
             else:

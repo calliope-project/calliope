@@ -93,23 +93,27 @@ def hex_to_rgba(hex_color, opacity):
     return 'rgba({1}, {2}, {3}, {0})'.format(opacity, *rgb)
 
 
-def break_name(name):
+def break_name(name, length):
     """Take a long technology name string and break it across multiple lines"""
-    name_breaks = len(name) / 30
+
+    name_breaks = len(name) / length
     if name_breaks > 1:
         initial_name = name
         break_buffer = 0
         for name_break in range(1, int(name_breaks) + 1):
             # preferably break at a space
-            breakpoint = initial_name.rfind(' ', name_break * 30 - 10, name_break * 30)
+            breakpoint = initial_name.rfind(
+                ' ', name_break * length - 10, name_break * length
+            )
             # -1 means rfind failed to find any space
             if breakpoint != -1:
                 breakpoint += break_buffer
                 name = name[:breakpoint].rstrip() + '<br>' + name[breakpoint:].lstrip()
                 break_buffer += 4
             else:
-                breakpoint = 30 * name_break + break_buffer
+                breakpoint = length * name_break + break_buffer
                 name = name[:breakpoint].rstrip() + '...<br>' + name[breakpoint:].lstrip()
+                # '...' is len 3
                 break_buffer += 7
 
     return name
@@ -146,3 +150,30 @@ def get_clustered_layout(dataset):
         layout['shapes'].append(shape_template.copy())
 
     return layout
+
+
+def get_range(coordinates, axis, buffer):
+    """
+    Based on lat/lon of the underlying data, get a range which defines the
+    bounding box for the map
+
+    Parameters
+    ----------
+    coordinates: xarray DataArray
+        Coordinate data of the underlying data
+    axis: str
+        axis of the data (lat/lon) by which to slice the coordinates DataArray
+    buffer: float
+        value, expressed as a fraction of the range of the underlying data,
+        to add as a buffer to the bounding box
+
+    Returns
+    -------
+    list, defining the range as input_range +/- input_range * buffer
+    """
+    _range = [
+        coordinates.loc[dict(coordinates=axis)].min().item(),
+        coordinates.loc[dict(coordinates=axis)].max().item()
+    ]
+    _offset = abs(_range[1] - _range[0]) * 0.1
+    return [_range[0] - _offset, _range[1] + _offset]

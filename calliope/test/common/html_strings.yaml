@@ -14,7 +14,7 @@ national_scale:
         - '"autosize": true, "hovermode": "closest", "showlegend": true}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
     energy_flows:
         - '{"visible": false, "mode": "lines", "hoverinfo": "text", "text": "", "line": {"width": 10, "color'
-        - '"scattergeo", "lon": [-2, -2], "lat": [41, 40]}, {"visible": false,'
+        - '"lon": [-2, -2], "lat": [41, 40], "type": "scattergeo"}, {"visible": false,'
 
 milp:
     capacity:
