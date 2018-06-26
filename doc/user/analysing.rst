@@ -105,7 +105,7 @@ Without the token, the plot will fall back on simple country-level outlines. In 
 
 Summary plots
 -------------
-If you want all the data in one place, you can run ``model.plot.summary(out_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to ``out_file``. This HTML file can be opened in a web browser to show all the plots. This funcionality is made avaiable in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
+If you want all the data in one place, you can run ``model.plot.summary(to_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to 'path/to/file.html'. This HTML file can be opened in a web browser to show all the plots. This funcionality is made available in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
 
 See an `example of such a HTML plot here <../_static/plot_summary.html>`_.
 
