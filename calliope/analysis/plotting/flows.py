@@ -2,7 +2,7 @@
 Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-energy_flows.py
+flows.py
 ~~~~~~~~~~~~~~~
 
 Plot energy flows data.
@@ -16,9 +16,9 @@ from calliope.analysis.plotting.util import break_name, get_range
 def _line(loc_coordinates, location, carrier, tech, prod, scale_factor,
           techs_colors, is_initial_timestep, add_legend, name):
     [transmission_type, from_location] = tech.split(":")
-    hover_info = "%s>%s: %.2f by %s (%s)" % \
+    # e.g. "Region1->Region2: 256.54 by gas_transmission (gas)"
+    hover_info = "%s->%s: %.2f by %s (%s)" % \
         (from_location, location, prod, transmission_type, carrier)
-    # e.g. "Region1>Region2: 256.54 by gas_transmission (gas)"
 
     line = dict(
         visible=False,
@@ -96,9 +96,9 @@ def _line(loc_coordinates, location, carrier, tech, prod, scale_factor,
 
 def _marker(loc_coordinates, location, carrier, tech, prod, scale_factor,
             techs_colors, is_initial_timestep, add_legend, name):
+    # Example: "Region1: 3552.65 of pipe_import (gas)"
     hover_info = "%s: %.2f of %s (%s)" % \
         (location, prod, tech, carrier)
-    # ex: "Region1: 3552.65 of pipe_import (gas)"
 
     marker_dict = dict(
         visible=False,
@@ -215,8 +215,7 @@ def _production_data(model, timesteps, timestep):
     return production_data
 
 
-def plot_energy_flows(model, timestep_cycle=1,
-                      timestep_index_subset=[], **kwargs):
+def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
     """
     Parameters
     ----------

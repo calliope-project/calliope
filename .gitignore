@@ -9,4 +9,4 @@ mprofile_*
 profile_*
 *.profile
 _test
-.vscode
+.pytest_cache/
