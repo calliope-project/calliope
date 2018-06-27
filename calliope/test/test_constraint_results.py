@@ -90,13 +90,13 @@ class TestModelSettings:
 
             return override_dict
 
-        # Feasible case, unmet_demand/excess_supply is deleted
+        # Feasible case, unmet_demand/unused_supply is deleted
         model_10 = build_model(
             override_dict=override(True, 10),
             override_groups='investment_costs'
         )
         model_10.run()
-        for i in ['unmet_demand', 'excess_supply']:
+        for i in ['unmet_demand', 'unused_supply']:
             assert hasattr(model_10._backend_model, i)
             assert i not in model_10._model_data.data_vars.keys()
 
@@ -107,20 +107,20 @@ class TestModelSettings:
         )
         model_5.run()
         assert hasattr(model_5._backend_model, 'unmet_demand')
-        assert hasattr(model_5._backend_model, 'excess_supply')
+        assert hasattr(model_5._backend_model, 'unused_supply')
         assert model_5._model_data['unmet_demand'].sum() == 15
-        assert 'excess_supply' not in model_5._model_data.data_vars.keys()
+        assert 'unused_supply' not in model_5._model_data.data_vars.keys()
 
-        # Infeasible case, excess_supply is required
+        # Infeasible case, unused_supply is required
         model_15 = build_model(
             override_dict=override(True, 15),
             override_groups='investment_costs'
         )
         model_15.run()
         assert hasattr(model_15._backend_model, 'unmet_demand')
-        assert hasattr(model_15._backend_model, 'excess_supply')
+        assert hasattr(model_15._backend_model, 'unused_supply')
         assert model_15._model_data['unmet_demand'].sum() == -15
-        assert 'excess_supply' not in model_15._model_data.data_vars.keys()
+        assert 'unused_supply' not in model_15._model_data.data_vars.keys()
 
         assert (
             model_15._backend_model.obj.expr() - model_10._backend_model.obj.expr() ==
@@ -140,7 +140,7 @@ class TestModelSettings:
         )
         model.run()
         assert not hasattr(model._backend_model, 'unmet_demand')
-        assert not hasattr(model._backend_model, 'excess_supply')
+        assert not hasattr(model._backend_model, 'unused_supply')
         assert not model._model_data.attrs['termination_condition'] == 'optimal'
 
         # too little supply
