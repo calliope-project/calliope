@@ -30,6 +30,7 @@ def initialize_decision_variables(backend_model):
     units                loc_techs_milp
     operating\_units     loc_techs_milp, timesteps
     unmet\_demand        loc_carriers, timesteps
+    unused\_supply       loc_carriers, timesteps
     ==================== ========================================
 
     """
@@ -92,4 +93,5 @@ def initialize_decision_variables(backend_model):
 
     if model_data_dict['attrs'].get('run.ensure_feasibility', False):
         backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
+        backend_model.unused_supply = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NegativeReals)
         backend_model.bigM = model_data_dict['attrs'].get('run.bigM')
