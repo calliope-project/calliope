@@ -131,7 +131,7 @@ def run_operate(model_data, timings, backend, build_only):
 
     # Capacity results (from plan mode) can be used as the input to operate mode
     if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
-        model_data.attrs.get('run.operation.use_cap_results', False)):
+            model_data.attrs.get('run.operation.use_cap_results', False)):
         # Anything with is_result = 1 will be ignored in the Pyomo model
         for varname, varvals in model_data.data_vars.items():
             if varname in operate_params:
@@ -256,7 +256,7 @@ def run_operate(model_data, timings, backend, build_only):
             log_time(
                 timings, 'model_gen_{}'.format(i + 1),
                 comment=(
-                    'Backend: ite()ration {}: generating new model for '
+                    'Backend: iteration {}: generating new model for '
                     'end of timeseries, with horizon = {} timesteps'
                     .format(i + 1, window_ends[i] - window_starts[i])
                 )

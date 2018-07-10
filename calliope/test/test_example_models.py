@@ -113,6 +113,33 @@ class TestNationalScaleExampleModelInfeasibility:
         self.example_tester()
 
 
+class TestNationalScaleExampleModelOperate:
+    def example_tester(self):
+        override_file = os.path.join(
+            calliope.examples._PATHS['national_scale'],
+            'overrides.yaml'
+        )
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            model = calliope.examples.national_scale(
+                override_dict={'model.subset_time': ['2005-01-01', '2005-01-03']},
+                override_file=override_file + ':operate')
+            model.run()
+
+        expected_warnings = [
+            'Energy capacity constraint removed from region1::demand_power as force_resource is applied',
+            'Energy capacity constraint removed from region2::demand_power as force_resource is applied',
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
+            'Resource capacity constraint removed from region1-1::csp as force_resource is applied',
+            'Resource capacity constraint removed from region1-3::csp as force_resource is applied'
+        ]
+
+        assert check_error_or_warning(excinfo, expected_warnings)
+        assert all(model.results.timesteps == pd.date_range('2005-01', '2005-01-03 23:00:00', freq='H'))
+
+    def test_nationalscale_example_results_glpk(self):
+        self.example_tester()
+
+
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver='glpk', solver_io=None):
         override = {
