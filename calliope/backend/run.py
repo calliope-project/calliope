@@ -297,7 +297,7 @@ def run_operate(model_data, timings, backend, build_only):
             # Note: Warmstart isn't possible with GLPK (dealt with later on)
             _results = backend.solve_model(
                 backend_model, solver=solver, solver_io=solver_io,
-                solver_options=solver_options, save_logs=save_logs, warmstart=warmstart
+                solver_options=solver_options, save_logs=save_logs, warmstart=warmstart,
             )
 
             log_time(
@@ -322,8 +322,8 @@ def run_operate(model_data, timings, backend, build_only):
 
             # Set up initial storage for the next iteration
             if 'loc_techs_store' in model_data.dims.keys():
-                storage_initial = _results.storage.loc[dict(timesteps=window_ends.index[i])]
-                model_data['storage_initial'].loc[{}] = storage_initial.values
+                storage_initial = _results.storage.loc[{'timesteps': window_ends.index[i]}].drop('timesteps')
+                model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
                 for k, v in backend_model.storage_initial.items():
                     v.set_value(storage_initial.to_series().dropna().to_dict()[k])
 
