@@ -18,6 +18,8 @@ Release History
 
 |new| AttrDict now persists comments when reading from and writing to YAML files, and gains an API to view, add and remove comments on keys
 
+|new| Plotting flows() function. Shows how much energy locations produce and how much they exchange with other locations. Provided with a slider in order to see flows evolution through time. 
+
 |fixed| Fix CLI error when running a model without transmission technologies
 
 |fixed| Allow plotting for inputs-only models, single location models, and models without location coordinates
