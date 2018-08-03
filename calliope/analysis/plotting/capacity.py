@@ -119,7 +119,7 @@ def _get_var_data(
                 hoverinfo = 'y+name'
             else:
                 hoverinfo = 'x+name'
-                y = y[::-1]  # Make sure that sorting is from bottom down
+                x, y = x[::-1], y[::-1]  # Make sure that sorting is from bottom down
 
             data.append(go.Bar(
                 x=x, y=y, visible=visible,
