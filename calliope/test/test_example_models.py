@@ -325,8 +325,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         expected_warnings = [
             'Energy capacity constraint removed',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
-            'Resource capacity constraint removed'
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs'
         ]
 
         assert check_error_or_warning(excinfo, expected_warnings)
