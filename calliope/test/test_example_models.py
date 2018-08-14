@@ -128,9 +128,7 @@ class TestNationalScaleExampleModelOperate:
         expected_warnings = [
             'Energy capacity constraint removed from region1::demand_power as force_resource is applied',
             'Energy capacity constraint removed from region2::demand_power as force_resource is applied',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
-            'Resource capacity constraint removed from region1-1::csp as force_resource is applied',
-            'Resource capacity constraint removed from region1-3::csp as force_resource is applied'
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs'
         ]
 
         assert check_error_or_warning(excinfo, expected_warnings)

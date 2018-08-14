@@ -45,13 +45,10 @@ def check_operate_params(model_data):
         return param
 
     def _is_in(loc_tech, set_or_var):
-        if set_or_var in model_data:
-            try:
-                model_data[set_or_var].loc[loc_tech]
-                return True
-            except KeyError:
-                return False
-        else:
+        try:
+            model_data[set_or_var].loc[loc_tech]
+            return True
+        except (KeyError, AttributeError):
             return False
 
     for loc_tech in model_data.loc_techs.values:
@@ -73,7 +70,8 @@ def check_operate_params(model_data):
                         'force_resource is applied'.format(loc_tech)
                     )
                 if _is_in(loc_tech, 'resource_cap'):
-                    resource_cap = model_data.resource_cap.loc[loc_tech] = np.inf
+                    print(loc_tech, model_data.resource_cap.loc_techs_supply_plus)
+                    model_data.resource_cap.loc[loc_tech] = np.inf
                     warnings.append(
                         'Resource capacity constraint removed from {} as '
                         'force_resource is applied'.format(loc_tech)
@@ -103,20 +101,6 @@ def check_operate_params(model_data):
                         'Operate mode: resource is forced to be higher than '
                         'fixed energy cap for `{}`'.format(loc_tech)
                     )
-        # Must define a resource capacity to ensure the Pyomo param is created
-        # for it. But we just create an array of infs, so the capacity has no effect
-        if _is_in(loc_tech, 'loc_techs_supply_plus'):
-            if 'resource_cap' not in model_data.data_vars.keys():
-                model_data['resource_cap'] = xr.DataArray(
-                    [np.inf for i in model_data.loc_techs_supply_plus.values],
-                    dims='loc_techs_supply_plus')
-                model_data['resource_cap'].attrs['is_result'] = 1
-                model_data['resource_cap'].attrs['operate_param'] = 1
-                warnings.append(
-                    'Resource capacity constraint defined and set to infinity '
-                    'for all supply_plus techs'
-                )
-
         if _is_in(loc_tech, 'loc_techs_store'):
             if _is_in(loc_tech, 'charge_rate'):
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()
@@ -127,6 +111,19 @@ def check_operate_params(model_data):
                             'fixed storage capacity * charge rate is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
+    # Must define a resource capacity to ensure the Pyomo param is created
+    # for it. But we just create an array of infs, so the capacity has no effect
+    if ('resource_cap' not in model_data.data_vars.keys() and
+            'loc_techs_supply_plus' in model_data.dims.keys()):
+        model_data['resource_cap'] = xr.DataArray(
+            [np.inf for i in model_data.loc_techs_supply_plus.values],
+            dims='loc_techs_supply_plus')
+        model_data['resource_cap'].attrs['is_result'] = 1
+        model_data['resource_cap'].attrs['operate_param'] = 1
+        warnings.append(
+            'Resource capacity constraint defined and set to infinity '
+            'for all supply_plus techs'
+        )
 
     window = model_data.attrs.get('run.operation.window', None)
     horizon = model_data.attrs.get('run.operation.horizon', None)
