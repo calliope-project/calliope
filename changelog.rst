@@ -6,6 +6,8 @@ Release History
 0.6.3-dev
 ---------
 
+|fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
+
 |fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.
 
 |fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
