@@ -10,6 +10,8 @@ Release History
 
 |fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
 
+|new| Added ``--groups_file`` option to the ``calliope generate_runs`` command, allowing the flexible specification of a large number of scenario combinations. See the documentaion (:doc:`user/ref_advanced_func`) for details.
+
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
 
 0.6.2 (2018-06-04)

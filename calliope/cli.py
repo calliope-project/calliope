@@ -265,6 +265,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
 @click.argument('out_file')
 @click.option('--kind', help='One of: "bash", "bsub", "sbatch", or "windows".')
 @click.option('--override_file')
+@click.option('--groups_file')
 @click.option('--groups')
 @click.option('--cluster_threads', default=1)
 @click.option('--cluster_mem')
@@ -276,7 +277,7 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
 @_quiet
 @_pdb
 def generate_runs(
-        model_file, out_file, kind, override_file, groups, additional_args,
+        model_file, out_file, kind, override_file, groups_file, groups, additional_args,
         cluster_threads, cluster_mem, cluster_time,
         debug, quiet, pdb):
 
@@ -286,6 +287,7 @@ def generate_runs(
         model_file=model_file,
         out_file=out_file,
         override_file=override_file,
+        groups_file=groups_file,
         groups=groups,
         additional_args=additional_args,
         cluster_mem=cluster_mem,

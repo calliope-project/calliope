@@ -97,6 +97,17 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
             assert os.path.isfile(os.path.join(tempdir, 'test.sh.array.sh'))
 
+    def test_generate_runs_groups_file_and_groups(self):
+        runner = CliRunner()
+
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.generate_runs, [
+                _MODEL_NATIONAL, 'test.sh', '--kind=bash',
+                '--groups="run1,run2,run3,run4"',
+                '--groups_file="foobar"'
+            ])
+            assert result.exit_code == 1
+
     def test_debug(self):
         runner = CliRunner()
         result = runner.invoke(cli.run, ['foo.yaml', '--debug'])
