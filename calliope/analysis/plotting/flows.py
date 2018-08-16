@@ -210,15 +210,6 @@ def _production_data(model, timesteps, timestep):
                             "add_legend": add_legend,
                             "name": name,
                         })
-                        # production_data.extend(
-                        #     _line(
-                        #         locs_coordinates, transmission_type, location, from_location,
-                        #         carrier, tech, prod,
-                        #         scale_factor, techs_colors,
-                        #         timestep == timesteps[0],
-                        #         add_legend, name
-                        #     )
-                        # )
                     else:
                         # if the energy comes from this location
                         production_data.extend(
