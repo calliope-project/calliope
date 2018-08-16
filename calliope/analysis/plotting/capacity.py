@@ -105,7 +105,7 @@ def _get_var_data(
 
         if array_cap.loc[{'techs': tech}].sum() > 0:
             x = array_cap.loc[{'techs': tech}].values
-            name = break_name(model._model_data.names.loc[{'techs': tech}].item())
+            name = break_name(model._model_data.names.loc[{'techs': tech}].item(), 30)
             if 'systemwide' in cap:
                 y = natsorted(array_cap.carriers.values)
             else:
@@ -119,7 +119,7 @@ def _get_var_data(
                 hoverinfo = 'y+name'
             else:
                 hoverinfo = 'x+name'
-                y = y[::-1]  # Make sure that sorting is from bottom down
+                x, y = x[::-1], y[::-1]  # Make sure that sorting is from bottom down
 
             data.append(go.Bar(
                 x=x, y=y, visible=visible,

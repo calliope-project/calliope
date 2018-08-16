@@ -190,13 +190,13 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         if 'techs_transmission' in dataset and tech in dataset.techs_transmission.values:
             base_tech = 'transmission'
             color = dataset.colors.loc[{'techs': tech.split(':')[0]}].item()
-            name = break_name(dataset.names.loc[{'techs': tech.split(':')[0]}].item())
+            name = break_name(dataset.names.loc[{'techs': tech.split(':')[0]}].item(), 30)
             if var in carriers:
                 continue  # no transmission in carrier flow
         else:
             base_tech = dataset.inheritance.loc[tech_dict].item().split('.')[0]
             color = dataset.colors.loc[tech_dict].item()
-            name = break_name(dataset.names.loc[tech_dict].item())
+            name = break_name(dataset.names.loc[tech_dict].item(), 30)
 
         if base_tech == 'demand':
             # Always insert demand at position 0 in the list, to make
