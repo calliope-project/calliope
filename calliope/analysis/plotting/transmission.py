@@ -14,7 +14,7 @@ import xarray as xr
 import numpy as np
 
 from calliope.core.preprocess.util import vincenty
-from calliope.analysis.plotting.util import break_name
+from calliope.analysis.plotting.util import break_name, get_range
 
 
 def _get_zoom(coordinate_array, width):
@@ -160,14 +160,6 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
                 )
             )
         else:
-            def get_range(axis):
-                _range = [
-                    coordinates.loc[dict(coordinates=axis)].min().item(),
-                    coordinates.loc[dict(coordinates=axis)].max().item()
-                ]
-                _offset = abs(_range[1] - _range[0]) * 0.1
-                return [_range[0] - _offset, _range[1] + _offset]
-
             scatter_type = 'scattergeo'
             layout_dict = dict(
                 geo=dict(
@@ -179,8 +171,8 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
                     showocean=True,
                     showrivers=True,
                     showlakes=True,
-                    lonaxis=dict(range=get_range('lon')),
-                    lataxis=dict(range=get_range('lat')),
+                    lonaxis=dict(range=get_range(coordinates, 'lon', 0.1)),
+                    lataxis=dict(range=get_range(coordinates, 'lat', 0.1)),
                     resolution=50,
                     landcolor="rgba(240, 240, 240, 0.8)",
                     oceancolor='#aec6cf',
@@ -230,7 +222,7 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
                 v_coord: v_edge[i],
                 'showlegend': showlegend,
                 'legendgroup': tech,
-                'name': break_name(names.loc[dict(techs=tech)].item()),
+                'name': break_name(names.loc[dict(techs=tech)].item(), 30),
                 'line': {'color': colors.loc[dict(techs=tech)].item()}
             }})
             showlegend = False

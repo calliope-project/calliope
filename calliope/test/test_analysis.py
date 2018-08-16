@@ -28,6 +28,7 @@ class TestPlotting:
             'capacity': model.plot.capacity(html_only=True),
             'timeseries': model.plot.timeseries(html_only=True),
             'transmission': model.plot.transmission(html_only=True),
+            'flows': model.plot.flows(html_only=True),
         }
 
         for plot_type in HTML_STRINGS['national_scale']:
@@ -55,6 +56,7 @@ class TestPlotting:
             'capacity': model.plot.capacity(html_only=True),
             'timeseries': model.plot.timeseries(html_only=True),
             'transmission': model.plot.transmission(html_only=True),
+            'flows': model.plot.flows(html_only=True),
         }
 
         for plot_type in HTML_STRINGS['milp']:
@@ -196,7 +198,7 @@ class TestPlotting:
         # FIXME: currently throws up save dialogue rather than just
         # saving the file
 
-        #with tempfile.TemporaryDirectory() as tempdir:
+        # with tempfile.TemporaryDirectory() as tempdir:
         #    for extension in ['png', 'jpeg', 'svg', 'webp']:
         #        out_path = os.path.join(tempdir, 'plot_to_save.' + extension)
         #        model.plot.capacity(array='energy_cap', to_file=out_path, auto_open=False)

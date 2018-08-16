@@ -12,6 +12,9 @@ national_scale:
         - '[{"type": "scattergeo", "mode": "lines", "hoverinfo": "none", "opacity": 0.8, "lat": [40, 40, null], "lon": [-2, -8, null], "showlegend": true, "legendgroup": "ac_transmission", "name": "AC power transmission",'
         - '{"geo": {"scope": "world", "projection": {"type": "mercator", "scale": 1}, "showland": true, "showcountries": true, "showsubunits": true, "showocean": true, "showrivers": true, "showlakes": true,'
         - '"autosize": true, "hovermode": "closest", "showlegend": true}, {"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false})</script>'
+    flows:
+        - '{"visible": false, "mode": "lines", "hoverinfo": "text", "text": "", "line": {"width": 10, "color'
+        - '"lon": [-2, -2], "lat": [41, 40], "type": "scattergeo"}, {"visible": false,'
 
 milp:
     capacity:

@@ -6,13 +6,15 @@ Release History
 0.6.3-dev
 ---------
 
-|fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.
-
-|fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
+|new| Addition of ``flows`` plotting function. This shows production and how much they exchange with other locations. It also provides a slider in order to see flows' evolution through time.
 
 |new| Added ``--groups_file`` option to the ``calliope generate_runs`` command, allowing the flexible specification of a large number of scenario combinations. See the documentaion (:doc:`user/ref_advanced_func`) for details.
 
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
+
+|fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.
+
+|fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
 
 0.6.2 (2018-06-04)
 ------------------
