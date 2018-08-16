@@ -5,6 +5,7 @@ doc/_build/
 doc/_static/notebooks/*.html
 dist/
 .cache
+.pytest_cache/
 mprofile_*
 profile_*
 *.profile
