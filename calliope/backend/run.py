@@ -131,7 +131,7 @@ def run_operate(model_data, timings, backend, build_only):
 
     # Capacity results (from plan mode) can be used as the input to operate mode
     if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
-        model_data.attrs.get('run.operation.use_cap_results', False)):
+            model_data.attrs.get('run.operation.use_cap_results', False)):
         # Anything with is_result = 1 will be ignored in the Pyomo model
         for varname, varvals in model_data.data_vars.items():
             if varname in operate_params:
@@ -256,7 +256,7 @@ def run_operate(model_data, timings, backend, build_only):
             log_time(
                 timings, 'model_gen_{}'.format(i + 1),
                 comment=(
-                    'Backend: ite()ration {}: generating new model for '
+                    'Backend: iteration {}: generating new model for '
                     'end of timeseries, with horizon = {} timesteps'
                     .format(i + 1, window_ends[i] - window_starts[i])
                 )
@@ -297,7 +297,7 @@ def run_operate(model_data, timings, backend, build_only):
             # Note: Warmstart isn't possible with GLPK (dealt with later on)
             _results = backend.solve_model(
                 backend_model, solver=solver, solver_io=solver_io,
-                solver_options=solver_options, save_logs=save_logs, warmstart=warmstart
+                solver_options=solver_options, save_logs=save_logs, warmstart=warmstart,
             )
 
             log_time(
@@ -322,8 +322,8 @@ def run_operate(model_data, timings, backend, build_only):
 
             # Set up initial storage for the next iteration
             if 'loc_techs_store' in model_data.dims.keys():
-                storage_initial = _results.storage.loc[dict(timesteps=window_ends.index[i])]
-                model_data['storage_initial'].loc[{}] = storage_initial.values
+                storage_initial = _results.storage.loc[{'timesteps': window_ends.index[i]}].drop('timesteps')
+                model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
                 for k, v in backend_model.storage_initial.items():
                     v.set_value(storage_initial.to_series().dropna().to_dict()[k])
 
