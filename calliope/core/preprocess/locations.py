@@ -438,8 +438,14 @@ def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
 
             tech_config.costs[cost]['depreciation_rate'] = dep
         try:
-            del tech_config.costs[cost]['interest_rate']
+            tech_config.costs[cost].del_key('interest_rate')
         except KeyError:
             pass
+        # If, by deleting 'interest_rate', we end up with an empty dict, delete the cost class
+        if len(tech_config.costs[cost].keys()) == 0:
+            tech_config.costs.del_key(cost)
+    # If, by deleting the cost class, we end up with an empty dict, delete the cost key
+    if len(cost_classes) > 0 and len(tech_config.costs.keys()) == 0:
+            tech_config.del_key('costs')
 
     return tech_config
