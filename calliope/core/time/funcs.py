@@ -20,7 +20,6 @@ from calliope.core.util.logging import logger
 from calliope.core.preprocess.lookup import lookup_clusters
 
 
-
 def get_daily_timesteps(data, check_uniformity=False):
     daily_timesteps = [
         data.timestep_resolution.loc[i].values
@@ -78,10 +77,10 @@ def normalized_copy(data):
 def _copy_non_t_vars(data0, data1):
     """Copies non-t-indexed variables from data0 into data1, then
     returns data1"""
-    non_t_vars = [v for v in data0.data_vars
-                  if 'timesteps' not in data0[v].dims]
-    # Manually copy over variables not in `t`. If we don't do this,
-    # these vars get polluted with a superfluous `t` dimension
+    non_t_vars = [varname for varname, vardata in data0.data_vars.items()
+                  if 'timesteps' not in vardata.dims]
+    # Manually copy over variables not in `timesteps`. If we don't do this,
+    # these vars get polluted with a superfluous `timesteps` dimension
     for v in non_t_vars:
         data1[v] = data0[v]
     return data1
@@ -96,6 +95,23 @@ def _combine_datasets(data0, data1):
     ]
 
     return data_new
+
+
+def _drop_timestep_vars(data, timesteps):
+    timeseries_data = data.copy(deep=True)
+    # Save all coordinates, to ensure they can be added back in after clustering
+    data_coords = data.copy().coords
+    del data_coords['timesteps']
+
+    if timesteps is not None:
+        timeseries_data = timeseries_data.loc[{'timesteps': timesteps}]
+
+    timeseries_data = timeseries_data.drop([
+        varname for varname, vardata in data.data_vars.items()
+        if 'timesteps' not in vardata.dims
+    ])
+
+    return timeseries_data, data_coords
 
 
 def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
@@ -136,20 +152,11 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
     daily_timesteps = get_daily_timesteps(data, check_uniformity=True)
     timesteps_per_day = len(daily_timesteps)
 
-    # Save all coordinates, to ensure they can be added back in after clustering
-    data_coords = data.copy().coords
-    del data_coords['timesteps']
-    # Only apply clustering function on subset of masked timesteps
-    if timesteps is None:
-        data_to_cluster = data
-    else:
-        data_to_cluster = data.loc[{'timesteps': timesteps}]
+    # get a copy of the dataset with only timeseries variables,
+    # and get all coordinates of the original dataset, to reinstate later
+    data_to_cluster, data_coords = _drop_timestep_vars(data, timesteps)
 
-    # remove all variables that are not indexed over time
-    data_to_cluster = data_to_cluster.drop([
-        i for i in data.variables
-        if 'timesteps' not in data[i].dims or 'timestep_' in i
-    ])
+    data_to_cluster = data_to_cluster.drop(['timestep_weights', 'timestep_resolution'])
 
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
@@ -213,17 +220,17 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
         storage_inter_cluster=storage_inter_cluster
     )
 
-    if timesteps is None:
-        data_new = _copy_non_t_vars(data, data_new)
-    else:
-        # Drop timesteps from old data
+    # It's now safe to add the original coordinates back in (preserving all the
+    # loc_tech sets that aren't used to index a variable in the DataArray)
+    data_new.update(data_coords)
+
+    data_new = _copy_non_t_vars(data, data_new)
+
+    if timesteps is not None:
         data_new = _copy_non_t_vars(data, data_new)
         data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
         data_new = _copy_non_t_vars(data, data_new)
 
-    # It's now safe to add the original coordinates back in (preserving all the
-    # loc_tech sets that aren't used to index a variable in the DataArray)
-    data_new.update(data_coords)
 
     # Scale the new/combined data so that the mean for each (loc_tech, variable)
     # combination matches that from the original data
@@ -262,53 +269,52 @@ def resample(data, timesteps, resolution):
         E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute. Multiples allowed.
 
     """
-    data_new = data.copy(deep=True)
-    if timesteps is not None:
-        data_new = data_new.loc[{'timesteps': timesteps}]
+
+    def _resample(var, how):
+        return getattr(var.resample(timesteps=resolution, keep_attrs=True), how)('timesteps')
+
+    # get a copy of the dataset with only timeseries variables,
+    # and get all coordinates of the original dataset, to reinstate later
+    data_new, data_coords = _drop_timestep_vars(data, timesteps)
 
     # First create a new resampled dataset of the correct size by
     # using first-resample, which should be a quick way to achieve this
-    data_rs = data_new.resample(resolution, dim='timesteps', how='first')
 
-    timestep_vars = [v for v in data_new.data_vars
-                     if 'timesteps' in data_new[v].dims]
+    data_rs = _resample(data_new, how='first')
 
-    # Resampling adds spurious `time` dimension to non-time vars, correct that
-    for v in data_rs.data_vars:
-        if v not in timestep_vars:
-            data_rs[v] = data[v]
-
-    for var in timestep_vars:
+    for var in data_rs.data_vars:
         if var in ['timestep_resolution', 'resource']:
-            data_rs[var] = data_new[var].resample(
-                resolution, dim='timesteps', how='sum'
-            )
+            data_rs[var] = _resample(data_new[var], how='sum')
         else:
             try:
-                data_rs[var] = data_new[var].resample(
-                    resolution, dim='timesteps', how='mean'
-                )
+                data_rs[var] = _resample(data_new[var], how='mean')
             except TypeError:
                 # If the var has a datatype of strings, it can't be resampled
-                logger.error('Dropping {} because it has a {} data type when '
-                              'integer or float is expected for timeseries '
-                              'resampling.'.format(var, data_rs[var].dtype))
+                logger.error(
+                    'Dropping {} because it has a {} data type when integer or '
+                    'float is expected for timeseries resampling.'
+                    .format(var, data_rs[var].dtype)
+                )
                 data_rs = data_rs.drop(var)
 
     # Get rid of the filled-in NaN timestamps
     data_rs = data_rs.dropna(dim='timesteps', how='all')
 
-    # repopulate the attribute dictionary, as it will have been lost along the way
-    data_rs.attrs.update(data.attrs)
     data_rs.attrs['allow_operate_mode'] = 1  # Resampling still permits operational mode
+
+    # It's now safe to add the original coordinates back in (preserving all the
+    # loc_tech sets that aren't used to index a variable in the DataArray)
+    data_rs.update(data_coords)
+
+    data_rs = _copy_non_t_vars(data, data_rs)  # add back in non timeseries data
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
-        data_rs = _copy_non_t_vars(data, data_rs)
         data_rs = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_rs)
         data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
         data_rs.attrs['allow_operate_mode'] = 0
+
 
     return data_rs
 
