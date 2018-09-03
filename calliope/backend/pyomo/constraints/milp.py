@@ -392,18 +392,18 @@ def energy_capacity_max_purchase_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{purchase}
 
     """
-    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_techs=loc_tech)
-    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_techs=loc_tech)
-    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_techs=loc_tech)
+    _max = get_param(backend_model, 'energy_cap_max', loc_techs=loc_tech)
+    _equals = get_param(backend_model, 'energy_cap_equals', loc_techs=loc_tech)
+    _scale = get_param(backend_model, 'energy_cap_scale', loc_techs=loc_tech)
 
-    if po.value(energy_cap_equals):
+    if po.value(_equals) is not False and po.value(_equals) is not None:
         return backend_model.energy_cap[loc_tech] == (
-            energy_cap_equals * energy_cap_scale * backend_model.purchased[loc_tech]
+            _equals * _scale * backend_model.purchased[loc_tech]
         )
 
     else:
         return backend_model.energy_cap[loc_tech] <= (
-            energy_cap_max * energy_cap_scale * backend_model.purchased[loc_tech]
+            _max * _scale * backend_model.purchased[loc_tech]
         )
 
 
@@ -451,17 +451,17 @@ def storage_capacity_max_purchase_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{purchase, store}
 
     """
-    storage_cap_max = get_param(backend_model, 'storage_cap_max', loc_techs=loc_tech)
-    storage_cap_equals = get_param(backend_model, 'storage_cap_equals', loc_techs=loc_tech)
+    _max = get_param(backend_model, 'storage_cap_max', loc_techs=loc_tech)
+    _equals = get_param(backend_model, 'storage_cap_equals', loc_techs=loc_tech)
 
-    if po.value(storage_cap_equals):
+    if po.value(_equals) is not False and po.value(_equals) is not None:
         return backend_model.storage_cap[loc_tech] == (
-            storage_cap_equals * backend_model.purchased[loc_tech]
+            _equals * backend_model.purchased[loc_tech]
         )
 
-    elif po.value(storage_cap_max):
+    elif po.value(_max):
         return backend_model.storage_cap[loc_tech] <= (
-            storage_cap_max * backend_model.purchased[loc_tech]
+            _max * backend_model.purchased[loc_tech]
         )
 
     else:
@@ -592,7 +592,7 @@ def unit_capacity_systemwide_constraint_rule(backend_model, tech):
     max_systemwide = get_param(backend_model, 'units_max_systemwide', techs=tech)
     equals_systemwide = get_param(backend_model, 'units_equals_systemwide', techs=tech)
 
-    if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
+    if np.isinf(po.value(max_systemwide)) and (equals_systemwide is None or equals_systemwide is False):
         return po.Constraint.NoConstraint
     elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
         raise ValueError(
@@ -608,7 +608,7 @@ def unit_capacity_systemwide_constraint_rule(backend_model, tech):
         if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_purchase')
     )
 
-    if equals_systemwide:
+    if po.value(equals_systemwide) is not False and po.value(equals_systemwide) is not None:
         return sum_expr_units + sum_expr_purchase == equals_systemwide * multiplier
     else:
         return sum_expr_units + sum_expr_purchase <= max_systemwide * multiplier

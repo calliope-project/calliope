@@ -290,7 +290,7 @@ class Model(object):
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1
-        if scenario is not None:
+        if scenario is not None and len(results.variables) > 0:
             results = reorganise_dataset_dimensions(
                 results.loc[{'scenarios': scenario}].expand_dims('scenarios')
             )
