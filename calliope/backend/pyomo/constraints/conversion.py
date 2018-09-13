@@ -104,7 +104,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, scenario,
 
     if po.value(cost_om_con):
         cost_con = (cost_om_con * weight * -1 *
-                    backend_model.carrier_con[loc_tech_carrier_in, timestep])
+                    backend_model.carrier_con[loc_tech_carrier_in, scenario, timestep])
     else:
         cost_con = 0
 
