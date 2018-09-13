@@ -1,4 +1,4 @@
-|badge_gitter| |badge_travis| |badge_appveyor| |badge_rtd| |badge_coveralls| |badge_pypi| |badge_conda| |badge_license|
+|badge_gitter| |badge_travis| |badge_appveyor| |badge_rtd| |badge_coveralls| |badge_pypi| |badge_conda| |badge_joss|
 
 -----
 
@@ -64,11 +64,9 @@ See changes made in recent versions in the `changelog <https://github.com/callio
 Citing Calliope
 ---------------
 
-If you use Calliope, please cite the following paper:
+If you use Calliope for academic work please cite:
 
-Stefan Pfenninger (2017). Dealing with multiple decades of hourly wind and PV time series in energy models: a comparison of methods to reduce time resolution and the planning implications of inter-annual variability. *Applied Energy*. `doi: 10.1016/j.apenergy.2017.03.051 <https://doi.org/10.1016/j.apenergy.2017.03.051>`_
-
-All Calliope releases are archived on Zenodo, and can be referred to by the overall concept DOI `10.5281/zenodo.593292 <https://doi.org/10.5281/zenodo.593292>`_. Each version also has its own specific DOI `listed on Zenodo <https://doi.org/10.5281/zenodo.593292>`_.
+Stefan Pfenninger and Bryn Pickering (2018). Calliope: a multi-scale energy systems modelling framework. *Journal of Open Source Software*, 3(29), 825. `doi: 10.21105/joss.00825 <https://doi.org/10.21105/joss.00825>`_
 
 License
 -------
@@ -120,3 +118,7 @@ limitations under the License.
 .. |badge_gitter|  image:: https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square
     :target: https://gitter.im/calliope-project/calliope
     :alt: Chat on Gitter
+
+.. |badge_joss|  image:: https://img.shields.io/badge/JOSS-10.21105/joss.00825-green.svg?style=flat-square
+    :target: https://doi.org/10.21105/joss.00825
+    :alt: JOSS DOI

@@ -1,3 +1,1 @@
-Please cite the following paper if you use Calliope in academic work:
-
-Stefan Pfenninger (2017). Dealing with multiple decades of hourly wind and PV time series in energy models: a comparison of methods to reduce time resolution and the planning implications of inter-annual variability. Applied Energy. https://doi.org/10.1016/j.apenergy.2017.03.051
+Stefan Pfenninger and Bryn Pickering (2018). Calliope: a multi-scale energy systems modelling framework. Journal of Open Source Software, 3(29), 825. https://doi.org/10.21105/joss.00825
