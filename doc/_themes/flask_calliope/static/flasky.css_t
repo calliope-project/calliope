@@ -538,7 +538,9 @@ a:hover tt {
         display: none;
     }
 
-
+    .github-corner {
+        display: none;
+    }
 
 }
 
