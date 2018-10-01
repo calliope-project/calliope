@@ -274,6 +274,18 @@ class TestModelRun:
         }
         build_model(override_dict=override7, override_groups='simple_supply,one_day')
 
+    def test_delete_interest_rate(self):
+        """
+        If only 'interest_rate' is given in the cost class for a technology, we
+        should be able to handle deleting it without leaving an empty cost key.
+        """
+
+        override1 = {
+            'techs.test_supply_elec.costs.monetary.interest_rate': 0.1
+        }
+        m = build_model(override_dict=override1, override_groups='simple_supply,one_day')
+        assert 'loc_techs_cost' not in m._model_data.dims
+
 
 class TestChecks:
 
