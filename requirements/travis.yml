@@ -6,5 +6,5 @@ channels:
 
 dependencies:
     - coincbc  # COIN-OR CBC LP and MILP solver for testing
-    - python-coveralls
-    - pylint=1.6
+    - coverage >= 4.4
+    - coveralls
