@@ -10,6 +10,8 @@ Release History
 
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
 
+|changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
+
 |fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
 
 |fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.
@@ -17,6 +19,8 @@ Release History
 |fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
 
 |fixed| Permit groups in override files to specify imports of other YAML files
+
+|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on.
 
 0.6.2 (2018-06-04)
 ------------------
