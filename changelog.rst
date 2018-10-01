@@ -18,6 +18,8 @@ Release History
 
 |fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
 
+|fixed| Permit groups in override files to specify imports of other YAML files
+
 |fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on.
 
 0.6.2 (2018-06-04)

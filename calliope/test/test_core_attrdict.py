@@ -475,3 +475,49 @@ class TestAttrDict:
         d_flat = d.as_dict_flat(filtered=False)
         assert d_flat['__dict_comments__'] == {}
         assert 'doo' in d_flat['baz.bar.foo.__dict_comments__']
+
+    def test_import_must_be_list(self):
+        yaml_string = """
+            import: 'somefile.yaml'
+        """
+        with pytest.raises(ValueError) as excinfo:
+            AttrDict.from_yaml_string(yaml_string, resolve_imports=True)
+        assert check_error_or_warning(
+            excinfo, '`import` must be a list.')
+
+    def test_do_not_resolve_imports(self):
+        yaml_string = """
+            import: ['somefile.yaml']
+        """
+        d = AttrDict.from_yaml_string(yaml_string, resolve_imports=False)
+        # Should not raise an error about a missing file, as we ask for
+        # imports not to be resolved
+        assert d['import'] == ['somefile.yaml']
+
+    def test_nested_import(self, yaml_file):
+        with tempfile.TemporaryDirectory() as tempdir:
+            imported_file = os.path.join(tempdir, 'test_import.yaml')
+            imported_yaml = """
+                somekey: 1
+                anotherkey: 2
+            """
+            with open(imported_file, 'w') as f:
+                f.write(imported_yaml)
+
+            yaml_string = """
+                foobar:
+                    import:
+                        - {}
+                foo:
+                    bar: 1
+                    baz: 2
+                    3:
+                        4: 5
+            """.format(imported_file)
+
+            d = AttrDict.from_yaml_string(
+                yaml_string, resolve_imports='foobar'
+            )
+
+        assert 'foobar.somekey' in d.keys_nested()
+        assert d.get_key('foobar.anotherkey') == 2

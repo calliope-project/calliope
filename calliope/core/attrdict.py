@@ -181,18 +181,35 @@ class AttrDict(dict):
 
     @classmethod
     def _resolve_imports(cls, loaded, resolve_imports, base_path=None):
-        if resolve_imports and 'import' in loaded:
-            for k in loaded['import']:
-                if base_path:
-                    path = relative_path(base_path, k)
-                else:
-                    path = k
-                imported = cls.from_yaml(path)
-                # loaded is added to imported (i.e. it takes precedence)
-                imported.union(loaded)
-                loaded = imported
-            # 'import' key no longer needed, so we drop it
-            loaded.pop('import', None)
+        if isinstance(resolve_imports, bool) and resolve_imports is True and 'import' in loaded:
+            loaded_dict = loaded
+        elif isinstance(resolve_imports, str) and resolve_imports + '.import' in loaded.keys_nested():
+            loaded_dict = loaded.get_key(resolve_imports)
+        else:  # Return right away if no importing to be done
+            return loaded
+
+        # If we end up here, we have something to import
+        imports = loaded_dict.get_key('import')
+        if not isinstance(imports, list):
+            raise ValueError('`import` must be a list.')
+
+        for k in imports:
+            if base_path:
+                path = relative_path(base_path, k)
+            else:
+                path = k
+            imported = cls.from_yaml(path)
+            # loaded is added to imported (i.e. it takes precedence)
+            imported.union(loaded_dict)
+            loaded_dict = imported
+        # 'import' key itself is no longer needed
+        loaded_dict.del_key('import')
+
+        if isinstance(resolve_imports, str):
+            loaded.set_key(resolve_imports, loaded_dict)
+        else:
+            loaded = loaded_dict
+
         return loaded
 
     @classmethod
@@ -201,8 +218,11 @@ class AttrDict(dict):
         Returns an AttrDict initialized from the given path or
         file object ``f``, which must point to a YAML file.
 
-        If ``resolve_imports`` is True, ``import:`` statements are
+        If ``resolve_imports`` is True, top-level ``import:`` statements are
         resolved recursively, else they are treated like any other key.
+
+        If ``resolve_imports`` is a string, such as ``foobar``, import
+        statements underneath that key are resolved, i.e. ``foobar.import:``.
 
         When resolving import statements, anything defined locally
         overrides definitions in the imported file.

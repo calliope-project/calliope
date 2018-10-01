@@ -87,7 +87,12 @@ def combine_overrides(override_file_path, override_groups):
     override = AttrDict()
     for group in overrides:
         try:
-            override_group_from_file = AttrDict.from_yaml(override_file_path)[group]
+            # Seting resolve_imports to group ensures that import
+            # keys within the override group are processed, i.e. that
+            # my_override.import: ['foo.yaml', 'bar.yaml'] works
+            override_group_from_file = AttrDict.from_yaml(
+                override_file_path, resolve_imports=group
+            )[group]
         except KeyError:
             raise exceptions.ModelError(
                 'Override group `{}` does not exist in file `{}`.'.format(
