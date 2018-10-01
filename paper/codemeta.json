@@ -17,12 +17,12 @@
   ],
   "identifier": "https://doi.org/10.5281/zenodo.593292",
   "codeRepository": "https://github.com/calliope-project/calliope",
-  "datePublished": "2018-04-30",
-  "dateModified": "2018-04-30",
-  "dateCreated": "2018-04-30",
+  "datePublished": "2018-06-04",
+  "dateModified": "2018-06-04",
+  "dateCreated": "2018-06-04",
   "description": "A multi-scale energy systems modelling framework",
   "keywords": "python, energy, optimisation, energy-system",
   "license": "Apache 2.0",
   "title": "Calliope",
-  "version": "0.6.0"
+  "version": "0.6.2"
 }
