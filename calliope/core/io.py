@@ -59,13 +59,9 @@ def save_netcdf(model_data, path):
 
     # Convert `object` dtype coords to string
     # FIXME: remove once xarray issue https://github.com/pydata/xarray/issues/2404 is resolved
-    obj_vars = [
-        k for k, v in model_data.coords.items()
-        if v.dtype == 'O'
-    ]
-
-    for k in obj_vars:
-        model_data[k] = model_data[k].astype(str)
+    for k, v in model_data.coords.items():
+        if v.dtype == 'O':
+            model_data[k] = v.astype('<U{}'.format(max([len(i.item()) for i in v])))
 
     try:
         model_data.to_netcdf(path, format='netCDF4', encoding=encoding)
