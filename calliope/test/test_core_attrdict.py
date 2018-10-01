@@ -476,6 +476,15 @@ class TestAttrDict:
         assert d_flat['__dict_comments__'] == {}
         assert 'doo' in d_flat['baz.bar.foo.__dict_comments__']
 
+    def test_import_must_be_list(self):
+        yaml_string = """
+            import: 'somefile.yaml'
+        """
+        with pytest.raises(ValueError) as excinfo:
+            AttrDict.from_yaml_string(yaml_string)
+        assert check_error_or_warning(
+            excinfo, '`imports` must be a list.')
+
     def test_nested_import(self, yaml_file):
         with tempfile.TemporaryDirectory() as tempdir:
             imported_file = os.path.join(tempdir, 'test_import.yaml')

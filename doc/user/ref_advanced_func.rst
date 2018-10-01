@@ -507,6 +507,40 @@ Running this will create two files:
 
 In all cases, results are saved into the same directory as the script, with filenames of the form ``out_{run_number}_{groups}.nc`` (model results) and ``plots_{run_number}_{groups}.html`` (HTML plots), where ``{run_number}`` is the run number and ``{groups}`` is the specified set of groups. On a cluster, log files are saved to files with names starting with ``log_`` in the same directory.
 
+.. _imports_in_override_groups:
+
+Imports in override groups
+--------------------------
+
+When using override groups (see :ref:`building_overrides`), it is possible to have ``import`` statements within override groups for more flexibility. The following example illustrates this:
+
+``overrides.yaml``:
+
+.. code-block:: yaml
+
+    some_override:
+        techs:
+            some_tech.constraints.energy_cap_max: 10
+        import: [additional_definitions.yaml]
+
+``additional_definitions.yaml``:
+
+.. code-block:: yaml
+
+    techs:
+        some_other_tech.constraints.energy_eff: 0.1
+
+This is equivalent to the following override group:
+
+``overrides.yaml``:
+
+.. code-block:: yaml
+
+    some_override:
+        techs:
+            some_tech.constraints.energy_cap_max: 10
+            some_other_tech.constraints.energy_eff: 0.1
+
 Binary and mixed-integer models
 -------------------------------
 

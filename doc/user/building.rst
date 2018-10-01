@@ -241,4 +241,7 @@ Each group is given by a name (above, ``run1`` and ``run2``) and any number of m
 
 One or several override groups can be applied when running a model, as described in :doc:`running`. They can also be used to generate scripts that run a Calliope model with slightly changed settings many times, either sequentially, or in parallel on a high-performance cluster.
 
-.. seealso:: :ref:`generating_scripts`
+.. note::
+    Override groups can also import other files. This can be useful if many override groups are defined which share large parts of model configuration, such as different levels of interconnection between model zones. See :ref:`imports_in_override_groups` for details.
+
+.. seealso:: :ref:`generating_scripts`, :ref:`imports_in_override_groups`
