@@ -1,15 +1,24 @@
 import pytest  # pylint: disable=unused-import
-import calliope
-import logging
+
 import datetime
+import os
+import logging
+import tempfile
+
+import calliope
+
+from calliope.test.common.util import check_error_or_warning
 
 from calliope.core.util import dataset
-
 from calliope.core.util.tools import \
     memoize, \
     memoize_instancemethod
-
 from calliope.core.util.logging import log_time
+from calliope.core.util.generate_runs import generate_runs
+
+
+F_MODEL = os.path.join(os.path.dirname(__file__), 'common', 'test_model', 'model_minimal.yaml')
+F_OVERRIDE = os.path.join(os.path.dirname(__file__), 'common', 'test_model', 'overrides.yaml')
 
 
 class TestDataset:
@@ -90,3 +99,74 @@ class TestLogging:
 
         # TODO: capture logging output and check that time_since_start is in the string
         log_time(timings, 'test', comment=None, level='info', time_since_start=True)
+
+
+class TestGenerateRuns:
+    def test_generate_runs_groups_file_combinations(self):
+        groups_str = """
+        combinations: [
+            ['a', 'b', 'c'],
+            ['1', '2']
+        ]
+        """
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            groups_file = os.path.join(tempdir, 'groups.yaml')
+            with open(groups_file, 'w') as f:
+                f.write(groups_str)
+            runs = generate_runs(
+                F_MODEL, F_OVERRIDE, groups_file=groups_file
+            )
+
+        run_results = [
+            'overrides.yaml:a,1 --save_netcdf out_1_a,1.nc --save_plots plots_1_a,1.html',
+            'overrides.yaml:a,2 --save_netcdf out_2_a,2.nc --save_plots plots_2_a,2.html',
+            'overrides.yaml:b,1 --save_netcdf out_3_b,1.nc --save_plots plots_3_b,1.html',
+            'overrides.yaml:b,2 --save_netcdf out_4_b,2.nc --save_plots plots_4_b,2.html',
+            'overrides.yaml:c,1 --save_netcdf out_5_c,1.nc --save_plots plots_5_c,1.html',
+            'overrides.yaml:c,2 --save_netcdf out_6_c,2.nc --save_plots plots_6_c,2.html'
+        ]
+
+        for i in range(len(runs)):
+            assert run_results[i] in runs[i]
+
+    def test_generate_runs_groups_file_groups(self):
+        groups_str = """
+        groups: [
+            'a,1',
+            'b,1',
+        ]
+        """
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            groups_file = os.path.join(tempdir, 'groups.yaml')
+            with open(groups_file, 'w') as f:
+                f.write(groups_str)
+            runs = generate_runs(
+                F_MODEL, F_OVERRIDE, groups_file=groups_file
+            )
+
+        run_results = [
+            'overrides.yaml:a,1 --save_netcdf out_1_a,1.nc --save_plots plots_1_a,1.html',
+            'overrides.yaml:b,1 --save_netcdf out_2_b,1.nc --save_plots plots_2_b,1.html'
+        ]
+
+        for i in range(len(runs)):
+            assert run_results[i] in runs[i]
+
+    def test_generate_runs_groups_file_combinations_and_groups(self):
+        groups_str = """
+        combinations: [['a', 'b', 'c'], ['1', '2']]
+        groups: ['a,1', 'a,2', 'b,1']
+        """
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            groups_file = os.path.join(tempdir, 'groups.yaml')
+            with open(groups_file, 'w') as f:
+                f.write(groups_str)
+            with pytest.raises(ValueError) as excinfo:
+                generate_runs(
+                    F_MODEL, F_OVERRIDE, groups_file=groups_file
+                )
+
+        assert check_error_or_warning(excinfo, 'Only one of `combinations` or `groups` may be defined in the groups_file.')

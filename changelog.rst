@@ -8,6 +8,8 @@ Release History
 
 |new| Addition of ``flows`` plotting function. This shows production and how much they exchange with other locations. It also provides a slider in order to see flows' evolution through time.
 
+|new| Added ``--groups_file`` option to the ``calliope generate_runs`` command, allowing the flexible specification of a large number of scenario combinations. See the documentaion (:doc:`user/ref_advanced_func`) for details.
+
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
 
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.

@@ -478,7 +478,26 @@ This functionality can be used together with the ``calliope generate_runs`` comm
 * the name of the script to create
 * ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, ``bsub`` creates a submission script for a LSF-based high-performance cluster, and ``sbatch`` creates a submission script for a SLURM-based high-performance cluster.
 * ``--override_file``: The file that specifies override groups.
-* ``--groups``: A semicolon-separated list of override groups to generate scripts for, for example, ``run1;run2``. A comma is used to group override groups together into a single model -- for example, ``run1,high_costs;run1,low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
+
+To select the groups to use, one of two options can be used:
+
+1. ``--groups_file``: A YAML file that specifies the combinations of groups to use or a list of groups to use. It must either contain a single ``groups`` key which specifies a list of override groups, for examle, ``groups: ['run1', 'run2']``, or a single ``combinations`` key which specifies a combination of groups (see below for an example).
+2. ``--groups``: A semicolon-separated list of override groups to generate scripts for, for example, ``run1;run2``.
+
+A comma is used to group override groups together into a single model -- for example, ``run1,high_costs;run1,low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
+
+An example of a YAML file specifying combinations:
+
+.. code-block:: yaml
+
+    combinations: [
+        # Cost scenarios
+        ['base_cost', 'low_cost', 'high_cost'],
+        # Weather scenarios
+        ['base_weather', 'good_weather', 'bad_weather']
+    ]
+
+This example would result in the runs like this: ``base_cost,base_weather;base_cost,good_weather; ...``
 
 A fully-formed command generating a Windows batch script to run a model four times with each of the override groups "run1", "run2", "run3", and "run4":
 
