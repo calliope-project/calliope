@@ -60,7 +60,7 @@ setup(
         "pyomo >= 5.4, < 5.5",
         "ruamel.yaml <= 0.15",
         "scikit-learn >= 0.19.1",
-        "xarray >= 0.10.0, < 0.11",
+        "xarray >= 0.10.8, < 0.11",
     ],
     entry_points={
         'console_scripts': [
