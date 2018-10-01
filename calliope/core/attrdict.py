@@ -181,7 +181,7 @@ class AttrDict(dict):
 
     @classmethod
     def _resolve_imports(cls, loaded, resolve_imports, base_path=None):
-        if isinstance(resolve_imports, bool) and 'import' in loaded:
+        if isinstance(resolve_imports, bool) and resolve_imports is True and 'import' in loaded:
             loaded_dict = loaded
         elif isinstance(resolve_imports, str) and resolve_imports + '.import' in loaded.keys_nested():
             loaded_dict = loaded.get_key(resolve_imports)
@@ -191,7 +191,7 @@ class AttrDict(dict):
         # If we end up here, we have something to import
         imports = loaded_dict.get_key('import')
         if not isinstance(imports, list):
-            raise ValueError('`imports` must be a list.')
+            raise ValueError('`import` must be a list.')
 
         for k in imports:
             if base_path:

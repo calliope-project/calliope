@@ -481,9 +481,18 @@ class TestAttrDict:
             import: 'somefile.yaml'
         """
         with pytest.raises(ValueError) as excinfo:
-            AttrDict.from_yaml_string(yaml_string)
+            AttrDict.from_yaml_string(yaml_string, resolve_imports=True)
         assert check_error_or_warning(
-            excinfo, '`imports` must be a list.')
+            excinfo, '`import` must be a list.')
+
+    def test_do_not_resolve_imports(self):
+        yaml_string = """
+            import: ['somefile.yaml']
+        """
+        d = AttrDict.from_yaml_string(yaml_string, resolve_imports=False)
+        # Should not raise an error about a missing file, as we ask for
+        # imports not to be resolved
+        assert d['import'] == ['somefile.yaml']
 
     def test_nested_import(self, yaml_file):
         with tempfile.TemporaryDirectory() as tempdir:
