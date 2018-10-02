@@ -294,3 +294,16 @@ def generate_runs(
 
     with format_exceptions(debug, pdb):
         generate(kind, **kwargs)
+
+
+@cli.command()
+@click.argument('args', nargs=-1)
+@_debug
+@_quiet
+@_pdb
+def convert(args, debug, quiet, pdb):
+    print(
+        'The ``calliope convert`` command has been removed in v0.6.3.\n'
+        'If you need to convert a 0.5.x model, use Calliope v0.6.2 for '
+        'the conversion and then upgrade to the newest version.'
+    )
