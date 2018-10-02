@@ -88,15 +88,10 @@ class TestNationalScaleExampleModelSenseChecks:
 
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
-        override_file = os.path.join(
-            calliope.examples._PATHS['national_scale'],
-            'overrides.yaml'
-        )
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model = calliope.examples.national_scale(
                 override_file=override_file + ':check_feasibility',
                 override_dict={'run.cyclic_storage': False}
-            )
 
         expected_warnings = [
             'Objective function argument `cost_class` given but not used by objective function `check_feasibility`',
@@ -118,14 +113,10 @@ class TestNationalScaleExampleModelInfeasibility:
 
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
-        override_file = os.path.join(
-            calliope.examples._PATHS['national_scale'],
-            'overrides.yaml'
-        )
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model = calliope.examples.national_scale(
                 override_dict={'model.subset_time': ['2005-01-01', '2005-01-03']},
-                override_file=override_file + ':operate')
+                scenario='operate')
             model.run()
 
         expected_warnings = [

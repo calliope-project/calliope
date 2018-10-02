@@ -2,13 +2,11 @@ from pytest import approx
 
 import calliope
 
-_OVERRIDE_FILE = calliope.examples._PATHS['national_scale'] + '/overrides.yaml'
-
 
 class TestNationalScaleObjectives:
     def test_nationalscale_minimize_emissions(self):
         model = calliope.examples.national_scale(
-            override_file=_OVERRIDE_FILE + ':minimize_emissions_costs',
+            scenario='minimize_emissions_costs',
             override_dict={
                 'model.subset_time': '2005-01-01'
             }
@@ -24,7 +22,7 @@ class TestNationalScaleObjectives:
 
     def test_nationalscale_maximize_utility(self):
         model = calliope.examples.national_scale(
-            override_file=_OVERRIDE_FILE + ':maximize_utility_costs',
+            scenario='maximize_utility_costs',
             override_dict={
                 'model.subset_time': '2005-01-01'
             }

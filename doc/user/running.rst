@@ -26,7 +26,7 @@ The ``calliope run`` command takes the following options:
 * ``--save_csv={directory name}``: Save results as a set of CSV files to the given directory. This can be handy if the modeler needs results in a simple text-based format for further processing with a tool like Microsoft Excel.
 * ``--save_plots={filename.html}``: Save interactive plots to the given HTML file (see :doc:`analysing` for further details on the plotting functionality).
 * ``--debug``: Run in debug mode, which prints more internal information, and is useful when troubleshooting failing models.
-* ``--override_file={filename.yaml}:{override_groups}``: Specify override groups to apply to the model (see below for more information).
+* ``--scenario={scenario}`` and ``--override_dict={yaml_string}``: Specify a scenario, or one or several overrides, to apply to the model, or apply specific overrides from a YAML string (see below for more information)
 * ``--help``: Show all available options.
 
 Multiple options can be specified, for example, saving NetCDF, CSV, and HTML plots simultaneously::
@@ -35,14 +35,28 @@ Multiple options can be specified, for example, saving NetCDF, CSV, and HTML plo
 
 .. Warning:: Unlike in versions prior to 0.6.0, the command-line tool in Calliope 0.6.0 and upward does not save results by default -- the modeller must specify one of the ``-save`` options.
 
-Overrides
----------
+.. _applying_scenario_or_override:
 
-Assuming we have specified an override group called ``milp`` in a file called ``overrides.yaml``, we can apply it to our model with::
+Applying a scenario or override
+-------------------------------
 
-   $ calliope run testmodel/model.yaml --override_file=overrides.yaml:milp --save_netcdf=results.nc
+The ``--scenario`` can be used in three different ways:
 
-Multiple overrides from the YAML file can be applied at once. For example, we may want to change some of the costs through an additional override group called ``high_cost_scenario``. We could then use ``--override_file=overrides.yaml:milp,high_cost_scenario`` to apply both overrides simultaneously.
+* It can be given the name of a scenario defined in the model configuration, as in ``--scenario=my_scenario``
+* It can be given the name of a single override defined in the model configuration, as in ``--scenario=my_override``
+* It can be given a comma-separated string of several overrides defined in the model configuration, as in ``--scenario=my_override_1,my_override_2``
+
+In the latter two cases, the given override(s) is used to implicitly create a "scenario" on-the-fly when running the model. This allows quick experimentation with different overrides without explicitly defining a scenario combining them.
+
+Assuming we have specified an override called ``milp`` in our model configuration, we can apply it to our model with::
+
+   $ calliope run testmodel/model.yaml --scenario=milp --save_netcdf=results.nc
+
+Note that if both a scenario and an override with the same name, such as ``milp`` in the above example, exist, Calliope will raise an error, as it will not be clear which one the user wishes to apply.
+
+It is also possible to use the `--override_dict` option to pass a YAML string that will be applied after anything applied through ``--scenario``::
+
+    $ calliope run testmodel/model.yaml --override_dict="{'model.subset_time': ['2005-01-01', '2005-01-31']}" --save_netcdf=results.nc
 
 .. seealso::
 
@@ -74,21 +88,18 @@ After the model has been solved, an xarray Dataset containing results (``model.r
 .. seealso::
     An example of interactive running in a Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the :doc:`tutorials <tutorials>`. You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
-Overrides
----------
+Scenarios and overrides
+-----------------------
 
-There are two ways to apply override groups interactively:
+There are two ways to override a base model when running interactively, analogously to the use of the command-line tool (see :ref:`applying_scenario_or_override` above):
 
-1. By setting the `override_file` argument analogously to use in the command-line tool, e.g.:
+1. By setting the `scenario` argument, e.g.:
 
     .. code-block:: python
 
-        model = calliope.Model(
-            'model.yaml',
-            override_file='overrides.yaml:milp'
-        )
+        model = calliope.Model('model.yaml', scenario='milp')
 
-2. By passing the `override_dict` argument, which is a Python dictionary or :class:`~calliope.AttrDict` of overrides:
+2. By passing the `override_dict` argument, which is a Python dictionary, an :class:`~calliope.AttrDict`, or a YAML string of overrides:
 
     .. code-block:: python
 

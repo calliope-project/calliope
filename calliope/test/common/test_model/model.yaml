@@ -1,3 +1,6 @@
+import:
+    - scenarios.yaml
+
 model:
     name: Test model
 

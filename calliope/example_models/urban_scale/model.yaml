@@ -1,6 +1,7 @@
 import:  # Import other files from paths relative to this file, or absolute paths
     - 'model_config/techs.yaml'
     - 'model_config/locations.yaml'
+    - 'scenarios.yaml'
 
 model:
     name: Urban-scale example model

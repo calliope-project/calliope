@@ -4,13 +4,11 @@ from pytest import approx
 import calliope
 from calliope.test.common.util import build_test_model as build_model
 
-_OVERRIDE_FILE = calliope.examples._PATHS['national_scale'] + '/overrides.yaml'
-
 
 class TestNationalScaleExampleModelSenseChecks:
     def test_group_share_prod_min(self):
         model = calliope.examples.national_scale(
-            override_file=_OVERRIDE_FILE + ':cold_fusion,group_share_cold_fusion_prod'
+            scenario='cold_fusion_with_production_share'
         )
         model.run()
 
@@ -29,7 +27,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_group_share_cap_max(self):
         model = calliope.examples.national_scale(
-            override_file=_OVERRIDE_FILE + ':cold_fusion,group_share_cold_fusion_cap'
+            scenario='cold_fusion_with_capacity_share'
         )
         model.run()
 
@@ -58,7 +56,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_reserve_margin(self):
         model = calliope.examples.national_scale(
-            override_file=_OVERRIDE_FILE + ':reserve_margin'
+            scenario='reserve_margin'
         )
 
         model.run()
@@ -93,7 +91,7 @@ class TestModelSettings:
         # Feasible case, unmet_demand/unused_supply is deleted
         model_10 = build_model(
             override_dict=override(True, 10),
-            override_groups='investment_costs'
+            scenario='investment_costs'
         )
         model_10.run()
         for i in ['unmet_demand', 'unused_supply']:
@@ -103,7 +101,7 @@ class TestModelSettings:
         # Infeasible case, unmet_demand is required
         model_5 = build_model(
             override_dict=override(True, 5),
-            override_groups='investment_costs'
+            scenario='investment_costs'
         )
         model_5.run()
         assert hasattr(model_5._backend_model, 'unmet_demand')
@@ -114,7 +112,7 @@ class TestModelSettings:
         # Infeasible case, unused_supply is required
         model_15 = build_model(
             override_dict=override(True, 15),
-            override_groups='investment_costs'
+            scenario='investment_costs'
         )
         model_15.run()
         assert hasattr(model_15._backend_model, 'unmet_demand')
@@ -136,7 +134,7 @@ class TestModelSettings:
         # too much supply
         model = build_model(
             override_dict=override(False, 15),
-            override_groups='investment_costs'
+            scenario='investment_costs'
         )
         model.run()
         assert not hasattr(model._backend_model, 'unmet_demand')
@@ -146,7 +144,7 @@ class TestModelSettings:
         # too little supply
         model = build_model(
             override_dict=override(False, 5),
-            override_groups='investment_costs'
+            scenario='investment_costs'
         )
         model.run()
         assert not model._model_data.attrs['termination_condition'] == 'optimal'
