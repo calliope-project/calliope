@@ -14,18 +14,13 @@ defaults = AttrDict.from_yaml(_defaults_files['defaults'])
 defaults_model = AttrDict.from_yaml(_defaults_files['model'])
 
 
-def build_test_model(override_dict=None, override_groups=None):
+def build_test_model(override_dict=None, scenario=None):
     this_path = os.path.dirname(__file__)
     model_location = os.path.join(this_path, 'test_model', 'model.yaml')
-    override_location = os.path.join(this_path, 'test_model', 'overrides.yaml')
-    if override_groups:
-        override_file = override_location + ':' + override_groups
-    else:
-        override_file = None
 
     return calliope.Model(
         model_location, override_dict=override_dict,
-        override_file=override_file
+        scenario=scenario
     )
 
 

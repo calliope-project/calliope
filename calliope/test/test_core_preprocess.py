@@ -38,6 +38,37 @@ class TestModelRun:
         # test as dict
         calliope.Model(model_dict.as_dict())
 
+    def test_invalid_scenarios(self):
+        """
+        Test that invalid scenario definition raises appropriate error
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            scenarios:
+                scenario_1:
+                    techs.foo.bar: 1
+            """
+        )
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override, scenario='scenario_1')
+
+        assert check_error_or_warning(error, 'Scenario definition must be string of comma-separated overrides.')
+
+    def test_scenario_name_overlaps_overrides(self):
+        """
+        Test that a scenario name cannot be a combination of override names
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            scenarios:
+                'simple_supply,group_share_energy_cap_min': 'foobar'
+            """
+        )
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override, scenario='simple_supply,group_share_energy_cap_min')
+
+        assert check_error_or_warning(error, 'Manually defined scenario cannot be a combination of override names.')
+
     def test_undefined_carriers(self):
         """
         Test that user has input either carrier or carrier_in/_out for each tech
@@ -56,7 +87,7 @@ class TestModelRun:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_conversion_plus_primary_carriers(self):
         """
@@ -66,24 +97,24 @@ class TestModelRun:
         override2 = {'techs.test_conversion_plus.essentials.primary_carrier_in': 'coal'}
         override3 = {'techs.test_conversion_plus.essentials.primary_carrier_out': 'coal'}
 
-        model = build_model({}, override_groups='simple_conversion_plus,two_hours')
+        model = build_model({}, scenario='simple_conversion_plus,two_hours')
         assert model._model_run.techs.test_conversion_plus.essentials.get_key(
             'primary_carrier_in', None
         ) == 'gas'
 
         # should fail: multiple carriers in, but no primary_carrier_in assigned
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override1, override_groups='simple_conversion_plus,two_hours')
+            build_model(override1, scenario='simple_conversion_plus,two_hours')
         assert check_error_or_warning(error, 'Primary_carrier_in must be assigned')
 
         # should fail: primary_carrier_in not one of the carriers_in
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override2, override_groups='simple_conversion_plus,two_hours')
+            build_model(override2, scenario='simple_conversion_plus,two_hours')
         assert check_error_or_warning(error, 'Primary_carrier_in `coal` not one')
 
         # should fail: primary_carrier_out not one of the carriers_out
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override3, override_groups='simple_conversion_plus,two_hours')
+            build_model(override3, scenario='simple_conversion_plus,two_hours')
         assert check_error_or_warning(error, 'Primary_carrier_out `coal` not one')
 
     def test_incorrect_subset_time(self):
@@ -99,27 +130,27 @@ class TestModelRun:
 
         # should fail: one string in list
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override(['2005-01']), override_groups='simple_supply')
+            build_model(override_dict=override(['2005-01']), scenario='simple_supply')
 
         # should fail: three strings in list
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override(['2005-01-01', '2005-01-02', '2005-01-03']), override_groups='simple_supply')
+            build_model(override_dict=override(['2005-01-01', '2005-01-02', '2005-01-03']), scenario='simple_supply')
 
         # should pass: two string in list as slice
-        model = build_model(override_dict=override(['2005-01-01', '2005-01-07']), override_groups='simple_supply')
+        model = build_model(override_dict=override(['2005-01-01', '2005-01-07']), scenario='simple_supply')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-01-07 23:00:00', freq='H'))
 
         # should pass: one integer/string
-        model = build_model(override_dict=override('2005-01'), override_groups='simple_supply')
+        model = build_model(override_dict=override('2005-01'), scenario='simple_supply')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-01-31 23:00:00', freq='H'))
 
         # should fail: time subset out of range of input data
         with pytest.raises(KeyError):
-            build_model(override_dict=override('2005-03'), override_groups='simple_supply')
+            build_model(override_dict=override('2005-03'), scenario='simple_supply')
 
         # should fail: time subset out of range of input data
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override(['2005-02-01', '2005-02-05']), override_groups='simple_supply')
+            build_model(override_dict=override(['2005-02-01', '2005-02-05']), scenario='simple_supply')
 
     def test_incorrect_date_format(self):
         """
@@ -133,7 +164,7 @@ class TestModelRun:
             'techs.test_demand_heat.constraints.resource': 'file=demand_heat_diff_dateformat.csv',
             'techs.test_demand_elec.constraints.resource': 'file=demand_heat_diff_dateformat.csv'
         }
-        model = build_model(override_dict=override1, override_groups='simple_conversion')
+        model = build_model(override_dict=override1, scenario='simple_conversion')
         assert all(model.inputs.timesteps.to_index() == pd.date_range('2005-01', '2005-02-01 23:00:00', freq='H'))
 
         # should fail: wrong dateformat input for one file
@@ -142,7 +173,7 @@ class TestModelRun:
         }
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, override_groups='simple_conversion')
+            build_model(override_dict=override2, scenario='simple_conversion')
 
         # should fail: wrong dateformat input for all files
         override3 = {
@@ -150,7 +181,7 @@ class TestModelRun:
         }
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override3, scenario='simple_supply')
 
         # should fail: one value wrong in file
         override4 = {
@@ -158,7 +189,7 @@ class TestModelRun:
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override4, override_groups='simple_conversion')
+            build_model(override_dict=override4, scenario='simple_conversion')
 
     def test_inconsistent_time_indeces(self):
         """
@@ -171,10 +202,10 @@ class TestModelRun:
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='simple_conversion')
+            build_model(override_dict=override1, scenario='simple_conversion')
 
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
-        build_model(override_dict=override1, override_groups='simple_conversion,one_day')
+        build_model(override_dict=override1, scenario='simple_conversion,one_day')
 
     def test_empty_key_on_explode(self):
         """
@@ -197,7 +228,7 @@ class TestModelRun:
         }
 
         with pytest.raises(KeyError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_calculate_depreciation(self):
         """
@@ -211,7 +242,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, scenario='simple_supply,one_day')
         assert check_error_or_warning(
             error, 'Must specify constraints.lifetime and costs.monetary.interest_rate'
         )
@@ -221,7 +252,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override2, override_groups='simple_supply,one_day')
+            build_model(override_dict=override2, scenario='simple_supply,one_day')
         assert check_error_or_warning(
             error, 'Must specify constraints.lifetime and costs.monetary.interest_rate'
         )
@@ -231,7 +262,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override3, override_groups='simple_supply,one_day')
+            build_model(override_dict=override3, scenario='simple_supply,one_day')
         assert check_error_or_warning(
             error, 'Must specify constraints.lifetime and costs.monetary.interest_rate'
         )
@@ -242,7 +273,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override4, override_groups='simple_supply,one_day')
+            build_model(override_dict=override4, scenario='simple_supply,one_day')
         assert check_error_or_warning(excinfo, '`monetary` interest rate of zero')
 
         override5 = {
@@ -251,7 +282,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override5, override_groups='simple_supply,one_day')
+            build_model(override_dict=override5, scenario='simple_supply,one_day')
         assert check_error_or_warning(
             excinfo, 'No investment monetary cost will be incurred for `test_supply_elec`'
         )
@@ -262,7 +293,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override6, override_groups='simple_supply,one_day')
+            build_model(override_dict=override6, scenario='simple_supply,one_day')
         assert check_error_or_warning(
             excinfo, 'No investment monetary cost will be incurred for `test_supply_elec`'
         )
@@ -272,7 +303,7 @@ class TestModelRun:
             'techs.test_supply_elec.costs.monetary.interest_rate': 0.1,
             'techs.test_supply_elec.costs.monetary.energy_cap': 10
         }
-        build_model(override_dict=override7, override_groups='simple_supply,one_day')
+        build_model(override_dict=override7, scenario='simple_supply,one_day')
 
     def test_delete_interest_rate(self):
         """
@@ -283,7 +314,7 @@ class TestModelRun:
         override1 = {
             'techs.test_supply_elec.costs.monetary.interest_rate': 0.1
         }
-        m = build_model(override_dict=override1, override_groups='simple_supply,one_day')
+        m = build_model(override_dict=override1, scenario='simple_supply,one_day')
         assert 'loc_techs_cost' not in m._model_data.dims
 
 
@@ -297,7 +328,7 @@ class TestChecks:
         override = {'nonsensical_key': 'random_string'}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override, override_groups='simple_supply')
+            build_model(override_dict=override, scenario='simple_supply')
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised top-level configuration item: nonsensical_key'
@@ -311,7 +342,7 @@ class TestChecks:
         override1 = {'model.nonsensical_key': 'random_string'}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override1, override_groups='simple_supply')
+            build_model(override_dict=override1, scenario='simple_supply')
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised setting in model configuration: nonsensical_key'
@@ -320,7 +351,7 @@ class TestChecks:
         override2 = {'run.nonsensical_key': 'random_string'}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override2, override_groups='simple_supply')
+            build_model(override_dict=override2, scenario='simple_supply')
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised setting in run configuration: nonsensical_key'
@@ -330,7 +361,7 @@ class TestChecks:
         override3 = {'model.solver': 'glpk'}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override3, override_groups='simple_supply')
+            build_model(override_dict=override3, scenario='simple_supply')
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised setting in model configuration: solver'
@@ -340,7 +371,7 @@ class TestChecks:
         override4 = {'run.subset_time': None}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override4, override_groups='simple_supply')
+            build_model(override_dict=override4, scenario='simple_supply')
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised setting in run configuration: subset_time'
@@ -356,7 +387,7 @@ class TestChecks:
         }
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override5, override_groups='simple_supply')
+            build_model(override_dict=override5, scenario='simple_supply')
 
         assert check_error_or_warning(
             excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
@@ -370,7 +401,7 @@ class TestChecks:
         override = {'model.calliope_version': 0.1}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
         assert check_error_or_warning(excinfo, 'Model configuration specifies calliope_version')
 
@@ -387,7 +418,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, scenario='simple_supply,one_day')
 
         override2 = AttrDict.from_yaml_string(
             """
@@ -396,7 +427,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, override_groups='simple_conversion_plus,one_day')
+            build_model(override_dict=override2, scenario='simple_conversion_plus,one_day')
 
     def test_name_overlap(self):
         """
@@ -420,7 +451,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='one_day')
+            build_model(override_dict=override, scenario='one_day')
 
     def test_unspecified_parent(self):
         """
@@ -441,7 +472,7 @@ class TestChecks:
         )
 
         with pytest.raises(KeyError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_tech_as_parent(self):
         """
@@ -463,7 +494,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, scenario='simple_supply,one_day')
         check_error_or_warning(error, 'tech `test_supply_tech_parent` has another tech as a parent')
 
         override2 = AttrDict.from_yaml_string(
@@ -483,7 +514,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override2, override_groups='simple_supply,one_day')
+            build_model(override_dict=override2, scenario='simple_supply,one_day')
         check_error_or_warning(error, 'tech_group `test_supply_group` has a tech as a parent')
 
     def test_resource_as_carrier(self):
@@ -503,7 +534,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, scenario='simple_supply,one_day')
 
         override2 = AttrDict.from_yaml_string(
             """
@@ -518,7 +549,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, override_groups='simple_supply,one_day')
+            build_model(override_dict=override2, scenario='simple_supply,one_day')
 
     def test_missing_constraints(self):
         """
@@ -537,7 +568,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_missing_required_constraints(self):
         """
@@ -559,7 +590,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override_supply1, scenario='simple_supply,one_day')
 
         # should pass: giving one of ['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']
         override_supply2 = AttrDict.from_yaml_string(
@@ -574,7 +605,7 @@ class TestChecks:
             locations.1.techs.supply_missing_constraint:
             """
         )
-        build_model(override_dict=override_supply2, override_groups='simple_supply,one_day')
+        build_model(override_dict=override_supply2, scenario='simple_supply,one_day')
 
     def test_defining_non_allowed_constraints(self):
         """
@@ -589,7 +620,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override_supply1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override_supply1, scenario='simple_supply,one_day')
 
     def test_defining_non_allowed_costs(self):
         """
@@ -604,7 +635,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
         # should fail: om_prod not allowed for demand tech
         override = AttrDict.from_yaml_string(
@@ -613,7 +644,7 @@ class TestChecks:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_exporting_unspecified_carrier(self):
         """
@@ -630,17 +661,17 @@ class TestChecks:
 
         # should fail: exporting `heat` not allowed for electricity supply tech
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override_supply('heat'), override_groups='simple_supply,one_day')
+            build_model(override_dict=override_supply('heat'), scenario='simple_supply,one_day')
 
         # should fail: exporting `random` not allowed for conversion_plus tech
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override_converison_plus('random'), override_groups='simple_conversion_plus,one_day')
+            build_model(override_dict=override_converison_plus('random'), scenario='simple_conversion_plus,one_day')
 
         # should pass: exporting electricity for supply tech
-        build_model(override_dict=override_supply('electricity'), override_groups='simple_supply,one_day')
+        build_model(override_dict=override_supply('electricity'), scenario='simple_supply,one_day')
 
         # should pass: exporting heat for conversion tech
-        build_model(override_dict=override_converison_plus('heat'), override_groups='simple_conversion_plus,one_day')
+        build_model(override_dict=override_converison_plus('heat'), scenario='simple_conversion_plus,one_day')
 
 
     def test_allowed_time_varying_constraints(self):
@@ -666,7 +697,7 @@ class TestChecks:
         # should fail: Cannot have `file=` on the following constraints
         for param in allowed_constraints_no_file:
             with pytest.raises(exceptions.ModelError) as errors:
-                build_model(override_dict=override(param), override_groups='simple_storage,one_day')
+                build_model(override_dict=override(param), scenario='simple_storage,one_day')
             assert check_error_or_warning(
                 errors,
                 'Cannot load `{}` from file for configuration'.format(param)
@@ -674,7 +705,7 @@ class TestChecks:
 
         # should pass: can have `file=` on the following constraints
         for param in allowed_constraints_file:
-            build_model(override_dict=override(param), override_groups='simple_storage,one_day')
+            build_model(override_dict=override(param), scenario='simple_storage,one_day')
 
     def test_incorrect_location_coordinates(self):
         """
@@ -699,29 +730,29 @@ class TestChecks:
 
         # should fail: cannot have locations in one place and not in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, None), override_groups='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, None), scenario='simple_storage,one_day')
         check_error_or_warning(error, "Either all or no locations must have `coordinates` defined")
 
         # should fail: cannot have cartesian coordinates in one place and geographic in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, geographic1), override_groups='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_storage,one_day')
         check_error_or_warning(error, "All locations must use the same coordinate format")
 
         # should fail: cannot use a non-cartesian or non-geographic coordinate system
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(fictional0, fictional1), override_groups='simple_storage,one_day')
+            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_storage,one_day')
         check_error_or_warning(error, "Unidentified coordinate system")
 
         # should fail: coordinates must be given as key:value pairs
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override([0, 1], [1, 1]), override_groups='simple_storage,one_day')
+            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_storage,one_day')
         check_error_or_warning(error, "Coordinates must be given in the format")
 
         # should pass: cartesian coordinates in both places
-        build_model(override_dict=_override(cartesian0, cartesian1), override_groups='simple_storage,one_day')
+        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_storage,one_day')
 
         # should pass: geographic coordinates in both places
-        build_model(override_dict=_override(geographic0, geographic1), override_groups='simple_storage,one_day')
+        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_storage,one_day')
 
     def test_one_way(self):
         """
@@ -753,7 +784,7 @@ class TestChecks:
         override1 = AttrDict.from_yaml_string("techs.test_supply_elec.constraints.units_max: 4")
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, override_groups='simple_supply,one_day')
+            build_model(override_dict=override1, scenario='simple_supply,one_day')
 
         # should pass: energy_cap_per_unit given
         override2 = AttrDict.from_yaml_string("""
@@ -762,7 +793,7 @@ class TestChecks:
                         energy_cap_per_unit: 5
             """)
 
-        build_model(override_dict=override2, override_groups='simple_supply,one_day')
+        build_model(override_dict=override2, scenario='simple_supply,one_day')
 
     def test_force_resource_ignored(self):
         """
@@ -776,7 +807,7 @@ class TestChecks:
         }
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
         assert check_error_or_warning(
             excinfo,
@@ -830,7 +861,7 @@ class TestChecks:
         }
 
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override, override_groups='simple_supply')
+            build_model(override, scenario='simple_supply')
 
         assert check_error_or_warning(error, 'cannot have cyclic storage')
 
@@ -869,7 +900,7 @@ class TestDataset:
             "techs.test_supply_plus.costs.monetary.resource_cap: -10"
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply_plus,one_day')
+            build_model(override_dict=override, scenario='simple_supply_plus,one_day')
 
         # should fail: storage_cap cost is negative, storage_cap_max is infinite
         override = AttrDict.from_yaml_string(
@@ -880,7 +911,7 @@ class TestDataset:
             """
         )
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_storage,one_day')
+            build_model(override_dict=override, scenario='simple_storage,one_day')
 
     # FIXME: What are the *required* arrays?
     def test_missing_array(self):
@@ -904,7 +935,7 @@ class TestDataset:
         }
 
         with pytest.raises(exceptions.ModelError) as error_info:
-            build_model(override_dict=override, override_groups='simple_supply_plus,one_day')
+            build_model(override_dict=override, scenario='simple_supply_plus,one_day')
 
         assert check_error_or_warning(error_info, 'Ensure all entries are numeric')
 
@@ -918,7 +949,7 @@ class TestDataset:
         }
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, override_groups='simple_supply,one_day')
+            build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_empty_dimensions(self):
         """
@@ -926,7 +957,7 @@ class TestDataset:
         so check that we have successfully removed them here.
         """
 
-        model = build_model(override_groups='simple_conversion_plus,one_day')
+        model = build_model(scenario='simple_conversion_plus,one_day')
 
         assert 'distance' not in model._model_data.data_vars
         assert 'lookup_remotes' not in model._model_data.data_vars
@@ -936,7 +967,7 @@ class TestDataset:
         On masking times, operate mode will no longer be allowed
         """
 
-        model = build_model(override_groups='simple_supply,one_day')
+        model = build_model(scenario='simple_supply,one_day')
         assert model.model_data.attrs['allow_operate_mode'] == 1
 
         model1 = calliope.examples.time_masking()
@@ -948,7 +979,7 @@ class TestDataset:
             'techs.test_demand_elec.constraints.resource': 'file=demand_elec_15mins.csv',
         }
 
-        model = build_model(override, override_groups='simple_supply,one_day')
+        model = build_model(override, scenario='simple_supply,one_day')
 
         assert model.inputs.timestep_resolution.to_pandas().unique() == [0.25]
 
@@ -967,7 +998,7 @@ class TestDataset:
             }
         }
 
-        model = build_model(override, override_groups='simple_supply')
+        model = build_model(override, scenario='simple_supply')
 
         assert 'clusters' in model._model_data.dims
         assert 'lookup_cluster_first_timestep' in model._model_data.data_vars
@@ -996,7 +1027,7 @@ class TestDataset:
             }
         }
 
-        model = build_model(override, override_groups='simple_supply')
+        model = build_model(override, scenario='simple_supply')
 
         assert 'clusters' in model._model_data.dims
         assert 'datesteps' not in model._model_data.dims
@@ -1011,11 +1042,11 @@ class TestDataset:
         Test and warning to be removed in v0.6.3-dev
         """
         with pytest.warns(FutureWarning) as warning:
-            build_model({}, override_groups='simple_storage')
+            build_model({}, scenario='simple_storage')
         assert check_error_or_warning(warning, 'From v0.6.3, cyclic storage will default to True.')
 
 
-class TestUtil():
+class TestUtil:
     def test_concat_iterable_ensures_same_length_iterables(self):
         """
         All iterables must have the same length

@@ -3,18 +3,14 @@
 --------------------------------------------
 Tutorial 3: Mixed Integer Linear Programming
 --------------------------------------------
-This example is based on the :ref:`urban scale example model <urban_scale_example>`, but with an override. An override file exists in which binary and integer decision variables are triggered, creating a MILP model, rather than the conventional Calliope LP model.
-
-.. Warning::
-
-   Integer and Binary variables are still experimental and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behaviour.
+This example is based on the :ref:`urban scale example model <urban_scale_example>`, but with an override. In the model's ``scenarios.yaml`` file overrides are defined which trigger binary and integer decision variables, creating a MILP model, rather than a conventional LP model.
 
 Units
 =====
 
 The capacity of a technology is usually a continuous decision variable, which can be within the range of 0 and ``energy_cap_max`` (the maximum capacity of a technology). In this model, we introduce a unit limit on the CHP instead:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/overrides.yaml
+.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
    :dedent: 8
    :start-after: # chp-start
@@ -27,7 +23,7 @@ Purchase cost
 
 The boiler does not have a unit limit, it still utilises the continuous variable for its capacity. However, we have introduced a ``purchase`` cost:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/overrides.yaml
+.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
    :dedent: 8
    :start-after: # boiler-start

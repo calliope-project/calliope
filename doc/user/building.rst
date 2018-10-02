@@ -42,7 +42,7 @@ It makes sense to collect all files belonging to a model inside a single model d
             - solar_resource.csv
             - electricity_demand.csv
         - model.yaml
-        - overrides.yaml
+        - scenarios.yaml
 
 In the above example, the files ``model.yaml``, ``locations.yaml`` and ``techs.yaml`` together are the model definition. This definition could be in one file, but it is more readable when split into multiple. We use the above layout in the example models and in our research!
 
@@ -226,24 +226,39 @@ Further optional settings, including debug settings, can be specified in the run
 
 .. _building_overrides:
 
----------
-Overrides
----------
+-----------------------
+Scenarios and overrides
+-----------------------
 
-To make it easier to run a given model multiple times with slightly changed settings or constraints, for example, varying the cost of a key technology, it is possible to define and apply "override groups" in a separate file (in the above example, ``overrides.yaml``):
+To make it easier to run a given model multiple times with slightly changed settings or constraints, for example, varying the cost of a key technology, it is possible to define and apply scenarios and overrides. "Overrides" are blocks of YAML that specify configurations that expand or override parts of the base model. "Scenarios" are combinations of any number of such overrides. Both are specified at the top level of the model configuration, as in this example ``model.yaml`` file:
 
 .. code-block:: yaml
 
-    run1:
-        model.subset_time: ['2005-01-01', '2005-01-31']
-    run2:
-        model.subset_time: ['2005-02-01', '2005-02-31']
+    scenarios:
+        high_cost_2005: "high_cost,year2005"
+        high_cost_2006: "high_cost,year2006"
 
-Each group is given by a name (above, ``run1`` and ``run2``) and any number of model settings -- anything in the model configuration can be overridden by an override group. In the above example, the two runs specify different time subsets, so would run an otherwise identical model over two different periods of time series data.
+    overrides:
+        high_cost:
+            techs.onshore_wind.costs.monetary.energy_cap: 2000
+        year2005:
+            model.subset_time: ['2005-01-01', '2005-12-31']
+        year2006:
+            model.subset_time: ['2006-01-01', '2006-12-31']
 
-One or several override groups can be applied when running a model, as described in :doc:`running`. They can also be used to generate scripts that run a Calliope model with slightly changed settings many times, either sequentially, or in parallel on a high-performance cluster.
+    model:
+        ...
+
+    run:
+        ...
+
+Each override is given by a name (e.g. ``high_cost``) and any number of model settings -- anything in the model configuration can be overridden by an override. In the above example, one override defines higher costs for an ``onshore_wind`` tech while the two other overrides specify different time subsets, so would run an otherwise identical model over two different periods of time series data.
+
+One or several overrides can be applied when running a model, as described in :doc:`running`. Overrides can also be combined into scenarios to make applying them at run-time easier. Scenarios consist of a name and a string of comma-delimited override names which together form that scenario.
+
+Scenarios and overrides can be used to generate scripts that run a single Calliope model many times, either sequentially, or in parallel on a high-performance cluster (see :ref:`generating_scripts`).
 
 .. note::
-    Override groups can also import other files. This can be useful if many override groups are defined which share large parts of model configuration, such as different levels of interconnection between model zones. See :ref:`imports_in_override_groups` for details.
+    Overrides can also import other files. This can be useful if many overrides are defined which share large parts of model configuration, such as different levels of interconnection between model zones. See :ref:`imports_in_override_groups` for details.
 
 .. seealso:: :ref:`generating_scripts`, :ref:`imports_in_override_groups`

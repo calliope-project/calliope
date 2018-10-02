@@ -48,10 +48,7 @@ def model_plots(
 
 
 def generate_all_plots():
-    override_path = os.path.join(os.path.dirname(calliope.__file__), 'example_models', 'urban_scale')
-    model_urban = calliope.examples.urban_scale(
-        override_file=os.path.join(override_path, 'overrides.yaml:mapbox_ready')
-    )
+    model_urban = calliope.examples.urban_scale(scenario='mapbox_ready')
     model_urban.run()
     model_plots(model_urban)
     model_plots(

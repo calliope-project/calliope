@@ -12,11 +12,11 @@ lint :
 test :
 	py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
 	# Run simple profiling job to spot major performance regressions
-	calliope run calliope/example_models/national_scale/model.yaml --override_file=calliope/example_models/national_scale/overrides.yaml:profiling --profile
+	calliope run calliope/example_models/national_scale/model.yaml --scenario=profiling --profile
 
 .PHONY : profile
 profile :
-	mprof run -C -T 1.0 --python calliope run calliope/example_models/national_scale/model.yaml --override_file=calliope/example_models/national_scale/overrides.yaml:profiling --profile --profile_filename=$(PROFILE_FILE).profile
+	mprof run -C -T 1.0 --python calliope run calliope/example_models/national_scale/model.yaml --scenario=profiling --profile --profile_filename=$(PROFILE_FILE).profile
 	pyprof2calltree -i $(PROFILE_FILE).profile -o $(PROFILE_FILE).calltree
 	gprof2dot -f callgrind $(PROFILE_FILE).calltree | dot -Tsvg -o $(PROFILE_FILE).callgraph.svg
 
