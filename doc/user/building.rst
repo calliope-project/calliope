@@ -169,7 +169,7 @@ The ``locations`` section specifies each location:
                     constraints:
                         energy_cap_max: 30000
 
-Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific constraints. If given, location-specific constraints supersede any model-wide constraints a technology defines in the ``techs`` section for that location.
+Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific parameters (constraints or costs). If given, location-specific parameters supersede any model-wide constraints a technology defines in the ``techs`` section for that location.
 
 The ``links`` section specifies possible transmission links between locations in the form ``location1,location2``:
 
@@ -181,8 +181,10 @@ The ``links`` section specifies possible transmission links between locations in
                 ac_transmission:
                     constraints:
                         energy_cap_max: 10000
+                    costs.monetary:
+                        energy_cap: 100
 
-In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given model-wide constraints such as costs. As in the case of locations, the ``links`` section can specify per-link constraints that supersede any model-wide constraints.
+In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given model-wide constraints or costs. As in the case of locations, the ``links`` section can specify per-link parameters (constraints or costs) that supersede any model-wide parameters.
 
 The modeller can also specify a distance for each link, and use per-distance constraints and costs for transmission technologies.
 

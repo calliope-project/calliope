@@ -173,6 +173,39 @@ Solver choice
 
 The open-source solvers (GLPK and CBC) are slower than the commercial solvers. If you are an academic researcher, it is recommended to acquire a free licence for Gurobi or CPLEX to very quickly improve solution times. GLPK in particular is slow when solving MILP models. CBC is an improvement, but can still be several orders of magnitude slower at reaching a solution than Gurobi or CPLEX.
 
+We tested solution time for various solver choices on our example models, extended to run over a full year (8760 hours). These runs took place on the University of Cambridge high performance computing cluster, with a maximum run time of 5 hours. As can be seen, CBC is far superior to GLPK. If introducing binary constraints, although CBC is an improvement on GLPK, access to a commercial solver is preferable.
+
+**National scale example model size**
+
+- Variables : 420526 [Nneg: 219026, Free: 105140, Other: 96360]
+- Linear constraints : 586972 [Less: 315373, Greater: 10, Equal: 271589]
+
+**MILP urban scale example model**
+
+- Variables: 586996 [Nneg: 332913, Free: 78880, Binary: 2, General Integer: 8761, Other: 166440]
+- Linear constraints: 788502 [Less: 394226, Greater: 21, Equal: 394255]
+
+**Solution time**
+
++-------------------+----------------+
+|Solver             |Solution time   |
+|                   +--------+-------+
+|                   |National|Urban  |
++===================+========+=======+
+|GLPK               |4:35:40 |>5hrs  |
++-------------------+--------+-------+
+|CBC                |0:04:45 |0:52:13|
++-------------------+--------+-------+
+|Gurobi (1 thread)  |0:02:08 |0:03:21|
++-------------------+--------+-------+
+|CPLEX (1 thread)   |0:04:55 |0:05:56|
++-------------------+--------+-------+
+|Gurobi (4 thread)  |0:02:27 |0:03:08|
++-------------------+--------+-------+
+|CPLEX (4 thread)   |0:02:16 |0:03:26|
++-------------------+--------+-------+
+
+
 .. seealso:: :ref:`solver_options`
 
 Rerunning a model

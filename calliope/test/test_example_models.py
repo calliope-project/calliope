@@ -172,7 +172,8 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
     def model_runner(self, solver='glpk', solver_io=None,
-                     how='closest', storage_inter_cluster=False, cyclic=False):
+                     how='closest', storage_inter_cluster=False,
+                     cyclic=False, storage=True):
         override = {
             'model.time.function_options': {
                 'how': how, 'storage_inter_cluster': storage_inter_cluster
@@ -180,6 +181,11 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             'run.solver': solver,
             'run.cyclic_storage': cyclic
         }
+        if storage is False:
+            override.update({
+                'techs.battery.exists': False,
+                'techs.csp.exists': False
+            })
 
         if solver_io:
             override['run.solver_io'] = solver_io
@@ -235,21 +241,6 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.074167, abs=0.000001)
 
-    def example_tester_storage_inter_cluster_cyclic(self):
-        model = self.model_runner(storage_inter_cluster=True, cyclic=True)
-        # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(18838244.087694)
-
-        # Full 1-hourly model run: 0.296973
-        assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.133111, abs=0.000001)
-
-        # Full 1-hourly model run: 0.064362
-        assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.071411, abs=0.000001)
-
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         self.example_tester_closest()
 
@@ -272,6 +263,31 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
     def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.example_tester_storage_inter_cluster()
+
+    def test_storage_inter_cluster_cyclic(self):
+        model = self.model_runner(storage_inter_cluster=True, cyclic=True)
+        # Full 1-hourly model run: 22312488.670967
+        assert float(model.results.cost.sum()) == approx(18838244.087694)
+
+        # Full 1-hourly model run: 0.296973
+        assert float(
+            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.133111, abs=0.000001)
+
+        # Full 1-hourly model run: 0.064362
+        assert float(
+            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+        ) == approx(0.071411, abs=0.000001)
+
+    def test_storage_inter_cluster_no_storage(self):
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            self.model_runner(storage_inter_cluster=True, storage=False)
+
+        expected_warnings = [
+            'Tech battery was removed by setting ``exists: False``',
+            'Tech csp was removed by setting ``exists: False``'
+        ]
+        assert check_error_or_warning(excinfo, expected_warnings)
 
 
 class TestUrbanScaleExampleModelSenseChecks:

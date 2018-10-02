@@ -14,7 +14,9 @@ Release History
 
 |new| Addition of ``calliope generate_scenarios`` command to allow building autmating the construction of scenarios which consist of many combinations of overrides.
 
-|new| Add ``--override_dict`` option to ``calliope run`` and ``calliope generate_runs`` commands
+|new| Added ``--override_dict`` option to ``calliope run`` and ``calliope generate_runs`` commands
+
+|new| Added solver performance comparison in the docs. CPLEX & Gurobi are, as expected, the best options. If going open-source & free, CBC is much quicker than GLPK!
 
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
 
@@ -26,7 +28,9 @@ Release History
 
 |fixed| Permit groups in override files to specify imports of other YAML files
 
-|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on.
+|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on. Fixes issue #113.
+
+|fixed| If time clustering with 'storage_inter_cluster' = True, but no storage technologies, the model doesn't break. Fixes issue #142.
 
 0.6.2 (2018-06-04)
 ------------------
