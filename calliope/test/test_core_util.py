@@ -2,6 +2,7 @@ import pytest  # pylint: disable=unused-import
 import calliope
 import logging
 import datetime
+import os
 
 from calliope.core.util import dataset
 
@@ -10,6 +11,18 @@ from calliope.core.util.tools import \
     memoize_instancemethod
 
 from calliope.core.util.logging import log_time
+from calliope.core.util.generate_runs import generate_runs
+
+
+_MODEL_NATIONAL = os.path.join(
+    os.path.dirname(__file__), '..',
+    'example_models', 'national_scale', 'model.yaml'
+)
+
+_MODEL_URBAN = os.path.join(
+    os.path.dirname(__file__), '..',
+    'example_models', 'urban_scale', 'model.yaml'
+)
 
 
 class TestDataset:
@@ -90,3 +103,35 @@ class TestLogging:
 
         # TODO: capture logging output and check that time_since_start is in the string
         log_time(timings, 'test', comment=None, level='info', time_since_start=True)
+
+
+class TestGenerateRuns:
+    def test_generate_runs_scenarios(self):
+        runs = generate_runs(
+            _MODEL_NATIONAL,
+            scenarios='time_resampling;profiling;time_clustering'
+        )
+        assert len(runs) == 3
+        assert runs[0].endswith(
+            '--scenario time_resampling --save_netcdf out_1_time_resampling.nc --save_plots plots_1_time_resampling.html'
+        )
+
+    def test_generate_runs_scenarios_none_with_scenarios(self):
+        runs = generate_runs(
+            _MODEL_NATIONAL,
+            scenarios=None
+        )
+        assert len(runs) == 2
+        assert runs[0].endswith(
+            '--scenario cold_fusion_with_capacity_share --save_netcdf out_1_cold_fusion_with_capacity_share.nc --save_plots plots_1_cold_fusion_with_capacity_share.html'
+        )
+
+    def test_generate_runs_scenarios_none_with_overrides(self):
+        runs = generate_runs(
+            _MODEL_URBAN,
+            scenarios=None,
+        )
+        assert len(runs) == 4
+        assert runs[0].endswith(
+            '--scenario mapbox_ready --save_netcdf out_1_mapbox_ready.nc --save_plots plots_1_mapbox_ready.html'
+        )

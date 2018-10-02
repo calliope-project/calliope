@@ -18,6 +18,7 @@ import pandas as pd
 import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
+from calliope.core.util.logging import logger
 from calliope.core.util.tools import relative_path
 from calliope.core.preprocess import locations, sets, checks, constraint_sets, util
 
@@ -48,11 +49,12 @@ def model_run_from_yaml(model_file, scenario=None, override_dict=None):
     config = AttrDict.from_yaml(model_file)
     config.config_path = model_file
 
-    config_with_overrides, debug_comments = apply_overrides(
+    config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
 
-    return generate_model_run(config_with_overrides, debug_comments)
+    return generate_model_run(
+        config_with_overrides, debug_comments, overrides, scenario)
 
 
 def model_run_from_dict(config_dict, scenario=None, override_dict=None):
@@ -76,11 +78,12 @@ def model_run_from_dict(config_dict, scenario=None, override_dict=None):
         config = config_dict
     config.config_path = None
 
-    config_with_overrides, debug_comments = apply_overrides(
+    config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
 
-    return generate_model_run(config_with_overrides, debug_comments)
+    return generate_model_run(
+        config_with_overrides, debug_comments, overrides, scenario)
 
 
 def combine_overrides(config_model, overrides):
@@ -152,12 +155,29 @@ def apply_overrides(config, scenario=None, override_dict=None):
 
     if scenario:
         scenarios = config_model.get('scenarios', {})
-        overrides = scenarios.get(scenario, str(scenario).split(','))
 
-        if not isinstance(overrides, list):
-            raise exceptions.ModelError(
-                'Scenario definition must be a list of overrides, '
-                'not: {}'.format(overrides)
+        if scenario in scenarios:
+            # Manually defined scenario names cannot be the same as single
+            # overrides or any combination of semicolon-delimited overrides
+            if all([i in config_model.get('overrides', {})
+                    for i in scenario.split(',')]):
+                raise exceptions.ModelError(
+                    'Manually defined scenario cannot be a combination of override names.'
+                )
+            if not isinstance(scenarios[scenario], str):
+                raise exceptions.ModelError(
+                    'Scenario definition must be string of comma-separated overrides.'
+                )
+            overrides = scenarios[scenario].split(',')
+            logger.info(
+                'Using scenario `{}` leading to the application of '
+                'overrides `{}`.'.format(scenario, scenarios[scenario])
+            )
+        else:
+            overrides = str(scenario).split(',')
+            logger.info(
+                'Applying overrides overrides `{}` without a '
+                'specific scenario name.'.format(scenario)
             )
 
         overrides_from_scenario = combine_overrides(config_model, overrides)
@@ -172,6 +192,8 @@ def apply_overrides(config, scenario=None, override_dict=None):
             debug_comments.set_key(
                 '{}'.format(k),
                 'Applied from override')
+    else:
+        overrides = []
 
     # Second pass of applying override dict after applying scenarios,
     # so that scenario-based overrides are overridden by override_dict!
@@ -184,7 +206,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
                 '{}'.format(k),
                 'Overridden via override dictionary.')
 
-    return config_model, debug_comments
+    return config_model, debug_comments, overrides, scenario
 
 
 def get_parents(tech_id, model_config):
@@ -463,7 +485,7 @@ def process_timeseries_data(config_model, model_run):
     return timeseries_data, first_index
 
 
-def generate_model_run(config, debug_comments):
+def generate_model_run(config, debug_comments, applied_overrides, scenario):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
@@ -475,6 +497,8 @@ def generate_model_run(config, debug_comments):
 
     """
     model_run = AttrDict()
+    model_run['scenario'] = scenario
+    model_run['applied_overrides'] = ';'.join(applied_overrides)
 
     # 1) Initial checks on model configuration
     warnings, errors = checks.check_initial(config)

@@ -29,7 +29,7 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 .. code-block:: text
 
     - model.yaml
-    - overrides.yaml
+    - scenarios.yaml
     + timeseries_data
         - csp_resource.csv
         - demand-1.csv
@@ -44,9 +44,9 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 .. literalinclude:: ../../calliope/example_models/national_scale/model.yaml
    :language: yaml
 
-``overrides.yaml``:
+``scenarios.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/overrides.yaml
+.. literalinclude:: ../../calliope/example_models/national_scale/scenarios.yaml
    :language: yaml
 
 ``techs.yaml``:
@@ -74,9 +74,9 @@ Model settings
 .. literalinclude:: ../../calliope/example_models/urban_scale/model.yaml
    :language: yaml
 
-``overrides.yaml``:
+``scenarios.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/overrides.yaml
+.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
 
 ``techs.yaml``:

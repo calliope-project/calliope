@@ -112,7 +112,7 @@ To solve a model, point to the `model.yaml` file, e.g.: ``calliope run path/to/m
 Overrides
 =========
 
-Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a separate YAML file, called for example `overrides.yaml`.
+Overrides are no longer applied within `run.yaml` (or even `model.yaml`). Instead, overrides are grouped and placed into a separate YAML file, called for example `overrides.yaml` (as of version 0.6.3, they are in a top-level ``overrides`` key in the model configuration, so the informatiom below no longer applies to v0.6.3 and later).
 
 Each group defines any number of overrides to the technology, location, link, model, or run definitions. One or several such groups can then be applied when solving a model, e.g.:
 

@@ -449,6 +449,8 @@ def add_attributes(model_run):
             del attr_dict[k]
 
     attr_dict['calliope_version'] = __version__
+    attr_dict['applied_overrides'] = model_run['applied_overrides']
+    attr_dict['scenario'] = model_run['scenario']
 
     default_tech_dict = checks.defaults.default_tech.as_dict()
     default_location_dict = checks.defaults.default_location.as_dict()

@@ -35,10 +35,11 @@ def generate_runs(
     """
     if scenarios is None:
         model = Model(model_file, override_dict=override_dict)
-        if 'scenarios' in model:
-            runs = model.scenarios.keys()
+        config = model._debug_data['config_initial']
+        if 'scenarios' in config:
+            runs = config.scenarios.keys()
         else:
-            runs = model.overrides.keys()
+            runs = config.overrides.keys()
     else:
         runs = scenarios.split(';')
 
@@ -47,15 +48,21 @@ def generate_runs(
     for i, run in enumerate(runs):
         cmd = (
             'calliope run {model} --scenario {scenario} '
-            '--override_dict {override_dict} --save_netcdf out_{i}_{scenario}.nc '
-            '--save_plots plots_{i}_{scenario}.html {other_options}'
+            '--save_netcdf out_{i}_{scenario}.nc '
+            '--save_plots plots_{i}_{scenario}.html'
         ).format(
             i=i + 1,
             model=model_file,
             scenario=run,
             override_dict=override_dict,
-            other_options=additional_args
         ).strip()
+
+        if override_dict:
+            cmd = cmd + ' --override_dict="{}"'.format(override_dict)
+
+        if additional_args:
+            cmd = cmd + ' ' + additional_args
+
         commands.append(cmd)
 
     return commands

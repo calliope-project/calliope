@@ -52,7 +52,23 @@ class TestModelRun:
         with pytest.raises(exceptions.ModelError) as error:
             build_model(override_dict=override, scenario='scenario_1')
 
-        assert check_error_or_warning(error, 'Scenario definition must be a list of overrides')
+        assert check_error_or_warning(error, 'Scenario definition must be string of comma-separated overrides.')
+
+
+    def test_scenario_name_overlaps_overrides(self):
+        """
+        Test that a scenario name cannot be a combination of override names
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            scenarios:
+                scenario_1: 'simple_supply,simple_supply_plus'
+            """
+        )
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override, scenario='scenario_1')
+
+        assert check_error_or_warning(error, 'Manually defined scenario cannot be a combination of override names.')
 
     def test_undefined_carriers(self):
         """

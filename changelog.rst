@@ -10,6 +10,12 @@ Release History
 
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
 
+|new| Addition of ``scenarios``, which complement and expand the existing ``overrides`` functionality.  ``overrides`` becomes a top-level key in model configuration, instead of a separate file. The ``calliope run`` command has a new ``--scenario`` option which replaces --override_file, while ``calliope generate_runs`` has a new ``--scenarios`` option which replaces --override_file and takes a semicolon-separated list of scenario names or of group1,group2 combinations. To convert existing overrides to the new approach, simply group them under a top-level ``overrides`` key and import your existing overrides file from the main model configuration file with ``import: ['your_overrides_file.yaml']``.
+
+|new| Addition of ``calliope generate_scenarios`` command to allow building autmating the construction of scenarios which consist of many combinations of overrides.
+
+|new| Add ``--override_dict`` option to ``calliope run`` and ``calliope generate_runs`` commands
+
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
 
 |fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
