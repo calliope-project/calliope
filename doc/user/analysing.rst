@@ -101,6 +101,21 @@ Without the token, the plot will fall back on simple country-level outlines. In 
 
 .. note:: If the coordinates were in `x` and `y`, not `lat` and `lon`, the transmission trace would be given on a cartesian plot.
 
+Plotting flows
+--------------
+
+The following example shows an energy flow plot of the built-in urban scale example model:
+
+.. raw:: html
+   :file: images/plot_flows.html
+
+By calling ``model.plot.flows()`` you will see a plot similar to `transmission`. However, you can see carrier production at each node and along links, at every timestep (controlled by moving a slider). This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location. It is possible to look at only a subset of the timesteps in the model using the `timestep_index_subset` argument, or to show only every ``X`` timestep (where ``X`` is an integer) using the `timestep_cycle` argument.
+
+.. note::
+    If the timestep dimension is particularly large in your model, you will find this visualisation to be slow. Time subsetting is recommended for such a case.
+
+    If you cannot see the carrier production for a technology on hovering, it is likely masked by another technology at the same location or on the same link. Hide the masking technology to get the hover info for the technology below.
+
 .. _summary_plots:
 
 Summary plots

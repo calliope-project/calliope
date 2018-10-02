@@ -19,7 +19,7 @@ _TOKEN = 'pk.eyJ1IjoiY2FsbGlvcGUtcHJvamVjdCIsImEiOiJjamVwd280ODkwYzh6Mnhxbm1qYnU
 
 def model_plots(
         model,
-        plots=['timeseries', 'capacity', 'transmission', 'transmission_token'],
+        plots=['timeseries', 'capacity', 'transmission', 'transmission_token', 'flows'],
         filename_prefix=None,
         out_path=None):
 
@@ -62,8 +62,6 @@ def generate_all_plots():
     model_clustered = calliope.examples.time_clustering()
     model_clustered.run()
     model_plots(model_clustered, plots=['timeseries'], filename_prefix='clustered_')
-
-
 
 
 if __name__ == '__main__':
