@@ -92,6 +92,7 @@ class TestNationalScaleExampleModelInfeasibility:
             model = calliope.examples.national_scale(
                 override_file=override_file + ':check_feasibility',
                 override_dict={'run.cyclic_storage': False}
+            )
 
         expected_warnings = [
             'Objective function argument `cost_class` given but not used by objective function `check_feasibility`',

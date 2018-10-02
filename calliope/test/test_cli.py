@@ -118,26 +118,3 @@ class TestCLI:
             scenarios = AttrDict.from_yaml(out_file)
             assert 'scenario_0' not in scenarios['scenarios']
             assert scenarios['scenarios']['scenario_1'] == 'cold_fusion,run1,group_share_cold_fusion_cap'
-
-    def test_convert(self):
-        runner = CliRunner()
-        run_config = os.path.join(
-            _THIS_DIR, 'model_conversion', 'national_scale', 'run.yaml'
-        )
-        model_config = os.path.join(
-            _THIS_DIR, 'model_conversion', 'national_scale', 'model_config', 'model.yaml'
-        )
-
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.convert, [run_config, model_config, tempdir]
-            )
-
-            # Conversion ran without errors
-            assert result.exit_code == 0
-
-            # FIXME to add:
-            # Ensure that 'override' is in __disabled
-            # Ensure that tech groups are converted
-            # Check that only allowed top-level things are at top level in model
-            # Check that time series files have converted successfully
