@@ -91,9 +91,7 @@ def combine_overrides(config_model, overrides):
     for override in overrides:
         try:
             yaml_string = config_model.overrides[override].to_yaml()
-            override_with_imports = AttrDict.from_yaml_string(
-                yaml_string, resolve_imports=True
-            )
+            override_with_imports = AttrDict.from_yaml_string(yaml_string)
         except KeyError:
             raise exceptions.ModelError(
                 'Override `{}` is not defined.'.format(override)
@@ -176,7 +174,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
         else:
             overrides = str(scenario).split(',')
             logger.info(
-                'Applying overrides overrides `{}` without a '
+                'Applying overrides `{}` without a '
                 'specific scenario name.'.format(scenario)
             )
 
