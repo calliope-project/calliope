@@ -26,7 +26,7 @@ The ``calliope run`` command takes the following options:
 * ``--save_csv={directory name}``: Save results as a set of CSV files to the given directory. This can be handy if the modeler needs results in a simple text-based format for further processing with a tool like Microsoft Excel.
 * ``--save_plots={filename.html}``: Save interactive plots to the given HTML file (see :doc:`analysing` for further details on the plotting functionality).
 * ``--debug``: Run in debug mode, which prints more internal information, and is useful when troubleshooting failing models.
-* ``--override_file={filename.yaml}:{override_groups}``: Specify override groups to apply to the model (see below for more information).
+* ``--override_file={filename.yaml}:{override_groups}``: Specify overrides to apply to the model (see below for more information).
 * ``--help``: Show all available options.
 
 Multiple options can be specified, for example, saving NetCDF, CSV, and HTML plots simultaneously::
@@ -77,7 +77,7 @@ After the model has been solved, an xarray Dataset containing results (``model.r
 Overrides
 ---------
 
-There are two ways to apply override groups interactively:
+There are two ways to apply overrides interactively:
 
 1. By setting the `override_file` argument analogously to use in the command-line tool, e.g.:
 

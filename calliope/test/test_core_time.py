@@ -108,7 +108,7 @@ class TestClustering:
             'model.subset_time': None
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         data_clustered_kmeans = funcs.apply_clustering(
@@ -149,7 +149,7 @@ class TestClustering:
             'model.subset_time': None
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         data_clustered_kmeans = funcs.apply_clustering(
@@ -197,7 +197,7 @@ class TestClustering:
             }
         }
 
-        model = build_test_model(override, override_groups='simple_supply')
+        model = build_test_model(override, scenario='simple_supply')
 
         assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0, 1, 2])
 
@@ -205,7 +205,7 @@ class TestClustering:
             'model.time.function_options.clustering_func': 'file=cluster_days.csv:1'
         }}
 
-        model = build_test_model(override2, override_groups='simple_supply')
+        model = build_test_model(override2, scenario='simple_supply')
 
         assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0, 1, 2])
 
@@ -214,7 +214,7 @@ class TestClustering:
             'model.time.function_options.how': 'closest'
         }}
 
-        model = build_test_model(override3, override_groups='simple_supply')
+        model = build_test_model(override3, scenario='simple_supply')
 
         assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0])
 
@@ -233,7 +233,7 @@ class TestClustering:
             'model.time.function_options.clustering_func': 'file=clusters.csv'
         }}
         with pytest.raises(exceptions.ModelError) as error:
-            build_test_model(override1, override_groups='simple_supply')
+            build_test_model(override1, scenario='simple_supply')
 
         assert check_error_or_warning(error, 'No time clustering column given')
 
@@ -243,7 +243,7 @@ class TestClustering:
         }}
 
         with pytest.raises(KeyError) as error:
-            build_test_model(override2, override_groups='simple_supply')
+            build_test_model(override2, scenario='simple_supply')
 
         assert check_error_or_warning(error, 'time clustering column 1 not found')
 
@@ -253,7 +253,7 @@ class TestClustering:
         }}
 
         with pytest.raises(exceptions.ModelError) as error:
-            build_test_model(override3, override_groups='simple_supply')
+            build_test_model(override3, scenario='simple_supply')
 
         assert check_error_or_warning(
             error, 'More than one cluster value assigned to a day in `clusters.csv:b`'
@@ -266,7 +266,7 @@ class TestClustering:
         }}
 
         with pytest.raises(exceptions.ModelError) as error:
-            build_test_model(override4, override_groups='simple_supply')
+            build_test_model(override4, scenario='simple_supply')
 
         assert check_error_or_warning(error, 'Missing cluster days')
 
@@ -417,7 +417,7 @@ class TestMasks:
             'model.subset_time': None
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         mask = masks.extreme(
@@ -469,7 +469,7 @@ class TestMasks:
             'model.subset_time': None
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         mask = masks.extreme(
@@ -506,7 +506,7 @@ class TestResampling:
             }
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         dtindex = pd.DatetimeIndex([
@@ -565,7 +565,7 @@ class TestResampling:
             }
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         dtindex = pd.DatetimeIndex([
@@ -589,7 +589,7 @@ class TestResampling:
             }
         }
 
-        model = build_test_model(override, override_groups='simple_supply,one_day')
+        model = build_test_model(override, scenario='simple_supply,one_day')
         data = model._model_data
 
         dtindex = pd.DatetimeIndex([

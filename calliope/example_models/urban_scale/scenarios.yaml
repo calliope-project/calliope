@@ -1,0 +1,82 @@
+##
+# Overrides for different example model configuratiions
+##
+
+overrides:
+    milp:
+        model.name: 'Urban-scale example model with MILP'
+        techs:
+            # chp-start
+            chp:
+                constraints:
+                    units_max: 4
+                    energy_cap_per_unit: 300
+                    energy_cap_min_use: 0.2
+                costs:
+                    monetary:
+                        energy_cap: 700
+                        purchase: 40000
+            # chp-end
+            # boiler-start
+            boiler:
+                costs:
+                    monetary:
+                        energy_cap: 35
+                        purchase: 2000
+            # boiler-end
+
+    mapbox_ready:
+        locations:
+            X1.coordinates: {lat: 51.4596158, lon: -0.1613446}
+            X2.coordinates: {lat: 51.4652373, lon: -0.1141548}
+            X3.coordinates: {lat: 51.4287016, lon: -0.1310635}
+            N1.coordinates: {lat: 51.4450766, lon: -0.1247183}
+        links:
+            X1,X2.techs.power_lines.distance: 10
+            X1,X3.techs.power_lines.istance: 5
+            X1,N1.techs.heat_pipes.distance: 3
+            N1,X2.techs.heat_pipes.distance: 3
+            N1,X3.techs.heat_pipes.distance: 4
+
+    operate:
+        run.mode: operate
+        run.operation:
+            window: 24
+            horizon: 48
+        model.subset_time: ['2005-07-01', '2005-07-10']
+        locations:
+            X1:
+                techs:
+                    chp.constraints.energy_cap_max: 300
+                    pv.constraints.energy_cap_max: 0
+                    supply_grid_power.constraints.energy_cap_max: 40
+                    supply_gas.constraints.energy_cap_max: 700
+
+            X2:
+                techs:
+                    boiler.constraints.energy_cap_max: 200
+                    pv.constraints.energy_cap_max: 70
+                    supply_gas.constraints.energy_cap_max: 250
+
+            X3:
+                techs:
+                    boiler.constraints.energy_cap_max: 0
+                    pv.constraints.energy_cap_max: 50
+                    supply_gas.constraints.energy_cap_max: 0
+
+        links:
+            X1,X2.techs.power_lines.constraints.energy_cap_max: 300
+            X1,X3.techs.power_lines.constraints.energy_cap_max: 60
+            X1,N1.techs.heat_pipes.constraints.energy_cap_max: 300
+            N1,X2.techs.heat_pipes.constraints.energy_cap_max: 250
+            N1,X3.techs.heat_pipes.constraints.energy_cap_max: 320
+
+    time_masking:
+        model.name: 'Urban-scale example model with time masking'
+        model.subset_time: '2005-01'
+        # Resample time resolution to 6-hourly
+        model.time:
+            masks:
+                - {function: extreme_diff, options: {tech0: demand_heat, tech1: demand_electricity, how: max, n: 2}}
+            function: resample
+            function_options: {resolution: 6H}

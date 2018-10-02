@@ -18,7 +18,7 @@ run_config:
     output.path: null
     debug.keep_temp_files: run.save_logs
     debug.symbolic_solver_labels: null
-    override: null  # now achieved with override groups, see override.yaml in examples
+    override: null  # now achieved with overrides and scenarios, see scenarios.yaml in examples
     parallel: null
     random_seed: model.random_seed
     debug: null  # no longer available

@@ -144,7 +144,7 @@ Running interactively:
         override_file='overrides.yaml:higher_costs'
     )
 
-    # apply both the 'higher_costs' and 'winter' override groups
+    # apply both the 'higher_costs' and 'winter' overrides
     model2 = calliope.Model(
         'model.yaml',
         override_file='overrides.yaml:higher_costs,winter'

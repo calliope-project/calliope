@@ -29,7 +29,7 @@ def time_clustering(*args, **kwargs):
     """Returns the built-in national-scale example model with time clustering."""
     return Model(
         os.path.join(_PATHS['national_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_clustering'),
+        scenario='time_clustering',
         *args, **kwargs
     )
 
@@ -38,7 +38,7 @@ def time_resampling(*args, **kwargs):
     """Returns the built-in national-scale example model with time resampling."""
     return Model(
         os.path.join(_PATHS['national_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['national_scale'], 'overrides.yaml:time_resampling'),
+        scenario='time_resampling',
         *args, **kwargs
     )
 
@@ -52,7 +52,7 @@ def milp(*args, **kwargs):
     """Returns the built-in urban-scale example model with MILP constraints enabled."""
     return Model(
         os.path.join(_PATHS['urban_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:milp'),
+        scenario='milp',
         *args, **kwargs
     )
 
@@ -61,7 +61,7 @@ def operate(*args, **kwargs):
     """Returns the built-in urban-scale example model in operate mode."""
     return Model(
         os.path.join(_PATHS['urban_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:operate'),
+        scenario='operate',
         *args, **kwargs
     )
 
@@ -70,6 +70,6 @@ def time_masking(*args, **kwargs):
     """Returns the built-in urban-scale example model with time masking."""
     return Model(
         os.path.join(_PATHS['urban_scale'], 'model.yaml'),
-        override_file=os.path.join(_PATHS['urban_scale'], 'overrides.yaml:time_masking'),
+        scenario='time_masking',
         *args, **kwargs
     )
