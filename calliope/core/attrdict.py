@@ -237,7 +237,7 @@ class AttrDict(dict):
         return loaded
 
     @classmethod
-    def from_yaml_string(cls, string, resolve_imports=False):
+    def from_yaml_string(cls, string, resolve_imports=True):
         """
         Returns an AttrDict initialized from the given string, which
         must be valid YAML.

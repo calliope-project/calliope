@@ -13,41 +13,66 @@ in parallel on a cluster or sequentially on any machine.
 import os
 
 import pandas as pd
-from calliope.core import AttrDict
+from calliope.core import Model
 
 
-def generate_runs(model_file, override_file, groups=None, additional_args=None):
+def generate_runs(
+        model_file, scenarios=None,
+        additional_args=None, override_dict=None):
     """
     Returns a list of "calliope run" invocations.
 
-    groups specified as group1{,group2,...}{;group3...}
+    ``scenarios`` must be specified as either a semicolon-separated
+    list of scenarios or a semicolon-separated list of comma-separated
+    individual override combinations, such as:
 
-    if groups not specified, use all groups in the override_file, one by one
+        ``override1,override2;override1,override3;...``
+
+    If ``scenarios`` is not given, use all scenarios in the model
+    configuration, and if no scenarios given in the model configuration,
+    uses all individual overrides, one by one.
 
     """
-    if groups is None:
-        overrides = AttrDict.from_yaml(override_file)
-        runs = overrides.keys()
+    if scenarios is None:
+        model = Model(model_file, override_dict=override_dict)
+        config = model._debug_data['config_initial']
+        if 'scenarios' in config:
+            runs = config.scenarios.keys()
+        else:
+            runs = config.overrides.keys()
     else:
-        runs = groups.split(';')
+        runs = scenarios.split(';')
 
     commands = []
 
     for i, run in enumerate(runs):
-        cmd = 'calliope run {model} --override_file {override}:{groups} --save_netcdf out_{i}_{groups}.nc --save_plots plots_{i}_{groups}.html {other_options}'.format(
+        cmd = (
+            'calliope run {model} --scenario {scenario} '
+            '--save_netcdf out_{i}_{scenario}.nc '
+            '--save_plots plots_{i}_{scenario}.html'
+        ).format(
             i=i + 1,
             model=model_file,
-            override=override_file,
-            groups=run,
-            other_options=additional_args
+            scenario=run,
+            override_dict=override_dict,
         ).strip()
+
+        if override_dict:
+            cmd = cmd + ' --override_dict="{}"'.format(override_dict)
+
+        if additional_args:
+            cmd = cmd + ' ' + additional_args
+
         commands.append(cmd)
 
     return commands
 
 
-def generate_bash_script(out_file, model_file, override_file, groups, additional_args=None, **kwargs):
-    commands = generate_runs(model_file, override_file, groups, additional_args)
+def generate_bash_script(
+        out_file, model_file, scenarios,
+        additional_args=None, override_dict=None, **kwargs):
+
+    commands = generate_runs(model_file, scenarios, additional_args, override_dict)
 
     base_string = '    {i}) {cmd} ;;\n'
     lines_start = [
@@ -80,14 +105,16 @@ def generate_bash_script(out_file, model_file, override_file, groups, additional
     return commands
 
 
-def generate_bsub_script(out_file, model_file, override_file, groups,
-                         additional_args, cluster_mem, cluster_time,
-                         cluster_threads=1, **kwargs):
+def generate_bsub_script(out_file, model_file, scenarios,
+                         additional_args, override_dict,
+                         cluster_mem, cluster_time, cluster_threads=1,
+                         **kwargs):
 
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + '.array.sh'
     bash_out_file_basename = os.path.basename(bash_out_file)
-    commands = generate_bash_script(bash_out_file, model_file, override_file, groups, additional_args)
+    commands = generate_bash_script(
+        bash_out_file, model_file, scenarios, additional_args, override_dict)
 
     lines = [
         '#!/bin/sh',
@@ -106,9 +133,10 @@ def generate_bsub_script(out_file, model_file, override_file, groups,
         f.write(bytes('\n'.join(lines), 'UTF-8'))
 
 
-def generate_sbatch_script(out_file, model_file, override_file, groups,
-                           additional_args, cluster_mem, cluster_time,
-                           cluster_threads=1, **kwargs):
+def generate_sbatch_script(out_file, model_file, scenarios,
+                           additional_args, override_dict,
+                           cluster_mem, cluster_time, cluster_threads=1,
+                           **kwargs):
     """
     SBATCH (SLURM) script generator.
     """
@@ -116,7 +144,8 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + '.array.sh'
     bash_out_file_basename = os.path.basename(bash_out_file)
-    commands = generate_bash_script(bash_out_file, model_file, override_file, groups, additional_args)
+    commands = generate_bash_script(
+        bash_out_file, model_file, scenarios, additional_args, override_dict)
 
     if ':' not in cluster_time:
         # Assuming time given as minutes, so needs changing to %H:%M%S
@@ -152,8 +181,13 @@ def generate_sbatch_script(out_file, model_file, override_file, groups,
         f.write(bytes('\n'.join(lines), 'UTF-8'))
 
 
-def generate_windows_script(out_file, model_file, override_file, groups, additional_args=None, **kwargs):
-    commands = generate_runs(model_file, override_file, groups, additional_args)
+def generate_windows_script(
+        out_file, model_file, scenarios,
+        additional_args=None, override_dict=None,
+        **kwargs):
+
+    commands = generate_runs(
+        model_file, scenarios, additional_args, override_dict)
 
     # \r\n are Windows line endings
     base_string = 'echo "Run {i}"\r\n{cmd}\r\n'
@@ -162,7 +196,9 @@ def generate_windows_script(out_file, model_file, override_file, groups, additio
         '',
     ]
 
-    lines_all = lines_start + [base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)]
+    lines_all = lines_start + [
+        base_string.format(i=i + 1, cmd=cmd)
+        for i, cmd in enumerate(commands)]
 
     with open(out_file, 'wb') as f:
         f.write(bytes('\r\n'.join(lines_all), 'UTF-8'))

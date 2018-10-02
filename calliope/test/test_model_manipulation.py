@@ -7,19 +7,15 @@ from calliope import exceptions
 from calliope.test.common.util import check_error_or_warning
 
 
-
-def build_model(override_dict, override_groups):
+def build_model(override_dict, scenario):
     model_path = os.path.join(
         os.path.dirname(__file__), 'common', 'test_model', 'model.yaml'
     )
-    overrides_path = os.path.join(
-        os.path.dirname(__file__), 'common', 'test_model', 'overrides.yaml'
-    )
 
     return calliope.Model(
-        model_path, override_dict=override_dict,
-        override_file=overrides_path + ':' + override_groups
+        model_path, override_dict=override_dict, scenario=scenario
     )
+
 
 class TestExistsFalse():
     """

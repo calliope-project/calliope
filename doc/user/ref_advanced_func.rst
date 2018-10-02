@@ -426,14 +426,14 @@ These can be implemented as, for example, to force at most 20% of ``energy_cap``
 
 .. Note:: The share given in the ``carrier_prod`` constraints refer to the use of generation from ``supply`` and ``supply_plus`` technologies only. The share given in the ``energy_cap`` constraints refers to the combined capacity from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus`` technologies.
 
-.. seealso:: The above examples are supplied override groups in the :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``overrides.yaml`` (``cold_fusion`` to define that tech, and ``group_share_cold_fusion_prod`` or ``group_share_cold_fusion_cap`` to apply the group share constraints).
+.. seealso:: The above examples are supplied as overrides in the :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` (``cold_fusion`` to define that tech, and ``group_share_cold_fusion_prod`` or ``group_share_cold_fusion_cap`` to apply the group share constraints).
 
 .. _removing_techs_locations:
 
 Removing techs, locations and links
 -----------------------------------
 
-By specifying ``exists: false`` in the model configuration, which can be done through override groups, model components can be removed for debugging or scenario analysis.
+By specifying ``exists: false`` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
 
 This works for:
 
@@ -468,23 +468,22 @@ Operational mode runs a model with a receding horizon control algorithm. This re
 Generating scripts to run a model many times
 --------------------------------------------
 
-:ref:`Override groups <building_overrides>` can be used to run a given model multiple times with slightly changed settings or constraints.
+:ref:`Scenarios and overrides <building_overrides>` can be used to run a given model multiple times with slightly changed settings or constraints.
 
-This functionality can be used together with the ``calliope generate_runs`` command-line tool to generate scripts that run a model many times over in a fully automated way, for example, to explore the effect of different technology costs on model results.
+This functionality can be used together with the ``calliope generate_runs`` and ``calliope generate_scenarios`` command-line tools to generate scripts that run a model many times over in a fully automated way, for example, to explore the effect of different technology costs on model results.
 
 ``calliope generate_runs``, at a minimum, must be given the following arguments:
 
 * the model configuration file to use
 * the name of the script to create
 * ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, ``bsub`` creates a submission script for a LSF-based high-performance cluster, and ``sbatch`` creates a submission script for a SLURM-based high-performance cluster.
-* ``--override_file``: The file that specifies override groups.
-* ``--groups``: A semicolon-separated list of override groups to generate scripts for, for example, ``run1;run2``. A comma is used to group override groups together into a single model -- for example, ``run1,high_costs;run1,low_costs`` would run the model twice, once applying the ``run1`` and ``high_costs`` override groups, and once applying ``run1`` and ``low_costs``.
+* ``--scenarios``: A semicolon-separated list of scenarios (or overrides/combinations of overrides) to generate scripts for, for example, ``scenario1;scenario2`` or ``override1,override2a;override1,override2b``. Note that when not using manually defined scenario names, a comma is used to group overrides together into a single model -- in the above example, ``override1,override2a`` would be applied to the first run and ``override1,override2b`` be applied to the second run
 
-A fully-formed command generating a Windows batch script to run a model four times with each of the override groups "run1", "run2", "run3", and "run4":
+A fully-formed command generating a Windows batch script to run a model four times with each of the scenarios "run1", "run2", "run3", and "run4":
 
 .. code-block:: shell
 
-    calliope generate_runs model.yaml run_model.bat --kind=windows --override_file=overrides.yaml --groups "run1;run2;run3;run4"
+    calliope generate_runs model.yaml run_model.bat --kind=windows --scenarios "run1;run2;run3;run4"
 
 Optional arguments are:
 
@@ -498,30 +497,36 @@ An example generating a script to run on a ``bsub``-type high-performance cluste
 
 .. code-block:: shell
 
-    calliope generate_runs model.yaml submit_runs.sh --kind=bsub --cluster_mem=1G --cluster_time=100 --cluster_threads=5 --override_file=overrides.yaml --groups "run1,run2,run3,run4"
+    calliope generate_runs model.yaml submit_runs.sh --kind=bsub --cluster_mem=1G --cluster_time=100 --cluster_threads=5  --scenarios "run1;run2;run3;run4"
 
 Running this will create two files:
 
 * ``submit_runs.sh``: The cluster submission script to pass to ``bsub`` on the cluster.
 * ``submit_runs.array.sh``: The accompanying script defining the runs for the cluster to execute.
 
-In all cases, results are saved into the same directory as the script, with filenames of the form ``out_{run_number}_{groups}.nc`` (model results) and ``plots_{run_number}_{groups}.html`` (HTML plots), where ``{run_number}`` is the run number and ``{groups}`` is the specified set of groups. On a cluster, log files are saved to files with names starting with ``log_`` in the same directory.
+In all cases, results are saved into the same directory as the script, with filenames of the form ``out_{run_number}_{scenario_name}.nc`` (model results) and ``plots_{run_number}_{scenario_name}.html`` (HTML plots), where ``{run_number}`` is the run number and ``{scenario_name}`` is the name of the scenario (or the string defining the overrides applied). On a cluster, log files are saved to files with names starting with ``log_`` in the same directory.
+
+Finally, the  ``calliope generate_scenarios`` tool can be used to quickly generate a file with ``scenarios`` definition for inclusion in a model, if a large enough number of overrides exist to make it tedious to manually combine them into scenarios. Assuming that in ``model.yaml`` a range of overrides exist that specify a subset of time for the years 2000 through 2010, called "y2000" through "y2010", and a set of cost-related overrides called "cost_low", "cost_medium" and "cost_high", the following command would generate scenarios with combinations of all years and cost overrides, calling them "run_1", "run_2", and so on, and saving them to ``scenarios.yaml``:
+
+.. code-block:: shell
+
+    calliope generate_scenarios model.yaml scenarios.yaml y2000;y2001;y2002;2003;y2004;y2005;y2006;2007;2008;y2009;2010 cost_low;cost_medium;cost_high --scenario_name_prefix="run_"
+
 
 .. _imports_in_override_groups:
 
-Imports in override groups
---------------------------
+Imports in overrides
+--------------------
 
-When using override groups (see :ref:`building_overrides`), it is possible to have ``import`` statements within override groups for more flexibility. The following example illustrates this:
-
-``overrides.yaml``:
+When using overrides (see :ref:`building_overrides`), it is possible to have ``import`` statements within overrides for more flexibility. The following example illustrates this:
 
 .. code-block:: yaml
 
-    some_override:
-        techs:
-            some_tech.constraints.energy_cap_max: 10
-        import: [additional_definitions.yaml]
+    overrides:
+        some_override:
+            techs:
+                some_tech.constraints.energy_cap_max: 10
+            import: [additional_definitions.yaml]
 
 ``additional_definitions.yaml``:
 
@@ -530,16 +535,15 @@ When using override groups (see :ref:`building_overrides`), it is possible to ha
     techs:
         some_other_tech.constraints.energy_eff: 0.1
 
-This is equivalent to the following override group:
-
-``overrides.yaml``:
+This is equivalent to the following override:
 
 .. code-block:: yaml
 
-    some_override:
-        techs:
-            some_tech.constraints.energy_cap_max: 10
-            some_other_tech.constraints.energy_eff: 0.1
+    overrides:
+        some_override:
+            techs:
+                some_tech.constraints.energy_cap_max: 10
+                some_other_tech.constraints.energy_eff: 0.1
 
 Binary and mixed-integer models
 -------------------------------

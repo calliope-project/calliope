@@ -10,6 +10,14 @@ Release History
 
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
 
+|new| Addition of ``scenarios``, which complement and expand the existing ``overrides`` functionality.  ``overrides`` becomes a top-level key in model configuration, instead of a separate file. The ``calliope run`` command has a new ``--scenario`` option which replaces --override_file, while ``calliope generate_runs`` has a new ``--scenarios`` option which replaces --override_file and takes a semicolon-separated list of scenario names or of group1,group2 combinations. To convert existing overrides to the new approach, simply group them under a top-level ``overrides`` key and import your existing overrides file from the main model configuration file with ``import: ['your_overrides_file.yaml']``.
+
+|new| Addition of ``calliope generate_scenarios`` command to allow building autmating the construction of scenarios which consist of many combinations of overrides.
+
+|new| Added ``--override_dict`` option to ``calliope run`` and ``calliope generate_runs`` commands
+
+|new| Added solver performance comparison in the docs. CPLEX & Gurobi are, as expected, the best options. If going open-source & free, CBC is much quicker than GLPK!
+
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
 
 |changed| Removed ``calliope convert`` command. If you need to convert a 0.5.x model, first use ``calliope convert`` in Calliope 0.6.2 and then upgrade to 0.6.3 or higher.
@@ -22,7 +30,9 @@ Release History
 
 |fixed| Permit groups in override files to specify imports of other YAML files
 
-|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on.
+|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on. Fixes issue #113.
+
+|fixed| If time clustering with 'storage_inter_cluster' = True, but no storage technologies, the model doesn't break. Fixes issue #142.
 
 0.6.2 (2018-06-04)
 ------------------

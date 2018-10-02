@@ -5,13 +5,13 @@ import pytest  # pylint: disable=unused-import
 from click.testing import CliRunner
 
 import calliope
-from calliope import cli
+from calliope import cli, AttrDict
 
 _THIS_DIR = os.path.dirname(__file__)
 _MODEL_NATIONAL = os.path.join(
-    _THIS_DIR, '..', 'example_models', 'national_scale', 'model.yaml')
-_OVERRIDES_NATIONAL = os.path.join(
-    _THIS_DIR, '..', 'example_models', 'national_scale', 'overrides.yaml')
+    _THIS_DIR,
+    '..', 'example_models', 'national_scale', 'model.yaml'
+)
 
 
 class TestCLI:
@@ -51,8 +51,7 @@ class TestCLI:
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.generate_runs, [
                 _MODEL_NATIONAL, 'test.sh', '--kind=bash',
-                '--groups="run1,run2,run3,run4"',
-                '--override_file={}'.format(_OVERRIDES_NATIONAL)
+                '--scenarios="run1;run2;run3;run4"'
             ])
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
@@ -63,8 +62,7 @@ class TestCLI:
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.generate_runs, [
                 _MODEL_NATIONAL, 'test.bat', '--kind=windows',
-                '--groups="run1,run2,run3,run4"',
-                '--override_file={}'.format(_OVERRIDES_NATIONAL)
+                '--scenarios="run1;run2;run3;run4"'
             ])
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'test.bat'))
@@ -75,9 +73,8 @@ class TestCLI:
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.generate_runs, [
                 _MODEL_NATIONAL, 'test.sh', '--kind=bsub',
-                '--groups="run1,run2,run3,run4"',
-                '--cluster_mem=1G', '--cluster_time=100',
-                '--override_file={}'.format(_OVERRIDES_NATIONAL)
+                '--scenarios="run1;run2;run3;run4"',
+                '--cluster_mem=1G', '--cluster_time=100'
             ])
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
@@ -89,9 +86,8 @@ class TestCLI:
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.generate_runs, [
                 _MODEL_NATIONAL, 'test.sh', '--kind=sbatch',
-                '--groups="run1,run2,run3,run4"',
-                '--cluster_mem=1G', '--cluster_time=100',
-                '--override_file={}'.format(_OVERRIDES_NATIONAL)
+                '--scenarios="run1;run2;run3;run4"',
+                '--cluster_mem=1G', '--cluster_time=100'
             ])
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'test.sh'))
@@ -106,3 +102,19 @@ class TestCLI:
         result = runner.invoke(cli.run, ['foo.yaml'])
         assert result.exit_code == 1
         assert 'Traceback (most recent call last)' not in result.output
+
+    def test_generate_scenarios(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem() as tempdir:
+            out_file = os.path.join(tempdir, 'scenarios.yaml')
+            result = runner.invoke(cli.generate_scenarios, [
+                _MODEL_NATIONAL, out_file,
+                'cold_fusion',
+                'run1;run2',
+                'group_share_cold_fusion_cap;group_share_cold_fusion_prod',
+            ])
+            assert result.exit_code == 0
+            assert os.path.isfile(out_file)
+            scenarios = AttrDict.from_yaml(out_file)
+            assert 'scenario_0' not in scenarios['scenarios']
+            assert scenarios['scenarios']['scenario_1'] == 'cold_fusion,run1,group_share_cold_fusion_cap'

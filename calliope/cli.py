@@ -11,19 +11,28 @@ Command-line interface.
 
 import contextlib
 import datetime
+import itertools
 import logging
 import os
 import pstats
 import shutil
 import sys
 import traceback
+
 import click
 
+<<<<<<< HEAD
 from calliope import Model, read_netcdf, examples
+||||||| merged common ancestors
+from calliope import Model, read_netcdf, examples
+from calliope.core.util.convert import convert_model
+=======
+from calliope import AttrDict, Model, examples, read_netcdf
+from calliope._version import __version__
+from calliope.core.util.convert import convert_model
+>>>>>>> master
 from calliope.core.util.generate_runs import generate
 from calliope.core.util.logging import logger, set_log_level
-from calliope._version import __version__
-
 
 _time_format = '%Y-%m-%d %H:%M:%S'
 
@@ -66,8 +75,11 @@ console = logging.StreamHandler(stream=sys.stderr)
 console.setFormatter(formatter)
 logger.addHandler(console)
 
+
 @contextlib.contextmanager
-def format_exceptions(debug=False, pdb=False, profile=False, profile_filename=None, start_time=None):
+def format_exceptions(
+        debug=False, pdb=False, profile=False,
+        profile_filename=None, start_time=None):
     if debug:
         set_log_level('DEBUG')
 
@@ -162,19 +174,20 @@ def new(path, template, debug):
 
 @cli.command(short_help='Run a model.')
 @click.argument('model_file')
-@click.option('--override_file')
+@click.option('--scenario')
 @click.option('--save_netcdf')
 @click.option('--save_csv')
 @click.option('--save_plots')
 @click.option('--save_logs')
 @click.option('--model_format')
+@click.option('--override_dict')
 @_debug
 @_quiet
 @_pdb
 @_profile
 @_profile_filename
-def run(model_file, override_file, save_netcdf, save_csv, save_plots,
-        save_logs, model_format,
+def run(model_file, scenario, save_netcdf, save_csv, save_plots,
+        save_logs, model_format, override_dict,
         debug, quiet, pdb, profile, profile_filename):
     """
     Execute the given model. Tries to guess from the file extension whether
@@ -217,23 +230,21 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
                 )
 
         if model_format == 'yaml':
-            override_dict = {
-                'run.save_logs': save_logs
-            }
             model = Model(
-                model_file, override_file=override_file, override_dict=override_dict
+                model_file, scenario=scenario, override_dict=override_dict
             )
         elif model_format == 'netcdf':
-            if override_file is not None:
+            if scenario is not None or override_dict is not None:
                 raise ValueError(
-                    'Overrides cannot be applied when loading a pre-built '
-                    'model from NetCDF. Please run without --override options.'
+                    'When loading a pre-built model from NetCDF, the '
+                    '--scenario and --override_dict options are not available.'
                 )
             model = read_netcdf(model_file)
-            if save_logs is not None:
-                model._model_data.attrs['run.save_logs'] = save_logs
         else:
             raise ValueError('Invalid model format: {}'.format(model_format))
+
+        if save_logs:
+            model._model_data.attrs['run.save_logs'] = save_logs
 
         print(model.info() + '\n')
         print('Starting model run...')
@@ -263,19 +274,20 @@ def run(model_file, override_file, save_netcdf, save_csv, save_plots,
 @click.argument('model_file')
 @click.argument('out_file')
 @click.option('--kind', help='One of: "bash", "bsub", "sbatch", or "windows".')
-@click.option('--override_file')
-@click.option('--groups')
+@click.option('--scenarios')
 @click.option('--cluster_threads', default=1)
 @click.option('--cluster_mem')
 @click.option('--cluster_time')
 @click.option(
     '--additional_args', default='',
     help='Any additional arguments to pass directly on to `calliope run`.')
+@click.option('--override_dict')
 @_debug
 @_quiet
 @_pdb
 def generate_runs(
-        model_file, out_file, kind, override_file, groups, additional_args,
+        model_file, out_file, kind, scenarios,
+        additional_args, override_dict,
         cluster_threads, cluster_mem, cluster_time,
         debug, quiet, pdb):
 
@@ -284,9 +296,9 @@ def generate_runs(
     kwargs = dict(
         model_file=model_file,
         out_file=out_file,
-        override_file=override_file,
-        groups=groups,
+        scenarios=scenarios,
         additional_args=additional_args,
+        override_dict=override_dict,
         cluster_mem=cluster_mem,
         cluster_time=cluster_time,
         cluster_threads=cluster_threads,
@@ -294,6 +306,35 @@ def generate_runs(
 
     with format_exceptions(debug, pdb):
         generate(kind, **kwargs)
+
+
+@cli.command(short_help='Generate scenario definitions from given combinations of overrides.')
+@click.argument('model_file')
+@click.argument('out_file')
+@click.argument('overrides', nargs=-1)
+@click.option('--scenario_name_prefix')
+@_debug
+@_quiet
+@_pdb
+def generate_scenarios(
+        model_file, out_file, overrides, scenario_name_prefix,
+        debug, quiet, pdb):
+
+    set_quietness_level(quiet)
+    with format_exceptions(debug, pdb):
+        combinations = list(itertools.product(
+            *[i.split(';') for i in overrides]
+        ))
+
+        if not scenario_name_prefix:
+            scenario_name_prefix = 'scenario_'
+
+        scenarios = {'scenarios': {
+            scenario_name_prefix + str(i + 1):
+            ','.join(c)
+            for i, c in enumerate(combinations)}}
+
+        AttrDict(scenarios).to_yaml(out_file)
 
 
 @cli.command()

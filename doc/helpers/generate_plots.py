@@ -19,7 +19,7 @@ _TOKEN = 'pk.eyJ1IjoiY2FsbGlvcGUtcHJvamVjdCIsImEiOiJjamVwd280ODkwYzh6Mnhxbm1qYnU
 
 def model_plots(
         model,
-        plots=['timeseries', 'capacity', 'transmission', 'transmission_token'],
+        plots=['timeseries', 'capacity', 'transmission', 'transmission_token', 'flows'],
         filename_prefix=None,
         out_path=None):
 
@@ -48,10 +48,7 @@ def model_plots(
 
 
 def generate_all_plots():
-    override_path = os.path.join(os.path.dirname(calliope.__file__), 'example_models', 'urban_scale')
-    model_urban = calliope.examples.urban_scale(
-        override_file=os.path.join(override_path, 'overrides.yaml:mapbox_ready')
-    )
+    model_urban = calliope.examples.urban_scale(scenario='mapbox_ready')
     model_urban.run()
     model_plots(model_urban)
     model_plots(
@@ -62,8 +59,6 @@ def generate_all_plots():
     model_clustered = calliope.examples.time_clustering()
     model_clustered.run()
     model_plots(model_clustered, plots=['timeseries'], filename_prefix='clustered_')
-
-
 
 
 if __name__ == '__main__':

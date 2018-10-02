@@ -1,0 +1,162 @@
+##
+# Scenarios are optional, named combinations of overrides
+##
+scenarios:
+    cold_fusion_with_production_share: 'cold_fusion,group_share_cold_fusion_prod'
+    cold_fusion_with_capacity_share: 'cold_fusion,group_share_cold_fusion_cap'
+
+
+##
+# Overrides are the building blocks from which scenarios can be defined
+##
+overrides:
+    profiling:
+        model.name: 'National-scale example model (profiling run)'
+        model.subset_time: ['2005-01-01', '2005-01-15']
+        run.solver: glpk
+
+    time_resampling:
+        model.name: 'National-scale example model with time resampling'
+        model.subset_time: '2005-01'
+        # Resample time resolution to 6-hourly
+        model.time: {function: resample, function_options: {'resolution': '6H'}}
+
+    time_clustering:
+        model.random_seed: 23
+        model.name: 'National-scale example model with time clustering'
+        model.subset_time: null  # No time subsetting
+        # Cluster timesteps using k-means
+        model.time: {function: apply_clustering, function_options: {clustering_func: 'kmeans', how: 'closest', k: 10}}
+
+    operate:
+        run.mode: operate
+        run.operation:
+            window: 12
+            horizon: 24
+        model.subset_time: ['2005-01-01', '2005-01-10']
+        locations:
+            region1.techs.ccgt.constraints.energy_cap_equals: 30000
+
+            region2.techs.battery.constraints.energy_cap_equals: 1000
+            region2.techs.battery.constraints.storage_cap_equals: 5240
+
+            region1-1.techs.csp.constraints.energy_cap_equals: 10000
+            region1-1.techs.csp.constraints.storage_cap_equals: 244301
+            region1-1.techs.csp.constraints.resource_area_equals: 130385
+
+            region1-2.techs.csp.constraints.energy_cap_equals: 0
+            region1-2.techs.csp.constraints.storage_cap_equals: 0
+            region1-2.techs.csp.constraints.resource_area_equals: 0
+
+            region1-3.techs.csp.constraints.energy_cap_equals: 2534
+            region1-3.techs.csp.constraints.storage_cap_equals: 25301
+            region1-3.techs.csp.constraints.resource_area_equals: 8487
+
+        links:
+            region1,region2.techs.ac_transmission.constraints.energy_cap_equals: 3231
+            region1,region1-1.techs.free_transmission.constraints.energy_cap_equals: 9000
+            region1,region1-2.techs.free_transmission.constraints.energy_cap_equals: 0
+            region1,region1-3.techs.free_transmission.constraints.energy_cap_equals: 2281
+
+    check_feasibility:
+        run:
+            ensure_feasibility: False
+            objective: 'check_feasibility'
+        model:
+            subset_time: '2005-01-04'
+
+    reserve_margin:
+        model:
+            # Model-wide settings for the system-wide reserve margin
+            # Even setting a reserve margin of zero activates the constraint,
+            # forcing enough installed capacity to cover demand in
+            # the maximum demand timestep
+            reserve_margin:
+                power: 0.10  # 10% reserve margin for power
+
+    ##
+    # Overrides to demonstrate the run generator ("calliope generate_runs")
+    ##
+
+    run1:
+        model.subset_time: ['2005-01-01', '2005-01-31']
+    run2:
+        model.subset_time: ['2005-02-01', '2005-02-31']
+    run3:
+        model.subset_time: ['2005-01-01', '2005-01-31']
+        locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+    run4:
+        subset_time: ['2005-02-01', '2005-02-31']
+        locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+
+    ##
+    # Overrides to demonstrate the group_share constraints
+    ##
+
+    cold_fusion:  # Defines a hypothetical cold fusion tech to use in group_share
+        techs:
+            cold_fusion:
+                essentials:
+                    name: 'Cold fusion'
+                    color: '#233B39'
+                    parent: supply
+                    carrier_out: power
+                constraints:
+                    energy_cap_max: 10000
+                    lifetime: 50
+                costs:
+                    monetary:
+                        interest_rate: 0.20
+                        energy_cap: 100
+        locations.region1.techs.cold_fusion: null
+        locations.region2.techs.cold_fusion: null
+
+    group_share_cold_fusion_prod:
+        model:
+            group_share:
+                # At least 85% of power supply must come from CSP and cold fusion together
+                csp,cold_fusion:
+                    carrier_prod_min:
+                        power: 0.85
+
+    group_share_cold_fusion_cap:
+        model:
+            group_share:
+                # At most 20% of total energy_cap can come from CSP and cold fusion together
+                csp,cold_fusion:
+                    energy_cap_max: 0.20
+        locations:
+            region1:
+                techs:
+                    ccgt:
+                        constraints:
+                            energy_cap_max: 100000  # Increased to keep model feasible
+
+    minimize_emissions_costs:
+        run:
+            objective_options:
+                cost_class: emissions
+        techs:
+            ccgt:
+                costs:
+                    emissions:
+                        om_prod: 100 # kgCO2/kWh
+            csp:
+                costs:
+                    emissions:
+                        om_prod: 10 # kgCO2/kWh
+
+    maximize_utility_costs:
+        run:
+            objective_options:
+                cost_class: utility
+                sense: maximize
+        techs:
+            ccgt:
+                costs:
+                    utility:
+                        om_prod: 10 # arbitrary utility value
+            csp:
+                costs:
+                    utility:
+                        om_prod: 100 # arbitrary utility value

@@ -18,6 +18,7 @@ import pandas as pd
 import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
+from calliope.core.util.logging import logger
 from calliope.core.util.tools import relative_path
 from calliope.core.preprocess import locations, sets, checks, constraint_sets, util
 
@@ -29,7 +30,7 @@ _DEFAULT_PALETTE = [
 ]
 
 
-def model_run_from_yaml(model_file, override_file=None, override_dict=None):
+def model_run_from_yaml(model_file, scenario=None, override_dict=None):
     """
     Generate processed ModelRun configuration from a
     YAML model configuration file.
@@ -38,23 +39,25 @@ def model_run_from_yaml(model_file, override_file=None, override_dict=None):
     ----------
     model_file : str
         Path to YAML file with model configuration.
-    override_file : str, optional
-        Path to YAML file with model configuration overrides and the override
-        group to use, separated by ':', e.g. 'overrides.yaml:group1'.
+    scenario : str, optional
+        Name of scenario to apply. Can either be a named scenario, or a
+        comman-separated list of individual overrides to be combined
+        ad-hoc, e.g. 'my_scenario_name' or 'override1,override2'.
     override_dict : dict or AttrDict, optional
 
     """
     config = AttrDict.from_yaml(model_file)
     config.config_path = model_file
 
-    config_with_overrides, debug_comments = apply_overrides(
-        config, override_file=override_file, override_dict=override_dict
+    config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
+        config, scenario=scenario, override_dict=override_dict
     )
 
-    return generate_model_run(config_with_overrides, debug_comments)
+    return generate_model_run(
+        config_with_overrides, debug_comments, overrides, scenario)
 
 
-def model_run_from_dict(config_dict, override_dict=None):
+def model_run_from_dict(config_dict, scenario=None, override_dict=None):
     """
     Generate processed ModelRun configuration from a
     model configuration dictionary.
@@ -62,6 +65,10 @@ def model_run_from_dict(config_dict, override_dict=None):
     Parameters
     ----------
     config_dict : dict or AttrDict
+    scenario : str, optional
+        Name of scenario to apply. Can either be a named scenario, or a
+        comman-separated list of individual overrides to be combined
+        ad-hoc, e.g. 'my_scenario_name' or 'override1,override2'.
     override_dict : dict or AttrDict, optional
 
     """
@@ -71,55 +78,46 @@ def model_run_from_dict(config_dict, override_dict=None):
         config = config_dict
     config.config_path = None
 
-    config_with_overrides, debug_comments = apply_overrides(
-        config, override_dict=override_dict
+    config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
+        config, scenario=scenario, override_dict=override_dict
     )
 
-    return generate_model_run(config_with_overrides, debug_comments)
+    return generate_model_run(
+        config_with_overrides, debug_comments, overrides, scenario)
 
 
-def combine_overrides(override_file_path, override_groups):
-    if ',' in override_groups:
-        overrides = override_groups.split(',')
-    else:
-        overrides = [override_groups]
-
-    override = AttrDict()
-    for group in overrides:
+def combine_overrides(config_model, overrides):
+    override_dict = AttrDict()
+    for override in overrides:
         try:
-            # Seting resolve_imports to group ensures that import
-            # keys within the override group are processed, i.e. that
-            # my_override.import: ['foo.yaml', 'bar.yaml'] works
-            override_group_from_file = AttrDict.from_yaml(
-                override_file_path, resolve_imports=group
-            )[group]
+            yaml_string = config_model.overrides[override].to_yaml()
+            override_with_imports = AttrDict.from_yaml_string(yaml_string)
         except KeyError:
             raise exceptions.ModelError(
-                'Override group `{}` does not exist in file `{}`.'.format(
-                    group, override_file_path
-                )
+                'Override `{}` is not defined.'.format(override)
             )
         try:
-            override.union(override_group_from_file, allow_override=False)
+            override_dict.union(override_with_imports, allow_override=False)
         except KeyError as e:
             raise exceptions.ModelError(
                 str(e)[1:-1] + '. Already specified but defined again in '
-                'override group `{}`.'.format(group)
+                'override `{}`.'.format(override)
             )
 
-    return override
+    return override_dict
 
 
-def apply_overrides(config, override_file=None, override_dict=None):
+def apply_overrides(config, scenario=None, override_dict=None):
     """
-    Generate processed Model configuration, applying any overrides.
+    Generate processed Model configuration, applying any scenarios overrides.
 
     Parameters
     ----------
     config : AttrDict
         a model configuration AttrDict
-    override_file : str, optional
-    override_dict : dict or AttrDict, optional
+    scenario : str, optional
+    override_dict : str or dict or AttrDict, optional
+        If a YAML string, converted to AttrDict
 
     """
     debug_comments = AttrDict()
@@ -130,17 +128,6 @@ def apply_overrides(config, override_file=None, override_dict=None):
     )
     config_model = AttrDict.from_yaml(base_model_config_file)
 
-    default_tech_groups = list(config_model.tech_groups.keys())
-
-    # README CHANGED: `model` is not a list any longer -
-    # it is now always a single file
-
-    # README CHANGED: order of arguments to relative_path reversed
-
-    # README CHANGED: data_path option removed -- need to make sure
-    # that for parallel runs, data_path relative to the currently
-    # open model config file always works
-
     # Interpret timeseries_data_path as relative
     config.model.timeseries_data_path = relative_path(
         config.config_path, config.model.timeseries_data_path
@@ -149,32 +136,12 @@ def apply_overrides(config, override_file=None, override_dict=None):
     # The input files are allowed to override other model defaults
     config_model.union(config, allow_override=True)
 
-    # Apply overrides via 'override_file', which contains the path to a YAML file
-    if override_file:
-        # Due to the possible occurrance of `C:\path_to_file\file.yaml:override` we have to split
-        # override_file into `path_to_file`, `file.yaml` and `override` before
-        # merging `path_to_file` and `file.yaml` back together
-
-        path_to_file, override_file_with_group = os.path.split(override_file)
-        override_file, override_groups = override_file_with_group.split(':')
-        override_file_path = os.path.join(path_to_file, override_file)
-
-        override_from_file = combine_overrides(override_file_path, override_groups)
-
-        warnings = checks.check_overrides(config_model, override_from_file)
-        exceptions.print_warnings_and_raise_errors(warnings=warnings)
-
-        config_model.union(
-            override_from_file, allow_override=True, allow_replacement=True
-        )
-        for k, v in override_from_file.as_dict_flat().items():
-            debug_comments.set_key(
-                '{}'.format(k),
-                'Overridden via override: {}'.format(override_file))
-
-    # Apply overrides via 'override', which is an AttrDict
+    # First pass of applying override dict before applying scenarios,
+    # so that can override scenario definitions by override_dict
     if override_dict:
-        if not isinstance(override_dict, AttrDict):
+        if isinstance(override_dict, str):
+            override_dict = AttrDict.from_yaml_string(override_dict)
+        elif not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
 
         warnings = checks.check_overrides(config_model, override_dict)
@@ -183,12 +150,61 @@ def apply_overrides(config, override_file=None, override_dict=None):
         config_model.union(
             override_dict, allow_override=True, allow_replacement=True
         )
+
+    if scenario:
+        scenarios = config_model.get('scenarios', {})
+
+        if scenario in scenarios:
+            # Manually defined scenario names cannot be the same as single
+            # overrides or any combination of semicolon-delimited overrides
+            if all([i in config_model.get('overrides', {})
+                    for i in scenario.split(',')]):
+                raise exceptions.ModelError(
+                    'Manually defined scenario cannot be a combination of override names.'
+                )
+            if not isinstance(scenarios[scenario], str):
+                raise exceptions.ModelError(
+                    'Scenario definition must be string of comma-separated overrides.'
+                )
+            overrides = scenarios[scenario].split(',')
+            logger.info(
+                'Using scenario `{}` leading to the application of '
+                'overrides `{}`.'.format(scenario, scenarios[scenario])
+            )
+        else:
+            overrides = str(scenario).split(',')
+            logger.info(
+                'Applying overrides `{}` without a '
+                'specific scenario name.'.format(scenario)
+            )
+
+        overrides_from_scenario = combine_overrides(config_model, overrides)
+
+        warnings = checks.check_overrides(config_model, overrides_from_scenario)
+        exceptions.print_warnings_and_raise_errors(warnings=warnings)
+
+        config_model.union(
+            overrides_from_scenario, allow_override=True, allow_replacement=True
+        )
+        for k, v in overrides_from_scenario.as_dict_flat().items():
+            debug_comments.set_key(
+                '{}'.format(k),
+                'Applied from override')
+    else:
+        overrides = []
+
+    # Second pass of applying override dict after applying scenarios,
+    # so that scenario-based overrides are overridden by override_dict!
+    if override_dict:
+        config_model.union(
+            override_dict, allow_override=True, allow_replacement=True
+        )
         for k, v in override_dict.as_dict_flat().items():
             debug_comments.set_key(
                 '{}'.format(k),
                 'Overridden via override dictionary.')
 
-    return config_model, debug_comments
+    return config_model, debug_comments, overrides, scenario
 
 
 def get_parents(tech_id, model_config):
@@ -467,7 +483,7 @@ def process_timeseries_data(config_model, model_run):
     return timeseries_data, first_index
 
 
-def generate_model_run(config, debug_comments):
+def generate_model_run(config, debug_comments, applied_overrides, scenario):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
@@ -479,6 +495,8 @@ def generate_model_run(config, debug_comments):
 
     """
     model_run = AttrDict()
+    model_run['scenario'] = scenario
+    model_run['applied_overrides'] = ';'.join(applied_overrides)
 
     # 1) Initial checks on model configuration
     warnings, errors = checks.check_initial(config)
