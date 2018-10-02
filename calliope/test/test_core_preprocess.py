@@ -54,7 +54,6 @@ class TestModelRun:
 
         assert check_error_or_warning(error, 'Scenario definition must be string of comma-separated overrides.')
 
-
     def test_scenario_name_overlaps_overrides(self):
         """
         Test that a scenario name cannot be a combination of override names
