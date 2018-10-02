@@ -65,19 +65,22 @@ def load_constraints(backend_model):
             rule=ramping_down_constraint_rule
         )
 
-    if 'clusters' in sets and 'datesteps' in sets:
+    if 'loc_techs_storage_intra_max_constraint' in sets:
         backend_model.storage_intra_max_constraint = po.Constraint(
             backend_model.loc_techs_storage_intra_max_constraint, backend_model.timesteps,
             rule=storage_intra_max_rule
         )
+    if 'loc_techs_storage_intra_min_constraint' in sets:
         backend_model.storage_intra_min_constraint = po.Constraint(
             backend_model.loc_techs_storage_intra_min_constraint, backend_model.timesteps,
             rule=storage_intra_min_rule
         )
+    if 'loc_techs_storage_inter_max_constraint' in sets:
         backend_model.storage_inter_max_constraint = po.Constraint(
             backend_model.loc_techs_storage_inter_max_constraint, backend_model.datesteps,
             rule=storage_inter_max_rule
         )
+    if 'loc_techs_storage_inter_min_constraint' in sets:
         backend_model.storage_inter_min_constraint = po.Constraint(
             backend_model.loc_techs_storage_inter_min_constraint, backend_model.datesteps,
             rule=storage_inter_min_rule
