@@ -90,7 +90,7 @@ class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model = calliope.examples.national_scale(
-                override_file=override_file + ':check_feasibility',
+                scenario='check_feasibility',
                 override_dict={'run.cyclic_storage': False}
             )
 
