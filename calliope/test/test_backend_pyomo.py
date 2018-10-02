@@ -176,8 +176,7 @@ class TestInterface:
 class TestChecks:
     def test_operate_cyclic_storage(self):
         """Cannot have cyclic storage in operate mode"""
-        override = {'run.cyclic_storage': True}
-        m = build_model(override, 'simple_supply,operate,investment_costs')
+        m = build_model({}, 'simple_supply,operate,investment_costs')
         assert m._model_data.attrs['run.cyclic_storage'] is True
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)
@@ -252,7 +251,7 @@ class TestBalanceConstraints:
         sets.loc_techs_store,
         """
         m = build_model(
-            {'run.cyclic_storage': True},
+            {},
             'simple_storage,one_day,investment_costs'
         )
         m.run(build_only=True)
@@ -260,8 +259,7 @@ class TestBalanceConstraints:
         assert not hasattr(m._backend_model, 'storage_initial_constraint')
 
         m2 = build_model(
-            {'run.cyclic_storage': True,
-             'techs.test_storage.constraints.storage_initial': 0},
+            {'techs.test_storage.constraints.storage_initial': 0},
             'simple_storage,one_day,investment_costs'
         )
         m2.run(build_only=True)

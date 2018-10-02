@@ -14,6 +14,8 @@ Release History
 
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
 
+|changed| Cyclic storage (introduced in v0.6.2) now defaults to True on a model. To set to False add `run.cyclic_storage: false` to your configuration.
+
 |fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
 
 |fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.

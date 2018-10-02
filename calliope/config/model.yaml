@@ -11,7 +11,7 @@ run:
 
     backend: pyomo  # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
     bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
-    cyclic_storage: false # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
+    cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
     ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
     objective_options: {'cost_class': 'monetary', 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)

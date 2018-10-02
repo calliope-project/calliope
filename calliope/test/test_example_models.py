@@ -52,7 +52,7 @@ class TestNationalScaleExampleModelSenseChecks:
         assert model.results.energy_cap.to_pandas()['region2::battery'] == approx(1000)
         assert model.results.energy_cap.to_pandas()['region1::ccgt'] == approx(30000)
 
-        assert float(model.results.cost.sum()) == approx(38997.3544)
+        assert float(model.results.cost.sum()) == approx(38988.7442)
 
         assert float(
             model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
@@ -93,7 +93,10 @@ class TestNationalScaleExampleModelInfeasibility:
             'overrides.yaml'
         )
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            model = calliope.examples.national_scale(override_file=override_file + ':check_feasibility')
+            model = calliope.examples.national_scale(
+                override_file=override_file + ':check_feasibility',
+                override_dict={'run.cyclic_storage': False}
+            )
 
         expected_warnings = [
             'Objective function argument `cost_class` given but not used by objective function `check_feasibility`',

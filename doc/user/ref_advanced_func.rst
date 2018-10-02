@@ -159,7 +159,7 @@ See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitio
 Cyclic storage
 --------------
 
-With ``storage`` and ``supply_plus`` techs, it is possible to link the storage at either end of the timeseries. This allows the user to better represent multiple years by just modelling one year. By activating cyclig storage (``run.cyclic_storage: true``), the initial stored energy for each storage technology at each location passed to the model's first timestep will be equal to the stored energy at the end of the model's last timestep.
+With ``storage`` and ``supply_plus`` techs, it is possible to link the storage at either end of the timeseries. This allows the user to better represent multiple years by just modelling one year. By activating cyclic storage (``run.cyclic_storage: true`` - default functionality as of v0.6.3), the initial stored energy for each storage technology at each location passed to the model's first timestep will be equal to the stored energy at the end of the model's last timestep.
 
 For example, for a model running over a full year at hourly resolution, the initial storage at `Jan 1st 00:00:00` will be forced equal to the storage at the end of the timestep `Dec 31st 23:00:00`. By setting ``storage_initial`` for a technology, it is also possible to fix the value in the last timestep. For instance, with ``run.cyclic_storage: true`` and a ``storage_initial`` of zero, the stored energy *must* be zero by the end of the time horizon.
 

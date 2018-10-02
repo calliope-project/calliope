@@ -140,8 +140,7 @@ def check_operate_params(model_data):
 
     # Cyclic storage isn't really valid in operate mode, so we ignore it, using
     # initial_storage instead (allowing us to pass storage between operation windows)
-    # TODO: update default to True for 0.6.3
-    if model_data.attrs.get('run.cyclic_storage', False):
+    if model_data.attrs.get('run.cyclic_storage', True):
         warnings.append(
             'Storage cannot be cyclic in operate run mode, setting '
             '`run.cyclic_storage` to False for this run'
