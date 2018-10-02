@@ -21,16 +21,8 @@ import traceback
 
 import click
 
-<<<<<<< HEAD
-from calliope import Model, read_netcdf, examples
-||||||| merged common ancestors
-from calliope import Model, read_netcdf, examples
-from calliope.core.util.convert import convert_model
-=======
 from calliope import AttrDict, Model, examples, read_netcdf
 from calliope._version import __version__
-from calliope.core.util.convert import convert_model
->>>>>>> master
 from calliope.core.util.generate_runs import generate
 from calliope.core.util.logging import logger, set_log_level
 
