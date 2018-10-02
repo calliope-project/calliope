@@ -61,11 +61,11 @@ class TestModelRun:
         override = AttrDict.from_yaml_string(
             """
             scenarios:
-                scenario_1: 'simple_supply,simple_supply_plus'
+                'simple_supply,group_share_energy_cap_min': 'foobar'
             """
         )
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override, scenario='scenario_1')
+            build_model(override_dict=override, scenario='simple_supply,group_share_energy_cap_min')
 
         assert check_error_or_warning(error, 'Manually defined scenario cannot be a combination of override names.')
 
