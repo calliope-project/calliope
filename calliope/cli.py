@@ -20,7 +20,6 @@ import traceback
 import click
 
 from calliope import Model, read_netcdf, examples
-from calliope.core.util.convert import convert_model
 from calliope.core.util.generate_runs import generate
 from calliope.core.util.logging import logger, set_log_level
 from calliope._version import __version__
@@ -295,28 +294,3 @@ def generate_runs(
 
     with format_exceptions(debug, pdb):
         generate(kind, **kwargs)
-
-
-@cli.command(short_help='Convert a 0.5.x model to 0.6.0.')
-@click.argument('run_config_path')
-@click.argument('model_config_path')
-@click.argument('out_path')
-@_debug
-@_quiet
-@_pdb
-def convert(
-        run_config_path, model_config_path, out_path,
-        debug, quiet, pdb):
-    """
-    Convert a Calliope 0.5.x model specified by its run and model
-    configurations to a Calliope 0.6.0 model.
-
-    The input model is not modified; the converted version of the model
-    is saved to ``out_path``.
-
-    """
-    set_quietness_level(quiet)
-    with format_exceptions(debug, pdb):
-        print('Converting model...')
-        convert_model(run_config_path, model_config_path, out_path)
-        print('Done. Results saved to: {}'.format(out_path))

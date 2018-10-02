@@ -106,26 +106,3 @@ class TestCLI:
         result = runner.invoke(cli.run, ['foo.yaml'])
         assert result.exit_code == 1
         assert 'Traceback (most recent call last)' not in result.output
-
-    def test_convert(self):
-        runner = CliRunner()
-        run_config = os.path.join(
-            _THIS_DIR, 'model_conversion', 'national_scale', 'run.yaml'
-        )
-        model_config = os.path.join(
-            _THIS_DIR, 'model_conversion', 'national_scale', 'model_config', 'model.yaml'
-        )
-
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.convert, [run_config, model_config, tempdir]
-            )
-
-            # Conversion ran without errors
-            assert result.exit_code == 0
-
-            # FIXME to add:
-            # Ensure that 'override' is in __disabled
-            # Ensure that tech groups are converted
-            # Check that only allowed top-level things are at top level in model
-            # Check that time series files have converted successfully

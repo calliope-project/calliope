@@ -12,6 +12,8 @@ Release History
 
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
 
+|changed| Removed ``calliope convert`` command. If you need to convert a 0.5.x model, first use ``calliope convert`` in Calliope 0.6.2 and then upgrade to 0.6.3 or higher.
+
 |fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
 
 |fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.
