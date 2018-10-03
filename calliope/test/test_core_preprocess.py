@@ -1014,7 +1014,8 @@ class TestDataset:
     def test_clustering_no_datestep(self):
         """
         On clustering, there are a few new dimensions in the model_data, and a
-        few new lookup arrays
+        few new lookup arrays. Cyclic storage is set to False as you cannot
+        have cyclic storage without `storage_inter_cluster` being active.
         """
         override = {
             'model.subset_time': ['2005-01-01', '2005-01-04'],
