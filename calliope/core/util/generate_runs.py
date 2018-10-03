@@ -13,7 +13,7 @@ in parallel on a cluster or sequentially on any machine.
 import os
 
 import pandas as pd
-from calliope.core import Model
+from calliope.core import AttrDict
 
 
 def generate_runs(
@@ -34,8 +34,13 @@ def generate_runs(
 
     """
     if scenarios is None:
-        model = Model(model_file, override_dict=override_dict)
-        config = model._debug_data['config_initial']
+        config = AttrDict.from_yaml(model_file)
+        if override_dict:
+            override = AttrDict.from_yaml_string(override_dict)
+            config.union(
+                override, allow_override=True, allow_replacement=True
+            )
+
         if 'scenarios' in config:
             runs = config.scenarios.keys()
         else:
@@ -45,13 +50,16 @@ def generate_runs(
 
     commands = []
 
+    # len(str(x)) gives us the number of digits in x, for padding
+    i_string = '{:0>' + str(len(str(len(runs)))) + 'd}'
+
     for i, run in enumerate(runs):
         cmd = (
             'calliope run {model} --scenario {scenario} '
             '--save_netcdf out_{i}_{scenario}.nc '
             '--save_plots plots_{i}_{scenario}.html'
         ).format(
-            i=i + 1,
+            i=i_string.format(i + 1),
             model=model_file,
             scenario=run,
             override_dict=override_dict,

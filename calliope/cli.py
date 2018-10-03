@@ -321,8 +321,11 @@ def generate_scenarios(
         if not scenario_name_prefix:
             scenario_name_prefix = 'scenario_'
 
+        # len(str(x)) gives us the number of digits in x, for padding
+        scenario_string = '{}{:0>' + str(len(str(len(combinations)))) + 'd}'
+
         scenarios = {'scenarios': {
-            scenario_name_prefix + str(i + 1):
+            scenario_string.format(scenario_name_prefix, i + 1):
             ','.join(c)
             for i, c in enumerate(combinations)}}
 

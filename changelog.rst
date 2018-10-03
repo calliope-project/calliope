@@ -18,9 +18,13 @@ Release History
 
 |new| Added solver performance comparison in the docs. CPLEX & Gurobi are, as expected, the best options. If going open-source & free, CBC is much quicker than GLPK!
 
+|new| Calliope is tested and confirmed to run on Python 3.7
+
 |changed| Updated to xarray v0.10.8, including updates to timestep aggregation and NetCDF I/O to handle updated xarray functionality.
 
 |changed| Removed ``calliope convert`` command. If you need to convert a 0.5.x model, first use ``calliope convert`` in Calliope 0.6.2 and then upgrade to 0.6.3 or higher.
+
+|changed| Removed comment persistence in AttrDict and the associated API in order to improve compatibility with newer versions of ruamel.yaml
 
 |fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
 

@@ -123,7 +123,7 @@ class TestGenerateRuns:
         )
         assert len(runs) == 2
         assert runs[0].endswith(
-            '--scenario cold_fusion_with_capacity_share --save_netcdf out_1_cold_fusion_with_capacity_share.nc --save_plots plots_1_cold_fusion_with_capacity_share.html'
+            '--scenario cold_fusion_with_production_share --save_netcdf out_1_cold_fusion_with_production_share.nc --save_plots plots_1_cold_fusion_with_production_share.html'
         )
 
     def test_generate_runs_scenarios_none_with_overrides(self):
@@ -133,5 +133,5 @@ class TestGenerateRuns:
         )
         assert len(runs) == 4
         assert runs[0].endswith(
-            '--scenario mapbox_ready --save_netcdf out_1_mapbox_ready.nc --save_plots plots_1_mapbox_ready.html'
+            '--scenario milp --save_netcdf out_1_milp.nc --save_plots plots_1_milp.html'
         )
