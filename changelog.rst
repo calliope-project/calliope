@@ -10,7 +10,7 @@ Release History
 
 |new| ``calliope generate_runs`` in the command line interface can now produce scripts for remote clusters which require SLURM-based submission (``sbatch...``).
 
-|new| Addition of ``scenarios``, which complement and expand the existing ``overrides`` functionality.  ``overrides`` becomes a top-level key in model configuration, instead of a separate file. The ``calliope run`` command has a new ``--scenario`` option which replaces --override_file, while ``calliope generate_runs`` has a new ``--scenarios`` option which replaces --override_file and takes a semicolon-separated list of scenario names or of group1,group2 combinations. To convert existing overrides to the new approach, simply group them under a top-level ``overrides`` key and import your existing overrides file from the main model configuration file with ``import: ['your_overrides_file.yaml']``.
+|new| |backwards-incompatible| Addition of ``scenarios``, which complement and expand the existing ``overrides`` functionality.  ``overrides`` becomes a top-level key in model configuration, instead of a separate file. The ``calliope run`` command has a new ``--scenario`` option which replaces --override_file, while ``calliope generate_runs`` has a new ``--scenarios`` option which replaces --override_file and takes a semicolon-separated list of scenario names or of group1,group2 combinations. To convert existing overrides to the new approach, simply group them under a top-level ``overrides`` key and import your existing overrides file from the main model configuration file with ``import: ['your_overrides_file.yaml']``.
 
 |new| Addition of ``calliope generate_scenarios`` command to allow building autmating the construction of scenarios which consist of many combinations of overrides.
 
@@ -77,14 +77,14 @@ Release History
 0.6.0 (2018-04-20)
 ------------------
 
-Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/whatsnew` for a more detailed description of the many changes.
+Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/whatsnew_060` for a more detailed description of the many changes.
 
 Major changes
 ~~~~~~~~~~~~~
 
-|changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files. See :doc:`user/conversion_0.6.0` for a full list of changes.
+|changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files.
 
-|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see :doc:`user/whatsnew`).
+|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see :doc:`user/whatsnew_060`).
 
 |new| Addition of a ``calliope convert`` CLI tool to convert 0.5.x models to 0.6.0.
 
@@ -92,7 +92,7 @@ Major changes
 
 |new| New constraints: ``resource_min_use`` constraint for ``supply`` and ``supply_plus`` techs.
 
-|changed| |backwards-incompatible| Removal of settings and constraints includes ``subset_x``, ``subset_y``, ``s_time``, ``r2``, ``r_scale_to_peak``, ``weight``. See :doc:`user/conversion_0.6.0` for a full list.
+|changed| |backwards-incompatible| Removal of settings and constraints includes ``subset_x``, ``subset_y``, ``s_time``, ``r2``, ``r_scale_to_peak``, ``weight``.
 
 |changed| |backwards-incompatible| ``system_margin`` constraint replaced with ``reserve_margin`` constraint.
 
