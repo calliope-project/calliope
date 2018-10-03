@@ -99,20 +99,20 @@ class TestAttrDict:
 
     def test_from_yaml_string_dot_strings_duplicate(self):
         yaml_string = 'a.b.c: 1\na.b.c: 2'
-        d = AttrDict.from_yaml_string(yaml_string)
-        assert d.a.b.c == 2
+        with pytest.warns(ruamel_yaml.constructor.DuplicateKeyFutureWarning):
+            AttrDict.from_yaml_string(yaml_string)
 
     def test_simple_invalid_yaml(self):
         yaml_string = '1 this is not valid yaml'
         with pytest.raises(ValueError) as excinfo:
-            d = AttrDict.from_yaml_string(yaml_string)
+            AttrDict.from_yaml_string(yaml_string)
         assert check_error_or_warning(
             excinfo, 'Could not parse <yaml string> as YAML'
         )
 
     def test_parser_error(self):
         with pytest.raises(ruamel_yaml.YAMLError):
-            d = AttrDict.from_yaml_string("""
+            AttrDict.from_yaml_string("""
             foo: bar
             baz: 1
                 - foobar
@@ -275,7 +275,7 @@ class TestAttrDict:
             'baz': {'bar': {}},
         })
         d.union(d_new)
-        assert d.baz.bar.keys() == []
+        assert len(d.baz.bar.keys()) == 0
 
     def test_del_key_single(self, attr_dict):
         attr_dict.del_key('c')
@@ -305,176 +305,6 @@ class TestAttrDict:
         d = AttrDict.from_yaml(yaml_file)
         result = d.to_yaml()
         assert 'a: 1' in result
-
-    def test_comment_roundtrip(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_file = os.path.join(tempdir, 'test.yaml')
-            d.to_yaml(out_file)
-
-            with open(out_file, 'r') as f:
-                result = f.read()
-
-            assert 'x: foo  # a comment on foo' in result
-
-    def test_iter_with_comments_filtered(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        keys = [k for k in d]
-        assert '__dict_comments__' not in keys
-
-    def test_keys_with_comments_not_filtered(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        keys = d.keys(filtered=False)
-        assert '__dict_comments__' in keys
-
-    def test_values_with_comments_not_filtered(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        values = d.values(filtered=False)
-        c_value = [i for i in values if isinstance(i, dict) and 'c' in i]
-        assert c_value[0]['c'][0] is None
-
-    def test_keys_nested_with_comments_flat(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        dd = d.keys_nested()
-        assert dd == ['a', 'b', 'c.x', 'c.y', 'c.z.I', 'c.z.II', 'd']
-
-    def test_keys_nested_with_comments_as_dict(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        dd = d.keys_nested(subkeys_as='dict')
-        assert dd == ['a', 'b', {'c': ['x', 'y', {'z': ['I', 'II']}]}, 'd']
-
-    def test_add_comment_invalid_kind(self, attr_dict):
-        with pytest.raises(ValueError):
-            attr_dict.set_comment('foo', 'bar', kind='baz')
-
-    def test_add_comment(self, attr_dict):
-        attr_dict.set_comment('c.y', 'test comment')  # inline
-        attr_dict.set_comment('c.y', 'test comment above', kind='above')
-
-        wanted_comments = [
-            None,
-            [ruamel_yaml.CommentToken('# test comment above', 0, None)],
-            ruamel_yaml.CommentToken('# test comment', 0, None),
-            None
-        ]
-
-        resulting_comments = attr_dict.c.__dict_comments__['y']
-        assert resulting_comments[1][0].value == wanted_comments[1][0].value
-        assert resulting_comments[2].value == wanted_comments[2].value
-
-    def test_add_comment_exists(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-
-        # should work, as no inline comment exists
-        d.set_comment('b', 'test comment')
-
-        # should fail, as an above comment exists
-        with pytest.raises(ValueError) as excinfo:
-            d.set_comment('c', 'test comment', kind='above')
-
-        assert check_error_or_warning(
-            excinfo, 'Comment exists'
-        )
-
-    def test_add_comment_exists_but_empty(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-
-        # Ensure comments were added
-        assert d.c.__dict_comments__['y'][2].value == '#\n'
-
-        # should work, as inline comment is empty
-        d.set_comment('c.y', 'test comment')
-
-        # should work, as above comment is empty
-        d.set_comment('c.y', 'test comment', kind='above')
-
-    def test_del_comment(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        assert 'y' in d.c.__dict_comments__
-        d.del_comments('c.y')
-        assert 'y' not in d.c.__dict_comments__
-
-    def test_get_comment(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        result = {
-            'above': '# a comment about `c`\n',
-            'inline': '# a comment inline with `c`\n',
-            'below': None
-        }
-        assert d.get_comments('c') == result
-
-    def test_get_comment_inexistent(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        with pytest.raises(KeyError):
-            d.get_comments('b')
-
-    def test_get_comment_all_none(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        d.__dict_comments__['b'] = [None, None, None, None]
-        result = {
-            'above': None,
-            'inline': None,
-            'below': None
-        }
-        assert d.get_comments('b') == result
-
-    def test_delete_key_deletes_comments(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        assert 'x' in d.c.__dict_comments__
-        d.del_key('c.x')
-        assert 'x' not in d.c.__dict_comments__
-
-    def test_union_preserves_comments(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        d_new = AttrDict.from_yaml_string("""
-            test: 1  # And a comment
-            somekey:
-                bar:
-                    baz: 2  # Another comment
-        """)
-        d.union(d_new)
-        assert d.get_comments('somekey.bar.baz')['inline'] == '# Another comment\n'
-
-    def test_import_preserves_comments(self, yaml_file):
-        with tempfile.TemporaryDirectory() as tempdir:
-            imported_file = os.path.join(tempdir, 'test_import.yaml')
-            imported_yaml = """
-                somekey: 1
-                anotherkey: 2  # anotherkey's comment
-            """
-            with open(imported_file, 'w') as f:
-                f.write(imported_yaml)
-
-            yaml_string = """
-                import:
-                    - {}
-                foo:
-                    bar: 1  # Comment on bar
-                    baz: 2
-                    3:
-                        4: 5
-            """.format(imported_file)
-
-            d = AttrDict.from_yaml_string(yaml_string, resolve_imports=True)
-
-        assert 'anotherkey' in d.__dict_comments__
-
-        assert d.get_comments('anotherkey')['inline'] == "# anotherkey's comment\n"
-
-    def test_comment_on_collapsed_dict_notation(self):
-        yaml_string = """
-            foo:
-                bar: 1  # Comment on bar
-                baz: 2
-                3:
-                    4: 5
-            baz.bar.foo.doo: 4  # Big bad comment
-        """
-
-        d = AttrDict.from_yaml_string(yaml_string)
-        d_flat = d.as_dict_flat(filtered=False)
-        assert d_flat['__dict_comments__'] == {}
-        assert 'doo' in d_flat['baz.bar.foo.__dict_comments__']
 
     def test_import_must_be_list(self):
         yaml_string = """

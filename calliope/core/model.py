@@ -9,6 +9,8 @@ Implements the core Model class.
 
 """
 
+from io import StringIO
+
 import numpy as np
 import ruamel.yaml as ruamel_yaml
 
@@ -138,9 +140,6 @@ class Model(object):
         formulation.
 
         """
-        # README: currently based on ruamel.yaml 0.15 which is a mix of old
-        # and new API - possibly needs a bit of rewriting once ruamel.yaml
-        # has progressed a bit further
         yaml = ruamel_yaml.YAML()
 
         model_run_debug = self._model_run.copy()
@@ -151,7 +150,11 @@ class Model(object):
             model_run_debug.sets[k] = list(v)
 
         debug_comments = self._debug_data['comments']
-        debug_yaml = yaml.load(yaml.dump(model_run_debug.as_dict()))
+
+        stream = StringIO()
+        yaml.dump(model_run_debug.as_dict(), stream=stream)
+        debug_yaml = yaml.load(stream.getvalue())
+
         for k in debug_comments.model_run.keys_nested():
             v = debug_comments.model_run.get_key(k)
             if v:
@@ -163,8 +166,10 @@ class Model(object):
 
         with open(path, 'w') as f:
             ruamel_yaml.dump(
-                debug_yaml, f,
-                Dumper=dumper, default_flow_style=False
+                debug_yaml,
+                stream=f,
+                Dumper=dumper,
+                default_flow_style=False
             )
 
     def run(self, force_rerun=False, **kwargs):

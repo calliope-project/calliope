@@ -1,16 +1,19 @@
 build: false
 
-# See: https://www.appveyor.com/docs/installed-software/#python
+# See: https://www.appveyor.com/docs/windows-images-software/#miniconda
 environment:
   matrix:
-    # - PYTHON: "C:\\Miniconda3-x64"
-    #   PYTHON_VERSION: "3.4.3"
-    #   PYTHON_ARCH: "64"
-    - PYTHON: "C:\\Miniconda35"
-      PYTHON_VERSION: "3.6.1"
+    - PYTHON: "C:\\Miniconda3"
+      PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Miniconda35-x64"
-      PYTHON_VERSION: "3.6.1"
+    - PYTHON: "C:\\Miniconda3"
+      PYTHON_VERSION: "3.7"
+      PYTHON_ARCH: "32"
+    - PYTHON: "C:\\Miniconda3-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+    - PYTHON: "C:\\Miniconda3-x64"
+      PYTHON_VERSION: "3.7"
       PYTHON_ARCH: "64"
 
 init:
@@ -21,7 +24,7 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - "conda env create -n calliope --file requirements\\base.yml"
+  - "conda env create -n calliope --file requirements\\base.yml python=%PYTHON_VERSION%"
   - activate calliope
   - pip install --no-cache-dir .
 

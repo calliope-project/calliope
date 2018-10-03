@@ -398,7 +398,7 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
 
 
 def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
-    cost_classes = tech_config.get('costs', {}).keys()
+    cost_classes = list(tech_config.get('costs', {}).keys())
     for cost in cost_classes:
         plant_life = tech_config.constraints.get_key('lifetime', 0)
         interest = tech_config.costs[cost].get_key('interest_rate', None)
