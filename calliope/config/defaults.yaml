@@ -69,8 +69,8 @@ default_tech:
         resource_cap_min: 0  # name: Minimum installed resource consumption capacity ¦ unit: kW ¦
         resource_eff: 1.0  # name: Resource efficiency ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing resource before it reaches storage (if storage is present) or conversion to carrier.
         resource_min_use: false # name: Minimum resource consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum resource consumption for production technologies
-        resource_scale: 1.0  # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all valuesin timeseries) by this value
-        resource_unit: power  # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``power`` (i.e. kW) or ``energy`` (i.e. kWh), which affects how resource time series are processed when performing time resolution adjustments
+        resource_scale: 1.0  # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all values in timeseries) by this value
+        resource_unit: energy  # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
         storage_cap_equals: false  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``charge_rate`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
         storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``charge_rate`` will be used as the capacity.
         storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦

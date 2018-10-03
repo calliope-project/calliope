@@ -43,6 +43,7 @@ techs:
             charge_rate: 1
             storage_loss: 0.002
             resource: file=csp_resource.csv
+            resource_unit: energy_per_cap
             energy_eff: 0.4
             parasitic_eff: 0.9
             resource_area_max: inf

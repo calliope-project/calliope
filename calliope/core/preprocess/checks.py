@@ -347,6 +347,15 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
                     '{} cost: `{}`'.format(tech_id, loc_id, cost_class, k)
                 )
 
+    # Error if non-allowed `resource_unit` is defined
+    if (tech_config.constraints.get('resource_unit', 'energy') not in
+            ['energy', 'energy_per_cap', 'energy_per_area']):
+        errors.append(
+            '`{}` is an unknown resource unit for `{}` at `{}`. '
+            'Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed.'
+            .format(tech_config.constraints.resource_unit, tech_id, loc_id)
+        )
+
     return model_warnings, errors
 
 
