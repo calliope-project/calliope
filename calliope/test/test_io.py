@@ -71,7 +71,8 @@ class TestIO:
         # test_example_models
         with pytest.warns(exceptions.ModelWarning):
             model = calliope.examples.national_scale(
-                scenario='check_feasibility'
+                scenario='check_feasibility',
+                override_dict={'run.cyclic_storage': False}
             )
 
         model.run()

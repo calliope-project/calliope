@@ -231,7 +231,7 @@ def check_initial(config_model):
     # storage_inter_cluster
     storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
     if (config_model.get_key('model.time.function', None) == 'apply_clustering'
-            and config_model.get_key('run.cyclic_storage', False)
+            and config_model.get_key('run.cyclic_storage', True)
             and not config_model.get_key(storage_inter_cluster, True)):
         errors.append(
             'When time clustering, cannot have cyclic storage constraints if '
@@ -545,14 +545,4 @@ def check_future_deprecation_warnings(model_run, model_data):
     warning should specify Calliope version in which it was added, and the
     version in which it should be updated/removed.
     """
-
-    # Warning that cyclic storage will default to True in 0.6.3 #
-    # Added in 0.6.2-dev, to be removed in v0.6.3-dev
-    if ('loc_techs_store' in model_data and
-            not model_data.attrs.get('run.cyclic_storage', False)):
-        warnings.warn(
-            'Cyclic storage, a new addition in v0.6.2, currently defaults to '
-            'False (i.e. emulating functionality prior to v0.6.2). '
-            'From v0.6.3, cyclic storage will default to True.',
-            FutureWarning
-        )
+    return None

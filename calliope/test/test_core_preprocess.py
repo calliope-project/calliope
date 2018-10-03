@@ -1014,7 +1014,8 @@ class TestDataset:
     def test_clustering_no_datestep(self):
         """
         On clustering, there are a few new dimensions in the model_data, and a
-        few new lookup arrays
+        few new lookup arrays. Cyclic storage is set to False as you cannot
+        have cyclic storage without `storage_inter_cluster` being active.
         """
         override = {
             'model.subset_time': ['2005-01-01', '2005-01-04'],
@@ -1024,7 +1025,8 @@ class TestDataset:
                     'clustering_func': 'file=cluster_days.csv:0', 'how': 'mean',
                     'storage_inter_cluster': False
                 }
-            }
+            },
+            'run.cyclic_storage': False
         }
 
         model = build_model(override, scenario='simple_supply')
@@ -1037,13 +1039,13 @@ class TestDataset:
         assert 'lookup_datestep_cluster' not in model._model_data.data_vars
         assert 'timestep_cluster' in model._model_data.data_vars
 
-    def test_future_warning(self):
-        """
-        Test and warning to be removed in v0.6.3-dev
-        """
-        with pytest.warns(FutureWarning) as warning:
-            build_model({}, scenario='simple_storage')
-        assert check_error_or_warning(warning, 'From v0.6.3, cyclic storage will default to True.')
+    #def test_future_warning(self):
+    #    """
+    #    Test and warnings to be uncommented when a futurewarning is present
+    #    """
+    #    with pytest.warns(FutureWarning) as warning:
+    #        build_model({}, override_groups='')
+    #    assert check_error_or_warning(warning, '')
 
 
 class TestUtil:
