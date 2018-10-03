@@ -2,7 +2,6 @@ name: calliope-docs
 
 channels:
     - conda-forge
-    - anaconda
 
 dependencies:
     - python=3.5  # As of June 2017, readthedocs does not support Python 3.6

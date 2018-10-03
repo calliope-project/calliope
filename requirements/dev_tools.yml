@@ -2,7 +2,6 @@ name: calliope
 
 channels:
     - conda-forge
-    - anaconda
 
 dependencies:
     - flake8

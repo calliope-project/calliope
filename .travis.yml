@@ -5,8 +5,10 @@ sudo: false  # Use container-based infrastructure
 
 matrix:
   include:
-    - env:
-      - JOB_TYPE="test"
+  - name: "Python 3.6"
+    env: [PY_VERSION="3.6", JOB_TYPE="test"]
+  - name: "Python 3.7"
+    env: [PY_VERSION="3.7", JOB_TYPE="test"]
 
 before_install:
   - "wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;"
@@ -18,10 +20,10 @@ before_install:
   - conda info -a
 
 install:
-  - conda env create -n calliope --file requirements/base.yml
+  - conda env create -n calliope --file requirements/base.yml python=$PY_VERSION
   - source activate calliope
   - conda env update --file requirements/travis.yml
-  - pip install --no-cache-dir .
+  - pip install --no-cache-dir --verbose -e .
 
 script: "make ci"
 

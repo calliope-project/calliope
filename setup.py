@@ -58,7 +58,7 @@ setup(
         "pandas >= 0.22, < 0.23",
         "plotly >= 2.5",
         "pyomo >= 5.4, < 5.5",
-        "ruamel.yaml <= 0.15",
+        "ruamel.yaml >= 0.15.71, < 0.16",
         "scikit-learn >= 0.19.1",
         "xarray >= 0.10.8, < 0.11",
     ],
