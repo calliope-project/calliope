@@ -7,7 +7,7 @@ import ruamel.yaml
 
 from calliope.core.util.logging import log_time
 from calliope import exceptions
-from calliope.backend import checks
+from calliope.backend import checks, forecasts
 
 import numpy as np
 import xarray as xr
@@ -47,6 +47,7 @@ def run(model_data, timings, build_only=False):
         )
 
     elif model_data.attrs['run.mode'] == 'operate':
+
         results, backend = run_operate(
             model_data, timings,
             backend=BACKEND[run_backend], build_only=build_only
@@ -123,6 +124,15 @@ def run_operate(model_data, timings, backend, build_only):
     """
     log_time(timings, 'run_start',
              comment='Backend: starting model run in operational mode')
+
+    if any([i.endswith('_forecasts') for i in list(model_data.data_vars)]):
+            # FIXME "temporary" and undocumented hack to allow user-supplied
+            # operate_forecasts, with no sense checking whatsoever,
+            # so to be used with caution and restraint
+            assert 'horizonstep_resolution' in model_data.data_vars
+    else:
+        forecasts_data = forecasts.generate_forecasts(model_data)
+        model_data.merge(forecasts_data, inplace=True)
 
     defaults = ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
     operate_params = ['purchased'] + [
