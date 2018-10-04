@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.3-dev
----------
+0.6.3 (2018-10-03)
+------------------
 
 |new| Addition of ``flows`` plotting function. This shows production and how much they exchange with other locations. It also provides a slider in order to see flows' evolution through time.
 
