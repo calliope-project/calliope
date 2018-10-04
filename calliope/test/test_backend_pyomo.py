@@ -203,6 +203,22 @@ class TestBalanceConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_supply_constraint')
 
+        m = build_model(
+            {'techs.test_supply_elec.constraints.resource': 20,
+             'techs.test_supply_elec.constraints.resource_unit': 'energy_per_cap'},
+            'simple_supply,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'balance_supply_constraint', 'energy_cap')
+
+        m = build_model(
+            {'techs.test_supply_elec.constraints.resource': 20,
+             'techs.test_supply_elec.constraints.resource_unit': 'energy_per_area'},
+            'simple_supply,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'balance_supply_constraint', 'resource_area')
+
     def test_loc_techs_balance_demand_constraint(self):
         """
         sets.loc_techs_finite_resource_demand,
@@ -210,6 +226,16 @@ class TestBalanceConstraints:
         m = build_model({}, 'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_demand_constraint')
+
+        m = build_model({'techs.test_demand_elec.constraints.resource_unit': 'energy_per_cap'},
+                        'simple_supply,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'balance_demand_constraint', 'energy_cap')
+
+        m = build_model({'techs.test_demand_elec.constraints.resource_unit': 'energy_per_area'},
+                        'simple_supply,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'balance_demand_constraint', 'resource_area')
 
     def test_loc_techs_resource_availability_supply_plus_constraint(self):
         """
@@ -220,6 +246,16 @@ class TestBalanceConstraints:
         assert hasattr(
             m._backend_model, 'resource_availability_supply_plus_constraint'
         )
+
+        m = build_model({'techs.test_supply_plus.constraints.resource_unit': 'energy_per_cap'},
+                        'simple_supply_and_supply_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'resource_availability_supply_plus_constraint', 'energy_cap')
+
+        m = build_model({'techs.test_supply_plus.constraints.resource_unit': 'energy_per_area'},
+                        'simple_supply_and_supply_plus,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert check_variable_exists(m._backend_model, 'resource_availability_supply_plus_constraint', 'resource_area')
 
     def test_loc_techs_balance_transmission_constraint(self):
         """
