@@ -47,7 +47,6 @@ setup(
     package_data={'calliope': find_calliope_package_data()},
     install_requires=[
         "click >= 3.3",
-        "cufflinks >= 0.12.1",
         "ipython >= 6.2.1",
         "ipdb >= 0.11",
         "jinja2 >= 2.10",
@@ -56,7 +55,7 @@ setup(
         "numexpr >= 2.3.1",
         "numpy >= 1.14",
         "pandas >= 0.22, < 0.23",
-        "plotly >= 2.5",
+        "plotly >= 3.3",
         "pyomo >= 5.4, < 5.5",
         "ruamel.yaml >= 0.15.71, < 0.16",
         "scikit-learn >= 0.19.1",

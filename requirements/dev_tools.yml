@@ -11,5 +11,6 @@ dependencies:
     - snakeviz
     - twine
     - pip:
+        - cufflinks>=0.14  # Needed to build the tutorial notebooks
         - pyprof2calltree
         - gprof2dot

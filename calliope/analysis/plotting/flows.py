@@ -105,7 +105,7 @@ def _marker(locs_coordinates, location, carrier, tech, prod, scale_factor,
         text=hover_info,
         mode="markers",
         marker=dict(
-            symbol="dot",
+            symbol="circle-dot",
             opacity=0.6,
             size=prod * scale_factor + 1,
             color=techs_colors[tech],
@@ -120,7 +120,7 @@ def _marker(locs_coordinates, location, carrier, tech, prod, scale_factor,
         text=hover_info,
         mode="markers",
         marker=dict(
-            symbol="dot",
+            symbol="circle-dot",
             opacity=0.6,
             size=10,
             color=techs_colors[tech],
@@ -341,8 +341,8 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
     layout = dict(
         title="Energy Flow",
         showlegend=True,
-        width="900",
-        height="700",
+        width=900,
+        height=700,
         hovermode="closest",
         sliders=sliders,
         margin={'autoexpand': False, 'b': 150, 'r': 180}
