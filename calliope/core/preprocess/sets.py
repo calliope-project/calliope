@@ -255,8 +255,10 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Technologies that specify resource_area constraints
     sets.loc_techs_area = set(
         k for k in sets.loc_techs_non_transmission
-        if any('resource_area' in i
-               for i in loc_techs_config[k].constraints.keys_nested())
+        if (
+            any('resource_area' in i for i in loc_techs_config[k].keys_nested()) or
+            loc_techs_config[k].constraints.get('resource_unit', 'energy') == 'energy_per_area'
+        )
     )
 
     # Technologies that define storage, which can include `supply_plus`

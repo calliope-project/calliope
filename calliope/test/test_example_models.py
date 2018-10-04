@@ -294,19 +294,57 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
 
 class TestUrbanScaleExampleModelSenseChecks:
-    def test_urbanscale_example_results(self):
-        model = calliope.examples.urban_scale(
-            override_dict={'model.subset_time': '2005-01-01'}
-        )
+    def example_tester(self, resource_unit, solver='glpk'):
+        unit_override = {
+            'techs.pv.constraints': {
+                'resource': 'file=pv_resource.csv:{}'.format(resource_unit),
+                'resource_unit': 'energy_{}'.format(resource_unit)
+            },
+            'run.solver': solver
+        }
+        override = {'model.subset_time': '2005-07-01', **unit_override}
+
+        model = calliope.examples.urban_scale(override_dict=override)
         model.run()
 
-        assert model.results.energy_cap.to_pandas()['X1::chp'] == approx(272.227204)
-        assert model.results.energy_cap.to_pandas()['X2::heat_pipes:N1'] == approx(197.908691)
+        assert model.results.energy_cap.to_pandas()['X1::chp'] == approx(250.090112)
 
-        assert model.results.carrier_prod.sum('timesteps').to_pandas()['X3::boiler::heat'] == approx(474.720800)
-        assert float(model.results.carrier_export.sum()) == approx(0)
+        # GLPK isn't able to get the same answer both times, so we have to account for that here
+        if resource_unit == 'per_cap' and solver == 'glpk':
+            heat_pipe_approx = 183.45825
+        else:
+            heat_pipe_approx = 182.19260
 
-        assert float(model.results.cost.sum()) == approx(528.8643154)
+        assert model.results.energy_cap.to_pandas()['X2::heat_pipes:N1'] == approx(heat_pipe_approx)
+
+        assert model.results.carrier_prod.sum('timesteps').to_pandas()['X3::boiler::heat'] == approx(0.18720)
+        assert model.results.resource_area.to_pandas()['X2::pv'] == approx(830.064659)
+
+        assert float(model.results.carrier_export.sum()) == approx(122.7156)
+
+        # GLPK doesn't agree with commercial solvers, so we have to account for that here
+        cost_sum = 430.097399 if solver == 'glpk' else 430.089188
+        assert float(model.results.cost.sum()) == approx(cost_sum)
+
+    def test_urban_example_results_area(self):
+        self.example_tester('per_area')
+
+    def test_urban_example_results_area_gurobi(self):
+        # Check for existence of the `gurobi` solver
+        if shutil.which('gurobi'):
+            self.example_tester('per_area', 'gurobi')
+        else:
+            pytest.skip('Gurobi not installed')
+
+    def test_urban_example_results_cap(self):
+        self.example_tester('per_cap')
+
+    def test_urban_example_results_cap_gurobi(self):
+        # Check for existence of the `gurobi` solver
+        if shutil.which('gurobi'):
+            self.example_tester('per_cap', 'gurobi')
+        else:
+            pytest.skip('Gurobi not installed')
 
     def test_milp_example_results(self):
         model = calliope.examples.milp(

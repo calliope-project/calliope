@@ -865,6 +865,28 @@ class TestChecks:
 
         assert check_error_or_warning(error, 'cannot have cyclic storage')
 
+    def test_incorrect_resource_unit(self):
+        """
+        Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed under
+        `resource unit`.
+        """
+        def _override(resource_unit):
+            return {
+                'techs.test_supply_elec.constraints.resource_unit': resource_unit
+            }
+
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(_override('power'), scenario='simple_supply')
+
+        build_model(_override('energy'), scenario='simple_supply')
+        build_model(_override('energy_per_cap'), scenario='simple_supply')
+        build_model(_override('energy_per_area'), scenario='simple_supply')
+
+        assert check_error_or_warning(
+            error,
+            '`power` is an unknown resource unit for `test_supply_elec`'
+        )
+
 
 class TestDataset:
 

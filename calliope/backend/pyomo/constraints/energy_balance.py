@@ -171,14 +171,17 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
     min_use = get_param(backend_model, 'resource_min_use', (loc_tech, timestep))
+    resource_unit = get_param(backend_model, 'resource_unit', loc_tech)
 
     if po.value(energy_eff) == 0:
         return backend_model.carrier_prod[loc_tech_carrier, timestep] == 0
     else:
         carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
+    if po.value(resource_unit) == 'energy_per_area':
         available_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
+    elif po.value(resource_unit) == 'energy_per_cap':
+        available_resource = resource * resource_scale * backend_model.energy_cap[loc_tech]
     else:
         available_resource = resource * resource_scale
 
@@ -237,12 +240,15 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
+    resource_unit = get_param(backend_model, 'resource_unit', loc_tech)
 
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
+    if po.value(resource_unit) == 'energy_per_area':
         required_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
+    elif po.value(resource_unit) == 'energy_per_cap':
+        required_resource = resource * resource_scale * backend_model.energy_cap[loc_tech]
     else:
         required_resource = resource * resource_scale
 
@@ -297,9 +303,12 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
     resource = get_param(backend_model, 'resource', (loc_tech, timestep))
     resource_scale = get_param(backend_model, 'resource_scale', loc_tech)
     force_resource = get_param(backend_model, 'force_resource', loc_tech)
+    resource_unit = get_param(backend_model, 'resource_unit', loc_tech)
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_area'):
+    if po.value(resource_unit) == 'energy_per_area':
         available_resource = resource * resource_scale * backend_model.resource_area[loc_tech]
+    elif po.value(resource_unit) == 'energy_per_cap':
+        available_resource = resource * resource_scale * backend_model.energy_cap[loc_tech]
     else:
         available_resource = resource * resource_scale
 
