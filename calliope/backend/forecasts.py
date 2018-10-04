@@ -22,22 +22,23 @@ def checks(model_data):
 
 
 def apply_horizon(data, windowsteps, extents):
-    forecasts = []
+    window_forecasts = []
     for windowstep in windowsteps:
-        step_data = []
+        window_forecast = []
         for _, d_from, d_to, resolution in extents:
             # Set extents to start from current windowstep
             d_from = windowstep + d_from
             d_to = windowstep + d_to
-            resampled = data.loc[
-                dict(timesteps=slice(d_from, d_to))
-            ].to_pandas().T.resample(resolution).mean().reset_index(drop=True)
-            step_data.append(resampled)
-        forecasts.append(xr.DataArray(pd.concat(step_data, axis=0, ignore_index=True)))
-    forecast_data = xr.concat(forecasts, dim='windowsteps')
+            if resolution == 'window':
+                resampled = data.loc[dict(timesteps=slice(d_from, d_to))]
+            else:
+                resampled = data.loc[dict(timesteps=slice(d_from, d_to))].resample(timesteps=resolution).mean('timesteps')
+            window_forecast.append(resampled)
+        window_forecasts.append(xr.concat(window_forecast, dim='timesteps').drop('timesteps'))
+    forecast_data = xr.concat(window_forecasts, dim='windowsteps')
 
     forecast_data['windowsteps'] = windowsteps
-    forecast_data = forecast_data.rename({'dim_0': 'horizonsteps'})
+    forecast_data = forecast_data.rename({'timesteps': 'horizonsteps'})
 
     return forecast_data
 
@@ -69,22 +70,33 @@ def generate_horizonstep_resolution(data):
         timesteps as values
 
     """
-    # horizon: a list of {horizon_size: horizon_resolution} dicts
-    horizon = data.attrs['run.operation.horizon']
-    horizon = [
-        (list(h.keys())[0], list(h.values())[0])
-        for h in horizon
-    ]
+    # horizon: a {horizon_size: horizon_resolution} dict
+    horizon = {
+        k.split('.')[-1]: v for k, v in data.attrs.items()
+        if 'run.operation.horizon' in k
+    }
 
     # t_ -> timesteps, h_ -> horizonsteps
     t_resolutions = data.timestep_resolution.to_series()
-
-    h_resolutions = []
-    horizon_extents = []
-
     first_timestep = t_resolutions.index[0]
-    from_timestep = first_timestep
-    for horizon_size, horizon_resolution in horizon:
+
+    window = data.attrs['run.operation.window']
+    windowstep = pd.DateOffset(hours=hours_from_datestring(window))
+
+    # TODO: Add check that window < first horizon
+
+    # Initialise lists with window information
+    h_resolutions = [t_resolutions.loc[:first_timestep + windowstep][:-1]]
+
+    horizon_extents = [[
+        window,
+        first_timestep - first_timestep,
+        h_resolutions[0].index[-1] - first_timestep,
+        'window'
+    ]]
+
+    from_timestep = first_timestep + windowstep
+    for horizon_size, horizon_resolution in horizon.items():
         offset = pd.DateOffset(hours=hours_from_datestring(horizon_size))
         resolution = '{}H'.format(hours_from_datestring(horizon_resolution))
         to_ts_pos = t_resolutions.index.get_loc(first_timestep + offset) - 1
@@ -122,7 +134,7 @@ def generate_forecasts(model_data):
     resolutions, extents = generate_horizonstep_resolution(model_data)
 
     max_extent = hours_from_datestring(extents[-1][0])
-    max_windowstep = model_data.timesteps.to_series()[0] + pd.DateOffset(hours=max_extent)
+    max_windowstep = model_data.timesteps.to_series()[-1] - pd.DateOffset(hours=max_extent)
 
     windowsteps = model_data.timestep_resolution.to_series().loc[:max_windowstep].resample(window).first().index
     windowsteps.name = 'windowsteps'
@@ -140,5 +152,7 @@ def generate_forecasts(model_data):
 
     forecast_dataset = xr.Dataset(forecasts)
     forecast_dataset['horizonstep_resolution'] = resolutions
+    for k in forecast_dataset.data_vars.keys():
+        forecast_dataset[k].attrs['is_result'] = 0
 
     return forecast_dataset

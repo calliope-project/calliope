@@ -41,8 +41,10 @@ overrides:
     operate:
         run.mode: operate
         run.operation:
-            window: 24
-            horizon: 48
+            window: 24H
+            horizon:
+                48H: 1H
+                72H: 3H
         model.subset_time: ['2005-07-01', '2005-07-10']
         locations:
             X1:

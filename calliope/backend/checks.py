@@ -125,18 +125,18 @@ def check_operate_params(model_data):
             'for all supply_plus techs'
         )
 
-    window = model_data.attrs.get('run.operation.window', None)
-    horizon = model_data.attrs.get('run.operation.horizon', None)
-    if not window or not horizon:
-        errors.append(
-            'Operational mode requires a timestep window and horizon to be '
-            'defined under run.operation'
-        )
-    elif horizon < window:
-        errors.append(
-            'Iteration horizon must be larger than iteration window, '
-            'for operational mode'
-        )
+    #window = model_data.attrs.get('run.operation.window', None)
+    #horizon = [model_data.attrs.get(i, None) for i in
+    #if not window or not horizon:
+    #    errors.append(
+    #        'Operational mode requires a timestep window and horizon to be '
+    #        'defined under run.operation'
+    #    )
+    #elif horizon < window:
+    #    errors.append(
+    #        'Iteration horizon must be larger than iteration window, '
+    #        'for operational mode'
+    #    )
 
     # Cyclic storage isn't really valid in operate mode, so we ignore it, using
     # initial_storage instead (allowing us to pass storage between operation windows)

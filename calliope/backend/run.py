@@ -11,6 +11,7 @@ from calliope.backend import checks, forecasts
 
 import numpy as np
 import xarray as xr
+import pandas as pd
 import calliope.backend.pyomo.model as run_pyomo
 import calliope.backend.pyomo.interface as pyomo_interface
 
@@ -165,7 +166,7 @@ def run_operate(model_data, timings, backend, build_only):
 
     # Storage initial is carried over between iterations, so must be defined along with storage
     if ('loc_techs_store' in model_data.dims.keys() and
-        'storage_initial' not in model_data.data_vars.keys()):
+            'storage_initial' not in model_data.data_vars.keys()):
         model_data['storage_initial'] = (
             xr.DataArray([0 for loc_tech in model_data.loc_techs_store.values],
                          dims='loc_techs_store')
@@ -177,7 +178,7 @@ def run_operate(model_data, timings, backend, build_only):
         )
     # Operated units is carried over between iterations, so must be defined in a milp model
     if ('loc_techs_milp' in model_data.dims.keys() and
-        'operated_units' not in model_data.data_vars.keys()):
+            'operated_units' not in model_data.data_vars.keys()):
         model_data['operated_units'] = (
             xr.DataArray([0 for loc_tech in model_data.loc_techs_milp.values],
                          dims='loc_techs_milp')
@@ -198,33 +199,25 @@ def run_operate(model_data, timings, backend, build_only):
     solver_options = model_data.attrs.get('run.solver_options', None)
     save_logs = model_data.attrs.get('run.save_logs', None)
     window = model_data.attrs['run.operation.window']
-    horizon = model_data.attrs['run.operation.horizon']
-    window_to_horizon = horizon - window
-
-    # get the cumulative sum of timestep resolution, to find where we hit our window and horizon
-    timestep_cumsum = model_data.timestep_resolution.cumsum('timesteps').to_pandas()
-    # get the timesteps at which we start and end our windows
-    window_ends = timestep_cumsum.where(
-        (timestep_cumsum % window == 0) | (timestep_cumsum == timestep_cumsum[-1])
-    )
-    window_starts = timestep_cumsum.where(
-        (~np.isnan(window_ends.shift(1))) | (timestep_cumsum == timestep_cumsum[0])
-    ).dropna()
-
-    window_ends = window_ends.dropna()
-    horizon_ends = timestep_cumsum[timestep_cumsum.isin(window_ends.values + window_to_horizon)]
-
-    if not any(window_starts):
-        raise exceptions.ModelError(
-            'Not enough timesteps or incorrect timestep resolution to run in '
-            'operational mode with an optimisation window of {}'.format(window)
-        )
+    windowsteps = model_data.windowsteps.values
 
     # We will only update timseries parameters
     timeseries_data_vars = [
-        k for k, v in model_data.data_vars.items() if 'timesteps' in v.dims
-        and v.attrs['is_result'] == 0
+        k for k, v in model_data.data_vars.items() if 'timesteps' in v.dims and
+        v.attrs['is_result'] == 0
     ]
+
+    # Drop all timeseries vars, we only work with forecasts
+    operate_model_data = model_data.drop(timeseries_data_vars)
+    # Rename forecasts to their original names, so Pyomo understands them
+    operate_model_data.rename(
+        {var + '_forecast': var for var in timeseries_data_vars}, inplace=True
+    )
+    operate_model_data = operate_model_data.drop(['timesteps', 'timestep_resolution'])
+    operate_model_data.rename(
+        {'horizonstep_resolution': 'timestep_resolution', 'horizonsteps': 'timesteps'},
+        inplace=True
+    )
 
     # Loop through each window, solve over the horizon length, and add result to
     # result_array we only go as far as the end of the last horizon, which may
@@ -233,20 +226,15 @@ def run_operate(model_data, timings, backend, build_only):
     # track whether each iteration finds an optimal solution or not
     terminations = []
 
-    if build_only:
-        iterations = [0]
-    else:
-        iterations = range(len(window_starts))
-
-    for i in iterations:
-        start_timestep = window_starts.index[i]
+    for windowstep in windowsteps:
+        i = 0
+        # window_model_data should look like a plan mode calliope model, with only timesteps
+        # as a time dimension
+        window_model_data = operate_model_data.loc[dict(windowsteps=windowstep)].drop('windowsteps')
 
         # Build full model in first instance
-        if i == 0:
+        if windowstep == windowsteps[0]:
             warmstart = False
-            end_timestep = horizon_ends.index[i]
-            timesteps = slice(start_timestep, end_timestep)
-            window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
                 timings, 'model_gen_1',
@@ -255,31 +243,9 @@ def run_operate(model_data, timings, backend, build_only):
 
             backend_model = backend.generate_model(window_model_data)
 
-        # Build the full model in the last instance(s),
-        # where number of timesteps is less than the horizon length
-        elif i > len(horizon_ends) - 1:
-            warmstart = False
-            end_timestep = window_ends.index[i]
-            timesteps = slice(start_timestep, end_timestep)
-            window_model_data = model_data.loc[dict(timesteps=timesteps)]
-
-            log_time(
-                timings, 'model_gen_{}'.format(i + 1),
-                comment=(
-                    'Backend: iteration {}: generating new model for '
-                    'end of timeseries, with horizon = {} timesteps'
-                    .format(i + 1, window_ends[i] - window_starts[i])
-                )
-            )
-
-            backend_model = backend.generate_model(window_model_data)
-
         # Update relevent Pyomo Params in intermediate instances
         else:
             warmstart = True
-            end_timestep = horizon_ends.index[i]
-            timesteps = slice(start_timestep, end_timestep)
-            window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
                 timings, 'model_gen_{}'.format(i + 1),
@@ -298,7 +264,9 @@ def run_operate(model_data, timings, backend, build_only):
                     if k in var_dict:
                         v.set_value(var_dict[k])
 
-        if not build_only:
+        if build_only:
+            break  # i.e. only the first windowstep is built if 'build_only'
+        else:
             log_time(
                 timings, 'model_run_{}'.format(i + 1), time_since_start=True,
                 comment='Backend: iteration {}: sending model to solver'.format(i + 1)
@@ -322,25 +290,24 @@ def run_operate(model_data, timings, backend, build_only):
 
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
-            _results['timesteps'] = window_model_data.timesteps.copy()
-
-            # We always save the window data. Until the last window(s) this will crop
-            # the window_to_horizon timesteps. In the last window(s), optimistion will
-            # only be occurring over a window length anyway
-            _results = _results.loc[dict(timesteps=slice(None, window_ends.index[i]))]
+            window_end = pd.DateOffset(hours=forecasts.hours_from_datestring(window) - 1)
+            window_slice = slice(pd.to_datetime(windowstep), pd.to_datetime(windowstep) + window_end)
+            window_timesteps = model_data.timesteps.loc[{'timesteps': window_slice}]
+            _results = _results.loc[{'timesteps': slice(0, len(window_timesteps) - 1)}]
+            _results['timesteps'] = window_timesteps
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
             if 'loc_techs_store' in model_data.dims.keys():
-                storage_initial = _results.storage.loc[{'timesteps': window_ends.index[i]}].drop('timesteps')
-                model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
+                storage_initial = _results.storage.loc[{'timesteps': _results.timesteps[-1]}].drop('timesteps')
+                operate_model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
                 for k, v in backend_model.storage_initial.items():
                     v.set_value(storage_initial.to_series().dropna().to_dict()[k])
 
             # Set up total operated units for the next iteration
             if 'loc_techs_milp' in model_data.dims.keys():
                 operated_units = _results.operating_units.sum('timesteps').astype(np.int)
-                model_data['operated_units'].loc[{}] += operated_units.values
+                operate_model_data['operated_units'].loc[{}] += operated_units.values
                 for k, v in backend_model.operated_units.items():
                     v.set_value(operated_units.to_series().dropna().to_dict()[k])
 
@@ -349,12 +316,15 @@ def run_operate(model_data, timings, backend, build_only):
                 comment='Backend: iteration {}: generated solution array'.format(i + 1)
             )
 
+            i += 1
+
     if build_only:
         results = xr.Dataset()
     else:
         # Concatenate results over the timestep dimension to get a single
         # xarray Dataset of interest
         results = xr.concat(result_array, dim='timesteps')
+        results.reindex(timesteps=model_data.timesteps)
         if all(i == 'optimal' for i in terminations):
             results.attrs['termination_condition'] = 'optimal'
         else:
