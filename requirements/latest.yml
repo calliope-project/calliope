@@ -1,9 +1,0 @@
-name: calliope
-
-channels:
-    - conda-forge
-
-dependencies:
-    - pip>=9
-    - pip:
-        - "git+https://github.com/calliope-project/calliope.git"

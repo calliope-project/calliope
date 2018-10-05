@@ -8,8 +8,10 @@ dependencies:
     - line_profiler
     - memory_profiler
     - pylint
+    - pytest-xdist  # pytest distributed testing plugin
     - snakeviz
     - twine
     - pip:
+        - cufflinks>=0.14  # Needed to build the tutorial notebooks
         - pyprof2calltree
         - gprof2dot

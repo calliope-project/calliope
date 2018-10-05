@@ -17,11 +17,11 @@ Installing a development version
 As when installing a stable version, using ``conda`` is recommended.
 
 If you only want to track the latest commit, without having a local Calliope
-repository, then just download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ and `latest.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/latest.yml>`_ requirements files and run (assuming both are saved into a directory called requirements)::
+repository, then download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ requirements files and run::
 
-    $ conda env create -n calliope_latest --file=requirements/base.yml --file=requirements/latest.yml
-
-This will create a conda environment called ``calliope_latest``.
+    $ conda env create -n calliope_latest --file=base.yml
+    $ source activate calliope_latest
+    $ pip install git+https://github.com/calliope-project/calliope.git
 
 To actively contribute to Calliope development, you'll instead want to clone the repository, giving you an editable copy. This will provide you with the master branch in a known location on your local device.
 
@@ -29,19 +29,19 @@ First, clone the repository::
 
    $ git clone https://github.com/calliope-project/calliope
 
-Using Anaconda/conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
+Using conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
 
-   $ conda env create -f ./calliope/requirements/base.yml -n calliope_dev
+   $ conda env create -f calliope/requirements/base.yml -n calliope_dev
    $ source activate calliope_dev
 
 On Windows::
 
-   $ conda env create -f ./calliope/requirements/base.yml -n calliope_dev
+   $ conda env create -f calliope/requirements/base.yml -n calliope_dev
    $ activate calliope_dev
 
 Then install Calliope itself with pip::
 
-   $ pip install -e ./calliope
+   $ pip install -e calliope
 
 ---------------------------
 Creating modular extensions

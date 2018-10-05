@@ -5,8 +5,7 @@ channels:
 
 dependencies:
     - bottleneck
-    - click
-    - cufflinks-py=0.12.1
+    - click=6  # v7.0 changes '_' to '-' in subcommands
     - glpk=4.61
     - hdf5
     - ipython
@@ -16,14 +15,12 @@ dependencies:
     - natsort
     - netcdf4
     - numexpr
-    - numpy=1.14.1
-    - pandas=0.22
-    - plotly=2.5
-    - pyomo=5.4.3
+    - numpy
+    - pandas<0.24
+    - plotly<4.0
+    - pyomo<5.5
     - pytest
     - pytest-cov
     - ruamel.yaml<0.16
-    - scikit-learn=0.19.1
-    - xarray=0.10.8
-    - pip:
-        - "git+https://github.com/calliope-project/calliope.git"
+    - scikit-learn<0.21
+    - xarray<0.11
