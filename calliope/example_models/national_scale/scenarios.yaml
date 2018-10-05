@@ -31,8 +31,8 @@ overrides:
     operate:
         run.mode: operate
         run.operation:
-            window: 12
-            horizon: 24
+            window: 12H
+            horizon: {24H: 1H}
         model.subset_time: ['2005-01-01', '2005-01-10']
         locations:
             region1.techs.ccgt.constraints.energy_cap_equals: 30000
