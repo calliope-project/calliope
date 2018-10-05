@@ -8,6 +8,7 @@ dependencies:
     - line_profiler
     - memory_profiler
     - pylint
+    - pytest-xdist  # pytest distributed testing plugin
     - snakeviz
     - twine
     - pip:
