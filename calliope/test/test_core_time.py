@@ -7,6 +7,11 @@ from calliope import exceptions
 from calliope.core.time import funcs, masks
 from calliope.test.common.util import build_test_model, check_error_or_warning
 
+python36_or_higher = pytest.mark.skipif(
+    sys.version_info < (3, 6),
+    reason="Requires ordered dicts from Python >= 3.6"
+)
+
 
 class TestClustering:
     @pytest.fixture
@@ -186,6 +191,7 @@ class TestClustering:
             ]
         )
 
+    @python36_or_higher
     def test_predefined_clusters(self):
         override = {
             'model.subset_time': ['2005-01-01', '2005-01-04'],
@@ -218,6 +224,7 @@ class TestClustering:
 
         assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0])
 
+    @python36_or_higher
     def test_predefined_clusters_fail(self):
         override = {
             'model.subset_time': ['2005-01-01', '2005-01-04'],

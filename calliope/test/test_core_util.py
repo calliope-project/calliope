@@ -113,6 +113,8 @@ class TestLogging:
 
 
 class TestGenerateRuns:
+
+    @python36_or_higher
     def test_generate_runs_scenarios(self):
         runs = generate_runs(
             _MODEL_NATIONAL,
@@ -123,6 +125,7 @@ class TestGenerateRuns:
             '--scenario time_resampling --save_netcdf out_1_time_resampling.nc --save_plots plots_1_time_resampling.html'
         )
 
+    @python36_or_higher
     def test_generate_runs_scenarios_none_with_scenarios(self):
         runs = generate_runs(
             _MODEL_NATIONAL,
