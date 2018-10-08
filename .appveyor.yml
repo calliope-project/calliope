@@ -27,7 +27,7 @@ init:
 
 install:
   - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-  - set CONDA_CHANS="conda-forge defaults"
+  - set CONDA_CHANS=conda-forge defaults
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a

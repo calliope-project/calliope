@@ -3,6 +3,7 @@ import calliope
 import logging
 import datetime
 import os
+import sys
 
 from calliope.core.util import dataset
 
@@ -12,6 +13,12 @@ from calliope.core.util.tools import \
 
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
+
+
+python36_or_higher = pytest.mark.skipif(
+    sys.version_info < (3, 6),
+    reason="Requires ordered dicts from Python >= 3.6"
+)
 
 
 _MODEL_NATIONAL = os.path.join(
@@ -126,6 +133,7 @@ class TestGenerateRuns:
             '--scenario cold_fusion_with_production_share --save_netcdf out_1_cold_fusion_with_production_share.nc --save_plots plots_1_cold_fusion_with_production_share.html'
         )
 
+    @python36_or_higher
     def test_generate_runs_scenarios_none_with_overrides(self):
         runs = generate_runs(
             _MODEL_URBAN,

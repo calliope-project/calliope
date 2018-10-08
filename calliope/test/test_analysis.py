@@ -14,7 +14,7 @@ HTML_STRINGS = AttrDict.from_yaml(
 
 python36_or_higher = pytest.mark.skipif(
     sys.version_info < (3, 6),
-    reason="Requires Python >= 3.6"
+    reason="Requires ordered dicts from Python >= 3.6"
 )
 
 
