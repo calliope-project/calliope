@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest  # pylint: disable=unused-import
+import sys
 
 import calliope
 from calliope import exceptions
