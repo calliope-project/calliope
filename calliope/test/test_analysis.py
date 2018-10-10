@@ -1,20 +1,14 @@
 import os
 import calliope
 import pytest  # pylint: disable=unused-import
-import sys
 import tempfile
 
 from calliope.core.attrdict import AttrDict
-from calliope.test.common.util import check_error_or_warning
+from calliope.test.common.util import check_error_or_warning, python36_or_higher
 
 
 HTML_STRINGS = AttrDict.from_yaml(
     os.path.join(os.path.dirname(__file__), 'common', 'html_strings.yaml')
-)
-
-python36_or_higher = pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Requires ordered dicts from Python >= 3.6"
 )
 
 

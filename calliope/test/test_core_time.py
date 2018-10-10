@@ -1,16 +1,14 @@
 import pandas as pd
 import numpy as np
 import pytest  # pylint: disable=unused-import
-import sys
 
 import calliope
 from calliope import exceptions
 from calliope.core.time import funcs, masks
-from calliope.test.common.util import build_test_model, check_error_or_warning
-
-python36_or_higher = pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Requires ordered dicts from Python >= 3.6"
+from calliope.test.common.util import (
+    build_test_model,
+    check_error_or_warning,
+    python36_or_higher
 )
 
 

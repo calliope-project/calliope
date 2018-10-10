@@ -3,7 +3,6 @@ import calliope
 import logging
 import datetime
 import os
-import sys
 
 from calliope.core.util import dataset
 
@@ -13,12 +12,7 @@ from calliope.core.util.tools import \
 
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
-
-
-python36_or_higher = pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Requires ordered dicts from Python >= 3.6"
-)
+from calliope.test.common.util import python36_or_higher
 
 
 _MODEL_NATIONAL = os.path.join(
