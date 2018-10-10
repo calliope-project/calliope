@@ -1,4 +1,7 @@
 import os
+import sys
+
+import pytest
 
 import calliope
 from calliope import AttrDict
@@ -12,6 +15,12 @@ _defaults_files = {
 }
 defaults = AttrDict.from_yaml(_defaults_files['defaults'])
 defaults_model = AttrDict.from_yaml(_defaults_files['model'])
+
+
+python36_or_higher = pytest.mark.skipif(
+    sys.version_info < (3, 6),
+    reason="Requires ordered dicts from Python >= 3.6"
+)
 
 
 def build_test_model(override_dict=None, scenario=None):

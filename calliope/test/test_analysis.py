@@ -4,7 +4,7 @@ import pytest  # pylint: disable=unused-import
 import tempfile
 
 from calliope.core.attrdict import AttrDict
-from calliope.test.common.util import check_error_or_warning
+from calliope.test.common.util import check_error_or_warning, python36_or_higher
 
 
 HTML_STRINGS = AttrDict.from_yaml(
@@ -21,6 +21,7 @@ class TestPlotting:
         model.run()
         return model
 
+    @python36_or_higher
     def test_national_scale_plotting(self, national_scale_example):
         model = national_scale_example
 
@@ -47,6 +48,7 @@ class TestPlotting:
                 plotly_kwarg_updates={'auto_open': False, 'filename': out_path}
             )
 
+    @python36_or_higher
     def test_milp_plotting(self):
         override = {'model.subset_time': '2005-07-01'}
         model = calliope.examples.milp(override_dict=override)
@@ -85,6 +87,7 @@ class TestPlotting:
             model.plot.timeseries(squeeze=False)
             model.plot.timeseries(sum_dims=None)
 
+    @python36_or_higher
     def test_clustered_plotting(self):
         override = {'model.time.function_options.k': 2}
         model = calliope.examples.time_clustering(override_dict=override)
