@@ -382,7 +382,7 @@ For example:
                 energy_cap_max: 10000
             costs:
                 monetary:
-                    eenergy_cap: 1000
+                    energy_cap: 1000
 
 None of the ``tech_groups`` appear in model results, they are only used to group model configuration values.
 
