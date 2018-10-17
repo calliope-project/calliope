@@ -94,7 +94,7 @@ Three more technologies are needed for a simple model. First, a definition of po
 
 Power demand is a technology like any other. We will associate an actual demand time series with the demand technology later.
 
-What remains to set up is a simple transmission technologies. Transmission technologies (like conversion technologies) look different than other nodes, as they link the carrier at one location to the carrier at another (or, in the case of conversion, one carrier to another at the same location):
+What remains to set up is a simple transmission technology. Transmission technologies (like conversion technologies) look different than other nodes, as they link the carrier at one location to the carrier at another (or, in the case of conversion, one carrier to another at the same location):
 
 .. figure:: images/transmission.*
    :alt: Transmission node
