@@ -347,11 +347,17 @@ In a large model, several very similar technologies may exist, for example, diff
 
 To make it easier to specify closely related technologies, ``tech_groups`` can be used to specify configuration shared between multiple technologies. The technologies then give the ``tech_group`` as their parent, rather than one of the abstract base technologies.
 
+You can as well extend abstract base technologies, by adding an attribute that will be in effect for all technologies derived from the base technology. To do so, use the name of the abstract base technology for your group, but omit the parent.
+
 For example:
 
 .. code-block:: yaml
 
     tech_groups:
+        supply:
+            constraints:
+                monetary:
+                    interest_rate: 0.1
         pv:
             essentials:
                 parent: supply

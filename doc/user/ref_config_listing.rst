@@ -90,7 +90,7 @@ A technology inherits the configuration that its parent group specifies (which, 
 
 .. Note::
 
-   The identifiers of the abstract base tech groups are reserved and cannot be used for a user-defined technology or tech group.
+   The identifiers of the abstract base tech groups are reserved and cannot be used for user-defined technologies. However, you can amend an abstract base technology group for example by a lifetime attribute that will be in effect for all technologies derived from that group (see :ref:`tech_groups`).
 
 The following lists the pre-defined base tech groups and the defaults they provide.
 

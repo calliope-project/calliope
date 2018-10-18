@@ -6,6 +6,7 @@ Release History
 0.6.4 (dev)
 -----------
 
+|fixed| Updated documentation on amendments of abstract base technology groups
 
 0.6.3 (2018-10-03)
 ------------------
