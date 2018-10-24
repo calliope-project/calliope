@@ -6,6 +6,7 @@ Release History
 0.6.4 (dev)
 -----------
 
+|changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
 0.6.3 (2018-10-03)
 ------------------
