@@ -59,10 +59,10 @@ default_tech:
         lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
         parasitic_eff: 1.0  # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
         resource: 0  # name: Available resource ¦ unit: kWh/m\ :sup:`2` | kW/m\ :sup:`2` ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``reosurce_unit``
-        resource_area_equals: false  # name: Specific installed collector area ¦ unit: m\ :sup:`2` ¦
-        resource_area_max: false  # name: Maximum installed collector area ¦ unit: m\ :sup:`2` ¦ Set to false by default in order to disable this constraint
-        resource_area_min: 0  # name: Minimum installed collector area ¦ unit: m\ :sup:`2` ¦
-        resource_area_per_energy_cap: false  # name: Energy capacity per unit collector ares ¦ unit: boolean ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
+        resource_area_equals: false  # name: Specific installed resource area ¦ unit: m\ :sup:`2` ¦
+        resource_area_max: .inf  # name: Maximum usable resource area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
+        resource_area_min: 0  # name: Minimum usable resource area ¦ unit: m\ :sup:`2` ¦
+        resource_area_per_energy_cap: false  # name: Resource area per energy capacity ¦ unit: boolean ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
         resource_cap_equals: false  # name: Specific installed resource consumption capacity ¦ unit: kW ¦ overrides ``_max`` and ``_min`` constraints.
         resource_cap_equals_energy_cap: false  # name: Resource capacity equals energy cpacity ¦ unit: boolean ¦ If true, ``resource_cap`` is forced to equal ``energy_cap``
         resource_cap_max: .inf  # name: Maximum installed resource consumption capacity ¦ unit: kW ¦
@@ -93,6 +93,6 @@ default_tech:
             om_con: 0  # name: Carrier consumption cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier consumption of a technology
             om_prod: 0  # name: Carrier production cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier production of a technology
             purchase: 0  # name: Purchase cost ¦ unit: unit :sup:`-1` ¦ Triggers a binary variable for that technology to say that it has been purchased or is applied to integer variable ``units``
-            resource_area: 0  # name: Cost of resource collector area ¦ unit: m\ :sup:`-2` ¦
+            resource_area: 0  # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
             resource_cap: 0  # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
             storage_cap: 0  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
