@@ -453,6 +453,24 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario='one_day')
 
+    def test_abstract_base_tech_group_override(self):
+        """
+        Abstract base technology groups can be overridden
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            tech_groups:
+                supply:
+                    constraints:
+                        lifetime: 25
+            locations:
+                1.techs.test_supply_elec:
+                1.techs.test_demand_elec:
+            """
+        )
+
+        build_model(override_dict=override, scenario='one_day')
+
     def test_unspecified_parent(self):
         """
         All technologies and technology groups must specify a parent

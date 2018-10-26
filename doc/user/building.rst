@@ -202,7 +202,7 @@ The only required setting in the run configuration is the solver to use:
 
     run:
         solver: glpk
-        model: plan
+        mode: plan
 
 the most important parts of the ``run`` section are ``solver`` and  ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
 

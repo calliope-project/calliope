@@ -56,7 +56,7 @@ Time series data
 
 .. Note::
 
-   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource).
+   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
 
 
 For parameters that vary in time, time series data can be read from CSV files, by specifying ``resource: file=filename.csv`` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
@@ -347,11 +347,17 @@ In a large model, several very similar technologies may exist, for example, diff
 
 To make it easier to specify closely related technologies, ``tech_groups`` can be used to specify configuration shared between multiple technologies. The technologies then give the ``tech_group`` as their parent, rather than one of the abstract base technologies.
 
+You can as well extend abstract base technologies, by adding an attribute that will be in effect for all technologies derived from the base technology. To do so, use the name of the abstract base technology for your group, but omit the parent.
+
 For example:
 
 .. code-block:: yaml
 
     tech_groups:
+        supply:
+            constraints:
+                monetary:
+                    interest_rate: 0.1
         pv:
             essentials:
                 parent: supply

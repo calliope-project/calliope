@@ -85,6 +85,15 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip('CBC not installed')
 
+    def test_fails_gracefully_without_timeseries(self):
+        override = {
+            "locations.region1.techs.demand_power.constraints.resource": -200,
+            "locations.region2.techs.demand_power.constraints.resource": -400,
+            "techs.csp.constraints.resource": 100
+        }
+        with pytest.raises(calliope.exceptions.ModelError):
+            calliope.examples.national_scale(override_dict=override)
+
 
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
