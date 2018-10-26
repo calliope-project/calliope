@@ -6,6 +6,8 @@ Release History
 0.6.4 (dev)
 -----------
 
+|fixed| Updated documentation on amendments of abstract base technology groups
+
 |fixed| Models without time series data fail gracefully.
 
 0.6.3 (2018-10-03)
