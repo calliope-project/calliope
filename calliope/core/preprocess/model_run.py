@@ -399,6 +399,8 @@ def process_timeseries_data(config_model, model_run):
         constraint_filenames = get_filenames(location_config)
         cluster_filenames = get_filenames(model_config)
 
+        _assert_timeseries_available(constraint_filenames | cluster_filenames)
+
         datetime_min = []
         datetime_max = []
 
@@ -481,6 +483,14 @@ def process_timeseries_data(config_model, model_run):
             )
 
     return timeseries_data, first_index
+
+
+def _assert_timeseries_available(filenames):
+    if len(filenames) == 0:
+        raise exceptions.ModelError(
+            'There is no timeseries in the model. At least one timeseries is '
+            'necessary to run the model.'
+        )
 
 
 def generate_model_run(config, debug_comments, applied_overrides, scenario):
