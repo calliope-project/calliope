@@ -43,9 +43,9 @@ def postprocess_model_results(results, model_data, timings):
     )
 
     results['capacity_factor'] = capacity_factor(results, model_data)
-    results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
-    results['systemwide_levelised_cost'] = systemwide_levelised_cost(results, model_data)
-    results['total_levelised_cost'] = systemwide_levelised_cost(results, model_data, total=True)
+    #results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
+    #results['systemwide_levelised_cost'] = systemwide_levelised_cost(results, model_data)
+    #results['total_levelised_cost'] = systemwide_levelised_cost(results, model_data, total=True)
     results = clean_results(results, model_data.attrs.get('run.zero_threshold', 0), timings)
 
     log_time(

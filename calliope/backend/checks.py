@@ -62,7 +62,7 @@ def check_operate_params(model_data):
 
         elif _is_in(loc_tech, 'loc_techs_finite_resource'):
             # force resource overrides capacity constraints, so set capacity constraints to infinity
-            if _is_in(loc_tech, 'force_resource'):
+            if _get_param(loc_tech, 'force_resource'):
                 if not _is_in(loc_tech, 'loc_techs_store'):
                     energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
                     warnings.append(
@@ -70,7 +70,6 @@ def check_operate_params(model_data):
                         'force_resource is applied'.format(loc_tech)
                     )
                 if _is_in(loc_tech, 'resource_cap'):
-                    print(loc_tech, model_data.resource_cap.loc_techs_supply_plus)
                     model_data.resource_cap.loc[loc_tech] = np.inf
                     warnings.append(
                         'Resource capacity constraint removed from {} as '
@@ -88,19 +87,19 @@ def check_operate_params(model_data):
             # Cannot have consumed resource being higher than energy_cap, as
             # constraints will clash. Doesn't affect supply_plus techs with a
             # storage buffer prior to carrier production.
-            elif not _is_in(loc_tech, 'loc_techs_store'):
-                resource_scale = _get_param(loc_tech, 'resource_scale')
-                energy_cap_scale = _get_param(loc_tech, 'energy_cap_scale')
-                resource_eff = _get_param(loc_tech, 'resource_eff')
-                energy_eff = _get_param(loc_tech, 'energy_eff')
-                resource = model_data.resource.loc[loc_tech].values
-                if (energy_cap is not None and
-                    any(resource * resource_scale * resource_eff >
-                        energy_cap * energy_cap_scale * energy_eff)):
-                    errors.append(
-                        'Operate mode: resource is forced to be higher than '
-                        'fixed energy cap for `{}`'.format(loc_tech)
-                    )
+            #elif not _is_in(loc_tech, 'loc_techs_store'):
+            #    resource_scale = _get_param(loc_tech, 'resource_scale')
+            #    energy_cap_scale = _get_param(loc_tech, 'energy_cap_scale')
+            #    resource_eff = _get_param(loc_tech, 'resource_eff')
+            #    energy_eff = _get_param(loc_tech, 'energy_eff')
+            #    resource = model_data.resource.loc[loc_tech].values
+            #    if (energy_cap is not None and
+            #        any(resource * resource_scale * resource_eff >
+            #            energy_cap * energy_cap_scale * energy_eff)):
+            #        errors.append(
+            #            'Operate mode: resource is forced to be higher than '
+            #            'fixed energy cap for `{}`'.format(loc_tech)
+            #        )
         if _is_in(loc_tech, 'loc_techs_store'):
             if _is_in(loc_tech, 'charge_rate'):
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()

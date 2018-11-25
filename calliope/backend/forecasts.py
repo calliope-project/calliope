@@ -6,7 +6,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 import pandas as pd
 import xarray as xr
 
-
 ##
 # CHECKS TO IMPLEMENT IN PREPROCESSING
 ##
@@ -154,5 +153,6 @@ def generate_forecasts(model_data):
     forecast_dataset['horizonstep_resolution'] = resolutions
     for k in forecast_dataset.data_vars.keys():
         forecast_dataset[k].attrs['is_result'] = 0
+
 
     return forecast_dataset

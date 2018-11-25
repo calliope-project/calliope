@@ -14,6 +14,7 @@ import xarray as xr
 import pandas as pd
 import calliope.backend.pyomo.model as run_pyomo
 import calliope.backend.pyomo.interface as pyomo_interface
+from calliope.core.util.dataset import reorganise_dataset_dimensions
 
 
 def run(model_data, timings, build_only=False):
@@ -126,7 +127,7 @@ def run_operate(model_data, timings, backend, build_only):
     log_time(timings, 'run_start',
              comment='Backend: starting model run in operational mode')
 
-    if any([i.endswith('_forecasts') for i in list(model_data.data_vars)]):
+    if any([i.endswith('_forecast') for i in list(model_data.data_vars)]):
             # FIXME "temporary" and undocumented hack to allow user-supplied
             # operate_forecasts, with no sense checking whatsoever,
             # so to be used with caution and restraint
@@ -134,6 +135,7 @@ def run_operate(model_data, timings, backend, build_only):
     else:
         forecasts_data = forecasts.generate_forecasts(model_data)
         model_data.merge(forecasts_data, inplace=True)
+        model_data = reorganise_dataset_dimensions(model_data)
 
     defaults = ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
     operate_params = ['purchased'] + [
@@ -219,15 +221,11 @@ def run_operate(model_data, timings, backend, build_only):
         inplace=True
     )
 
-    # Loop through each window, solve over the horizon length, and add result to
-    # result_array we only go as far as the end of the last horizon, which may
-    # clip the last bit of data
-    result_array = []
     # track whether each iteration finds an optimal solution or not
     terminations = []
 
+    i = 0
     for windowstep in windowsteps:
-        i = 0
         # window_model_data should look like a plan mode calliope model, with only timesteps
         # as a time dimension
         window_model_data = operate_model_data.loc[dict(windowsteps=windowstep)].drop('windowsteps')
@@ -235,7 +233,6 @@ def run_operate(model_data, timings, backend, build_only):
         # Build full model in first instance
         if windowstep == windowsteps[0]:
             warmstart = False
-
             log_time(
                 timings, 'model_gen_1',
                 comment='Backend: generating initial model'
@@ -245,7 +242,9 @@ def run_operate(model_data, timings, backend, build_only):
 
         # Update relevent Pyomo Params in intermediate instances
         else:
-            warmstart = True
+
+            if model_data.attrs.get('run.operation.warmstart', True) is True:
+                warmstart = True
 
             log_time(
                 timings, 'model_gen_{}'.format(i + 1),
@@ -256,13 +255,9 @@ def run_operate(model_data, timings, backend, build_only):
             for var in timeseries_data_vars:
                 # New values
                 var_series = window_model_data[var].to_series().dropna().replace('inf', np.inf)
-                # Same timestamps
-                var_series.index = backend_model.__calliope_model_data__['data'][var].keys()
                 var_dict = var_series.to_dict()
                 # Update pyomo Param with new dictionary
-                for k, v in getattr(backend_model, var).items():
-                    if k in var_dict:
-                        v.set_value(var_dict[k])
+                getattr(backend_model, var).store_values(var_dict)
 
         if build_only:
             break  # i.e. only the first windowstep is built if 'build_only'
@@ -295,7 +290,14 @@ def run_operate(model_data, timings, backend, build_only):
             window_timesteps = model_data.timesteps.loc[{'timesteps': window_slice}]
             _results = _results.loc[{'timesteps': slice(0, len(window_timesteps) - 1)}]
             _results['timesteps'] = window_timesteps
-            result_array.append(_results)
+
+            # Cpture the only non timeseries result: cost
+            if windowstep == windowsteps[0]:
+                cost = _results.cost
+                results = _results
+            else:
+                cost += _results.cost
+                results = results.combine_first(_results)
 
             # Set up initial storage for the next iteration
             if 'loc_techs_store' in model_data.dims.keys():
@@ -316,14 +318,11 @@ def run_operate(model_data, timings, backend, build_only):
                 comment='Backend: iteration {}: generated solution array'.format(i + 1)
             )
 
-            i += 1
+        i += 1
 
     if build_only:
         results = xr.Dataset()
     else:
-        # Concatenate results over the timestep dimension to get a single
-        # xarray Dataset of interest
-        results = xr.concat(result_array, dim='timesteps')
         results.reindex(timesteps=model_data.timesteps)
         if all(i == 'optimal' for i in terminations):
             results.attrs['termination_condition'] = 'optimal'
@@ -334,5 +333,10 @@ def run_operate(model_data, timings, backend, build_only):
             timings, 'run_solution_returned', time_since_start=True,
             comment='Backend: generated full solution array'
         )
+        # Add the only non-timeseries result: cost
+        results['cost'] = cost
+
+    # Add all the parameters which would normally (in plan mode) be decision variables
+    results.update(model_data.filter_by_attrs(is_result=1, operate_param=1))
 
     return results, backend_model
