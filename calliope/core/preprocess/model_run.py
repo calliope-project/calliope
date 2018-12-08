@@ -154,7 +154,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
     if scenario:
         scenarios = config_model.get('scenarios', {})
 
-        if scenario in scenarios:
+        if scenario in scenarios.keys():
             # Manually defined scenario names cannot be the same as single
             # overrides or any combination of semicolon-delimited overrides
             if all([i in config_model.get('overrides', {})
@@ -162,20 +162,20 @@ def apply_overrides(config, scenario=None, override_dict=None):
                 raise exceptions.ModelError(
                     'Manually defined scenario cannot be a combination of override names.'
                 )
-            if not isinstance(scenarios[scenario], str):
+            if not isinstance(scenarios[scenario], list):
                 raise exceptions.ModelError(
-                    'Scenario definition must be string of comma-separated overrides.'
+                    'Scenario definition must be a list of override names.'
                 )
-            overrides = scenarios[scenario].split(',')
+            overrides = [str(i) for i in scenarios[scenario]]
             logger.info(
                 'Using scenario `{}` leading to the application of '
-                'overrides `{}`.'.format(scenario, scenarios[scenario])
+                'overrides `{}`.'.format(scenario, overrides)
             )
         else:
             overrides = str(scenario).split(',')
             logger.info(
-                'Applying overrides `{}` without a '
-                'specific scenario name.'.format(scenario)
+                'Applying the following overrides without a '
+                'specific scenario name: {}'.format(overrides)
             )
 
         overrides_from_scenario = combine_overrides(config_model, overrides)

@@ -235,8 +235,8 @@ To make it easier to run a given model multiple times with slightly changed sett
 .. code-block:: yaml
 
     scenarios:
-        high_cost_2005: "high_cost,year2005"
-        high_cost_2006: "high_cost,year2006"
+        high_cost_2005: ["high_cost", "year2005"]
+        high_cost_2006: ["high_cost", "year2006"]
 
     overrides:
         high_cost:
@@ -254,7 +254,7 @@ To make it easier to run a given model multiple times with slightly changed sett
 
 Each override is given by a name (e.g. ``high_cost``) and any number of model settings -- anything in the model configuration can be overridden by an override. In the above example, one override defines higher costs for an ``onshore_wind`` tech while the two other overrides specify different time subsets, so would run an otherwise identical model over two different periods of time series data.
 
-One or several overrides can be applied when running a model, as described in :doc:`running`. Overrides can also be combined into scenarios to make applying them at run-time easier. Scenarios consist of a name and a string of comma-delimited override names which together form that scenario.
+One or several overrides can be applied when running a model, as described in :doc:`running`. Overrides can also be combined into scenarios to make applying them at run-time easier. Scenarios consist of a name and a list of override names which together form that scenario.
 
 Scenarios and overrides can be used to generate scripts that run a single Calliope model many times, either sequentially, or in parallel on a high-performance cluster (see :ref:`generating_scripts`).
 

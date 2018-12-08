@@ -117,4 +117,6 @@ class TestCLI:
             assert os.path.isfile(out_file)
             scenarios = AttrDict.from_yaml(out_file)
             assert 'scenario_0' not in scenarios['scenarios']
-            assert scenarios['scenarios']['scenario_1'] == 'cold_fusion,run1,group_share_cold_fusion_cap'
+            assert scenarios['scenarios']['scenario_1'] == [
+                'cold_fusion', 'run1', 'group_share_cold_fusion_cap'
+            ]
