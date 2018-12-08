@@ -37,11 +37,12 @@ def conda_create_command(
             y['dependencies']
         ))
 
-        # Filter ignored dependencies
-        str_deps = list(filter(
-            lambda i: not any([ign in i for ign in ignore]),
-            str_deps
-        ))
+        if ignore:
+            # Filter ignored dependencies
+            str_deps = list(filter(
+                lambda i: not any([ign in i for ign in ignore]),
+                str_deps
+            ))
 
         dep_set.update(str_deps)
         chan_set.update(y['channels'])
