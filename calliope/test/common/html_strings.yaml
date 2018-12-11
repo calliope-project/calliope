@@ -2,14 +2,16 @@ national_scale:
     capacity:
         - '"type": "dropdown", "x": 0, "xanchor": "left", "y": 1.13'
         - '"yaxis": {"showticklabels": true, "title": "Location"}'
-        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false}'
+        - '"showLink": false'
+        - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     timeseries:
         - '"type": "scatter",'
         - '"x": ["2005-01-01", "2005-01-01 01:00:00",'
         - '"y": [27538.578, 26518.588, 25820.82,'
         - '"name": "Concentrating solar power"'
         - '"title": "Carrier flow: power",'
-        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false}'
+        - '"showLink": false'
+        - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     transmission:
         - '"type": "scattergeo",'
         - '"lat": [40, 40, null],'
@@ -18,7 +20,8 @@ national_scale:
         - '"scope": "world"'
         - '"showcountries": true'
         - '"type": "mercator"'
-        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false}'
+        - '"showLink": false'
+        - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     flows:
         - '"type": "scattergeo"'
         - '"lon": [-2, -2],'
@@ -32,11 +35,13 @@ milp:
         - '"type": "bar"'
         - '"y": ["X3", "X2", "X1", "N1"]'
         - '"name": "Natural gas boiler"'
-        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false}'
+        - '"showLink": false'
+        - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     timeseries:
         - '"type": "scatter"'
         - '"x": ["2005-07-01", "2005-07-01 01:00:00",'
-        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false}'
+        - '"showLink": false'
+        - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     transmission:
         - '"type": "scatter"'
         - '"x": [5, 2, null]'
@@ -44,7 +49,8 @@ milp:
         - '"name": "District heat distribution"'
         - '"name": "Locations",'
         - '"hovermode": "closest"'
-        - '{"showLink": false, "linkText": "Export to plot.ly", "modeBarButtonsToRemove": ["sendDataToCloud"], "displaylogo": false}'
+        - '"showLink": false'
+        - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
 
 clustering:
     timeseries:
