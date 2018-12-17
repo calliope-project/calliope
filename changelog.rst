@@ -8,6 +8,8 @@ Release History
 
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
+|changed| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
+
 |fixed| Updated documentation on amendments of abstract base technology groups
 
 |fixed| Models without time series data fail gracefully.

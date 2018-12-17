@@ -325,8 +325,7 @@ def generate_scenarios(
         scenario_string = '{}{:0>' + str(len(str(len(combinations)))) + 'd}'
 
         scenarios = {'scenarios': {
-            scenario_string.format(scenario_name_prefix, i + 1):
-            ','.join(c)
+            scenario_string.format(scenario_name_prefix, i + 1): c
             for i, c in enumerate(combinations)}}
 
         AttrDict(scenarios).to_yaml(out_file)

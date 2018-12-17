@@ -2,8 +2,8 @@
 # Scenarios are optional, named combinations of overrides
 ##
 scenarios:
-    cold_fusion_with_production_share: 'cold_fusion,group_share_cold_fusion_prod'
-    cold_fusion_with_capacity_share: 'cold_fusion,group_share_cold_fusion_cap'
+    cold_fusion_with_production_share: ['cold_fusion', 'group_share_cold_fusion_prod']
+    cold_fusion_with_capacity_share: ['cold_fusion', 'group_share_cold_fusion_cap']
 
 
 ##

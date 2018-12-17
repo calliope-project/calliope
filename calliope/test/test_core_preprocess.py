@@ -38,7 +38,35 @@ class TestModelRun:
         # test as dict
         calliope.Model(model_dict.as_dict())
 
-    def test_invalid_scenarios(self):
+    def test_valid_scenarios(self):
+        """
+        Test that valid scenario definition raises no error and results in applied scenario.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            scenarios:
+                scenario_1: ['one', 'two']
+
+            overrides:
+                one:
+                    techs.test_supply_gas.constraints.energy_cap_max: 20
+                two:
+                    techs.test_supply_elec.constraints.energy_cap_max: 20
+
+            locations:
+                0:
+                    techs:
+                        test_supply_gas:
+                        test_supply_elec:
+                        test_demand_elec:
+            """
+        )
+        model = build_model(override_dict=override, scenario='scenario_1')
+
+        assert model._model_run.locations['0'].techs.test_supply_gas.constraints.energy_cap_max == 20
+        assert model._model_run.locations['0'].techs.test_supply_elec.constraints.energy_cap_max == 20
+
+    def test_invalid_scenarios_dict(self):
         """
         Test that invalid scenario definition raises appropriate error
         """
@@ -52,7 +80,22 @@ class TestModelRun:
         with pytest.raises(exceptions.ModelError) as error:
             build_model(override_dict=override, scenario='scenario_1')
 
-        assert check_error_or_warning(error, 'Scenario definition must be string of comma-separated overrides.')
+        assert check_error_or_warning(error, 'Scenario definition must be a list of override names.')
+
+    def test_invalid_scenarios_str(self):
+        """
+        Test that invalid scenario definition raises appropriate error
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            scenarios:
+                scenario_1: 'foo1,foo2'
+            """
+        )
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(override_dict=override, scenario='scenario_1')
+
+        assert check_error_or_warning(error, 'Scenario definition must be a list of override names.')
 
     def test_scenario_name_overlaps_overrides(self):
         """
