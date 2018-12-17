@@ -44,10 +44,29 @@ div.sphinxsidebar {
     position: sticky;
     top: 35px;
     height: 100vh;
-    overflow-y: auto;
 }
 
 div#sidebartoc{
+    width: {{ sidebar_width_withoutpadding }};
+    overflow-y: auto;
+    position: sticky;
+    height: 100vh;
+}
+
+div#sidebartoc div{
+    width: {{ sidebar_width_withoutpadding }};
+    position:relative;
+    overflow-y: scroll;
+}
+
+div#sidebarsearch{
+    width: {{ sidebar_width_withoutpadding }};
+    padding: 0 0 20px 0;
+    overflow: visible;
+}
+
+#sidebarsearch input {
+    font-size: 17px;
     width: {{ sidebar_width_withoutpadding }};
 }
 

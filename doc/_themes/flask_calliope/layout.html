@@ -1,7 +1,7 @@
 {% extends "basic/layout.html" %}
 
 {# Plotly must load before MathJax or MathJax breaks #}
-{% set script_files = ["https://cdn.plot.ly/plotly-latest.min.js"] + script_files %}
+{% set script_files = ["https://cdn.plot.ly/plotly-latest.min.js", "https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"] + script_files %}
 
 {% block extrahead %}
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
@@ -15,6 +15,7 @@
      showMathMenu: true
     });
 </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css" />
 {% endblock %}
 
 {% block header %}
@@ -32,4 +33,12 @@
   {% if pagename == 'index' %}
   </div>
   {% endif %}
+
+  <script type="text/javascript"> docsearch({
+  apiKey: '04d24e31cb503240174517b52e108be1',
+  indexName: 'calliope',
+  inputSelector: '#algoliasearch',
+  debug: false // Set debug to true if you want to inspect the dropdown
+  });
+  </script>
 {% endblock %}
