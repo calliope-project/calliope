@@ -9,7 +9,7 @@ national_scale:
         - '"x": ["2005-01-01", "2005-01-01 01:00:00",'
         - '"y": [27538.578, 26518.588, 25820.82,'
         - '"name": "Concentrating solar power"'
-        - '"title": "Carrier flow: power",'
+        - '"title": {"text": "Carrier flow: power"},'
         - '"showLink": false'
         - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     transmission:
@@ -56,5 +56,5 @@ clustering:
     timeseries:
         - '"type": "category"'
         - '"tickvals": [11.5, 35.5],'
-        - '"title": "Clusters"'
-        - '"title": "Storage at start of each day in unclustered timeseries"'
+        - '"title": {"text": "Clusters"}'
+        - '"title": {"text": "Storage at start of each day in unclustered timeseries"}'

@@ -26,8 +26,8 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
 
         .. math::
 
-            min: z = \sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) + \sum_{loc::carrier,timestep} unmet\_demand(loc::carrier, timestep) \\times bigM
-            max: z = \sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) - \sum_{loc::carrier,timestep} unmet\_demand(loc::carrier, timestep) \\times bigM
+            min: z = \\sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) + \\sum_{loc::carrier,timestep} unmet\\_demand(loc::carrier, timestep) \\times bigM
+            max: z = \\sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) - \\sum_{loc::carrier,timestep} unmet\\_demand(loc::carrier, timestep) \\times bigM
 
     """
     def obj_rule(backend_model):
