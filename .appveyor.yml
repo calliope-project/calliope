@@ -3,9 +3,6 @@ build: false
 # See: https://www.appveyor.com/docs/windows-images-software/#miniconda
 environment:
   matrix:
-    - PYTHON: "C:\\Miniconda3"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Miniconda3-x64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
