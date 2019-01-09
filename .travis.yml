@@ -3,12 +3,10 @@ sudo: false  # Use container-based infrastructure
 
 matrix:
   include:
-  - name: "Python 3.5"
-    env: [PYTHON_VERSION="3.5", COVERAGE=FALSE]
   - name: "Python 3.6"
-    env: [PYTHON_VERSION="3.6", COVERAGE=TRUE]
-  # - name: "Python 3.7"
-  #   env: [PYTHON_VERSION="3.7", COVERAGE=TRUE]
+    env: [PYTHON_VERSION="3.6", COVERAGE=FALSE]
+  - name: "Python 3.7"
+    env: [PYTHON_VERSION="3.7", COVERAGE=TRUE]
 
 before_install:
   - "wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;"
