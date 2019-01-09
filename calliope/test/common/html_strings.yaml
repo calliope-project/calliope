@@ -57,4 +57,4 @@ clustering:
         - '"type": "category"'
         - '"tickvals": [11.5, 35.5],'
         - '"title": {"text": "Clusters"}'
-        - '"title": {"text": "Storage at start of each day in unclustered timeseries"}'
+        - '"title": "Storage at start of each day in unclustered timeseries"'
