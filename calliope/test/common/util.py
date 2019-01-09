@@ -23,9 +23,11 @@ python36_or_higher = pytest.mark.skipif(
 )
 
 
-def build_test_model(override_dict=None, scenario=None):
+def build_test_model(override_dict=None, scenario=None, minimal=False):
     this_path = os.path.dirname(__file__)
-    model_location = os.path.join(this_path, 'test_model', 'model.yaml')
+    model = 'model_minimal.yaml' if minimal is True else 'model.yaml'
+
+    model_location = os.path.join(this_path, 'test_model', model)
 
     return calliope.Model(
         model_location, override_dict=override_dict,

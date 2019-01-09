@@ -75,8 +75,8 @@ def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
             \\geq \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
-            \\quad \\forall loc::tech::carrier \in locs::tech::carriers_{export},
-            \\forall timestep \in timesteps
+            \\quad \\forall loc::tech::carrier \\in locs::tech::carriers_{export},
+            \\forall timestep \\in timesteps
     """
 
     return (backend_model.carrier_prod[loc_tech_carrier, timestep] >=

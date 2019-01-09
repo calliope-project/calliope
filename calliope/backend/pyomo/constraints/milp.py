@@ -136,7 +136,7 @@ def unit_commitment_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            \\boldsymbol{operating\_units}(loc::tech, timestep) \\leq
+            \\boldsymbol{operating\\_units}(loc::tech, timestep) \\leq
             \\boldsymbol{units}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{milp},
             \\forall timestep \\in timesteps
@@ -185,8 +185,8 @@ def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier,
         .. math::
 
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
-            \\leq energy_{cap, per unit}(loc::tech) \\times timestep\_resolution(timestep)
-            \\times \\boldsymbol{operating\_units}(loc::tech, timestep)
+            \\leq energy_{cap, per unit}(loc::tech) \\times timestep\\_resolution(timestep)
+            \\times \\boldsymbol{operating\\_units}(loc::tech, timestep)
             \\times \\eta_{parasitic}(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{milp}, \\forall timestep \\in timesteps
 
@@ -213,10 +213,10 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, l
 
         .. math::
 
-            \sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
-            \\leq energy_{cap, per unit}(loc::tech) \\times timestep\_resolution(timestep)
-            \\times \\boldsymbol{operating\_units}(loc::tech, timestep)
+            \\leq energy_{cap, per unit}(loc::tech) \\times timestep\\_resolution(timestep)
+            \\times \\boldsymbol{operating\\_units}(loc::tech, timestep)
             \\times \\eta_{parasitic}(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{milp, conversion^{+}}, \\forall timestep \\in timesteps
 
@@ -246,8 +246,8 @@ def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier,
         .. math::
 
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
-            \\geq energy_{cap, per unit}(loc::tech) \\times timestep\_resolution(timestep)
-            \\times \\boldsymbol{operating\_units}(loc::tech, timestep)
+            \\geq energy_{cap, per unit}(loc::tech) \\times timestep\\_resolution(timestep)
+            \\times \\boldsymbol{operating\\_units}(loc::tech, timestep)
             \\times energy_{cap, min use}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{milp}, \\forall timestep \\in timesteps
     """
@@ -270,10 +270,10 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, l
     .. container:: scrolling-wrapper
 
         .. math::
-            \sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
-            \\geq energy_{cap, per unit}(loc::tech) \\times timestep\_resolution(timestep)
-            \\times \\boldsymbol{operating\_units}(loc::tech, timestep)
+            \\geq energy_{cap, per unit}(loc::tech) \\times timestep\\_resolution(timestep)
+            \\times \\boldsymbol{operating\\_units}(loc::tech, timestep)
             \\times energy_{cap, min use}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{milp, conversion^{+}},
             \\forall timestep \\in timesteps
@@ -305,8 +305,8 @@ def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier
         .. math::
 
             \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
-            \\geq -1 * energy_{cap, per unit}(loc::tech) \\times timestep\_resolution(timestep)
-            \\times \\boldsymbol{operating\_units}(loc::tech, timestep)
+            \\geq -1 * energy_{cap, per unit}(loc::tech) \\times timestep\\_resolution(timestep)
+            \\times \\boldsymbol{operating\\_units}(loc::tech, timestep)
             \\times \\eta_{parasitic}(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{milp, con}, \\forall timestep \\in timesteps
 
