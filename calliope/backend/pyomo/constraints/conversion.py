@@ -43,8 +43,8 @@ def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
             \\times \\eta_{energy}(loc::tech, timestep)
             = \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
             \\times \\eta_{energy}(loc::tech, timestep)
-            \\quad \\forall loc::tech \in locs::techs_{conversion},
-            \\forall timestep \in timesteps
+            \\quad \\forall loc::tech \\in locs::techs_{conversion},
+            \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 

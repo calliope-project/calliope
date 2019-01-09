@@ -144,7 +144,7 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
         .. math::
 
             \\boldsymbol{energy_{cap}}(loc::tech)
-            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times charge\_rate(loc::tech)
+            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times charge\\_rate(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
@@ -171,7 +171,7 @@ def resource_capacity_constraint_rule(backend_model, loc_tech):
                 \\leq resource_{cap, max}(loc::tech),& \\text{if } resource_{cap, max}(loc::tech)\\\\
                 \\text{unconstrained},& \\text{otherwise}
             \\end{cases}
-            \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
+            \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
 
     and (if ``equals`` not enforced):
 
@@ -180,7 +180,7 @@ def resource_capacity_constraint_rule(backend_model, loc_tech):
         .. math::
 
             \\boldsymbol{resource_{cap}}(loc::tech) \\geq resource_{cap, min}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
+            \\quad \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
     """
 
     return get_capacity_constraint(backend_model, 'resource_cap', loc_tech)
@@ -196,8 +196,8 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, loc_
         .. math::
 
             \\boldsymbol{resource_{cap}}(loc::tech) = \\boldsymbol{energy_{cap}}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{finite\_resource\_supply\_plus}
-            \\text{ if } resource\_cap\_equals\_energy\_cap = \\text{True}
+            \\quad \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
+            \\text{ if } resource\\_cap\\_equals\\_energy\\_cap = \\text{True}
     """
     return backend_model.resource_cap[loc_tech] == backend_model.energy_cap[loc_tech]
 
@@ -250,8 +250,8 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
         .. math::
 
             \\boldsymbol{resource_{area}}(loc::tech) =
-            \\boldsymbol{energy_{cap}}(loc::tech) \\times area\_per\_energy\_cap(loc::tech)
-            \\quad \\forall loc::tech \\in locs::techs_{area} \\text{ if } area\_per\_energy\_cap(loc::tech)
+            \\boldsymbol{energy_{cap}}(loc::tech) \\times area\\_per\\_energy\\_cap(loc::tech)
+            \\quad \\forall loc::tech \\in locs::techs_{area} \\text{ if } area\\_per\\_energy\\_cap(loc::tech)
     """
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
@@ -268,8 +268,8 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
 
         .. math::
 
-            \\sum_{tech} \\boldsymbol{resource_{area}}(loc::tech) \\leq available\_area
-            \\quad \\forall loc \in locs \\text{ if } available\_area(loc)
+            \\sum_{tech} \\boldsymbol{resource_{area}}(loc::tech) \\leq available\\_area
+            \\quad \\forall loc \\in locs \\text{ if } available\\_area(loc)
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     available_area = model_data_dict['available_area'][loc]

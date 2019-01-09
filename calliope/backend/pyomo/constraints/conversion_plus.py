@@ -86,10 +86,10 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
 
             \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
-                carrier\_ratio(loc::tech::carrier, `out')} =
+                carrier\\_ratio(loc::tech::carrier, `out')} =
             -1 * \\sum_{loc::tech::carrier \\in loc::tech::carriers_{in}} (
             \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
-            * carrier\_ratio(loc::tech::carrier, `in') * \\eta_{energy}(loc::tech, timestep))
+            * carrier\\_ratio(loc::tech::carrier, `in') * \\eta_{energy}(loc::tech, timestep))
             \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -125,9 +125,9 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
 
         .. math::
 
-            \sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
-            \\leq \\boldsymbol{energy_{cap}}(loc::tech) \\times timestep\_resolution(timestep)
+            \\leq \\boldsymbol{energy_{cap}}(loc::tech) \\times timestep\\_resolution(timestep)
             \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}},
             \\forall timestep \\in timesteps
     """
@@ -152,9 +152,9 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
 
         .. math::
 
-            \sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
+            \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}}
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
-            \\leq \\boldsymbol{energy_{cap}}(loc::tech) \\times timestep\_resolution(timestep)
+            \\leq \\boldsymbol{energy_{cap}}(loc::tech) \\times timestep\\_resolution(timestep)
             \\times energy_{cap, min use}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}},
             \\forall timestep \\in timesteps
@@ -240,10 +240,10 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
 
             \\sum_{loc::tech::carrier \\in loc::tech::carriers_{out}} (
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
-                carrier\_ratio(loc::tech::carrier, `out')} =
+                carrier\\_ratio(loc::tech::carrier, `out')} =
             \\sum_{loc::tech::carrier \\in loc::tech::carriers_{tier}} (
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
-                carrier\_ratio(loc::tech::carrier, tier)}
+                carrier\\_ratio(loc::tech::carrier, tier)}
             \\quad \\forall \\text { tier } \\in [`out_2', `out_3'], \\forall loc::tech
                 \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
 
@@ -255,10 +255,10 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
 
             \\sum_{loc::tech::carrier \\in loc::tech::carriers_{in}}
             \\frac{\\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)}{
-                carrier\_ratio(loc::tech::carrier, `in')} =
+                carrier\\_ratio(loc::tech::carrier, `in')} =
             \\sum_{loc::tech::carrier \\in loc::tech::carriers_{tier}}
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{
-                carrier\_ratio(loc::tech::carrier, tier)}
+                carrier\\_ratio(loc::tech::carrier, tier)}
             \\quad \\forall \\text{ tier } \\in [`in_2', `in_3'], \\forall loc::tech
                 \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
     """

@@ -96,7 +96,7 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
         .. math::
 
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep) \\leq energy_{cap}(loc::tech)
-            \\times timestep\_resolution(timestep) \\times parasitic\_eff(loc::tec)
+            \\times timestep\\_resolution(timestep) \\times parasitic\\_eff(loc::tec)
 
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
@@ -118,7 +118,7 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
         .. math::
 
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep) \\geq energy_{cap}(loc::tech)
-            \\times timestep\_resolution(timestep) \\times energy_{cap,min\_use}(loc::tec)
+            \\times timestep\\_resolution(timestep) \\times energy_{cap,min\\_use}(loc::tec)
 
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
@@ -141,7 +141,7 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
 
             \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\geq
             -1 \\times energy_{cap}(loc::tech)
-            \\times timestep\_resolution(timestep)
+            \\times timestep\\_resolution(timestep)
 
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
@@ -162,7 +162,7 @@ def resource_max_constraint_rule(backend_model, loc_tech, timestep):
         .. math::
 
             \\boldsymbol{resource_{con}}(loc::tech, timestep) \\leq
-            timestep\_resolution(timestep) \\times resource_{cap}(loc::tech)
+            timestep\\_resolution(timestep) \\times resource_{cap}(loc::tech)
 
     """
     timestep_resolution = backend_model.timestep_resolution[timestep]
@@ -194,7 +194,7 @@ def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
         .. math::
 
-            diff(loc::tech::carrier, timestep) \\leq max\_ramping\_rate(loc::tech::carrier, timestep)
+            diff(loc::tech::carrier, timestep) \\leq max\\_ramping\\_rate(loc::tech::carrier, timestep)
 
     """
     return ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0)
@@ -208,7 +208,7 @@ def ramping_down_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
         .. math::
 
-            -1 \\times max\_ramping\_rate(loc::tech::carrier, timestep) \\leq diff(loc::tech::carrier, timestep)
+            -1 \\times max\\_ramping\\_rate(loc::tech::carrier, timestep) \\leq diff(loc::tech::carrier, timestep)
 
     """
     return ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=1)
@@ -224,14 +224,14 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
 
         .. math::
 
-            \\boldsymbol{max\_ramping\_rate}(loc::tech::carrier, timestep) =
+            \\boldsymbol{max\\_ramping\\_rate}(loc::tech::carrier, timestep) =
             energy_{ramping}(loc::tech, timestep) \\times energy_{cap}(loc::tech)
 
             \\boldsymbol{diff}(loc::tech::carrier, timestep) =
             (carrier_{prod}(loc::tech::carrier, timestep) + carrier_{con}(loc::tech::carrier, timestep))
-            / timestep\_resolution(timestep) -
+            / timestep\\_resolution(timestep) -
             (carrier_{prod}(loc::tech::carrier, timestep-1) + carrier_{con}(loc::tech::carrier, timestep-1))
-            / timestep\_resolution(timestep-1)
+            / timestep\\_resolution(timestep-1)
 
     """
 
@@ -284,7 +284,7 @@ def storage_intra_max_rule(backend_model, loc_tech, timestep):
         .. math::
 
             \\boldsymbol{storage}(loc::tech, timestep) \\leq
-            \\boldsymbol{storage_{intra\_cluster, max}}(loc::tech, cluster(timestep))
+            \\boldsymbol{storage_{intra\\_cluster, max}}(loc::tech, cluster(timestep))
             \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
 
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
@@ -308,7 +308,7 @@ def storage_intra_min_rule(backend_model, loc_tech, timestep):
         .. math::
 
             \\boldsymbol{storage}(loc::tech, timestep) \\geq
-            \\boldsymbol{storage_{intra\_cluster, min}}(loc::tech, cluster(timestep))
+            \\boldsymbol{storage_{intra\\_cluster, min}}(loc::tech, cluster(timestep))
             \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
 
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
@@ -333,8 +333,8 @@ def storage_inter_max_rule(backend_model, loc_tech, datestep):
 
         .. math::
 
-            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep) +
-            \\boldsymbol{storage_{intra\_cluster, max}}(loc::tech, cluster(datestep))
+            \\boldsymbol{storage_{inter\\_cluster}}(loc::tech, datestep) +
+            \\boldsymbol{storage_{intra\\_cluster, max}}(loc::tech, cluster(datestep))
             \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\quad \\forall
             loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
 
@@ -361,9 +361,9 @@ def storage_inter_min_rule(backend_model, loc_tech, datestep):
 
         .. math::
 
-            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep)
-            \\times (1 - storage\_loss(loc::tech, timestep))^{24} +
-            \\boldsymbol{storage_{intra\_cluster, min}}(loc::tech, cluster(datestep))
+            \\boldsymbol{storage_{inter\\_cluster}}(loc::tech, datestep)
+            \\times (1 - storage\\_loss(loc::tech, timestep))^{24} +
+            \\boldsymbol{storage_{intra\\_cluster, min}}(loc::tech, cluster(datestep))
             \\geq 0 \\quad \\forall loc::tech \\in loc::techs_{store},
             \\forall datestep \\in datesteps
 

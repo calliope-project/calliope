@@ -75,8 +75,8 @@ def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
             \\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)
             \\geq \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
-            \\quad \\forall loc::tech::carrier \in locs::tech::carriers_{export},
-            \\forall timestep \in timesteps
+            \\quad \\forall loc::tech::carrier \\in locs::tech::carriers_{export},
+            \\forall timestep \\in timesteps
     """
 
     return (backend_model.carrier_prod[loc_tech_carrier, timestep] >=
@@ -123,8 +123,8 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
             \\boldsymbol{carrier_{export}}(loc::tech::carrier, timestep)
             \\leq export_{cap}(loc::tech)
-            \\quad \\forall loc::tech::carrier \in locs::tech::carriers_{export},
-            \\forall timestep \in timesteps
+            \\quad \\forall loc::tech::carrier \\in locs::tech::carriers_{export},
+            \\forall timestep \\in timesteps
 
     If the technology is defined by integer units, not a continuous capacity,
     this constraint becomes:

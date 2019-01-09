@@ -129,19 +129,19 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            min\_use(loc::tech) \\times available\_resource(loc::tech, timestep) \\leq
+            min\\_use(loc::tech) \\times available\\_resource(loc::tech, timestep) \\leq
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
-            \\geq available\_resource(loc::tech, timestep)
+            \\geq available\\_resource(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
 
-    If :math:`force\_resource(loc::tech)` is set:
+    If :math:`force\\_resource(loc::tech)` is set:
 
     .. container:: scrolling-wrapper
 
         .. math::
 
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
-            = available\_resource(loc::tech, timestep)
+            = available\\_resource(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{supply}, \\forall timestep \\in timesteps
 
     Where:
@@ -150,8 +150,8 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource\_scale(loc::tech)
+            available\\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+            \\times resource\\_scale(loc::tech)
 
     if :math:`loc::tech` is in :math:`loc::techs_{area}`:
 
@@ -159,8 +159,8 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
+            available\\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+            \\times resource\\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -202,17 +202,17 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
         .. math::
 
             \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\times \\eta_{energy}(loc::tech, timestep) \\geq
-            required\_resource(loc::tech, timestep) \\quad \\forall loc::tech \\in loc::techs_{demand},
+            required\\_resource(loc::tech, timestep) \\quad \\forall loc::tech \\in loc::techs_{demand},
             \\forall timestep \\in timesteps
 
-    If :math:`force\_resource(loc::tech)` is set:
+    If :math:`force\\_resource(loc::tech)` is set:
 
     .. container:: scrolling-wrapper
 
         .. math::
 
             \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep) \\times \\eta_{energy}(loc::tech, timestep) =
-            required\_resource(loc::tech, timestep)
+            required\\_resource(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{demand}, \\forall timestep \\in timesteps
 
     Where:
@@ -221,8 +221,8 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            required\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource\_scale(loc::tech)
+            required\\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+            \\times resource\\_scale(loc::tech)
 
     if :math:`loc::tech` is in :math:`loc::techs_{area}`:
 
@@ -230,8 +230,8 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            required\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
-            \\times resource\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
+            required\\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+            \\times resource\\_scale(loc::tech) \\times \\boldsymbol{resource_{area}}(loc::tech)
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -267,17 +267,17 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
         .. math::
 
             \\boldsymbol{resource_{con}}(loc::tech, timestep)
-            \\leq available\_resource(loc::tech, timestep)
+            \\leq available\\_resource(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
 
-    If :math:`force\_resource(loc::tech)` is set:
+    If :math:`force\\_resource(loc::tech)` is set:
 
     .. container:: scrolling-wrapper
 
         .. math::
 
             \\boldsymbol{resource_{con}}(loc::tech, timestep)
-            = available\_resource(loc::tech, timestep)
+            = available\\_resource(loc::tech, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
 
     Where:
@@ -286,7 +286,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
 
         .. math::
 
-            available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+            available\\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
             \\times resource_{scale}(loc::tech)
 
     if :math:`loc::tech` is in :math:`loc::techs_{area}`:
@@ -295,7 +295,7 @@ def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, t
 
         .. math::
 
-            available\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
+            available\\_resource(loc::tech, timestep) = resource(loc::tech, timestep)
             \\times resource_{scale}(loc::tech)
             \\times resource_{area}(loc::tech)
 
@@ -329,8 +329,8 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
             -1 * \\boldsymbol{carrier_{con}}(loc_{from}::tech:loc_{to}::carrier, timestep)
             \\times \\eta_{energy}(loc::tech, timestep)
             = \\boldsymbol{carrier_{prod}}(loc_{to}::tech:loc_{from}::carrier, timestep)
-            \\quad \\forall loc::tech:loc \in locs::techs:locs_{transmission},
-            \\forall timestep \in timesteps
+            \\quad \\forall loc::tech:loc \\in locs::techs:locs_{transmission},
+            \\forall timestep \\in timesteps
 
     Where a link is the connection between :math:`loc_{from}::tech:loc_{to}`
     and :math:`loc_{to}::tech:loc_{from}` for locations `to` and `from`.
@@ -367,7 +367,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
 
             \\boldsymbol{storage}(loc::tech, timestep) =
             \\boldsymbol{storage}(loc::tech, timestep_{previous})
-            \\times (1 - storage\_loss(loc::tech, timestep))^{timestep\_resolution(timestep)} +
+            \\times (1 - storage\\_loss(loc::tech, timestep))^{timestep\\_resolution(timestep)} +
             \\boldsymbol{resource_{con}}(loc::tech, timestep) \\times \\eta_{resource}(loc::tech, timestep) -
             \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep) \\times \\eta_{parasitic}(loc::tech, timestep)}
             \\quad \\forall loc::tech \\in loc::techs_{supply^{+}}, \\forall timestep \\in timesteps
@@ -443,7 +443,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
             \\boldsymbol{storage}(loc::tech, timestep) =
             \\boldsymbol{storage}(loc::tech, timestep_{previous})
-            \\times (1 - storage\_loss(loc::tech, timestep))^{resolution(timestep)}
+            \\times (1 - storage\\_loss(loc::tech, timestep))^{resolution(timestep)}
             - \\boldsymbol{carrier_{con}}(loc::tech::carrier, timestep)
             \\times \\eta_{energy}(loc::tech, timestep)
             - \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
@@ -500,9 +500,9 @@ def balance_storage_inter_cluster_rule(backend_model, loc_tech, datestep):
 
         .. math::
 
-            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep) =
-            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep_{previous})
-            \\times (1 - storage\_loss(loc::tech, timestep))^{24}
+            \\boldsymbol{storage_{inter\\_cluster}}(loc::tech, datestep) =
+            \\boldsymbol{storage_{inter\\_cluster}}(loc::tech, datestep_{previous})
+            \\times (1 - storage\\_loss(loc::tech, timestep))^{24}
             + \\boldsymbol{storage}(loc::tech, timestep_{final, cluster(datestep))})
             \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
 
@@ -549,7 +549,7 @@ def storage_initial_rule(backend_model, loc_tech):
 
         .. math::
 
-            \\boldsymbol{storage_{inter\_cluster}}(loc::tech, datestep_{final})
+            \\boldsymbol{storage_{inter\\_cluster}}(loc::tech, datestep_{final})
             \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
 

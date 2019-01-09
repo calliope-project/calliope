@@ -28,9 +28,9 @@ def initialize_decision_variables(backend_model):
     cost_investment      costs, loc_techs_investment_cost
     purchased            loc_techs_purchase
     units                loc_techs_milp
-    operating\_units     loc_techs_milp, timesteps
-    unmet\_demand        loc_carriers, timesteps
-    unused\_supply       loc_carriers, timesteps
+    operating\\_units     loc_techs_milp, timesteps
+    unmet\\_demand        loc_carriers, timesteps
+    unused\\_supply       loc_carriers, timesteps
     ==================== ========================================
 
     """
