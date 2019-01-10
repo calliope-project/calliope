@@ -728,6 +728,14 @@ class TestCapacityConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
 
+        # Check that a model without transmission techs doesn't cause an error
+        m = build_model(
+            {'techs.test_supply_elec.constraints.energy_cap_equals_systemwide': 20},
+            'simple_supply,two_hours,investment_costs', minimal=True
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
+
 
 class TestDispatchConstraints:
     # dispatch.py
@@ -1298,6 +1306,10 @@ class TestMILPConstraints:
                 'purchase': 1, 'interest_rate': 0.1
             }
         }
+        override_no_transmission = {
+            'techs.test_supply_elec.constraints.units_equals_systemwide': 1,
+            'locations.1.techs.test_supply_elec.costs.monetary.purchase': 1
+        }
 
         m = build_model(override_max, 'conversion_plus_milp,two_hours,investment_costs')
         m.run(build_only=True)
@@ -1319,6 +1331,10 @@ class TestMILPConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
         assert m._backend_model.unit_capacity_systemwide_constraint['test_transmission_elec'].upper() == 2
+
+        m = build_model(override_no_transmission, 'simple_supply,two_hours,investment_costs', minimal=True)
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
 
 
 class TestConversionConstraints:

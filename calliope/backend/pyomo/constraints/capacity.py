@@ -336,7 +336,7 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
 
     """
 
-    if tech in backend_model.techs_transmission_names:
+    if tech in getattr(backend_model, 'techs_transmission_names', []):
         all_loc_techs = [
             i for i in backend_model.loc_techs_transmission
             if i.split('::')[1].split(':')[0] == tech
