@@ -140,3 +140,24 @@ class TestGenerateRuns:
         assert runs[0].endswith(
             '--scenario milp --save_netcdf out_1_milp.nc --save_plots plots_1_milp.html'
         )
+
+
+class TestPandasExport:
+
+    @pytest.fixture(scope="module")
+    def model(self):
+        return calliope.examples.national_scale()
+
+    @pytest.mark.parametrize("variable_name", [
+        ("storage_loss"), ("energy_cap_max"), ("storage_cap_max"), ("resource_eff"), ("energy_con"),
+        ("charge_rate"), ("energy_ramping"), ("resource_area_max"), ("resource"), ("lifetime"),
+        ("energy_eff"), ("resource_unit"), ("force_resource"), ("energy_prod"), ("parasitic_eff"),
+        ("reserve_margin"), ("cost_energy_cap"), ("cost_storage_cap"), ("cost_resource_cap"),
+        ("cost_om_con"), ("cost_om_prod"), ("cost_resource_area"), ("cost_depreciation_rate"),
+        ("lookup_remotes"), ("loc_coordinates"), ("colors"), ("inheritance"), ("names"),
+        ("energy_cap_max_systemwide"), ("lookup_loc_carriers"), ("lookup_loc_techs"),
+        ("lookup_loc_techs_area"), ("timestep_resolution"), ("timestep_weights"),
+        ("max_demand_timesteps")
+    ])
+    def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
+        model.get_formatted_array(variable_name).to_dataframe()
