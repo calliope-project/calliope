@@ -117,6 +117,7 @@ def split_loc_techs(data_var, as_='DataArray'):
     elif as_ == "DataArray":
         updated_data_var = xr.DataArray.from_series(data_var_series)
         updated_data_var.attrs = data_var.attrs
+        updated_data_var.name = data_var.name
 
         return updated_data_var
 
