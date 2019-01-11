@@ -30,7 +30,7 @@ The distance is specified in transmission links:
             my_transmission_tech:
                 distance: 500
                 constraints:
-                    e_cap.max: 10000
+                    energy_cap.max: 10000
 
 If no distance is given, but the locations have been given lat and lon coordinates, Calliope will compute distances automatically (based on the length of a straight line connecting the locations).
 
@@ -379,7 +379,7 @@ For example:
                 energy_cap_max: 2000
             costs:
                 monetary:
-                    e_cap: 750
+                    energy_cap: 750
         pv_rooftop:
             essentials:
                 parent: pv
@@ -388,7 +388,7 @@ For example:
                 energy_cap_max: 10000
             costs:
                 monetary:
-                    e_cap: 1000
+                    energy_cap: 1000
 
 None of the ``tech_groups`` appear in model results, they are only used to group model configuration values.
 
