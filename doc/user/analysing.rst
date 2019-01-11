@@ -129,7 +129,7 @@ See an `example of such a HTML plot here <../_static/plot_summary.html>`_.
 Saving publication-quality SVG figures
 --------------------------------------
 
-On calling any of the three primary plotting functions, you can also set ``to_file=True`` for a high quality vector graphic to be saved. This file can be prepared for publication in programs like `Inkscape <https://inkscape.org/en/>`_.
+On calling any of the three primary plotting functions, you can also set ``to_file=path/to/file.svg`` for a high quality vector graphic to be saved. This file can be prepared for publication in programs like `Inkscape <https://inkscape.org/en/>`_.
 
 .. note::
 
