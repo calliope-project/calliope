@@ -6,6 +6,8 @@ Release History
 0.6.4 (dev)
 -----------
 
+|new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
+
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
 |changed| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.

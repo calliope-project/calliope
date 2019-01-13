@@ -10,6 +10,8 @@ Tests are included and can be run with ``py.test`` from the project's root direc
 
 Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_,  planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ and `projects <https://github.com/calliope-project/calliope/projects>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
 
+.. _installing_dev:
+
 --------------------------------
 Installing a development version
 --------------------------------
@@ -19,29 +21,24 @@ As when installing a stable version, using ``conda`` is recommended.
 If you only want to track the latest commit, without having a local Calliope
 repository, then download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ requirements files and run::
 
-    $ conda env create -n calliope_latest --file=base.yml
-    $ source activate calliope_latest
-    $ pip install git+https://github.com/calliope-project/calliope.git
+   conda env create -n calliope_latest --file=base.yml
+   conda activate calliope_latest
+   pip install git+https://github.com/calliope-project/calliope.git
 
 To actively contribute to Calliope development, you'll instead want to clone the repository, giving you an editable copy. This will provide you with the master branch in a known location on your local device.
 
 First, clone the repository::
 
-   $ git clone https://github.com/calliope-project/calliope
+   git clone https://github.com/calliope-project/calliope
 
 Using conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
 
-   $ conda env create -f calliope/requirements/base.yml -n calliope_dev
-   $ source activate calliope_dev
-
-On Windows::
-
-   $ conda env create -f calliope/requirements/base.yml -n calliope_dev
-   $ activate calliope_dev
+   conda env create -f calliope/requirements/base.yml -n calliope_dev
+   conda activate calliope_dev
 
 Then install Calliope itself with pip::
 
-   $ pip install -e calliope
+   pip install -e calliope
 
 ---------------------------
 Creating modular extensions
@@ -62,6 +59,128 @@ Custom functions that adjust time resolution can be loaded dynamically during mo
           - {function: my_custom_module.my_custom_mask, options: {...}}
       function: my_custom_module.my_custom_function
       function_options: {...}
+
+----------------------------------------------
+Understanding Calliope internal implementation
+----------------------------------------------
+
+Worried about delving into the Calliope code? Confused by the structure? Fear not! The package is structured as best as possible to follow a clear workflow, which takes inputs on a journey from YAML and CSV files, via pyomo objects, to a NetCDF file of results. 
+
+Overview
+-----------------
+
+Calliope enables data stored in YAML and CSV files to be prepared for optimisation in a linear solver, and the results of optimisation to be analysed and/or saved. The internal workflow is shown below. The python packages ruamel.yaml and pandas are used to parse the YAML and CSV files, respectively. Xarray is then used to restructure the data into multidimensional arrays, ready for saving, plotting, or sending to the backend. The pyomo package is currently used in the backend to transform the xarray dataset into a pyomo ConcreteModel. All parameters, sets, constraints, and decision variables are defined as pyomo objects at this stage. Pyomo produces an LP file, which can be read in by the modeller's chosen solver. Results are extracted from pyomo into an xarray dataset, again ready to be analysed or saved.
+
+.. figure:: images/calliope_workflow_basic.*
+   :alt: calliope_workflow_overview
+
+Internal implementation
+-----------------------
+
+Taking a more detailed look at the workflow, a number of data objects are populated. On initialising a model, the `model_run` dictionary is created from the provided YAML and CSV files. Overrides (both from scenarios and location/link specific ones) are applied at this point. The `model_run` dictionary is then reformulated into multidimensional arrays of data and collated in the `model_data` xarray dataset. At this point, model initialisation has completed; model inputs can be accessed by the user, and edited if necessary. 
+
+On executing `model.run()`, only `model_data` is sent over to the backend, where the pyomo `ConcreteModel` is created and pyomo parameters (Param) and sets (Set) are populated using data from `model_data`. Decision variables (Var), constraints (Constraint), and the objective (Obj) are also initialised at this point. The model is then sent to the solver. 
+
+Upon solving the problem, the backend_model (pyomo ConcreteModel) is attached to the Model object and the results are added to `model_data`. Post-processing also occurs to clean up the results and to calculate certain indicators, such as the capacity factor of technologies. At this point, the model run has completed; model results can be accessed by the user, and saved or analysed as required.
+
+.. figure:: images/calliope_workflow_complex.*
+   :alt: Calliope internal implementation workflow
+
+   Representation of Calliope internal implementation workflow. Five primary steps are shown, starting at the model definition and implemented clockwise. From inner edge to outer edge of the rainbow are: the data object produced by the step, primary and auxiliary python files in which functionality to produce the data object are found, and the folder containing the relevant python files for the step.
+
+
+Exposing all methods and data attached to the Model object 
+----------------------------------------------------------
+
+The Model object begins as an empty class. Once called, it becomes an empty object which is populated with methods to access, analyse, and save the model data. The Model object is further augmented once `run` has been called, at which point, the backend model object can be accessed, directly or via a user-friendly interface. The notebook found :nbviewer_docs:`here <_static/notebooks/calliope_model_object.ipynb>` goes through each method and data object which can be accessed through the Model object. Most are hidden (using an underscore before the method name), as they aren't useful for the average user. 
+
+.. figure:: images/calliope_model_structure.*
+   :alt: Calliope model object augmentation
+
+   Representation of the Calliope Model object, growing from an empty class to having methods to view, plot and save data, and to interface with the solver backend.
+
+---------------------
+Contribution workflow
+---------------------
+
+Have a bug fix or feature addition you'd like to see in the next stable release of Calliope? First, be sure to check out our list of `open <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen>`_ and `closed <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed>`_ issues to see whether this is something someone else has mentioned, or perhaps has even fixed. If it's there, you can add to the discussion, give it a thumbs up, or look to implement the change yourself. If it isn't there, then feel free to open your own issue, or you can head straight to implementing it. 
+
+Implementing a change
+---------------------
+
+When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `here <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope master branch and can be 'cloned' to provide you with the repository on your own device::
+
+   $ git clone https://github.com/your_repository/calliope
+
+If you want the local version of your fork to be in the same folder as your local version of the main Calliope repository, then you just need to specify a new directory name::
+
+   $ git clone https://github.com/your_repository/calliope your_new_directory_name
+
+Following the instructions for :ref:`installing a development environment of Calliope <installing_dev>`, you can create an environment specific to this installation of Calliope. 
+
+In making changes to your local version, it's a good idea to create a branch first, to not have your master branch diverge from that of the main Calliope repository::
+
+   $ git branch new_fix_or_feature
+
+Then, 'checkout' the branch so that the folder contents are specific to that branch::
+
+   $ git checkout new_fix_or_feature
+
+Finally, push the branch online, so it's existence is also in your remote fork of the Calliope repository (you'll find it in the dropdown list of branches at https://github.com/your_repository/calliope)::
+
+   $ git push -u origin feature_branch_name
+
+Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to your fork directory from the terminal / command line and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you're in your calliope fork conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in::
+
+   $ pytest calliope/test/test_filename.py::Class_name::function_name
+
+If tests are failing, you can debug them by using the pytest arguments `-x` (stop at the first failed test) and `--pdb` (enter into the debug console). 
+
+Once everything has been updated as you'd like (see the contribution checklist below for more on this), you can commit those changes. This stores all edited files in the directory, ready for pushing online::
+
+   $ git add .
+   $ git checkout -m "Short message explaining what has been done in this commit."
+
+If you only want a subset of edited files to go into this commit, you can specify them in the call to `git add`; the period adds all edited files.
+
+If you're happy with your commit(s) then it is time to 'push' everything online using the command `git push`. If you're working with someone else on a branch and they have made changes, you can bring them into your local repository using the command `git pull`.
+
+Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://help.github.com/articles/about-pull-requests/>`. One of the core Calliope team will review the pull request and either accept it or request some changes before it's added. You can make those changes on your local branch, commit them, and push them online and your pull request will update automatically with those changes.
+
+Once a pull request has been accepted, you can return your fork back to its master branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project master::
+
+   $ git remote add upstream https://github.com/calliope-project/calliope
+   $ git fetch upstream master
+   $ git checkout master
+   $ git merge upstream/master
+
+Contribution checklist
+----------------------
+
+A contribution to the core Calliope code should meet the following requirements:
+
+   1. Test(s) added to cover contribution
+
+      Tests ensure that a bug you've fixed will be caught in future, if an update to the code causes it to occur again. They also allow you to ensure that additional functionality works as you expect, and any change elsewhere in the code that causes it to act differently in future will be caught.
+
+   2. Documentation updated
+
+      If you've added functionality, it should be mentioned in the documentation. You can find the reStructuredText (.rst) files for the documentation under 'doc/user'.
+
+   3. Changelog updated
+
+      A brief description of the bug fixed or feature added should be placed in the changelog (changelog.rst). Depending on what the pull request introduces, the description should be prepended with `fixed`, `changed`, or `new`.
+
+   4. Coverage maintained or improved
+
+      Coverage will be shown once all tests are complete online. It is the percentage of lines covered by at least one test. If you've added a test or two, you should be fine. But if coverage does go down it means that not all of your contribution has been tested!
+
+   .. figure:: images/coveralls.*
+      :alt: Example of coverage notification on a pull request
+
+      Example of coverage notification in a pull request.
+
+If you're not sure you've done everything to have a fully formed pull request, feel free to start it anyway. We can help guide you through making the necessary changes, once we have seen where you've got to.
 
 ---------
 Profiling
