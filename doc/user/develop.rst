@@ -64,7 +64,7 @@ Custom functions that adjust time resolution can be loaded dynamically during mo
 Understanding Calliope internal implementation
 ----------------------------------------------
 
-Worried about delving into the Calliope code? Confused by the structure? Fear not! The package is structured as best as possible to follow a clear workflow, which takes inputs on a journey from YAML and CSV files, via pyomo objects, to a NetCDF file of results. 
+Worried about delving into the Calliope code? Confused by the structure? Fear not! The package is structured as best as possible to follow a clear workflow, which takes inputs on a journey from YAML and CSV files, via Pyomo objects, to a NetCDF file of results. 
 
 Overview
 -----------------
@@ -108,13 +108,13 @@ Have a bug fix or feature addition you'd like to see in the next stable release 
 Implementing a change
 ---------------------
 
-When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `here <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope master branch and can be 'cloned' to provide you with the repository on your own device::
+When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope master branch and can be 'cloned' to provide you with the repository on your own device::
 
-   $ git clone https://github.com/your_repository/calliope
+   $ git clone https://github.com/your_username/calliope
 
 If you want the local version of your fork to be in the same folder as your local version of the main Calliope repository, then you just need to specify a new directory name::
 
-   $ git clone https://github.com/your_repository/calliope your_new_directory_name
+   $ git clone https://github.com/your_username/calliope your_new_directory_name
 
 Following the instructions for :ref:`installing a development environment of Calliope <installing_dev>`, you can create an environment specific to this installation of Calliope. 
 
@@ -130,11 +130,11 @@ Finally, push the branch online, so it's existence is also in your remote fork o
 
    $ git push -u origin feature_branch_name
 
-Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to your fork directory from the terminal / command line and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you're in your calliope fork conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in::
+Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in::
 
    $ pytest calliope/test/test_filename.py::Class_name::function_name
 
-If tests are failing, you can debug them by using the pytest arguments `-x` (stop at the first failed test) and `--pdb` (enter into the debug console). 
+If tests are failing, you can debug them by using the pytest arguments ``-x`` (stop at the first failed test) and ``--pdb`` (enter into the debug console). 
 
 Once everything has been updated as you'd like (see the contribution checklist below for more on this), you can commit those changes. This stores all edited files in the directory, ready for pushing online::
 
@@ -145,7 +145,7 @@ If you only want a subset of edited files to go into this commit, you can specif
 
 If you're happy with your commit(s) then it is time to 'push' everything online using the command `git push`. If you're working with someone else on a branch and they have made changes, you can bring them into your local repository using the command `git pull`.
 
-Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://help.github.com/articles/about-pull-requests/>`. One of the core Calliope team will review the pull request and either accept it or request some changes before it's added. You can make those changes on your local branch, commit them, and push them online and your pull request will update automatically with those changes.
+Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://help.github.com/articles/about-pull-requests/>`_. One of the core Calliope team will review the pull request and either accept it or request some changes before it's merged into the main Calliope repository. If any changes are requested, you can make those changes on your local branch, commit them, and push them online -- your pull request will update automatically with those changes.
 
 Once a pull request has been accepted, you can return your fork back to its master branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project master::
 
