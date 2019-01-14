@@ -132,7 +132,7 @@ Finally, push the branch online, so it's existence is also in your remote fork o
 
 Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in::
 
-   $ pytest calliope/test/test_filename.py::Class_name::function_name
+   $ pytest calliope/test/test_filename.py::ClassName::function_name
 
 If tests are failing, you can debug them by using the pytest arguments ``-x`` (stop at the first failed test) and ``--pdb`` (enter into the debug console). 
 
