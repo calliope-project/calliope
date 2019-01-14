@@ -103,7 +103,7 @@ The Model object begins as an empty class. Once called, it becomes an empty obje
 Contribution workflow
 ---------------------
 
-Have a bug fix or feature addition you'd like to see in the next stable release of Calliope? First, be sure to check out our list of `open <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen>`_ and `closed <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed>`_ issues to see whether this is something someone else has mentioned, or perhaps has even fixed. If it's there, you can add to the discussion, give it a thumbs up, or look to implement the change yourself. If it isn't there, then feel free to open your own issue, or you can head straight to implementing it. 
+Have a bug fix or feature addition you'd like to see in the next stable release of Calliope? First, be sure to check out our list of `open <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen>`_ and `closed <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed>`_ issues to see whether this is something someone else has mentioned, or perhaps has even fixed. If it's there, you can add to the discussion, give it a thumbs up, or look to implement the change yourself. If it isn't there, then feel free to open your own issue, or you can head straight to implementing it. The below instructions are a more detailed description of our `contribution guidelines <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_, which you can refer to if you're already comfortable with using pytest and GitHub flows.
 
 Implementing a change
 ---------------------
@@ -120,15 +120,15 @@ Following the instructions for :ref:`installing a development environment of Cal
 
 In making changes to your local version, it's a good idea to create a branch first, to not have your master branch diverge from that of the main Calliope repository::
 
-   $ git branch new_fix_or_feature
+   $ git branch new-fix-or-feature
 
 Then, 'checkout' the branch so that the folder contents are specific to that branch::
 
-   $ git checkout new_fix_or_feature
+   $ git checkout new-fix-or-feature
 
 Finally, push the branch online, so it's existence is also in your remote fork of the Calliope repository (you'll find it in the dropdown list of branches at https://github.com/your_repository/calliope)::
 
-   $ git push -u origin feature_branch_name
+   $ git push -u origin new-fix-or-feature
 
 Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in::
 

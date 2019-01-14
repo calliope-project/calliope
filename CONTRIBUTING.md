@@ -21,7 +21,7 @@ If reporting an error when running Calliope on the command line, please re-run y
 
 ``calliope run my_model.yaml --debug``
 
-Then post the full output from the debug run as part of your GitHub issue.s
+Then post the full output from the debug run as part of your GitHub issues.
 
 If reporting an error when running Calliope interactively in a Python session, please include a full traceback in your issue.
 
@@ -32,17 +32,19 @@ Look at the [development guide in our documentation](http://calliope.readthedocs
 To contribute changes:
 
 1. Fork the project on GitHub
-2. Create a feature branch to work on in your fork (``git checkout -b new-feature``)
+2. Create a feature branch to work on in your fork (``git checkout -b new-fix-or-feature``)
 3. Add your name to the ``AUTHORS`` file
 4. Commit your changes to the feature branch
-5. Push the branch to GitHub (``git push origin my-new-feature``)
+5. Push the branch to GitHub (``git push origin new-fix-or-feature``)
 6. On GitHub, create a new [pull request](https://github.com/calliope-project/calliope/pull/new/master) from the feature branch
+
+Our [development guide](http://calliope.readthedocs.io/en/latest/user/develop.html) gives a more detailed description of each step, if you're new to working with GitHub.
 
 ### Pull requests
 
 Before submitting a pull request, check whether you have:
 
-* Added your changes to ``CHANGELOG.rst``
+* Added your changes to ``changelog.rst``
 * Added or updated documentation for your changes
 * Added tests if you implemented new functionality
 
