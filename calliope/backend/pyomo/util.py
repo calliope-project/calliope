@@ -102,8 +102,18 @@ def get_timestep_weight(backend_model):
     always be 1 per step, unless time clustering/masking/resampling has taken place.
     """
     model_data_dict = backend_model.__calliope_model_data__
-    time_res = list(model_data_dict['data']['timestep_resolution'].values())
-    weights = list(model_data_dict['data']['timestep_weights'].values())
+    time_res = pd.Series(model_data_dict['data']['timestep_resolution'])
+    weights =  pd.Series(model_data_dict['data']['timestep_weights'])
+    # FIXME: make this more intelligent than just taking the first scenario
+    if 'scenarios' in model_data_dict['dims']['timestep_resolution']:
+        time_res = time_res.unstack().iloc[0].values
+    else:
+        time_res = time_res.values
+    if 'scenarios' in model_data_dict['dims']['timestep_weights']:
+        weights = weights.unstack().iloc[0].values
+    else:
+        weights = weights.values
+
     return sum(np.multiply(time_res, weights)) / 8760
 
 
@@ -146,6 +156,9 @@ def get_var(backend_model, var, dims=None, sparse=False):
         var_container = getattr(backend_model, var)
     except AttributeError:
         raise exceptions.BackendError('Variable {} inexistent.'.format(var))
+
+    if isinstance(var_container.index_set(), set):  # i.e. a variable not built over any dimensions
+        return var_container.value
 
     if not dims:
         if var + '_index' == var_container.index_set().name:

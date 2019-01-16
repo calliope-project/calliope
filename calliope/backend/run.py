@@ -113,6 +113,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
         results = backend.get_result_array(backend_model, model_data)
         results.attrs['termination_condition'] = termination
+        results.attrs['objective_function_value'] = backend_model.obj()
 
         log_time(
             timings, 'run_solution_returned', time_since_start=True,
@@ -330,14 +331,14 @@ def run_operate(model_data, timings, backend, build_only):
             # Set up initial storage for the next iteration
             if 'loc_techs_store' in model_data.dims.keys():
                 storage_initial = _results.storage.loc[dict(timesteps=window_ends.index[i])]
-                model_data['storage_initial'].loc[{}] = storage_initial.values
+                model_data['storage_initial'].loc[{}] = storage_initial.values.flatten()
                 for k, v in backend_model.storage_initial.items():
                     v.set_value(storage_initial.to_series().dropna().to_dict()[k])
 
             # Set up total operated units for the next iteration
             if 'loc_techs_milp' in model_data.dims.keys():
                 operated_units = _results.operating_units.sum('timesteps').astype(np.int)
-                model_data['operated_units'].loc[{}] += operated_units.values
+                model_data['operated_units'].loc[{}] += operated_units.values.flatten()
                 for k, v in backend_model.operated_units.items():
                     v.set_value(operated_units.to_series().dropna().to_dict()[k])
 
@@ -432,6 +433,7 @@ def run_scenario_plan(model_data, timings, backend, build_only, backend_rerun=Fa
 
         results = backend.get_result_array(backend_model, model_data)
         results.attrs['termination_condition'] = termination
+        results.attrs['objective_function_value'] = backend_model.obj()
 
         log_time(
             timings, 'run_solution_returned', time_since_start=True,

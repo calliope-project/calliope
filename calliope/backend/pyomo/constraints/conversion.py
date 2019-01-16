@@ -78,7 +78,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, scenario,
             \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion}
     """
     model_data_dict = backend_model.__calliope_model_data__
-    weight = backend_model.timestep_weights[timestep]
+    weight = get_param(backend_model, 'timestep_weights', timesteps=timestep, scenarios=scenario)
 
     loc_tech_carrier_in = (
         model_data_dict['data']['lookup_loc_techs_conversion'][('in', loc_tech)]

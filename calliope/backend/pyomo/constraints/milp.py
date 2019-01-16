@@ -196,7 +196,7 @@ def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier,
     loc_tech = get_loc_tech(loc_tech_carrier)
 
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
-    timestep_resolution = backend_model.timestep_resolution[timestep]
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timesteps=timestep, scenarios=scenario)
     parasitic_eff = get_param(
         backend_model, 'parasitic_eff',
         loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
@@ -226,7 +226,7 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, l
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
-    timestep_resolution = backend_model.timestep_resolution[timestep]
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timesteps=timestep, scenarios=scenario)
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_techs=loc_tech)
     loc_tech_carriers_out = (
         split_comma_list(model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech])
@@ -257,7 +257,7 @@ def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier,
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, scenario, timestep]
-    timestep_resolution = backend_model.timestep_resolution[timestep]
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timesteps=timestep, scenarios=scenario)
     min_use = get_param(
         backend_model, 'energy_cap_min_use',
         loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
@@ -287,7 +287,7 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, l
 
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
-    timestep_resolution = backend_model.timestep_resolution[timestep]
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timesteps=timestep, scenarios=scenario)
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_techs=loc_tech)
     min_use = get_param(
         backend_model, 'energy_cap_min_use',
@@ -323,7 +323,7 @@ def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_con = backend_model.carrier_con[loc_tech_carrier, scenario, timestep]
-    timestep_resolution = backend_model.timestep_resolution[timestep]
+    timestep_resolution = get_param(backend_model, 'timestep_resolution', timesteps=timestep, scenarios=scenario)
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_techs=loc_tech)
 
     return carrier_con >= (-1 *

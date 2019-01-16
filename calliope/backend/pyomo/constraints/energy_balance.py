@@ -443,7 +443,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, scenario, times
             else:
                 previous_step = get_previous_timestep(backend_model.timesteps, timestep)
             storage_loss = get_param(backend_model, 'storage_loss', loc_techs=loc_tech)
-            time_resolution = backend_model.timestep_resolution[previous_step]
+            time_resolution = get_param(backend_model, 'timestep_resolution', timesteps=previous_step, scenarios=scenario)
             storage_previous_step = (
                 ((1 - storage_loss) ** time_resolution) *
                 backend_model.storage[loc_tech, scenario, previous_step]
@@ -503,7 +503,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, scenario, timestep)
         else:
             previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         storage_loss = get_param(backend_model, 'storage_loss', loc_techs=loc_tech)
-        time_resolution = backend_model.timestep_resolution[previous_step]
+        time_resolution = get_param(backend_model, 'timestep_resolution', timesteps=previous_step, scenarios=scenario)
         storage_previous_step = (
             ((1 - storage_loss) ** time_resolution) *
             backend_model.storage[loc_tech, scenario, previous_step]
@@ -551,10 +551,10 @@ def balance_storage_inter_cluster_rule(backend_model, loc_tech, scenario, datest
             ((1 - storage_loss) ** 24) *
             backend_model.storage_inter_cluster[loc_tech, scenario, previous_step]
         )
-        final_timestep = (
-            backend_model.__calliope_model_data__
-            ['data']['lookup_datestep_last_cluster_timestep'][previous_step]
-        )
+        final_timestep = get_param(
+            backend_model, 'lookup_datestep_last_cluster_timestep',
+            datesteps=previous_step, scenarios=scenario
+        ).value
         storage_intra = backend_model.storage[loc_tech, scenario, final_timestep]
     return (
         backend_model.storage_inter_cluster[loc_tech, scenario, datestep] ==
@@ -602,7 +602,7 @@ def storage_initial_rule(backend_model, loc_tech, scenario):
     else:
         storage = backend_model.storage
         final_step = backend_model.timesteps[-1]
-        time_resolution = backend_model.timestep_resolution[final_step]
+        time_resolution = get_param(backend_model, 'timestep_resolution', timesteps=final_step, scenarios=scenario)
 
     return (
         storage[loc_tech, scenario, final_step] * ((1 - storage_loss) ** time_resolution)
