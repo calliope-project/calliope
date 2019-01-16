@@ -152,7 +152,8 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
     ])
 
     for dim in data_to_cluster.dims:
-        data_to_cluster[dim] = data[dim]
+        if dim != 'timesteps':
+            data_to_cluster[dim] = data[dim]
 
     if normalize:
         data_normalized = normalized_copy(data_to_cluster)
@@ -209,8 +210,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
 
     data_new = clustering.map_clusters_to_data(
         data_to_cluster, clusters,
-        how=how, daily_timesteps=daily_timesteps,
-        storage_inter_cluster=storage_inter_cluster
+        how=how, daily_timesteps=daily_timesteps
     )
 
     if timesteps is None:
@@ -218,7 +218,23 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
     else:
         # Drop timesteps from old data
         data_new = _copy_non_t_vars(data, data_new)
-        data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
+        data_new.update(data_coords)
+        cluster_nums = data_new.clusters.to_index()
+        masked_timesteps_index = pd.to_datetime(data.drop(timesteps, dim='timesteps').timesteps.to_index())
+        new_clusters_index = np.unique(masked_timesteps_index.strftime('%Y-%m-%d'))
+        new_clusters = pd.Series(index = masked_timesteps_index)
+        new_cluster_num = cluster_nums.max() + 1
+        for i in new_clusters_index:
+            new_clusters.loc[i] = new_cluster_num
+            new_cluster_num += 1
+
+        clusters = clusters.append(new_clusters[pd.to_datetime(new_clusters_index)].astype(int)).sort_index()
+
+        timestep_cluster = data_new['timestep_cluster'].to_series().append(new_clusters).sort_index()
+
+        data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new.drop('clusters'))
+        data_new.coords['clusters'] = cluster_nums.append(pd.Index(new_clusters.unique().astype(int)))
+        data_new['timestep_cluster'] = timestep_cluster
         data_new = _copy_non_t_vars(data, data_new)
 
     # It's now safe to add the original coordinates back in (preserving all the
@@ -241,6 +257,9 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
             )
             data_new_scaled[var] = data_new[var] * scale.fillna(0)
 
+    if storage_inter_cluster:
+        clusters.index.name = 'datesteps'
+        data_new_scaled['lookup_datestep_cluster'] = xr.DataArray.from_series(clusters)
     lookup_clusters(data_new_scaled)
 
     return data_new_scaled

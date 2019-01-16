@@ -236,7 +236,7 @@ def _timesteps_from_daily_index(idx, daily_timesteps):
     return new_idx
 
 
-def map_clusters_to_data(data, clusters, how, daily_timesteps, storage_inter_cluster=True):
+def map_clusters_to_data(data, clusters, how, daily_timesteps):
     """
     Returns a copy of data that has been clustered.
 
@@ -245,9 +245,6 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps, storage_inter_clu
     how : str
         How to select data from clusters. Can be mean (centroid) or closest real
         day to the mean (by root mean square error).
-    storage_inter_cluster : bool, default=True
-        If True, add `datesteps` to model_data, for use in the backend to build
-        inter_cluster storage decision variables and constraints
     """
     # FIXME hardcoded time intervals ('1H', '1D')
 
@@ -320,9 +317,6 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps, storage_inter_clu
                      coords={'timesteps': new_data['timesteps']})
     )
 
-    if storage_inter_cluster:
-        clusters.index.name = 'datesteps'
-        new_data['lookup_datestep_cluster'] = xr.DataArray.from_series(clusters)
     timestamps.index.name = 'clusters'
     new_data.coords['clusters'] = timestamps.index
 

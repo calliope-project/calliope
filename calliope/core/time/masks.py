@@ -74,7 +74,10 @@ def _get_minmax_timestamps(series, length, n, how='max', padding=None):
         if padding is not None:
             ts -= pd.Timedelta(padding)
             ts_end += pd.Timedelta(padding)
-        ts_range = series[ts:ts_end].index[:-1]
+        if ts_end > series.index[-1]:
+            ts_range = series[ts:ts_end].index
+        else:
+            ts_range = series[ts:ts_end].index[:-1]
         full_timesteps.append(ts_range)
 
     ts_index = _concat_indices(full_timesteps)

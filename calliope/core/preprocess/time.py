@@ -75,7 +75,7 @@ def apply_time_clustering(model_data, model_run):
             mask_func = plugin_load(entry.function, builtin_module='calliope.core.time.masks')
             mask_kwargs = entry.get_key('options', default=AttrDict()).as_dict()
             masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
-        data.attrs['masks'] = masks
+        # data.attrs['masks'] = masks
         # Concatenate the DatetimeIndexes by using dummy Series
         chosen_timesteps = pd.concat([pd.Series(0, index=m)
                                      for m in masks.values()]).index
