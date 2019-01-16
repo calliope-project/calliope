@@ -81,17 +81,19 @@ def generate_model(model_data):
                          initialize=v, mutable=True,
                          default=backend_model.__calliope_defaults__[k])
             )
-        elif k == 'timestep_resolution' or k == 'timestep_weights':  # no default value to look up
-            setattr(
-                backend_model, k,
-                po.Param(backend_model.timesteps, initialize=v, mutable=True)
-            )
         # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
         # so add those in.
         elif mode == 'operate' and model_data[k].attrs.get('operate_param') == 1:
             setattr(
                 backend_model, k,
                 po.Param(getattr(backend_model, model_data_dict['dims'][k][0]),
+                         initialize=v, mutable=True)
+            )
+        else:  # no default value to look up
+            setattr(
+                backend_model, k,
+                po.Param(*[getattr(backend_model, i)
+                           for i in model_data_dict['dims'][k]],
                          initialize=v, mutable=True)
             )
 
@@ -102,10 +104,6 @@ def generate_model(model_data):
         )
         backend_model.alpha = po.Param(
             initialize=model_data_dict['attrs']['run.alpha'], mutable=True
-        )
-        backend_model.probability = po.Param(
-            *[getattr(backend_model, i) for i in model_data_dict['dims']['probability']],
-            initialize=model_data_dict['data']['probability'], mutable=True
         )
     if not hasattr(backend_model, 'scenarios'):
         backend_model.scenarios = po.Set(initialize=[1], ordered=True)
@@ -213,7 +211,7 @@ def solve_model(backend_model, solver,
         TempfileManager.tempdir = save_logs  # Sets log output dir
     if 'warmstart' in solve_kwargs.keys() and solver == 'glpk':
         exceptions.ModelWarning(
-            'The chosen solver, GLPK, does not suport warmstart, which may '
+            'The chosen solver, GLPK, does not support warmstart, which may '
             'impact performance.'
         )
         del solve_kwargs['warmstart']
@@ -259,7 +257,7 @@ def get_result_array(backend_model, model_data):
     """
     all_variables = {
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
-        if isinstance(i, po.base.var.IndexedVar)
+        if isinstance(i, po.base.Var)
     }
 
     # Get any parameters that did not appear in the user's model.inputs Dataset

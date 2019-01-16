@@ -27,6 +27,14 @@ def load_constraints(backend_model):
             backend_model.scenarios,
             rule=cost_constraint_rule
         )
+
+    if 'costs_cap_constraint' in sets:
+        backend_model.cost_cap_constraint = po.Constraint(
+            backend_model.costs_cap_constraint,
+            backend_model.scenarios,
+            rule=cost_cap_constraint_rule
+        )
+
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if 'loc_techs_cost_investment_constraint' in sets and backend_model.mode != 'operate':
         # Right-hand side expression can be later updated by MILP investment costs
@@ -40,6 +48,12 @@ def load_constraints(backend_model):
             backend_model.costs,
             backend_model.loc_techs_cost_investment_constraint,
             rule=cost_investment_constraint_rule
+        )
+
+    if 'costs_investment_cap_constraint' in sets:
+        backend_model.cost_investment_cap_constraint = po.Constraint(
+            backend_model.costs_investment_cap_constraint,
+            rule=cost_investment_cap_constraint_rule
         )
 
     if 'loc_techs_om_cost' in sets:
@@ -59,6 +73,12 @@ def load_constraints(backend_model):
             backend_model.scenarios, backend_model.timesteps,
             rule=cost_var_constraint_rule
         )
+    if 'costs_var_cap_constraint' in sets:
+        backend_model.cost_var_cap_constraint = po.Constraint(
+            backend_model.costs_var_cap_constraint,
+            backend_model.scenarios,
+            rule=cost_var_cap_constraint_rule
+        )
 
 
 def cost_constraint_rule(backend_model, cost, loc_tech, scenario):
@@ -73,6 +93,10 @@ def cost_constraint_rule(backend_model, cost, loc_tech, scenario):
             + \\sum_{timestep \\in timesteps} \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
 
     """
+    model_data_dict = backend_model.__calliope_model_data__
+    phi = model_data_dict['attrs'].get('run.objective_options.investment_weight', 1)
+    psi = model_data_dict['attrs'].get('run.objective_options.operation_weight', 1)
+
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost') and backend_model.mode != 'operate':
         cost_investment = backend_model.cost_investment[cost, loc_tech]
@@ -86,8 +110,75 @@ def cost_constraint_rule(backend_model, cost, loc_tech, scenario):
         cost_var = 0
 
     return (
-        backend_model.cost[cost, loc_tech, scenario] == cost_investment + cost_var
+        backend_model.cost[cost, loc_tech, scenario] == phi * cost_investment + psi * cost_var
     )
+
+
+def cost_cap_constraint_rule(backend_model, cost, scenario):
+    """
+    Limit a system-wide cost to a certain value, i.e. Ɛ-constrained costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\_techs\_cost} \\boldsymbol{cost}(cost) <= cost_cap(cost)
+
+    """
+    model_data_dict = backend_model.__calliope_model_data__
+    cap = model_data_dict['attrs'].get('model.cost_cap.{}'.format(cost), None)
+
+    if cap is not None:
+        cost = sum(backend_model.cost[cost, loc_tech, scenario]
+                   for loc_tech in backend_model.loc_techs_cost)
+        return cost <= cap
+    else:
+        return po.Constraint.NoConstraint
+
+
+def cost_investment_cap_constraint_rule(backend_model, cost):
+    """
+    Limit a system-wide cost to a certain value, i.e. Ɛ-constrained costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\_techs\_cost} \\boldsymbol{cost}(cost) <= cost_cap(cost)
+
+    """
+    model_data_dict = backend_model.__calliope_model_data__
+    cap = model_data_dict['attrs'].get('model.cost_investment_cap.{}'.format(cost), None)
+
+    if cap is not None:
+        cost = sum(backend_model.cost_investment[cost, loc_tech]
+                   for loc_tech in backend_model.loc_techs_investment_cost)
+        return cost <= cap
+    else:
+        return po.Constraint.NoConstraint
+
+
+def cost_var_cap_constraint_rule(backend_model, cost, scenario):
+    """
+    Limit a system-wide cost to a certain value, i.e. Ɛ-constrained costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\_techs\_cost} \\boldsymbol{cost}(cost) <= cost_cap(cost)
+
+    """
+    model_data_dict = backend_model.__calliope_model_data__
+    cap = model_data_dict['attrs'].get('model.cost_var_cap.{}'.format(cost), None)
+
+    if cap is not None:
+        cost = sum(backend_model.cost_var[cost, loc_tech, scenario, timestep]
+                   for loc_tech in backend_model.loc_techs_om_cost
+                   for timestep in backend_model.timesteps)
+        return cost <= cap
+    else:
+        return po.Constraint.NoConstraint
 
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
@@ -216,7 +307,7 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, scenario, timestep):
         backend_model, 'cost_om_con',
         costs=cost, loc_techs=loc_tech, scenarios=scenario, timesteps=timestep
     )
-    weight = backend_model.timestep_weights[timestep]
+    weight = get_param(backend_model, 'timestep_weights', timesteps=timestep, scenarios=scenario)
 
     loc_tech_carrier = model_data_dict['data']['lookup_loc_techs'][loc_tech]
 
