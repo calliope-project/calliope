@@ -12,6 +12,7 @@ import os
 import sys
 
 
+
 def get_from_dict(data_dict, map_list):
     return functools.reduce(operator.getitem, map_list, data_dict)
 

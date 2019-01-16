@@ -9,11 +9,11 @@ Checks for model consistency and possible errors when preparing run in the backe
 
 """
 import ruamel.yaml
-
 import numpy as np
 import pandas as pd
 import xarray as xr
 from calliope.core.attrdict import AttrDict
+from calliope.core.util.observed_dict import ObservedDict
 
 
 def check_operate_params(model_data):
@@ -33,7 +33,9 @@ def check_operate_params(model_data):
         serious issues that should raise a ModelError
 
     """
-    defaults = ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
+    defaults = ObservedDict(model_data.attrs['defaults'], 'defaults', model_data)
+    run_config = ObservedDict(model_data.attrs['run_config'], 'run_config', model_data)
+
     warnings, errors = [], []
     comments = AttrDict()
 
@@ -125,8 +127,8 @@ def check_operate_params(model_data):
             'for all supply_plus techs'
         )
 
-    window = model_data.attrs.get('run.operation.window', None)
-    horizon = model_data.attrs.get('run.operation.horizon', None)
+    window = run_config.get('operation.window', None)
+    horizon = run_config.get('operation.horizon', None)
     if not window or not horizon:
         errors.append(
             'Operational mode requires a timestep window and horizon to be '
@@ -140,11 +142,11 @@ def check_operate_params(model_data):
 
     # Cyclic storage isn't really valid in operate mode, so we ignore it, using
     # initial_storage instead (allowing us to pass storage between operation windows)
-    if model_data.attrs.get('run.cyclic_storage', True):
+    if run_config.get('cyclic_storage', True):
         warnings.append(
             'Storage cannot be cyclic in operate run mode, setting '
             '`run.cyclic_storage` to False for this run'
         )
-        model_data.attrs['run.cyclic_storage'] = False
+        run_config['cyclic_storage'] = False
 
     return comments, warnings, errors

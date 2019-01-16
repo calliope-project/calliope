@@ -26,6 +26,7 @@ from calliope.core.preprocess.checks import check_future_deprecation_warnings
 from calliope.core.util.logging import log_time
 from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.tools import apply_to_dict
+from calliope.core.util.observed_dict import ObservedDict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
 
@@ -114,12 +115,16 @@ class Model(object):
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = 0
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
+        self.model_config = ObservedDict(model_run.get('model', {}), 'model_config', self._model_data)
+        self.run_config = ObservedDict(model_run.get('run', {}), 'run_config', self._model_data)
 
     def _init_from_model_data(self, model_data):
         self._model_run = None
         self._debug_data = None
         self._model_data = model_data
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
+        self.model_config = ObservedDict(model_data.attrs.get('model_config', {}), 'model_config', self._model_data)
+        self.run_config = ObservedDict(model_data.attrs.get('run_config', {}), 'run_config', self._model_data)
 
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
@@ -189,7 +194,7 @@ class Model(object):
                 'the results to be overwritten with a new run.'
             )
 
-        if (self._model_data.attrs['run.mode'] == 'operate' and
+        if (self.run_config['mode'] == 'operate' and
                 not self._model_data.attrs['allow_operate_mode']):
             raise exceptions.ModelError(
                 'Unable to run this model in operational mode, probably because '
@@ -264,7 +269,7 @@ class Model(object):
 
     def info(self):
         info_strings = []
-        model_name = self._model_data.attrs.get('model.name', 'None')
+        model_name = self.model_config.get('name', 'None')
         info_strings.append('Model name:   {}'.format(model_name))
         msize = '{locs} locations, {techs} technologies, {times} timesteps'.format(
             locs=len(self._model_data.coords.get('locs', [])),

@@ -13,10 +13,12 @@ Objective functions.
 import pyomo.core as po  # pylint: disable=import-error
 from calliope.core.util.tools import load_function
 
-
-def minmax_cost_optimization(backend_model, cost_class, sense):
+def minmax_cost_optimization(backend_model):
     """
-    Minimize or maximise total system cost for specified cost class.
+    Minimize or maximise total system cost for specified cost class or a set of cost classes.
+    cost_class is a string or dictionary. If a string, it is automatically converted to a
+    dictionary with a single key:value pair. The dictionary provides a weight for each
+    cost class of interest: {cost_1: weight_1, cost_2: weight_2, etc.}.
 
     If unmet_demand is in use, then the calculated cost of unmet_demand is
     added or subtracted from the total cost in the opposite sense to the
@@ -26,15 +28,25 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
 
         .. math::
 
-            min: z = \\sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) + \\sum_{loc::carrier,timestep} unmet\\_demand(loc::carrier, timestep) \\times bigM
-            max: z = \\sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) - \\sum_{loc::carrier,timestep} unmet\\_demand(loc::carrier, timestep) \\times bigM
+            min: z = \\sum_{loc::tech_{cost},k} (cost(loc::tech, cost=cost_{k}) \\times weight_{k}) +
+             \\sum_{loc::carrier,timestep} (unmet\\_demand(loc::carrier, timestep) \\times bigM)
+
+            max: z = \\sum_{loc::tech_{cost},k} (cost(loc::tech, cost=cost_{k}) \\times weight_{k}) -
+             \\sum_{loc::carrier,timestep} (unmet\\_demand(loc::carrier, timestep) \\times bigM)
 
     """
+
+    options = backend_model.__calliope_run_config['objective_options']
+    sense = options['sense']
+
     def obj_rule(backend_model):
-        if backend_model.__calliope_model_data__['attrs'].get('run.ensure_feasibility', False):
+        cost_class = options['cost_class']
+
+        if backend_model.__calliope_run_config.get('ensure_feasibility', False):
             unmet_demand = sum(
-                backend_model.unmet_demand[loc_carrier, timestep] -
-                backend_model.unused_supply[loc_carrier, timestep]
+                (backend_model.unmet_demand[loc_carrier, timestep] -
+                 backend_model.unused_supply[loc_carrier, timestep]) *
+                backend_model.timestep_weights[timestep]
                 for loc_carrier in backend_model.loc_carriers
                 for timestep in backend_model.timesteps
             ) * backend_model.bigM
@@ -43,10 +55,16 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
         else:
             unmet_demand = 0
 
+        if isinstance(cost_class, str):
+            cost_class = {cost_class: 1}
+        for k, v in cost_class.items():
+            if v is None:
+                cost_class[k] = 1
         return (
             sum(
-                backend_model.cost[cost_class, loc_tech]
+                backend_model.cost[k, loc_tech] * v
                 for loc_tech in backend_model.loc_techs_cost
+                for k, v in cost_class.items()
             ) + unmet_demand
         )
 
