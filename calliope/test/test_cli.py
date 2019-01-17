@@ -128,7 +128,7 @@ class TestCLI:
         runner = CliRunner()
         result = runner.invoke(cli.run, [
             _MINIMAL_TEST_MODEL,
-            "--scenario=supply_purchase,investment_costs",  # without these, the model cannot run
+            "--scenario=investment_costs",  # without these, the model cannot run
             "--override_dict={techs.test_supply_elec.constraints.energy_cap_max: 1}"  # elec supply too low
         ])
         assert result.exit_code != 0
@@ -138,7 +138,7 @@ class TestCLI:
         result = runner.invoke(cli.run, [
             _MINIMAL_TEST_MODEL,
             "--no_fail_when_infeasible",
-            "--scenario=supply_purchase,investment_costs",  # without these, the model cannot run
+            "--scenario=investment_costs",  # without these, the model cannot run
             "--override_dict={techs.test_supply_elec.constraints.energy_cap_max: 1}"  # elec supply too low
         ])
         assert result.exit_code == 0
