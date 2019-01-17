@@ -8,7 +8,7 @@ Release History
 
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
 
-|changed| Exit code for infeasible problems now is 1 (no sucess). This is a breaking change when relying on the exit code.
+|changed| Exit code for infeasible problems now is 1 (no success). This is a breaking change when relying on the exit code.
 
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
