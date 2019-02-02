@@ -11,46 +11,25 @@ from calliope.core.attrdict import AttrDict
 
 class ObservedDict(dict):
     """
-    Dictionary subclass which updates an attribute of the model_data xarray dataset
-    with a yaml string of that dictionary. This update takes place whenever a
-    value is updated in the dictionary.
-
-    Parameters
-    ----------
-    initial_dict : a dictionary to subclass
-    name : the model_data attribute key to update
-    model_data : the model data object
+    Dictionary subclass which updates an observer when there is a change in the
+    values assigned to keys in the Dictionary.
     """
-
-    def __init__(self, initial_dict, name=None, observer=None, parent=None):
-        if isinstance(initial_dict, str):
-            initial_dict = AttrDict.from_yaml_string(initial_dict).as_dict()
-        for k, v in initial_dict.items():
-            if isinstance(v, dict):
-                _parent = self if parent is None else parent
-                initial_dict[k] = ObservedDict(v, name, observer, parent=_parent)
-
+    def __init__(self, initial_dict, on_changed=None):
         super().__init__(initial_dict)
 
-        self.observer = observer
-        self.name = name
-        self.parent = parent
-        if parent is None:  # initialise the key:value pair in observer
-            observer.attrs[name] = AttrDict(initial_dict).to_yaml()
+        self.on_changed = on_changed
 
-    def __setitem__(self, item, value):
+        for k, v in initial_dict.items():
+            if isinstance(v, dict):
+                super().__setitem__(
+                    k, ObservedDict(v, on_changed=self.notify))
+        self.notify()
+
+    def __setitem__(self, key, value):
         if isinstance(value, dict):
-            _value = ObservedDict(value, self.name, self.observer, parent=self.parent)
-        else:
-            _value = value
-
-        super().__setitem__(item, _value)
-
-        # Update B
-        if self.parent is not None:
-            self.observer.attrs[self.name] = AttrDict(self.parent).to_yaml()
-        else:
-            self.observer.attrs[self.name] = AttrDict(self).to_yaml()
+            value = ObservedDict(value, on_changed=self.notify)
+        super().__setitem__(key, value)
+        self.notify()
 
     def update(self, other=None, **kwargs):
         if other is not None:
@@ -58,3 +37,29 @@ class ObservedDict(dict):
                 self[k] = v
         for k, v in kwargs.items():
             self[k] = v
+
+    def notify(self):
+        if self.on_changed is not None:
+            return self.on_changed(self)
+
+
+class UpdateObserver(ObservedDict):
+    """
+    Dictionary subclass which observes a dictionary and updates an attribute of
+    the model_data xarray dataset with a YAML string of that dictionary.
+    This update takes place whenever a value is updated in the dictionary.
+
+    Parameters
+    ----------
+    initial_dict : a dictionary to subclass
+    name : the model_data attribute key to update
+    observer : the model_data object
+    """
+
+    def __init__(self, *args, name, observer, **kwargs):
+        self.observer = observer
+        self.name = name
+        super().__init__(*args, **kwargs)
+
+    def notify(self, updated=None):
+        self.observer.attrs[self.name] = AttrDict(self).to_yaml()

@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.observed_dict import ObservedDict
+from calliope.core.util.observed_dict import UpdateObserver
 
 
 def check_operate_params(model_data):
@@ -33,8 +33,10 @@ def check_operate_params(model_data):
         serious issues that should raise a ModelError
 
     """
-    defaults = ObservedDict(model_data.attrs['defaults'], 'defaults', model_data)
-    run_config = ObservedDict(model_data.attrs['run_config'], 'run_config', model_data)
+    defaults = UpdateObserver(model_data.attrs['defaults'],
+                              name='defaults', observer=model_data)
+    run_config = UpdateObserver(model_data.attrs['run_config'],
+                                name='run_config', observer=model_data)
 
     warnings, errors = [], []
     comments = AttrDict()
