@@ -38,6 +38,7 @@ default_tech:
         primary_carrier_in: false  # Selects the primary input carrier to associate with costs & constraints (if multiple primary input carriers are assigned)
         primary_carrier_out: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
     constraints:
+        binary_operation: false  # if True, carrier_prod and carrier_con cannot both occur in the same timestep
         carrier_ratios: {}  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
         charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
         energy_cap_equals: false  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.

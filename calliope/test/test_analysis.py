@@ -50,7 +50,7 @@ class TestPlotting:
 
     @python36_or_higher
     def test_milp_plotting(self):
-        override = {'model.subset_time': '2005-07-01'}
+        override = {'model.subset_time': ['2005-07-01 00:00:00', '2005-07-01 12:00:00']}
         model = calliope.examples.milp(override_dict=override)
         model.run()
 

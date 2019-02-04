@@ -1336,6 +1336,29 @@ class TestMILPConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
 
+    def test_binary_operation_constraint(self):
+        """
+        Binary switch for prod/con can be activated using the option
+        'binary_operation'
+        """
+        m_store = build_model(
+            {'techs.test_storage.constraints.binary_operation': True},
+            'simple_storage,investment_costs'
+        )
+        m_store.run(build_only=True)
+        assert hasattr(m_store._backend_model, 'operating_switch')
+        assert hasattr(m_store._backend_model, 'binary_operation_con_constraint')
+        assert hasattr(m_store._backend_model, 'binary_operation_prod_constraint')
+
+        m_trans = build_model(
+            {'techs.test_transmission_elec.constraints.binary_operation': True},
+            'simple_storage,investment_costs'
+        )
+        m_trans.run(build_only=True)
+        assert hasattr(m_trans._backend_model, 'operating_switch')
+        assert hasattr(m_trans._backend_model, 'binary_operation_con_constraint')
+        assert hasattr(m_trans._backend_model, 'binary_operation_prod_constraint')
+
 
 class TestConversionConstraints:
 

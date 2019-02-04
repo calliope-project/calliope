@@ -91,6 +91,9 @@ def initialize_decision_variables(backend_model):
             for k, v in backend_model.units.items():
                 backend_model.energy_cap[k] = v * backend_model.energy_cap_per_unit[k]
 
+    if 'loc_techs_binary_operation' in model_data_dict['sets']:
+        backend_model.operating_switch = po.Var(backend_model.loc_techs_binary_operation, backend_model.timesteps, within=po.Binary)
+
     if model_data_dict['attrs'].get('run.ensure_feasibility', False):
         backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
         backend_model.unused_supply = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NegativeReals)

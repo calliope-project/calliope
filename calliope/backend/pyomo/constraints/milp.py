@@ -125,6 +125,19 @@ def load_constraints(backend_model):
             rule=unit_capacity_systemwide_constraint_rule
         )
 
+    if 'loc_techs_binary_operation' in sets:
+        backend_model.binary_operation_con_constraint = po.Constraint(
+            backend_model.loc_techs_binary_operation,
+            backend_model.timesteps,
+            rule=binary_operation_con_constraint_rule
+        )
+        backend_model.binary_operation_prod_constraint = po.Constraint(
+            backend_model.loc_techs_binary_operation,
+            backend_model.timesteps,
+            rule=binary_operation_prod_constraint_rule
+        )
+
+
 def unit_commitment_constraint_rule(backend_model, loc_tech, timestep):
     """
     Constraining the number of integer units
@@ -602,3 +615,51 @@ def unit_capacity_systemwide_constraint_rule(backend_model, tech):
         return sum_expr_units + sum_expr_purchase == equals_systemwide * multiplier
     else:
         return sum_expr_units + sum_expr_purchase <= max_systemwide * multiplier
+
+
+def binary_operation_con_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    BigM limit set on `carrier_con`, forcing it to either be zero or non-zero,
+    depending on whether `con` is zero or one, respectively.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+            - \\boldsymbol{carrier_con}[loc::tech::carrier, timestep] \\leq
+            \\text{bigM} \\times (1 - \\boldsymbol{operating_switch}[loc::tech, timestep])
+            \\forall loc::tech \\in loc::techs_{binary_operation},
+            \\forall timestep \\in timesteps
+
+    """
+    model_dict = backend_model.__calliope_model_data__
+    loc_tech_carrier = model_dict['data']['lookup_loc_techs'][loc_tech]
+    bigM = model_dict['attrs']['run.bigM']
+
+    return (
+        -1 * backend_model.carrier_con[loc_tech_carrier, timestep] <=
+        (1 - backend_model.operating_switch[loc_tech, timestep]) * bigM
+    )
+
+
+def binary_operation_prod_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    BigM limit set on `carrier_prod`, forcing it to either be zero or non-zero,
+    depending on whether `prod` is zero or one, respectively.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+            \\boldsymbol{carrier_prod}[loc::tech::carrier, timestep] \\leq
+            \\text{bigM} \\times \\boldsymbol{operating_switch}[loc::tech, timestep]
+            \\forall loc::tech \\in loc::techs_{binary_operation},
+            \\forall timestep \\in timesteps
+
+    """
+    model_dict = backend_model.__calliope_model_data__
+    loc_tech_carrier = model_dict['data']['lookup_loc_techs'][loc_tech]
+    bigM = model_dict['attrs']['run.bigM']
+
+    return (
+        backend_model.carrier_prod[loc_tech_carrier, timestep] <=
+        backend_model.operating_switch[loc_tech, timestep] * bigM
+    )

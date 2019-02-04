@@ -82,7 +82,7 @@ def save_csv(model_data, path, dropna=True):
     os.makedirs(path, exist_ok=False)
 
     if ('termination_condition' not in model_data.attrs or
-            model_data.attrs['termination_condition'] == 'optimal'):
+            model_data.attrs['termination_condition'] in ['optimal', 'feasible']):
         data_vars = model_data.data_vars
     else:
         data_vars = model_data.filter_by_attrs(is_result=0).data_vars

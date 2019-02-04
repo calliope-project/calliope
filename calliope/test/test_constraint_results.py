@@ -69,6 +69,31 @@ class TestNationalScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(282487.35489)
 
 
+class TestUrbanScaleMILP:
+    def test_binary_operation(self):
+
+        def _get_prod_con(model, prod_con):
+            return (
+                model.get_formatted_array('carrier_{}'.format(prod_con))
+                     .loc[{'techs': 'heat_pipes:X1', 'carriers': 'heat'}]
+                     .to_pandas().dropna(how='all')
+            )
+        m = calliope.examples.urban_scale()
+        m.run()
+        _prod = _get_prod_con(m, 'prod')
+        _con = _get_prod_con(m, 'con')
+        assert any(((_con < 0) & (_prod > 0)).any()) is True
+
+        m_bin = calliope.examples.urban_scale(
+            override_dict={'techs.heat_pipes.constraints.binary_operation': True,
+                           'run.solver_options.mipgap': 0.05}
+        )
+        m_bin.run()
+        _prod = _get_prod_con(m_bin, 'prod')
+        _con = _get_prod_con(m_bin, 'con')
+        assert any(((_con < 0) & (_prod > 0)).any()) is False
+
+
 class TestModelSettings:
     def test_feasibility(self):
 

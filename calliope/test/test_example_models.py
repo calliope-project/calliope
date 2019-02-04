@@ -303,7 +303,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
 
 class TestUrbanScaleExampleModelSenseChecks:
-    def example_tester(self, resource_unit, solver='glpk'):
+    def example_tester(self, resource_unit, solver='glpk', solver_io=None):
         unit_override = {
             'techs.pv.constraints': {
                 'resource': 'file=pv_resource.csv:{}'.format(resource_unit),
@@ -312,6 +312,9 @@ class TestUrbanScaleExampleModelSenseChecks:
             'run.solver': solver
         }
         override = {'model.subset_time': '2005-07-01', **unit_override}
+
+        if solver_io:
+            override['run.solver_io'] = solver_io
 
         model = calliope.examples.urban_scale(override_dict=override)
         model.run()
@@ -340,9 +343,10 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_area_gurobi(self):
         # Check for existence of the `gurobi` solver
-        if shutil.which('gurobi'):
-            self.example_tester('per_area', 'gurobi')
-        else:
+        try:
+            import gurobipy
+            self.example_tester('per_area', solver='gurobi', solver_io='python')
+        except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_urban_example_results_cap(self):
@@ -350,14 +354,15 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_cap_gurobi(self):
         # Check for existence of the `gurobi` solver
-        if shutil.which('gurobi'):
-            self.example_tester('per_cap', 'gurobi')
-        else:
+        try:
+            import gurobipy
+            self.example_tester('per_cap', solver='gurobi', solver_io='python')
+        except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_milp_example_results(self):
         model = calliope.examples.milp(
-            override_dict={'model.subset_time': '2005-01-01'}
+            override_dict={'model.subset_time': '2005-01-01', 'run.solver_options.mipgap': 0.001}
         )
         model.run()
 
