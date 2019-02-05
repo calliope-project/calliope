@@ -303,8 +303,140 @@ def generate_loc_tech_sets(model_run, simple_sets):
         if 'export_carrier' in loc_techs_config[k].constraints
     )
 
-    # Technologies that allow purchasing discrete units
-    # NB: includes transmission techs!
+    ##
+    # Sets based on specific costs being active
+    # NB includes transmission techs
+    ##
+
+    loc_techs_costs = set(
+        k for k in sets.loc_techs_non_transmission
+        if any('costs' in i
+               for i in loc_techs_config[k].keys())
+    )
+
+    loc_techs_transmission_costs = set(
+        k for k in sets.loc_techs_transmission
+        if any('costs' in i
+               for i in loc_techs_transmission_config[k].keys())
+    )
+
+    loc_techs_piecewise_costs = set(
+        k for k in sets.loc_techs_non_transmission
+        if any('piecewise_costs' in i
+               for i in loc_techs_config[k].keys())
+    )
+
+    loc_techs_piecewise_transmission_costs = set(
+        k for k in sets.loc_techs_transmission
+        if any('piecewise_costs' in i
+               for i in loc_techs_transmission_config[k].keys())
+    )
+
+    # Any capacity or fixed annual costs
+    loc_techs_investment_costs = set(
+        k for k in loc_techs_costs
+        if any('_cap' in i or '.purchase' in i or '_area' in i
+               for i in loc_techs_config[k].costs.keys_nested())
+    )
+    loc_techs_transmission_investment_costs = set(
+        k for k in loc_techs_transmission_costs
+        if any('_cap' in i or '.purchase' in i or '_area' in i
+               for i in loc_techs_transmission_config[k].costs.keys_nested())
+    )
+    loc_techs_piecewise_investment_costs = set(
+        k for k in loc_techs_piecewise_costs
+        if any('_cap' in i or '.purchase' in i or '_area' in i
+               for i in loc_techs_config[k].piecewise_costs.keys_nested())
+    )
+    loc_techs_piecewise_transmission_investment_costs = set(
+        k for k in loc_techs_piecewise_transmission_costs
+        if any('_cap' in i or '.purchase' in i or '_area' in i
+               for i in loc_techs_transmission_config[k].piecewise_costs.keys_nested())
+    )
+
+    # Any operation and maintenance
+    loc_techs_om_costs = set(
+        k for k in loc_techs_costs
+        if any('om_' in i or 'export' in i
+               for i in loc_techs_config[k].costs.keys_nested())
+    )
+    loc_techs_transmission_om_costs = set(
+        k for k in loc_techs_transmission_costs
+        if any('om_' in i
+               for i in loc_techs_transmission_config[k].costs.keys_nested())
+    )
+    loc_techs_piecewise_om_costs = set(
+        k for k in loc_techs_piecewise_costs
+        if any('om_' in i or 'export' in i
+               for i in loc_techs_config[k].piecewise_costs.keys_nested())
+    )
+    loc_techs_piecewise_transmission_om_costs = set(
+        k for k in loc_techs_piecewise_transmission_costs
+        if any('om_' in i
+               for i in loc_techs_transmission_config[k].piecewise_costs.keys_nested())
+    )
+
+    # Any export costs
+    sets.loc_techs_costs_export = set(
+        k for k in loc_techs_costs
+        if any('export' in i
+               for i in loc_techs_config[k].costs.keys_nested())
+    )
+
+    # Any piecewise costs
+
+    sets.loc_techs_cost = (
+        loc_techs_costs | loc_techs_transmission_costs |
+        loc_techs_piecewise_costs | loc_techs_piecewise_transmission_costs
+    )
+    sets.loc_techs_investment_cost = (
+        loc_techs_investment_costs |
+        loc_techs_transmission_investment_costs |
+        loc_techs_piecewise_investment_costs |
+        loc_techs_piecewise_transmission_investment_costs)
+    sets.loc_techs_om_cost = (
+        loc_techs_om_costs | loc_techs_transmission_om_costs |
+        loc_techs_piecewise_om_costs | loc_techs_piecewise_transmission_om_costs
+    )
+
+    sets.loc_techs_piecewise_costs = (
+        loc_techs_piecewise_costs | loc_techs_piecewise_transmission_costs
+    )
+    sets.loc_techs_piecewise_investment_cost = (
+        loc_techs_piecewise_investment_costs |
+        loc_techs_piecewise_transmission_investment_costs
+    )
+    sets.loc_techs_piecewise_om_cost = (
+        loc_techs_piecewise_om_costs | loc_techs_piecewise_transmission_om_costs
+    )
+    # piecewise intercept and slope
+
+    slopes = [
+        v for j in loc_techs_piecewise_costs
+        for k, v in loc_techs_config[j].piecewise_costs.as_dict_flat().items()
+        if '.slope' in k
+    ] + [
+        v for j in loc_techs_piecewise_transmission_costs
+        for k, v in loc_techs_transmission_config[j].piecewise_costs.as_dict_flat().items()
+        if '.slope' in k
+    ]
+    sets.slopes = [i for i in range(max(len(j) for j in slopes))]
+
+    intercepts = [
+        v for j in loc_techs_piecewise_costs
+        for k, v in loc_techs_config[j].piecewise_costs.as_dict_flat().items()
+        if '.intercept' in k
+    ] + [
+        v for j in loc_techs_piecewise_transmission_costs
+        for k, v in loc_techs_transmission_config[j].piecewise_costs.as_dict_flat().items()
+        if '.intercept' in k
+    ]
+    sets.intercepts = [i for i in range(max(len(j) for j in intercepts))]
+
+    sets.slope_intercepts = sets.slopes
+
+# Technologies that allow purchasing discrete units
+# NB: includes transmission techs!
     loc_techs_purchase = set(
         k for k in sets.loc_techs_non_transmission
         if any('.purchase' in i
@@ -325,7 +457,10 @@ def generate_loc_tech_sets(model_run, simple_sets):
                 'constraints', AttrDict()).keys_nested())
     )
 
-    sets.loc_techs_purchase = loc_techs_purchase | transmission_purchase
+    sets.loc_techs_purchase = (
+        loc_techs_purchase | transmission_purchase | loc_techs_piecewise_costs |
+        loc_techs_piecewise_transmission_costs
+    )
 
     # Technologies with MILP constraints
     loc_techs_milp = set(
@@ -341,60 +476,6 @@ def generate_loc_tech_sets(model_run, simple_sets):
     )
 
     sets.loc_techs_milp = loc_techs_milp | transmission_milp
-
-    ##
-    # Sets based on specific costs being active
-    # NB includes transmission techs
-    ##
-
-    loc_techs_costs = set(
-        k for k in sets.loc_techs_non_transmission
-        if any('costs' in i
-               for i in loc_techs_config[k].keys())
-    )
-
-    loc_techs_transmission_costs = set(
-        k for k in sets.loc_techs_transmission
-        if any('costs' in i
-               for i in loc_techs_transmission_config[k].keys())
-    )
-
-    # Any capacity or fixed annual costs
-    loc_techs_investment_costs = set(
-        k for k in loc_techs_costs
-        if any('_cap' in i or '.purchase' in i or '_area' in i
-               for i in loc_techs_config[k].costs.keys_nested())
-    )
-    loc_techs_transmission_investment_costs = set(
-        k for k in loc_techs_transmission_costs
-        if any('_cap' in i or '.purchase' in i or '_area' in i
-               for i in loc_techs_transmission_config[k].costs.keys_nested())
-    )
-
-    # Any operation and maintenance
-    loc_techs_om_costs = set(
-        k for k in loc_techs_costs
-        if any('om_' in i or 'export' in i
-               for i in loc_techs_config[k].costs.keys_nested())
-    )
-    loc_techs_transmission_om_costs = set(
-        k for k in loc_techs_transmission_costs
-        if any('om_' in i
-               for i in loc_techs_transmission_config[k].costs.keys_nested())
-    )
-
-    # Any export costs
-    sets.loc_techs_costs_export = set(
-        k for k in loc_techs_costs
-        if any('export' in i
-               for i in loc_techs_config[k].costs.keys_nested())
-    )
-
-    sets.loc_techs_cost = loc_techs_costs | loc_techs_transmission_costs
-    sets.loc_techs_investment_cost = (
-        loc_techs_investment_costs |
-        loc_techs_transmission_investment_costs)
-    sets.loc_techs_om_cost = loc_techs_om_costs | loc_techs_transmission_om_costs
 
     ##
     # Subsets of costs for different abstract base technologies

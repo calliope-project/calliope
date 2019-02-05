@@ -193,6 +193,9 @@ def add_time_dimension(data, model_run):
         dims=['timesteps']
     )
 
+    data.coords['yearsteps'] = np.unique(data.timesteps.to_index().year)
+    data.coords['monthsteps'] = np.unique(data.timesteps.to_index().month)
+
     return None
 
 

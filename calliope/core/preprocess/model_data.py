@@ -62,6 +62,7 @@ def build_model_data(model_run, debug=False):
     data_dict = dict()
     data_dict.update(constraints_to_dataset(model_run))
     data_dict.update(costs_to_dataset(model_run))
+    data_dict.update(piecewise_costs_to_dataset(model_run))
     data_dict.update(location_specific_to_dataset(model_run))
     data_dict.update(tech_specific_to_dataset(model_run))
     data_dict.update(carrier_specific_to_dataset(model_run))
@@ -256,6 +257,72 @@ def costs_to_dataset(model_run):
                 # add the value for the particular location & technology combination to the correct cost class list
                 cost_class_array.append(cost_value)
             data_dict['cost_' + cost]['data'].append(cost_class_array)
+
+    return data_dict
+
+
+def piecewise_costs_to_dataset(model_run):
+    """
+    Extract all piecewise costs from the processed dictionary (model.model_run) and
+    return an xarray Dataset with all the costs as DataArray variables. Variable
+    names will be prepended with `p_cost_` to differentiate from other constraints
+
+    Parameters
+    ----------
+    model_run : AttrDict
+        processed Calliope model_run dict
+
+    Returns
+    -------
+    data_dict : dict conforming to xarray conventions
+
+    """
+    data_dict = dict()
+
+    # FIXME: hardcoding == bad
+    def _get_set(cost):
+        """
+        return the set of loc_techs over which the given cost should be built
+        """
+        if any(i in cost for i in ['_cap', 'depreciation_rate', 'purchase', 'area']):
+            return 'loc_techs_piecewise_investment_cost'
+        elif any(i in cost for i in ['om_', 'export']):
+            return 'loc_techs_piecewise_om_cost'
+        else:
+            return 'loc_techs'
+
+    # find all cost classes and associated costs which are actually defined in the model_run
+    costs = set(i.split('.piecewise_costs.')[1].split('.')[1]
+                for i in model_run.locations.as_dict_flat().keys()
+                if '.piecewise_costs.' in i)
+    cost_classes = model_run.sets['costs']
+    slopes = model_run.sets['slopes']
+
+    # loop over unique costs, cost classes and technology & location combinations
+    for cost in costs:
+        data_dict['p_cost_' + cost] = dict(dims=['costs', _get_set(cost), 'slope_intercepts'], data=[])
+        for cost_class in cost_classes:
+            cost_class_array = []
+            for loc_tech in model_run.sets[_get_set(cost)]:
+                loc, tech = loc_tech.split('::', 1)
+                # for transmission technologies, we also need to go into link nesting
+                if ':' in tech:  # i.e. transmission technologies
+                    tech, link = tech.split(':')
+                    loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
+                else:  # all other technologies
+                    loc_tech_dict = model_run.locations[loc].techs[tech]
+                cost_dict = loc_tech_dict.get_key('piecewise_costs.' + cost_class, None)
+
+                # inf is assumed to be string on import, so need to np.inf it
+                cost_value = {} if not cost_dict else cost_dict.get(cost, {})
+                # All slope and intercept information should be the same length, using NaNs to fill in empty data
+                _slope = cost_value.get('slope', [])
+                _intercept = cost_value.get('intercept', [])
+                slope_intercept = ['{}::{}'.format(_slope[i], _intercept[i]) for i in range(len(_slope))]
+                slope_intercept += [np.nan for i in range(len(slopes) - len(slope_intercept))]
+                # add the value for the particular location & technology combination to the correct cost class list
+                cost_class_array.append(slope_intercept)
+            data_dict['p_cost_' + cost]['data'].append(cost_class_array)
 
     return data_dict
 
@@ -457,6 +524,7 @@ def add_attributes(model_run):
     attr_dict['defaults'] = ruamel.yaml.dump({
         **default_tech_dict['constraints'],
         **{'cost_{}'.format(k): v for k, v in default_tech_dict['costs']['default'].items()},
+        **{'p_cost_{}'.format(k): v for k, v in default_tech_dict['piecewise_costs']['default'].items()},
         **default_location_dict
     })
 

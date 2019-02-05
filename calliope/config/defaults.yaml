@@ -96,3 +96,14 @@ default_tech:
             resource_area: 0  # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
             resource_cap: 0  # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
             storage_cap: 0  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
+    piecewise_costs:
+        default:  # These costs are used for any value not defined for a given cost class
+            energy_cap: null  # name: Cost of energy capacity ¦ unit: kW :sub:`gross` :sup:`-1` ¦
+            energy_cap_per_distance: null  # name: Cost of energy capacity, per unit distance ¦ unit: kW :sub:`gross` :sup:`-1` / distance ¦ Applied to transmission links only
+            export: null  # name: Carrier export cost ¦ unit: kWh :sup:`-1` ¦ Usually used in the negative sense, as a subsidy.
+            om_con: null  # name: Carrier consumption cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier consumption of a technology
+            om_prod: null  # name: Carrier production cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier production of a technology
+            purchase: null  # name: Purchase cost ¦ unit: unit :sup:`-1` ¦ Triggers a binary variable for that technology to say that it has been purchased or is applied to integer variable ``units``
+            resource_area: null  # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
+            resource_cap: null  # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
+            storage_cap: null  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦

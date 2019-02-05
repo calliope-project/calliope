@@ -120,6 +120,9 @@ def generate_model(model_data):
     if hasattr(backend_model, 'loc_techs_milp') or hasattr(backend_model, 'loc_techs_purchase'):
         constraints_to_add.append('milp.load_constraints')
 
+    if hasattr(backend_model, 'loc_techs_piecewise_costs'):
+        constraints_to_add.append('piecewise.load_constraints')
+
     # Export comes last as it can add to the cost expression, this could be
     # overwritten if it doesn't come last
     if hasattr(backend_model, 'loc_techs_export'):
