@@ -162,11 +162,19 @@ def constraints_to_dataset(model_run):
 
     # Additional system-wide constraints from model_run.model
     # FIXME: hardcoding == bad
-    data_dict['reserve_margin'] = {
-        'data': [model_run.model.get('reserve_margin', {}).get(c, np.nan)
-                 for c in model_run.sets['carriers']],
-        'dims': 'carriers'
-    }
+    for i in ['reserve_margin']:
+        data_dict[i] = {
+            'data': [model_run.model.get(i, {}).get(c, np.nan)
+                     for c in model_run.sets['carriers']],
+            'dims': 'carriers'
+        }
+
+    for i in ['cost_var_cap', 'cost_cap', 'cost_investment_cap']:
+        data_dict[i] = {
+            'data': [model_run.model.get(i, {}).get(c, np.nan)
+                     for c in model_run.sets['costs']],
+            'dims': 'costs'
+        }
 
     group_share_data = {}
     group_constraints = ['energy_cap_min', 'energy_cap_max', 'energy_cap_equals']
@@ -495,25 +503,6 @@ def tech_specific_to_dataset(model_run):
 
 def add_attributes(model_run):
     attr_dict = AttrDict()
-    attr_dict['model'] = model_run.model.copy()
-    attr_dict['run'] = model_run.run.copy()
-
-    # Some keys are killed right away
-    for k in ['model.time', 'model.data_path', 'model.timeseries_data_path',
-              'run.config_run_path', 'run.model']:
-        try:
-            attr_dict.del_key(k)
-        except KeyError:
-            pass
-
-    # Now we flatten the AttrDict into a dict
-    attr_dict = attr_dict.as_dict(flat=True)
-
-    # Anything empty or None in the flattened dict is also killed
-    for k in list(attr_dict.keys()):
-        val = attr_dict[k]
-        if val is None or (hasattr(val, '__iter__') and not val):
-            del attr_dict[k]
 
     attr_dict['calliope_version'] = __version__
     attr_dict['applied_overrides'] = model_run['applied_overrides']

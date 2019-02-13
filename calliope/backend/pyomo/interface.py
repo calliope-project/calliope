@@ -116,10 +116,10 @@ def rerun_pyomo_model(model_data, backend_model):
         with 0 for inputs and 1 for results.
     """
 
-    if model_data.attrs['run.mode'] != 'plan':
+    if backend_model.__calliope_run_config['mode'] != 'plan':
         raise exceptions.ModelError(
             'Cannot rerun the backend in {} run mode. Only `plan` mode is '
-            'possible.'.format(model_data.attrs['run.mode'])
+            'possible.'.format(backend_model.__calliope_run_config['mode'])
         )
 
     timings = {}

@@ -19,7 +19,7 @@ from calliope.backend.pyomo.util import \
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
 
     if 'loc_carriers_update_system_balance_constraint' in sets:
         for loc_carrier, timestep in (
@@ -99,7 +99,7 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
             \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     loc_tech_carrier = model_data_dict['lookup_loc_techs_export'][(loc_tech)]
     weight = backend_model.timestep_weights[timestep]
