@@ -127,10 +127,10 @@ def cost_cap_constraint_rule(backend_model, cost):
 
     """
 
-    cost = sum(backend_model.cost[cost, loc_tech]
+    sum_cost = sum(backend_model.cost[cost, loc_tech]
                for loc_tech in backend_model.loc_techs_cost)
 
-    return cost <= backend_model.cost_cap[cost]
+    return sum_cost <= backend_model.cost_cap[cost]
 
 
 def cost_investment_cap_constraint_rule(backend_model, cost):
@@ -147,10 +147,10 @@ def cost_investment_cap_constraint_rule(backend_model, cost):
 
     """
 
-    cost = sum(backend_model.cost_investment[cost, loc_tech]
+    sum_cost = sum(backend_model.cost_investment[cost, loc_tech]
                for loc_tech in backend_model.loc_techs_investment_cost)
 
-    return cost <= backend_model.cost_investment_cap[cost]
+    return sum_cost <= backend_model.cost_investment_cap[cost]
 
 
 def cost_var_cap_constraint_rule(backend_model, cost):
@@ -168,11 +168,11 @@ def cost_var_cap_constraint_rule(backend_model, cost):
 
     """
 
-    cost = sum(backend_model.cost_var[cost, loc_tech, timestep]
+    sum_cost = sum(backend_model.cost_var[cost, loc_tech, timestep]
                for loc_tech in backend_model.loc_techs_om_cost
                for timestep in backend_model.timesteps)
 
-    return cost <= backend_model.cost_var_cap[cost]
+    return sum_cost <= backend_model.cost_var_cap[cost]
 
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):

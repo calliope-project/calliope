@@ -38,7 +38,7 @@ class ObservedDict(dict):
         for k, v in kwargs.items():
             self[k] = v
 
-    def notify(self):
+    def notify(self, updated=None):
         if self.on_changed is not None:
             return self.on_changed(self)
 

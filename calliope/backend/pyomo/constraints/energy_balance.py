@@ -450,7 +450,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
             \\quad \\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
     """
     model_data_dict = backend_model.__calliope_model_data['data']
-    run_config = backend_model.__run_config
+    run_config = backend_model.__calliope_run_config
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
