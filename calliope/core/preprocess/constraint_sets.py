@@ -53,10 +53,14 @@ def generate_constraint_sets(model_run):
 
     # costs.py
     constraint_sets['loc_techs_cost_constraint'] = sets.loc_techs_cost
-    constraint_sets['loc_techs_cost_investment_constraint'] = sets.loc_techs_investment_cost
+    constraint_sets['loc_techs_cost_investment_constraint'] = [
+        i for i in sets.loc_techs_investment_cost
+        if i not in sets.loc_techs_piecewise_investment_cost
+    ]
     constraint_sets['loc_techs_cost_var_constraint'] = [
         i for i in sets.loc_techs_om_cost
-        if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion
+        if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion +
+        sets.loc_techs_piecewise_om_cost
     ]
 
     # export.py

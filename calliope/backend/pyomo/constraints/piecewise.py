@@ -14,7 +14,8 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import \
     get_param, \
     get_timestep_weight, \
-    loc_tech_is_in
+    loc_tech_is_in, \
+    get_previous_timestep
 
 
 def load_constraints(backend_model):
@@ -32,7 +33,7 @@ def load_constraints(backend_model):
             backend_model.costs,
             backend_model.loc_techs_piecewise_om_cost,
             backend_model.slope_intercepts,
-            backend_model.timesteps,
+            backend_model.timesteps,  # hardcoded for kyoto project
             rule=piecewise_om_cost_constraint_rule
         )
 
@@ -55,8 +56,8 @@ def piecewise_investment_cost_constraint_rule(backend_model, cost, loc_tech, slo
         """
         if loc_tech_is_in(backend_model, loc_tech, calliope_set):
             _cost = get_param(backend_model, 'p_cost_' + capacity_decision_variable, (cost, loc_tech, slope_intercept))
-            if _cost is not None:
-                slope, intercept = (int(i) for i in po.value(_cost).split('::'))
+            if _cost is not None and po.value(_cost) != 'nan':
+                slope, intercept = (float(i) for i in po.value(_cost).split('::'))
                 return (
                     slope * getattr(backend_model, capacity_decision_variable)[loc_tech]
                     + intercept * backend_model.purchased[loc_tech]
@@ -80,7 +81,7 @@ def piecewise_investment_cost_constraint_rule(backend_model, cost, loc_tech, slo
             else:
                 cost_con += i
     if cost_con is None:
-        return po.NoConstraint
+        return po.Constraint.NoConstraint
     else:
         cost_con *= depreciation_rate * ts_weight
 
@@ -88,15 +89,12 @@ def piecewise_investment_cost_constraint_rule(backend_model, cost, loc_tech, slo
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
             cost_con = cost_con / 2
 
-    backend_model.cost_investment_rhs[cost, loc_tech].expr = cost_con
-
     return (
-        backend_model.cost_investment[cost, loc_tech] >=
-        backend_model.cost_investment_rhs[cost, loc_tech]
+        backend_model.cost_investment[cost, loc_tech] >= cost_con
     )
 
 
-def piecewise_om_cost_constraint_rule(backend_model, cost, loc_tech, slope_intercept, timestep):
+def piecewise_om_cost_constraint_rule(backend_model, cost, loc_tech, slope_intercept, step):
     """
 
     .. container:: scrolling-wrapper
@@ -106,38 +104,58 @@ def piecewise_om_cost_constraint_rule(backend_model, cost, loc_tech, slope_inter
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
 
-    cost_om_prod = get_param(backend_model, 'p_cost_om_prod', (cost, loc_tech, slope_intercept, timestep))
-    cost_om_con = get_param(backend_model, 'p_cost_om_con', (cost, loc_tech, slope_intercept, timestep))
-
-    weight = backend_model.timestep_weights[timestep]
+    cost_om_prod = get_param(backend_model, 'p_cost_om_prod', (cost, loc_tech, slope_intercept, step))
+    cost_om_con = get_param(backend_model, 'p_cost_om_con', (cost, loc_tech, slope_intercept, step))
 
     loc_tech_carrier = model_data_dict['lookup_loc_techs'][loc_tech]
 
-    if cost_om_prod is not None:
-        slope, intercept = (int(i) for i in po.value(cost_om_prod).split('::'))
-        cost_prod = slope * weight * backend_model.carrier_prod[loc_tech_carrier, timestep] + intercept * backend_model.purchased[loc_tech]
+    # TODO: remove monthwise step hardcoding
+    last_timestep = [timestep for timestep in backend_model.timesteps if timestep.month == step.month][-1]
+    if step != last_timestep:
+        return backend_model.cost_var[cost, loc_tech, step] == 0
+
+    if (po.value(cost_om_prod) != 'nan' and cost_om_prod is not None):
+        slope, intercept = (float(i) for i in po.value(cost_om_prod).split('::'))
+        cost_prod = (
+            slope * sum(
+                backend_model.timestep_weights[timestep] * backend_model.carrier_prod[loc_tech_carrier, timestep]
+                # TODO: remove monthwise step hardcoding
+                for timestep in backend_model.timesteps if timestep.month == step.month
+            ) + intercept * backend_model.purchased[loc_tech]
+        )
     else:
         cost_prod = None
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and cost_om_con is not None:
-        (int(i) for i in po.value(cost_om_con).split('::'))
-        cost_con = slope * weight * backend_model.resource_con[loc_tech, timestep] + intercept * backend_model.purchased[loc_tech]
+    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply_plus') and po.value(cost_om_con) != 'nan' and cost_om_con is not None:
+        slope, intercept = (float(i) for i in po.value(cost_om_prod).split('::'))
+        cost_con = (
+            slope * sum(
+                backend_model.timestep_weights[timestep] * backend_model.resource_con[loc_tech, timestep]
+                # TODO: remove monthwise step hardcoding
+                for timestep in backend_model.timesteps if timestep.month == step.month
+            ) + intercept * backend_model.purchased[loc_tech]
+        )
 
-    elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and cost_om_con is not None:
-        (int(i) for i in po.value(cost_om_con).split('::'))
-        energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
-        if po.value(energy_eff) > 0:  # in case energy_eff is zero, to avoid an infinite value
-            cost_con = slope * weight * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff) + intercept * backend_model.purchased[loc_tech]
-        else:
-            cost_con = None
+    elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_supply') and po.value(cost_om_con) != 'nan' and cost_om_con is not None:
+        slope, intercept = (float(i) for i in po.value(cost_om_prod).split('::'))
+        # TODO: add in a check for energy_eff == 0, as this will create an infinite value
+        cost_con = (
+            slope * sum(
+                backend_model.timestep_weights[timestep] *
+                (backend_model.carrier_prod[loc_tech_carrier, timestep] /
+                    get_param(backend_model, 'energy_eff', (loc_tech, timestep)))
+                # TODO: remove monthwise step hardcoding
+                for timestep in backend_model.timesteps if timestep.month == step.month
+            ) + intercept * backend_model.purchased[loc_tech]
+        )
     else:
         cost_con = None
 
     if cost_prod is not None and cost_con is not None:
-        return backend_model.cost_var[cost, loc_tech, timestep] >= cost_prod + cost_con
+        return backend_model.cost_var[cost, loc_tech, last_timestep] >= cost_prod + cost_con
     elif cost_prod is not None:
-        return backend_model.cost_var[cost, loc_tech, timestep] >= cost_prod
+        return backend_model.cost_var[cost, loc_tech, last_timestep] >= cost_prod
     elif cost_con is not None:
-        return backend_model.cost_var[cost, loc_tech, timestep] >= cost_con
+        return backend_model.cost_var[cost, loc_tech, last_timestep] >= cost_con
     else:
-        po.NoConstraint
+        return po.Constraint.NoConstraint
