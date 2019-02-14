@@ -14,12 +14,11 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import \
     get_param, \
     get_timestep_weight, \
-    loc_tech_is_in, \
-    get_previous_timestep
+    loc_tech_is_in
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
 
     if 'loc_techs_piecewise_investment_cost' in sets:
         backend_model.piecewise_investment_cost_constraint = po.Constraint(
@@ -47,7 +46,7 @@ def piecewise_investment_cost_constraint_rule(backend_model, cost, loc_tech, slo
         .. math::=
 
     """
-    model_data_dict = backend_model.__calliope_model_data__
+    model_data_dict = backend_model.__calliope_model_data
 
     def _get_investment_cost(capacity_decision_variable, calliope_set):
         """
@@ -102,7 +101,7 @@ def piecewise_om_cost_constraint_rule(backend_model, cost, loc_tech, slope_inter
         .. math::
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     cost_om_prod = get_param(backend_model, 'p_cost_om_prod', (cost, loc_tech, slope_intercept, step))
     cost_om_con = get_param(backend_model, 'p_cost_om_con', (cost, loc_tech, slope_intercept, step))
