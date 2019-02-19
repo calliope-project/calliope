@@ -28,9 +28,6 @@ run:
 
 model:
     calliope_version: null  # Calliope framework version this model is intended for
-    cost_cap: {}
-    cost_var_cap: {}
-    cost_investment_cap: {}
     group_share: {}  # Optional settings for the group_share constraint
     name: null  # Model name
     random_seed: null  # Seed for random number generator used during clustering

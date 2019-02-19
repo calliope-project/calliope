@@ -168,13 +168,6 @@ def constraints_to_dataset(model_run):
             'dims': 'carriers'
         }
 
-    for i in ['cost_var_cap', 'cost_cap', 'cost_investment_cap']:
-        data_dict[i] = {
-            'data': [model_run.model.get(i, {}).get(c, np.nan)
-                     for c in model_run.sets['costs']],
-            'dims': 'costs'
-        }
-
     group_share_data = {}
     group_constraints = ['energy_cap_min', 'energy_cap_max', 'energy_cap_equals']
     group_constraints_carrier = ['carrier_prod_min', 'carrier_prod_max', 'carrier_prod_equals']

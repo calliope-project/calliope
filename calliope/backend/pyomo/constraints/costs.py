@@ -28,12 +28,6 @@ def load_constraints(backend_model):
             rule=cost_constraint_rule
         )
 
-    if 'costs_cap_constraint' in sets:
-        backend_model.cost_cap_constraint = po.Constraint(
-            backend_model.costs_cap_constraint,
-            rule=cost_cap_constraint_rule
-        )
-
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if 'loc_techs_cost_investment_constraint' in sets and run_config['mode'] != 'operate':
         # Right-hand side expression can be later updated by MILP investment costs
@@ -47,12 +41,6 @@ def load_constraints(backend_model):
             backend_model.costs,
             backend_model.loc_techs_cost_investment_constraint,
             rule=cost_investment_constraint_rule
-        )
-
-    if 'costs_investment_cap_constraint' in sets:
-        backend_model.cost_investment_cap_constraint = po.Constraint(
-            backend_model.costs_investment_cap_constraint,
-            rule=cost_investment_cap_constraint_rule
         )
 
     if 'loc_techs_om_cost' in sets:
@@ -72,11 +60,6 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             rule=cost_var_constraint_rule
         )
-    if 'costs_var_cap_constraint' in sets:
-        backend_model.cost_var_cap_constraint = po.Constraint(
-            backend_model.costs_var_cap_constraint,
-            rule=cost_var_cap_constraint_rule
-        )
 
 
 def cost_constraint_rule(backend_model, cost, loc_tech):
@@ -93,10 +76,7 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
             + \\sum_{timestep \\in timesteps} \\boldsymbol{cost_{var}}(cost, loc::tech, timestep) \\times \\psi
 
     """
-    model_data_dict = backend_model.__calliope_model_data
     run_config = backend_model.__calliope_run_config
-    phi = run_config.get('objective_options.investment_weight', 1)
-    psi = run_config.get('objective_options.operation_weight', 1)
 
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_investment_cost') and run_config['mode'] != 'operate':
@@ -111,68 +91,8 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
         cost_var = 0
 
     return (
-        backend_model.cost[cost, loc_tech] == phi * cost_investment + psi * cost_var
+        backend_model.cost[cost, loc_tech] == cost_investment + cost_var
     )
-
-
-def cost_cap_constraint_rule(backend_model, cost):
-    """
-    Limit system-wide cost for a specific cost class to a certain value, i.e. Ɛ-constrained costs
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\sum{loc::tech \\in loc\_techs\_cost} \\boldsymbol{cost}(cost, loc::tech) <= cost_cap(cost)
-
-    """
-
-    sum_cost = sum(backend_model.cost[cost, loc_tech]
-               for loc_tech in backend_model.loc_techs_cost)
-
-    return sum_cost <= backend_model.cost_cap[cost]
-
-
-def cost_investment_cap_constraint_rule(backend_model, cost):
-    """
-    Limit system-wide investment costs specific to a cost class to a
-    certain value, i.e. Ɛ-constrained costs
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\sum{loc::tech \\in loc\_techs\_cost} \\boldsymbol{cost_{investment}}(cost, loc::tech)
-            <= cost_investment_cap(cost)
-
-    """
-
-    sum_cost = sum(backend_model.cost_investment[cost, loc_tech]
-               for loc_tech in backend_model.loc_techs_investment_cost)
-
-    return sum_cost <= backend_model.cost_investment_cap[cost]
-
-
-def cost_var_cap_constraint_rule(backend_model, cost):
-    """
-    Limit system-wide variable costs specific to a cost class
-    to a certain value, i.e. Ɛ-constrained costs
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\sum{loc::tech \\in loc\_techs\_cost, timestep \\in timesteps}
-            \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
-             <= cost_var_cap(cost)
-
-    """
-
-    sum_cost = sum(backend_model.cost_var[cost, loc_tech, timestep]
-               for loc_tech in backend_model.loc_techs_om_cost
-               for timestep in backend_model.timesteps)
-
-    return sum_cost <= backend_model.cost_var_cap[cost]
 
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
