@@ -85,7 +85,7 @@ def generate_model(model_data):
             setattr(
                 backend_model, k,
                 po.Param(getattr(backend_model, model_data_dict['dims'][k][0]),
-                        initialize=v, mutable=True)
+                         initialize=v, mutable=True)
             )
         else:  # no default value to look up
             setattr(
@@ -146,9 +146,6 @@ def generate_model(model_data):
                           backend_model.__calliope_run_config['objective'])
     objective_args = backend_model.__calliope_run_config['objective_options']
     load_function(objective_function)(backend_model, **objective_args)
-
-
-    # delattr(backend_model, '__calliope_model_data')
 
     return backend_model
 

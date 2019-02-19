@@ -255,6 +255,3 @@ class TestObservedDict:
             assert 'run_config' in model_from_disk._model_data.attrs.keys()
             assert hasattr(model_from_disk, 'model_config')
             assert 'model_config' in model_from_disk._model_data.attrs.keys()
-
-
-
