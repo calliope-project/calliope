@@ -12,8 +12,6 @@ Model-wide constraints.
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param
-
 
 def load_constraints(backend_model):
     model_data_dict = backend_model.__calliope_model_data__['data']
@@ -50,6 +48,7 @@ def demand_share_constraint_rule(backend_model, modelwide_constraint_group, carr
     model_data_dict = backend_model.__calliope_model_data__['data']
     share = model_data_dict['modelwide_demand_share_{}'.format(what)][(carrier, modelwide_constraint_group)]
     # FIXME uncomment this once Bryn has merged his changes
+    # and import again: from calliope.backend.pyomo.util import get_param
     # share = get_param(
     #     backend_model,
     #     'modelwide_demand_share_{}'.format(what), (carrier, modelwide_constraint_group)

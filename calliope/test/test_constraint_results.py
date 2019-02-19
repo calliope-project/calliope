@@ -1,4 +1,3 @@
-import pytest  # pylint: disable=import-error
 from pytest import approx
 
 import calliope
