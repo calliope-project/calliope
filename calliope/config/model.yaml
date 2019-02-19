@@ -7,8 +7,8 @@
 ##
 # Model-wide default settings
 ##
-run:
 
+run:
     backend: pyomo  # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
     bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
     cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries

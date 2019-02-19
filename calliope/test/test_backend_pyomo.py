@@ -731,7 +731,7 @@ class TestCapacityConstraints:
         # Check that a model without transmission techs doesn't cause an error
         m = build_model(
             {'techs.test_supply_elec.constraints.energy_cap_equals_systemwide': 20},
-            'simple_supply,two_hours,investment_costs', minimal=True
+            'simple_supply,two_hours,investment_costs', model_file='model_minimal.yaml'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
@@ -1332,7 +1332,10 @@ class TestMILPConstraints:
         assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
         assert m._backend_model.unit_capacity_systemwide_constraint['test_transmission_elec'].upper() == 2
 
-        m = build_model(override_no_transmission, 'simple_supply,two_hours,investment_costs', minimal=True)
+        m = build_model(
+            override_no_transmission,
+            'simple_supply,two_hours,investment_costs',
+            model_file='model_minimal.yaml')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
 

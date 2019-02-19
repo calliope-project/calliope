@@ -1,0 +1,76 @@
+model:
+    name: Demand share constraint test model
+    timeseries_data_path: 'timeseries_data'
+
+run:
+    mode: plan
+    solver: glpk
+
+techs:
+    cheap_supply:
+        essentials:
+            name: Cheap supply tech
+            carrier: electricity
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 10
+    expensive_supply:
+        essentials:
+            name: Expensive supply
+            carrier: electricity
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 20
+    electricity_demand:
+        essentials:
+            name: Electricity demand
+            carrier: electricity
+            parent: demand
+        constraints:
+            resource: file=demand_elec.csv
+
+locations:
+    0:
+        techs:
+            cheap_supply:
+            expensive_supply:
+            electricity_demand:
+    1:
+        techs:
+            cheap_supply:
+            expensive_supply:
+            electricity_demand:
+
+overrides:
+    demand_share_max_systemwide:
+        modelwide_constraints.example_demand_share_max_constraint:
+            techs: ["cheap_supply"]
+            demand_share_max:
+                electricity: 0.4
+    demand_share_min_systemwide:
+        modelwide_constraints.example_demand_share_min_constraint:
+            techs: ["expensive_supply"]
+            demand_share_min:
+                electricity: 0.6
+    demand_share_max_location_0:
+        modelwide_constraints.example_demand_share_max_constraint:
+            locs: ["0"]
+            techs: ["cheap_supply"]
+            demand_share_max:
+                electricity: 0.4
+    demand_share_min_location_0:
+        modelwide_constraints.example_demand_share_min_constraint:
+            locs: ["0"]
+            techs: ["expensive_supply"]
+            demand_share_min:
+                electricity: 0.6

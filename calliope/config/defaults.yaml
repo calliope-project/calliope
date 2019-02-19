@@ -22,8 +22,14 @@
 # List of constraints allowed to specify "file="
 file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss']
 
+modelwide_allowed_constraints:
+    per_carrier: ['demand_share_min', 'demand_share_max']
+    per_cost: []
+    general: []
+
 default_location:
     available_area: null
+
 default_tech:
     essentials:
         carrier_in: false  # Defaults to false, allows technologies to define primary carrier(s) to consume

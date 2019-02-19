@@ -105,7 +105,8 @@ def generate_model(model_data):
         'dispatch.load_constraints',
         'network.load_constraints',
         'costs.load_constraints',
-        'policy.load_constraints'
+        'policy.load_constraints',
+        'modelwide.load_constraints'
     ]
 
     if mode != 'operate':
