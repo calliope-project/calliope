@@ -159,15 +159,6 @@ def constraints_to_dataset(model_run):
             data_dict[constraint]['data'].append(constraint_value)
         # once we've looped through all technology & location combinations, add the array to the dataset
 
-    # Additional system-wide constraints from model_run.model
-    # FIXME: hardcoding == bad
-    for i in ['reserve_margin']:
-        data_dict[i] = {
-            'data': [model_run.model.get(i, {}).get(c, np.nan)
-                     for c in model_run.sets['carriers']],
-            'dims': 'carriers'
-        }
-
     group_share_data = {}
     group_constraints = ['energy_cap_min', 'energy_cap_max', 'energy_cap_equals']
     group_constraints_carrier = ['carrier_prod_min', 'carrier_prod_max', 'carrier_prod_equals']
@@ -308,7 +299,7 @@ def carrier_specific_to_dataset(model_run):
             )
 
     # Additional system-wide constraints from model_run.model
-    if 'reserve_margin' in model_run.model.keys():
+    if model_run.model.get('reserve_margin', {}) != {}:
         data_dict['reserve_margin'] = {
             'data': [model_run.model.reserve_margin.get(c, np.nan)
                      for c in model_run.sets['carriers']],

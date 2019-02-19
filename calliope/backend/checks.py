@@ -129,8 +129,8 @@ def check_operate_params(model_data):
             'for all supply_plus techs'
         )
 
-    window = run_config.get('operation.window', None)
-    horizon = run_config.get('operation.horizon', None)
+    window = run_config.get('operation', {}).get('window', None)
+    horizon = run_config.get('operation', {}).get('horizon', None)
     if not window or not horizon:
         errors.append(
             'Operational mode requires a timestep window and horizon to be '

@@ -6,6 +6,7 @@ from pyomo.core.base.expr import identify_variables
 
 from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
+from calliope.core.attrdict import AttrDict
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_error_or_warning
@@ -168,7 +169,7 @@ class TestInterface:
 
         # should fail if the run mode is not 'plan'
         with pytest.raises(exceptions.ModelError) as error:
-            m.run['mode'] = 'operate'
+            m.run_config['mode'] = 'operate'
             m.backend.rerun()
         assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
 
@@ -177,11 +178,12 @@ class TestChecks:
     def test_operate_cyclic_storage(self):
         """Cannot have cyclic storage in operate mode"""
         m = build_model({}, 'simple_supply,operate,investment_costs')
-        assert m._model_data.run['cyclic_storage'] is True
+        assert m.run_config['cyclic_storage'] is True
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)
         assert check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
-        assert m._model_data.run['cyclic_storage'] is False
+        run_config = AttrDict.from_yaml_string(m._model_data.attrs['run_config'])
+        assert run_config['cyclic_storage'] is False
 
 
 class TestBalanceConstraints:

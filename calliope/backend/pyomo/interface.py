@@ -8,6 +8,7 @@ from calliope.backend.pyomo import model as run_pyomo
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
+from calliope.core.attrdict import AttrDict
 
 
 def access_pyomo_model_inputs(backend_model):
@@ -115,6 +116,7 @@ def rerun_pyomo_model(model_data, backend_model):
         to filter inputs/results, use `run_data.filter_by_attrs(is_result=...)`
         with 0 for inputs and 1 for results.
     """
+    backend_model.__calliope_run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
 
     if backend_model.__calliope_run_config['mode'] != 'plan':
         raise exceptions.ModelError(

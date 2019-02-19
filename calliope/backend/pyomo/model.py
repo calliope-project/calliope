@@ -144,7 +144,8 @@ def generate_model(model_data):
     # if they are present
     objective_function = ('calliope.backend.pyomo.objective.' +
                           backend_model.__calliope_run_config['objective'])
-    load_function(objective_function)(backend_model)
+    objective_args = backend_model.__calliope_run_config['objective_options']
+    load_function(objective_function)(backend_model, **objective_args)
 
 
     # delattr(backend_model, '__calliope_model_data')

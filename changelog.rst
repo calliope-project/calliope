@@ -6,6 +6,8 @@ Release History
 0.6.4 (dev)
 -----------
 
+|changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
+
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
 
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.

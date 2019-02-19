@@ -3,8 +3,11 @@ import calliope
 import logging
 import datetime
 import os
+import tempfile
 
-from calliope.core.util import dataset
+import xarray as xr
+
+from calliope.core.util import dataset, observed_dict
 
 from calliope.core.util.tools import \
     memoize, \
@@ -148,16 +151,110 @@ class TestPandasExport:
     def model(self):
         return calliope.examples.national_scale()
 
-    @pytest.mark.parametrize("variable_name", [
-        ("storage_loss"), ("energy_cap_max"), ("storage_cap_max"), ("resource_eff"), ("energy_con"),
-        ("charge_rate"), ("energy_ramping"), ("resource_area_max"), ("resource"), ("lifetime"),
-        ("energy_eff"), ("resource_unit"), ("force_resource"), ("energy_prod"), ("parasitic_eff"),
-        ("reserve_margin"), ("cost_energy_cap"), ("cost_storage_cap"), ("cost_resource_cap"),
-        ("cost_om_con"), ("cost_om_prod"), ("cost_resource_area"), ("cost_depreciation_rate"),
-        ("lookup_remotes"), ("loc_coordinates"), ("colors"), ("inheritance"), ("names"),
-        ("energy_cap_max_systemwide"), ("lookup_loc_carriers"), ("lookup_loc_techs"),
-        ("lookup_loc_techs_area"), ("timestep_resolution"), ("timestep_weights"),
-        ("max_demand_timesteps")
-    ])
+    @pytest.mark.parametrize(
+        "variable_name",
+        [i for i in calliope.examples.national_scale()._model_data.data_vars.keys()]
+    )
     def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
         model.get_formatted_array(variable_name).to_dataframe()
+
+
+class TestObservedDict:
+
+    def as_yaml(self, _dict, strip=False):
+        if strip is True:
+            _dict = {
+                k: v for k, v in _dict.items()
+                if (not isinstance(v, dict) and v is not None)
+                or (isinstance(v, dict) and len(v.keys()) > 0)
+            }
+        return calliope.AttrDict.to_yaml(calliope.AttrDict(_dict))
+
+    @pytest.fixture(scope="module")
+    def model(self):
+        return calliope.examples.national_scale()
+
+    @pytest.fixture(scope="module")
+    def observer(self):
+        return xr.Dataset()
+
+    @pytest.fixture(scope="module")
+    def observed_from_dict(self, observer):
+        initial_dict = {'foo': 'bar', 'foobar': {'baz': 'fob'}}
+        return observed_dict.UpdateObserver(
+            initial_dict, name='test', observer=observer
+        )
+
+    @pytest.fixture(scope="module")
+    def observed_from_string(self, observer):
+        initial_dict = {'foo': 'bar', 'foobar': {'baz': 'fob'}}
+        return observed_dict.UpdateObserver(
+            self.as_yaml(initial_dict), name='test_2', observer=observer
+        )
+
+    def test_initialise_observer(self, observer, observed_from_dict, observed_from_string):
+        assert 'test' in observer.attrs.keys()
+        assert 'test_2' in observer.attrs.keys()
+        assert observer.attrs['test'] == self.as_yaml({'foo': 'bar', 'foobar': {'baz': 'fob'}})
+        observer.attrs['test'] == observer.attrs['test_2']
+
+    @pytest.mark.parametrize('key1,key2,value,result', [
+        ('foo', None, 1, {'foo': 1, 'foobar': {'baz': 'fob'}}),
+        ('foobar', 'baz', 2, {'foo': 1, 'foobar': {'baz': 2}}),
+        ('foo', None, {'baz': 'fob'}, {'foo': {'baz': 'fob'}, 'foobar': {'baz': 2}}),
+        ('foo', 'baz', 3, {'foo': {'baz': 3}, 'foobar': {'baz': 2}}),
+        ('foo', None, {}, {'foobar': {'baz': 2}}),
+        ('foo', None, 5, {'foo': 5, 'foobar': {'baz': 2}}),
+        ('foo', None, None, {'foobar': {'baz': 2}})
+
+    ])
+    def test_set_item_observer(self, observed_from_dict, observer, key1, key2, value, result):
+        if key2 is None:
+            observed_from_dict[key1] = value
+        else:
+            observed_from_dict[key1][key2] = value
+
+        assert observer.attrs['test'] == self.as_yaml(result)
+
+    def test_update_observer(self, observed_from_dict, observer):
+        observed_from_dict.update({'baz': 4})
+        assert observer.attrs['test'] == self.as_yaml({'foobar': {'baz': 2}, 'baz': 4})
+
+    def test_reinstate_observer(self, observed_from_dict, observer):
+        observer.attrs['test'] = "{}"
+        assert observer.attrs['test'] == "{}"
+        observed_from_dict['foo'] = 5
+        assert observer.attrs['test'] == self.as_yaml({'foo': 5, 'foobar': {'baz': 2}, 'baz': 4})
+
+    def test_model_config(self, model):
+        assert hasattr(model, 'model_config')
+        assert 'model_config' in model._model_data.attrs.keys()
+        assert model._model_data.attrs['model_config'] == self.as_yaml(model.model_config, strip=True)
+
+        model.model_config['name'] = 'new name'
+        assert model.model_config['name'] == 'new name'
+        assert model._model_data.attrs['model_config'] == self.as_yaml(model.model_config, strip=True)
+
+    def test_run_config(self, model):
+        assert hasattr(model, 'run_config')
+        assert 'run_config' in model._model_data.attrs.keys()
+        assert model._model_data.attrs['run_config'] == self.as_yaml(model.run_config, strip=True)
+
+        model.run_config['solver'] = 'cplex'
+        assert model.run_config['solver'] == 'cplex'
+        assert model._model_data.attrs['run_config'] == self.as_yaml(model.run_config, strip=True)
+
+    def test_load_from_netcdf(self, model):
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'model.nc')
+            model.to_netcdf(out_path)
+
+            model_from_disk = calliope.read_netcdf(out_path)
+            assert hasattr(model_from_disk, 'run_config')
+            assert 'run_config' in model_from_disk._model_data.attrs.keys()
+            assert hasattr(model_from_disk, 'model_config')
+            assert 'model_config' in model_from_disk._model_data.attrs.keys()
+
+
+

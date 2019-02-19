@@ -74,7 +74,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
     run_config = backend_model.__calliope_run_config
     solver = run_config['solver']
     solver_io = run_config.get('solver_io', None)
-    solver_options = run_config['solver_options']
+    solver_options = run_config.get('solver_options', None)
     save_logs = run_config.get('save_logs', None)
 
     if build_only:
@@ -188,8 +188,8 @@ def run_operate(model_data, timings, backend, build_only):
     solver_io = run_config.get('solver_io', None)
     solver_options = run_config.get('solver_options', None)
     save_logs = run_config.get('save_logs', None)
-    window = run_config['operation.window']
-    horizon = run_config['operation.horizon']
+    window = run_config['operation']['window']
+    horizon = run_config['operation']['horizon']
     window_to_horizon = horizon - window
 
     # get the cumulative sum of timestep resolution, to find where we hit our window and horizon

@@ -15,6 +15,9 @@ class ObservedDict(dict):
     values assigned to keys in the Dictionary.
     """
     def __init__(self, initial_dict, on_changed=None):
+        if isinstance(initial_dict, str):
+            initial_dict = AttrDict.from_yaml_string(initial_dict).as_dict()
+
         super().__init__(initial_dict)
 
         self.on_changed = on_changed
@@ -62,4 +65,9 @@ class UpdateObserver(ObservedDict):
         super().__init__(*args, **kwargs)
 
     def notify(self, updated=None):
-        self.observer.attrs[self.name] = AttrDict(self).to_yaml()
+        temp_dict = {
+            k: v for k, v in self.items()
+            if (not isinstance(v, dict) and v is not None)
+            or (isinstance(v, dict) and len(v.keys()) > 0)
+        }
+        self.observer.attrs[self.name] = AttrDict(temp_dict).to_yaml()
