@@ -1,3 +1,13 @@
+# This file contains the model used to test a range of
+# basic constraints.
+
+##
+# WARNING: When adding tests for new constraints, we now
+# want to create separate models, as in the example of
+# `model_demand_share.yaml`, which can double as minimal
+# working examples of the given functionality.
+##
+
 import:
     - scenarios.yaml
 
