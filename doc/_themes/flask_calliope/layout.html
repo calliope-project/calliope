@@ -16,7 +16,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css" />
 <link rel="shortcut icon" href="{{ pathto('_static/favicon.ico', 1) }}"/>
 <meta name="docsearch:language" content="en">
+{% if READTHEDOCS and current_version %}
+<meta name="docsearch:version" content="{{ current_version }}">
+{% else %}
 <meta name="docsearch:version" content="{{ version }}">
+{% endif %}
 {% endblock %}
 
 {% block header %}
