@@ -5,8 +5,6 @@
 
 {% block extrahead %}
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
-  <link href="https://fonts.googleapis.com/css?family=EB+Garamond" rel="stylesheet" type="text/css">
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
   <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
         "HTML-CSS": {
@@ -16,6 +14,9 @@
     });
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css" />
+<link rel="shortcut icon" href="{{ pathto('_static/favicon.ico', 1) }}"/>
+<meta name="docsearch:language" content="en">
+<meta name="docsearch:version" content="{{ version }}">
 {% endblock %}
 
 {% block header %}
