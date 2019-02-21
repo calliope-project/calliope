@@ -554,4 +554,12 @@ def check_future_deprecation_warnings(model_run, model_data):
     warning should specify Calliope version in which it was added, and the
     version in which it should be updated/removed.
     """
-    return None
+
+    # Warning that group_share constraints will removed in 0.7.0 #
+    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+    if model_run is not None and 'group_share' in model_run.model:
+        warnings.warn(
+            '`group_share` constraints will be removed in v0.7.0 -- '
+            'use the new model-wide constraints instead.',
+            DeprecationWarning
+        )

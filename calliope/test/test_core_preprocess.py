@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest
 import os
 
 import pandas as pd

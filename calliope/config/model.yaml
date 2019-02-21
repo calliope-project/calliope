@@ -28,7 +28,7 @@ run:
 
 model:
     calliope_version: null  # Calliope framework version this model is intended for
-    group_share: {}  # Optional settings for the group_share constraint
+    group_share: {}  # Optional settings for the group_share constraint - deprecated and will be removed in v0.7.0
     name: null  # Model name
     random_seed: null  # Seed for random number generator used during clustering
     reserve_margin:  {} # Per-carrier system-wide reserve margins

@@ -4,7 +4,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-import logging
 import os
 import ruamel.yaml
 from contextlib import redirect_stdout, redirect_stderr
@@ -92,7 +91,6 @@ def generate_model(model_data):
                 po.Param(getattr(backend_model, model_data_dict['dims'][k][0]),
                          initialize=v, mutable=True)
             )
-
 
     # Variables
     load_function(
