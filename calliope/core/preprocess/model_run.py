@@ -537,7 +537,7 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     # 6) Grab additional relevant bits from run and model config
     model_run['run'] = config['run']
     model_run['model'] = config['model']
-    model_run['modelwide_constraints'] = config.get('modelwide_constraints', {})
+    model_run['group_constraints'] = config.get('group_constraints', {})
 
     # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)

@@ -149,7 +149,7 @@ class TestModelSettings:
         assert not model._model_data.attrs['termination_condition'] == 'optimal'
 
 
-class TestModelWideConstraints:
+class TestGroupConstraints:
     def test_no_demand_share_constraint(self):
         model = build_model(model_file='model_demand_share.yaml')
         model.run()

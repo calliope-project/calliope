@@ -287,17 +287,17 @@ def generate_constraint_sets(model_run):
         if carrier in model_run.model.get_key('group_share.{}.carrier_prod_equals'.format(i), {}).keys()
     ]
 
-    # modelwide.py
-    constraint_sets['modelwide_constraint_groups'] = list(model_run['modelwide_constraints'].keys())
+    # group.py
+    constraint_sets['constraint_groups'] = list(model_run['group_constraints'].keys())
 
-    for k, v in model_run['modelwide_constraints'].items():
-        # For now, transmission techs are not supported in modelwide constraints
+    for k, v in model_run['group_constraints'].items():
+        # For now, transmission techs are not supported in group constraints
         techs = v.get('techs', sets['techs_non_transmission'])
         locs = v.get('locs', sets['locs'])
         loc_techs = list(set(concat_iterable(
             [(l, t) for l, t in product(locs, techs)],
             ['::']
         )))
-        constraint_sets['modelwide_constraint_loc_techs_{}'.format(k)] = loc_techs
+        constraint_sets['group_constraint_loc_techs_{}'.format(k)] = loc_techs
 
     return constraint_sets

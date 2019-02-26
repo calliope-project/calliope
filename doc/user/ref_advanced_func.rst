@@ -401,7 +401,7 @@ None of the ``tech_groups`` appear in model results, they are only used to group
 Using the ``group_share`` constraint
 -------------------------------------
 
-.. Warning:: ``group_share`` is deprecated as of v0.6.4 and will be removed in v0.7.0. Use the new, more flexible functionality :ref:`model_wide_constraints` to replace it.
+.. Warning:: ``group_share`` is deprecated as of v0.6.4 and will be removed in v0.7.0. Use the new, more flexible functionality :ref:`group_constraints` to replace it.
 
 The ``group_share`` constraint can be used to force groups of technologies to fulfill certain shares of supply or capacity.
 
@@ -440,12 +440,12 @@ These can be implemented as, for example, to force at most 20% of ``energy_cap``
 
 .. seealso:: The above examples are supplied as overrides in the :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` (``cold_fusion`` to define that tech, and ``group_share_cold_fusion_prod`` or ``group_share_cold_fusion_cap`` to apply the group share constraints).
 
-.. _model_wide_constraints:
+.. _group_constraints:
 
-Model-wide constraints
-----------------------
+Group constraints
+-----------------
 
-Model-wide constraints are applied to named sets of locations and techs specified within a top-level ``modelwide_constraints`` key (sitting alongside other top-level keys like ``model`` and ``run``).
+Group constraints are applied to named sets of locations and techs, called "constraint groups", specified through a top-level ``group_constraints`` key (sitting alongside other top-level keys like ``model`` and ``run``).
 
 The below example shows two such named groups. The first does not specify a subset of techs or locations and is thus applied across the entire model. In the example, we use ``cost_max`` with the ``co2`` cost class to specify a model-wide emissions limit (assuming the technologies in the model have ``co2`` costs associated with them). We also use the ``demand_share_min`` constraint to force wind and PV to supply at least 40% of electricity demand in Germany, which is modelled as two locations (North and South):
 
@@ -457,21 +457,23 @@ The below example shows two such named groups. The first does not specify a subs
     model:
         ...
 
-    modelwide_constraints:
+    group_constraints:
+        # A constraint group to apply a systemwide CO2 cap
         systemwide_co2_cap:
             cost_max:
                 co2: 100000
+        # A constraint group to enforce renewable generation in Germany
         renewable_minimum_share_in_germany:
             techs: ['wind', 'pv']
             locs: ['germany_north', 'germany_south']
             demand_share_min:
                 electricity: 0.4
 
-When specifying model-wide constraints, a named group must give at least one constraint, but can list an arbitrary amount of constraints, and optionally give a subset of techs and locations:
+When specifying group constraints, a named group must give at least one constraint, but can list an arbitrary amount of constraints, and optionally give a subset of techs and locations:
 
 .. code-block:: yaml
 
-    modelwide_constraints:
+    group_constraints:
         group_name:
             techs: []  # Optional, can be left out if empty
             locs: []  # Optional, can be left out if empty
@@ -480,9 +482,9 @@ When specifying model-wide constraints, a named group must give at least one con
             constraint_2: ...
             ...
 
-The below table lists all available model-wide constraints.
+The below table lists all available group constraints.
 
-.. list-table:: Model-wide constraints
+.. list-table:: Group constraints
    :widths: 15 15 60
    :header-rows: 1
 
@@ -496,7 +498,7 @@ The below table lists all available model-wide constraints.
      - carriers
      - Maximum share of carrier demand met from a set of technologies across a set of locations.
 
-For specifics of the mathematical formulation of the available model-wide constraints, see :ref:`constraint_modelwide` in the mathematical formulation section.
+For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_modelwide` in the mathematical formulation section.
 
 .. _removing_techs_locations:
 

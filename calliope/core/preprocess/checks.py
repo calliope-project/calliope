@@ -111,7 +111,7 @@ def check_initial(config_model):
     for k in config_model.keys():
         if k not in [
                 'model', 'run', 'locations', 'tech_groups', 'techs', 'links',
-                'overrides', 'scenarios', 'config_path', 'modelwide_constraints']:
+                'overrides', 'scenarios', 'config_path', 'group_constraints']:
             model_warnings.append(
                 'Unrecognised top-level configuration item: {}'.format(k)
             )

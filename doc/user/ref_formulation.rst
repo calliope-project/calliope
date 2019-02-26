@@ -85,7 +85,7 @@ Policy
 
 .. _constraint_modelwide:
 
-Model-wide constraints
+Group constraints
 ----------------------
 
 .. automodule:: calliope.backend.pyomo.constraints.modelwide

@@ -53,23 +53,23 @@ locations:
 
 overrides:
     demand_share_max_systemwide:
-        modelwide_constraints.example_demand_share_max_constraint:
+        group_constraints.example_demand_share_max_constraint:
             techs: ["cheap_supply"]
             demand_share_max:
                 electricity: 0.4
     demand_share_min_systemwide:
-        modelwide_constraints.example_demand_share_min_constraint:
+        group_constraints.example_demand_share_min_constraint:
             techs: ["expensive_supply"]
             demand_share_min:
                 electricity: 0.6
     demand_share_max_location_0:
-        modelwide_constraints.example_demand_share_max_constraint:
+        group_constraints.example_demand_share_max_constraint:
             locs: ["0"]
             techs: ["cheap_supply"]
             demand_share_max:
                 electricity: 0.4
     demand_share_min_location_0:
-        modelwide_constraints.example_demand_share_min_constraint:
+        group_constraints.example_demand_share_min_constraint:
             locs: ["0"]
             techs: ["expensive_supply"]
             demand_share_min:

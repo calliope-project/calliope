@@ -66,7 +66,7 @@ def build_model_data(model_run, debug=False):
     data_dict.update(location_specific_to_dataset(model_run))
     data_dict.update(tech_specific_to_dataset(model_run))
     data_dict.update(carrier_specific_to_dataset(model_run))
-    data_dict.update(modelwide_constraints_to_dataset(model_run))
+    data_dict.update(group_constraints_to_dataset(model_run))
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
@@ -428,29 +428,29 @@ def tech_specific_to_dataset(model_run):
     return data_dict
 
 
-def modelwide_constraints_to_dataset(model_run):
+def group_constraints_to_dataset(model_run):
     data_dict = {}
 
     # Get a DataFrame with constraint names as index, constraint groups as columns
     constraint_df = (
-        pd.DataFrame(model_run['modelwide_constraints'])
+        pd.DataFrame(model_run['group_constraints'])
           .drop(['techs', 'locs'], axis=0, errors='ignore')
     )
 
     for constr_name, constraints in constraint_df.iterrows():
         constraints = constraints.dropna()  # Ignore where constraint not defined
 
-        if constr_name in checks.defaults.modelwide_allowed_constraints.per_carrier:
-            dims = ['modelwide_constraint_groups', 'carriers']
+        if constr_name in checks.defaults.allowed_group_constraints.per_carrier:
+            dims = ['constraint_groups', 'carriers']
             data = [list(constraints.loc[i].values()) for i in constraints.index]
-        elif constr_name in checks.defaults.modelwide_allowed_constraints.per_cost:
-            dims = ['modelwide_constraint_groups', 'costs']
+        elif constr_name in checks.defaults.allowed_group_constraints.per_cost:
+            dims = ['constraint_groups', 'costs']
             data = [list(constraints.loc[i].values()) for i in constraints.index]
-        elif constr_name in checks.defaults.modelwide_allowed_constraints.general:
-            dims = ['modelwide_constraint_groups']
+        elif constr_name in checks.defaults.allowed_group_constraints.general:
+            dims = ['constraint_groups']
             data = constraints.values
 
-        data_dict['modelwide_' + constr_name] = {'dims': dims, 'data': data}
+        data_dict['group_' + constr_name] = {'dims': dims, 'data': data}
 
     return data_dict
 
