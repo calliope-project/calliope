@@ -6,7 +6,7 @@ Release History
 0.6.4 (dev)
 -----------
 
-|new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, initially covering "demand_share_min" and "demand_share_max". Model-wide constraints supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
+|new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, initially covering "energy_cap_share_min", "energy_cap_share_max", "demand_share_min" and "demand_share_max". Model-wide constraints supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
 
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
 

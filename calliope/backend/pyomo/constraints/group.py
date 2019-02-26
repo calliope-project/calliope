@@ -28,6 +28,16 @@ def load_constraints(backend_model):
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
         )
+    if 'group_energy_cap_share_min' in model_data_dict:
+        backend_model.group_energy_cap_share_min_constraint = po.Constraint(
+            backend_model.constraint_groups,
+            ['min'], rule=energy_cap_share_constraint_rule
+        )
+    if 'group_energy_cap_share_max' in model_data_dict:
+        backend_model.group_energy_cap_share_max_constraint = po.Constraint(
+            backend_model.constraint_groups,
+            ['max'], rule=energy_cap_share_constraint_rule
+        )
 
 
 def equalizer(lhs, rhs, sign):
@@ -82,6 +92,44 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             backend_model.carrier_con[loc_tech_carrier, timestep]
             for loc_tech_carrier in rhs_loc_tech_carriers
             for timestep in backend_model.timesteps
+        )
+
+        return equalizer(lhs, rhs, what)
+
+
+def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
+    """
+    TODO write docstring
+    """
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    share = model_data_dict['group_energy_cap_share_{}'.format(what)][(constraint_group)]
+    # FIXME uncomment this once Bryn has merged his changes
+    # and import again: from calliope.backend.pyomo.util import get_param
+    # share = get_param(
+    #     backend_model,
+    #     'group_demand_share_{}'.format(what), (carrier, constraint_group)
+    # )
+
+    if np.isnan(share):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+        rhs_loc_techs = [
+            i for i in backend_model.loc_techs_supply
+            if i.split('::')[0] in lhs_locs
+        ]
+
+        lhs = sum(
+            backend_model.energy_cap[loc_tech]
+            for loc_tech in lhs_loc_techs
+        )
+        rhs = share * sum(
+            backend_model.energy_cap[loc_tech]
+            for loc_tech in rhs_loc_techs
         )
 
         return equalizer(lhs, rhs, what)
