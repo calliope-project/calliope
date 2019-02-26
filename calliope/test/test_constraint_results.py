@@ -299,3 +299,74 @@ class TestGroupConstraints:
         assert expensive_generation_0 / demand_elec_0 >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
         assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
+
+
+class TestEnergyCapGroupConstraints:
+
+    def test_no_energy_cap_constraint(self):
+        model = build_model(model_file='energy_cap.yaml')
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert expensive_capacity == 0
+
+    def test_systemwide_energy_cap_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_max_systemwide'
+        )
+        model.run()
+        cheap_capacity = (model.get_formatted_array("energy_cap")
+                               .to_dataframe()
+                               .reset_index()
+                               .groupby("techs")
+                               .energy_cap
+                               .sum()
+                               .loc["cheap_supply"])
+        assert cheap_capacity <= 14
+
+    def test_systemwide_energy_cap_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_min_systemwide'
+        )
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert expensive_capacity >= 6
+
+    def test_location_specific_energy_cap_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_max_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        cheap_capacity0 = capacity.loc[("0", "cheap_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert cheap_capacity0 <= 4
+        assert expensive_capacity1 == 0
+
+    def test_location_specific_energy_cap_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_min_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert expensive_capacity0 >= 6
+        assert expensive_capacity1 == 0
