@@ -331,6 +331,83 @@ class TestDemandShareGroupConstraints:
         assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
 
 
+class TestSupplyShareGroupConstraints:
+
+    def test_no_supply_share_constraint(self):
+        model = build_model(model_file='model_supply_share.yaml')
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    def test_systemwide_supply_share_max_constraint(self):
+        model = build_model(
+            model_file='model_supply_share.yaml',
+            scenario='supply_share_max_systemwide'
+        )
+        model.run()
+        cheap_generation = (model.get_formatted_array("carrier_prod")
+                                 .to_dataframe()
+                                 .reset_index()
+                                 .groupby("techs")
+                                 .carrier_prod
+                                 .sum()
+                                 .transform(lambda x: x / x.sum())
+                                 .loc["cheap_supply"])
+        assert cheap_generation <= 0.4
+
+    def test_systemwide_supply_share_min_constraint(self):
+        model = build_model(
+            model_file='model_supply_share.yaml',
+            scenario='supply_share_min_systemwide'
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .transform(lambda x: x / x.sum())
+                                     .loc["expensive_supply"])
+        assert expensive_generation >= 0.6
+
+    def test_location_specific_supply_share_max_constraint(self):
+        model = build_model(
+            model_file='model_supply_share.yaml',
+            scenario='supply_share_max_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
+        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
+        assert cheap_generation0 / (cheap_generation0 + expensive_generation0) <= 0.4
+        assert expensive_generation1 == 0
+
+    def test_location_specific_supply_share_min_constraint(self):
+        model = build_model(
+            model_file='model_supply_share.yaml',
+            scenario='supply_share_min_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
+        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
+        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) >= 0.6
+        assert expensive_generation1 == 0
+
+
 class TestEnergyCapGroupConstraints:
 
     def test_no_energy_cap_constraint(self):
