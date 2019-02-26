@@ -497,6 +497,12 @@ The below table lists all available group constraints.
    * - ``demand_share_max``
      - carriers
      - Maximum share of carrier demand met from a set of technologies across a set of locations.
+   * - ``resource_area_min```
+     - [-]
+     - Minimum resource area used by a set of technologies across a set of locations.
+   * - ``resource_area_max```
+     - [-]
+     - Maximum resource area used by a set of technologies across a set of locations.
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 

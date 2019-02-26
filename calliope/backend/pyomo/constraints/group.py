@@ -28,6 +28,16 @@ def load_constraints(backend_model):
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
         )
+    if 'group_resource_area_min' in model_data_dict:
+        backend_model.group_resource_area_min_constraint = po.Constraint(
+            backend_model.constraint_groups,
+            ['min'], rule=resource_area_constraint_rule
+        )
+    if 'group_resource_area_max' in model_data_dict:
+        backend_model.group_resource_area_max_constraint = po.Constraint(
+            backend_model.constraint_groups,
+            ['max'], rule=resource_area_constraint_rule
+        )
 
 
 def equalizer(lhs, rhs, sign):
@@ -83,5 +93,35 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             for loc_tech_carrier in rhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
+
+        return equalizer(lhs, rhs, what)
+
+
+def resource_area_constraint_rule(backend_model, constraint_group, what):
+    """
+    TODO write docstring
+    """
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]
+    # FIXME uncomment this once Bryn has merged his changes
+    # and import again: from calliope.backend.pyomo.util import get_param
+    # share = get_param(
+    #     backend_model,
+    #     'group_demand_share_{}'.format(what), (carrier, constraint_group)
+    # )
+
+    if np.isnan(threshold):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+
+        lhs = sum(
+            backend_model.resource_area[loc_tech]
+            for loc_tech in lhs_loc_techs
+        )
+        rhs = threshold
 
         return equalizer(lhs, rhs, what)

@@ -299,3 +299,74 @@ class TestGroupConstraints:
         assert expensive_generation_0 / demand_elec_0 >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
         assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
+
+
+class TestResourceAreaGroupConstraints:
+
+    def test_no_energy_cap_share_constraint(self):
+        model = build_model(model_file='resource_area.yaml')
+        model.run()
+        cheap_resource_area = (model.get_formatted_array("resource_area")
+                                    .to_dataframe()
+                                    .reset_index()
+                                    .groupby("techs")
+                                    .resource_area
+                                    .sum()
+                                    .loc["cheap_supply"])
+        assert cheap_resource_area == 40
+
+    def test_systemwide_resource_area_max_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_max_systemwide'
+        )
+        model.run()
+        cheap_resource_area = (model.get_formatted_array("resource_area")
+                                    .to_dataframe()
+                                    .reset_index()
+                                    .groupby("techs")
+                                    .resource_area
+                                    .sum()
+                                    .loc["cheap_supply"])
+        assert cheap_resource_area == 20
+
+    def test_systemwide_resource_area_min_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_min_systemwide'
+        )
+        model.run()
+        resource_area = (model.get_formatted_array("resource_area")
+                              .to_dataframe()
+                              .reset_index()
+                              .groupby("techs")
+                              .resource_area
+                              .sum())
+        assert resource_area["cheap_supply"] == 0
+        assert resource_area["expensive_supply"] == 20
+
+    def test_location_specific_resource_area_max_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_max_location_0'
+        )
+        model.run()
+        resource_area = (model.get_formatted_array("resource_area")
+                              .to_dataframe()["resource_area"])
+        cheap_resource_area0 = resource_area.loc[("0", "cheap_supply")]
+        cheap_resource_area1 = resource_area.loc[("1", "cheap_supply")]
+        assert cheap_resource_area0 == 10
+        assert cheap_resource_area1 == 20
+
+    def test_location_specific_resource_area_min_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_min_location_0'
+        )
+        model.run()
+        resource_area = (model.get_formatted_array("resource_area")
+                              .to_dataframe()["resource_area"])
+        expensive_resource_area0 = resource_area.loc[("0", "expensive_supply")]
+        expensive_resource_area1 = resource_area.loc[("1", "expensive_supply")]
+        assert expensive_resource_area0 == 10
+        assert expensive_resource_area1 == 0
