@@ -449,6 +449,8 @@ def group_constraints_to_dataset(model_run):
         elif constr_name in checks.defaults.allowed_group_constraints.general:
             dims = ['constraint_groups']
             data = constraints.values
+        else:  # Do nothing if it is an unknown constraint
+            continue
 
         data_dict['group_' + constr_name] = {'dims': dims, 'data': data}
 

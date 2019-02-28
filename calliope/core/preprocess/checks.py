@@ -145,6 +145,20 @@ def check_initial(config_model):
                 "is valid.".format(key)
             )
 
+    # Warn if any unknown group constraints are defined
+    permitted_group_constraints = ['techs', 'locs'] + \
+        defaults.allowed_group_constraints.per_carrier + \
+        defaults.allowed_group_constraints.per_cost + \
+        defaults.allowed_group_constraints.general
+
+    for group in config_model.get('group_constraints', {}).keys():
+        for key in config_model.group_constraints[group].keys():
+            if key not in permitted_group_constraints:
+                model_warnings.append(
+                    'Unrecognised group constraint `{}` in group `{}` '
+                    'will be ignored - possibly a misspelling?'.format(key, group)
+                )
+
     # No techs may have the same identifier as a tech_group
     name_overlap = (
         set(config_model.tech_groups.keys()) &
