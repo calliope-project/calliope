@@ -99,7 +99,13 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
 
 def energy_cap_constraint_rule(backend_model, constraint_group, what):
     """
-    TODO write docstring
+    Enforces thresholds of energy_cap for groups of technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\leq threshold
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     threshold = model_data_dict['group_energy_cap_{}'.format(what)][(constraint_group)]
