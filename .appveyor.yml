@@ -23,7 +23,7 @@ install:
   - activate calliope
   - pip install --no-cache-dir .
   - ps: Start-FileDownload 'https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.9.9-x86_64-w64-mingw32.zip'
-  - 7z a Cbc-2.9.9-x86_64-w64-mingw32.zip cbc
+  - 7z e Cbc-2.9.9-x86_64-w64-mingw32.zip cbc
   - SET PATH=cbc/bin;%PATH%
 
 
