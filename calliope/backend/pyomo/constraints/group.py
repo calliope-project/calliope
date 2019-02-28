@@ -118,10 +118,8 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq
-            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all \\in given\\_locations, timestep\\in timesteps}
-            carrier_{prod}(loc::tech::carrier, timestep)
-
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) <= / >=
+            fraction \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all, timestep\\in timesteps} carrier_{prod}(loc::tech::carrier, timestep)
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     share = model_data_dict['group_supply_share_{}'.format(what)][(carrier, constraint_group)]
