@@ -1,5 +1,5 @@
 model:
-    name: Energy capacity share constraint test model
+    name: Energy capacity group constraint test model
     timeseries_data_path: 'timeseries_data'
 
 run:
