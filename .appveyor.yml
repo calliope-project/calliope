@@ -22,6 +22,10 @@ install:
   - "python utils\\conda_create.py requirements\\base.yml --python_version=%PYTHON_VERSION% --channels %CONDA_CHANS% --ignore %CONDA_IGNORE% --run"
   - activate calliope
   - pip install --no-cache-dir .
+  - ps: Start-FileDownload 'https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.9.9-x86_64-w64-mingw32.zip'
+  - 7z a Cbc-2.9.9-x86_64-w64-mingw32.zip cbc
+  - SET PATH=cbc/bin;%PATH%
+
 
 test_script:
   - "py.test"
