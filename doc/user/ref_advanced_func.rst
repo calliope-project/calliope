@@ -498,7 +498,7 @@ The below table lists all available group constraints.
      - carriers
      - Maximum share of carrier demand met from a set of technologies across a set of locations.
 
-For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_modelwide` in the mathematical formulation section.
+For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
 .. _removing_techs_locations:
 
