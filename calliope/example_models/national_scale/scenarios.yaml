@@ -13,7 +13,7 @@ overrides:
     profiling:
         model.name: 'National-scale example model (profiling run)'
         model.subset_time: ['2005-01-01', '2005-01-15']
-        run.solver: glpk
+        run.solver: cbc
 
     time_resampling:
         model.name: 'National-scale example model with time resampling'

@@ -17,7 +17,7 @@ model:
 run:
     mode: plan  # Choices: plan, operate
 
-    solver: glpk
+    solver: cbc
 
     ensure_feasibility: true # Switching on unmet demand
 

@@ -33,7 +33,7 @@ class TestModelPreproccesing:
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    def example_tester(self, solver='glpk', solver_io=None):
+    def example_tester(self, solver='cbc', solver_io=None):
         override = {
             'model.subset_time': '2005-01-01',
             'run.solver': solver,
@@ -78,12 +78,12 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip('CPLEX not installed')
 
-    def test_nationalscale_example_results_cbc(self):
+    def test_nationalscale_example_results_glpk(self):
         # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester(solver='cbc')
+        if shutil.which('glpk'):
+            self.example_tester(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
@@ -143,7 +143,7 @@ class TestNationalScaleExampleModelOperate:
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:
-    def example_tester(self, solver='glpk', solver_io=None):
+    def example_tester(self, solver='cbc', solver_io=None):
         override = {
             'model.subset_time': '2005-01-01',
             'run.solver': solver,
@@ -174,16 +174,16 @@ class TestNationalScaleResampledExampleModelSenseChecks:
     def test_nationalscale_resampled_example_results_glpk(self):
         self.example_tester()
 
-    def test_nationalscale_resampled_example_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester(solver='cbc')
+    def test_nationalscale_resampled_example_results_glpk(self):
+        # Check for existence of the `glpk` command
+        if shutil.which('glpk'):
+            self.example_tester(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
-    def model_runner(self, solver='glpk', solver_io=None,
+    def model_runner(self, solver='cbc', solver_io=None,
                      how='closest', storage_inter_cluster=False,
                      cyclic=False, storage=True):
         override = {
@@ -207,7 +207,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         return model
 
-    def example_tester_closest(self, solver='glpk', solver_io=None):
+    def example_tester_closest(self, solver='cbc', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
         # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(51711873.203096)
@@ -222,7 +222,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.074809, abs=0.000001)
 
-    def example_tester_mean(self, solver='glpk', solver_io=None):
+    def example_tester_mean(self, solver='cbc', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
         # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(45110415.5627)
@@ -256,22 +256,22 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         self.example_tester_closest()
 
-    def test_nationalscale_clustered_example_closest_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester_closest(solver='cbc')
+    def test_nationalscale_clustered_example_closest_results_glpk(self):
+        # Check for existence of the `glpk` command
+        if shutil.which('glpk'):
+            self.example_tester_closest(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
     def test_nationalscale_clustered_example_mean_results_glpk(self):
         self.example_tester_mean()
 
-    def test_nationalscale_clustered_example_mean_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester_mean(solver='cbc')
+    def test_nationalscale_clustered_example_mean_results_glpk(self):
+        # Check for existence of the `glpk` command
+        if shutil.which('glpk'):
+            self.example_tester_mean(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
     def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.example_tester_storage_inter_cluster()
@@ -303,7 +303,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
 
 class TestUrbanScaleExampleModelSenseChecks:
-    def example_tester(self, resource_unit, solver='glpk'):
+    def example_tester(self, resource_unit, solver='cbc'):
         unit_override = {
             'techs.pv.constraints': {
                 'resource': 'file=pv_resource.csv:{}'.format(resource_unit),

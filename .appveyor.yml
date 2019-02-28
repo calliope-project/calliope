@@ -25,7 +25,7 @@ install:
   - ps: Start-FileDownload 'https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.9.9-win32-msvc14.zip' -FileName 'cbc.zip'
   - 7z x cbc.zip -ocbc
   - SET PATH=cbc/bin;%PATH%
-  - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
+  - CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
 
 
 test_script:

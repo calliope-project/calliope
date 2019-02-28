@@ -4,7 +4,7 @@ model:
 
 run:
     mode: plan
-    solver: glpk
+    solver: cbc
 
 techs:
     cheap_supply:
