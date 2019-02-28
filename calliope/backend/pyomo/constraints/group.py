@@ -99,7 +99,13 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
 
 def resource_area_constraint_rule(backend_model, constraint_group, what):
     """
-    TODO write docstring
+    Enforce threshold of resource_area for groups of technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{resource_{area}}(loc::tech) \\leq threshold
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]

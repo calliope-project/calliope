@@ -1,5 +1,5 @@
 model:
-    name: Resource area constraint test model
+    name: Resource area group constraint test model
     timeseries_data_path: 'timeseries_data'
 
 run:
