@@ -10,9 +10,11 @@ reduce constraint complexity
 
 """
 
-from calliope.core.preprocess.util import constraint_exists
+from itertools import product
 
 import numpy as np
+
+from calliope.core.preprocess.util import constraint_exists, concat_iterable
 
 
 def generate_constraint_sets(model_run):
@@ -284,5 +286,18 @@ def generate_constraint_sets(model_run):
         for carrier in sets.carriers
         if carrier in model_run.model.get_key('group_share.{}.carrier_prod_equals'.format(i), {}).keys()
     ]
+
+    # group.py
+    constraint_sets['constraint_groups'] = list(model_run['group_constraints'].keys())
+
+    for k, v in model_run['group_constraints'].items():
+        # For now, transmission techs are not supported in group constraints
+        techs = v.get('techs', sets['techs_non_transmission'])
+        locs = v.get('locs', sets['locs'])
+        loc_techs = list(set(concat_iterable(
+            [(l, t) for l, t in product(locs, techs)],
+            ['::']
+        )))
+        constraint_sets['group_constraint_loc_techs_{}'.format(k)] = loc_techs
 
     return constraint_sets

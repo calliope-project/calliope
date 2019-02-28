@@ -1,4 +1,3 @@
-import pytest
 from pytest import approx
 
 import calliope
@@ -148,3 +147,79 @@ class TestModelSettings:
         )
         model.run()
         assert not model._model_data.attrs['termination_condition'] == 'optimal'
+
+
+class TestGroupConstraints:
+    def test_no_demand_share_constraint(self):
+        model = build_model(model_file='model_demand_share.yaml')
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    def test_systemwide_demand_share_max_constraint(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='demand_share_max_systemwide'
+        )
+        model.run()
+        cheap_generation = (model.get_formatted_array("carrier_prod")
+                                 .to_dataframe()
+                                 .reset_index()
+                                 .groupby("techs")
+                                 .carrier_prod
+                                 .sum()
+                                 .transform(lambda x: x / x.sum())
+                                 .loc["cheap_supply"])
+        assert cheap_generation <= 0.4
+
+    def test_systemwide_demand_share_min_constraint(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='demand_share_min_systemwide'
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .transform(lambda x: x / x.sum())
+                                     .loc["expensive_supply"])
+        assert expensive_generation >= 0.6
+
+    def test_location_specific_demand_share_max_constraint(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='demand_share_max_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
+        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
+        assert cheap_generation0 / (cheap_generation0 + expensive_generation0) <= 0.4
+        assert expensive_generation1 == 0
+
+    def test_location_specific_demand_share_min_constraint(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='demand_share_min_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
+        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
+        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) >= 0.6
+        assert expensive_generation1 == 0

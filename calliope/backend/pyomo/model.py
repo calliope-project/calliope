@@ -4,7 +4,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-import logging
 import os
 import ruamel.yaml
 from contextlib import redirect_stdout, redirect_stderr
@@ -93,7 +92,6 @@ def generate_model(model_data):
                          initialize=v, mutable=True)
             )
 
-
     # Variables
     load_function(
         'calliope.backend.pyomo.variables.initialize_decision_variables'
@@ -105,7 +103,8 @@ def generate_model(model_data):
         'dispatch.load_constraints',
         'network.load_constraints',
         'costs.load_constraints',
-        'policy.load_constraints'
+        'policy.load_constraints',
+        'group.load_constraints'
     ]
 
     if mode != 'operate':

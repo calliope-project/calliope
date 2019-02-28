@@ -82,3 +82,11 @@ Policy
 
 .. automodule:: calliope.backend.pyomo.constraints.policy
     :members:
+
+.. _constraint_group:
+
+Group constraints
+----------------------
+
+.. automodule:: calliope.backend.pyomo.constraints.group
+    :members:

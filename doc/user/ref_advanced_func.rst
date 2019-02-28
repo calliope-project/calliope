@@ -401,6 +401,8 @@ None of the ``tech_groups`` appear in model results, they are only used to group
 Using the ``group_share`` constraint
 -------------------------------------
 
+.. Warning:: ``group_share`` is deprecated as of v0.6.4 and will be removed in v0.7.0. Use the new, more flexible functionality :ref:`group_constraints` to replace it.
+
 The ``group_share`` constraint can be used to force groups of technologies to fulfill certain shares of supply or capacity.
 
 For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power generation technology, we could force at least 85% of power generation in the model to come from these two technologies with the following constraint definition in the ``model`` settings:
@@ -437,6 +439,66 @@ These can be implemented as, for example, to force at most 20% of ``energy_cap``
 .. Note:: The share given in the ``carrier_prod`` constraints refer to the use of generation from ``supply`` and ``supply_plus`` technologies only. The share given in the ``energy_cap`` constraints refers to the combined capacity from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus`` technologies.
 
 .. seealso:: The above examples are supplied as overrides in the :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` (``cold_fusion`` to define that tech, and ``group_share_cold_fusion_prod`` or ``group_share_cold_fusion_cap`` to apply the group share constraints).
+
+.. _group_constraints:
+
+Group constraints
+-----------------
+
+Group constraints are applied to named sets of locations and techs, called "constraint groups", specified through a top-level ``group_constraints`` key (sitting alongside other top-level keys like ``model`` and ``run``).
+
+The below example shows two such named groups. The first does not specify a subset of techs or locations and is thus applied across the entire model. In the example, we use ``cost_max`` with the ``co2`` cost class to specify a model-wide emissions limit (assuming the technologies in the model have ``co2`` costs associated with them). We also use the ``demand_share_min`` constraint to force wind and PV to supply at least 40% of electricity demand in Germany, which is modelled as two locations (North and South):
+
+.. code-block:: yaml
+
+    run:
+        ...
+
+    model:
+        ...
+
+    group_constraints:
+        # A constraint group to apply a systemwide CO2 cap
+        systemwide_co2_cap:
+            cost_max:
+                co2: 100000
+        # A constraint group to enforce renewable generation in Germany
+        renewable_minimum_share_in_germany:
+            techs: ['wind', 'pv']
+            locs: ['germany_north', 'germany_south']
+            demand_share_min:
+                electricity: 0.4
+
+When specifying group constraints, a named group must give at least one constraint, but can list an arbitrary amount of constraints, and optionally give a subset of techs and locations:
+
+.. code-block:: yaml
+
+    group_constraints:
+        group_name:
+            techs: []  # Optional, can be left out if empty
+            locs: []  # Optional, can be left out if empty
+            # Any number of constraints can be specified for the given group
+            constraint_1: ...
+            constraint_2: ...
+            ...
+
+The below table lists all available group constraints.
+
+.. list-table:: Group constraints
+   :widths: 15 15 60
+   :header-rows: 1
+
+   * - Constraint
+     - Dimensions
+     - Description
+   * - ``demand_share_min``
+     - carriers
+     - Minimum share of carrier demand met from a set of technologies across a set of locations.
+   * - ``demand_share_max``
+     - carriers
+     - Maximum share of carrier demand met from a set of technologies across a set of locations.
+
+For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
 .. _removing_techs_locations:
 
