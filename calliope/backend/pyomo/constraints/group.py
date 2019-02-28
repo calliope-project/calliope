@@ -99,7 +99,15 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
 
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
     """
-    TODO write docstring
+    Enforces shares of energy_cap for groups of technologies and locations. The
+    share is relative to ``supply`` and ``supply_plus`` technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\leq
+            share \\times \\sum_{loc::tech \\in loc\\_tech\\_supply\\_all \\in given\\_locations} energy_{cap}(loc::tech)
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     share = model_data_dict['group_energy_cap_share_{}'.format(what)][(constraint_group)]
