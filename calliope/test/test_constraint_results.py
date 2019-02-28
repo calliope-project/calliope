@@ -1,3 +1,4 @@
+import pytest
 from pytest import approx
 
 import calliope
@@ -178,6 +179,30 @@ class TestGroupConstraints:
                                      .loc["expensive_supply"])
         assert expensive_generation == 0
 
+    @pytest.mark.xfail(reason="Check not yet implemented.")
+    def test_group_constraint_without_technology(self):
+        model = build_model(
+            model_file='group_constraints.yaml',
+            scenario='group_constraint_without_tech'
+        )
+        model.run()
+
+    def test_group_constraint_with_several_constraints(self):
+        model = build_model(
+            model_file='group_constraints.yaml',
+            scenario='several_group_constraints'
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .transform(lambda x: x / x.sum())
+                                     .loc["expensive_supply"])
+        assert expensive_generation >= 0.8
+
 
 class TestDemandShareGroupConstraints:
     def test_no_demand_share_constraint(self):
@@ -334,7 +359,7 @@ class TestDemandShareGroupConstraints:
 class TestSupplyShareGroupConstraints:
 
     def test_no_supply_share_constraint(self):
-        model = build_model(model_file='model_supply_share.yaml')
+        model = build_model(model_file='supply_share.yaml')
         model.run()
         expensive_generation = (model.get_formatted_array("carrier_prod")
                                      .to_dataframe()
@@ -347,7 +372,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_systemwide_supply_share_max_constraint(self):
         model = build_model(
-            model_file='model_supply_share.yaml',
+            model_file='supply_share.yaml',
             scenario='supply_share_max_systemwide'
         )
         model.run()
@@ -363,7 +388,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_systemwide_supply_share_min_constraint(self):
         model = build_model(
-            model_file='model_supply_share.yaml',
+            model_file='supply_share.yaml',
             scenario='supply_share_min_systemwide'
         )
         model.run()
@@ -379,7 +404,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_location_specific_supply_share_max_constraint(self):
         model = build_model(
-            model_file='model_supply_share.yaml',
+            model_file='supply_share.yaml',
             scenario='supply_share_max_location_0'
         )
         model.run()
@@ -394,7 +419,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_location_specific_supply_share_min_constraint(self):
         model = build_model(
-            model_file='model_supply_share.yaml',
+            model_file='supply_share.yaml',
             scenario='supply_share_min_location_0'
         )
         model.run()

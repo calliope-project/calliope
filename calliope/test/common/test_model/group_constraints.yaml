@@ -48,9 +48,25 @@ locations:
             electricity_demand:
 
 overrides:
+<<<<<<< HEAD
     switching_off_group_constraint:
         group_constraints.demo:
             techs: ["cheap_supply"]
             demand_share_max:
                 electricity: 0.4
         group_constraints.demo.exists: False
+=======
+    group_constraint_without_tech:
+        group_constraints.no_tech:
+            locs: ["0"]
+            demand_share_max:
+                electricity: 0.4
+    several_group_constraints:
+        group_constraints.several: # TODO add more/other constraints whose combination is more interesting
+            techs: ["expensive_supply"]
+            demand_share_min:
+                electricity: 0.6
+            supply_share_min:
+                electricity: 0.8
+
+>>>>>>> Add general group constraint tests
