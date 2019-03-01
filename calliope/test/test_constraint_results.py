@@ -176,7 +176,7 @@ class TestGroupConstraints:
                                  .sum()
                                  .transform(lambda x: x / x.sum())
                                  .loc["cheap_supply"])
-        assert cheap_generation <= 0.4
+        assert round(cheap_generation, 1) <= 0.4
 
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
@@ -192,7 +192,7 @@ class TestGroupConstraints:
                                      .sum()
                                      .transform(lambda x: x / x.sum())
                                      .loc["expensive_supply"])
-        assert expensive_generation >= 0.6
+        assert round(expensive_generation, 1) >= 0.6
 
     def test_location_specific_demand_share_max_constraint(self):
         model = build_model(
@@ -206,7 +206,7 @@ class TestGroupConstraints:
         cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
         expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert cheap_generation0 / (cheap_generation0 + expensive_generation0) <= 0.4
+        assert round(cheap_generation0 / (cheap_generation0 + expensive_generation0), 1) <= 0.4
         assert expensive_generation1 == 0
 
     def test_location_specific_demand_share_min_constraint(self):
@@ -221,5 +221,5 @@ class TestGroupConstraints:
         cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
         expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) >= 0.6
+        assert round(expensive_generation0 / (cheap_generation0 + expensive_generation0), 1) >= 0.6
         assert expensive_generation1 == 0

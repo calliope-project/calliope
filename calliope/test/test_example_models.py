@@ -80,7 +80,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_nationalscale_example_results_glpk(self):
         # Check for existence of the `cbc` command
-        if shutil.which('glpk'):
+        if shutil.which('glpsol'):
             self.example_tester(solver='glpk')
         else:
             pytest.skip('GLPK not installed')
@@ -112,12 +112,12 @@ class TestNationalScaleExampleModelInfeasibility:
 
         model.run()
 
-        assert model.results.attrs['termination_condition'] == 'other'
+        assert model.results.attrs['termination_condition'] in ['infeasible']  # glpk gives 'other' as result
 
         assert 'systemwide_levelised_cost' not in model.results.data_vars
         assert 'systemwide_capacity_factor' not in model.results.data_vars
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
 
@@ -138,7 +138,7 @@ class TestNationalScaleExampleModelOperate:
         assert check_error_or_warning(excinfo, expected_warnings)
         assert all(model.results.timesteps == pd.date_range('2005-01', '2005-01-03 23:00:00', freq='H'))
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
 
@@ -176,7 +176,7 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
     def test_nationalscale_resampled_example_results_glpk(self):
         # Check for existence of the `glpk` command
-        if shutil.which('glpk'):
+        if shutil.which('glpsol'):
             self.example_tester(solver='glpk')
         else:
             pytest.skip('GLPK not installed')
@@ -258,7 +258,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         # Check for existence of the `glpk` command
-        if shutil.which('glpk'):
+        if shutil.which('glpsol'):
             self.example_tester_closest(solver='glpk')
         else:
             pytest.skip('GLPK not installed')
@@ -268,7 +268,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
     def test_nationalscale_clustered_example_mean_results_glpk(self):
         # Check for existence of the `glpk` command
-        if shutil.which('glpk'):
+        if shutil.which('glpsol'):
             self.example_tester_mean(solver='glpk')
         else:
             pytest.skip('GLPK not installed')
@@ -303,7 +303,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
 
 class TestUrbanScaleExampleModelSenseChecks:
-    def example_tester(self, resource_unit, solver='cbc'):
+    def example_tester(self, resource_unit, solver='cbc', solver_io=None):
         unit_override = {
             'techs.pv.constraints': {
                 'resource': 'file=pv_resource.csv:{}'.format(resource_unit),
@@ -312,6 +312,9 @@ class TestUrbanScaleExampleModelSenseChecks:
             'run.solver': solver
         }
         override = {'model.subset_time': '2005-07-01', **unit_override}
+
+        if solver_io:
+            override['run.solver_io'] = solver_io
 
         model = calliope.examples.urban_scale(override_dict=override)
         model.run()
@@ -340,9 +343,10 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_area_gurobi(self):
         # Check for existence of the `gurobi` solver
-        if shutil.which('gurobi'):
-            self.example_tester('per_area', 'gurobi')
-        else:
+        try:
+            import gurobipy
+            self.example_tester('per_area', solver='gurobi', solver_io='python')
+        except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_urban_example_results_cap(self):
@@ -350,9 +354,10 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_cap_gurobi(self):
         # Check for existence of the `gurobi` solver
-        if shutil.which('gurobi'):
-            self.example_tester('per_cap', 'gurobi')
-        else:
+        try:
+            import gurobipy
+            self.example_tester('per_cap', solver='gurobi', solver_io='python')
+        except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_milp_example_results(self):
