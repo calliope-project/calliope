@@ -150,6 +150,36 @@ class TestModelSettings:
 
 
 class TestGroupConstraints:
+
+    def test_no_group_constraint(self):
+        model = build_model(model_file="group_constraints.yaml")
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    def test_switched_off_group_constraint(self):
+        model = build_model(
+            model_file="group_constraints.yaml",
+            scenario="switching_off_group_constraint"
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+
+class TestDemandShareGroupConstraints:
     def test_no_demand_share_constraint(self):
         model = build_model(model_file='model_demand_share.yaml')
         model.run()

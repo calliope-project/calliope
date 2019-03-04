@@ -433,7 +433,12 @@ def group_constraints_to_dataset(model_run):
 
     group_constraints = model_run['group_constraints']
 
-    for constr_name in model_run.sets['group_constraints']:
+    group_constraints = {
+        name: data for name, data in group_constraints.items()
+        if data.get("exists", True) is True
+    }
+
+    for constr_name in group_constraints:
         dims = ['group_names_' + constr_name]
         if constr_name in checks.defaults.allowed_group_constraints.per_carrier:
             dims.append('carriers')
