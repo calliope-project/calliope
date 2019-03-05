@@ -431,24 +431,29 @@ def tech_specific_to_dataset(model_run):
 def group_constraints_to_dataset(model_run):
     data_dict = {}
 
-    # Get a DataFrame with constraint names as index, constraint groups as columns
-    constraint_df = (
-        pd.DataFrame(model_run['group_constraints'])
-          .drop(['techs', 'locs'], axis=0, errors='ignore')
-    )
+    group_constraints = model_run['group_constraints']
 
-    for constr_name, constraints in constraint_df.iterrows():
-        constraints = constraints.dropna()  # Ignore where constraint not defined
-
+    for constr_name in model_run.sets['group_constraints']:
+        dims = ['group_names_' + constr_name]
         if constr_name in checks.defaults.allowed_group_constraints.per_carrier:
-            dims = ['constraint_groups', 'carriers']
-            data = [list(constraints.loc[i].values()) for i in constraints.index]
+            dims.append('carriers')
+            data = [
+                [group_constraints[i][constr_name].get(carrier, np.nan)
+                 for carrier in model_run.sets['carriers']]
+                for i in model_run.sets['group_names_' + constr_name]
+            ]
         elif constr_name in checks.defaults.allowed_group_constraints.per_cost:
-            dims = ['constraint_groups', 'costs']
-            data = [list(constraints.loc[i].values()) for i in constraints.index]
+            dims.append('costs')
+            data = [
+                [group_constraints[i][constr_name].get(cost, np.nan)
+                 for cost in model_run.sets['costs']]
+                for i in model_run.sets['group_names_' + constr_name]
+            ]
         elif constr_name in checks.defaults.allowed_group_constraints.general:
-            dims = ['constraint_groups']
-            data = constraints.values
+            data = [
+                group_constraints[i][constr_name]
+                for i in model_run.sets['group_names_' + constr_name]
+            ]
         else:  # Do nothing if it is an unknown constraint
             continue
 
