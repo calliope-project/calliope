@@ -27,15 +27,11 @@ With Miniconda installed, you can create a new Python 3.6 environment called ``"
 
    $ conda create -c conda-forge -n calliope python=3.6 calliope
 
-To use Calliope, you need to activate the ``calliope`` environment each time. On Linux and macOS::
+To use Calliope, you need to activate the ``calliope`` environment each time]::
 
-   $ source activate calliope
+   $ conda activate calliope#
 
-On Windows::
-
-   $ activate calliope
-
-You are now ready to use Calliope together with the free and open source GLPK solver. Read the next section for more information on alternative solvers.
+You are now ready to use Calliope together with the free and open source GLPK solver. However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result). Indeed, our example models use the free and open source CBC solver instead. Read the next section for more information on installing alternative solvers.
 
 Updating an existing installation
 =================================
@@ -57,7 +53,7 @@ GLPK
 CBC
 ---
 
-`CBC <https://projects.coin-or.org/Cbc>`_ is another free and open-source option. CBC can be installed via conda on Linux and macOS by running ``conda install -c conda-forge coincbc``. Windows binary packages and further documentation are available at `the CBC website <https://projects.coin-or.org/Cbc>`_.
+`CBC <https://projects.coin-or.org/Cbc>`_ is another free and open-source option. CBC can be installed via conda on Linux and macOS by running ``conda install -c conda-forge coincbc``. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_. We recommend you download the relevant binary for `CBC 2.9.9 <https://bintray.com/coin-or/download/Cbc/2.9.9>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 Gurobi
 ------
