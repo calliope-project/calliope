@@ -159,7 +159,7 @@ class TestGroupConstraints:
                                      .groupby("techs")
                                      .carrier_prod
                                      .sum()
-                                     .loc["expensive_supply"])
+                                     .loc["expensive_elec_supply"])
         assert expensive_generation == 0
 
     def test_systemwide_demand_share_max_constraint(self):
@@ -175,8 +175,8 @@ class TestGroupConstraints:
                                  .carrier_prod
                                  .sum()
                                  .transform(lambda x: x / x.sum())
-                                 .loc["cheap_supply"])
-        assert cheap_generation <= 0.4
+                                 .loc["cheap_elec_supply"])
+        assert cheap_generation <= 0.3
 
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
@@ -191,7 +191,7 @@ class TestGroupConstraints:
                                      .carrier_prod
                                      .sum()
                                      .transform(lambda x: x / x.sum())
-                                     .loc["expensive_supply"])
+                                     .loc["expensive_elec_supply"])
         assert expensive_generation >= 0.6
 
     def test_location_specific_demand_share_max_constraint(self):
@@ -203,10 +203,10 @@ class TestGroupConstraints:
         generation = (model.get_formatted_array("carrier_prod")
                            .sum(dim='timesteps')
                            .to_dataframe()["carrier_prod"])
-        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
-        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
-        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert cheap_generation0 / (cheap_generation0 + expensive_generation0) <= 0.4
+        demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
+        cheap_generation0 = generation.loc[("0", "cheap_elec_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_elec_supply", "electricity")]
+        assert cheap_generation0 / demand0 <= 0.3
         assert expensive_generation1 == 0
 
     def test_location_specific_demand_share_min_constraint(self):
@@ -218,8 +218,85 @@ class TestGroupConstraints:
         generation = (model.get_formatted_array("carrier_prod")
                            .sum(dim='timesteps')
                            .to_dataframe()["carrier_prod"])
-        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
-        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
-        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) >= 0.6
+        demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
+        expensive_generation0 = generation.loc[("0", "expensive_elec_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_elec_supply", "electricity")]
+        assert expensive_generation0 / demand0 >= 0.6
         assert expensive_generation1 == 0
+
+    def test_multiple_group_constraints(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='multiple_constraints'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'locs', 'carriers')))
+        demand = -model.get_formatted_array("carrier_con").sum().item()
+        cheap_generation = generation.loc[{'techs': 'cheap_elec_supply'}].item()
+        expensive_generation = generation.loc[{'techs': 'expensive_elec_supply'}].item()
+
+        assert expensive_generation / demand >= 0.6
+        assert cheap_generation / demand <= 0.3
+
+    def test_multiple_group_carriers(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='multiple_carriers_max'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'locs')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps', 'locs')))
+        cheap_generation_elec = generation.loc[{'techs': 'cheap_elec_supply', 'carriers': 'electricity'}].item()
+        demand_elec = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity'}].item()
+        cheap_generation_heat = generation.loc[{'techs': 'cheap_heat_supply', 'carriers': 'heat'}].item()
+        demand_heat = demand.loc[{'techs': 'heat_demand', 'carriers': 'heat'}].item()
+
+        assert cheap_generation_elec / demand_elec <= 0.3
+        assert cheap_generation_heat / demand_heat <= 0.5
+
+    def test_multiple_group_carriers_constraints(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='multiple_constraints_carriers'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'locs')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps', 'locs')))
+        cheap_generation_elec = generation.loc[{'techs': 'cheap_elec_supply', 'carriers': 'electricity'}].item()
+        expensive_generation_elec = generation.loc[{'techs': 'expensive_elec_supply', 'carriers': 'electricity'}].item()
+        demand_elec = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity'}].item()
+        cheap_generation_heat = generation.loc[{'techs': 'cheap_heat_supply', 'carriers': 'heat'}].item()
+        expensive_generation_heat = generation.loc[{'techs': 'expensive_heat_supply', 'carriers': 'heat'}].item()
+        demand_heat = demand.loc[{'techs': 'heat_demand', 'carriers': 'heat'}].item()
+
+        assert cheap_generation_elec / demand_elec <= 0.3
+        assert expensive_generation_elec / demand_elec >= 0.6
+        assert cheap_generation_heat / demand_heat <= 0.5
+        assert expensive_generation_heat / demand_heat >= 0.4
+
+    def test_different_locatinos_per_group_constraint(self):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario='different_locations_per_group'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'carriers')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps')))
+        cheap_generation_0 = generation.loc[{'techs': 'cheap_elec_supply', 'locs': '0'}].item()
+        expensive_generation_0 = generation.loc[{'techs': 'expensive_elec_supply', 'locs': '0'}].item()
+        cheap_generation_1 = generation.loc[{'techs': 'cheap_elec_supply', 'locs': '1'}].item()
+        expensive_generation_1 = generation.loc[{'techs': 'expensive_elec_supply', 'locs': '1'}].item()
+        demand_elec_0 = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity', 'locs': '0'}].item()
+        demand_elec_1 = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity', 'locs': '1'}].item()
+
+        assert expensive_generation_0 / demand_elec_0 >= 0.6
+        assert expensive_generation_1 / demand_elec_1 == 0
+        assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
+

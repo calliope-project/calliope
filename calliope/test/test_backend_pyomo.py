@@ -1714,6 +1714,47 @@ class TestPolicyConstraints:
         assert hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
 
 
+# Group constraints, i.e. those that can be defined on a system/subsystem scale
+class TestGroupConstraints:
+
+    def _build_group_model(self, scenario, group_name):
+        model = build_model(
+            model_file='model_demand_share.yaml',
+            scenario=scenario
+        )
+        model.run(build_only=True)
+        constraint = [
+            i.replace('example_', '').replace('_constraint', '')
+            for i in group_name
+        ]
+
+        return model, constraint
+
+    _test_vars = [
+        ('demand_share_max_systemwide', ['example_demand_share_max_constraint']),
+        ('demand_share_min_systemwide', ['example_demand_share_min_constraint']),
+        ('demand_share_max_location_0', ['example_demand_share_max_constraint']),
+        ('demand_share_min_location_0', ['example_demand_share_min_constraint']),
+        ('multiple_constraints', ['example_demand_share_max_constraint',
+                                  'example_demand_share_min_constraint'])
+    ]
+    @pytest.mark.parametrize("scenario,group_name", _test_vars)
+    def test_group_names(self, scenario, group_name):
+        model, constraint = self._build_group_model(scenario, group_name)
+        assert all('group_names_' + i in model._model_data.dims for i in constraint)
+
+    @pytest.mark.parametrize("scenario,group_name", _test_vars)
+    def test_group_variables(self, scenario, group_name):
+        model, constraint = self._build_group_model(scenario, group_name)
+        assert all('group_' + i in model._model_data.data_vars.keys() for i in constraint)
+
+    @pytest.mark.parametrize("scenario,group_name", _test_vars)
+    def test_group_constraints(self, scenario, group_name):
+        model, constraint = self._build_group_model(scenario, group_name)
+        assert all(hasattr(model._backend_model, 'group_' + i + '_constraint')
+                   for i in constraint)
+
+
 # clustering constraints
 class TestClusteringConstraints:
 
