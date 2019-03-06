@@ -1738,6 +1738,7 @@ class TestGroupConstraints:
         ('multiple_constraints', ['example_demand_share_max_constraint',
                                   'example_demand_share_min_constraint'])
     ]
+
     @pytest.mark.parametrize("scenario,group_name", _test_vars)
     def test_group_names(self, scenario, group_name):
         model, constraint = self._build_group_model(scenario, group_name)

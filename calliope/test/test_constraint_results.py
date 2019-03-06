@@ -299,4 +299,3 @@ class TestGroupConstraints:
         assert expensive_generation_0 / demand_elec_0 >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
         assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
-
