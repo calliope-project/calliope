@@ -1,16 +1,15 @@
 model:
     name: Demand share constraint test model
     timeseries_data_path: 'timeseries_data'
+    model.subset_time: '2005-01-01'
 
 run:
     mode: plan
     solver: glpk
 
-techs:
+tech_groups:
     cheap_supply:
         essentials:
-            name: Cheap supply tech
-            carrier: electricity
             parent: supply
         constraints:
             lifetime: 25
@@ -21,8 +20,6 @@ techs:
                 energy_cap: 10
     expensive_supply:
         essentials:
-            name: Expensive supply
-            carrier: electricity
             parent: supply
         constraints:
             lifetime: 25
@@ -31,6 +28,33 @@ techs:
             monetary:
                 interest_rate: 0.1
                 energy_cap: 20
+    normal_supply:
+        essentials:
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 15
+
+techs:
+    cheap_elec_supply:
+        essentials:
+            name: Cheap electricity supply
+            parent: cheap_supply
+            carrier: electricity
+    expensive_elec_supply:
+        essentials:
+            name: Expensive electricity supply
+            parent: expensive_supply
+            carrier: electricity
+    normal_elec_supply:
+        essentials:
+            name: Normal electricity supply
+            parent: normal_supply
+            carrier: electricity
     electricity_demand:
         essentials:
             name: Electricity demand
@@ -40,37 +64,72 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0:
-        techs:
-            cheap_supply:
-            expensive_supply:
-            electricity_demand:
-    1:
-        techs:
-            cheap_supply:
-            expensive_supply:
-            electricity_demand:
+    0,1:
+        techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
 overrides:
     demand_share_max_systemwide:
         group_constraints.example_demand_share_max_constraint:
-            techs: ["cheap_supply"]
+            techs: ["cheap_elec_supply"]
             demand_share_max:
-                electricity: 0.4
+                electricity: 0.3
     demand_share_min_systemwide:
         group_constraints.example_demand_share_min_constraint:
-            techs: ["expensive_supply"]
+            techs: ["expensive_elec_supply"]
             demand_share_min:
                 electricity: 0.6
     demand_share_max_location_0:
         group_constraints.example_demand_share_max_constraint:
             locs: ["0"]
-            techs: ["cheap_supply"]
+            techs: ["cheap_elec_supply"]
             demand_share_max:
-                electricity: 0.4
+                electricity: 0.3
     demand_share_min_location_0:
         group_constraints.example_demand_share_min_constraint:
             locs: ["0"]
-            techs: ["expensive_supply"]
+            techs: ["expensive_elec_supply"]
             demand_share_min:
                 electricity: 0.6
+    second_carrier:
+        techs:
+            cheap_heat_supply:
+                essentials:
+                    name: Cheap heat supply
+                    parent: cheap_supply
+                    carrier: heat
+            expensive_heat_supply:
+                essentials:
+                    name: Expensive heat supply
+                    parent: expensive_supply
+                    carrier: heat
+            normal_heat_supply:
+                essentials:
+                    name: Normal heat supply
+                    parent: normal_supply
+                    carrier: heat
+            heat_demand:
+                essentials:
+                    name: Heat demand
+                    carrier: heat
+                    parent: demand
+                constraints:
+                    resource: file=demand_heat.csv
+        locations:
+            0,1:
+                techs: {cheap_heat_supply, expensive_heat_supply, normal_heat_supply, heat_demand}
+    heat_demand_share_max_systemwide:
+        group_constraints.example_heat_demand_share_max_constraint:
+            techs: ["cheap_heat_supply"]
+            demand_share_max:
+                heat: 0.5
+    heat_demand_share_min_systemwide:
+        group_constraints.example_heat_demand_share_min_constraint:
+            techs: ["expensive_heat_supply"]
+            demand_share_min:
+                heat: 0.4
+
+scenarios:
+    multiple_carriers_max: ['demand_share_max_systemwide', 'second_carrier', 'heat_demand_share_max_systemwide']
+    multiple_constraints: ['demand_share_max_systemwide', 'demand_share_min_systemwide']
+    multiple_constraints_carriers: ['demand_share_max_systemwide', 'demand_share_min_systemwide', 'second_carrier', 'heat_demand_share_max_systemwide', 'heat_demand_share_min_systemwide']
+    different_locations_per_group: ['demand_share_max_systemwide', 'demand_share_min_location_0']
