@@ -181,7 +181,7 @@ class TestGroupConstraints:
 
 class TestDemandShareGroupConstraints:
     def test_no_demand_share_constraint(self):
-        model = build_model(model_file='model_demand_share.yaml')
+        model = build_model(model_file='demand_share.yaml')
         model.run()
         expensive_generation = (model.get_formatted_array("carrier_prod")
                                      .to_dataframe()
@@ -194,7 +194,7 @@ class TestDemandShareGroupConstraints:
 
     def test_systemwide_demand_share_max_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_max_systemwide'
         )
         model.run()
@@ -210,7 +210,7 @@ class TestDemandShareGroupConstraints:
 
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_min_systemwide'
         )
         model.run()
@@ -226,7 +226,7 @@ class TestDemandShareGroupConstraints:
 
     def test_location_specific_demand_share_max_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_max_location_0'
         )
         model.run()
@@ -241,7 +241,7 @@ class TestDemandShareGroupConstraints:
 
     def test_location_specific_demand_share_min_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_min_location_0'
         )
         model.run()
@@ -256,7 +256,7 @@ class TestDemandShareGroupConstraints:
 
     def test_multiple_group_constraints(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='multiple_constraints'
         )
         model.run()
@@ -271,7 +271,7 @@ class TestDemandShareGroupConstraints:
 
     def test_multiple_group_carriers(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='multiple_carriers_max'
         )
         model.run()
@@ -289,7 +289,7 @@ class TestDemandShareGroupConstraints:
 
     def test_multiple_group_carriers_constraints(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='multiple_constraints_carriers'
         )
         model.run()
@@ -311,7 +311,7 @@ class TestDemandShareGroupConstraints:
 
     def test_different_locatinos_per_group_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='different_locations_per_group'
         )
         model.run()

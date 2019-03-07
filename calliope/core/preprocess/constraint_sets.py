@@ -290,7 +290,7 @@ def generate_constraint_sets(model_run):
     # group.py
     group_constraints = {
         name: data for name, data in model_run['group_constraints'].items()
-        if data.get("exists", True) is True
+        if data.get("exists", True)
     }
     constraint_sets['constraint_groups'] = list(group_constraints.keys())
 
