@@ -1,6 +1,7 @@
 model:
-        name: Test model for group constraint mechanism
-        timeseries_data_path: 'timeseries_data'
+    name: Test model for group constraint mechanism
+    timeseries_data_path: 'timeseries_data'
+    subset_time: '2005-01-01'
 
 run:
     mode: plan
