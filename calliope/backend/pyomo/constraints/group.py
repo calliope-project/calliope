@@ -18,13 +18,13 @@ def load_constraints(backend_model):
 
     if 'group_demand_share_min' in model_data_dict:
         backend_model.group_demand_share_min_constraint = po.Constraint(
-            backend_model.constraint_groups,
+            backend_model.group_names_demand_share_min,
             backend_model.carriers,
             ['min'], rule=demand_share_constraint_rule
         )
     if 'group_demand_share_max' in model_data_dict:
         backend_model.group_demand_share_max_constraint = po.Constraint(
-            backend_model.constraint_groups,
+            backend_model.group_names_demand_share_max,
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
         )
@@ -41,12 +41,14 @@ def equalizer(lhs, rhs, sign):
         raise ValueError('Invalid sign: {}'.format(sign))
 
 
-def demand_share_constraint_rule(backend_model, constraint_group, carrier, what):
+def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     """
     TODO write docstring
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
-    share = model_data_dict['group_demand_share_{}'.format(what)][(carrier, constraint_group)]
+    share = model_data_dict['group_demand_share_{}'.format(what)].get(
+        (carrier, group_name), np.nan
+    )
     # FIXME uncomment this once Bryn has merged his changes
     # and import again: from calliope.backend.pyomo.util import get_param
     # share = get_param(
@@ -59,22 +61,26 @@ def demand_share_constraint_rule(backend_model, constraint_group, carrier, what)
     else:
         lhs_loc_techs = getattr(
             backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
+            'group_constraint_loc_techs_{}'.format(group_name)
         )
-        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
-        rhs_loc_techs = [
-            i for i in backend_model.loc_techs_demand
-            if i.split('::')[0] in lhs_locs
+        lhs_locs = set(loc_tech.split('::')[0] for loc_tech in lhs_loc_techs)
+        lhs_loc_tech_carriers = [
+            i for i in backend_model.loc_tech_carriers_prod
+            if i.rsplit('::', 1)[0] in lhs_loc_techs and i.split('::')[-1] == carrier
+        ]
+        rhs_loc_tech_carriers = [
+            i for i in backend_model.loc_tech_carriers_con
+            if i.split('::')[0] in lhs_locs and i.split('::')[-1] == carrier
         ]
 
         lhs = sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
-            for loc_tech in lhs_loc_techs
+            backend_model.carrier_prod[loc_tech_carrier, timestep]
+            for loc_tech_carrier in lhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
         rhs = share * -1 * sum(
-            backend_model.carrier_con[loc_tech + '::' + carrier, timestep]
-            for loc_tech in rhs_loc_techs
+            backend_model.carrier_con[loc_tech_carrier, timestep]
+            for loc_tech_carrier in rhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
 
