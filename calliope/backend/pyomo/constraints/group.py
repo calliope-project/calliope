@@ -114,12 +114,12 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
 
         .. math::
 
-            \\sum{loc::tech \\in loc\_techs_{group\_name}, timestep \\in timesteps}
+            \\sum{loc::tech \\in loc\\_techs_{group\\_name}, timestep \\in timesteps}
             \\boldsymbol{cost}(cost, loc::tech, timestep)
             \\begin{cases}
-                \\leq cost_max(cost)
-                \\geq cost_min(cost)
-                = cost_equals(cost)
+                \\leq cost\\_max(cost)
+                \\geq cost\\_min(cost)
+                = cost\\_equals(cost)
             \\end{cases}
 
     """
@@ -151,12 +151,12 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
 
         .. math::
 
-            \\sum{loc::tech \\in loc\_techs_{group\_name}, timestep \\in timesteps}
-            \\boldsymbol{cost_{investment}}(cost, loc::tech, timestep)
+            \\sum{loc::tech \\in loc\\_techs_{group\\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost\\_{investment}}(cost, loc::tech, timestep)
             \\begin{cases}
-                \\leq cost_investment_max(cost)
-                \\geq cost_investment_min(cost)
-                = cost_investment_equals(cost)
+                \\leq cost\\_investment\\_max(cost)
+                \\geq cost\\_investment\\_min(cost)
+                = cost\\_investment\\_equals(cost)
             \\end{cases}
 
     """
@@ -188,12 +188,12 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
 
         .. math::
 
-            \\sum{loc::tech \\in loc\_techs_{group\_name}, timestep \\in timesteps}
-            \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
+            \\sum{loc::tech \\in loc\\_techs_{group\\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost\\_{var}}(cost, loc::tech, timestep)
             \\begin{cases}
-                \\leq cost_var_max(cost)
-                \\geq cost_var_min(cost)
-                = cost_var_equals(cost)
+                \\leq cost\\_var\\_max(cost)
+                \\geq cost\\_var\\_min(cost)
+                = cost\\_var\\_equals(cost)
             \\end{cases}
 
     """
