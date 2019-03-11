@@ -30,13 +30,13 @@ def load_constraints(backend_model):
         )
     if 'group_supply_share_min' in model_data_dict:
         backend_model.group_supply_share_min_constraint = po.Constraint(
-            backend_model.constraint_groups,
+            backend_model.group_names_supply_share_min,
             backend_model.carriers,
             ['min'], rule=supply_share_constraint_rule
         )
     if 'group_supply_share_max' in model_data_dict:
         backend_model.group_supply_share_max_constraint = po.Constraint(
-            backend_model.constraint_groups,
+            backend_model.group_names_supply_share_max,
             backend_model.carriers,
             ['max'], rule=supply_share_constraint_rule
         )
