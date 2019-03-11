@@ -279,7 +279,7 @@ class TestGroupConstraints:
         assert cheap_generation_heat / demand_heat <= 0.5
         assert expensive_generation_heat / demand_heat >= 0.4
 
-    def test_different_locatinos_per_group_constraint(self):
+    def test_different_locations_per_group_constraint(self):
         model = build_model(
             model_file='model_demand_share.yaml',
             scenario='different_locations_per_group'
@@ -299,3 +299,146 @@ class TestGroupConstraints:
         assert expensive_generation_0 / demand_elec_0 >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
         assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
+
+    def test_systemwide_cost_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_max_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert round(cheap_cost, 5) <= 30
+
+    def test_systemwide_cost_investment_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_investment_max_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        cheap_cost_investment = (model.get_formatted_array('cost_investment')
+                                      .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert cheap_cost > cheap_cost_investment
+        assert round(cheap_cost_investment, 5) <= 4
+
+    def test_systemwide_cost_var_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_var_max_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        cheap_cost_var = (model.get_formatted_array('cost_var')
+                               .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert cheap_cost > cheap_cost_var
+        assert round(cheap_cost_var, 5) <= 200
+
+    def test_systemwide_cost_min_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='expensive_cost_min_systemwide'
+        )
+        model.run()
+        expensive_cost = (model.get_formatted_array('cost')
+                               .loc[{'costs': 'monetary', 'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(expensive_cost, 5) >= 600
+
+    def test_systemwide_cost_equals_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_equals_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert cheap_cost == approx(210)
+
+    def test_location_specific_cost_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_max_location_0'
+        )
+        model.run()
+        cheap_cost0 = (model.get_formatted_array('cost')
+                            .loc[{'costs': 'monetary',
+                                  'techs': 'cheap_polluting_supply',
+                                  'locs': '0'}]).sum().item()
+        assert round(cheap_cost0, 5) <= 10
+
+    def test_systemwide_emissions_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='emissions_max_systemwide'
+        )
+        model.run()
+        emissions = (model.get_formatted_array('cost')
+                          .loc[{'costs': 'emissions'}]).sum().item()
+        assert round(emissions, 5) <= 400
+
+    def test_location_specific_emissions_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='emissions_max_location_0'
+        )
+        model.run()
+        emissions0 = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'emissions',
+                                 'locs': '0'}]).sum().item()
+        assert round(emissions0, 5) <= 200
+
+    def test_systemwide_clean_emissions_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='clean_emissions_max_systemwide'
+        )
+        model.run()
+        clean_emissions = (model.get_formatted_array('cost')
+                                .loc[{'costs': 'emissions',
+                                      'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(clean_emissions, 5) <= 300
+
+    def test_multiple_costs_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='multiple_costs_constraint'
+        )
+        model.run()
+        emissions = (model.get_formatted_array('cost')
+                          .loc[{'costs': 'emissions'}]).sum().item()
+        expensive_cost = (model.get_formatted_array('cost')
+                               .loc[{'costs': 'monetary',
+                                     'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(emissions, 5) <= 400
+        assert round(expensive_cost, 5) <= 600
+
+    def test_different_locations_per_cost_group_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='different_locations_per_group'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        cheap_cost0 = (model.get_formatted_array('cost')
+                            .loc[{'costs': 'monetary',
+                                  'techs': 'cheap_polluting_supply',
+                                  'locs': '0'}]).sum().item()
+        assert round(cheap_cost, 5) <= 30
+        assert round(cheap_cost0, 5) <= 10
+
+    def test_different_techs_per_cost_group_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='different_techs_per_group'
+        )
+        model.run()
+        emissions = (model.get_formatted_array('cost')
+                          .loc[{'costs': 'emissions'}]).sum().item()
+        clean_emissions = (model.get_formatted_array('cost')
+                                .loc[{'costs': 'emissions',
+                                      'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(emissions, 5) <= 400
+        assert round(clean_emissions, 5) <= 300

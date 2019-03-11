@@ -28,6 +28,25 @@ def load_constraints(backend_model):
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
         )
+    for sense in ['min', 'max', 'equals']:
+        if 'group_cost_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_cap_constraint_rule)
+            )
+        if 'group_cost_var_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_var_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_var_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_var_cap_constraint_rule)
+            )
+        if 'group_cost_investment_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_investment_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_investment_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_investment_cap_constraint_rule)
+            )
 
 
 def equalizer(lhs, rhs, sign):
@@ -85,3 +104,116 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
         )
 
         return equalizer(lhs, rhs, what)
+
+
+def cost_cap_constraint_rule(backend_model, group_name, cost, what):
+    """
+    Limit system-wide cost for a specific cost class to a certain value, i.e. Ɛ-constrained costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\_techs_{group\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost}(cost, loc::tech, timestep)
+            \\begin{cases}
+                \\leq cost_max(cost)
+                \\geq cost_min(cost)
+                = cost_equals(cost)
+            \\end{cases}
+
+    """
+
+    loc_techs = [i for i in getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    ) if i in backend_model.loc_techs_cost]
+
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    cost_cap = model_data_dict['group_cost_{}'.format(what)].get(
+        (cost, group_name), np.nan
+    )
+
+    if np.isnan(cost_cap):
+        return po.Constraint.NoConstraint
+
+    sum_cost = sum(backend_model.cost[cost, loc_tech] for loc_tech in loc_techs)
+
+    return equalizer(sum_cost, cost_cap, what)
+
+
+def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
+    """
+    Limit system-wide investment costs specific to a cost class to a
+    certain value, i.e. Ɛ-constrained costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\_techs_{group\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost_{investment}}(cost, loc::tech, timestep)
+            \\begin{cases}
+                \\leq cost_investment_max(cost)
+                \\geq cost_investment_min(cost)
+                = cost_investment_equals(cost)
+            \\end{cases}
+
+    """
+
+    loc_techs = [i for i in getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    ) if i in backend_model.loc_techs_investment_cost]
+
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    cost_cap = model_data_dict['group_cost_investment_{}'.format(what)].get(
+        (cost, group_name), np.nan
+    )
+
+    if np.isnan(cost_cap):
+        return po.Constraint.NoConstraint
+
+    sum_cost = sum(backend_model.cost_investment[cost, loc_tech] for loc_tech in loc_techs)
+
+    return equalizer(sum_cost, cost_cap, what)
+
+
+def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
+    """
+    Limit system-wide variable costs specific to a cost class
+    to a certain value, i.e. Ɛ-constrained costs
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\_techs_{group\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
+            \\begin{cases}
+                \\leq cost_var_max(cost)
+                \\geq cost_var_min(cost)
+                = cost_var_equals(cost)
+            \\end{cases}
+
+    """
+
+    loc_techs = [i for i in getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    ) if i in backend_model.loc_techs_om_cost]
+
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    cost_cap = model_data_dict['group_cost_var_{}'.format(what)].get(
+        (cost, group_name), np.nan
+    )
+
+    if np.isnan(cost_cap):
+        return po.Constraint.NoConstraint
+
+    sum_cost = sum(
+        backend_model.cost_var[cost, loc_tech, timestep]
+        for loc_tech in loc_techs for timestep in backend_model.timesteps
+    )
+
+    return equalizer(sum_cost, cost_cap, what)
