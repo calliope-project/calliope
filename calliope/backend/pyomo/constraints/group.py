@@ -30,12 +30,12 @@ def load_constraints(backend_model):
         )
     if 'group_resource_area_min' in model_data_dict:
         backend_model.group_resource_area_min_constraint = po.Constraint(
-            backend_model.constraint_groups,
+            backend_model.group_names_resource_area_min,
             ['min'], rule=resource_area_constraint_rule
         )
     if 'group_resource_area_max' in model_data_dict:
         backend_model.group_resource_area_max_constraint = po.Constraint(
-            backend_model.constraint_groups,
+            backend_model.group_names_resource_area_max,
             ['max'], rule=resource_area_constraint_rule
         )
 
@@ -109,12 +109,6 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
     """
     model_data_dict = backend_model.__calliope_model_data__['data']
     threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]
-    # FIXME uncomment this once Bryn has merged his changes
-    # and import again: from calliope.backend.pyomo.util import get_param
-    # share = get_param(
-    #     backend_model,
-    #     'group_demand_share_{}'.format(what), (carrier, constraint_group)
-    # )
 
     if np.isnan(threshold):
         return po.Constraint.NoConstraint
