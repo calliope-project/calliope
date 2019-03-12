@@ -514,6 +514,7 @@ This works for:
 * Links: ``links.location1,location2.exists: false``
 * Techs at a specific location:  ``locations.location_name.techs.tech_name.exists: false``
 * Transmission techs at a specific location: ``links.location1,location2.techs.transmission_tech.exists: false``
+* Group constraints: ``group_constraints.my_constraint.exists: false``
 
 .. _operational_mode:
 
