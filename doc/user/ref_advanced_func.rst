@@ -497,6 +497,12 @@ The below table lists all available group constraints.
    * - ``demand_share_max``
      - carriers
      - Maximum share of carrier demand met from a set of technologies across a set of locations.
+   * - ``supply_share_min``
+     - carriers
+     - Minimum share of carrier production met from a set of technologies across a set of locations.
+   * - ``supply_share_max``
+     - carriers
+     - Maximum share of carrier production met from a set of technologies across a set of locations.
    * - ``energy_cap_min```
      - [-]
      - Minimum installed capacity from a set of technologies across a set of locations.
