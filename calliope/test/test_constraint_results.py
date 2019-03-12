@@ -4,6 +4,8 @@ from pytest import approx
 import calliope
 from calliope.test.common.util import build_test_model as build_model
 
+RELATIVE_TOLERANCE = 0.0001
+
 
 class TestNationalScaleExampleModelSenseChecks:
     def test_group_share_prod_min(self):
@@ -185,7 +187,8 @@ class TestGroupConstraints:
             model_file='group_constraints.yaml',
             scenario='group_constraint_without_tech'
         )
-        model.run()
+        with pytest.raises(calliope.exceptions.ModelError):
+            model.run()
 
     def test_group_constraint_with_several_constraints(self):
         model = build_model(
@@ -201,7 +204,7 @@ class TestGroupConstraints:
                                      .sum()
                                      .transform(lambda x: x / x.sum())
                                      .loc["expensive_supply"])
-        assert expensive_generation >= 0.8
+        assert expensive_generation + RELATIVE_TOLERANCE >= 0.8
 
 
 class TestDemandShareGroupConstraints:
@@ -429,7 +432,7 @@ class TestSupplyShareGroupConstraints:
         cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
         expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) >= 0.6
+        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) + RELATIVE_TOLERANCE >= 0.6
         assert expensive_generation1 == 0
 
 
