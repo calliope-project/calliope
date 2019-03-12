@@ -1,4 +1,3 @@
-import os
 import shutil
 
 import pytest
@@ -61,7 +60,7 @@ class TestNationalScaleExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.2642256, abs=0.000001)
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
     def test_nationalscale_example_results_gurobi(self):
@@ -171,7 +170,7 @@ class TestNationalScaleResampledExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.25, abs=0.000001)
 
-    def test_nationalscale_resampled_example_results_glpk(self):
+    def test_nationalscale_resampled_example_results_cbc(self):
         self.example_tester()
 
     def test_nationalscale_resampled_example_results_glpk(self):
@@ -253,7 +252,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.074167, abs=0.000001)
 
-    def test_nationalscale_clustered_example_closest_results_glpk(self):
+    def test_nationalscale_clustered_example_closest_results_cbc(self):
         self.example_tester_closest()
 
     def test_nationalscale_clustered_example_closest_results_glpk(self):
@@ -263,7 +262,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         else:
             pytest.skip('GLPK not installed')
 
-    def test_nationalscale_clustered_example_mean_results_glpk(self):
+    def test_nationalscale_clustered_example_mean_results_cbc(self):
         self.example_tester_mean()
 
     def test_nationalscale_clustered_example_mean_results_glpk(self):
