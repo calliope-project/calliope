@@ -158,14 +158,18 @@ def generate_simple_sets(model_run):
     # at a group level
 
     sets.group_constraints = set()
-    if len(model_run.group_constraints.keys()) > 0:
+    group_constraints = AttrDict({
+        name: data for name, data in model_run['group_constraints'].items()
+        if data.get("exists", True)
+    })
+    if len(group_constraints.keys()) > 0:
         sets.group_constraints.update(
-            i.split('.')[1] for i in model_run.group_constraints.as_dict_flat().keys()
+            i.split('.')[1] for i in group_constraints.as_dict_flat().keys()
             if i.split('.')[1] not in ['techs', 'locs']
         )
         for constr in sets.group_constraints:
             sets['group_names_' + constr] = set(
-                k for k, v in model_run.group_constraints.items()
+                k for k, v in group_constraints.items()
                 if constr in v.keys()
             )
 

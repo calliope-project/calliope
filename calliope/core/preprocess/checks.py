@@ -146,7 +146,7 @@ def check_initial(config_model):
             )
 
     # Warn if any unknown group constraints are defined
-    permitted_group_constraints = ['techs', 'locs'] + \
+    permitted_group_constraints = ['techs', 'locs', 'exists'] + \
         defaults.allowed_group_constraints.per_carrier + \
         defaults.allowed_group_constraints.per_cost + \
         defaults.allowed_group_constraints.general
