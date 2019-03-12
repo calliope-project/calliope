@@ -25,7 +25,7 @@ file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'en
 allowed_group_constraints:
     per_carrier: ['demand_share_min', 'demand_share_max']
     per_cost: []
-    general: []
+    general: ['energy_cap_min', 'energy_cap_max']
 
 default_location:
     available_area: null
