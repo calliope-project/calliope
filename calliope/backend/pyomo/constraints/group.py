@@ -133,7 +133,9 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
 
 def cost_cap_constraint_rule(backend_model, group_name, cost, what):
     """
-    Limit system-wide cost for a specific cost class to a certain value, i.e. Ɛ-constrained costs
+    Limit cost for a specific cost class to a certain value,
+    i.e. Ɛ-constrained costs,
+    for groups of technologies and locations.
 
     .. container:: scrolling-wrapper
 
@@ -169,8 +171,9 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
 
 def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
     """
-    Limit system-wide investment costs specific to a cost class to a
-    certain value, i.e. Ɛ-constrained costs
+    Limit investment costs specific to a cost class to a
+    certain value, i.e. Ɛ-constrained costs,
+    for groups of technologies and locations.
 
     .. container:: scrolling-wrapper
 
@@ -206,8 +209,9 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
 
 def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
     """
-    Limit system-wide variable costs specific to a cost class
-    to a certain value, i.e. Ɛ-constrained costs
+    Limit variable costs specific to a cost class
+    to a certain value, i.e. Ɛ-constrained costs,
+    for groups of technologies and locations.
 
     .. container:: scrolling-wrapper
 
