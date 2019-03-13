@@ -1719,7 +1719,7 @@ class TestGroupConstraints:
 
     def _build_group_model(self, scenario, group_name):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario=scenario
         )
         model.run(build_only=True)

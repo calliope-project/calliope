@@ -28,6 +28,28 @@ def load_constraints(backend_model):
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
         )
+    if 'group_supply_share_min' in model_data_dict:
+        backend_model.group_supply_share_min_constraint = po.Constraint(
+            backend_model.group_names_supply_share_min,
+            backend_model.carriers,
+            ['min'], rule=supply_share_constraint_rule
+        )
+    if 'group_supply_share_max' in model_data_dict:
+        backend_model.group_supply_share_max_constraint = po.Constraint(
+            backend_model.group_names_supply_share_max,
+            backend_model.carriers,
+            ['max'], rule=supply_share_constraint_rule
+        )
+    if 'group_energy_cap_min' in model_data_dict:
+        backend_model.group_energy_cap_min_constraint = po.Constraint(
+            backend_model.group_names_energy_cap_min,
+            ['min'], rule=energy_cap_constraint_rule
+        )
+    if 'group_energy_cap_max' in model_data_dict:
+        backend_model.group_energy_cap_max_constraint = po.Constraint(
+            backend_model.group_names_energy_cap_max,
+            ['max'], rule=energy_cap_constraint_rule
+        )
 
 
 def equalizer(lhs, rhs, sign):
@@ -83,5 +105,82 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             for loc_tech_carrier in rhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
+
+        return equalizer(lhs, rhs, what)
+
+
+def supply_share_constraint_rule(backend_model, constraint_group, carrier, what):
+    """
+    Enforces shares of carrier_prod for groups of technologies and locations. The
+    share is relative to ``supply`` and ``supply_plus`` technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all \\in given\\_locations, timestep\\in timesteps}
+            carrier_{prod}(loc::tech::carrier, timestep)
+
+    """
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    share = model_data_dict['group_supply_share_{}'.format(what)][(carrier, constraint_group)]
+
+    if np.isnan(share):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+        rhs_loc_techs = [
+            i for i in backend_model.loc_techs_supply
+            if i.split('::')[0] in lhs_locs
+        ]
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in lhs_loc_techs
+            for timestep in backend_model.timesteps
+        )
+        rhs = share * sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in rhs_loc_techs
+            for timestep in backend_model.timesteps
+        )
+
+        return equalizer(lhs, rhs, what)
+
+
+def energy_cap_constraint_rule(backend_model, constraint_group, what):
+    """
+    Enforce upper and lower bounds for energy_cap of energy_cap
+    for groups of technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\leq energy\\_cap\\_max\\\\
+
+            \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\geq energy\\_cap\\_min
+
+    """
+    model_data_dict = backend_model.__calliope_model_data__['data']
+    threshold = model_data_dict['group_energy_cap_{}'.format(what)][(constraint_group)]
+
+    if np.isnan(threshold):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+        lhs = sum(
+            backend_model.energy_cap[loc_tech]
+            for loc_tech in lhs_loc_techs
+        )
+        rhs = threshold
 
         return equalizer(lhs, rhs, what)
