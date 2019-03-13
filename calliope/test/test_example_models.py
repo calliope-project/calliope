@@ -71,14 +71,12 @@ class TestNationalScaleExampleModelSenseChecks:
             pytest.skip('Gurobi not installed')
 
     def test_nationalscale_example_results_cplex(self):
-        # Check for existence of the `cplex` command
         if shutil.which('cplex'):
             self.example_tester(solver='cplex')
         else:
             pytest.skip('CPLEX not installed')
 
     def test_nationalscale_example_results_glpk(self):
-        # Check for existence of the `cbc` command
         if shutil.which('glpsol'):
             self.example_tester(solver='glpk')
         else:
@@ -174,7 +172,6 @@ class TestNationalScaleResampledExampleModelSenseChecks:
         self.example_tester()
 
     def test_nationalscale_resampled_example_results_glpk(self):
-        # Check for existence of the `glpk` command
         if shutil.which('glpsol'):
             self.example_tester(solver='glpk')
         else:
@@ -256,7 +253,6 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         self.example_tester_closest()
 
     def test_nationalscale_clustered_example_closest_results_glpk(self):
-        # Check for existence of the `glpk` command
         if shutil.which('glpsol'):
             self.example_tester_closest(solver='glpk')
         else:
@@ -266,7 +262,6 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         self.example_tester_mean()
 
     def test_nationalscale_clustered_example_mean_results_glpk(self):
-        # Check for existence of the `glpk` command
         if shutil.which('glpsol'):
             self.example_tester_mean(solver='glpk')
         else:
@@ -341,7 +336,6 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester('per_area')
 
     def test_urban_example_results_area_gurobi(self):
-        # Check for existence of the `gurobi` solver
         try:
             import gurobipy
             self.example_tester('per_area', solver='gurobi', solver_io='python')
@@ -352,7 +346,6 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester('per_cap')
 
     def test_urban_example_results_cap_gurobi(self):
-        # Check for existence of the `gurobi` solver
         try:
             import gurobipy
             self.example_tester('per_cap', solver='gurobi', solver_io='python')
