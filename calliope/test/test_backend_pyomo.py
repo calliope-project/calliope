@@ -1727,11 +1727,11 @@ class TestGroupConstraints:
         return model
 
     _test_vars = [
-        ('demand_share_max_systemwide', ['example_demand_share_max_constraint'], ['demand_share_max'], 'model_demand_share'),
-        ('demand_share_min_systemwide', ['example_demand_share_min_constraint'], ['demand_share_min'], 'model_demand_share'),
-        ('demand_share_max_location_0', ['example_demand_share_max_constraint'], ['demand_share_max'], 'model_demand_share'),
-        ('demand_share_min_location_0', ['example_demand_share_min_constraint'], ['demand_share_min'], 'model_demand_share'),
-        ('multiple_constraints', ['example_demand_share_max_constraint', 'example_demand_share_min_constraint'], ['demand_share_max', 'demand_share_min'], 'model_demand_share'),
+        ('demand_share_max_systemwide', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
+        ('demand_share_min_systemwide', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
+        ('demand_share_max_location_0', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
+        ('demand_share_min_location_0', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
+        ('multiple_constraints', ['example_demand_share_max_constraint', 'example_demand_share_min_constraint'], ['demand_share_max', 'demand_share_min'], 'demand_share'),
         ('cheap_cost_max_systemwide', ['example_cost_max_constraint'], ['cost_max'], 'model_cost_cap'),
         ('expensive_cost_min_systemwide', ['example_cost_min_constraint'], ['cost_min'], 'model_cost_cap'),
         ('cheap_cost_equals_systemwide', ['example_cost_equals_constraint'], ['cost_equals'], 'model_cost_cap'),

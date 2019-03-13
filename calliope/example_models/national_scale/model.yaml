@@ -17,7 +17,7 @@ model:
 
 # Run configuration: all settings that affect how the built model is run
 run:
-    solver: glpk
+    solver: cbc
 
     ensure_feasibility: true  # Switches on the "unmet demand" constraint
 

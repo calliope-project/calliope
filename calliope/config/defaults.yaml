@@ -23,9 +23,9 @@
 file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss']
 
 allowed_group_constraints:
-    per_carrier: ['demand_share_min', 'demand_share_max']
+    per_carrier: ['demand_share_min', 'demand_share_max', 'supply_share_min', 'supply_share_max']
     per_cost: ['cost_max', 'cost_min', 'cost_equals', 'cost_var_max', 'cost_var_min', 'cost_var_equals', 'cost_investment_min', 'cost_investment_max', 'cost_investment_equals']
-    general: []
+    general: ['energy_cap_min', 'energy_cap_max']
 
 default_location:
     available_area: null

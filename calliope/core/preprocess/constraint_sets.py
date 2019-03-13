@@ -288,9 +288,13 @@ def generate_constraint_sets(model_run):
     ]
 
     # group.py
-    constraint_sets['constraint_groups'] = list(model_run['group_constraints'].keys())
+    group_constraints = {
+        name: data for name, data in model_run['group_constraints'].items()
+        if data.get("exists", True)
+    }
+    constraint_sets['constraint_groups'] = list(group_constraints.keys())
 
-    for k, v in model_run['group_constraints'].items():
+    for k, v in group_constraints.items():
         # For now, transmission techs are not supported in group constraints
         techs = v.get('techs', sets['techs_non_transmission'])
         locs = v.get('locs', sets['locs'])
