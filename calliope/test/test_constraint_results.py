@@ -204,7 +204,7 @@ class TestGroupConstraints:
                                      .sum()
                                      .transform(lambda x: x / x.sum())
                                      .loc["expensive_supply"])
-        assert expensive_generation + RELATIVE_TOLERANCE >= 0.8
+        assert round(expensive_generation, 5) >= 0.8
 
 
 class TestDemandShareGroupConstraints:
@@ -234,7 +234,7 @@ class TestDemandShareGroupConstraints:
                                  .sum()
                                  .transform(lambda x: x / x.sum())
                                  .loc["cheap_elec_supply"])
-        assert cheap_generation <= 0.3
+        assert round(cheap_generation, 5) <= 0.3
 
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
@@ -250,7 +250,7 @@ class TestDemandShareGroupConstraints:
                                      .sum()
                                      .transform(lambda x: x / x.sum())
                                      .loc["expensive_elec_supply"])
-        assert expensive_generation >= 0.6
+        assert round(expensive_generation, 5) >= 0.6
 
     def test_location_specific_demand_share_max_constraint(self):
         model = build_model(
@@ -264,7 +264,7 @@ class TestDemandShareGroupConstraints:
         demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
         cheap_generation0 = generation.loc[("0", "cheap_elec_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_elec_supply", "electricity")]
-        assert cheap_generation0 / demand0 <= 0.3
+        assert round(cheap_generation0 / demand0, 5) <= 0.3
         assert expensive_generation1 == 0
 
     def test_location_specific_demand_share_min_constraint(self):
@@ -279,7 +279,7 @@ class TestDemandShareGroupConstraints:
         demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
         expensive_generation0 = generation.loc[("0", "expensive_elec_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_elec_supply", "electricity")]
-        assert expensive_generation0 / demand0 >= 0.6
+        assert round(expensive_generation0 / demand0, 5) >= 0.6
         assert expensive_generation1 == 0
 
     def test_multiple_group_constraints(self):
@@ -294,8 +294,8 @@ class TestDemandShareGroupConstraints:
         cheap_generation = generation.loc[{'techs': 'cheap_elec_supply'}].item()
         expensive_generation = generation.loc[{'techs': 'expensive_elec_supply'}].item()
 
-        assert expensive_generation / demand >= 0.6
-        assert cheap_generation / demand <= 0.3
+        assert round(expensive_generation / demand, 5) >= 0.6
+        assert round(cheap_generation / demand, 5) <= 0.3
 
     def test_multiple_group_carriers(self):
         model = build_model(
@@ -312,8 +312,8 @@ class TestDemandShareGroupConstraints:
         cheap_generation_heat = generation.loc[{'techs': 'cheap_heat_supply', 'carriers': 'heat'}].item()
         demand_heat = demand.loc[{'techs': 'heat_demand', 'carriers': 'heat'}].item()
 
-        assert cheap_generation_elec / demand_elec <= 0.3
-        assert cheap_generation_heat / demand_heat <= 0.5
+        assert round(cheap_generation_elec / demand_elec, 5) <= 0.3
+        assert round(cheap_generation_heat / demand_heat, 5) <= 0.5
 
     def test_multiple_group_carriers_constraints(self):
         model = build_model(
@@ -332,10 +332,10 @@ class TestDemandShareGroupConstraints:
         expensive_generation_heat = generation.loc[{'techs': 'expensive_heat_supply', 'carriers': 'heat'}].item()
         demand_heat = demand.loc[{'techs': 'heat_demand', 'carriers': 'heat'}].item()
 
-        assert cheap_generation_elec / demand_elec <= 0.3
-        assert expensive_generation_elec / demand_elec >= 0.6
-        assert cheap_generation_heat / demand_heat <= 0.5
-        assert expensive_generation_heat / demand_heat >= 0.4
+        assert round(cheap_generation_elec / demand_elec, 5) <= 0.3
+        assert round(expensive_generation_elec / demand_elec, 5) >= 0.6
+        assert round(cheap_generation_heat / demand_heat, 5) <= 0.5
+        assert round(expensive_generation_heat / demand_heat, 5) >= 0.4
 
     def test_different_locatinos_per_group_constraint(self):
         model = build_model(
@@ -354,9 +354,9 @@ class TestDemandShareGroupConstraints:
         demand_elec_0 = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity', 'locs': '0'}].item()
         demand_elec_1 = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity', 'locs': '1'}].item()
 
-        assert expensive_generation_0 / demand_elec_0 >= 0.6
+        assert round(expensive_generation_0 / demand_elec_0, 5) >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
-        assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
+        assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
 
 
 class TestSupplyShareGroupConstraints:
@@ -387,7 +387,7 @@ class TestSupplyShareGroupConstraints:
                                  .sum()
                                  .transform(lambda x: x / x.sum())
                                  .loc["cheap_supply"])
-        assert cheap_generation <= 0.4
+        assert round(cheap_generation, 5) <= 0.4
 
     def test_systemwide_supply_share_min_constraint(self):
         model = build_model(
@@ -403,7 +403,7 @@ class TestSupplyShareGroupConstraints:
                                      .sum()
                                      .transform(lambda x: x / x.sum())
                                      .loc["expensive_supply"])
-        assert expensive_generation >= 0.6
+        assert round(expensive_generation, 5) >= 0.6
 
     def test_location_specific_supply_share_max_constraint(self):
         model = build_model(
@@ -417,7 +417,7 @@ class TestSupplyShareGroupConstraints:
         cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
         expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert cheap_generation0 / (cheap_generation0 + expensive_generation0) <= 0.4
+        assert round(cheap_generation0 / (cheap_generation0 + expensive_generation0), 5) <= 0.4
         assert expensive_generation1 == 0
 
     def test_location_specific_supply_share_min_constraint(self):
@@ -432,7 +432,7 @@ class TestSupplyShareGroupConstraints:
         cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
         expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
         expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
-        assert expensive_generation0 / (cheap_generation0 + expensive_generation0) + RELATIVE_TOLERANCE >= 0.6
+        assert round(expensive_generation0 / (cheap_generation0 + expensive_generation0), 5) >= 0.6
         assert expensive_generation1 == 0
 
 
@@ -463,7 +463,7 @@ class TestEnergyCapGroupConstraints:
                                .energy_cap
                                .sum()
                                .loc["cheap_supply"])
-        assert cheap_capacity <= 14
+        assert round(cheap_capacity, 5) <= 14
 
     def test_systemwide_energy_cap_min_constraint(self):
         model = build_model(
@@ -478,7 +478,7 @@ class TestEnergyCapGroupConstraints:
                                    .energy_cap
                                    .sum()
                                    .loc["expensive_supply"])
-        assert expensive_capacity >= 6
+        assert round(expensive_capacity, 5) >= 6
 
     def test_location_specific_energy_cap_max_constraint(self):
         model = build_model(
@@ -490,7 +490,7 @@ class TestEnergyCapGroupConstraints:
                          .to_dataframe()["energy_cap"])
         cheap_capacity0 = capacity.loc[("0", "cheap_supply")]
         expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
-        assert cheap_capacity0 <= 4
+        assert round(cheap_capacity0, 5) <= 4
         assert expensive_capacity1 == 0
 
     def test_location_specific_energy_cap_min_constraint(self):
@@ -503,5 +503,5 @@ class TestEnergyCapGroupConstraints:
                          .to_dataframe()["energy_cap"])
         expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
         expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
-        assert expensive_capacity0 >= 6
+        assert round(expensive_capacity0, 5) >= 6
         assert expensive_capacity1 == 0

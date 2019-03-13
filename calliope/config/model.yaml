@@ -23,7 +23,7 @@ run:
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
     solver_io: null  # What method the Pyomo backend should use to communicate with the solver
     solver_options: null  # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent
-    solver: glpk  # Which solver to use
+    solver: cbc  # Which solver to use
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
 
 model:
