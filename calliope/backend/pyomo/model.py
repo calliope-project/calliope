@@ -4,7 +4,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-import logging
 import os
 from contextlib import redirect_stdout, redirect_stderr
 
@@ -106,7 +105,8 @@ def generate_model(model_data):
         'dispatch.load_constraints',
         'network.load_constraints',
         'costs.load_constraints',
-        'policy.load_constraints'
+        'policy.load_constraints',
+        'group.load_constraints'
     ]
 
     if backend_model.__calliope_run_config['mode'] != 'operate':
@@ -171,10 +171,10 @@ def solve_model(backend_model, solver,
         })
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    if 'warmstart' in solve_kwargs.keys() and solver == 'glpk':
+    if 'warmstart' in solve_kwargs.keys() and solver in ['glpk', 'cbc']:
         exceptions.ModelWarning(
-            'The chosen solver, GLPK, does not support warmstart, which may '
-            'impact performance.'
+            'The chosen solver, {}, does not suport warmstart, which may '
+            'impact performance.'.format(solver)
         )
         del solve_kwargs['warmstart']
 
