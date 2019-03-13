@@ -109,7 +109,7 @@ class TestNationalScaleExampleModelInfeasibility:
 
         model.run()
 
-        assert model.results.attrs['termination_condition'] in ['infeasible']  # glpk gives 'other' as result
+        assert model.results.attrs['termination_condition'] in ['infeasible', 'other']  # glpk gives 'other' as result
 
         assert 'systemwide_levelised_cost' not in model.results.data_vars
         assert 'systemwide_capacity_factor' not in model.results.data_vars
