@@ -1717,43 +1717,53 @@ class TestPolicyConstraints:
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
 class TestGroupConstraints:
 
-    def _build_group_model(self, scenario, group_name):
+    def _build_group_model(self, scenario, model_file):
         model = build_model(
-            model_file='demand_share.yaml',
+            model_file=model_file + '.yaml',
             scenario=scenario
         )
         model.run(build_only=True)
-        constraint = [
-            i.replace('example_', '').replace('_constraint', '')
-            for i in group_name
-        ]
 
-        return model, constraint
+        return model
 
     _test_vars = [
-        ('demand_share_max_systemwide', ['example_demand_share_max_constraint']),
-        ('demand_share_min_systemwide', ['example_demand_share_min_constraint']),
-        ('demand_share_max_location_0', ['example_demand_share_max_constraint']),
-        ('demand_share_min_location_0', ['example_demand_share_min_constraint']),
-        ('multiple_constraints', ['example_demand_share_max_constraint',
-                                  'example_demand_share_min_constraint'])
+        ('demand_share_max_systemwide', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
+        ('demand_share_min_systemwide', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
+        ('demand_share_max_location_0', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
+        ('demand_share_min_location_0', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
+        ('multiple_constraints', ['example_demand_share_max_constraint', 'example_demand_share_min_constraint'], ['demand_share_max', 'demand_share_min'], 'demand_share'),
+        ('cheap_cost_max_systemwide', ['example_cost_max_constraint'], ['cost_max'], 'model_cost_cap'),
+        ('expensive_cost_min_systemwide', ['example_cost_min_constraint'], ['cost_min'], 'model_cost_cap'),
+        ('cheap_cost_equals_systemwide', ['example_cost_equals_constraint'], ['cost_equals'], 'model_cost_cap'),
+        ('cheap_cost_max_location_0', ['example_cheap_cost_max_location_0_constraint'], ['cost_max'], 'model_cost_cap'),
+        ('multiple_costs_constraint', ['example_emissions_max_constraint', 'example_cost_min_constraint'], ['cost_max', 'cost_min'], 'model_cost_cap'),
+        ('cheap_cost_var_max_systemwide', ['example_cost_var_max_constraint'], ['cost_var_max'], 'model_cost_cap'),
+        ('cheap_cost_investment_max_systemwide', ['example_cost_investment_max_constraint'], ['cost_investment_max'], 'model_cost_cap')
     ]
 
-    @pytest.mark.parametrize("scenario,group_name", _test_vars)
-    def test_group_names(self, scenario, group_name):
-        model, constraint = self._build_group_model(scenario, group_name)
-        assert all('group_names_' + i in model._model_data.dims for i in constraint)
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_constraint_names(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all('group_names_' + i in model._model_data.dims for i in constraints)
 
-    @pytest.mark.parametrize("scenario,group_name", _test_vars)
-    def test_group_variables(self, scenario, group_name):
-        model, constraint = self._build_group_model(scenario, group_name)
-        assert all('group_' + i in model._model_data.data_vars.keys() for i in constraint)
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_group_names(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all(
+            group_name[i] in model._model_data['group_names_' + constraints[i]].values
+            for i in range(len(constraints))
+        )
 
-    @pytest.mark.parametrize("scenario,group_name", _test_vars)
-    def test_group_constraints(self, scenario, group_name):
-        model, constraint = self._build_group_model(scenario, group_name)
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_group_variables(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all('group_' + i in model._model_data.data_vars.keys() for i in constraints)
+
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_group_constraints(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
         assert all(hasattr(model._backend_model, 'group_' + i + '_constraint')
-                   for i in constraint)
+                   for i in constraints)
 
 
 # clustering constraints
