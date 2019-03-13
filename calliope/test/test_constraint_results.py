@@ -356,7 +356,7 @@ class TestDemandShareGroupConstraints:
 
         assert round(expensive_generation_0 / demand_elec_0, 5) >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
-        assert (cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1) <= 0.3
+        assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
 
     def test_systemwide_cost_max_constraint(self):
         model = build_model(
@@ -500,7 +500,6 @@ class TestDemandShareGroupConstraints:
                                       'techs': 'expensive_clean_supply'}]).sum().item()
         assert round(emissions, 5) <= 400
         assert round(clean_emissions, 5) <= 300
-        assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
 
 
 class TestSupplyShareGroupConstraints:
