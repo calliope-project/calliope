@@ -91,5 +91,4 @@ class UpdateObserverDict(ObservedDict):
             if (not isinstance(v, dict) and v is not None)
             or (isinstance(v, dict) and len(v.keys()) > 0)
         }
-        print(temp_dict)
         self.observer.attrs[self.name] = AttrDict(temp_dict).to_yaml()
