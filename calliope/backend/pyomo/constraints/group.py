@@ -385,7 +385,8 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
 
 def resource_area_constraint_rule(backend_model, constraint_group, what):
     """
-    Enforce threshold of resource_area for groups of technologies and locations.
+    Enforce upper and lower bounds of resource_area for groups of
+    technologies and locations.
 
     .. container:: scrolling-wrapper
 
