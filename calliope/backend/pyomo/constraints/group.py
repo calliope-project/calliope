@@ -389,7 +389,7 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
     technologies and locations.
 
     .. container:: scrolling-wrapper
-            
+
         .. math::
 
             \\boldsymbol{resource_{area}}(loc::tech) \\leq group\\_resource\\_area\\_max\\\\
