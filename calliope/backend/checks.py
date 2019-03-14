@@ -33,10 +33,12 @@ def check_operate_params(model_data):
         serious issues that should raise a ModelError
 
     """
-    defaults = UpdateObserverDict(initial_yaml_string=model_data.attrs['defaults'],
-                              name='defaults', observer=model_data)
-    run_config = UpdateObserverDict(initial_yaml_string=model_data.attrs['run_config'],
-                                name='run_config', observer=model_data)
+    defaults = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['defaults'],
+        name='defaults', observer=model_data)
+    run_config = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['run_config'],
+        name='run_config', observer=model_data)
 
     warnings, errors = [], []
     comments = AttrDict()
