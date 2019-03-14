@@ -4,15 +4,16 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 import ruamel.yaml
+import numpy as np
+import xarray as xr
 
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.backend import checks
+from calliope.backend.pyomo import model as run_pyomo
+from calliope.backend.pyomo import interface as pyomo_interface
 
-import numpy as np
-import xarray as xr
-import calliope.backend.pyomo.model as run_pyomo
-import calliope.backend.pyomo.interface as pyomo_interface
+from calliope.core.attrdict import AttrDict
 
 
 def run(model_data, timings, build_only=False):
@@ -38,21 +39,21 @@ def run(model_data, timings, build_only=False):
         'pyomo': pyomo_interface
     }
 
-    run_backend = model_data.attrs['run.backend']
+    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
 
-    if model_data.attrs['run.mode'] == 'plan':
+    if run_config['mode'] == 'plan':
         results, backend = run_plan(
             model_data, timings,
-            backend=BACKEND[run_backend], build_only=build_only
+            backend=BACKEND[run_config.backend], build_only=build_only
         )
 
-    elif model_data.attrs['run.mode'] == 'operate':
+    elif run_config['mode'] == 'operate':
         results, backend = run_operate(
             model_data, timings,
-            backend=BACKEND[run_backend], build_only=build_only
+            backend=BACKEND[run_config.backend], build_only=build_only
         )
 
-    return results, backend, INTERFACE[run_backend].BackendInterfaceMethods
+    return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
 def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
@@ -70,13 +71,11 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
     else:
         backend_model = backend_rerun
 
-    solver = model_data.attrs['run.solver']
-    solver_io = model_data.attrs.get('run.solver_io', None)
-    solver_options = {
-        k.split('.')[-1]: v
-        for k, v in model_data.attrs.items() if '.solver_options.' in k
-    }
-    save_logs = model_data.attrs.get('run.save_logs', None)
+    run_config = backend_model.__calliope_run_config
+    solver = run_config['solver']
+    solver_io = run_config.get('solver_io', None)
+    solver_options = run_config.get('solver_options', None)
+    save_logs = run_config.get('save_logs', None)
 
     if build_only:
         results = xr.Dataset()
@@ -124,14 +123,16 @@ def run_operate(model_data, timings, backend, build_only):
     log_time(timings, 'run_start',
              comment='Backend: starting model run in operational mode')
 
-    defaults = ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
+    defaults = AttrDict.from_yaml_string(model_data.attrs['defaults'])
+    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
+
     operate_params = ['purchased'] + [
         i.replace('_max', '') for i in defaults if i[-4:] == '_max'
     ]
 
     # Capacity results (from plan mode) can be used as the input to operate mode
     if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
-            model_data.attrs.get('run.operation.use_cap_results', False)):
+            run_config.get('operation.use_cap_results', False)):
         # Anything with is_result = 1 will be ignored in the Pyomo model
         for varname, varvals in model_data.data_vars.items():
             if varname in operate_params:
@@ -183,12 +184,12 @@ def run_operate(model_data, timings, backend, build_only):
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # Initialize our variables
-    solver = model_data.attrs['run.solver']
-    solver_io = model_data.attrs.get('run.solver_io', None)
-    solver_options = model_data.attrs.get('run.solver_options', None)
-    save_logs = model_data.attrs.get('run.save_logs', None)
-    window = model_data.attrs['run.operation.window']
-    horizon = model_data.attrs['run.operation.horizon']
+    solver = run_config['solver']
+    solver_io = run_config.get('solver_io', None)
+    solver_options = run_config.get('solver_options', None)
+    save_logs = run_config.get('save_logs', None)
+    window = run_config['operation']['window']
+    horizon = run_config['operation']['horizon']
     window_to_horizon = horizon - window
 
     # get the cumulative sum of timestep resolution, to find where we hit our window and horizon
@@ -281,7 +282,7 @@ def run_operate(model_data, timings, backend, build_only):
                 # New values
                 var_series = window_model_data[var].to_series().dropna().replace('inf', np.inf)
                 # Same timestamps
-                var_series.index = backend_model.__calliope_model_data__['data'][var].keys()
+                var_series.index = backend_model.__calliope_model_data['data'][var].keys()
                 var_dict = var_series.to_dict()
                 # Update pyomo Param with new dictionary
                 for k, v in getattr(backend_model, var).items():

@@ -73,6 +73,7 @@ def generate_constraint_sets(model_run):
     constraint_sets['loc_techs_update_costs_var_constraint'] = [
         i for i in sets.loc_techs_om_cost if i in sets.loc_techs_export
     ]
+
     constraint_sets['loc_tech_carriers_export_max_constraint'] = [
         i for i in sets.loc_tech_carriers_export
         if constraint_exists(
@@ -288,9 +289,13 @@ def generate_constraint_sets(model_run):
     ]
 
     # group.py
-    constraint_sets['constraint_groups'] = list(model_run['group_constraints'].keys())
+    group_constraints = {
+        name: data for name, data in model_run['group_constraints'].items()
+        if data.get("exists", True)
+    }
+    constraint_sets['constraint_groups'] = list(group_constraints.keys())
 
-    for k, v in model_run['group_constraints'].items():
+    for k, v in group_constraints.items():
         # For now, transmission techs are not supported in group constraints
         techs = v.get('techs', sets['techs_non_transmission'])
         locs = v.get('locs', sets['locs'])

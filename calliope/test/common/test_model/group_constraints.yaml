@@ -1,0 +1,68 @@
+model:
+    name: Test model for group constraint mechanism
+    timeseries_data_path: 'timeseries_data'
+    subset_time: '2005-01-01'
+
+run:
+    mode: plan
+    solver: glpk
+
+techs:
+    cheap_supply:
+        essentials:
+            name: Cheap supply tech
+            carrier: electricity
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 10
+    expensive_supply:
+        essentials:
+            name: Expensive supply
+            carrier: electricity
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 20
+    electricity_demand:
+        essentials:
+            name: Electricity demand
+            carrier: electricity
+            parent: demand
+        constraints:
+            resource: file=demand_elec.csv
+
+locations:
+    0,1:
+        techs:
+            cheap_supply:
+            expensive_supply:
+            electricity_demand:
+
+overrides:
+    switching_off_group_constraint:
+        group_constraints.demo:
+            techs: ["cheap_supply"]
+            demand_share_max:
+                electricity: 0.4
+        group_constraints.demo.exists: False
+    group_constraint_without_tech:
+        group_constraints.no_tech:
+            locs: ["0"]
+            demand_share_max:
+                electricity: 0.4
+    several_group_constraints:
+        group_constraints.several: # TODO add more/other constraints whose combination is more interesting
+            techs: ["expensive_supply"]
+            demand_share_min:
+                electricity: 0.6
+            supply_share_min:
+                electricity: 0.8

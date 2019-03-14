@@ -26,15 +26,21 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
 
         .. math::
 
-            min: z = \\sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) + \\sum_{loc::carrier,timestep} unmet\\_demand(loc::carrier, timestep) \\times bigM
-            max: z = \\sum_{loc::tech_{cost}} cost(loc::tech, cost=cost_{k})) - \\sum_{loc::carrier,timestep} unmet\\_demand(loc::carrier, timestep) \\times bigM
+            min: z = \\sum_{loc::tech_{cost},k} (cost(loc::tech, cost=cost_{k}) +
+             \\sum_{loc::carrier,timestep} (unmet\\_demand(loc::carrier, timestep) \\times bigM)
+
+            max: z = \\sum_{loc::tech_{cost},k} (cost(loc::tech, cost=cost_{k}) -
+             \\sum_{loc::carrier,timestep} (unmet\\_demand(loc::carrier, timestep) \\times bigM)
 
     """
+
     def obj_rule(backend_model):
-        if backend_model.__calliope_model_data__['attrs'].get('run.ensure_feasibility', False):
+
+        if backend_model.__calliope_run_config.get('ensure_feasibility', False):
             unmet_demand = sum(
-                backend_model.unmet_demand[loc_carrier, timestep] -
-                backend_model.unused_supply[loc_carrier, timestep]
+                (backend_model.unmet_demand[loc_carrier, timestep] -
+                 backend_model.unused_supply[loc_carrier, timestep]) *
+                backend_model.timestep_weights[timestep]
                 for loc_carrier in backend_model.loc_carriers
                 for timestep in backend_model.timesteps
             ) * backend_model.bigM
