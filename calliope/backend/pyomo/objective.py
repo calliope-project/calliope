@@ -12,7 +12,7 @@ Objective functions.
 
 import pyomo.core as po  # pylint: disable=import-error
 from calliope.core.util.tools import load_function
-
+from calliope import exceptions
 
 def minmax_cost_optimization(backend_model, cost_class, sense):
     """
@@ -52,11 +52,6 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
         else:
             unmet_demand = 0
 
-        if isinstance(cost_class, str):
-            cost_class = {cost_class: 1}
-        for k, v in cost_class.items():
-            if v is None:
-                cost_class[k] = 1
         return (
             sum(
                 backend_model.cost[k, loc_tech] * v

@@ -241,6 +241,20 @@ def check_initial(config_model):
                 .format(arg, config_model.run.objective)
             )
 
+    # For cost minimisation objective, check for string cost class and set to dict.
+    if isinstance(config_model.run.objective_options.get('cost_class', {}), str):
+        config_model.run.objective_options.cost_class = {
+            config_model.run.objective_options.cost_class: 1
+        }
+
+    # For cost minimisation objective, check for cost_class: None and set to one
+    for k, v in config_model.run.objective_options.get('cost_class', {}).items():
+        if v is None:
+            config_model.run.objective_options.cost_class[k] = 1
+            model_warnings.append(
+                'cost class {} has weight = None, setting weight to 1'.format(k)
+            )
+
     # Don't allow time clustering with cyclic storage if not also using
     # storage_inter_cluster
     storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
