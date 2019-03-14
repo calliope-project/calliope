@@ -436,6 +436,18 @@ class TestChecks:
             excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
         )
 
+    @pytest.mark.parametrize("invalid_key", [
+        ("monetary"), ("emissions"), ("name"), ("anything_else_really")
+    ])
+    def test_unrecognised_tech_keys(self, invalid_key):
+        """
+        Check that no invalid keys are defined for technologies.
+        """
+        override1 = {'techs.test_supply_gas.{}'.format(invalid_key): 'random_string'}
+
+        with pytest.raises(exceptions.ModelError):
+            build_model(override_dict=override1, scenario='simple_supply')
+
     def test_model_version_mismatch(self):
         """
         Model config says model.calliope_version = 0.1, which is not what we
