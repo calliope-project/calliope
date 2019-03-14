@@ -14,7 +14,7 @@ import numpy as np
 
 from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.logging import log_time
-
+from calliope.core.attrdict import AttrDict
 
 def postprocess_model_results(results, model_data, timings):
     """
@@ -42,11 +42,12 @@ def postprocess_model_results(results, model_data, timings):
         comment='Postprocessing: started'
     )
 
+    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
     results['capacity_factor'] = capacity_factor(results, model_data)
     results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
     results['systemwide_levelised_cost'] = systemwide_levelised_cost(results, model_data)
     results['total_levelised_cost'] = systemwide_levelised_cost(results, model_data, total=True)
-    results = clean_results(results, model_data.attrs.get('run.zero_threshold', 0), timings)
+    results = clean_results(results, run_config.get('zero_threshold', 0), timings)
 
     log_time(
         timings, 'post_process_end', time_since_start=True,

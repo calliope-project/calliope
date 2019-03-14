@@ -18,7 +18,7 @@ model:
 
 run:
     mode: plan
-    solver: glpk
+    solver: cbc
 
 techs:
     test_supply_gas:

@@ -17,7 +17,7 @@ from calliope import exceptions
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
 
     if 'loc_techs_storage_capacity_constraint' in sets:
         backend_model.storage_capacity_constraint = po.Constraint(
@@ -271,7 +271,7 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
             \\sum_{tech} \\boldsymbol{resource_{area}}(loc::tech) \\leq available\\_area
             \\quad \\forall loc \\in locs \\text{ if } available\\_area(loc)
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     available_area = model_data_dict['available_area'][loc]
 
     loc_techs = split_comma_list(model_data_dict['lookup_loc_techs_area'][loc])

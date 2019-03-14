@@ -13,7 +13,8 @@ import pyomo.core as po  # pylint: disable=import-error
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
+    run_config = backend_model.__calliope_run_config
 
     if 'techlists_group_share_energy_cap_min_constraint' in sets:
         backend_model.group_share_energy_cap_min_constraint = po.Constraint(
@@ -51,7 +52,7 @@ def load_constraints(backend_model):
             ['equals'], rule=group_share_carrier_prod_constraint_rule
         )
 
-    if 'carriers_reserve_margin_constraint' in sets and backend_model.mode != 'operate':
+    if 'carriers_reserve_margin_constraint' in sets and run_config['mode'] != 'operate':
         backend_model.reserve_margin_constraint = po.Constraint(
             backend_model.carriers_reserve_margin_constraint,
             rule=reserve_margin_constraint_rule
@@ -83,8 +84,8 @@ def group_share_energy_cap_constraint_rule(backend_model, techlist, what):
             fraction \\times \\sum_{loc::tech \\in loc\\_techs\\_supply \\or loc\\_techs\\_supply\\_plus} energy_{cap}(loc::tech)
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
-    sets = backend_model.__calliope_model_data__['sets']
+    model_data_dict = backend_model.__calliope_model_data['data']
+    sets = backend_model.__calliope_model_data['sets']
     fraction = model_data_dict['group_share_energy_cap_{}'.format(what)][techlist]
 
     if 'loc_techs_supply_plus' in sets:
@@ -120,7 +121,7 @@ def group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, wh
             fraction \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all, timestep\\in timesteps} carrier_{prod}(loc::tech::carrier, timestep)
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     techlist, carrier = techlist_carrier.split('::')
     fraction = model_data_dict['group_share_carrier_prod_{}'.format(what)][(carrier, techlist)]
 
@@ -160,7 +161,7 @@ def reserve_margin_constraint_rule(backend_model, carrier):
             \\times (1 + reserve\\_margin)
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     reserve_margin = model_data_dict['reserve_margin'][carrier]
     max_demand_timestep = model_data_dict['max_demand_timesteps'][carrier]

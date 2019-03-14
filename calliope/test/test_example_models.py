@@ -1,4 +1,3 @@
-import os
 import shutil
 
 import pytest
@@ -33,7 +32,7 @@ class TestModelPreproccesing:
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    def example_tester(self, solver='glpk', solver_io=None):
+    def example_tester(self, solver='cbc', solver_io=None):
         override = {
             'model.subset_time': '2005-01-01',
             'run.solver': solver,
@@ -61,29 +60,27 @@ class TestNationalScaleExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.2642256, abs=0.000001)
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
     def test_nationalscale_example_results_gurobi(self):
         try:
-            import gurobipy
+            import gurobipy  # pylint: disable=unused-import
             self.example_tester(solver='gurobi', solver_io='python')
         except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_nationalscale_example_results_cplex(self):
-        # Check for existence of the `cplex` command
         if shutil.which('cplex'):
             self.example_tester(solver='cplex')
         else:
             pytest.skip('CPLEX not installed')
 
-    def test_nationalscale_example_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester(solver='cbc')
+    def test_nationalscale_example_results_glpk(self):
+        if shutil.which('glpsol'):
+            self.example_tester(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
@@ -112,12 +109,12 @@ class TestNationalScaleExampleModelInfeasibility:
 
         model.run()
 
-        assert model.results.attrs['termination_condition'] == 'other'
+        assert model.results.attrs['termination_condition'] in ['infeasible', 'other']  # glpk gives 'other' as result
 
         assert 'systemwide_levelised_cost' not in model.results.data_vars
         assert 'systemwide_capacity_factor' not in model.results.data_vars
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
 
@@ -138,12 +135,12 @@ class TestNationalScaleExampleModelOperate:
         assert check_error_or_warning(excinfo, expected_warnings)
         assert all(model.results.timesteps == pd.date_range('2005-01', '2005-01-03 23:00:00', freq='H'))
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:
-    def example_tester(self, solver='glpk', solver_io=None):
+    def example_tester(self, solver='cbc', solver_io=None):
         override = {
             'model.subset_time': '2005-01-01',
             'run.solver': solver,
@@ -171,19 +168,18 @@ class TestNationalScaleResampledExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.25, abs=0.000001)
 
-    def test_nationalscale_resampled_example_results_glpk(self):
+    def test_nationalscale_resampled_example_results_cbc(self):
         self.example_tester()
 
-    def test_nationalscale_resampled_example_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester(solver='cbc')
+    def test_nationalscale_resampled_example_results_glpk(self):
+        if shutil.which('glpsol'):
+            self.example_tester(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
 
 class TestNationalScaleClusteredExampleModelSenseChecks:
-    def model_runner(self, solver='glpk', solver_io=None,
+    def model_runner(self, solver='cbc', solver_io=None,
                      how='closest', storage_inter_cluster=False,
                      cyclic=False, storage=True):
         override = {
@@ -207,7 +203,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         return model
 
-    def example_tester_closest(self, solver='glpk', solver_io=None):
+    def example_tester_closest(self, solver='cbc', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
         # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(51711873.203096)
@@ -222,7 +218,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.074809, abs=0.000001)
 
-    def example_tester_mean(self, solver='glpk', solver_io=None):
+    def example_tester_mean(self, solver='cbc', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
         # Full 1-hourly model run: 22312488.670967
         assert float(model.results.cost.sum()) == approx(45110415.5627)
@@ -253,25 +249,23 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
         ) == approx(0.074167, abs=0.000001)
 
-    def test_nationalscale_clustered_example_closest_results_glpk(self):
+    def test_nationalscale_clustered_example_closest_results_cbc(self):
         self.example_tester_closest()
 
-    def test_nationalscale_clustered_example_closest_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester_closest(solver='cbc')
+    def test_nationalscale_clustered_example_closest_results_glpk(self):
+        if shutil.which('glpsol'):
+            self.example_tester_closest(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
-
-    def test_nationalscale_clustered_example_mean_results_glpk(self):
-        self.example_tester_mean()
+            pytest.skip('GLPK not installed')
 
     def test_nationalscale_clustered_example_mean_results_cbc(self):
-        # Check for existence of the `cbc` command
-        if shutil.which('cbc'):
-            self.example_tester_mean(solver='cbc')
+        self.example_tester_mean()
+
+    def test_nationalscale_clustered_example_mean_results_glpk(self):
+        if shutil.which('glpsol'):
+            self.example_tester_mean(solver='glpk')
         else:
-            pytest.skip('CBC not installed')
+            pytest.skip('GLPK not installed')
 
     def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.example_tester_storage_inter_cluster()
@@ -303,7 +297,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
 
 class TestUrbanScaleExampleModelSenseChecks:
-    def example_tester(self, resource_unit, solver='glpk'):
+    def example_tester(self, resource_unit, solver='cbc', solver_io=None):
         unit_override = {
             'techs.pv.constraints': {
                 'resource': 'file=pv_resource.csv:{}'.format(resource_unit),
@@ -312,6 +306,9 @@ class TestUrbanScaleExampleModelSenseChecks:
             'run.solver': solver
         }
         override = {'model.subset_time': '2005-07-01', **unit_override}
+
+        if solver_io:
+            override['run.solver_io'] = solver_io
 
         model = calliope.examples.urban_scale(override_dict=override)
         model.run()
@@ -339,20 +336,20 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester('per_area')
 
     def test_urban_example_results_area_gurobi(self):
-        # Check for existence of the `gurobi` solver
-        if shutil.which('gurobi'):
-            self.example_tester('per_area', 'gurobi')
-        else:
+        try:
+            import gurobipy  # pylint: disable=unused-import
+            self.example_tester('per_area', solver='gurobi', solver_io='python')
+        except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_urban_example_results_cap(self):
         self.example_tester('per_cap')
 
     def test_urban_example_results_cap_gurobi(self):
-        # Check for existence of the `gurobi` solver
-        if shutil.which('gurobi'):
-            self.example_tester('per_cap', 'gurobi')
-        else:
+        try:
+            import gurobipy  # pylint: disable=unused-import
+            self.example_tester('per_cap', solver='gurobi', solver_io='python')
+        except ImportError:
             pytest.skip('Gurobi not installed')
 
     def test_milp_example_results(self):

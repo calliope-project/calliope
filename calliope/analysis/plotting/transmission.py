@@ -246,7 +246,7 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
 
     layout_dict.update(dict(
         width=plot_width,
-        title=model._model_data.attrs['model.name'],
+        title=model.model_config['name'],
         autosize=True,
         hovermode='closest',
         showlegend=True

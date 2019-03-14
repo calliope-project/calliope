@@ -1,5 +1,5 @@
 model:
-    name: Test model for group constraint mechanism
+    name: Supply share constraint test model
     timeseries_data_path: 'timeseries_data'
     subset_time: '2005-01-01'
 
@@ -41,28 +41,37 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0,1:
+    0:
+        techs:
+            cheap_supply:
+            expensive_supply:
+            electricity_demand:
+    1:
         techs:
             cheap_supply:
             expensive_supply:
             electricity_demand:
 
 overrides:
-    switching_off_group_constraint:
-        group_constraints.demo:
+    supply_share_max_systemwide:
+        group_constraints.example_supply_share_max_constraint:
             techs: ["cheap_supply"]
-            demand_share_max:
+            supply_share_max:
                 electricity: 0.4
-        group_constraints.demo.exists: False
-    group_constraint_without_tech:
-        group_constraints.no_tech:
-            locs: ["0"]
-            demand_share_max:
-                electricity: 0.4
-    several_group_constraints:
-        group_constraints.several: # TODO add more/other constraints whose combination is more interesting
+    supply_share_min_systemwide:
+        group_constraints.example_supply_share_min_constraint:
             techs: ["expensive_supply"]
-            demand_share_min:
-                electricity: 0.6
             supply_share_min:
-                electricity: 0.8
+                electricity: 0.6
+    supply_share_max_location_0:
+        group_constraints.example_supply_share_max_constraint:
+            locs: ["0"]
+            techs: ["cheap_supply"]
+            supply_share_max:
+                electricity: 0.4
+    supply_share_min_location_0:
+        group_constraints.example_supply_share_min_constraint:
+            locs: ["0"]
+            techs: ["expensive_supply"]
+            supply_share_min:
+                electricity: 0.6

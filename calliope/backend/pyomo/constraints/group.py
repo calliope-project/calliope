@@ -14,7 +14,7 @@ import pyomo.core as po  # pylint: disable=import-error
 
 
 def load_constraints(backend_model):
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     if 'group_demand_share_min' in model_data_dict:
         backend_model.group_demand_share_min_constraint = po.Constraint(
@@ -27,6 +27,18 @@ def load_constraints(backend_model):
             backend_model.group_names_demand_share_max,
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
+        )
+    if 'group_supply_share_min' in model_data_dict:
+        backend_model.group_supply_share_min_constraint = po.Constraint(
+            backend_model.group_names_supply_share_min,
+            backend_model.carriers,
+            ['min'], rule=supply_share_constraint_rule
+        )
+    if 'group_supply_share_max' in model_data_dict:
+        backend_model.group_supply_share_max_constraint = po.Constraint(
+            backend_model.group_names_supply_share_max,
+            backend_model.carriers,
+            ['max'], rule=supply_share_constraint_rule
         )
     if 'group_energy_cap_share_min' in model_data_dict:
         backend_model.group_energy_cap_share_min_constraint = po.Constraint(
@@ -49,6 +61,26 @@ def load_constraints(backend_model):
             ['max'], rule=energy_cap_constraint_rule
         )
 
+    for sense in ['min', 'max', 'equals']:
+        if 'group_cost_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_cap_constraint_rule)
+            )
+        if 'group_cost_var_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_var_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_var_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_var_cap_constraint_rule)
+            )
+        if 'group_cost_investment_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_investment_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_investment_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_investment_cap_constraint_rule)
+            )
+
 
 def equalizer(lhs, rhs, sign):
     if sign == 'max':
@@ -65,7 +97,7 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     """
     TODO write docstring
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     share = model_data_dict['group_demand_share_{}'.format(what)].get(
         (carrier, group_name), np.nan
     )
@@ -107,6 +139,50 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
         return equalizer(lhs, rhs, what)
 
 
+def supply_share_constraint_rule(backend_model, constraint_group, carrier, what):
+    """
+    Enforces shares of carrier_prod for groups of technologies and locations. The
+    share is relative to ``supply`` and ``supply_plus`` technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all \\in given\\_locations, timestep\\in timesteps}
+            carrier_{prod}(loc::tech::carrier, timestep)
+
+    """
+    model_data_dict = backend_model.__calliope_model_data['data']
+    share = model_data_dict['group_supply_share_{}'.format(what)][(carrier, constraint_group)]
+
+    if np.isnan(share):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+        rhs_loc_techs = [
+            i for i in backend_model.loc_techs_supply
+            if i.split('::')[0] in lhs_locs
+        ]
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in lhs_loc_techs
+            for timestep in backend_model.timesteps
+        )
+        rhs = share * sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in rhs_loc_techs
+            for timestep in backend_model.timesteps
+        )
+
+        return equalizer(lhs, rhs, what)
+
+
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
     """
     Enforces shares of energy_cap for groups of technologies and locations. The
@@ -119,7 +195,7 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\leq
             share \\times \\sum_{loc::tech \\in loc\\_tech\\_supply\\_all \\in given\\_locations} energy_{cap}(loc::tech)
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     share = model_data_dict['group_energy_cap_share_{}'.format(what)][(constraint_group)]
 
     if np.isnan(share):
@@ -161,7 +237,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\geq energy\\_cap\\_min
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     threshold = model_data_dict['group_energy_cap_{}'.format(what)][(constraint_group)]
 
     if np.isnan(threshold):
@@ -171,7 +247,6 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
             backend_model,
             'group_constraint_loc_techs_{}'.format(constraint_group)
         )
-
         lhs = sum(
             backend_model.energy_cap[loc_tech]
             for loc_tech in lhs_loc_techs
@@ -179,3 +254,120 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
         rhs = threshold
 
         return equalizer(lhs, rhs, what)
+
+
+def cost_cap_constraint_rule(backend_model, group_name, cost, what):
+    """
+    Limit cost for a specific cost class to a certain value,
+    i.e. Ɛ-constrained costs,
+    for groups of technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\\_techs_{group\\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost}(cost, loc::tech, timestep)
+            \\begin{cases}
+                \\leq cost\\_max(cost)
+                \\geq cost\\_min(cost)
+                = cost\\_equals(cost)
+            \\end{cases}
+
+    """
+
+    loc_techs = [i for i in getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    ) if i in backend_model.loc_techs_cost]
+
+    model_data_dict = backend_model.__calliope_model_data['data']
+    cost_cap = model_data_dict['group_cost_{}'.format(what)].get(
+        (cost, group_name), np.nan
+    )
+
+    if np.isnan(cost_cap):
+        return po.Constraint.NoConstraint
+
+    sum_cost = sum(backend_model.cost[cost, loc_tech] for loc_tech in loc_techs)
+
+    return equalizer(sum_cost, cost_cap, what)
+
+
+def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
+    """
+    Limit investment costs specific to a cost class to a
+    certain value, i.e. Ɛ-constrained costs,
+    for groups of technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\\_techs_{group\\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost\\_{investment}}(cost, loc::tech, timestep)
+            \\begin{cases}
+                \\leq cost\\_investment\\_max(cost)
+                \\geq cost\\_investment\\_min(cost)
+                = cost\\_investment\\_equals(cost)
+            \\end{cases}
+
+    """
+
+    loc_techs = [i for i in getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    ) if i in backend_model.loc_techs_investment_cost]
+
+    model_data_dict = backend_model.__calliope_model_data['data']
+    cost_cap = model_data_dict['group_cost_investment_{}'.format(what)].get(
+        (cost, group_name), np.nan
+    )
+
+    if np.isnan(cost_cap):
+        return po.Constraint.NoConstraint
+
+    sum_cost = sum(backend_model.cost_investment[cost, loc_tech] for loc_tech in loc_techs)
+
+    return equalizer(sum_cost, cost_cap, what)
+
+
+def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
+    """
+    Limit variable costs specific to a cost class
+    to a certain value, i.e. Ɛ-constrained costs,
+    for groups of technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum{loc::tech \\in loc\\_techs_{group\\_name}, timestep \\in timesteps}
+            \\boldsymbol{cost\\_{var}}(cost, loc::tech, timestep)
+            \\begin{cases}
+                \\leq cost\\_var\\_max(cost)
+                \\geq cost\\_var\\_min(cost)
+                = cost\\_var\\_equals(cost)
+            \\end{cases}
+
+    """
+
+    loc_techs = [i for i in getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    ) if i in backend_model.loc_techs_om_cost]
+
+    model_data_dict = backend_model.__calliope_model_data['data']
+    cost_cap = model_data_dict['group_cost_var_{}'.format(what)].get(
+        (cost, group_name), np.nan
+    )
+
+    if np.isnan(cost_cap):
+        return po.Constraint.NoConstraint
+
+    sum_cost = sum(
+        backend_model.cost_var[cost, loc_tech, timestep]
+        for loc_tech in loc_techs for timestep in backend_model.timesteps
+    )
+
+    return equalizer(sum_cost, cost_cap, what)

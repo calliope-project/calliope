@@ -13,7 +13,7 @@ Running Calliope requires four things:
 
 1. The Python programming language, version 3.6 or higher.
 2. A number of Python add-on modules (see :ref:`below for the complete list <python_module_requirements>`).
-3. A solver: Calliope has been tested with GLPK, CBC, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
+3. A solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
 Recommended installation method
@@ -27,15 +27,11 @@ With Miniconda installed, you can create a new Python 3.6 environment called ``"
 
    $ conda create -c conda-forge -n calliope python=3.6 calliope
 
-To use Calliope, you need to activate the ``calliope`` environment each time. On Linux and macOS::
+To use Calliope, you need to activate the ``calliope`` environment each time::
 
-   $ source activate calliope
+   $ conda activate calliope
 
-On Windows::
-
-   $ activate calliope
-
-You are now ready to use Calliope together with the free and open source GLPK solver. Read the next section for more information on alternative solvers.
+You are now ready to use Calliope together with the free and open source GLPK solver. However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result). Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step. Read the next section for more information on installing alternative solvers.
 
 Updating an existing installation
 =================================
@@ -47,22 +43,22 @@ If following the recommended installation method above, the following command, a
 Solvers
 =======
 
-You need at least one of the solvers supported by Pyomo installed. CPLEX or Gurobi are recommended for large problems, and have been confirmed to work with Calliope. Refer to the documentation of your solver on how to install it.
+You need at least one of the solvers supported by Pyomo installed. CBC (open-source) or Gurobi (commercial) are recommended for large problems, and have been confirmed to work with Calliope. Refer to the documentation of your solver on how to install it.
+
+CBC
+---
+
+`CBC <https://projects.coin-or.org/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ``conda install -c conda-forge coincbc``. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_. We recommend you download the relevant binary for `CBC 2.9.9 <https://bintray.com/coin-or/download/Cbc/2.9.9>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 GLPK
 ----
 
 `GLPK <https://www.gnu.org/software/glpk/>`_ is free and open-source, but can take too much time and/or too much memory on larger problems. If using the recommended installation approach  above, GLPK is already installed in the ``calliope`` environment. To install GLPK manually, refer to the `GLPK website <https://www.gnu.org/software/glpk/>`_.
 
-CBC
----
-
-`CBC <https://projects.coin-or.org/Cbc>`_ is another free and open-source option. CBC can be installed via conda on Linux and macOS by running ``conda install -c conda-forge coincbc``. Windows binary packages and further documentation are available at `the CBC website <https://projects.coin-or.org/Cbc>`_.
-
 Gurobi
 ------
 
-`Gurobi <https://www.gurobi.com/>`_ is commercial but significantly faster than GLPK and CBC, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
+`Gurobi <https://www.gurobi.com/>`_ is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
 
 While Gurobi can be installed via conda (``conda install -c gurobi gurobi``) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
 
