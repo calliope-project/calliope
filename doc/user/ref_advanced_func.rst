@@ -515,6 +515,12 @@ The below table lists all available group constraints.
    * - ``energy_cap_max```
      - [-]
      - Maximum installed capacity from a set of technologies across a set of locations.
+   * - ``resource_area_min```
+     - [-]
+     - Minimum resource area used by a set of technologies across a set of locations.
+   * - ``resource_area_max```
+     - [-]
+     - Maximum resource area used by a set of technologies across a set of locations.
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 

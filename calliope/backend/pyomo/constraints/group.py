@@ -60,6 +60,16 @@ def load_constraints(backend_model):
             backend_model.group_names_energy_cap_max,
             ['max'], rule=energy_cap_constraint_rule
         )
+    if 'group_resource_area_min' in model_data_dict:
+        backend_model.group_resource_area_min_constraint = po.Constraint(
+            backend_model.group_names_resource_area_min,
+            ['min'], rule=resource_area_constraint_rule
+        )
+    if 'group_resource_area_max' in model_data_dict:
+        backend_model.group_resource_area_max_constraint = po.Constraint(
+            backend_model.group_names_resource_area_max,
+            ['max'], rule=resource_area_constraint_rule
+        )
 
     for sense in ['min', 'max', 'equals']:
         if 'group_cost_{}'.format(sense) in model_data_dict:
@@ -371,3 +381,37 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
     )
 
     return equalizer(sum_cost, cost_cap, what)
+
+
+def resource_area_constraint_rule(backend_model, constraint_group, what):
+    """
+    Enforce upper and lower bounds of resource_area for groups of
+    technologies and locations.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{resource_{area}}(loc::tech) \\leq group\\_resource\\_area\\_max\\\\
+
+            \\boldsymbol{resource_{area}}(loc::tech) \\geq group\\_resource\\_area\\_min
+
+    """
+    model_data_dict = backend_model.__calliope_model_data['data']
+    threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]
+
+    if np.isnan(threshold):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+
+        lhs = sum(
+            backend_model.resource_area[loc_tech]
+            for loc_tech in lhs_loc_techs
+        )
+        rhs = threshold
+
+        return equalizer(lhs, rhs, what)
