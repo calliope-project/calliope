@@ -7,6 +7,7 @@ Release History
 -----------
 
 |new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, covering:
+
 * "demand_share_min" and "demand_share_max", "energy_cap_share_min", "energy_cap_share_max", "supply_share_min", "supply_share_max", "demand_share_min", and "demand_share_max". These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
 * `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
 * `energy_cap_min` and `energy_cap_max` which allow to constrain installed capacities of groups of technologies in specific locations.
