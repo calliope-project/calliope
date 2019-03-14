@@ -30,7 +30,7 @@ Release History
 
 |fixed| Models without time series data fail gracefully.
 
-|fixed| Unknown technology parameters are detected and execution stopped.
+|fixed| Unknown technology parameters are detected and the user is warned.
 
 0.6.3 (2018-10-03)
 ------------------

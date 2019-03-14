@@ -196,7 +196,7 @@ def check_initial(config_model):
     for t_name, t_config in config_model.techs.items():
         for key in t_config.keys():
             if key not in defaults["default_tech"].keys():
-                errors.append("Unknown key `{}` defined for tech {}.".format(key, t_name))
+                model_warnings.append("Unknown key `{}` defined for tech {}.".format(key, t_name))
         if not t_config.get_key('essentials.parent'):
             errors.append(
                 'tech {} does not define '

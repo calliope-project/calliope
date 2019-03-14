@@ -445,7 +445,7 @@ class TestChecks:
         """
         override1 = {'techs.test_supply_gas.{}'.format(invalid_key): 'random_string'}
 
-        with pytest.raises(exceptions.ModelError):
+        with pytest.warns(exceptions.ModelWarning):
             build_model(override_dict=override1, scenario='simple_supply')
 
     def test_model_version_mismatch(self):
