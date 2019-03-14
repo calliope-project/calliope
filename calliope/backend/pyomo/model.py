@@ -4,7 +4,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-import logging
 import os
 from contextlib import redirect_stdout, redirect_stderr
 
@@ -85,7 +84,7 @@ def generate_model(model_data):
             setattr(
                 backend_model, k,
                 po.Param(getattr(backend_model, model_data_dict['dims'][k][0]),
-                        initialize=v, mutable=True)
+                         initialize=v, mutable=True)
             )
         else:  # no default value to look up
             setattr(
@@ -106,7 +105,8 @@ def generate_model(model_data):
         'dispatch.load_constraints',
         'network.load_constraints',
         'costs.load_constraints',
-        'policy.load_constraints'
+        'policy.load_constraints',
+        'group.load_constraints'
     ]
 
     if backend_model.__calliope_run_config['mode'] != 'operate':
@@ -144,10 +144,8 @@ def generate_model(model_data):
     # if they are present
     objective_function = ('calliope.backend.pyomo.objective.' +
                           backend_model.__calliope_run_config['objective'])
-    load_function(objective_function)(backend_model)
-
-
-    # delattr(backend_model, '__calliope_model_data')
+    objective_args = backend_model.__calliope_run_config['objective_options']
+    load_function(objective_function)(backend_model, **objective_args)
 
     return backend_model
 
@@ -173,10 +171,10 @@ def solve_model(backend_model, solver,
         })
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    if 'warmstart' in solve_kwargs.keys() and solver == 'glpk':
+    if 'warmstart' in solve_kwargs.keys() and solver in ['glpk', 'cbc']:
         exceptions.ModelWarning(
-            'The chosen solver, GLPK, does not support warmstart, which may '
-            'impact performance.'
+            'The chosen solver, {}, does not suport warmstart, which may '
+            'impact performance.'.format(solver)
         )
         del solve_kwargs['warmstart']
 

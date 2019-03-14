@@ -12,7 +12,7 @@ output:  # Only used if run via the 'calliope run' command-line tool
 
 mode: plan  # Choices: plan, operate
 
-solver: glpk
+solver: cbc
 
 ##
 # PARALLEL RUN SETTINGS

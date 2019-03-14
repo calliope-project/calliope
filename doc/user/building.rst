@@ -77,7 +77,7 @@ The model configuration specifies all aspects of the model to run. It is structu
             power: 0
         subset_time: ['2005-01-01', '2005-01-05']
 
-Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), model-wide constraints can be set, like ``reserve_margin``.
+Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), group constraints can be set, like ``reserve_margin``.
 
 To speed up model runs, the above example specifies a time subset to run the model over only five days of time series data (``subset_time: ['2005-01-01', '2005-01-05']``)-- this is entirely optional. Usually, a full model will contain at least one year of data, but subsetting time can be useful to speed up a model for testing purposes.
 
@@ -169,7 +169,7 @@ The ``locations`` section specifies each location:
                     constraints:
                         energy_cap_max: 30000
 
-Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific parameters (constraints or costs). If given, location-specific parameters supersede any model-wide constraints a technology defines in the ``techs`` section for that location.
+Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific parameters (constraints or costs). If given, location-specific parameters supersede any group constraints a technology defines in the ``techs`` section for that location.
 
 The ``links`` section specifies possible transmission links between locations in the form ``location1,location2``:
 
@@ -184,7 +184,7 @@ The ``links`` section specifies possible transmission links between locations in
                     costs.monetary:
                         energy_cap: 100
 
-In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given model-wide constraints or costs. As in the case of locations, the ``links`` section can specify per-link parameters (constraints or costs) that supersede any model-wide parameters.
+In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given group constraints or costs. As in the case of locations, the ``links`` section can specify per-link parameters (constraints or costs) that supersede any model-wide parameters.
 
 The modeller can also specify a distance for each link, and use per-distance constraints and costs for transmission technologies.
 

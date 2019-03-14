@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.observed_dict import UpdateObserver
+from calliope.core.util.observed_dict import UpdateObserverDict
 
 
 def check_operate_params(model_data):
@@ -33,10 +33,12 @@ def check_operate_params(model_data):
         serious issues that should raise a ModelError
 
     """
-    defaults = UpdateObserver(model_data.attrs['defaults'],
-                              name='defaults', observer=model_data)
-    run_config = UpdateObserver(model_data.attrs['run_config'],
-                                name='run_config', observer=model_data)
+    defaults = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['defaults'],
+        name='defaults', observer=model_data)
+    run_config = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['run_config'],
+        name='run_config', observer=model_data)
 
     warnings, errors = [], []
     comments = AttrDict()
@@ -129,8 +131,8 @@ def check_operate_params(model_data):
             'for all supply_plus techs'
         )
 
-    window = run_config.get('operation.window', None)
-    horizon = run_config.get('operation.horizon', None)
+    window = run_config.get('operation', {}).get('window', None)
+    horizon = run_config.get('operation', {}).get('horizon', None)
     if not window or not horizon:
         errors.append(
             'Operational mode requires a timestep window and horizon to be '

@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest
 import os
 
 import pandas as pd
@@ -495,6 +495,26 @@ class TestChecks:
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario='one_day')
+
+    def test_warn_on_unknown_group_constraint(self):
+        """
+        Unkown group constraints raise a warning, but don't crash
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            group_constraints:
+                mygroup:
+                    foobar: 0
+            """
+        )
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo,
+            'Unrecognised group constraint `foobar` in group `mygroup`'
+        )
 
     def test_abstract_base_tech_group_override(self):
         """

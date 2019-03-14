@@ -15,16 +15,14 @@ This is the documentation for version |version|. See the `main project website <
 
 ------------
 
-Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data). Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents. In an optional operational mode it can also test a pre-defined system under different operational conditions.
-
-A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of `xarray Datasets <http://xarray.pydata.org/en/stable/>`_ which in turn can easily be converted into `Pandas <http://pandas.pydata.org/>`_ data structures, for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
-
-Calliope's built-in tools allow interactive exploration of results, as shown in the following example of a model that includes three energy carriers (electricity, heat, and gas):
+Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data). Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents. In an optional operational mode it can also test a pre-defined system under different operational conditions. Calliope's built-in tools allow interactive exploration of results:
 
 .. raw:: html
    :file: user/images/plot_timeseries.html
 
-Calliope is developed in the open `on GitHub <https://github.com/calliope-project/calliope>`_ and contributions are very welcome (see the :doc:`user/develop`). See the list of `open issues <https://github.com/calliope-project/calliope/issues>`_ and planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of `xarray Datasets <http://xarray.pydata.org/en/stable/>`_ which in turn can easily be converted into `Pandas <http://pandas.pydata.org/>`_ data structures, for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+
+Calliope is developed in the open `on GitHub <https://github.com/calliope-project/calliope>`_ and contributions are very welcome (see the :doc:`user/develop`).
 
 Key features of Calliope include:
 
@@ -51,6 +49,7 @@ User guide
    user/running
    user/analysing
    user/tutorials
+   user/ref_advanced_func
    user/more_info
    user/develop
 

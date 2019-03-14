@@ -7,16 +7,51 @@
  */
 
 {% set page_width_min = '940px' %}
-{% set page_width_max = '1080px' %}
-{% set sidebar_width = '220px' %}
+{% set page_width_max = '1160px' %}
+{% set sidebar_width = '240px' %}
 {% set sidebar_width_withoutpadding = '200px' %}
 
 @import url("basic.css");
 
+@import url('https://rsms.me/inter/inter-ui.css');
+
+@font-face {
+    font-family: 'Lato';
+    src: url(font/lato-regular.eot);
+    src: local('Lato Regular'), local('Lato-Regular'), url(font/lato-regular.eot?#iefix) format('embedded-opentype'), url(font/lato-regular.woff2) format('woff2'), url(font/lato-regular.woff) format('woff'), url(font/lato-regular.ttf) format('truetype'), url(font/lato-regular.svg#lato) format('svg');
+    font-weight: 400;
+    font-style: normal;
+  }
+
+@font-face {
+    font-family: 'Lato';
+    src: url(font/lato-bold.eot);
+    src: local('Lato Bold'), local('Lato-Bold'), url(font/lato-bold.eot?#iefix) format('embedded-opentype'), url(font/lato-bold.woff2) format('woff2'), url(font/lato-bold.woff) format('woff'), url(font/lato-bold.ttf) format('truetype'), url(font/lato-bold.svg#lato) format('svg');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+@font-face {
+    font-family: 'Ubuntu Mono';
+    src: url('font/ubuntumono-regular-webfont.eot');
+    src: url('font/ubuntumono-regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('font/ubuntumono-regular-webfont.woff2') format('woff2'),
+         url('font/ubuntumono-regular-webfont.woff') format('woff'),
+         url('font/ubuntumono-regular-webfont.ttf') format('truetype'),
+         url('font/ubuntumono-regular-webfont.svg#ubuntu_monoregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
 /* -- page layout ----------------------------------------------------------- */
 
+body { font-family: 'Inter UI', sans-serif; }
+@supports (font-variation-settings: normal) {
+    body { font-family: 'Inter UI var alt', sans-serif; }
+}
+
 body {
-    font-family: 'Georgia', serif;
+    /* font-family: 'Lato', 'Helvetica Neue', 'Helvetica', sans-serif; */
     font-size: 17px;
     background-color: white;
     color: #000;
@@ -46,11 +81,27 @@ div.sphinxsidebar {
     height: 100vh;
 }
 
+.sphinxsidebar h1 {
+    font-family: 'Lato', 'Helvetica Neue', 'Helvetica', sans-serif;
+    margin-top: 0;
+    font-weight: normal;
+    color: #98252D;
+}
+
+.sphinxsidebar a h1 {
+    color: #98252D;
+}
+
+.sphinxsidebar .small {
+    font-size: 15px;
+    color: rgb(97, 97, 97);
+}
+
 div#sidebartoc{
     width: {{ sidebar_width_withoutpadding }};
     overflow-y: auto;
     position: sticky;
-    height: 100vh;
+    height: 80vh;
 }
 
 div#sidebartoc div{
@@ -66,7 +117,6 @@ div#sidebarsearch{
 }
 
 #sidebarsearch input {
-    font-size: 17px;
     width: {{ sidebar_width_withoutpadding }};
 }
 
@@ -89,7 +139,7 @@ div.footer {
     min-width: {{ page_width_min }};
     max-width: {{ page_width_max }};
     margin: 20px auto 30px auto;
-    font-size: 14px;
+    font-size: 15px;
     color: #888;
     text-align: right;
 }
@@ -121,7 +171,7 @@ div.sphinxsidebar a.current {
 }
 
 div.sphinxsidebar {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
 }
 
@@ -137,7 +187,7 @@ div.sphinxsidebarwrapper p.logo {
 
 div.sphinxsidebar h3,
 div.sphinxsidebar h4 {
-    font-family: 'EB Garamond', 'Garamond', 'Georgia', serif;
+    font-family: 'Lato', 'Helvetica Neue', 'Helvetica', sans-serif;
     color: #444;
     font-size: 20px;
     /* font-weight: normal; */
@@ -175,7 +225,7 @@ div.sphinxsidebar ul {
 
 div.sphinxsidebar input {
     border: 1px solid #ccc;
-    font-family: 'Georgia', serif;
+    font-family: 'Inter UI', 'Helvetica Neue', 'Helvetica', sans-serif;
     font-size: 1em;
 }
 
@@ -200,14 +250,11 @@ div.scrolling-wrapper {
 /* -- body styles ----------------------------------------------------------- */
 
 a {
-    // color: #004B6B;
-    // color: #0A4EB2;
     color: #0A2C7E;
     text-decoration: underline;
 }
 
 a:hover {
-    // color: #6D4100;
     text-decoration: underline;
 }
 
@@ -217,7 +264,7 @@ div.body h3,
 div.body h4,
 div.body h5,
 div.body h6 {
-    font-family: 'EB Garamond', 'Garamond', 'Georgia', serif;
+    font-family: 'Lato', 'Helvetica Neue', 'Helvetica', sans-serif;
     font-weight: normal;
     margin: 30px 0px 10px 0px;
     padding: 0;
@@ -255,8 +302,8 @@ div.body p, div.body dd, div.body li {
 div.body p.caption {
     // text-align: center;
     padding: 0 60px;
-    font-size: 14px;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    font-family: 'Inter UI', 'Helvetica Neue', 'Helvetica', sans-serif;
 }
 
 div.admonition {
@@ -277,7 +324,7 @@ dd div.admonition {
 }
 
 div.admonition p.admonition-title {
-    font-family: 'EB Garamond', 'Garamond', 'Georgia', serif;
+    font-family: 'Inter UI', 'Helvetica Neue', 'Helvetica', sans-serif;
     font-weight: normal;
     font-size: 24px;
     margin: 0 0 10px 0;
@@ -320,8 +367,8 @@ p.admonition-title:after {
 }
 
 pre, tt {
-    font-family: 'Consolas', 'Menlo', 'Deja Vu Sans Mono', 'Bitstream Vera Sans Mono', monospace;
-    font-size: 0.9em;
+    font-family: 'Ubuntu Mono', monospace;
+    font-size: 1.0em;
 }
 
 img.screenshot {
@@ -445,15 +492,15 @@ ul, ol {
 }
 
 pre {
-    background: #eee;
+    background: #ececec;
     padding: 7px 30px;
     margin: 15px -30px;
     line-height: 1.3em;
 }
 
 .pre {
-    font-family: monospace;
-    background: #FAFCEF;
+    font-family: 'Ubuntu Mono', monospace;
+    background: #ececec;
     padding: 2px;
 }
 
@@ -489,7 +536,7 @@ a.reference {
 
 a.reference:hover {
     background-color: #F3F3F3;
-    border-bottom: 1px solid #6D4100;
+    border-bottom: 1px solid #000000;
 }
 
 a.footnote-reference {
@@ -500,7 +547,7 @@ a.footnote-reference {
 }
 
 a.footnote-reference:hover {
-    border-bottom: 1px solid #6D4100;
+    border-bottom: 1px solid #000000;
 }
 
 a:hover tt {
@@ -749,7 +796,6 @@ dl.function {
     border-bottom: 2px solid #f0f0f0;
     margin-bottom: 30px;
     padding-bottom: 30px;
-    /* font-size: 14px; */
 }
 
 h2 + span + dl.function, h2 + dl.function {
@@ -787,7 +833,7 @@ code.descname {
 /* JUPYTER NOTEBOOK BELOW */
 
 div#notebook {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 20px;
     overflow-y: hidden;
     overflow-x: auto;
@@ -934,7 +980,7 @@ div.cell.selected.jupyter-soft-selected {
     padding: 0.4em;
     margin: 0px;
     font-size: 80%;
-    font-family: monospace;
+    font-family: 'Ubuntu Mono', monospace;
     text-align: right;
     /* This has to match that of the the CodeMirror class line-height below */
     line-height: 1.21429em;
@@ -1342,7 +1388,7 @@ pre.raw_input_prompt {
 }
 
 input.raw_input {
-    font-family: monospace;
+    font-family: 'Ubuntu Mono', monospace;
     font-size: inherit;
     color: inherit;
     width: auto;
@@ -1629,7 +1675,6 @@ div.text_cell {
 }
 
 div.text_cell_render {
-    /*font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;*/
     outline: none;
     resize: none;
     width: inherit;
@@ -1676,7 +1721,7 @@ h6:hover .anchor-link {
 .cm-header-5,
 .cm-header-6 {
     font-weight: bold;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: 'Lato', 'Helvetica Neue', 'Helvetica', sans-serif;
 }
 
 .cm-header-1 {

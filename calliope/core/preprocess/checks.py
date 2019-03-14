@@ -111,7 +111,7 @@ def check_initial(config_model):
     for k in config_model.keys():
         if k not in [
                 'model', 'run', 'locations', 'tech_groups', 'techs', 'links',
-                'overrides', 'scenarios', 'config_path']:
+                'overrides', 'scenarios', 'config_path', 'group_constraints']:
             model_warnings.append(
                 'Unrecognised top-level configuration item: {}'.format(k)
             )
@@ -121,7 +121,7 @@ def check_initial(config_model):
     # options for all solvers
     for k in config_model['run'].keys_nested():
         if (k not in defaults_model['run'].keys_nested() and
-                'solver_options' not in k):
+                'solver_options' not in k and 'objective_options.cost_class' not in k):
             model_warnings.append(
                 'Unrecognised setting in run configuration: {}'.format(k)
             )
@@ -144,6 +144,20 @@ def check_initial(config_model):
                 "'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3'] "
                 "is valid.".format(key)
             )
+
+    # Warn if any unknown group constraints are defined
+    permitted_group_constraints = ['techs', 'locs', 'exists'] + \
+        defaults.allowed_group_constraints.per_carrier + \
+        defaults.allowed_group_constraints.per_cost + \
+        defaults.allowed_group_constraints.general
+
+    for group in config_model.get('group_constraints', {}).keys():
+        for key in config_model.group_constraints[group].keys():
+            if key not in permitted_group_constraints:
+                model_warnings.append(
+                    'Unrecognised group constraint `{}` in group `{}` '
+                    'will be ignored - possibly a misspelling?'.format(key, group)
+                )
 
     # No techs may have the same identifier as a tech_group
     name_overlap = (
@@ -554,4 +568,12 @@ def check_future_deprecation_warnings(model_run, model_data):
     warning should specify Calliope version in which it was added, and the
     version in which it should be updated/removed.
     """
-    return None
+
+    # Warning that group_share constraints will removed in 0.7.0 #
+    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+    if model_run is not None and 'group_share' in model_run.model:
+        warnings.warn(
+            '`group_share` constraints will be removed in v0.7.0 -- '
+            'use the new model-wide constraints instead.',
+            DeprecationWarning
+        )

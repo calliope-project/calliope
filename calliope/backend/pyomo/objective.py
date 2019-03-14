@@ -13,7 +13,8 @@ Objective functions.
 import pyomo.core as po  # pylint: disable=import-error
 from calliope.core.util.tools import load_function
 
-def minmax_cost_optimization(backend_model):
+
+def minmax_cost_optimization(backend_model, cost_class, sense):
     """
     Minimize or maximise total system cost for specified cost class or a set of cost classes.
     cost_class is a string or dictionary. If a string, it is automatically converted to a
@@ -36,12 +37,8 @@ def minmax_cost_optimization(backend_model):
 
     """
 
-    options = backend_model.__calliope_run_config['objective_options']
-    sense = options['sense']
-
     def obj_rule(backend_model):
-        cost_class = options['cost_class']
-
+        nonlocal cost_class
         if backend_model.__calliope_run_config.get('ensure_feasibility', False):
             unmet_demand = sum(
                 (backend_model.unmet_demand[loc_carrier, timestep] -

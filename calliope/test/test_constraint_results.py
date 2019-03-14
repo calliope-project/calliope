@@ -4,6 +4,8 @@ from pytest import approx
 import calliope
 from calliope.test.common.util import build_test_model as build_model
 
+RELATIVE_TOLERANCE = 0.0001
+
 
 class TestNationalScaleExampleModelSenseChecks:
     def test_group_share_prod_min(self):
@@ -148,3 +150,501 @@ class TestModelSettings:
         )
         model.run()
         assert not model._model_data.attrs['termination_condition'] == 'optimal'
+
+
+class TestGroupConstraints:
+
+    def test_no_group_constraint(self):
+        model = build_model(model_file="group_constraints.yaml")
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    def test_switched_off_group_constraint(self):
+        model = build_model(
+            model_file="group_constraints.yaml",
+            scenario="switching_off_group_constraint"
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    @pytest.mark.xfail(reason="Check not yet implemented.")
+    def test_group_constraint_without_technology(self):
+        model = build_model(
+            model_file='group_constraints.yaml',
+            scenario='group_constraint_without_tech'
+        )
+        with pytest.raises(calliope.exceptions.ModelError):
+            model.run()
+
+    def test_group_constraint_with_several_constraints(self):
+        model = build_model(
+            model_file='group_constraints.yaml',
+            scenario='several_group_constraints'
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .transform(lambda x: x / x.sum())
+                                     .loc["expensive_supply"])
+        assert round(expensive_generation, 5) >= 0.8
+
+
+class TestDemandShareGroupConstraints:
+    def test_no_demand_share_constraint(self):
+        model = build_model(model_file='demand_share.yaml')
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_elec_supply"])
+        assert expensive_generation == 0
+
+    def test_systemwide_demand_share_max_constraint(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_max_systemwide'
+        )
+        model.run()
+        cheap_generation = (model.get_formatted_array("carrier_prod")
+                                 .to_dataframe()
+                                 .reset_index()
+                                 .groupby("techs")
+                                 .carrier_prod
+                                 .sum()
+                                 .transform(lambda x: x / x.sum())
+                                 .loc["cheap_elec_supply"])
+        assert round(cheap_generation, 5) <= 0.3
+
+    def test_systemwide_demand_share_min_constraint(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_min_systemwide'
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .transform(lambda x: x / x.sum())
+                                     .loc["expensive_elec_supply"])
+        assert round(expensive_generation, 5) >= 0.6
+
+    def test_location_specific_demand_share_max_constraint(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_max_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
+        cheap_generation0 = generation.loc[("0", "cheap_elec_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_elec_supply", "electricity")]
+        assert round(cheap_generation0 / demand0, 5) <= 0.3
+        assert expensive_generation1 == 0
+
+    def test_location_specific_demand_share_min_constraint(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_min_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
+        expensive_generation0 = generation.loc[("0", "expensive_elec_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_elec_supply", "electricity")]
+        assert round(expensive_generation0 / demand0, 5) >= 0.6
+        assert expensive_generation1 == 0
+
+    def test_multiple_group_constraints(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='multiple_constraints'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'locs', 'carriers')))
+        demand = -model.get_formatted_array("carrier_con").sum().item()
+        cheap_generation = generation.loc[{'techs': 'cheap_elec_supply'}].item()
+        expensive_generation = generation.loc[{'techs': 'expensive_elec_supply'}].item()
+
+        assert round(expensive_generation / demand, 5) >= 0.6
+        assert round(cheap_generation / demand, 5) <= 0.3
+
+    def test_multiple_group_carriers(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='multiple_carriers_max'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'locs')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps', 'locs')))
+        cheap_generation_elec = generation.loc[{'techs': 'cheap_elec_supply', 'carriers': 'electricity'}].item()
+        demand_elec = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity'}].item()
+        cheap_generation_heat = generation.loc[{'techs': 'cheap_heat_supply', 'carriers': 'heat'}].item()
+        demand_heat = demand.loc[{'techs': 'heat_demand', 'carriers': 'heat'}].item()
+
+        assert round(cheap_generation_elec / demand_elec, 5) <= 0.3
+        assert round(cheap_generation_heat / demand_heat, 5) <= 0.5
+
+    def test_multiple_group_carriers_constraints(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='multiple_constraints_carriers'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'locs')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps', 'locs')))
+        cheap_generation_elec = generation.loc[{'techs': 'cheap_elec_supply', 'carriers': 'electricity'}].item()
+        expensive_generation_elec = generation.loc[{'techs': 'expensive_elec_supply', 'carriers': 'electricity'}].item()
+        demand_elec = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity'}].item()
+        cheap_generation_heat = generation.loc[{'techs': 'cheap_heat_supply', 'carriers': 'heat'}].item()
+        expensive_generation_heat = generation.loc[{'techs': 'expensive_heat_supply', 'carriers': 'heat'}].item()
+        demand_heat = demand.loc[{'techs': 'heat_demand', 'carriers': 'heat'}].item()
+
+        assert round(cheap_generation_elec / demand_elec, 5) <= 0.3
+        assert round(expensive_generation_elec / demand_elec, 5) >= 0.6
+        assert round(cheap_generation_heat / demand_heat, 5) <= 0.5
+        assert round(expensive_generation_heat / demand_heat, 5) >= 0.4
+
+    def test_different_locations_per_group_constraint(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='different_locations_per_group'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'carriers')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps')))
+        cheap_generation_0 = generation.loc[{'techs': 'cheap_elec_supply', 'locs': '0'}].item()
+        expensive_generation_0 = generation.loc[{'techs': 'expensive_elec_supply', 'locs': '0'}].item()
+        cheap_generation_1 = generation.loc[{'techs': 'cheap_elec_supply', 'locs': '1'}].item()
+        expensive_generation_1 = generation.loc[{'techs': 'expensive_elec_supply', 'locs': '1'}].item()
+        demand_elec_0 = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity', 'locs': '0'}].item()
+        demand_elec_1 = demand.loc[{'techs': 'electricity_demand', 'carriers': 'electricity', 'locs': '1'}].item()
+
+        assert round(expensive_generation_0 / demand_elec_0, 5) >= 0.6
+        assert expensive_generation_1 / demand_elec_1 == 0
+        assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
+
+    def test_systemwide_cost_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_max_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert round(cheap_cost, 5) <= 30
+
+    def test_systemwide_cost_investment_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_investment_max_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        cheap_cost_investment = (model.get_formatted_array('cost_investment')
+                                      .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert cheap_cost > cheap_cost_investment
+        assert round(cheap_cost_investment, 5) <= 4
+
+    def test_systemwide_cost_var_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_var_max_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        cheap_cost_var = (model.get_formatted_array('cost_var')
+                               .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert cheap_cost > cheap_cost_var
+        assert round(cheap_cost_var, 5) <= 200
+
+    def test_systemwide_cost_min_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='expensive_cost_min_systemwide'
+        )
+        model.run()
+        expensive_cost = (model.get_formatted_array('cost')
+                               .loc[{'costs': 'monetary', 'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(expensive_cost, 5) >= 600
+
+    def test_systemwide_cost_equals_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_equals_systemwide'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        assert cheap_cost == approx(210)
+
+    def test_location_specific_cost_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='cheap_cost_max_location_0'
+        )
+        model.run()
+        cheap_cost0 = (model.get_formatted_array('cost')
+                            .loc[{'costs': 'monetary',
+                                  'techs': 'cheap_polluting_supply',
+                                  'locs': '0'}]).sum().item()
+        assert round(cheap_cost0, 5) <= 10
+
+    def test_systemwide_emissions_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='emissions_max_systemwide'
+        )
+        model.run()
+        emissions = (model.get_formatted_array('cost')
+                          .loc[{'costs': 'emissions'}]).sum().item()
+        assert round(emissions, 5) <= 400
+
+    def test_location_specific_emissions_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='emissions_max_location_0'
+        )
+        model.run()
+        emissions0 = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'emissions',
+                                 'locs': '0'}]).sum().item()
+        assert round(emissions0, 5) <= 200
+
+    def test_systemwide_clean_emissions_max_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='clean_emissions_max_systemwide'
+        )
+        model.run()
+        clean_emissions = (model.get_formatted_array('cost')
+                                .loc[{'costs': 'emissions',
+                                      'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(clean_emissions, 5) <= 300
+
+    def test_multiple_costs_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='multiple_costs_constraint'
+        )
+        model.run()
+        emissions = (model.get_formatted_array('cost')
+                          .loc[{'costs': 'emissions'}]).sum().item()
+        expensive_cost = (model.get_formatted_array('cost')
+                               .loc[{'costs': 'monetary',
+                                     'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(emissions, 5) <= 400
+        assert round(expensive_cost, 5) <= 600
+
+    def test_different_locations_per_cost_group_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='different_locations_per_group'
+        )
+        model.run()
+        cheap_cost = (model.get_formatted_array('cost')
+                           .loc[{'costs': 'monetary', 'techs': 'cheap_polluting_supply'}]).sum().item()
+        cheap_cost0 = (model.get_formatted_array('cost')
+                            .loc[{'costs': 'monetary',
+                                  'techs': 'cheap_polluting_supply',
+                                  'locs': '0'}]).sum().item()
+        assert round(cheap_cost, 5) <= 30
+        assert round(cheap_cost0, 5) <= 10
+
+    def test_different_techs_per_cost_group_constraint(self):
+        model = build_model(
+            model_file='model_cost_cap.yaml',
+            scenario='different_techs_per_group'
+        )
+        model.run()
+        emissions = (model.get_formatted_array('cost')
+                          .loc[{'costs': 'emissions'}]).sum().item()
+        clean_emissions = (model.get_formatted_array('cost')
+                                .loc[{'costs': 'emissions',
+                                      'techs': 'expensive_clean_supply'}]).sum().item()
+        assert round(emissions, 5) <= 400
+        assert round(clean_emissions, 5) <= 300
+
+
+class TestSupplyShareGroupConstraints:
+
+    def test_no_supply_share_constraint(self):
+        model = build_model(model_file='supply_share.yaml')
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    def test_systemwide_supply_share_max_constraint(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_max_systemwide'
+        )
+        model.run()
+        cheap_generation = (model.get_formatted_array("carrier_prod")
+                                 .to_dataframe()
+                                 .reset_index()
+                                 .groupby("techs")
+                                 .carrier_prod
+                                 .sum()
+                                 .transform(lambda x: x / x.sum())
+                                 .loc["cheap_supply"])
+        assert round(cheap_generation, 5) <= 0.4
+
+    def test_systemwide_supply_share_min_constraint(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_min_systemwide'
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .transform(lambda x: x / x.sum())
+                                     .loc["expensive_supply"])
+        assert round(expensive_generation, 5) >= 0.6
+
+    def test_location_specific_supply_share_max_constraint(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_max_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
+        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
+        assert round(cheap_generation0 / (cheap_generation0 + expensive_generation0), 5) <= 0.4
+        assert expensive_generation1 == 0
+
+    def test_location_specific_supply_share_min_constraint(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_min_location_0'
+        )
+        model.run()
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim='timesteps')
+                           .to_dataframe()["carrier_prod"])
+        cheap_generation0 = generation.loc[("0", "cheap_supply", "electricity")]
+        expensive_generation0 = generation.loc[("0", "expensive_supply", "electricity")]
+        expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
+        assert round(expensive_generation0 / (cheap_generation0 + expensive_generation0), 5) >= 0.6
+        assert expensive_generation1 == 0
+
+
+class TestEnergyCapGroupConstraints:
+
+    def test_no_energy_cap_constraint(self):
+        model = build_model(model_file='energy_cap.yaml')
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert expensive_capacity == 0
+
+    def test_systemwide_energy_cap_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_max_systemwide'
+        )
+        model.run()
+        cheap_capacity = (model.get_formatted_array("energy_cap")
+                               .to_dataframe()
+                               .reset_index()
+                               .groupby("techs")
+                               .energy_cap
+                               .sum()
+                               .loc["cheap_supply"])
+        assert round(cheap_capacity, 5) <= 14
+
+    def test_systemwide_energy_cap_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_min_systemwide'
+        )
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert round(expensive_capacity, 5) >= 6
+
+    def test_location_specific_energy_cap_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_max_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        cheap_capacity0 = capacity.loc[("0", "cheap_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert round(cheap_capacity0, 5) <= 4
+        assert expensive_capacity1 == 0
+
+    def test_location_specific_energy_cap_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_min_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert round(expensive_capacity0, 5) >= 6
+        assert expensive_capacity1 == 0
