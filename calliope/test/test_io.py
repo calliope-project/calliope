@@ -34,19 +34,10 @@ class TestIO:
             with pytest.raises(FileExistsError):
                 model.to_csv(out_path)
 
-    @pytest.mark.parametrize("file_name", [
-        'inputs_resource_eff.csv', 'inputs_storage_loss.csv',
-        'inputs_names.csv', 'inputs_loc_coordinates.csv', 'inputs_lookup_loc_carriers.csv',
-        'inputs_lookup_loc_techs_area.csv', 'inputs_energy_con.csv', 'inputs_resource.csv',
-        'inputs_storage_cap_max.csv', 'inputs_energy_cap_max_systemwide.csv', 'inputs_cost_om_con.csv',
-        'inputs_charge_rate.csv', 'inputs_lifetime.csv', 'inputs_max_demand_timesteps.csv',
-        'inputs_parasitic_eff.csv', 'inputs_timestep_resolution.csv', 'inputs_energy_eff.csv',
-        'inputs_energy_cap_max.csv', 'inputs_timestep_weights.csv', 'inputs_cost_storage_cap.csv',
-        'inputs_cost_resource_cap.csv', 'inputs_cost_depreciation_rate.csv', 'inputs_energy_prod.csv',
-        'inputs_cost_resource_area.csv', 'inputs_cost_om_prod.csv', 'inputs_lookup_loc_techs.csv',
-        'inputs_cost_energy_cap.csv', 'inputs_colors.csv', 'inputs_resource_unit.csv', 'inputs_inheritance.csv',
-        'inputs_energy_ramping.csv', 'inputs_resource_area_max.csv', 'inputs_force_resource.csv'
-    ])
+    @pytest.mark.parametrize("file_name", sorted([
+        'inputs_{}.csv'.format(i)
+        for i in calliope.examples.national_scale().inputs.data_vars.keys()
+    ]))
     def test_save_csv(self, model, file_name):
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, 'out_dir')

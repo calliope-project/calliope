@@ -15,8 +15,10 @@ from calliope.core.util.tools import \
 
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
-from calliope.test.common.util import python36_or_higher
-
+from calliope.test.common.util import (
+    python36_or_higher,
+    check_error_or_warning
+)
 
 _MODEL_NATIONAL = os.path.join(
     os.path.dirname(__file__), '..',
@@ -153,7 +155,7 @@ class TestPandasExport:
 
     @pytest.mark.parametrize(
         "variable_name",
-        [i for i in calliope.examples.national_scale()._model_data.data_vars.keys()]
+        sorted([i for i in calliope.examples.national_scale()._model_data.data_vars.keys()])
     )
     def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
         model.get_formatted_array(variable_name).to_dataframe()
@@ -181,15 +183,15 @@ class TestObservedDict:
     @pytest.fixture(scope="module")
     def observed_from_dict(self, observer):
         initial_dict = {'foo': 'bar', 'foobar': {'baz': 'fob'}}
-        return observed_dict.UpdateObserver(
-            initial_dict, name='test', observer=observer
+        return observed_dict.UpdateObserverDict(
+            initial_dict=initial_dict, name='test', observer=observer
         )
 
     @pytest.fixture(scope="module")
     def observed_from_string(self, observer):
         initial_dict = {'foo': 'bar', 'foobar': {'baz': 'fob'}}
-        return observed_dict.UpdateObserver(
-            self.as_yaml(initial_dict), name='test_2', observer=observer
+        return observed_dict.UpdateObserverDict(
+            initial_yaml_string=self.as_yaml(initial_dict), name='test_2', observer=observer
         )
 
     def test_initialise_observer(self, observer, observed_from_dict, observed_from_string):
@@ -197,6 +199,28 @@ class TestObservedDict:
         assert 'test_2' in observer.attrs.keys()
         assert observer.attrs['test'] == self.as_yaml({'foo': 'bar', 'foobar': {'baz': 'fob'}})
         observer.attrs['test'] == observer.attrs['test_2']
+
+    def test_value_error_on_initialising(self):
+        initial_dict = {'foo': 'bar', 'foobar': {'baz': 'fob'}}
+        initial_string = self.as_yaml(initial_dict)
+        with pytest.raises(ValueError) as error:
+            observed_dict.UpdateObserverDict(
+                name='test_2', observer=xr.Dataset()
+            )
+        assert check_error_or_warning(
+            error,
+            'must supply one, and only one, of initial_dict or initial_yaml_string'
+        )
+        with pytest.raises(ValueError) as error:
+            observed_dict.UpdateObserverDict(
+                initial_yaml_string=initial_string,
+                initial_dict=initial_dict,
+                name='test_2', observer=xr.Dataset()
+            )
+        assert check_error_or_warning(
+            error,
+            'must supply one, and only one, of initial_dict or initial_yaml_string'
+        )
 
     @pytest.mark.parametrize('key1,key2,value,result', [
         ('foo', None, 1, {'foo': 1, 'foobar': {'baz': 'fob'}}),
