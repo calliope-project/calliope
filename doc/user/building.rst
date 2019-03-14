@@ -130,6 +130,8 @@ The ``costs`` section gives costs for the technology. Calliope uses the concept 
 
 By default the ``monetary`` cost class is used in the objective function, which seeks to minimize total costs. Additional cost classes can be created simply by adding them to the definition of costs for a technology. To use an alternative cost class and/or sense (minimize/maximize) in the objective function, the ``objective_options`` parameter can be set in the run configuration, e.g. ``objective_options: {'cost_class': 'emissions', 'sense': 'minimize'}``.
 
+Multiple cost classes can also be considered in the objective, by setting the `cost_class` key to a dictionary of cost classes and their weights, e.g. ``objective_options: {'cost_class': {'monetary': 1, 'emissions': 0.1}}``. In this example, monetary costs are summed as usual and emissions are added to this, scaled by 0.1 (emulating a carbon price).
+
 .. seealso::
 
     :ref:`config_reference_constraints`, :ref:`config_reference_costs`, :doc:`tutorials <tutorials>`, :doc:`built-in examples <ref_example_models>`

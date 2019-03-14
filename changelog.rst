@@ -6,6 +6,8 @@ Release History
 0.6.4 (dev)
 -----------
 
+|new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}, which emulates a carbon price)
+
 |new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, covering:
 * "demand_share_min" and "demand_share_max", "energy_cap_min", "energy_cap_max", "supply_share_min", "supply_share_max", "demand_share_min", and "demand_share_max". These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
 * `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
