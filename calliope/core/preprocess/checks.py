@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 preprocess_checks.py
@@ -13,14 +13,13 @@ import os
 import warnings
 
 import numpy as np
-import xarray as xr
 
 from inspect import signature
 
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers, flatten_list
+from calliope.core.preprocess.util import get_all_carriers
 from calliope.core.util.logging import logger
 from calliope.core.util.tools import load_function
 
@@ -195,6 +194,9 @@ def check_initial(config_model):
             )
 
     for t_name, t_config in config_model.techs.items():
+        for key in t_config.keys():
+            if key not in defaults["default_tech"].keys():
+                model_warnings.append("Unknown key `{}` defined for tech {}.".format(key, t_name))
         if not t_config.get_key('essentials.parent'):
             errors.append(
                 'tech {} does not define '

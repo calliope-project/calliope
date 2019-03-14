@@ -102,3 +102,4 @@ default_tech:
             resource_area: 0  # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
             resource_cap: 0  # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
             storage_cap: 0  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
+    exists: true
