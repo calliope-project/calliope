@@ -503,6 +503,12 @@ The below table lists all available group constraints.
    * - ``energy_cap_share_max```
      - [-]
      - Maximums share of installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_min```
+     - [-]
+     - Minimum installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_max```
+     - [-]
+     - Maximum installed capacity from a set of technologies across a set of locations.
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
@@ -520,6 +526,7 @@ This works for:
 * Links: ``links.location1,location2.exists: false``
 * Techs at a specific location:  ``locations.location_name.techs.tech_name.exists: false``
 * Transmission techs at a specific location: ``links.location1,location2.techs.transmission_tech.exists: false``
+* Group constraints: ``group_constraints.my_constraint.exists: false``
 
 .. _operational_mode:
 

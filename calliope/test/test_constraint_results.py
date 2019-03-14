@@ -150,8 +150,38 @@ class TestModelSettings:
 
 
 class TestGroupConstraints:
+
+    def test_no_group_constraint(self):
+        model = build_model(model_file="group_constraints.yaml")
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+    def test_switched_off_group_constraint(self):
+        model = build_model(
+            model_file="group_constraints.yaml",
+            scenario="switching_off_group_constraint"
+        )
+        model.run()
+        expensive_generation = (model.get_formatted_array("carrier_prod")
+                                     .to_dataframe()
+                                     .reset_index()
+                                     .groupby("techs")
+                                     .carrier_prod
+                                     .sum()
+                                     .loc["expensive_supply"])
+        assert expensive_generation == 0
+
+
+class TestDemandShareGroupConstraints:
     def test_no_demand_share_constraint(self):
-        model = build_model(model_file='model_demand_share.yaml')
+        model = build_model(model_file='demand_share.yaml')
         model.run()
         expensive_generation = (model.get_formatted_array("carrier_prod")
                                      .to_dataframe()
@@ -164,7 +194,7 @@ class TestGroupConstraints:
 
     def test_systemwide_demand_share_max_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_max_systemwide'
         )
         model.run()
@@ -180,7 +210,7 @@ class TestGroupConstraints:
 
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_min_systemwide'
         )
         model.run()
@@ -196,7 +226,7 @@ class TestGroupConstraints:
 
     def test_location_specific_demand_share_max_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_max_location_0'
         )
         model.run()
@@ -211,7 +241,7 @@ class TestGroupConstraints:
 
     def test_location_specific_demand_share_min_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='demand_share_min_location_0'
         )
         model.run()
@@ -226,7 +256,7 @@ class TestGroupConstraints:
 
     def test_multiple_group_constraints(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='multiple_constraints'
         )
         model.run()
@@ -241,7 +271,7 @@ class TestGroupConstraints:
 
     def test_multiple_group_carriers(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='multiple_carriers_max'
         )
         model.run()
@@ -259,7 +289,7 @@ class TestGroupConstraints:
 
     def test_multiple_group_carriers_constraints(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='multiple_constraints_carriers'
         )
         model.run()
@@ -281,7 +311,7 @@ class TestGroupConstraints:
 
     def test_different_locatinos_per_group_constraint(self):
         model = build_model(
-            model_file='model_demand_share.yaml',
+            model_file='demand_share.yaml',
             scenario='different_locations_per_group'
         )
         model.run()
@@ -375,4 +405,75 @@ class TestEnergyCapShareGroupConstraints:
         expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
         expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
         assert expensive_capacity0 / (cheap_capacity0 + expensive_capacity0) >= 0.6
+        assert expensive_capacity1 == 0
+
+
+class TestEnergyCapGroupConstraints:
+
+    def test_no_energy_cap_constraint(self):
+        model = build_model(model_file='energy_cap.yaml')
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert expensive_capacity == 0
+
+    def test_systemwide_energy_cap_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_max_systemwide'
+        )
+        model.run()
+        cheap_capacity = (model.get_formatted_array("energy_cap")
+                               .to_dataframe()
+                               .reset_index()
+                               .groupby("techs")
+                               .energy_cap
+                               .sum()
+                               .loc["cheap_supply"])
+        assert cheap_capacity <= 14
+
+    def test_systemwide_energy_cap_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_min_systemwide'
+        )
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert expensive_capacity >= 6
+
+    def test_location_specific_energy_cap_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_max_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        cheap_capacity0 = capacity.loc[("0", "cheap_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert cheap_capacity0 <= 4
+        assert expensive_capacity1 == 0
+
+    def test_location_specific_energy_cap_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap.yaml',
+            scenario='energy_cap_min_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert expensive_capacity0 >= 6
         assert expensive_capacity1 == 0
