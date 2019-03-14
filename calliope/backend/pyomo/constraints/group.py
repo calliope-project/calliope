@@ -389,10 +389,13 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
     technologies and locations.
 
     .. container:: scrolling-wrapper
-
+            
         .. math::
 
-            \\boldsymbol{resource_{area}}(loc::tech) \\leq threshold
+            \\boldsymbol{resource_{area}}(loc::tech) \\leq group\\_resource\\_area\\_max\\\\
+
+            \\boldsymbol{resource_{area}}(loc::tech) \\geq group\\_resource\\_area\\_min
+
     """
     model_data_dict = backend_model.__calliope_model_data['data']
     threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]
