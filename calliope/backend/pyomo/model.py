@@ -5,7 +5,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import os
-import ruamel.yaml
 from contextlib import redirect_stdout, redirect_stderr
 
 import numpy as np
@@ -26,6 +25,7 @@ from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter, logger
 from calliope.core.util.dataset import reorganise_dataset_dimensions
 from calliope import exceptions
+from calliope.core.attrdict import AttrDict
 
 
 def generate_model(model_data):
@@ -34,8 +34,6 @@ def generate_model(model_data):
 
     """
     backend_model = po.ConcreteModel()
-    mode = model_data.attrs['run.mode']  # 'plan' or 'operate'
-    backend_model.mode = mode
 
     # Sets
     for coord in list(model_data.coords):
@@ -66,29 +64,33 @@ def generate_model(model_data):
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
     # remainder of dims are in alphabetic order
-    backend_model.__calliope_model_data__ = model_data_dict
-    backend_model.__calliope_defaults__ = (
-        ruamel.yaml.load(model_data.attrs['defaults'], Loader=ruamel.yaml.Loader)
-    )
+    backend_model.__calliope_model_data = model_data_dict
+    backend_model.__calliope_defaults = AttrDict.from_yaml_string(model_data.attrs['defaults'])
+    backend_model.__calliope_run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
 
     for k, v in model_data_dict['data'].items():
-        if k in backend_model.__calliope_defaults__.keys():
+        if k in backend_model.__calliope_defaults.keys():
             setattr(
                 backend_model, k,
                 po.Param(*[getattr(backend_model, i)
                            for i in model_data_dict['dims'][k]],
                          initialize=v, mutable=True,
-                         default=backend_model.__calliope_defaults__[k])
+                         default=backend_model.__calliope_defaults[k])
             )
-        elif k == 'timestep_resolution' or k == 'timestep_weights':  # no default value to look up
-            setattr(
-                backend_model, k,
-                po.Param(backend_model.timesteps, initialize=v, mutable=True)
-            )
-        elif mode == 'operate' and model_data[k].attrs.get('operate_param') == 1:
+        # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
+        # so add those in.
+        elif (backend_model.__calliope_run_config['mode'] == 'operate' and
+                model_data[k].attrs.get('operate_param') == 1):
             setattr(
                 backend_model, k,
                 po.Param(getattr(backend_model, model_data_dict['dims'][k][0]),
+                         initialize=v, mutable=True)
+            )
+        else:  # no default value to look up
+            setattr(
+                backend_model, k,
+                po.Param(*[getattr(backend_model, i)
+                           for i in model_data_dict['dims'][k]],
                          initialize=v, mutable=True)
             )
 
@@ -107,7 +109,7 @@ def generate_model(model_data):
         'group.load_constraints'
     ]
 
-    if mode != 'operate':
+    if backend_model.__calliope_run_config['mode'] != 'operate':
         constraints_to_add.append('capacity.load_constraints')
 
     if hasattr(backend_model, 'loc_techs_conversion'):
@@ -141,15 +143,9 @@ def generate_model(model_data):
     # fetch objective function by name, pass through objective options
     # if they are present
     objective_function = ('calliope.backend.pyomo.objective.' +
-                          model_data.attrs['run.objective'])
-    objective_args = dict([(k.split('.')[-1], v)
-                          for k, v in model_data.attrs.items()
-                          if (k.startswith('run.objective_options'))
-                           ])
+                          backend_model.__calliope_run_config['objective'])
+    objective_args = backend_model.__calliope_run_config['objective_options']
     load_function(objective_function)(backend_model, **objective_args)
-
-
-    # delattr(backend_model, '__calliope_model_data__')
 
     return backend_model
 
@@ -223,7 +219,7 @@ def get_result_array(backend_model, model_data):
     """
     all_variables = {
         i.name: get_var(backend_model, i.name) for i in backend_model.component_objects()
-        if isinstance(i, po.base.var.IndexedVar)
+        if isinstance(i, po.base.Var)
     }
 
     # Get any parameters that did not appear in the user's model.inputs Dataset

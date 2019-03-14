@@ -302,7 +302,7 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
     timesteps = model._model_data.timesteps.values[
         timestep_start:timestep_end:timestep_cycle
     ]  # slicing the desired timesteps
-    timeseries_dateformat = model._model_data.attrs["model.timeseries_dateformat"]
+    timeseries_dateformat = model.model_config['timeseries_dateformat']
 
     steps_length = []
     data = []

@@ -14,7 +14,7 @@ import pyomo.core as po  # pylint: disable=import-error
 
 
 def load_constraints(backend_model):
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     if 'group_demand_share_min' in model_data_dict:
         backend_model.group_demand_share_min_constraint = po.Constraint(
@@ -89,7 +89,7 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     """
     TODO write docstring
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     share = model_data_dict['group_demand_share_{}'.format(what)].get(
         (carrier, group_name), np.nan
     )
@@ -156,7 +156,7 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
         'group_constraint_loc_techs_{}'.format(group_name)
     ) if i in backend_model.loc_techs_cost]
 
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     cost_cap = model_data_dict['group_cost_{}'.format(what)].get(
         (cost, group_name), np.nan
     )
@@ -194,7 +194,7 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
         'group_constraint_loc_techs_{}'.format(group_name)
     ) if i in backend_model.loc_techs_investment_cost]
 
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     cost_cap = model_data_dict['group_cost_investment_{}'.format(what)].get(
         (cost, group_name), np.nan
     )
@@ -232,7 +232,7 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
         'group_constraint_loc_techs_{}'.format(group_name)
     ) if i in backend_model.loc_techs_om_cost]
 
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     cost_cap = model_data_dict['group_cost_var_{}'.format(what)].get(
         (cost, group_name), np.nan
     )
@@ -262,7 +262,7 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
             carrier_{prod}(loc::tech::carrier, timestep)
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     share = model_data_dict['group_supply_share_{}'.format(what)][(carrier, constraint_group)]
 
     if np.isnan(share):
@@ -306,7 +306,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\geq energy\\_cap\\_min
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     threshold = model_data_dict['group_energy_cap_{}'.format(what)][(constraint_group)]
 
     if np.isnan(threshold):

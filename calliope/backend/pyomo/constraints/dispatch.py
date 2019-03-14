@@ -19,7 +19,7 @@ from calliope.backend.pyomo.util import \
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
 
     if 'loc_tech_carriers_carrier_production_max_constraint' in sets:
         backend_model.carrier_production_max_constraint = po.Constraint(
@@ -290,7 +290,7 @@ def storage_intra_max_rule(backend_model, loc_tech, timestep):
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data__['data']['timestep_cluster'][timestep]
+    cluster = backend_model.__calliope_model_data['data']['timestep_cluster'][timestep]
     return (
         backend_model.storage[loc_tech, timestep] <=
         backend_model.storage_intra_cluster_max[loc_tech, cluster]
@@ -314,7 +314,7 @@ def storage_intra_min_rule(backend_model, loc_tech, timestep):
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data__['data']['timestep_cluster'][timestep]
+    cluster = backend_model.__calliope_model_data['data']['timestep_cluster'][timestep]
     return (
         backend_model.storage[loc_tech, timestep] >=
         backend_model.storage_intra_cluster_min[loc_tech, cluster]
@@ -341,7 +341,7 @@ def storage_inter_max_rule(backend_model, loc_tech, datestep):
     Where :math:`cluster(datestep)` is the cluster number in which the datestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
+    cluster = backend_model.__calliope_model_data['data']['lookup_datestep_cluster'][datestep]
     return (
         backend_model.storage_inter_cluster[loc_tech, datestep] +
         backend_model.storage_intra_cluster_max[loc_tech, cluster] <=
@@ -370,7 +370,7 @@ def storage_inter_min_rule(backend_model, loc_tech, datestep):
     Where :math:`cluster(datestep)` is the cluster number in which the datestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data__['data']['lookup_datestep_cluster'][datestep]
+    cluster = backend_model.__calliope_model_data['data']['lookup_datestep_cluster'][datestep]
     storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
     return (
         backend_model.storage_inter_cluster[loc_tech, datestep] * ((1 - storage_loss) ** 24) +

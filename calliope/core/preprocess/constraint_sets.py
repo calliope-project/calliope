@@ -73,6 +73,7 @@ def generate_constraint_sets(model_run):
     constraint_sets['loc_techs_update_costs_var_constraint'] = [
         i for i in sets.loc_techs_om_cost if i in sets.loc_techs_export
     ]
+
     constraint_sets['loc_tech_carriers_export_max_constraint'] = [
         i for i in sets.loc_tech_carriers_export
         if constraint_exists(

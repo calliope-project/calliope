@@ -23,7 +23,8 @@ from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
+    run_config = backend_model.__calliope_run_config
 
     if 'loc_techs_milp' in sets:
         backend_model.unit_commitment_constraint = po.Constraint(
@@ -82,14 +83,14 @@ def load_constraints(backend_model):
             rule=energy_capacity_units_constraint_rule
         )
 
-    if 'loc_techs_update_costs_investment_units_constraint' in sets and backend_model.mode != 'operate':
+    if 'loc_techs_update_costs_investment_units_constraint' in sets and run_config['mode'] != 'operate':
         for loc_tech, cost in (
             backend_model.loc_techs_update_costs_investment_units_constraint
             * backend_model.costs):
 
             update_costs_investment_units_constraint(backend_model, cost, loc_tech,)
 
-    if 'loc_techs_update_costs_investment_purchase_constraint' in sets and backend_model.mode != 'operate':
+    if 'loc_techs_update_costs_investment_purchase_constraint' in sets and run_config['mode'] != 'operate':
         for loc_tech, cost in (
             backend_model.loc_techs_update_costs_investment_purchase_constraint
             * backend_model.costs):
@@ -221,7 +222,7 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, l
             \\quad \\forall loc::tech \\in loc::techs_{milp, conversion^{+}}, \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
     loc_tech_carriers_out = (
@@ -279,7 +280,7 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, l
             \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
@@ -496,7 +497,7 @@ def update_costs_investment_units_constraint(backend_model, cost, loc_tech):
             \\times cost_{purchase}(cost, loc::tech) * timestep_{weight} * depreciation
             \\quad \\forall cost \\in costs, \\forall loc::tech \\in loc::techs_{cost_{investment}, milp}
     """
-    model_data_dict = backend_model.__calliope_model_data__
+    model_data_dict = backend_model.__calliope_model_data
     ts_weight = get_timestep_weight(backend_model)
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
 
@@ -526,7 +527,7 @@ def update_costs_investment_purchase_constraint(backend_model, cost, loc_tech):
             \\quad \\forall cost \\in costs, \\forall loc::tech \\in loc::techs_{cost_{investment}, purchase}
 
     """
-    model_data_dict = backend_model.__calliope_model_data__
+    model_data_dict = backend_model.__calliope_model_data
     ts_weight = get_timestep_weight(backend_model)
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
 

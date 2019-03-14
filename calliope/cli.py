@@ -245,7 +245,7 @@ def run(model_file, scenario, save_netcdf, save_csv, save_plots,
             raise ValueError('Invalid model format: {}'.format(model_format))
 
         if save_logs:
-            model._model_data.attrs['run.save_logs'] = save_logs
+            model.run_config['save_logs'] = save_logs
 
         print(model.info() + '\n')
         print('Starting model run...')
