@@ -18,8 +18,8 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
     """
     Minimize or maximise total system cost for specified cost class or a set of cost classes.
     cost_class is a string or dictionary. If a string, it is automatically converted to a
-    dictionary with a single key:value pair. The dictionary provides a weight for each
-    cost class of interest: {cost_1: weight_1, cost_2: weight_2, etc.}.
+    dictionary with a single key:value pair where value == 1. The dictionary provides a weight
+    for each cost class of interest: {cost_1: weight_1, cost_2: weight_2, etc.}.
 
     If unmet_demand is in use, then the calculated cost of unmet_demand is
     added or subtracted from the total cost in the opposite sense to the
