@@ -61,7 +61,7 @@ techs:
             resource: file=supply_plus_resource.csv
             resource_eff: 0.9
             energy_eff: 0.9
-            storage_cap_max: 15
+            storage_cap_max: 35
             storage_loss: 0.01
             charge_rate: 0.5
 
