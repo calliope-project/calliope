@@ -44,8 +44,8 @@ def check_operate_params(model_data):
     comments = AttrDict()
 
     def _get_param(loc_tech, var):
-        if _is_in(loc_tech, var) and not pd.isnull(model_data[var].loc[loc_tech].item()):
-            param = model_data[var].loc[loc_tech].item()
+        if _is_in(loc_tech, var) and not any((pd.isnull((model_data[var].loc[loc_tech].values, )),)):
+            param = model_data[var].loc[loc_tech].values
         else:
             param = defaults[var]
         return param
