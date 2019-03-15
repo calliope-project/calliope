@@ -46,14 +46,19 @@ class TestCostMinimisationObjective:
         ({'run.objective_options.cost_class': {'monetary': None, 'emissions': None}})
     ])
     def test_warn_on_no_weight(self, override):
-        model = build_model(
-            model_file='weighted_obj_func.yaml',
-            override_dict=override
-        )
-        with pytest.raises(calliope.exceptions.ModelWarning) as warn:
-            model.run(build_only=True)
+
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            model = build_model(
+                model_file='weighted_obj_func.yaml',
+                override_dict=override
+            )
 
         assert check_error_or_warning(warn, 'cost class monetary has weight = None, setting weight to 1')
+        assert all(
+            model.run_config['objective_options']['cost_class'][i] == 1
+            for i in override['run.objective_options.cost_class'].keys()
+        )
+
 
     @pytest.mark.parametrize("scenario,cost_class,weight", [
         ('monetary_objective', ['monetary'], [1]),
