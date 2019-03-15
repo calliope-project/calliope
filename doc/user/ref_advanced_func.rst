@@ -503,12 +503,24 @@ The below table lists all available group constraints.
    * - ``supply_share_max``
      - carriers
      - Maximum share of carrier production met from a set of technologies across a set of locations.
+   * - ``energy_cap_share_min```
+     - [-]
+     - Minimum share of installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_share_max```
+     - [-]
+     - Maximums share of installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_min```
      - [-]
      - Minimum installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_max```
      - [-]
      - Maximum installed capacity from a set of technologies across a set of locations.
+   * - ``resource_area_min```
+     - [-]
+     - Minimum resource area used by a set of technologies across a set of locations.
+   * - ``resource_area_max```
+     - [-]
+     - Maximum resource area used by a set of technologies across a set of locations.
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 

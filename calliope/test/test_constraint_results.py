@@ -358,6 +358,80 @@ class TestDemandShareGroupConstraints:
         assert expensive_generation_1 / demand_elec_1 == 0
         assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
 
+
+class TestResourceAreaGroupConstraints:
+
+    def test_no_energy_cap_share_constraint(self):
+        model = build_model(model_file='resource_area.yaml')
+        model.run()
+        cheap_resource_area = (model.get_formatted_array("resource_area")
+                                    .to_dataframe()
+                                    .reset_index()
+                                    .groupby("techs")
+                                    .resource_area
+                                    .sum()
+                                    .loc["cheap_supply"])
+        assert cheap_resource_area == 40
+
+    def test_systemwide_resource_area_max_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_max_systemwide'
+        )
+        model.run()
+        cheap_resource_area = (model.get_formatted_array("resource_area")
+                                    .to_dataframe()
+                                    .reset_index()
+                                    .groupby("techs")
+                                    .resource_area
+                                    .sum()
+                                    .loc["cheap_supply"])
+        assert cheap_resource_area == 20
+
+    def test_systemwide_resource_area_min_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_min_systemwide'
+        )
+        model.run()
+        resource_area = (model.get_formatted_array("resource_area")
+                              .to_dataframe()
+                              .reset_index()
+                              .groupby("techs")
+                              .resource_area
+                              .sum())
+        assert resource_area["cheap_supply"] == 0
+        assert resource_area["expensive_supply"] == 20
+
+    def test_location_specific_resource_area_max_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_max_location_0'
+        )
+        model.run()
+        resource_area = (model.get_formatted_array("resource_area")
+                              .to_dataframe()["resource_area"])
+        cheap_resource_area0 = resource_area.loc[("0", "cheap_supply")]
+        cheap_resource_area1 = resource_area.loc[("1", "cheap_supply")]
+        assert cheap_resource_area0 == 10
+        assert cheap_resource_area1 == 20
+
+    def test_location_specific_resource_area_min_constraint(self):
+        model = build_model(
+            model_file='resource_area.yaml',
+            scenario='resource_area_min_location_0'
+        )
+        model.run()
+        resource_area = (model.get_formatted_array("resource_area")
+                              .to_dataframe()["resource_area"])
+        expensive_resource_area0 = resource_area.loc[("0", "expensive_supply")]
+        expensive_resource_area1 = resource_area.loc[("1", "expensive_supply")]
+        assert expensive_resource_area0 == 10
+        assert expensive_resource_area1 == 0
+
+
+class TestCostCapGroupConstraint:
+
     def test_systemwide_cost_max_constraint(self):
         model = build_model(
             model_file='model_cost_cap.yaml',
@@ -577,6 +651,83 @@ class TestSupplyShareGroupConstraints:
         expensive_generation1 = generation.loc[("1", "expensive_supply", "electricity")]
         assert round(expensive_generation0 / (cheap_generation0 + expensive_generation0), 5) >= 0.6
         assert expensive_generation1 == 0
+
+
+class TestEnergyCapShareGroupConstraints:
+
+    def test_no_energy_cap_share_constraint(self):
+        model = build_model(model_file='energy_cap_share.yaml')
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc["expensive_supply"])
+        assert expensive_capacity == 0
+
+    def test_systemwide_energy_cap_share_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap_share.yaml',
+            scenario='energy_cap_share_max_systemwide'
+        )
+        model.run()
+        cheap_capacity = (model.get_formatted_array("energy_cap")
+                               .to_dataframe()
+                               .reset_index()
+                               .groupby("techs")
+                               .energy_cap
+                               .sum()
+                               .loc[["expensive_supply", "cheap_supply"]]  # remove demand
+                               .transform(lambda x: x / x.sum())
+                               .loc["cheap_supply"])
+        assert cheap_capacity <= 0.4
+
+    def test_systemwide_energy_cap_share_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap_share.yaml',
+            scenario='energy_cap_share_min_systemwide'
+        )
+        model.run()
+        expensive_capacity = (model.get_formatted_array("energy_cap")
+                                   .to_dataframe()
+                                   .reset_index()
+                                   .groupby("techs")
+                                   .energy_cap
+                                   .sum()
+                                   .loc[["expensive_supply", "cheap_supply"]]  # remove demand
+                                   .transform(lambda x: x / x.sum())
+                                   .loc["expensive_supply"])
+        assert expensive_capacity >= 0.6
+
+    def test_location_specific_energy_cap_share_max_constraint(self):
+        model = build_model(
+            model_file='energy_cap_share.yaml',
+            scenario='energy_cap_share_max_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        cheap_capacity0 = capacity.loc[("0", "cheap_supply")]
+        expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert cheap_capacity0 / (cheap_capacity0 + expensive_capacity0) <= 0.4
+        assert expensive_capacity1 == 0
+
+    def test_location_specific_energy_cap_share_min_constraint(self):
+        model = build_model(
+            model_file='energy_cap_share.yaml',
+            scenario='energy_cap_share_min_location_0'
+        )
+        model.run()
+        capacity = (model.get_formatted_array("energy_cap")
+                         .to_dataframe()["energy_cap"])
+        cheap_capacity0 = capacity.loc[("0", "cheap_supply")]
+        expensive_capacity0 = capacity.loc[("0", "expensive_supply")]
+        expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
+        assert expensive_capacity0 / (cheap_capacity0 + expensive_capacity0) >= 0.6
+        assert expensive_capacity1 == 0
 
 
 class TestEnergyCapGroupConstraints:
