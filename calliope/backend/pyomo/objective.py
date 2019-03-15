@@ -12,7 +12,7 @@ Objective functions.
 
 import pyomo.core as po  # pylint: disable=import-error
 from calliope.core.util.tools import load_function
-from calliope import exceptions
+
 
 def minmax_cost_optimization(backend_model, cost_class, sense):
     """
