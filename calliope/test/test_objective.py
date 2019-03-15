@@ -59,7 +59,6 @@ class TestCostMinimisationObjective:
             for i in override['run.objective_options.cost_class'].keys()
         )
 
-
     @pytest.mark.parametrize("scenario,cost_class,weight", [
         ('monetary_objective', ['monetary'], [1]),
         ('emissions_objective', ['emissions'], [1]),
