@@ -53,7 +53,6 @@ class TestCostMinimisationObjective:
             '`run.objective_options.cost_class` must be a dictionary.'
         )
 
-
     @pytest.mark.parametrize("override", [
         ({'run.objective_options.cost_class': {'monetary': None}}),
         ({'run.objective_options.cost_class': {'monetary': None, 'emissions': None}})
