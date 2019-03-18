@@ -106,7 +106,7 @@ def generate_model(model_data):
         'network.load_constraints',
         'costs.load_constraints',
         'policy.load_constraints',
-        'milp.load_constraints'
+        'milp.load_constraints',
         'group.load_constraints'
     ]
 

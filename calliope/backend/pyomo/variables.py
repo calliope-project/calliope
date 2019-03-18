@@ -94,8 +94,9 @@ def initialize_decision_variables(backend_model):
 
     if 'loc_techs_binary_operation' in model_data_dict['sets']:
         backend_model.operating_switch = po.Var(backend_model.loc_techs_binary_operation, backend_model.timesteps, within=po.Binary)
+        backend_model.bigM = run_config.get('bigM', 1e10)
 
     if run_config.get('ensure_feasibility', False):
         backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
         backend_model.unused_supply = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NegativeReals)
-        backend_model.bigM = run_config.get('bigM')
+        backend_model.bigM = run_config.get('bigM', 1e10)

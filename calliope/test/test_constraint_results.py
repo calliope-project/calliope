@@ -80,7 +80,7 @@ class TestUrbanScaleMILP:
                      .loc[{'techs': 'heat_pipes:X1', 'carriers': 'heat'}]
                      .to_pandas().dropna(how='all')
             )
-        m = calliope.examples.urban_scale()
+        m = calliope.examples.urban_scale(override_dict={'run.zero_threshold': 1e-6})
         m.run()
         _prod = _get_prod_con(m, 'prod')
         _con = _get_prod_con(m, 'con')
@@ -88,7 +88,8 @@ class TestUrbanScaleMILP:
 
         m_bin = calliope.examples.urban_scale(
             override_dict={'techs.heat_pipes.constraints.binary_operation': True,
-                           'run.solver_options.mipgap': 0.05}
+                           'run.solver_options.mipgap': 0.05,
+                           'run.zero_threshold': 1e-6}
         )
         m_bin.run()
         _prod = _get_prod_con(m_bin, 'prod')

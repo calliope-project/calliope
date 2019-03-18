@@ -632,13 +632,12 @@ def binary_operation_con_constraint_rule(backend_model, loc_tech, timestep):
             \\forall timestep \\in timesteps
 
     """
-    model_dict = backend_model.__calliope_model_data__
+    model_dict = backend_model.__calliope_model_data
     loc_tech_carrier = model_dict['data']['lookup_loc_techs'][loc_tech]
-    bigM = model_dict['attrs']['run.bigM']
 
     return (
         -1 * backend_model.carrier_con[loc_tech_carrier, timestep] <=
-        (1 - backend_model.operating_switch[loc_tech, timestep]) * bigM
+        (1 - backend_model.operating_switch[loc_tech, timestep]) * backend_model.bigM
     )
 
 
@@ -656,11 +655,10 @@ def binary_operation_prod_constraint_rule(backend_model, loc_tech, timestep):
             \\forall timestep \\in timesteps
 
     """
-    model_dict = backend_model.__calliope_model_data__
+    model_dict = backend_model.__calliope_model_data
     loc_tech_carrier = model_dict['data']['lookup_loc_techs'][loc_tech]
-    bigM = model_dict['attrs']['run.bigM']
 
     return (
         backend_model.carrier_prod[loc_tech_carrier, timestep] <=
-        backend_model.operating_switch[loc_tech, timestep] * bigM
+        backend_model.operating_switch[loc_tech, timestep] * backend_model.bigM
     )
