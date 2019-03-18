@@ -41,6 +41,19 @@ class TestCostMinimisationObjective:
 
         assert float(model.results.cost.sum()) > 6.6e7
 
+    def test_fail_on_string(self):
+        with pytest.raises(calliope.exceptions.ModelError) as exception:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='illegal_string_cost_class'
+            )
+
+        assert check_error_or_warning(
+            exception,
+            '`run.objective_options.cost_class` must be a dictionary.'
+        )
+
+
     @pytest.mark.parametrize("override", [
         ({'run.objective_options.cost_class': {'monetary': None}}),
         ({'run.objective_options.cost_class': {'monetary': None, 'emissions': None}})

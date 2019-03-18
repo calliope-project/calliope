@@ -135,7 +135,7 @@ overrides:
     minimize_emissions_costs:
         run:
             objective_options:
-                cost_class: emissions
+                cost_class: {'emissions': 1, 'monetary': 0}
         techs:
             ccgt:
                 costs:
@@ -149,7 +149,7 @@ overrides:
     maximize_utility_costs:
         run:
             objective_options:
-                cost_class: utility
+                cost_class: {'utility': 1 , 'monetary': 0}
                 sense: maximize
         techs:
             ccgt:

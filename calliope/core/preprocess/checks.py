@@ -116,8 +116,8 @@ def check_initial(config_model):
             )
 
     # Check run configuration
-    # Exclude solver_options from checks, as we don't know all possible
-    # options for all solvers
+    # Exclude solver_options and objective_options.cost_class from checks,
+    # as we don't know all possible options for all solvers
     for k in config_model['run'].keys_nested():
         if (k not in defaults_model['run'].keys_nested() and
                 'solver_options' not in k and 'objective_options.cost_class' not in k):
@@ -243,19 +243,28 @@ def check_initial(config_model):
                 .format(arg, config_model.run.objective)
             )
 
-    # For cost minimisation objective, check for string cost class and set to dict.
-    if isinstance(config_model.run.objective_options.get('cost_class', {}), str):
-        config_model.run.objective_options.cost_class = {
-            config_model.run.objective_options.cost_class: 1
-        }
+    # We no longer allow cost_class in objective_obtions to be a string
+    if not isinstance(
+            config_model.run.objective_options.get('cost_class', {}),
+            dict):
+        errors.append(
+            '`run.objective_options.cost_class` must be a dictionary.'
+            'If you want to minimise or maximise with a single cost class, '
+            'use e.g. "{monetary: 1}", which gives the monetary cost class a weight '
+            'of 1 in the objective, and ignores any other cost classes.'
+        )
 
-    # For cost minimisation objective, check for cost_class: None and set to one
-    for k, v in config_model.run.objective_options.get('cost_class', {}).items():
-        if v is None:
-            config_model.run.objective_options.cost_class[k] = 1
-            model_warnings.append(
-                'cost class {} has weight = None, setting weight to 1'.format(k)
-            )
+    else:
+        # This next check is only run if we have confirmed that cost_class is
+        # a dict, as it errors otherwise
+
+        # For cost minimisation objective, check for cost_class: None and set to one
+        for k, v in config_model.run.objective_options.get('cost_class', {}).items():
+            if v is None:
+                config_model.run.objective_options.cost_class[k] = 1
+                model_warnings.append(
+                    'cost class {} has weight = None, setting weight to 1'.format(k)
+                )
 
     # Don't allow time clustering with cyclic storage if not also using
     # storage_inter_cluster

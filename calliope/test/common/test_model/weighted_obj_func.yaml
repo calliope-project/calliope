@@ -69,6 +69,8 @@ locations:
         techs: {cheap_polluting_supply, expensive_clean_supply, mean_supply, electricity_demand}
 
 overrides:
+    illegal_string_cost_class:
+        run.objective_options.cost_class: 'monetary'
     monetary_objective:
         run.objective_options.cost_class: {'monetary': 1}
     emissions_objective:

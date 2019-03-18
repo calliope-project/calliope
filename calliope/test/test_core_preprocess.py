@@ -423,7 +423,7 @@ class TestChecks:
         override5 = {
             'run.objective': 'minmax_cost_optimization',
             'run.objective_options': {
-                'cost_class': 'monetary',
+                'cost_class': {'monetary': 1},
                 'sense': 'minimize',
                 'unused_option': 'some_value'
             }
