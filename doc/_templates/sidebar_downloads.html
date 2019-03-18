@@ -1,9 +1,3 @@
-<p class="logo">
-  <a href="{{ pathto(master_doc) }}">
-    <img class="logo" src="{{ pathto('_static/sidebar_logo_intro.png', 1) }}" title="Calliope" width="200" height="239">
-  </a>
-</p>
-
 <!-- Only show downloads if they are defined, i.e. on ReadTheDocs -->
 {% if downloads is defined %}
 <h3>Downloads</h3>
@@ -11,3 +5,5 @@
 <a href="{{ url }}">{{ type }}</a>&nbsp;
 {% endfor %}
 {% endif %}
+
+<h3>Content</h3>

@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 preprocess_checks.py
@@ -13,14 +13,13 @@ import os
 import warnings
 
 import numpy as np
-import xarray as xr
 
 from inspect import signature
 
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers, flatten_list
+from calliope.core.preprocess.util import get_all_carriers
 from calliope.core.util.logging import logger
 from calliope.core.util.tools import load_function
 
@@ -111,7 +110,7 @@ def check_initial(config_model):
     for k in config_model.keys():
         if k not in [
                 'model', 'run', 'locations', 'tech_groups', 'techs', 'links',
-                'overrides', 'scenarios', 'config_path']:
+                'overrides', 'scenarios', 'config_path', 'group_constraints']:
             model_warnings.append(
                 'Unrecognised top-level configuration item: {}'.format(k)
             )
@@ -144,6 +143,20 @@ def check_initial(config_model):
                 "'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3'] "
                 "is valid.".format(key)
             )
+
+    # Warn if any unknown group constraints are defined
+    permitted_group_constraints = ['techs', 'locs', 'exists'] + \
+        defaults.allowed_group_constraints.per_carrier + \
+        defaults.allowed_group_constraints.per_cost + \
+        defaults.allowed_group_constraints.general
+
+    for group in config_model.get('group_constraints', {}).keys():
+        for key in config_model.group_constraints[group].keys():
+            if key not in permitted_group_constraints:
+                model_warnings.append(
+                    'Unrecognised group constraint `{}` in group `{}` '
+                    'will be ignored - possibly a misspelling?'.format(key, group)
+                )
 
     # No techs may have the same identifier as a tech_group
     name_overlap = (
@@ -181,6 +194,9 @@ def check_initial(config_model):
             )
 
     for t_name, t_config in config_model.techs.items():
+        for key in t_config.keys():
+            if key not in defaults["default_tech"].keys():
+                model_warnings.append("Unknown key `{}` defined for tech {}.".format(key, t_name))
         if not t_config.get_key('essentials.parent'):
             errors.append(
                 'tech {} does not define '
@@ -554,4 +570,12 @@ def check_future_deprecation_warnings(model_run, model_data):
     warning should specify Calliope version in which it was added, and the
     version in which it should be updated/removed.
     """
-    return None
+
+    # Warning that group_share constraints will removed in 0.7.0 #
+    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+    if model_run is not None and 'group_share' in model_run.model:
+        warnings.warn(
+            '`group_share` constraints will be removed in v0.7.0 -- '
+            'use the new model-wide constraints instead.',
+            DeprecationWarning
+        )

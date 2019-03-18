@@ -12,6 +12,9 @@ _MODEL_NATIONAL = os.path.join(
     _THIS_DIR,
     '..', 'example_models', 'national_scale', 'model.yaml'
 )
+_MINIMAL_TEST_MODEL = os.path.join(
+    _THIS_DIR, 'common', 'test_model', 'model_minimal.yaml'
+)
 
 
 class TestCLI:
@@ -120,3 +123,22 @@ class TestCLI:
             assert scenarios['scenarios']['scenario_1'] == [
                 'cold_fusion', 'run1', 'group_share_cold_fusion_cap'
             ]
+
+    def test_no_success_exit_code_when_infeasible(self):
+        runner = CliRunner()
+        result = runner.invoke(cli.run, [
+            _MINIMAL_TEST_MODEL,
+            "--scenario=investment_costs",  # without these, the model cannot run
+            "--override_dict={techs.test_supply_elec.constraints.energy_cap_max: 1}"  # elec supply too low
+        ])
+        assert result.exit_code != 0
+
+    def test_success_exit_code_when_infeasible_and_demanded(self):
+        runner = CliRunner()
+        result = runner.invoke(cli.run, [
+            _MINIMAL_TEST_MODEL,
+            "--no_fail_when_infeasible",
+            "--scenario=investment_costs",  # without these, the model cannot run
+            "--override_dict={techs.test_supply_elec.constraints.energy_cap_max: 1}"  # elec supply too low
+        ])
+        assert result.exit_code == 0

@@ -2,6 +2,10 @@
 Advanced functionality
 ----------------------
 
+This section, as the title suggests, contains more info and more details, and in particular, information on some of Calliope's more advanced functionality.
+
+We suggest you read the :doc:`building`, :doc:`running` and :doc:`analysing` sections first.
+
 Per-distance constraints and costs
 ----------------------------------
 
@@ -397,6 +401,8 @@ None of the ``tech_groups`` appear in model results, they are only used to group
 Using the ``group_share`` constraint
 -------------------------------------
 
+.. Warning:: ``group_share`` is deprecated as of v0.6.4 and will be removed in v0.7.0. Use the new, more flexible functionality :ref:`group_constraints` to replace it.
+
 The ``group_share`` constraint can be used to force groups of technologies to fulfill certain shares of supply or capacity.
 
 For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power generation technology, we could force at least 85% of power generation in the model to come from these two technologies with the following constraint definition in the ``model`` settings:
@@ -434,6 +440,90 @@ These can be implemented as, for example, to force at most 20% of ``energy_cap``
 
 .. seealso:: The above examples are supplied as overrides in the :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` (``cold_fusion`` to define that tech, and ``group_share_cold_fusion_prod`` or ``group_share_cold_fusion_cap`` to apply the group share constraints).
 
+.. _group_constraints:
+
+Group constraints
+-----------------
+
+Group constraints are applied to named sets of locations and techs, called "constraint groups", specified through a top-level ``group_constraints`` key (sitting alongside other top-level keys like ``model`` and ``run``).
+
+The below example shows two such named groups. The first does not specify a subset of techs or locations and is thus applied across the entire model. In the example, we use ``cost_max`` with the ``co2`` cost class to specify a model-wide emissions limit (assuming the technologies in the model have ``co2`` costs associated with them). We also use the ``demand_share_min`` constraint to force wind and PV to supply at least 40% of electricity demand in Germany, which is modelled as two locations (North and South):
+
+.. code-block:: yaml
+
+    run:
+        ...
+
+    model:
+        ...
+
+    group_constraints:
+        # A constraint group to apply a systemwide CO2 cap
+        systemwide_co2_cap:
+            cost_max:
+                co2: 100000
+        # A constraint group to enforce renewable generation in Germany
+        renewable_minimum_share_in_germany:
+            techs: ['wind', 'pv']
+            locs: ['germany_north', 'germany_south']
+            demand_share_min:
+                electricity: 0.4
+
+When specifying group constraints, a named group must give at least one constraint, but can list an arbitrary amount of constraints, and optionally give a subset of techs and locations:
+
+.. code-block:: yaml
+
+    group_constraints:
+        group_name:
+            techs: []  # Optional, can be left out if empty
+            locs: []  # Optional, can be left out if empty
+            # Any number of constraints can be specified for the given group
+            constraint_1: ...
+            constraint_2: ...
+            ...
+
+The below table lists all available group constraints.
+
+.. list-table:: Group constraints
+   :widths: 15 15 60
+   :header-rows: 1
+
+   * - Constraint
+     - Dimensions
+     - Description
+   * - ``demand_share_min``
+     - carriers
+     - Minimum share of carrier demand met from a set of technologies across a set of locations.
+   * - ``demand_share_max``
+     - carriers
+     - Maximum share of carrier demand met from a set of technologies across a set of locations.
+   * - ``supply_share_min``
+     - carriers
+     - Minimum share of carrier production met from a set of technologies across a set of locations.
+   * - ``supply_share_max``
+     - carriers
+     - Maximum share of carrier production met from a set of technologies across a set of locations.
+   * - ``energy_cap_share_min```
+     - [-]
+     - Minimum share of installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_share_max```
+     - [-]
+     - Maximums share of installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_min```
+     - [-]
+     - Minimum installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_max```
+     - [-]
+     - Maximum installed capacity from a set of technologies across a set of locations.
+   * - ``resource_area_min```
+     - [-]
+     - Minimum resource area used by a set of technologies across a set of locations.
+   * - ``resource_area_max```
+     - [-]
+     - Maximum resource area used by a set of technologies across a set of locations.
+
+For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
+
 .. _removing_techs_locations:
 
 Removing techs, locations and links
@@ -448,6 +538,7 @@ This works for:
 * Links: ``links.location1,location2.exists: false``
 * Techs at a specific location:  ``locations.location_name.techs.tech_name.exists: false``
 * Transmission techs at a specific location: ``links.location1,location2.techs.transmission_tech.exists: false``
+* Group constraints: ``group_constraints.my_constraint.exists: false``
 
 .. _operational_mode:
 

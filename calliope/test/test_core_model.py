@@ -1,6 +1,6 @@
 import os
 
-import pytest  # pylint: disable=unused-import
+import pytest
 import tempfile
 
 import calliope

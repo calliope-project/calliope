@@ -15,6 +15,7 @@ import collections
 import ruamel.yaml
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
@@ -65,6 +66,7 @@ def build_model_data(model_run, debug=False):
     data_dict.update(location_specific_to_dataset(model_run))
     data_dict.update(tech_specific_to_dataset(model_run))
     data_dict.update(carrier_specific_to_dataset(model_run))
+    data_dict.update(group_constraints_to_dataset(model_run))
 
     data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
 
@@ -158,14 +160,6 @@ def constraints_to_dataset(model_run):
             # add the value for the particular location & technology combination to the list
             data_dict[constraint]['data'].append(constraint_value)
         # once we've looped through all technology & location combinations, add the array to the dataset
-
-    # Additional system-wide constraints from model_run.model
-    # FIXME: hardcoding == bad
-    data_dict['reserve_margin'] = {
-        'data': [model_run.model.get('reserve_margin', {}).get(c, np.nan)
-                 for c in model_run.sets['carriers']],
-        'dims': 'carriers'
-    }
 
     group_share_data = {}
     group_constraints = ['energy_cap_min', 'energy_cap_max', 'energy_cap_equals']
@@ -307,7 +301,7 @@ def carrier_specific_to_dataset(model_run):
             )
 
     # Additional system-wide constraints from model_run.model
-    if 'reserve_margin' in model_run.model.keys():
+    if model_run.model.get('reserve_margin', {}) != {}:
         data_dict['reserve_margin'] = {
             'data': [model_run.model.reserve_margin.get(c, np.nan)
                      for c in model_run.sets['carriers']],
@@ -426,27 +420,42 @@ def tech_specific_to_dataset(model_run):
     return data_dict
 
 
+def group_constraints_to_dataset(model_run):
+    data_dict = {}
+
+    group_constraints = model_run['group_constraints']
+
+    for constr_name in model_run.sets['group_constraints']:
+        dims = ['group_names_' + constr_name]
+        if constr_name in checks.defaults.allowed_group_constraints.per_carrier:
+            dims.append('carriers')
+            data = [
+                [group_constraints[i][constr_name].get(carrier, np.nan)
+                 for carrier in model_run.sets['carriers']]
+                for i in model_run.sets['group_names_' + constr_name]
+            ]
+        elif constr_name in checks.defaults.allowed_group_constraints.per_cost:
+            dims.append('costs')
+            data = [
+                [group_constraints[i][constr_name].get(cost, np.nan)
+                 for cost in model_run.sets['costs']]
+                for i in model_run.sets['group_names_' + constr_name]
+            ]
+        elif constr_name in checks.defaults.allowed_group_constraints.general:
+            data = [
+                group_constraints[i][constr_name]
+                for i in model_run.sets['group_names_' + constr_name]
+            ]
+        else:  # Do nothing if it is an unknown constraint
+            continue
+
+        data_dict['group_' + constr_name] = {'dims': dims, 'data': data}
+
+    return data_dict
+
+
 def add_attributes(model_run):
     attr_dict = AttrDict()
-    attr_dict['model'] = model_run.model.copy()
-    attr_dict['run'] = model_run.run.copy()
-
-    # Some keys are killed right away
-    for k in ['model.time', 'model.data_path', 'model.timeseries_data_path',
-              'run.config_run_path', 'run.model']:
-        try:
-            attr_dict.del_key(k)
-        except KeyError:
-            pass
-
-    # Now we flatten the AttrDict into a dict
-    attr_dict = attr_dict.as_dict(flat=True)
-
-    # Anything empty or None in the flattened dict is also killed
-    for k in list(attr_dict.keys()):
-        val = attr_dict[k]
-        if val is None or (hasattr(val, '__iter__') and not val):
-            del attr_dict[k]
 
     attr_dict['calliope_version'] = __version__
     attr_dict['applied_overrides'] = model_run['applied_overrides']

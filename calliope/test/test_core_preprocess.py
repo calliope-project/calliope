@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest
 import os
 
 import pandas as pd
@@ -436,6 +436,18 @@ class TestChecks:
             excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
         )
 
+    @pytest.mark.parametrize("invalid_key", [
+        ("monetary"), ("emissions"), ("name"), ("anything_else_really")
+    ])
+    def test_unrecognised_tech_keys(self, invalid_key):
+        """
+        Check that no invalid keys are defined for technologies.
+        """
+        override1 = {'techs.test_supply_gas.{}'.format(invalid_key): 'random_string'}
+
+        with pytest.warns(exceptions.ModelWarning):
+            build_model(override_dict=override1, scenario='simple_supply')
+
     def test_model_version_mismatch(self):
         """
         Model config says model.calliope_version = 0.1, which is not what we
@@ -495,6 +507,26 @@ class TestChecks:
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario='one_day')
+
+    def test_warn_on_unknown_group_constraint(self):
+        """
+        Unkown group constraints raise a warning, but don't crash
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            group_constraints:
+                mygroup:
+                    foobar: 0
+            """
+        )
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(
+            excinfo,
+            'Unrecognised group constraint `foobar` in group `mygroup`'
+        )
 
     def test_abstract_base_tech_group_override(self):
         """

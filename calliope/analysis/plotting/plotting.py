@@ -66,7 +66,7 @@ def plot_summary(model, to_file=False, mapbox_access_token=None):
         result_stats = 'inputs only'
 
     html = html_template.render(
-        model_name=model._model_data.attrs['model.name'],
+        model_name=model.model_config['name'],
         calliope_version=model._model_data.attrs['calliope_version'],
         result_stats=result_stats,
         top=timeseries,

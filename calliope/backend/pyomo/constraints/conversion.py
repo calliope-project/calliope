@@ -16,7 +16,7 @@ from calliope.backend.pyomo.util import \
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
 
     backend_model.balance_conversion_constraint = po.Constraint(
         backend_model.loc_techs_balance_conversion_constraint, backend_model.timesteps,
@@ -46,7 +46,7 @@ def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
             \\quad \\forall loc::tech \\in locs::techs_{conversion},
             \\forall timestep \\in timesteps
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     loc_tech_carrier_out = model_data_dict['lookup_loc_techs_conversion'][('out', loc_tech)]
     loc_tech_carrier_in = model_data_dict['lookup_loc_techs_conversion'][('in', loc_tech)]
@@ -75,7 +75,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
             \\times timestep_{weight}(timestep) \\times cost_{om, con}(loc::tech, cost, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion}
     """
-    model_data_dict = backend_model.__calliope_model_data__
+    model_data_dict = backend_model.__calliope_model_data
     weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier_in = (

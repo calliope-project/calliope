@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 cli.py
@@ -25,6 +25,7 @@ from calliope import AttrDict, Model, examples, read_netcdf
 from calliope._version import __version__
 from calliope.core.util.generate_runs import generate
 from calliope.core.util.logging import logger, set_log_level
+from calliope.exceptions import BackendError
 
 _time_format = '%Y-%m-%d %H:%M:%S'
 
@@ -55,6 +56,13 @@ _profile_filename = click.option(
     '--profile_filename', type=str,
     help='Filename to save profile to if enabled --profile.'
 )
+
+
+_fail_when_infeasible = click.option(
+    '--fail_when_infeasible/--no_fail_when_infeasible', is_flag=True, default=True,
+    help='Return fail on command line when problem is infeasible (default True).'
+)
+
 
 if logger.hasHandlers():
     for handler in logger.handlers:
@@ -178,9 +186,10 @@ def new(path, template, debug):
 @_pdb
 @_profile
 @_profile_filename
+@_fail_when_infeasible
 def run(model_file, scenario, save_netcdf, save_csv, save_plots,
         save_logs, model_format, override_dict,
-        debug, quiet, pdb, profile, profile_filename):
+        debug, quiet, pdb, profile, profile_filename, fail_when_infeasible):
     """
     Execute the given model. Tries to guess from the file extension whether
     ``model_file`` is a YAML file or a pre-built model saved to NetCDF.
@@ -236,7 +245,7 @@ def run(model_file, scenario, save_netcdf, save_csv, save_plots,
             raise ValueError('Invalid model format: {}'.format(model_format))
 
         if save_logs:
-            model._model_data.attrs['run.save_logs'] = save_logs
+            model.run_config['save_logs'] = save_logs
 
         print(model.info() + '\n')
         print('Starting model run...')
@@ -259,7 +268,10 @@ def run(model_file, scenario, save_netcdf, save_csv, save_plots,
                     'Model termination condition non-optimal. Not saving plots',
                     fg='red', bold=True
                 )
-        print_end_time(start_time)
+        if fail_when_infeasible and termination != 'optimal':
+            raise BackendError("Problem is infeasible.")
+        else:
+            print_end_time(start_time)
 
 
 @cli.command(short_help='Generate a script to run multiple models.')

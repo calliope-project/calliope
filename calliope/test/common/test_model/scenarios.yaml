@@ -1,3 +1,12 @@
+# This file contains overrides for model.yaml
+
+##
+# WARNING: When adding tests for new constraints, we now
+# want to create separate models, as in the example of
+# `model_demand_share.yaml`, which can double as minimal
+# working examples of the given functionality.
+##
+
 overrides:
 
     simple_supply:

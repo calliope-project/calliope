@@ -6,6 +6,7 @@ from pyomo.core.base.expr import identify_variables
 
 from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
+from calliope.core.attrdict import AttrDict
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_error_or_warning
@@ -168,7 +169,7 @@ class TestInterface:
 
         # should fail if the run mode is not 'plan'
         with pytest.raises(exceptions.ModelError) as error:
-            m._model_data.attrs['run.mode'] = 'operate'
+            m.run_config['mode'] = 'operate'
             m.backend.rerun()
         assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
 
@@ -177,11 +178,12 @@ class TestChecks:
     def test_operate_cyclic_storage(self):
         """Cannot have cyclic storage in operate mode"""
         m = build_model({}, 'simple_supply,operate,investment_costs')
-        assert m._model_data.attrs['run.cyclic_storage'] is True
+        assert m.run_config['cyclic_storage'] is True
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)
         assert check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
-        assert m._model_data.attrs['run.cyclic_storage'] is False
+        run_config = AttrDict.from_yaml_string(m._model_data.attrs['run_config'])
+        assert run_config['cyclic_storage'] is False
 
 
 class TestBalanceConstraints:
@@ -731,7 +733,7 @@ class TestCapacityConstraints:
         # Check that a model without transmission techs doesn't cause an error
         m = build_model(
             {'techs.test_supply_elec.constraints.energy_cap_equals_systemwide': 20},
-            'simple_supply,two_hours,investment_costs', minimal=True
+            'simple_supply,two_hours,investment_costs', model_file='model_minimal.yaml'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'energy_capacity_systemwide_constraint')
@@ -1332,7 +1334,10 @@ class TestMILPConstraints:
         assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
         assert m._backend_model.unit_capacity_systemwide_constraint['test_transmission_elec'].upper() == 2
 
-        m = build_model(override_no_transmission, 'simple_supply,two_hours,investment_costs', minimal=True)
+        m = build_model(
+            override_no_transmission,
+            'simple_supply,two_hours,investment_costs',
+            model_file='model_minimal.yaml')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'unit_capacity_systemwide_constraint')
 
@@ -1732,6 +1737,58 @@ class TestPolicyConstraints:
         assert not hasattr(m._backend_model, 'group_share_carrier_prod_min_constraint')
         assert not hasattr(m._backend_model, 'group_share_carrier_prod_max_constraint')
         assert hasattr(m._backend_model, 'group_share_carrier_prod_equals_constraint')
+
+
+# Group constraints, i.e. those that can be defined on a system/subsystem scale
+class TestGroupConstraints:
+
+    def _build_group_model(self, scenario, model_file):
+        model = build_model(
+            model_file=model_file + '.yaml',
+            scenario=scenario
+        )
+        model.run(build_only=True)
+
+        return model
+
+    _test_vars = [
+        ('demand_share_max_systemwide', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
+        ('demand_share_min_systemwide', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
+        ('demand_share_max_location_0', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
+        ('demand_share_min_location_0', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
+        ('multiple_constraints', ['example_demand_share_max_constraint', 'example_demand_share_min_constraint'], ['demand_share_max', 'demand_share_min'], 'demand_share'),
+        ('cheap_cost_max_systemwide', ['example_cost_max_constraint'], ['cost_max'], 'model_cost_cap'),
+        ('expensive_cost_min_systemwide', ['example_cost_min_constraint'], ['cost_min'], 'model_cost_cap'),
+        ('cheap_cost_equals_systemwide', ['example_cost_equals_constraint'], ['cost_equals'], 'model_cost_cap'),
+        ('cheap_cost_max_location_0', ['example_cheap_cost_max_location_0_constraint'], ['cost_max'], 'model_cost_cap'),
+        ('multiple_costs_constraint', ['example_emissions_max_constraint', 'example_cost_min_constraint'], ['cost_max', 'cost_min'], 'model_cost_cap'),
+        ('cheap_cost_var_max_systemwide', ['example_cost_var_max_constraint'], ['cost_var_max'], 'model_cost_cap'),
+        ('cheap_cost_investment_max_systemwide', ['example_cost_investment_max_constraint'], ['cost_investment_max'], 'model_cost_cap')
+    ]
+
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_constraint_names(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all('group_names_' + i in model._model_data.dims for i in constraints)
+
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_group_names(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all(
+            group_name[i] in model._model_data['group_names_' + constraints[i]].values
+            for i in range(len(constraints))
+        )
+
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_group_variables(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all('group_' + i in model._model_data.data_vars.keys() for i in constraints)
+
+    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
+    def test_group_constraints(self, scenario, group_name, constraints, model_file):
+        model = self._build_group_model(scenario, model_file)
+        assert all(hasattr(model._backend_model, 'group_' + i + '_constraint')
+                   for i in constraints)
 
 
 # clustering constraints

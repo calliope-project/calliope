@@ -18,7 +18,7 @@ from calliope.backend.pyomo.util import \
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data__['sets']
+    sets = backend_model.__calliope_model_data['sets']
 
     backend_model.balance_conversion_plus_primary_constraint = po.Constraint(
         backend_model.loc_techs_balance_conversion_plus_primary_constraint,
@@ -92,7 +92,7 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
             * carrier\\_ratio(loc::tech::carrier, `in') * \\eta_{energy}(loc::tech, timestep))
             \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     loc_tech_carriers_out = split_comma_list(
         model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech]
@@ -131,7 +131,7 @@ def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_te
             \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}},
             \\forall timestep \\in timesteps
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     timestep_resolution = backend_model.timestep_resolution[timestep]
     loc_tech_carriers_out = split_comma_list(
@@ -159,7 +159,7 @@ def carrier_production_min_conversion_plus_constraint_rule(backend_model, loc_te
             \\quad \\forall loc::tech \\in loc::techs_{conversion^{+}},
             \\forall timestep \\in timesteps
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     timestep_resolution = backend_model.timestep_resolution[timestep]
     min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
@@ -192,7 +192,7 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
             \\times timestep_{weight}(timestep) \\times cost_{om, con}(loc::tech, cost, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion^{+}}
     """
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
     weight = backend_model.timestep_weights[timestep]
 
     loc_tech_carrier_con = (
@@ -263,7 +263,7 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
                 \\in loc::techs_{conversion^{+}}, \\forall timestep \\in timesteps
     """
     primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
-    model_data_dict = backend_model.__calliope_model_data__['data']
+    model_data_dict = backend_model.__calliope_model_data['data']
 
     loc_tech_carriers_1 = split_comma_list(
         model_data_dict['lookup_loc_techs_conversion_plus'][primary_tier, loc_tech]

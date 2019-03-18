@@ -6,11 +6,23 @@ Release History
 0.6.4 (dev)
 -----------
 
+|new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, covering:
+
+* `demand_share_min` and `demand_share_max`, `energy_cap_share_min`, `energy_cap_share_max`, `supply_share_min`, `supply_share_max`, `demand_share_min`, and `demand_share_max`. These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
+* `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
+* `energy_cap_min`, `energy_cap_max`, `resource_area_min`, `resource_area_max` which allow to constrain installed capacities of groups of technologies in specific locations.
+
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
+
+|changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
+
+|changed| All tests and example models have been updated to solve with Coin-CBC, instead of GLPK. Documentation has been updated to reflect this, and aid in installing CBC (which is not simple for Windows users).
+
+|changed| |backwards-incompatible| Exit code for infeasible problems now is 1 (no success). This is a breaking change when relying on the exit code.
 
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
-|changed| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
+|changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
 
 |fixed| Name of data variables is retained when accessed through `model.get_formatted_array()`
 
@@ -19,6 +31,8 @@ Release History
 |fixed| Updated documentation on amendments of abstract base technology groups.
 
 |fixed| Models without time series data fail gracefully.
+
+|fixed| Unknown technology parameters are detected and the user is warned.
 
 0.6.3 (2018-10-03)
 ------------------

@@ -32,7 +32,7 @@ def get_param(backend_model, var, dims):
         return getattr(backend_model, var)[dims]
     except AttributeError:  # i.e. parameter doesn't exist at all
         logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
-        return backend_model.__calliope_defaults__[var]
+        return backend_model.__calliope_defaults[var]
     except KeyError:  # try removing timestep
         try:
             if len(dims) > 2:
@@ -41,7 +41,7 @@ def get_param(backend_model, var, dims):
                 return getattr(backend_model, var)[dims[0]]
         except KeyError:  # Static default value
             logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
-            return backend_model.__calliope_defaults__[var]
+            return backend_model.__calliope_defaults[var]
 
 
 def get_previous_timestep(timesteps, timestep):
@@ -58,7 +58,7 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
     loc_tech_carriers which produce energy (loc_tech_carriers_prod), consume
     energy (loc_tech_carriers_con) and export energy (loc_tech_carriers_export)
     """
-    lookup = backend_model.__calliope_model_data__['data']['lookup_loc_carriers']
+    lookup = backend_model.__calliope_model_data['data']['lookup_loc_carriers']
     loc_tech_carriers = split_comma_list(lookup[loc_carrier])
 
     loc_tech_carriers_prod = [
@@ -100,7 +100,7 @@ def get_timestep_weight(backend_model):
     and divide it by number of hours in the year. Weight/resolution will almost
     always be 1 per step, unless time clustering/masking/resampling has taken place.
     """
-    model_data_dict = backend_model.__calliope_model_data__
+    model_data_dict = backend_model.__calliope_model_data
     time_res = list(model_data_dict['data']['timestep_resolution'].values())
     weights = list(model_data_dict['data']['timestep_weights'].values())
     return sum(np.multiply(time_res, weights)) / 8760
