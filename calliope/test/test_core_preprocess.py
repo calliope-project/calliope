@@ -980,6 +980,60 @@ class TestChecks:
             '`power` is an unknown resource unit for `test_supply_elec`'
         )
 
+    def test_fail_on_string(self):
+        with pytest.raises(calliope.exceptions.ModelError) as exception:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='illegal_string_cost_class'
+            )
+
+        assert check_error_or_warning(
+            exception,
+            '`run.objective_options.cost_class` must be a dictionary.'
+        )
+
+    def test_fail_on_empty(self):
+        with pytest.raises(calliope.exceptions.ModelError) as exception:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='empty_cost_class'
+            )
+
+        assert check_error_or_warning(
+            exception,
+            'No cost classes defined for use in the objective.'
+        )
+
+    def test_warn_on_using_default(self):
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='emissions_objective_without_removing_monetary_default'
+            )
+
+        assert check_error_or_warning(
+            warn,
+            'Monetary cost class with a weight of 1 is still included'
+        )
+
+    @pytest.mark.parametrize("override", [
+        ({'run.objective_options.cost_class': {'monetary': None}}),
+        ({'run.objective_options.cost_class': {'monetary': None, 'emissions': None}})
+    ])
+    def test_warn_on_no_weight(self, override):
+
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            model = build_model(
+                model_file='weighted_obj_func.yaml',
+                override_dict=override
+            )
+
+        assert check_error_or_warning(warn, 'cost class monetary has weight = None, setting weight to 1')
+        assert all(
+            model.run_config['objective_options']['cost_class'][i] == 1
+            for i in override['run.objective_options.cost_class'].keys()
+        )
+
 
 class TestDataset:
 

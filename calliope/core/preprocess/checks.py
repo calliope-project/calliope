@@ -244,14 +244,20 @@ def check_initial(config_model):
             )
 
     # We no longer allow cost_class in objective_obtions to be a string
-    if not isinstance(
-            config_model.run.objective_options.get('cost_class', {}),
-            dict):
+    _cost_class = config_model.run.objective_options.get('cost_class', {})
+
+    if not isinstance(_cost_class, dict):
         errors.append(
             '`run.objective_options.cost_class` must be a dictionary.'
             'If you want to minimise or maximise with a single cost class, '
             'use e.g. "{monetary: 1}", which gives the monetary cost class a weight '
             'of 1 in the objective, and ignores any other cost classes.'
+        )
+    elif len(_cost_class.keys()) == 0:
+        errors.append(
+            'No cost classes defined for use in the objective. '
+            'Expecting a dict of "{cost_class: weight}" for all cost classes '
+            'to be considered in the objective function.'
         )
 
     else:
@@ -259,12 +265,24 @@ def check_initial(config_model):
         # a dict, as it errors otherwise
 
         # For cost minimisation objective, check for cost_class: None and set to one
-        for k, v in config_model.run.objective_options.get('cost_class', {}).items():
+        for k, v in _cost_class.items():
             if v is None:
                 config_model.run.objective_options.cost_class[k] = 1
                 model_warnings.append(
                     'cost class {} has weight = None, setting weight to 1'.format(k)
                 )
+
+    if (isinstance(_cost_class, dict) and _cost_class.get('monetary', 0) == 1
+            and len(_cost_class.keys()) > 1):
+        # Warn that {monetary: 1} is still in the objective, since it is not
+        # automatically overidden on setting another objective.
+        model_warnings.append(
+            'Monetary cost class with a weight of 1 is still included '
+            'in the objective. If you want to remove the monetary cost class, '
+            'add `{"monetary": 0}` to the dictionary nested under '
+            ' `run.objective_options.cost_class`.'
+        )
+
 
     # Don't allow time clustering with cyclic storage if not also using
     # storage_inter_cluster
@@ -587,7 +605,7 @@ def check_model_data(model_data):
     return model_data, comments, model_warnings, errors
 
 
-def check_future_deprecation_warnings(model_run, model_data):
+def check_future_deprecation_warnings(model_data):
     """
     Function for all FutureWarnings and DeprecationWarnings. Comment above each
     warning should specify Calliope version in which it was added, and the
@@ -596,9 +614,21 @@ def check_future_deprecation_warnings(model_run, model_data):
 
     # Warning that group_share constraints will removed in 0.7.0 #
     # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if model_run is not None and 'group_share' in model_run.model:
+    if any('group_share_' in i for i in model_data.data_vars.keys()):
         warnings.warn(
             '`group_share` constraints will be removed in v0.7.0 -- '
             'use the new model-wide constraints instead.',
+            DeprecationWarning
+        )
+
+    # Warning that there will be no default cost class in 0.7.0 #
+    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+    if AttrDict.from_yaml_string(model_data.attrs['run_config']).objective_options.get('cost_class', {}) == {'monetary': 1}:
+        warnings.warn(
+            'There will be no default cost class for the objective function in '
+            'v0.7.0 (currently "monetary" with a weight of 1). '
+            'Explicitly specify the cost class(es) you would like to use '
+            'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
+            'replicate the current default.',
             DeprecationWarning
         )

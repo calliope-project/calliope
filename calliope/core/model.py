@@ -81,7 +81,7 @@ class Model(object):
             raise ValueError(
                 'Input configuration must either be a string or a dictionary.'
             )
-        check_future_deprecation_warnings(self._model_run, self._model_data)
+        check_future_deprecation_warnings(self._model_data)
 
         self.plot = plotting.ModelPlotMethods(self)
 

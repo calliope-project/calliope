@@ -41,40 +41,10 @@ class TestCostMinimisationObjective:
 
         assert float(model.results.cost.sum()) > 6.6e7
 
-    def test_fail_on_string(self):
-        with pytest.raises(calliope.exceptions.ModelError) as exception:
-            build_model(
-                model_file='weighted_obj_func.yaml',
-                scenario='illegal_string_cost_class'
-            )
-
-        assert check_error_or_warning(
-            exception,
-            '`run.objective_options.cost_class` must be a dictionary.'
-        )
-
-    @pytest.mark.parametrize("override", [
-        ({'run.objective_options.cost_class': {'monetary': None}}),
-        ({'run.objective_options.cost_class': {'monetary': None, 'emissions': None}})
-    ])
-    def test_warn_on_no_weight(self, override):
-
-        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
-            model = build_model(
-                model_file='weighted_obj_func.yaml',
-                override_dict=override
-            )
-
-        assert check_error_or_warning(warn, 'cost class monetary has weight = None, setting weight to 1')
-        assert all(
-            model.run_config['objective_options']['cost_class'][i] == 1
-            for i in override['run.objective_options.cost_class'].keys()
-        )
-
     @pytest.mark.parametrize("scenario,cost_class,weight", [
         ('monetary_objective', ['monetary'], [1]),
         ('emissions_objective', ['emissions'], [1]),
-        ('weighted_objective', ['monetary', 'emissions'], [1, 0.1])
+        ('weighted_objective', ['monetary', 'emissions'], [0.9, 0.1])
     ])
     def test_weighted_objective_results(self, scenario, cost_class, weight):
         model = build_model(
