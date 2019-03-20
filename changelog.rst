@@ -14,6 +14,8 @@ Release History
 
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
 
+|new| Storage capacity can be tied to energy capacity with a new `storage_cap_ratio` constraint.
+
 |changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
 
 |changed| All tests and example models have been updated to solve with Coin-CBC, instead of GLPK. Documentation has been updated to reflect this, and aid in installing CBC (which is not simple for Windows users).

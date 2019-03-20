@@ -116,6 +116,8 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
             \\begin{cases}
                 = storage_{cap, equals}(loc::tech),& \\text{if } storage_{cap, equals}(loc::tech)\\\\
                 \\leq storage_{cap, max}(loc::tech),& \\text{if } storage_{cap, max}(loc::tech)\\\\
+                = storage_{cap, ratio}(loc::tech) \\times energy_{cap}(loc::tech)\\
+                    ,& \\text{if } storage_{cap, ratio}(loc::tech)\\\\
                 \\text{unconstrained},& \\text{otherwise}
             \\end{cases}
             \\forall loc::tech \\in loc::techs_{store}
@@ -130,8 +132,13 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
-
-    return get_capacity_constraint(backend_model, 'storage_cap', loc_tech)
+    ratio = get_param(backend_model, 'storage_cap_ratio', loc_tech)
+    if po.value(ratio) is not False and po.value(ratio) is not None:
+        return backend_model.storage_cap[loc_tech] == (
+            backend_model.energy_cap[loc_tech] * ratio
+        )
+    else:
+        return get_capacity_constraint(backend_model, 'storage_cap', loc_tech)
 
 
 def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
