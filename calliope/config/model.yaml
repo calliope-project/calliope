@@ -14,7 +14,7 @@ run:
     cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
     ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
-    objective_options: {'cost_class': 'monetary', 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
+    objective_options: {'cost_class': {'monetary': 1}, 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
     objective:  minmax_cost_optimization # Name of internal objective function to use, currently only min/max cost-based optimisation is available
     operation:  # Settings for operational mode
         window: null

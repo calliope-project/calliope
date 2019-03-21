@@ -222,7 +222,7 @@ class TestObservedDict:
             'must supply one, and only one, of initial_dict or initial_yaml_string'
         )
 
-    @pytest.mark.parametrize('key1,key2,value,result', [
+    @pytest.mark.parametrize('key1,key2,value,result', (
         ('foo', None, 1, {'foo': 1, 'foobar': {'baz': 'fob'}}),
         ('foobar', 'baz', 2, {'foo': 1, 'foobar': {'baz': 2}}),
         ('foo', None, {'baz': 'fob'}, {'foo': {'baz': 'fob'}, 'foobar': {'baz': 2}}),
@@ -231,7 +231,7 @@ class TestObservedDict:
         ('foo', None, 5, {'foo': 5, 'foobar': {'baz': 2}}),
         ('foo', None, None, {'foobar': {'baz': 2}})
 
-    ])
+    ))
     def test_set_item_observer(self, observed_from_dict, observer, key1, key2, value, result):
         if key2 is None:
             observed_from_dict[key1] = value
