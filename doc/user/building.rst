@@ -126,11 +126,15 @@ Each technology must specify some ``essentials``, most importantly a name, the a
 
 The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the resource is set to infinite via ``inf``).
 
-The ``costs`` section gives costs for the technology. Calliope uses the concept of "cost classes" to allow accounting for more than just monetary costs. The above example specifies only the ``monetary`` cost class, but any number of other classes could be used, for example ``co2`` to account for emissions.
+The ``costs`` section gives costs for the technology. Calliope uses the concept of "cost classes" to allow accounting for more than just monetary costs. The above example specifies only the ``monetary`` cost class, but any number of other classes could be used, for example ``co2`` to account for emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology.
 
-By default the ``monetary`` cost class is used in the objective function, which seeks to minimize total costs. Additional cost classes can be created simply by adding them to the definition of costs for a technology. To use an alternative cost class and/or sense (minimize/maximize) in the objective function, the ``objective_options`` parameter can be set in the run configuration, e.g. ``objective_options: {'cost_class': 'emissions', 'sense': 'minimize'}``.
+By default, only the ``monetary`` cost class is used in the objective function, i.e., the default objective is to minimize total costs.
 
-Multiple cost classes can also be considered in the objective, by setting the `cost_class` key to a dictionary of cost classes and their weights, e.g. ``objective_options: {'cost_class': {'monetary': 1, 'emissions': 0.1}}``. In this example, monetary costs are summed as usual and emissions are added to this, scaled by 0.1 (emulating a carbon price).
+Multiple cost classes can be considered in the objective by setting the `cost_class` key. It must be a dictionary of cost classes and their weights in the objective, e.g. ``objective_options: {'cost_class': {'monetary': 1, 'emissions': 0.1}}``. In this example, monetary costs are summed as usual and emissions are added to this, scaled by 0.1 (emulating a carbon price).
+
+To use a different sense (minimize/maximize) you can set `sense`: ``objective_options: {'cost_class': ..., 'sense': 'minimize'}``.
+
+To use a single alternative cost class, disabling the consideration of the default `monetary`, set the weight of the monetary cost class to zero to stop considering it and the weight of another cost class to a non-zero value, e.g. ``objective_options: {'cost_class': {'monetary': 0, 'emissions': 1}}``.
 
 .. seealso::
 
