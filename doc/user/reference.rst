@@ -10,5 +10,5 @@ We suggest you read the :doc:`building`, :doc:`running` and :doc:`analysing` sec
    :maxdepth: 2
 
    ref_example_models
-   ref_config_listing
+   ref_config
    ref_formulation
