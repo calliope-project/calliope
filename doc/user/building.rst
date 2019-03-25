@@ -155,6 +155,50 @@ This will create an ``unmet_demand`` decision variable in the optimisation, whic
 .. note::
     When ensuring feasibility, you can also set a `big M value <https://en.wikipedia.org/wiki/Big_M_method>`_ (``run.bigM``). This is the "cost" of unmet demand. It is possible to make model convergence very slow if bigM is set too high. default bigM is 1x10 :sup:`9`, but should be close to the maximum total system cost that you can imagine. This is perhaps closer to 1x10 :sup:`6` for urban scale models.
 
+.. _configuration_timeseries:
+
+----------------
+Time series data
+----------------
+
+.. Note::
+
+   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
+
+
+For parameters that vary in time, time series data can be read from CSV files, by specifying ``resource: file=filename.csv`` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
+
+By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column too use when setting ``resource`` per location, by giving the column name with a colon following the filename: ``resource: file=filename.csv:column``
+
+For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour electricity generation data might look like this:
+
+.. code-block:: yaml
+
+    pv:
+        essentials:
+            name: 'Rooftop PV'
+            color: '#B59C2B'
+            parent: supply
+            carrier_out: power
+        constraints:
+            resource: file=pv_resource.csv
+            energy_cap_max: 10000  # kW
+
+All time series data in a model must be indexed by ISO 8601 compatible time stamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``), i.e., the first column in the CSV file must be time stamps.
+
+For example, the first few lines of a CSV file giving a resource potential for two locations might look like this:
+
+.. code-block:: text
+
+    ,location1,location2
+    2005-01-01 00:00:00,0,0
+    2005-01-01 01:00:00,0,11
+    2005-01-01 02:00:00,0,18
+    2005-01-01 03:00:00,0,49
+    2005-01-01 04:00:00,11,110
+    2005-01-01 05:00:00,45,300
+    2005-01-01 06:00:00,90,458
+
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
 ----------------------------------------------
@@ -228,7 +272,7 @@ Further optional settings, including debug settings, can be specified in the run
 
 .. seealso::
 
-    :ref:`config_reference_run`, :ref:`debugging_runs_config`, :ref:`solver_options`, :ref:`documentation on operational mode <operational_mode>`.
+    :ref:`config_reference_run`, :doc:`troubleshooting`, :ref:`solver_options`, :ref:`documentation on operational mode <operational_mode>`.
 
 .. _building_overrides:
 

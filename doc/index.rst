@@ -49,8 +49,10 @@ User guide
    user/running
    user/analysing
    user/tutorials
-   user/ref_advanced_func
-   user/more_info
+   user/advanced_constraints
+   user/advanced_features
+   user/troubleshooting
+   user/reference
    user/develop
 
 -----------------

@@ -93,10 +93,10 @@ def format_exceptions(
             profile.disable()
             if profile_filename:
                 dump_path = os.path.expanduser(profile_filename)
-                print('\nSaving cProfile output to: {}'.format(dump_path))
+                click.secho('\nSaving cProfile output to: {}'.format(dump_path))
                 profile.dump_stats(dump_path)
             else:
-                print('\n\n----PROFILE OUTPUT----\n\n')
+                click.secho('\n\n----PROFILE OUTPUT----\n\n')
                 stats = pstats.Stats(profile).sort_stats('cumulative')
                 stats.print_stats(20)  # Print first 20 lines
 
@@ -132,12 +132,33 @@ def print_end_time(start_time, msg='complete'):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
     tend = end_time.strftime(_time_format)
-    print('\nCalliope run {}. '
-          'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
+    click.secho(
+        '\nCalliope run {}. '
+        'Elapsed: {} seconds (time at exit: {})'.format(msg, secs, tend))
 
 
 def _get_version():
     return 'Version {}'.format(__version__)
+
+
+def _cli_start(debug, quiet):
+    """
+    Initial setup for CLI commands.
+    Returns ``start_time`` (datetime timestamp)
+
+    """
+    if debug:
+        click.secho(_get_version())
+
+    set_quietness_level(quiet)
+
+    logging.captureWarnings(True)
+    pywarning_logger = logging.getLogger('py.warnings')
+    pywarning_logger.addHandler(console)
+
+    start_time = datetime.datetime.now()
+
+    return start_time
 
 
 @click.group(invoke_without_command=True)
@@ -147,9 +168,9 @@ def _get_version():
 def cli(ctx, version):
     """Calliope: a multi-scale energy systems modelling framework"""
     if ctx.invoked_subcommand is None and not version:
-        print(ctx.get_help())
+        click.secho(ctx.get_help())
     if version:
-        print(_get_version())
+        click.secho(_get_version())
 
 
 @cli.command(short_help='Create a new model based on a built-in example.')
@@ -162,8 +183,8 @@ def new(path, template, debug):
     example models. The target path must not yet exist. Intermediate
     directories will be created automatically.
     """
-    if debug:
-        print(_get_version())
+    _cli_start(debug, quiet=False)
+
     with format_exceptions(debug):
         if template is None:
             template = 'national_scale'
@@ -172,23 +193,63 @@ def new(path, template, debug):
         shutil.copytree(source_path, path)
 
 
-@cli.command(short_help='Run a model.')
+def _run_setup_model(
+        model_file, scenario, model_format, override_dict):
+    """
+    Build model in CLI commands. Returns ``model``, a ready-to-run
+    calliope.Model instance.
+
+    """
+    # Try to determine model file type if not given explicitly
+    if model_format is None:
+        if model_file.split('.')[-1] in ['yaml', 'yml']:
+            model_format = 'yaml'
+        elif model_file.split('.')[-1] in ['nc', 'nc4', 'netcdf']:
+            model_format = 'netcdf'
+        else:
+            raise ValueError(
+                'Cannot determine model file format based on file '
+                'extension for "{}". Set format explicitly with '
+                '--model_format.'.format(model_file)
+            )
+
+    if model_format == 'yaml':
+        model = Model(
+            model_file, scenario=scenario, override_dict=override_dict
+        )
+    elif model_format == 'netcdf':
+        if scenario is not None or override_dict is not None:
+            raise ValueError(
+                'When loading a pre-built model from NetCDF, the '
+                '--scenario and --override_dict options are not available.'
+            )
+        model = read_netcdf(model_file)
+    else:
+        raise ValueError('Invalid model format: {}'.format(model_format))
+
+    return model
+
+
+@cli.command(short_help='Build and run a model.')
 @click.argument('model_file')
 @click.option('--scenario')
+@click.option('--model_format')
+@click.option('--override_dict')
 @click.option('--save_netcdf')
 @click.option('--save_csv')
 @click.option('--save_plots')
 @click.option('--save_logs')
-@click.option('--model_format')
-@click.option('--override_dict')
+@click.option(
+    '--save_lp', help='Build and save model to the given LP file. '
+    'When this is set, the model is not sent to a solver, and all other save options are ignored.')
 @_debug
 @_quiet
 @_pdb
 @_profile
 @_profile_filename
 @_fail_when_infeasible
-def run(model_file, scenario, save_netcdf, save_csv, save_plots,
-        save_logs, model_format, override_dict,
+def run(model_file, scenario, model_format, override_dict,
+        save_netcdf, save_csv, save_plots, save_logs, save_lp,
         debug, quiet, pdb, profile, profile_filename, fail_when_infeasible):
     """
     Execute the given model. Tries to guess from the file extension whether
@@ -197,81 +258,64 @@ def run(model_file, scenario, save_netcdf, save_csv, save_plots,
     --model_format=netcdf option.
 
     """
-    if debug:
-        print(_get_version())
+    start_time = _cli_start(debug, quiet)
+    click.secho(
+        'Calliope {} starting at {}\n'.format(
+            __version__,
+            start_time.strftime(_time_format)
+        ))
 
-    set_quietness_level(quiet)
-
-    logging.captureWarnings(True)
-    pywarning_logger = logging.getLogger('py.warnings')
-    pywarning_logger.addHandler(console)
-
-    start_time = datetime.datetime.now()
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
-        if save_csv is None and save_netcdf is None:
-            click.secho(
-                '\n!!!\nWARNING: No options to save results have been '
-                'specified.\nModel will run without saving results!\n!!!\n',
-                fg='red', bold=True
-            )
-        tstart = start_time.strftime(_time_format)
-        print('Calliope {} starting at {}\n'.format(__version__, tstart))
 
-        # Try to determine model file type if not given explicitly
-        if model_format is None:
-            if model_file.split('.')[-1] in ['yaml', 'yml']:
-                model_format = 'yaml'
-            elif model_file.split('.')[-1] in ['nc', 'nc4', 'netcdf']:
-                model_format = 'netcdf'
-            else:
-                raise ValueError(
-                    'Cannot determine model file format based on file '
-                    'extension for "{}". Set format explicitly with '
-                    '--model_format.'.format(model_file)
-                )
+        model = _run_setup_model(model_file, scenario, model_format, override_dict)
+        click.secho(model.info() + '\n')
 
-        if model_format == 'yaml':
-            model = Model(
-                model_file, scenario=scenario, override_dict=override_dict
-            )
-        elif model_format == 'netcdf':
-            if scenario is not None or override_dict is not None:
-                raise ValueError(
-                    'When loading a pre-built model from NetCDF, the '
-                    '--scenario and --override_dict options are not available.'
-                )
-            model = read_netcdf(model_file)
-        else:
-            raise ValueError('Invalid model format: {}'.format(model_format))
-
-        if save_logs:
-            model.run_config['save_logs'] = save_logs
-
-        print(model.info() + '\n')
-        print('Starting model run...')
-        model.run()
-
-        termination = model._model_data.attrs.get(
-            'termination_condition', 'unknown')
-        if save_csv:
-            print('Saving CSV results to directory: {}'.format(save_csv))
-            model.to_csv(save_csv)
-        if save_netcdf:
-            print('Saving NetCDF results to file: {}'.format(save_netcdf))
-            model.to_netcdf(save_netcdf)
-        if save_plots:
-            if termination == 'optimal':
-                print('Saving HTML file with plots to: {}'.format(save_plots))
-                model.plot.summary(to_file=save_plots)
-            else:
+        # Only save LP file
+        if save_lp:  # Only save LP file without solving model
+            click.secho('Saving model to LP file...')
+            if save_csv is not None or save_netcdf is not None or save_plots is not None:
                 click.secho(
-                    'Model termination condition non-optimal. Not saving plots',
+                    'WARNING: Model will not be solved - ignoring other save options!',
+                    fg='red', bold=True)
+            model.to_lp(save_lp)
+            print_end_time(start_time)
+
+        # Else run the model, then save outputs
+        else:
+            click.secho('Starting model run...')
+
+            if save_logs:
+                model.run_config['save_logs'] = save_logs
+
+            if save_csv is None and save_netcdf is None:
+                click.secho(
+                    '\n!!!\nWARNING: No options to save results have been '
+                    'specified.\nModel will run without saving results!\n!!!\n',
                     fg='red', bold=True
                 )
-        if fail_when_infeasible and termination != 'optimal':
-            raise BackendError("Problem is infeasible.")
-        else:
+
+            model.run()
+            termination = model._model_data.attrs.get('termination_condition', 'unknown')
+
+            if save_csv:
+                click.secho('Saving CSV results to directory: {}'.format(save_csv))
+                model.to_csv(save_csv)
+            if save_netcdf:
+                click.secho('Saving NetCDF results to file: {}'.format(save_netcdf))
+                model.to_netcdf(save_netcdf)
+            if save_plots:
+                if termination == 'optimal':
+                    click.secho('Saving HTML file with plots to: {}'.format(save_plots))
+                    model.plot.summary(to_file=save_plots)
+                else:
+                    click.secho(
+                        'Model termination condition non-optimal. Not saving plots',
+                        fg='red', bold=True
+                    )
+
             print_end_time(start_time)
+            if fail_when_infeasible and termination != 'optimal':
+                raise BackendError("Problem is infeasible.")
 
 
 @cli.command(short_help='Generate a script to run multiple models.')
@@ -295,7 +339,7 @@ def generate_runs(
         cluster_threads, cluster_mem, cluster_time,
         debug, quiet, pdb):
 
-    set_quietness_level(quiet)
+    _cli_start(debug, quiet)
 
     kwargs = dict(
         model_file=model_file,
@@ -324,7 +368,8 @@ def generate_scenarios(
         model_file, out_file, overrides, scenario_name_prefix,
         debug, quiet, pdb):
 
-    set_quietness_level(quiet)
+    _cli_start(debug, quiet)
+
     with format_exceptions(debug, pdb):
         combinations = list(itertools.product(
             *[i.split(';') for i in overrides]
@@ -341,16 +386,3 @@ def generate_scenarios(
             for i, c in enumerate(combinations)}}
 
         AttrDict(scenarios).to_yaml(out_file)
-
-
-@cli.command()
-@click.argument('args', nargs=-1)
-@_debug
-@_quiet
-@_pdb
-def convert(args, debug, quiet, pdb):
-    print(
-        'The ``calliope convert`` command has been removed in v0.6.3.\n'
-        'If you need to convert a 0.5.x model, use Calliope v0.6.2 for '
-        'the conversion and then upgrade to the newest version.'
-    )

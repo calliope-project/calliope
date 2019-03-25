@@ -8,7 +8,7 @@ RELATIVE_TOLERANCE = 0.0001
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    def test_group_share_prod_min(self):
+    def test_group_prod_min(self):
         model = calliope.examples.national_scale(
             scenario='cold_fusion_with_production_share'
         )
@@ -27,7 +27,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
         assert prod_share == approx(0.85)
 
-    def test_group_share_cap_max(self):
+    def test_group_cap_max(self):
         model = calliope.examples.national_scale(
             scenario='cold_fusion_with_capacity_share'
         )

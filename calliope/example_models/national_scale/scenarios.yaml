@@ -2,8 +2,8 @@
 # Scenarios are optional, named combinations of overrides
 ##
 scenarios:
-    cold_fusion_with_production_share: ['cold_fusion', 'group_share_cold_fusion_prod']
-    cold_fusion_with_capacity_share: ['cold_fusion', 'group_share_cold_fusion_cap']
+    cold_fusion_with_production_share: ['cold_fusion', 'cold_fusion_prod_share']
+    cold_fusion_with_capacity_share: ['cold_fusion', 'cold_fusion_cap_share']
 
 
 ##
@@ -90,10 +90,10 @@ overrides:
         locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
 
     ##
-    # Overrides to demonstrate the group_share constraints
+    # Overrides to demonstrate group constraints
     ##
 
-    cold_fusion:  # Defines a hypothetical cold fusion tech to use in group_share
+    cold_fusion:  # Defines a hypothetical cold fusion tech to use in group constraints
         techs:
             cold_fusion:
                 essentials:
@@ -111,20 +111,20 @@ overrides:
         locations.region1.techs.cold_fusion: null
         locations.region2.techs.cold_fusion: null
 
-    group_share_cold_fusion_prod:
-        model:
-            group_share:
-                # At least 85% of power supply must come from CSP and cold fusion together
-                csp,cold_fusion:
-                    carrier_prod_min:
-                        power: 0.85
+    cold_fusion_prod_share:
+        group_constraints:
+            min_supply_share_group:
+                techs: ['csp', 'cold_fusion']
+                supply_share_min:
+                    # At least 85% of power supply must come from CSP and cold fusion together
+                    power: 0.85
 
-    group_share_cold_fusion_cap:
-        model:
-            group_share:
+    cold_fusion_cap_share:
+        group_constraints:
+            max_cap_share_group:
+                techs: ['csp', 'cold_fusion']
                 # At most 20% of total energy_cap can come from CSP and cold fusion together
-                csp,cold_fusion:
-                    energy_cap_max: 0.20
+                energy_cap_share_max: 0.20
         locations:
             region1:
                 techs:

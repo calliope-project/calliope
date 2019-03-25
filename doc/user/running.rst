@@ -231,4 +231,4 @@ What will typically go wrong, in order of decreasing likelihood:
    * The model is consistent and properly defined but infeasible. Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
    * There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
 
-Calliope provides help in diagnosing model issues. See the section on :ref:`debugging failing runs <debugging_runs_config>`.
+Calliope provides help in diagnosing model issues. See :doc:`troubleshooting`.

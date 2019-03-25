@@ -279,6 +279,13 @@ class Model(object):
         """
         io.save_csv(self._model_data, path, dropna)
 
+    def to_lp(self, path):
+        """
+        Save built model to LP format at the given ``path``. If the backend
+        model has not been built yet, it is built prior to saving.
+        """
+        io.save_lp(self, path)
+
     def info(self):
         info_strings = []
         model_name = self.model_config.get('name', 'None')

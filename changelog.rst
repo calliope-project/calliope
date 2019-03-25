@@ -6,13 +6,17 @@ Release History
 0.6.4 (dev)
 -----------
 
-|new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}, which models an emissions price of 0.1 units of currency per unit of emissions)
+|new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}`, which models an emissions price of 0.1 units of currency per unit of emissions)
 
 |new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, covering:
 
 * `demand_share_min` and `demand_share_max`, `energy_cap_share_min`, `energy_cap_share_max`, `supply_share_min`, `supply_share_max`, `demand_share_min`, and `demand_share_max`. These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
 * `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
 * `energy_cap_min`, `energy_cap_max`, `resource_area_min`, `resource_area_max` which allow to constrain installed capacities of groups of technologies in specific locations.
+
+|new| Easier way to save an LP file with a ``--save_lp`` command-line option and a ``Model.to_lp`` method
+
+|new| Documentation has a new layout, better search, and is restructured with various content additions, such as a section on troubleshooting.
 
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
 
@@ -45,7 +49,7 @@ Release History
 
 |new| |backwards-incompatible| Addition of ``scenarios``, which complement and expand the existing ``overrides`` functionality.  ``overrides`` becomes a top-level key in model configuration, instead of a separate file. The ``calliope run`` command has a new ``--scenario`` option which replaces --override_file, while ``calliope generate_runs`` has a new ``--scenarios`` option which replaces --override_file and takes a semicolon-separated list of scenario names or of group1,group2 combinations. To convert existing overrides to the new approach, simply group them under a top-level ``overrides`` key and import your existing overrides file from the main model configuration file with ``import: ['your_overrides_file.yaml']``.
 
-|new| Addition of ``calliope generate_scenarios`` command to allow building autmating the construction of scenarios which consist of many combinations of overrides.
+|new| Addition of ``calliope generate_scenarios`` command to allow automating the construction of scenarios which consist of many combinations of overrides.
 
 |new| Added ``--override_dict`` option to ``calliope run`` and ``calliope generate_runs`` commands
 
