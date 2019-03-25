@@ -184,9 +184,9 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             resource: file=pv_resource.csv
             energy_cap_max: 10000  # kW
 
-All time series data in a model must be indexed by ISO 8601 compatible time stamps (usually in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``), i.e., the first column in the CSV file must be time stamps.
+By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting ``model.timeseries_dateformat``, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
-For example, the first few lines of a CSV file giving a resource potential for two locations might look like this:
+For example, the first few lines of a CSV file giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
 .. code-block:: text
 
