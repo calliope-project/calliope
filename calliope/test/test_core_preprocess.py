@@ -266,8 +266,8 @@ class TestModelRun:
         exploded location
         """
         override = {
-            'locations.0.test_supply_elec.constraints.resource': 10,
-            'locations.0,1.test_supply_elec.constraints.resource': 15
+            'locations.0.techs.test_supply_elec.constraints.resource': 10,
+            'locations.0,1.techs.test_supply_elec.constraints.resource': 15
         }
 
         with pytest.raises(KeyError):
@@ -372,7 +372,7 @@ class TestModelRun:
             m = build_model(override_dict=override1, scenario='simple_supply,one_day,investment_costs')
 
         assert check_error_or_warning(
-            warn_info, 'Deleting empty cost class `carbon` for technology `test_supply_elec`.'
+            warn_info, 'Deleting empty cost class `carbon` for technology `test_supply_elec` at `0`.'
         )
 
         assert 'carbon' not in m._model_run.locations['1'].techs.test_supply_elec.costs.keys()
@@ -393,6 +393,17 @@ class TestChecks:
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised top-level configuration item: nonsensical_key'
+        )
+
+    def test_missing_config_key(self):
+        """
+        Check that missing 'locations' raises an error
+        """
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model()  # Not selecting any scenario means no locations are defined
+
+        assert check_error_or_warning(
+            excinfo, 'Model is missing required top-level configuration item: locations'
         )
 
     def test_unrecognised_model_run_keys(self):
@@ -578,7 +589,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.1.test_supply_no_parent:
+            locations.1.techs.test_supply_no_parent:
             """
         )
 
@@ -600,7 +611,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.1.test_supply_tech_parent:
+            locations.1.techs.test_supply_tech_parent:
             """
         )
 
@@ -620,7 +631,7 @@ class TestChecks:
             techs.test_supply_tech_parent.essentials:
                         name: Supply tech
                         parent: test_supply_group
-            locations.1.test_supply_tech_parent:
+            locations.1.techs.test_supply_tech_parent:
             """
         )
 
@@ -738,6 +749,23 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario='simple_supply,one_day')
 
+    def test_defining_cost_class_with_name_of_cost(self):
+        """
+        A cost class with the same name as one of the possible cost types was
+        defined, suggesting a user mistake with indentation.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_elec.costs.storage_cap: 10
+            """
+        )
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            '`test_supply_elec` at `1` defines storage_cap as a cost class.')
+
     def test_exporting_unspecified_carrier(self):
         """
         User can only define an export carrier if it is defined in
@@ -764,6 +792,23 @@ class TestChecks:
 
         # should pass: exporting heat for conversion tech
         build_model(override_dict=override_converison_plus('heat'), scenario='simple_conversion_plus,one_day')
+
+    def test_tech_directly_in_locations(self):
+        """
+        A tech defined directly within a location rather than within techs
+        inside that location is probably an oversight.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.test_supply_elec.costs.storage_cap: 10
+            """
+        )
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            'Location `1` contains tech `test_supply_elec` at its top level')
 
     def test_allowed_time_varying_constraints(self):
         """
@@ -865,6 +910,44 @@ class TestChecks:
 
         for link in removed_con_links:
             assert link not in m._model_data.loc_tech_carriers_con.values
+
+    def test_carrier_ratio_for_inexistent_carrier(self):
+        """
+        A tech should not define a carrier ratio for a carrier it does
+        not actually use.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+                carrier_in:
+                    some_carrier: 1.0
+                carrier_out_2:
+                    another_carrier: 2.0
+            """
+        )
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            'Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually')
+
+    def test_carrier_ratio_for_specified_carrier(self):
+        """
+        The warning for not defining a carrier ratio for a carrier a tech does
+        not actually use should not be triggered if the carrier is defined.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+                carrier_in:
+                    heat: 1.0
+            """
+        )
+        with pytest.warns(None) as excinfo:
+            build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
+
+        assert 'Tech `test_conversion_plus` gives a carrier ratio' not in [str(i) for i in excinfo.list]
 
     def test_milp_constraints(self):
         """

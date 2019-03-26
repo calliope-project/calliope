@@ -18,7 +18,7 @@ from inspect import signature
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers
+from calliope.core.preprocess.util import get_all_carriers, flatten_list
 from calliope.core.util.logging import logger
 from calliope.core.util.tools import load_function
 
@@ -26,8 +26,15 @@ _defaults_files = {
     k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
     for k in ['model', 'defaults']
 }
-defaults = AttrDict.from_yaml(_defaults_files['defaults'])
-defaults_model = AttrDict.from_yaml(_defaults_files['model'])
+
+DEFAULTS = AttrDict.from_yaml(_defaults_files['defaults'])
+ALL_DEFAULT_CONSTRAINTS = list(DEFAULTS.default_tech.constraints.keys())
+DEFAULTS_MODEL = AttrDict.from_yaml(_defaults_files['model'])
+POSSIBLE_COSTS = set(
+    flatten_list([
+        DEFAULTS_MODEL.tech_groups[k].allowed_costs
+        for k in DEFAULTS_MODEL.tech_groups
+    ]))
 
 
 def check_overrides(config_model, override):
@@ -114,11 +121,18 @@ def check_initial(config_model):
                 'Unrecognised top-level configuration item: {}'.format(k)
             )
 
+    # Check that all required top-level keys are specified
+    for k in ['model', 'run', 'locations', 'techs']:
+        if k not in config_model.keys():
+            errors.append(
+                'Model is missing required top-level configuration item: {}'.format(k)
+            )
+
     # Check run configuration
     # Exclude solver_options and objective_options.cost_class from checks,
     # as we don't know all possible options for all solvers
     for k in config_model['run'].keys_nested():
-        if (k not in defaults_model['run'].keys_nested() and
+        if (k not in DEFAULTS_MODEL['run'].keys_nested() and
                 'solver_options' not in k and 'objective_options.cost_class' not in k):
             model_warnings.append(
                 'Unrecognised setting in run configuration: {}'.format(k)
@@ -126,7 +140,7 @@ def check_initial(config_model):
 
     # Check model configuration, but top-level keys only
     for k in config_model['model'].keys():
-        if k not in defaults_model['model'].keys():
+        if k not in DEFAULTS_MODEL['model'].keys():
             model_warnings.append(
                 'Unrecognised setting in model configuration: {}'.format(k)
             )
@@ -145,9 +159,9 @@ def check_initial(config_model):
 
     # Warn if any unknown group constraints are defined
     permitted_group_constraints = ['techs', 'locs', 'exists'] + \
-        defaults.allowed_group_constraints.per_carrier + \
-        defaults.allowed_group_constraints.per_cost + \
-        defaults.allowed_group_constraints.general
+        DEFAULTS.allowed_group_constraints.per_carrier + \
+        DEFAULTS.allowed_group_constraints.per_cost + \
+        DEFAULTS.allowed_group_constraints.general
 
     for group in config_model.get('group_constraints', {}).keys():
         for key in config_model.group_constraints[group].keys():
@@ -172,7 +186,7 @@ def check_initial(config_model):
     # * All user-defined tech and tech_groups must specify a parent
     # * techs cannot be parents, only tech groups can
     # * No carrier may be called 'resource'
-    default_tech_groups = list(defaults_model.tech_groups.keys())
+    default_tech_groups = list(DEFAULTS_MODEL.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
         if tg_name in default_tech_groups:
             continue
@@ -194,7 +208,7 @@ def check_initial(config_model):
 
     for t_name, t_config in config_model.techs.items():
         for key in t_config.keys():
-            if key not in defaults["default_tech"].keys():
+            if key not in DEFAULTS["default_tech"].keys():
                 model_warnings.append("Unknown key `{}` defined for tech {}.".format(key, t_name))
         if not t_config.get_key('essentials.parent'):
             errors.append(
@@ -212,8 +226,18 @@ def check_initial(config_model):
                 'be defined (tech: {})'.format(t_name)
             )
 
+    # Check whether any techs are erroneously in top-level location definitions
+    all_techs = config_model.techs.keys()
+    for k, v in config_model.get('locations', {}).items():
+        for loc_key in v:
+            if loc_key in all_techs:
+                errors.append(
+                    'Location `{l}` contains tech `{t}` at its top level. This '
+                    'should be under `locations.{l}.techs.{t}` instead.'.format(l=k, t=loc_key)
+                )
+
     # Error if a constraint is loaded from file that must not be
-    allowed_from_file = defaults['file_allowed']
+    allowed_from_file = DEFAULTS['file_allowed']
     for k, v in config_model.as_dict_flat().items():
         if 'file=' in str(v):
             constraint_name = k.split('.')[-1]
@@ -296,7 +320,7 @@ def check_initial(config_model):
     return model_warnings, errors
 
 
-def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors, comments):
+def _check_tech_final(model_run, tech_id, tech_config, loc_id, model_warnings, errors, comments):
     """
     Checks individual tech/tech groups at specific locations.
     NOTE: Updates `model_warnings` and `errors` lists in-place.
@@ -311,7 +335,6 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
     required = model_run.techs[tech_id].required_constraints
     allowed = model_run.techs[tech_id].allowed_constraints
     allowed_costs = model_run.techs[tech_id].allowed_costs
-    all_defaults = list(defaults.default_tech.constraints.keys())
 
     # Error if required constraints are not defined
     for r in required:
@@ -327,7 +350,6 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
                 '`{}` at `{}` fails to define '
                 'all required constraints: {}'.format(tech_id, loc_id, required)
             )
-            # print('{} -- {}-{}: {}, {}'.format(r, loc_id, tech_id, single_ok, multiple_ok))
 
     # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
     if model_run.techs[tech_id].essentials.parent == 'supply_plus':
@@ -339,6 +361,22 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
                 '`{}` at `{}` fails to define '
                 'energy_cap_per_storage_cap, but is using storage'.format(tech_id, loc_id, required)
             )
+
+    # Warn if defining a carrier ratio for a conversion_plus tech,
+    # but applying it to a carrier that isn't one of the carriers specified by that tech
+    # e.g. carrier_ratios.carrier_in_2.cooling when cooling isn't a carrier`
+    defined_carriers = get_all_carriers(model_run.techs[tech_id].essentials)
+    carriers_in_ratios = [
+        i.split('.')[-1] for i in
+        tech_config.constraints.get_key('carrier_ratios', AttrDict()).as_dict_flat().keys()
+    ]
+    for carrier in carriers_in_ratios:
+        if carrier not in defined_carriers:
+            model_warnings.append(
+                'Tech `{t}` gives a carrier ratio for `{c}`, but does not actually '
+                'configure `{c}` as a carrier.'.format(t=tech_id, c=carrier)
+            )
+
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (any(['units_' in k for k in tech_config.constraints.keys()])
         and 'energy_cap_per_unit' not in tech_config.constraints.keys()):
@@ -357,7 +395,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
             'technology in units_max/min/equals'.format(tech_id, loc_id, required)
         )
 
-    # If a technology is defines force_resource but is not in loc_techs_finite_resource
+    # If a technology defines force_resource but is not in loc_techs_finite_resource
     if ('force_resource' in tech_config.constraints.keys() and
             loc_id + '::' + tech_id not in model_run.sets.loc_techs_finite_resource):
 
@@ -373,7 +411,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
     # Warn if something is defined that's not allowed, but is not in defaults
     # (it could be a misspelling)
     for k in remaining:
-        if k in all_defaults:
+        if k in ALL_DEFAULT_CONSTRAINTS:
             errors.append(
                 '`{}` at `{}` defines non-allowed '
                 'constraint `{}`'.format(tech_id, loc_id, k)
@@ -438,7 +476,7 @@ def check_final(model_run):
     for loc_id, loc_config in model_run.locations.items():
         if 'techs' in loc_config:
             for tech_id, tech_config in loc_config.techs.items():
-                _check_tech(
+                _check_tech_final(
                     model_run, tech_id, tech_config, loc_id,
                     model_warnings, errors, comments
                 )
@@ -446,7 +484,7 @@ def check_final(model_run):
         if 'links' in loc_config:
             for link_id, link_config in loc_config.links.items():
                 for tech_id, tech_config in link_config.techs.items():
-                    _check_tech(
+                    _check_tech_final(
                         model_run, tech_id, tech_config,
                         'link {}:{}'.format(loc_id, link_id),
                         model_warnings, errors, comments

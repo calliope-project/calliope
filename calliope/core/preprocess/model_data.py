@@ -427,21 +427,21 @@ def group_constraints_to_dataset(model_run):
 
     for constr_name in model_run.sets['group_constraints']:
         dims = ['group_names_' + constr_name]
-        if constr_name in checks.defaults.allowed_group_constraints.per_carrier:
+        if constr_name in checks.DEFAULTS.allowed_group_constraints.per_carrier:
             dims.append('carriers')
             data = [
                 [group_constraints[i][constr_name].get(carrier, np.nan)
                  for carrier in model_run.sets['carriers']]
                 for i in model_run.sets['group_names_' + constr_name]
             ]
-        elif constr_name in checks.defaults.allowed_group_constraints.per_cost:
+        elif constr_name in checks.DEFAULTS.allowed_group_constraints.per_cost:
             dims.append('costs')
             data = [
                 [group_constraints[i][constr_name].get(cost, np.nan)
                  for cost in model_run.sets['costs']]
                 for i in model_run.sets['group_names_' + constr_name]
             ]
-        elif constr_name in checks.defaults.allowed_group_constraints.general:
+        elif constr_name in checks.DEFAULTS.allowed_group_constraints.general:
             data = [
                 group_constraints[i][constr_name]
                 for i in model_run.sets['group_names_' + constr_name]
@@ -461,8 +461,8 @@ def add_attributes(model_run):
     attr_dict['applied_overrides'] = model_run['applied_overrides']
     attr_dict['scenario'] = model_run['scenario']
 
-    default_tech_dict = checks.defaults.default_tech.as_dict()
-    default_location_dict = checks.defaults.default_location.as_dict()
+    default_tech_dict = checks.DEFAULTS.default_tech.as_dict()
+    default_location_dict = checks.DEFAULTS.default_location.as_dict()
     attr_dict['defaults'] = ruamel.yaml.dump({
         **default_tech_dict['constraints'],
         **{'cost_{}'.format(k): v for k, v in default_tech_dict['costs']['default'].items()},

@@ -14,7 +14,7 @@ import math
 from calliope.exceptions import ModelError, warn
 from calliope.core.attrdict import AttrDict
 from calliope.core.preprocess.util import vincenty
-from calliope.core.preprocess.checks import defaults
+from calliope.core.preprocess.checks import DEFAULTS, POSSIBLE_COSTS
 
 
 def process_locations(model_config, modelrun_techs):
@@ -42,7 +42,7 @@ def process_locations(model_config, modelrun_techs):
     locations_in = model_config.locations
     links_in = model_config.get('links', AttrDict())
 
-    allowed_from_file = defaults['file_allowed']
+    allowed_from_file = DEFAULTS['file_allowed']
 
     warnings = []
     errors = []
@@ -160,7 +160,7 @@ def process_locations(model_config, modelrun_techs):
                     config_value = '{}:{}'.format(config_value, loc_name)
                     tech_settings.set_key(config_key, config_value)
 
-            tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
+            tech_settings = check_costs_and_compute_depreciation_rates(tech_name, loc_name, tech_settings, warnings, errors)
 
             # Now merge the tech settings into the location-specific
             # tech dict -- but if a tech specifies ``exists: false``,
@@ -221,7 +221,7 @@ def process_locations(model_config, modelrun_techs):
                 tech_settings = cleanup_undesired_keys(tech_settings)
 
                 tech_settings = process_per_distance_constraints(tech_name, tech_settings, locations, locations_comments, loc_from, loc_to)
-                tech_settings = compute_depreciation_rates(tech_name, tech_settings, warnings, errors)
+                tech_settings = check_costs_and_compute_depreciation_rates(tech_name, link, tech_settings, warnings, errors)
                 processed_transmission_techs[tech_name] = tech_settings
             else:
                 tech_settings = processed_transmission_techs[tech_name]
@@ -397,15 +397,27 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
     return tech_settings
 
 
-def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
+def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config, warnings, errors):
     cost_classes = list(tech_config.get('costs', {}).keys())
     for cost in cost_classes:
-        # If the cost class is empty, delete it now and warn about it
+
+        # Warning if a cost is defined without a cost class, which is probably a mistake
+        if cost in POSSIBLE_COSTS:
+            warnings.append(
+                '`{}` at `{}` defines {} as a cost class. '
+                'This is probably an indentation mistake.'.format(
+                    tech_id, loc_or_link, cost)
+            )
+
+        # Warning if a cost class is empty
         if not isinstance(tech_config.costs[cost], dict):
             warnings.append(
-                'Deleting empty cost class `{}` for technology `{}`.'.format(cost, tech_id)
+                'Deleting empty cost class `{}` for technology `{}` at `{}`.'.format(
+                    cost, tech_id, loc_or_link)
             )
             tech_config.costs.del_key(cost)
+            # If the cost class is empty, it is not enough to delete it,
+            # we need to skip it entirely
             continue
 
         plant_life = tech_config.constraints.get_key('lifetime', 0)
@@ -454,6 +466,6 @@ def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
             tech_config.costs.del_key(cost)
     # If, by deleting the cost class, we end up with an empty dict, delete the cost key
     if len(cost_classes) > 0 and len(tech_config.costs.keys()) == 0:
-            tech_config.del_key('costs')
+        tech_config.del_key('costs')
 
     return tech_config
