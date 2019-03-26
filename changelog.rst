@@ -18,7 +18,7 @@ Release History
 
 |new| Storage capacity can be tied to energy capacity with a new `energy_cap_per_storage_cap_equals` constraint.
 
-|changed| `change_rate` has been renamed to `energy_cap_per_storage_cap_max`. `change_rate` will be removed in Calliope 0.7.0.
+|changed| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.
 
 |changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
 
