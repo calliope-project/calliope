@@ -2,9 +2,7 @@
 Advanced features
 -----------------
 
-This section, as the title suggests, contains more info and more details, and in particular, information on some of Calliope's more advanced functionality.
-
-We suggest you read the :doc:`building`, :doc:`running` and :doc:`analysing` sections first.
+Once you're comfortable with :doc:`building <building>`, :doc:`running <running>`, and :doc:`analysing <analysing>` one of the built-in example models, you may want to explore Calliope's advanced functionality. With these features, you will be able to build and run complex models in no time.
 
 .. _time_clustering:
 

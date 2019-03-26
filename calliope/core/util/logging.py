@@ -40,8 +40,8 @@ def set_log_level(level):
     * 'DEBUG'
     * 'SOLVER' -> Calliope custom level, assigned value of 19,
                   returns solver (e.g. GLPK) stream
-    * 'INFO' -> default level
-    * 'WARNING'
+    * 'INFO'
+    * 'WARNING' -> default level
     * 'ERROR'
     * 'CRITICAL'
     """

@@ -168,7 +168,7 @@ Time series data
 
 For parameters that vary in time, time series data can be read from CSV files, by specifying ``resource: file=filename.csv`` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
-By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column too use when setting ``resource`` per location, by giving the column name with a colon following the filename: ``resource: file=filename.csv:column``
+By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: ``resource: file=filename.csv:column``
 
 For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour electricity generation data might look like this:
 
@@ -184,7 +184,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             resource: file=pv_resource.csv
             energy_cap_max: 10000  # kW
 
-By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting ``model.timeseries_dateformat``, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
+By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting ``model.timeseries_dateformat`` based on ``strftime` directives <http://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
 For example, the first few lines of a CSV file giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
@@ -251,7 +251,7 @@ The only required setting in the run configuration is the solver to use:
 .. code-block:: yaml
 
     run:
-        solver: glpk
+        solver: cbc
         mode: plan
 
 the most important parts of the ``run`` section are ``solver`` and  ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm.

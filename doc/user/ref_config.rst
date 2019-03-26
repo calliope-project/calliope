@@ -21,6 +21,7 @@ This file or this set of files must specify the following top-level configuratio
 
 .. Note:: Model settings (``model``) affect how the model and its data are built by Calliope, while run settings (``run``) only take effect once a built model is run (e.g. interactively via ``model.run()``). This means that run settings, unlike model settings, can be updated after a model is built and before it is run, by modifying attributes in the built model dataset.
 
+.. _yaml_format:
 
 YAML configuration file format
 ------------------------------

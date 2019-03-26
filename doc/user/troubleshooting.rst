@@ -32,13 +32,18 @@ To understand infeasible models:
 
   More detail on this is in the `official Gurobi documentation <https://www.gurobi.com/documentation/current/refman/solving_a_model2.html>`_.
 
-To deal with numerically unstable models:
+To deal with numerically unstable models, try setting ``run.solver_options.Presolve: 0``, as large numeric ranges can cause the pre-solver to generate an infeasible or numerically unstable model. The `Gurobi Guidelines for Numerical Issues <https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html>`_ give detailed guidance for strategies to address numerically difficult optimisation problems.
 
-* Try setting ``run.solver_options.Presolve: 0``, as large numeric ranges can cause the pre-solver to generate an infeasible or numerically unstable model.
+Using the CPLEX solver
+^^^^^^^^^^^^^^^^^^^^^^
 
-.. seealso::
+There are two ways to understand infeasibility when using the CPLEX solver, the first is quick and the second is more involved:
 
-    The `Gurobi Guidelines for Numerical Issues <https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html>`_ give detailed guidance for strategies to address numerically difficult optimisation problems.
+1. Save solver logs for your model (``run.save_logs: path/to/log_directory``). In the directory, open the file ending in '.cplex.log' to see the CPLEX solver report. If the model is infeasible or unbounded, the offending constraint will be identified (e.g. ``SOLVER: Infeasible variable = slack c_u_carrier_production_max_constraint(region1_2__csp__power_2005_01_01_07_00_00)_``). This may be enough to understand why the model is failing, if not...
+
+2. Open the LP file in CPLEX interactive (run `cplex` in the command line to invoke a CPLEX interactive session). The LP file for the problem ends with '.lp' in the log folder (`read path/to/file.lp`). Once loaded, you can try relaxing variables / constraints to see if the problem can be solved with relaxation (`FeasOpt`). You can also identify conflicting constraints (`tools conflict`) and print those constraints directly (`display conflict all`). There are many more commands available to analyse individual constraints and variables in the `Official CPLEX documentation <https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.1/ilog.odms.cplex.help/CPLEX/UsrMan/topics/infeas_unbd/partInfeasUnbnded_title_synopsis.html>`_.
+
+Similar to Gurobi, numerically unstable models may lead to unexpected infeasibility, so you can try ``run.solver_options.preprocessing_presolve: 0``. The `CPLEX documentation page on numeric difficulties <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.4.0/com.ibm.cplex.zos.help/UsrMan/topics/cont_optim/simplex/20_num_difficulty.html>`_ goes into more detail on numeric instability.
 
 Debugging model errors
 ----------------------
@@ -46,6 +51,8 @@ Debugging model errors
 Calliope provides a method to save its fully built and commented internal representation of a model to a single YAML file with ``Model.save_commented_model_yaml(path)``. Comments in the resulting YAML file indicate where original values were overridden.
 
 Because this is Calliope's internal representation of a model directly before the ``model_data`` ``xarray.Dataset`` is built, it can be useful for debugging possible issues in the model formulation, for example, undesired constraints that exist at specific locations because they were specified model-wide without having been superseded by location-specific settings.
+
+Further processing of the data does occur before solving the model. The final values of parameters used by the backend solver to generate constraints can be analysed when running an interactive Python session by running  ``model.backend.get_input_params()``. This provides a user with an xarray Dataset which will look very similar to ``model.inputs``, except that assumed :ref:`default values <defaults>` will be included. An attempt at running the model has to be made in order to be able to run this command.
 
 .. seealso::
 

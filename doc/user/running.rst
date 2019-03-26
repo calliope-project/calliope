@@ -74,8 +74,6 @@ The most basic way to run a model programmatically from within a Python interpre
 
 .. note:: If ``config`` is not specified (i.e. ``model = Model()``), an error is raised. See :doc:`ref_example_models` for information on instantiating a simple example model without specifying a custom model configuration.
 
-.. note:: Calliope logs useful progress information to the INFO log level, but does not change the default log level from WARNING. To see progress information when running interactively, call ``calliope.set_log_level('INFO')`` immediately after importing Calliope.
-
 Other ways to load a model interactively are:
 
 * Passing an :class:`~calliope.AttrDict` or standard Python dictionary to the :class:`~calliope.Model` constructor, with the same nested format as the YAML model configuration (top-level keys: ``model``, ``run``, ``locations``, ``techs``).
@@ -108,23 +106,18 @@ There are two ways to override a base model when running interactively, analogou
             override_dict={'run.solver': 'gurobi'}
         )
 
+.. note:: Both `scenario` and `override_dict` can be defined at once. They will be applied in order, such that scenarios are applied first, followed by dictionary overrides. As such, the `override_dict` can be used to override scenarios.
+
 Tracking progress
 -----------------
 
-When running Calliope in command line, logging of model pre-processing and solving occurs automatically. Interactively, for example in a Jupyter notebook, you can enable verbose logging by running the following code before instantiating and running a Calliope model:
+When running Calliope in the command line, logging of model pre-processing and solving occurs automatically. Interactively, for example in a Jupyter notebook, you can enable verbose logging by setting the log level using ``calliope.set_log_level(level)`` immediately after importing the Calliope package. Possible levels are (from least to most verbose):
 
-.. code-block:: python
-
-    import logging
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(levelname)s: %(message)s',
-    )
-
-    logger = logging.getLogger()
-
-This will include model processing output, as well as the output of the chosen solver.
+1. `ERROR`: only print errors.
+2. `WARNING`: print errors and warnings (default level).
+3. `INFO`: print erros, warnings, and Calliope messages. This prints a message at each stage of pre-processing, sending the model to the solver, and post-processing, including timestamps.
+4. `SOLVER`: INFO logging, with added print-out of the solver status as it converges on a solution.
+5. `DEBUG`: SOLVER logging, with heavily verbose logging of a number of function outputs. Only for use when troubleshooting failing runs or developing new functionality in Calliope.
 
 --------------------------------------
 Generating scripts for many model runs

@@ -3,6 +3,7 @@ Configuration and defaults
 --------------------------
 
 This section lists the available configuration options and constraints along with their default values.
+Defaults are automatically applied in constraints whenever there is no user input for a particular value.
 
 .. _config_reference_model:
 
@@ -79,6 +80,8 @@ A technology inherits the configuration that its parent group specifies (which, 
 .. Note::
 
    The identifiers of the abstract base tech groups are reserved and cannot be used for user-defined technologies. However, you can amend an abstract base technology group for example by a lifetime attribute that will be in effect for all technologies derived from that group (see :ref:`tech_groups`).
+
+.. _defaults:
 
 The following lists the pre-defined base tech groups and the defaults they provide.
 
@@ -186,5 +189,3 @@ Required constraints, allowed constraints, and allowed costs:
 
 .. literalinclude:: includes/required_allowed_conversion_plus.yaml
    :language: yaml
-
-.. _yaml_format:
