@@ -1,12 +1,12 @@
 model:
-    name: Test model for storage capacity ratio
+    name: Test model for energy capacity per storage capacity
     timeseries_data_path: 'timeseries_data'
     subset_time: '2005-01-01'
 
 run:
     mode: plan
     solver: cbc
-    cyclic_storage: False
+    cyclic_storage: False # necessary so demand can be fed from stored energy
 
 techs:
     electricity_demand:
@@ -38,4 +38,4 @@ locations:
 
 overrides:
     fixed_ratio:
-        techs.my_storage.constraints.storage_cap_ratio: 2
+        techs.my_storage.constraints.energy_cap_per_storage_cap_equals: 10

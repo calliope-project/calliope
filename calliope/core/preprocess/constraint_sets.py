@@ -93,6 +93,7 @@ def generate_constraint_sets(model_run):
         i for i in sets.loc_techs_store
         if any([
             constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max'),
+            constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_equals'),
         ])
     ]
     constraint_sets['loc_techs_resource_capacity_constraint'] = [
