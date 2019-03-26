@@ -10,7 +10,6 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
-import warnings
 
 import numpy as np
 
@@ -603,32 +602,3 @@ def check_model_data(model_data):
             model_data.attrs['allow_operate_mode'] = 1
 
     return model_data, comments, model_warnings, errors
-
-
-def check_future_deprecation_warnings(model_data):
-    """
-    Function for all FutureWarnings and DeprecationWarnings. Comment above each
-    warning should specify Calliope version in which it was added, and the
-    version in which it should be updated/removed.
-    """
-
-    # Warning that group_share constraints will removed in 0.7.0 #
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if any('group_share_' in i for i in model_data.data_vars.keys()):
-        warnings.warn(
-            '`group_share` constraints will be removed in v0.7.0 -- '
-            'use the new model-wide constraints instead.',
-            FutureWarning
-        )
-
-    # Warning that there will be no default cost class in 0.7.0 #
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if AttrDict.from_yaml_string(model_data.attrs['run_config']).objective_options.cost_class == {'monetary': 1}:
-        warnings.warn(
-            'There will be no default cost class for the objective function in '
-            'v0.7.0 (currently "monetary" with a weight of 1). '
-            'Explicitly specify the cost class(es) you would like to use '
-            'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
-            'replicate the current default.',
-            FutureWarning
-        )

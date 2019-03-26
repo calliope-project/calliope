@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 model.py
@@ -10,6 +10,7 @@ Implements the core Model class.
 """
 
 from io import StringIO
+import warnings
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
@@ -22,7 +23,7 @@ from calliope.core.preprocess import \
     build_model_data, \
     apply_time_clustering, \
     final_timedimension_processing
-from calliope.core.preprocess.checks import check_future_deprecation_warnings
+from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.tools import apply_to_dict
@@ -81,7 +82,7 @@ class Model(object):
             raise ValueError(
                 'Input configuration must either be a string or a dictionary.'
             )
-        check_future_deprecation_warnings(self._model_data)
+        self._check_future_deprecation_warnings()
 
         self.plot = plotting.ModelPlotMethods(self)
 
@@ -292,3 +293,41 @@ class Model(object):
             times=len(self._model_data.coords.get('timesteps', [])))
         info_strings.append('Model size:   {}'.format(msize))
         return '\n'.join(info_strings)
+
+    def _check_future_deprecation_warnings(self):
+        """
+        Method for all FutureWarnings and DeprecationWarnings. Comment above each
+        warning should specify Calliope version in which it was added, and the
+        version in which it should be updated/removed.
+        """
+
+        # Warning that group_share constraints will removed in 0.7.0 #
+        # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+        if any('group_share_' in i for i in self._model_data.data_vars.keys()):
+            warnings.warn(
+                '`group_share` constraints will be removed in v0.7.0 -- '
+                'use the new model-wide constraints instead.',
+                FutureWarning
+            )
+
+        # Warning that there will be no default cost class in 0.7.0 #
+        # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+        if AttrDict.from_yaml_string(self._model_data.attrs['run_config']).objective_options.cost_class == {'monetary': 1}:
+            warnings.warn(
+                'There will be no default cost class for the objective function in '
+                'v0.7.0 (currently "monetary" with a weight of 1). '
+                'Explicitly specify the cost class(es) you would like to use '
+                'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
+                'replicate the current default.',
+                FutureWarning
+            )
+
+        # Warning that charge rate will be removed in 0.7.0
+        # Added in 0.6.4-dev, to be removed in 0.7.0-dev
+        # Rename charge rate to energy_cap_per_storage_cap_max
+        if self._model_data is not None and "charge_rate" in self._model_data:
+            warnings.warn(
+                '`charge_rate` is renamed to `energy_cap_per_storage_cap_max` '
+                'and will be removed in v0.7.0.',
+                FutureWarning
+            )
