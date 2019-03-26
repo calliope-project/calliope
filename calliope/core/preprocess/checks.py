@@ -333,10 +333,11 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
     # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
     if model_run.techs[tech_id].essentials.parent == 'supply_plus':
         if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
-            and 'charge_rate' not in tech_config.constraints.keys()):
+            and 'charge_rate' not in tech_config.constraints.keys()
+            and 'energy_cap_per_storage_cap_max' not in tech_config.constraints.keys()):
             errors.append(
                 '`{}` at `{}` fails to define '
-                'charge_rate, but is using storage'.format(tech_id, loc_id, required)
+                'energy_cap_per_storage_cap_max, but is using storage'.format(tech_id, loc_id, required)
             )
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (any(['units_' in k for k in tech_config.constraints.keys()])

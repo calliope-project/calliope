@@ -127,7 +127,7 @@ def constraints_to_dataset(model_run):
             return 'loc_techs_supply_plus'
         elif 'resource' in constraint: # i.e. everything with 'resource' in the name that isn't resource_cap
             return 'loc_techs_finite_resource'
-        elif 'storage' in constraint or 'charge_rate' in constraint:
+        elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap_max' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:
             return 'loc_techs_purchase'

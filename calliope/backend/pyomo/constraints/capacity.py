@@ -27,8 +27,14 @@ def load_constraints(backend_model):
 
     if 'loc_techs_energy_capacity_storage_constraint' in sets:
         backend_model.energy_capacity_storage_constraint = po.Constraint(
-                backend_model.loc_techs_energy_capacity_storage_constraint,
-                rule=energy_capacity_storage_constraint_rule
+            backend_model.loc_techs_energy_capacity_storage_constraint,
+            rule=energy_capacity_storage_constraint_rule
+        )
+
+    if 'loc_techs_energy_capacity_storage_constraint_old' in sets:
+        backend_model.energy_capacity_storage_constraint = po.Constraint(
+            backend_model.loc_techs_energy_capacity_storage_constraint,
+            rule=energy_capacity_storage_constraint_rule_old
         )
 
     if 'loc_techs_resource_capacity_constraint' in sets:
@@ -141,10 +147,13 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
         return get_capacity_constraint(backend_model, 'storage_cap', loc_tech)
 
 
-def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
+def energy_capacity_storage_constraint_rule_old(backend_model, loc_tech):
     """
     Set an additional energy capacity constraint on storage technologies,
     based on their use of `charge_rate`.
+
+    This is deprecated and will be removed in Calliope 0.7.0. Instead of
+    `charge_rate`, please use `energy_cap_per_storage_cap_max`.
 
     .. container:: scrolling-wrapper
 
@@ -159,6 +168,27 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
 
     return backend_model.energy_cap[loc_tech] <= (
         backend_model.storage_cap[loc_tech] * charge_rate
+    )
+
+
+def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
+    """
+    Set an additional energy capacity constraint on storage technologies,
+    based on their use of `energy_cap_per_storage_cap_max`.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{energy_{cap}}(loc::tech)
+            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_max(loc::tech)
+            \\quad \\forall loc::tech \\in loc::techs_{store}
+
+    """
+    energy_cap_per_storage_cap_max = get_param(backend_model, 'energy_cap_per_storage_cap_max', loc_tech)
+
+    return backend_model.energy_cap[loc_tech] <= (
+        backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap_max
     )
 
 
