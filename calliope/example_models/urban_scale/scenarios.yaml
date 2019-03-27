@@ -27,7 +27,7 @@ overrides:
             # boiler-end
             heat_pipes:
                 constraints:
-                    binary_operation: true
+                    force_asynchronous_prod_con: true
 
     mapbox_ready:
         locations:

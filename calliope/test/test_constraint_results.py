@@ -71,8 +71,9 @@ class TestNationalScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(282487.35489)
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
 class TestUrbanScaleMILP:
-    def test_binary_operation(self):
+    def test_asynchronous_prod_con(self):
 
         def _get_prod_con(model, prod_con):
             return (
@@ -87,7 +88,7 @@ class TestUrbanScaleMILP:
         assert any(((_con < 0) & (_prod > 0)).any()) is True
 
         m_bin = calliope.examples.urban_scale(
-            override_dict={'techs.heat_pipes.constraints.binary_operation': True,
+            override_dict={'techs.heat_pipes.constraints.force_asynchronous_prod_con': True,
                            'run.solver_options.mipgap': 0.05,
                            'run.zero_threshold': 1e-6}
         )

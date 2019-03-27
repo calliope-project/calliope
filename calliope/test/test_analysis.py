@@ -70,6 +70,7 @@ class TestPlotting:
         assert check_error_or_warning(error, 'Model does not define location coordinates')
 
     @python36_or_higher
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_plotting(self):
         override = {'model.subset_time': ['2005-07-01 00:00:00', '2005-07-01 12:00:00']}
         model = calliope.examples.milp(override_dict=override)

@@ -38,6 +38,7 @@ class TestModelRun:
         # test as dict
         calliope.Model(model_dict.as_dict())
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_valid_scenarios(self):
         """
         Test that valid scenario definition raises no error and results in applied scenario.
@@ -528,6 +529,7 @@ class TestChecks:
             'Unrecognised group constraint `foobar` in group `mygroup`'
         )
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_abstract_base_tech_group_override(self):
         """
         Abstract base technology groups can be overridden
@@ -868,6 +870,7 @@ class TestChecks:
         for link in removed_con_links:
             assert link not in m._model_data.loc_tech_carriers_con.values
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):
         """
         If `units` is defined, but not `energy_cap_per_unit`, throw an error
@@ -980,6 +983,56 @@ class TestChecks:
             '`power` is an unknown resource unit for `test_supply_elec`'
         )
 
+    @pytest.mark.parametrize('constraints,costs', (
+        ({'units_max': 2, 'energy_cap_per_unit': 5}, None),
+        ({'units_equals': 2, 'energy_cap_per_unit': 5}, None),
+        ({'units_min': 2, 'energy_cap_per_unit': 5}, None),
+        (None, {'purchase': 2}),
+
+    ))
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+    def test_milp_supply_warning(self, constraints, costs):
+        override_constraints = {}
+        override_costs = {}
+        if constraints is not None:
+            override_constraints.update({'techs.test_supply_elec.constraints': constraints})
+        if costs is not None:
+            override_costs.update({'techs.test_supply_elec.costs.monetary': costs})
+        override = {**override_constraints, **override_costs}
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(override_dict=override, scenario='simple_supply,one_day,investment_costs')
+
+        assert check_error_or_warning(
+            warn,
+            'Integer and / or binary decision variables are included in this model'
+        )
+
+    @pytest.mark.parametrize('constraints,costs', (
+        ({'units_max': 2, 'storage_cap_per_unit': 5, 'energy_cap_per_unit': 5}, None),
+        ({'units_equals': 2, 'storage_cap_per_unit': 5, 'energy_cap_per_unit': 5}, None),
+        ({'units_min': 2, 'storage_cap_per_unit': 5, 'energy_cap_per_unit': 5}, None),
+        (None, {'purchase': 2}),
+
+    ))
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+    def test_milp_storage_warning(self, constraints, costs):
+        override_constraints = {}
+        override_costs = {}
+        if constraints is not None:
+            override_constraints.update({'techs.test_storage.constraints': constraints})
+        if costs is not None:
+            override_costs.update({'techs.test_storage.costs.monetary': costs})
+        override = {**override_constraints, **override_costs}
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(override_dict=override, scenario='simple_storage,one_day,investment_costs')
+
+        assert check_error_or_warning(
+            warn,
+            'Integer and / or binary decision variables are included in this model'
+        )
+
 
 class TestDataset:
 
@@ -989,6 +1042,7 @@ class TestDataset:
         Timesteps must be consistent?
         """
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_unassigned_sets(self):
         """
         Check that all sets in which there are possible loc:techs are assigned
@@ -1153,14 +1207,6 @@ class TestDataset:
         assert 'lookup_datestep_last_cluster_timestep' not in model._model_data.data_vars
         assert 'lookup_datestep_cluster' not in model._model_data.data_vars
         assert 'timestep_cluster' in model._model_data.data_vars
-
-    #def test_future_warning(self):
-    #    """
-    #    Test and warnings to be uncommented when a futurewarning is present
-    #    """
-    #    with pytest.warns(FutureWarning) as warning:
-    #        build_model({}, override_groups='')
-    #    assert check_error_or_warning(warning, '')
 
 
 class TestUtil:
