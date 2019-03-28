@@ -40,7 +40,7 @@ techs:
             carrier_out: power
         constraints:
             storage_cap_max: 614033
-            charge_rate: 1
+            energy_cap_per_storage_cap_max: 1
             storage_loss: 0.002
             resource: file=csp_resource.csv
             resource_unit: energy_per_area
@@ -72,7 +72,7 @@ techs:
         constraints:
             energy_cap_max: 1000  # kW
             storage_cap_max: inf
-            charge_rate: 4
+            energy_cap_per_storage_cap_max: 4
             energy_eff: 0.95  # 0.95 * 0.95 = 0.9025 round trip efficiency
             storage_loss: 0  # No loss over time assumed
             lifetime: 25

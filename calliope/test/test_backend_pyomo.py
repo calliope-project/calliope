@@ -492,7 +492,7 @@ class TestCapacityConstraints:
 
     def test_loc_techs_energy_capacity_storage_constraint(self):
         """
-        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.charge_rate')
+        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
         """
         m = build_model({}, 'simple_storage,two_hours,investment_costs')
         m.run(build_only=True)
