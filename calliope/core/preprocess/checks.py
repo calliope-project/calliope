@@ -283,7 +283,6 @@ def check_initial(config_model):
             ' `run.objective_options.cost_class`.'
         )
 
-
     # Don't allow time clustering with cyclic storage if not also using
     # storage_inter_cluster
     storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
