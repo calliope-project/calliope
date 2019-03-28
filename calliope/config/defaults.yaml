@@ -45,7 +45,9 @@ default_tech:
         primary_carrier_out: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
     constraints:
         carrier_ratios: {}  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
-        charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
+        charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
+        energy_cap_per_storage_cap_max: false # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
+        energy_cap_per_storage_cap_equals: false # name: Tie energy capacity to storage capacity ¦ unit: fraction ¦
         energy_cap_equals: false  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
         energy_cap_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
         energy_cap_max: .inf  # name: Maximum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
@@ -77,8 +79,8 @@ default_tech:
         resource_min_use: false # name: Minimum resource consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum resource consumption for production technologies
         resource_scale: 1.0  # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all values in timeseries) by this value
         resource_unit: energy  # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
-        storage_cap_equals: false  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``charge_rate`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
-        storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``charge_rate`` will be used as the capacity.
+        storage_cap_equals: false  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
+        storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
         storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
         storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology perchased.
         storage_initial: 0  # name: Initial storage level ¦ unit: kWh ¦ Set stored energy in device at the first timestep

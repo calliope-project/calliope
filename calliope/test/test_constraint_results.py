@@ -799,3 +799,26 @@ class TestEnergyCapGroupConstraints:
         expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
         assert round(expensive_capacity0, 5) >= 6
         assert expensive_capacity1 == 0
+
+
+class TestEnergyCapacityPerStorageCapacity:
+
+    @pytest.fixture
+    def model_file(self):
+        return "energy_cap_per_storage_cap.yaml"
+
+    def test_no_constraint_set(self, model_file):
+        model = build_model(model_file=model_file)
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
+
+    def test_fixed_ratio(self, model_file):
+        model = build_model(model_file=model_file, scenario="fixed_ratio")
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)

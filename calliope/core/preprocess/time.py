@@ -8,8 +8,6 @@ time.py
 Functionality to add and process time varying parameters
 
 """
-import warnings
-
 import xarray as xr
 import numpy as np
 import pandas as pd

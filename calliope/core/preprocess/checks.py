@@ -10,7 +10,6 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
-import warnings
 
 import numpy as np
 
@@ -333,10 +332,12 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
     # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
     if model_run.techs[tech_id].essentials.parent == 'supply_plus':
         if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
-            and 'charge_rate' not in tech_config.constraints.keys()):
+                and 'charge_rate' not in tech_config.constraints.keys()
+                and 'energy_cap_per_storage_cap_max' not in tech_config.constraints.keys()
+                and 'energy_cap_per_storage_cap_equals' not in tech_config.constraints.keys()):
             errors.append(
                 '`{}` at `{}` fails to define '
-                'charge_rate, but is using storage'.format(tech_id, loc_id, required)
+                'energy_cap_per_storage_cap, but is using storage'.format(tech_id, loc_id, required)
             )
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (any(['units_' in k for k in tech_config.constraints.keys()])
@@ -602,32 +603,3 @@ def check_model_data(model_data):
             model_data.attrs['allow_operate_mode'] = 1
 
     return model_data, comments, model_warnings, errors
-
-
-def check_future_deprecation_warnings(model_data):
-    """
-    Function for all FutureWarnings and DeprecationWarnings. Comment above each
-    warning should specify Calliope version in which it was added, and the
-    version in which it should be updated/removed.
-    """
-
-    # Warning that group_share constraints will removed in 0.7.0 #
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if any('group_share_' in i for i in model_data.data_vars.keys()):
-        warnings.warn(
-            '`group_share` constraints will be removed in v0.7.0 -- '
-            'use the new model-wide constraints instead.',
-            FutureWarning
-        )
-
-    # Warning that there will be no default cost class in 0.7.0 #
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if AttrDict.from_yaml_string(model_data.attrs['run_config']).objective_options.cost_class == {'monetary': 1}:
-        warnings.warn(
-            'There will be no default cost class for the objective function in '
-            'v0.7.0 (currently "monetary" with a weight of 1). '
-            'Explicitly specify the cost class(es) you would like to use '
-            'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
-            'replicate the current default.',
-            FutureWarning
-        )
