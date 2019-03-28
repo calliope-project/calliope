@@ -811,38 +811,14 @@ class TestEnergyCapacityPerStorageCapacity:
         model = build_model(model_file=model_file)
         model.run()
         assert model.results.termination_condition == "optimal"
-        energy_capacity = (model.get_formatted_array("energy_cap")
-                                .to_dataframe()
-                                .reset_index()
-                                .groupby("techs")
-                                .energy_cap
-                                .sum()
-                                .loc["my_storage"])
-        storage_capacity = (model.get_formatted_array("storage_cap")
-                                 .to_dataframe()
-                                 .reset_index()
-                                 .groupby("techs")
-                                 .storage_cap
-                                 .sum()
-                                 .loc["my_storage"])
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
         assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
 
     def test_fixed_ratio(self, model_file):
         model = build_model(model_file=model_file, scenario="fixed_ratio")
         model.run()
         assert model.results.termination_condition == "optimal"
-        energy_capacity = (model.get_formatted_array("energy_cap")
-                                .to_dataframe()
-                                .reset_index()
-                                .groupby("techs")
-                                .energy_cap
-                                .sum()
-                                .loc["my_storage"])
-        storage_capacity = (model.get_formatted_array("storage_cap")
-                                 .to_dataframe()
-                                 .reset_index()
-                                 .groupby("techs")
-                                 .storage_cap
-                                 .sum()
-                                 .loc["my_storage"])
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
         assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)

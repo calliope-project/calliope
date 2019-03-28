@@ -34,9 +34,3 @@ class TestModel:
         model = calliope.Model(model_location)
 
         model.info()
-
-    def test_future_warning_for_charge_rate(self):
-        with pytest.warns(FutureWarning):
-            calliope.examples.national_scale(
-                override_dict={'model.techs.battery.constraints.charge_rate': 5}
-            )

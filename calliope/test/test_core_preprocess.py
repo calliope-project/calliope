@@ -1034,46 +1034,6 @@ class TestChecks:
         )
 
 
-@pytest.mark.filterwarnings('always::FutureWarning')
-class TestDeprecationWarnings:
-
-    def test_group_share_warning(self):
-        override = {
-            'model.group_share.test_supply_elec.carrier_prod_min.electricity': 0.85
-        }
-        if calliope.__version__ == '0.6.4-dev':
-            with pytest.warns(FutureWarning) as warn:
-                build_model(override_dict=override, scenario='simple_supply,one_day')
-
-            assert check_error_or_warning(warn, '`group_share` constraints will be removed in v0.7.0')
-            print(warn)
-        # In later versions it will either raise a 'warning not raised' failure or it will fail on the assertion,
-        # depending on if there are other deprecation warnings found
-        elif calliope.__version__ in ['0.7.0-dev', '0.6.4']:
-            with pytest.warns(FutureWarning) as warn:
-                build_model(override_dict=override, scenario='simple_supply,one_day')
-            assert not check_error_or_warning(warn, '`group_share` constraints will be removed in v0.7.0')
-
-    def test_default_cost_class_warning(self):
-        if calliope.__version__ == '0.6.4-dev':
-            with pytest.warns(FutureWarning) as warn:
-                build_model(scenario='simple_supply,one_day')
-
-                assert check_error_or_warning(
-                    warn,
-                    'There will be no default cost class for the objective function in v0.7.0'
-                )
-        # In later versions it will either raise a 'warning not raised' failure or it will fail on the assertion,
-        # depending on if there are other deprecation warnings found
-        elif calliope.__version__ in ['0.7.0-dev', '0.6.4']:
-            with pytest.warns(FutureWarning) as warn:
-                build_model(scenario='simple_supply,one_day')
-            assert not check_error_or_warning(
-                warn,
-                'There will be no default cost class for the objective function in v0.7.0'
-            )
-
-
 class TestDataset:
 
     # FIXME: What are we testing here?
