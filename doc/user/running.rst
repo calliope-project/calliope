@@ -115,7 +115,7 @@ When running Calliope in the command line, logging of model pre-processing and s
 
 1. `ERROR`: only print errors.
 2. `WARNING`: print errors and warnings (default level).
-3. `INFO`: print erros, warnings, and Calliope messages. This prints a message at each stage of pre-processing, sending the model to the solver, and post-processing, including timestamps.
+3. `INFO`: print errors, warnings, and Calliope messages. This prints a message at each stage of pre-processing, sending the model to the solver, and post-processing, including timestamps.
 4. `SOLVER`: INFO logging, with added print-out of the solver status as it converges on a solution.
 5. `DEBUG`: SOLVER logging, with heavily verbose logging of a number of function outputs. Only for use when troubleshooting failing runs or developing new functionality in Calliope.
 
