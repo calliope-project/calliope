@@ -111,7 +111,7 @@ To understand infeasible models:
 
   More detail on this is in the `official Gurobi documentation <https://www.gurobi.com/documentation/current/refman/solving_a_model2.html>`_.
 
-To deal with numerically unstable models, try setting ``run.solver_options.Presolve: 0``, as large numeric ranges can cause the pre-solver to generate an `infeasible or numerically unstable model <http://www.gurobi.com/documentation/8.1/refman/numerics_why_scaling_and_g.html>`_. The `Gurobi Guidelines for Numerical Issues <https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html>`_ give detailed guidance for strategies to address numerically difficult optimisation problems.
+To deal with numerically unstable models, try setting ``run.solver_options.Presolve: 0``, as large numeric ranges can cause the pre-solver to generate an `infeasible or numerically unstable model <http://www.gurobi.com/documentation/current/refman/numerics_why_scaling_and_g.html>`_. The `Gurobi Guidelines for Numerical Issues <https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html>`_ give detailed guidance for strategies to address numerically difficult optimisation problems.
 
 Using the CPLEX solver
 ^^^^^^^^^^^^^^^^^^^^^^
