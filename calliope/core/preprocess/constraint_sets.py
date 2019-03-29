@@ -306,10 +306,17 @@ def generate_constraint_sets(model_run):
         # For now, transmission techs are not supported in group constraints
         techs = v.get('techs', sets['techs_non_transmission'])
         locs = v.get('locs', sets['locs'])
-        loc_techs = list(set(concat_iterable(
+
+        # All possible loc_techs for this constraint
+        loc_techs_all = list(set(concat_iterable(
             [(l, t) for l, t in product(locs, techs)],
             ['::']
         )))
+
+        # Some loc_techs may not actually exist in the actual model,
+        # so we must filter with actually exising loc_techs
+        loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
+
         constraint_sets['group_constraint_loc_techs_{}'.format(k)] = loc_techs
 
     return constraint_sets

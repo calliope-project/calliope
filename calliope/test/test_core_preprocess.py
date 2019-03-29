@@ -644,25 +644,6 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override2, scenario='simple_supply,one_day')
 
-    def test_missing_constraints(self):
-        """
-        A technology must define at least one constraint.
-        """
-
-        override = AttrDict.from_yaml_string(
-            """
-            techs:
-                supply_missing_constraint:
-                    essentials:
-                        parent: supply
-                        carrier: electricity
-                        name: supply missing constraint
-            locations.1.techs.supply_missing_constraint:
-            """
-        )
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, scenario='simple_supply,one_day')
-
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
@@ -672,14 +653,14 @@ class TestChecks:
         override_supply1 = AttrDict.from_yaml_string(
             """
             techs:
-                supply_missing_constraint:
+                demand_missing_constraint:
                     essentials:
-                        parent: supply
+                        parent: demand
                         carrier: electricity
-                        name: supply missing constraint
+                        name: demand missing constraint
                     constraints:
-                        resource_area_max: 10
-            locations.1.techs.supply_missing_constraint:
+                        resource_unit: power
+            locations.1.techs.demand_missing_constraint:
             """
         )
         with pytest.raises(exceptions.ModelError):

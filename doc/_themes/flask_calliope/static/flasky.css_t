@@ -498,10 +498,14 @@ pre {
     line-height: 1.3em;
 }
 
+code.docutils {
+    background: #ececec;
+    padding: 2px;
+}
+
 .pre {
     font-family: 'Ubuntu Mono', monospace;
     background: #ececec;
-    padding: 2px;
 }
 
 .admonition .pre {
