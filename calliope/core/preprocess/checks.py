@@ -10,7 +10,6 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
-import warnings
 
 import numpy as np
 
@@ -116,11 +115,11 @@ def check_initial(config_model):
             )
 
     # Check run configuration
-    # Exclude solver_options from checks, as we don't know all possible
-    # options for all solvers
+    # Exclude solver_options and objective_options.cost_class from checks,
+    # as we don't know all possible options for all solvers
     for k in config_model['run'].keys_nested():
         if (k not in defaults_model['run'].keys_nested() and
-                'solver_options' not in k):
+                'solver_options' not in k and 'objective_options.cost_class' not in k):
             model_warnings.append(
                 'Unrecognised setting in run configuration: {}'.format(k)
             )
@@ -243,6 +242,46 @@ def check_initial(config_model):
                 .format(arg, config_model.run.objective)
             )
 
+    # We no longer allow cost_class in objective_obtions to be a string
+    _cost_class = config_model.run.objective_options.get('cost_class', {})
+
+    if not isinstance(_cost_class, dict):
+        errors.append(
+            '`run.objective_options.cost_class` must be a dictionary.'
+            'If you want to minimise or maximise with a single cost class, '
+            'use e.g. "{monetary: 1}", which gives the monetary cost class a weight '
+            'of 1 in the objective, and ignores any other cost classes.'
+        )
+    elif len(_cost_class.keys()) == 0:
+        errors.append(
+            'No cost classes defined for use in the objective. '
+            'Expecting a dict of "{cost_class: weight}" for all cost classes '
+            'to be considered in the objective function.'
+        )
+
+    else:
+        # This next check is only run if we have confirmed that cost_class is
+        # a dict, as it errors otherwise
+
+        # For cost minimisation objective, check for cost_class: None and set to one
+        for k, v in _cost_class.items():
+            if v is None:
+                config_model.run.objective_options.cost_class[k] = 1
+                model_warnings.append(
+                    'cost class {} has weight = None, setting weight to 1'.format(k)
+                )
+
+    if (isinstance(_cost_class, dict) and _cost_class.get('monetary', 0) == 1
+            and len(_cost_class.keys()) > 1):
+        # Warn that {monetary: 1} is still in the objective, since it is not
+        # automatically overidden on setting another objective.
+        model_warnings.append(
+            'Monetary cost class with a weight of 1 is still included '
+            'in the objective. If you want to remove the monetary cost class, '
+            'add `{"monetary": 0}` to the dictionary nested under '
+            ' `run.objective_options.cost_class`.'
+        )
+
     # Don't allow time clustering with cyclic storage if not also using
     # storage_inter_cluster
     storage_inter_cluster = 'model.time.function_options.storage_inter_cluster'
@@ -293,10 +332,12 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
     # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
     if model_run.techs[tech_id].essentials.parent == 'supply_plus':
         if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
-            and 'charge_rate' not in tech_config.constraints.keys()):
+                and 'charge_rate' not in tech_config.constraints.keys()
+                and 'energy_cap_per_storage_cap_max' not in tech_config.constraints.keys()
+                and 'energy_cap_per_storage_cap_equals' not in tech_config.constraints.keys()):
             errors.append(
                 '`{}` at `{}` fails to define '
-                'charge_rate, but is using storage'.format(tech_id, loc_id, required)
+                'energy_cap_per_storage_cap, but is using storage'.format(tech_id, loc_id, required)
             )
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (any(['units_' in k for k in tech_config.constraints.keys()])
@@ -573,20 +614,3 @@ def check_model_data(model_data):
         )
 
     return model_data, comments, model_warnings, errors
-
-
-def check_future_deprecation_warnings(model_run, model_data):
-    """
-    Function for all FutureWarnings and DeprecationWarnings. Comment above each
-    warning should specify Calliope version in which it was added, and the
-    version in which it should be updated/removed.
-    """
-
-    # Warning that group_share constraints will removed in 0.7.0 #
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if model_run is not None and 'group_share' in model_run.model:
-        warnings.warn(
-            '`group_share` constraints will be removed in v0.7.0 -- '
-            'use the new model-wide constraints instead.',
-            DeprecationWarning
-        )

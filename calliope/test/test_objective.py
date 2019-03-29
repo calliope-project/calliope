@@ -1,9 +1,13 @@
+import pytest
 from pytest import approx
 
+import pyomo.core as po
+
 import calliope
+from calliope.test.common.util import build_test_model as build_model
 
 
-class TestNationalScaleObjectives:
+class TestCostMinimisationObjective:
     def test_nationalscale_minimize_emissions(self):
         model = calliope.examples.national_scale(
             scenario='minimize_emissions_costs',
@@ -35,3 +39,21 @@ class TestNationalScaleObjectives:
         assert model.results.carrier_prod.sum('timesteps').to_pandas()['region1::ccgt::power'] == approx(115569.4354)
 
         assert float(model.results.cost.sum()) > 6.6e7
+
+    @pytest.mark.parametrize("scenario,cost_class,weight", [
+        ('monetary_objective', ['monetary'], [1]),
+        ('emissions_objective', ['emissions'], [1]),
+        ('weighted_objective', ['monetary', 'emissions'], [0.9, 0.1])
+    ])
+    def test_weighted_objective_results(self, scenario, cost_class, weight):
+        model = build_model(
+            model_file='weighted_obj_func.yaml',
+            scenario=scenario
+        )
+        model.run()
+        assert (
+            sum(
+                model.results.cost.loc[{'costs': cost_class[i]}].sum().item() * weight[i]
+                for i in range(len(cost_class))
+            ) == approx(po.value(model._backend_model.obj))
+        )

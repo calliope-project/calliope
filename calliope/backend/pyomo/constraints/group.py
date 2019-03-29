@@ -105,7 +105,18 @@ def equalizer(lhs, rhs, sign):
 
 def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     """
-    TODO write docstring
+    Enforces shares of demand of a carrier to be met by the given groups
+    of technologies at the given locations. All technologies producing
+    and demanding the given carrier are considered.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_con \\in given\\_locations, timestep\\in timesteps}
+            carrier_{con}(loc::tech::carrier, timestep)
+
     """
     model_data_dict = backend_model.__calliope_model_data['data']
     share = model_data_dict['group_demand_share_{}'.format(what)].get(
@@ -175,7 +186,7 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
         )
         lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
         rhs_loc_techs = [
-            i for i in backend_model.loc_techs_supply
+            i for i in backend_model.loc_techs_supply_all
             if i.split('::')[0] in lhs_locs
         ]
 
@@ -217,7 +228,7 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
         )
         lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
         rhs_loc_techs = [
-            i for i in backend_model.loc_techs_supply
+            i for i in backend_model.loc_techs_supply_all
             if i.split('::')[0] in lhs_locs
         ]
 

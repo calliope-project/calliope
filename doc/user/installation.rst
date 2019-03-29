@@ -36,9 +36,12 @@ You are now ready to use Calliope together with the free and open source GLPK so
 Updating an existing installation
 =================================
 
-If following the recommended installation method above, the following command, assuming the conda environment is active, will update Calliope to the newest version:
+If following the recommended installation method above, the following command, assuming the conda environment is active, will update Calliope to the newest version::
 
    $ conda update -c conda-forge calliope
+
+
+.. _install_solvers:
 
 Solvers
 =======
@@ -48,7 +51,7 @@ You need at least one of the solvers supported by Pyomo installed. CBC (open-sou
 CBC
 ---
 
-`CBC <https://projects.coin-or.org/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ``conda install -c conda-forge coincbc``. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_. We recommend you download the relevant binary for `CBC 2.9.9 <https://bintray.com/coin-or/download/Cbc/2.9.9>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
+`CBC <https://projects.coin-or.org/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ```conda install -c conda-forge coincbc```. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_. We recommend you download the relevant binary for `CBC 2.9.9 <https://bintray.com/coin-or/download/Cbc/2.9.9>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 GLPK
 ----
@@ -60,7 +63,7 @@ Gurobi
 
 `Gurobi <https://www.gurobi.com/>`_ is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
 
-While Gurobi can be installed via conda (``conda install -c gurobi gurobi``) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
+While Gurobi can be installed via conda (```conda install -c gurobi gurobi```) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
 
 After installing, log on to the `Gurobi website <https://www.gurobi.com/>`_ and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
 

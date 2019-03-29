@@ -82,3 +82,11 @@ class TestIO:
 
             model_from_disk = calliope.read_netcdf(out_path)
             # FIXME test for some data in model_from_disk
+
+    def test_save_lp(self, model):
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'model.lp')
+            model.to_lp(out_path)
+
+            with open(out_path, 'r') as f:
+                assert '\nmin \nobj:\n+1 cost(monetary_region1_1__csp)' in f.read()

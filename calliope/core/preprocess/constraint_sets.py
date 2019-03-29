@@ -85,9 +85,16 @@ def generate_constraint_sets(model_run):
     constraint_sets['loc_techs_storage_capacity_constraint'] = [
         i for i in sets.loc_techs_store if i not in sets.loc_techs_milp
     ]
-    constraint_sets['loc_techs_energy_capacity_storage_constraint'] = [
+    constraint_sets['loc_techs_energy_capacity_storage_constraint_old'] = [
         i for i in sets.loc_techs_store
         if constraint_exists(model_run, i, 'constraints.charge_rate')
+    ]
+    constraint_sets['loc_techs_energy_capacity_storage_constraint'] = [
+        i for i in sets.loc_techs_store
+        if any([
+            constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max'),
+            constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_equals'),
+        ])
     ]
     constraint_sets['loc_techs_resource_capacity_constraint'] = [
         i for i in sets.loc_techs_finite_resource_supply_plus
@@ -300,10 +307,17 @@ def generate_constraint_sets(model_run):
         # For now, transmission techs are not supported in group constraints
         techs = v.get('techs', sets['techs_non_transmission'])
         locs = v.get('locs', sets['locs'])
-        loc_techs = list(set(concat_iterable(
+
+        # All possible loc_techs for this constraint
+        loc_techs_all = list(set(concat_iterable(
             [(l, t) for l, t in product(locs, techs)],
             ['::']
         )))
+
+        # Some loc_techs may not actually exist in the actual model,
+        # so we must filter with actually exising loc_techs
+        loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
+
         constraint_sets['group_constraint_loc_techs_{}'.format(k)] = loc_techs
 
     return constraint_sets

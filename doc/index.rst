@@ -49,8 +49,11 @@ User guide
    user/running
    user/analysing
    user/tutorials
-   user/ref_advanced_func
-   user/more_info
+   user/advanced_constraints
+   user/advanced_features
+   user/config_defaults
+   user/troubleshooting
+   user/reference
    user/develop
 
 -----------------
@@ -81,7 +84,7 @@ Release history
 License
 -------
 
-Copyright 2013-2018 Calliope contributors listed in AUTHORS
+Copyright 2013-2019 Calliope contributors listed in AUTHORS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -8,7 +8,7 @@ RELATIVE_TOLERANCE = 0.0001
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    def test_group_share_prod_min(self):
+    def test_group_prod_min(self):
         model = calliope.examples.national_scale(
             scenario='cold_fusion_with_production_share'
         )
@@ -27,7 +27,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
         assert prod_share == approx(0.85)
 
-    def test_group_share_cap_max(self):
+    def test_group_cap_max(self):
         model = calliope.examples.national_scale(
             scenario='cold_fusion_with_capacity_share'
         )
@@ -826,3 +826,26 @@ class TestEnergyCapGroupConstraints:
         expensive_capacity1 = capacity.loc[("1", "expensive_supply")]
         assert round(expensive_capacity0, 5) >= 6
         assert expensive_capacity1 == 0
+
+
+class TestEnergyCapacityPerStorageCapacity:
+
+    @pytest.fixture
+    def model_file(self):
+        return "energy_cap_per_storage_cap.yaml"
+
+    def test_no_constraint_set(self, model_file):
+        model = build_model(model_file=model_file)
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
+
+    def test_fixed_ratio(self, model_file):
+        model = build_model(model_file=model_file, scenario="fixed_ratio")
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)

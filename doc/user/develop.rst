@@ -40,6 +40,8 @@ Then install Calliope itself with pip::
 
    pip install -e calliope
 
+Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. To install solvers other than GLPK, see our `solver installation instructions <install_solvers>`.
+
 ---------------------------
 Creating modular extensions
 ---------------------------
@@ -64,7 +66,7 @@ Custom functions that adjust time resolution can be loaded dynamically during mo
 Understanding Calliope internal implementation
 ----------------------------------------------
 
-Worried about delving into the Calliope code? Confused by the structure? Fear not! The package is structured as best as possible to follow a clear workflow, which takes inputs on a journey from YAML and CSV files, via Pyomo objects, to a NetCDF file of results. 
+Worried about delving into the Calliope code? Confused by the structure? Fear not! The package is structured as best as possible to follow a clear workflow, which takes inputs on a journey from YAML and CSV files, via Pyomo objects, to a NetCDF file of results.
 
 Overview
 -----------------
@@ -77,9 +79,9 @@ Calliope enables data stored in YAML and CSV files to be prepared for optimisati
 Internal implementation
 -----------------------
 
-Taking a more detailed look at the workflow, a number of data objects are populated. On initialising a model, the `model_run` dictionary is created from the provided YAML and CSV files. Overrides (both from scenarios and location/link specific ones) are applied at this point. The `model_run` dictionary is then reformulated into multidimensional arrays of data and collated in the `model_data` xarray dataset. At this point, model initialisation has completed; model inputs can be accessed by the user, and edited if necessary. 
+Taking a more detailed look at the workflow, a number of data objects are populated. On initialising a model, the `model_run` dictionary is created from the provided YAML and CSV files. Overrides (both from scenarios and location/link specific ones) are applied at this point. The `model_run` dictionary is then reformulated into multidimensional arrays of data and collated in the `model_data` xarray dataset. At this point, model initialisation has completed; model inputs can be accessed by the user, and edited if necessary.
 
-On executing `model.run()`, only `model_data` is sent over to the backend, where the pyomo `ConcreteModel` is created and pyomo parameters (Param) and sets (Set) are populated using data from `model_data`. Decision variables (Var), constraints (Constraint), and the objective (Obj) are also initialised at this point. The model is then sent to the solver. 
+On executing `model.run()`, only `model_data` is sent over to the backend, where the pyomo `ConcreteModel` is created and pyomo parameters (Param) and sets (Set) are populated using data from `model_data`. Decision variables (Var), constraints (Constraint), and the objective (Obj) are also initialised at this point. The model is then sent to the solver.
 
 Upon solving the problem, the backend_model (pyomo ConcreteModel) is attached to the Model object and the results are added to `model_data`. Post-processing also occurs to clean up the results and to calculate certain indicators, such as the capacity factor of technologies. At this point, the model run has completed; model results can be accessed by the user, and saved or analysed as required.
 
@@ -89,10 +91,10 @@ Upon solving the problem, the backend_model (pyomo ConcreteModel) is attached to
    Representation of Calliope internal implementation workflow. Five primary steps are shown, starting at the model definition and implemented clockwise. From inner edge to outer edge of the rainbow are: the data object produced by the step, primary and auxiliary python files in which functionality to produce the data object are found, and the folder containing the relevant python files for the step.
 
 
-Exposing all methods and data attached to the Model object 
+Exposing all methods and data attached to the Model object
 ----------------------------------------------------------
 
-The Model object begins as an empty class. Once called, it becomes an empty object which is populated with methods to access, analyse, and save the model data. The Model object is further augmented once `run` has been called, at which point, the backend model object can be accessed, directly or via a user-friendly interface. The notebook found :nbviewer_docs:`here <_static/notebooks/calliope_model_object.ipynb>` goes through each method and data object which can be accessed through the Model object. Most are hidden (using an underscore before the method name), as they aren't useful for the average user. 
+The Model object begins as an empty class. Once called, it becomes an empty object which is populated with methods to access, analyse, and save the model data. The Model object is further augmented once `run` has been called, at which point, the backend model object can be accessed, directly or via a user-friendly interface. The notebook found :nbviewer_docs:`here <_static/notebooks/calliope_model_object.ipynb>` goes through each method and data object which can be accessed through the Model object. Most are hidden (using an underscore before the method name), as they aren't useful for the average user.
 
 .. figure:: images/calliope_model_structure.*
    :alt: Calliope model object augmentation
@@ -116,7 +118,7 @@ If you want the local version of your fork to be in the same folder as your loca
 
    $ git clone https://github.com/your_username/calliope your_new_directory_name
 
-Following the instructions for :ref:`installing a development environment of Calliope <installing_dev>`, you can create an environment specific to this installation of Calliope. 
+Following the instructions for :ref:`installing a development environment of Calliope <installing_dev>`, you can create an environment specific to this installation of Calliope.
 
 In making changes to your local version, it's a good idea to create a branch first, to not have your master branch diverge from that of the main Calliope repository::
 
@@ -134,7 +136,7 @@ Now the files in your local directory can be edited with complete freedom. Once 
 
    $ pytest calliope/test/test_filename.py::ClassName::function_name
 
-If tests are failing, you can debug them by using the pytest arguments ``-x`` (stop at the first failed test) and ``--pdb`` (enter into the debug console). 
+If tests are failing, you can debug them by using the pytest arguments ``-x`` (stop at the first failed test) and ``--pdb`` (enter into the debug console).
 
 Once everything has been updated as you'd like (see the contribution checklist below for more on this), you can commit those changes. This stores all edited files in the directory, ready for pushing online::
 

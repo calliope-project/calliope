@@ -37,6 +37,28 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, 'output.nc'))
             assert os.path.isfile(os.path.join(tempdir, 'results.html'))
 
+    def test_incorrect_file_format(self):
+        runner = CliRunner()
+
+        result = runner.invoke(cli.run, ['test_model.txt', '--save_netcdf=output.nc'])
+        assert 'Cannot determine model file format' in result.output
+        assert result.exit_code == 1
+
+    def test_incorrect_model_format(self):
+        runner = CliRunner()
+
+        result = runner.invoke(cli.run, ['test_model.txt', '--model_format=yml', '--save_netcdf=output.nc'])
+        assert 'Invalid model format' in result.output
+        assert result.exit_code == 1
+
+    @pytest.mark.parametrize('arg', (('--scenario=test'), ("--override_dict={'model.name': 'test'}")))
+    def test_unavailable_arguments(self, arg):
+        runner = CliRunner()
+
+        result = runner.invoke(cli.run, ['test_model.nc', arg, '--save_netcdf=output.nc'])
+        assert 'the --scenario and --override_dict options are not available' in result.output
+        assert result.exit_code == 1
+
     def test_run_from_netcdf(self):
         runner = CliRunner()
         model = calliope.examples.national_scale()
@@ -47,6 +69,14 @@ class TestCLI:
             result = runner.invoke(cli.run, [model_file, '--save_netcdf=output.nc'])
             assert result.exit_code == 0
             assert os.path.isfile(out_file)
+
+    def test_run_save_lp(self):
+        runner = CliRunner()
+
+        with runner.isolated_filesystem() as tempdir:
+            result = runner.invoke(cli.run, [_MODEL_NATIONAL, '--save_lp=output.lp'])
+            assert result.exit_code == 0
+            assert os.path.isfile(os.path.join(tempdir, 'output.lp'))
 
     def test_generate_runs_bash(self):
         runner = CliRunner()
@@ -114,14 +144,14 @@ class TestCLI:
                 _MODEL_NATIONAL, out_file,
                 'cold_fusion',
                 'run1;run2',
-                'group_share_cold_fusion_cap;group_share_cold_fusion_prod',
+                'cold_fusion_cap_share;cold_fusion_prod_share',
             ])
             assert result.exit_code == 0
             assert os.path.isfile(out_file)
             scenarios = AttrDict.from_yaml(out_file)
             assert 'scenario_0' not in scenarios['scenarios']
             assert scenarios['scenarios']['scenario_1'] == [
-                'cold_fusion', 'run1', 'group_share_cold_fusion_cap'
+                'cold_fusion', 'run1', 'cold_fusion_cap_share'
             ]
 
     def test_no_success_exit_code_when_infeasible(self):

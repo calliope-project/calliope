@@ -4,5 +4,8 @@ ignore =
     E501,
     # D203: 1 blank line required before class docstring
     D203,
+    # W503: line break before binary operator
+    # See https://www.python.org/dev/peps/pep-0008/#id20
+    W503
 exclude = .git,__pycache__,dist,doc,calliope/lib
 max-complexity = 10
