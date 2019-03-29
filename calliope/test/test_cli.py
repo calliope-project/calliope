@@ -6,7 +6,6 @@ from click.testing import CliRunner
 
 import calliope
 from calliope import cli, AttrDict
-from calliope.test.common.util import check_error_or_warning
 
 _THIS_DIR = os.path.dirname(__file__)
 _MODEL_NATIONAL = os.path.join(
