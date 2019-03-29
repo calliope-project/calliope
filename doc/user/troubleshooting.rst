@@ -111,18 +111,18 @@ To understand infeasible models:
 
   More detail on this is in the `official Gurobi documentation <https://www.gurobi.com/documentation/current/refman/solving_a_model2.html>`_.
 
-To deal with numerically unstable models, try setting ``run.solver_options.Presolve: 0``, as large numeric ranges can cause the pre-solver to generate an infeasible or numerically unstable model. The `Gurobi Guidelines for Numerical Issues <https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html>`_ give detailed guidance for strategies to address numerically difficult optimisation problems.
+To deal with numerically unstable models, try setting ``run.solver_options.Presolve: 0``, as large numeric ranges can cause the pre-solver to generate an `infeasible or numerically unstable model <http://www.gurobi.com/documentation/8.1/refman/numerics_why_scaling_and_g.html>`_. The `Gurobi Guidelines for Numerical Issues <https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html>`_ give detailed guidance for strategies to address numerically difficult optimisation problems.
 
 Using the CPLEX solver
 ^^^^^^^^^^^^^^^^^^^^^^
 
 There are two ways to understand infeasibility when using the CPLEX solver, the first is quick and the second is more involved:
 
-1. Save solver logs for your model (``run.save_logs: path/to/log_directory``). In the directory, open the file ending in '.cplex.log' to see the CPLEX solver report. If the model is infeasible or unbounded, the offending constraint will be identified (e.g. ``SOLVER: Infeasible variable = slack c_u_carrier_production_max_constraint(region1_2__csp__power_2005_01_01_07_00_00)_``). This may be enough to understand why the model is failing, if not...
+1. Save solver logs for your model (``run.save_logs: path/to/log_directory``). In the directory, open the file ending in '.cplex.log' to see the CPLEX solver report. If the model is infeasible or unbounded, the offending constraint will be identified (e.g. "`SOLVER: Infeasible variable = slack c_u_carrier_production_max_constraint(region1_2__csp__power_2005_01_01_07_00_00)_`"). This may be enough to understand why the model is failing, if not...
 
 2. Open the LP file in CPLEX interactive (run `cplex` in the command line to invoke a CPLEX interactive session). The LP file for the problem ends with '.lp' in the log folder (`read path/to/file.lp`). Once loaded, you can try relaxing variables / constraints to see if the problem can be solved with relaxation (`FeasOpt`). You can also identify conflicting constraints (`tools conflict`) and print those constraints directly (`display conflict all`). There are many more commands available to analyse individual constraints and variables in the `Official CPLEX documentation <https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.1/ilog.odms.cplex.help/CPLEX/UsrMan/topics/infeas_unbd/partInfeasUnbnded_title_synopsis.html>`_.
 
-Similar to Gurobi, numerically unstable models may lead to unexpected infeasibility, so you can try ``run.solver_options.preprocessing_presolve: 0``. The `CPLEX documentation page on numeric difficulties <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.4.0/com.ibm.cplex.zos.help/UsrMan/topics/cont_optim/simplex/20_num_difficulty.html>`_ goes into more detail on numeric instability.
+Similar to Gurobi, numerically unstable models may lead to unexpected infeasibility, so you can try ``run.solver_options.preprocessing_presolve: 0`` or you can request CPLEX to more aggressively scale the problem itself using the `solver option <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.4.0/com.ibm.cplex.zos.help/Parameters/topics/ScaInd.html>`_ ``read_scale: 1`` . The `CPLEX documentation page on numeric difficulties <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.4.0/com.ibm.cplex.zos.help/UsrMan/topics/cont_optim/simplex/20_num_difficulty.html>`_ goes into more detail on numeric instability.
 
 
 Rerunning a model

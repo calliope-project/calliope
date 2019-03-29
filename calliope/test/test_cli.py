@@ -6,6 +6,7 @@ from click.testing import CliRunner
 
 import calliope
 from calliope import cli, AttrDict
+from calliope.test.common.util import check_error_or_warning
 
 _THIS_DIR = os.path.dirname(__file__)
 _MODEL_NATIONAL = os.path.join(
@@ -36,6 +37,25 @@ class TestCLI:
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, 'output.nc'))
             assert os.path.isfile(os.path.join(tempdir, 'results.html'))
+
+    def test_incorrect_file_format(self):
+        runner = CliRunner()
+
+        result = runner.invoke(cli.run, ['test_model.txt', '--save_netcdf=output.nc'])
+        assert result.exit_code == 1
+
+    def test_incorrect_model_format(self):
+        runner = CliRunner()
+
+        result = runner.invoke(cli.run, ['test_model.txt', '--model_format=yml', '--save_netcdf=output.nc'])
+        assert result.exit_code == 1
+
+    @pytest.mark.parametrize('arg', (('--scenario=test'), ("--override_dict={'model.name': 'test'}")))
+    def test_unavailable_arguments(self, arg):
+        runner = CliRunner()
+
+        result = runner.invoke(cli.run, ['test_model.nc', arg, '--save_netcdf=output.nc'])
+        assert result.exit_code == 1
 
     def test_run_from_netcdf(self):
         runner = CliRunner()
