@@ -104,8 +104,8 @@ tech_groups:
             resource_unit: energy
     transmission:
         required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_max', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_eff_per_distance', 'energy_prod', 'lifetime', 'one_way']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'energy_cap_per_distance', 'force_asynchronous_prod_con', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'purchase_per_distance']
+        allowed_constraints: ['energy_cap_equals', 'energy_cap_max', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_eff_per_distance', 'energy_prod', 'force_asynchronous_prod_con', 'lifetime', 'one_way']
+        allowed_costs: ['depreciation_rate', 'energy_cap', 'energy_cap_per_distance', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'purchase_per_distance']
         essentials:
             parent: null
         constraints:

@@ -1011,6 +1011,7 @@ class TestChecks:
         assert check_error_or_warning(
             warn,
             'Integer and / or binary decision variables are included in this model'
+        )
 
     def test_fail_on_string(self):
         with pytest.raises(calliope.exceptions.ModelError) as exception:
