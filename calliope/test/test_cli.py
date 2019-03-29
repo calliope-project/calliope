@@ -41,12 +41,14 @@ class TestCLI:
         runner = CliRunner()
 
         result = runner.invoke(cli.run, ['test_model.txt', '--save_netcdf=output.nc'])
+        assert 'Cannot determine model file format' in result.output
         assert result.exit_code == 1
 
     def test_incorrect_model_format(self):
         runner = CliRunner()
 
         result = runner.invoke(cli.run, ['test_model.txt', '--model_format=yml', '--save_netcdf=output.nc'])
+        assert 'Invalid model format' in result.output
         assert result.exit_code == 1
 
     @pytest.mark.parametrize('arg', (('--scenario=test'), ("--override_dict={'model.name': 'test'}")))
@@ -54,6 +56,7 @@ class TestCLI:
         runner = CliRunner()
 
         result = runner.invoke(cli.run, ['test_model.nc', arg, '--save_netcdf=output.nc'])
+        assert 'the --scenario and --override_dict options are not available' in result.output
         assert result.exit_code == 1
 
     def test_run_from_netcdf(self):
