@@ -360,6 +360,24 @@ class TestModelRun:
         m = build_model(override_dict=override1, scenario='simple_supply,one_day')
         assert 'loc_techs_cost' not in m._model_data.dims
 
+    def test_empty_cost_class(self):
+        """
+        If cost is defined, but its value is not a dictionary, ensure it is
+        deleted
+        """
+        override1 = {
+            'techs.test_supply_elec.costs.carbon': None
+        }
+        with pytest.warns(exceptions.ModelWarning) as warn_info:
+            m = build_model(override_dict=override1, scenario='simple_supply,one_day,investment_costs')
+
+        assert check_error_or_warning(
+            warn_info, 'Deleting empty cost class `carbon` for technology `test_supply_elec`.'
+        )
+
+        assert 'carbon' not in m._model_run.locations['1'].techs.test_supply_elec.costs.keys()
+        assert 'carbon' not in m._model_data.coords['costs'].values
+
 
 class TestChecks:
 
