@@ -141,8 +141,18 @@ def add_time_dimension(data, model_run):
             filenames.index = filenames.index.remove_unused_levels()
 
         # 6) Get all timeseries data from dataframes stored in model_run
-        timeseries_data = [model_run.timeseries_data[file].loc[:, column].values
-                           for (file, column) in filenames.values]
+        timeseries_data = []
+        key_errors = []
+        for loc_tech, (filename, column) in filenames.iteritems():
+            try:
+                timeseries_data.append(model_run.timeseries_data[filename].loc[:, column].values)
+            except KeyError:
+                key_errors.append(
+                    'column `{}` not found in file `{}`, but was requested by '
+                    'loc::tech `{}`.'.format(column, filename, loc_tech)
+                )
+        if key_errors:
+            exceptions.print_warnings_and_raise_errors(errors=key_errors)
 
         timeseries_data_series = pd.DataFrame(index=filenames.index,
                                               columns=data.timesteps.values,

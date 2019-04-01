@@ -644,3 +644,26 @@ class TestFuncs:
 
         assert '2005-01-01 21:00' not in result_timesteps
         assert '2005-01-01 22:00' not in result_timesteps
+
+
+class TestLoadTimeseries:
+
+    def test_invalid_csv_columns(self):
+        override = {
+            'locations': {
+                '2.techs': {'test_supply_elec': None, 'test_demand_elec': None},
+                '3.techs': {'test_supply_elec': None, 'test_demand_elec': None}
+            },
+            'links': {
+                '0,1': {'exists': False},
+                '2,3.techs': {'test_transmission_elec': None}
+            }
+        }
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_test_model(override_dict=override, scenario='one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            ['column `2` not found in file `demand_elec.csv`, but was requested by loc::tech `2::test_demand_elec`.',
+             'column `3` not found in file `demand_elec.csv`, but was requested by loc::tech `3::test_demand_elec`.']
+        )
