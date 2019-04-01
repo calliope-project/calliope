@@ -400,6 +400,14 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
 def compute_depreciation_rates(tech_id, tech_config, warnings, errors):
     cost_classes = list(tech_config.get('costs', {}).keys())
     for cost in cost_classes:
+        # If the cost class is empty, delete it now and warn about it
+        if not isinstance(tech_config.costs[cost], dict):
+            warnings.append(
+                'Deleting empty cost class `{}` for technology `{}`.'.format(cost, tech_id)
+            )
+            tech_config.costs.del_key(cost)
+            continue
+
         plant_life = tech_config.constraints.get_key('lifetime', 0)
         interest = tech_config.costs[cost].get_key('interest_rate', None)
 
