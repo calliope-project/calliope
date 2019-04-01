@@ -8,7 +8,6 @@ run_checks.py
 Checks for model consistency and possible errors when preparing run in the backend.
 
 """
-import ruamel.yaml
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -115,6 +114,16 @@ def check_operate_params(model_data):
                     if storage_cap * charge_rate < energy_cap:
                         errors.append(
                             'fixed storage capacity * charge rate is not larger '
+                            'than fixed energy capacity for loc::tech {}'.format(loc_tech)
+                        )
+        if _is_in(loc_tech, 'loc_techs_store'):
+            if _is_in(loc_tech, 'energy_cap_per_storage_cap_max'):
+                storage_cap = model_data.storage_cap.loc[loc_tech].item()
+                if storage_cap and energy_cap:
+                    energy_cap_per_storage_cap_max = model_data['energy_cap_per_storage_cap_max'].loc[loc_tech].item()
+                    if storage_cap * energy_cap_per_storage_cap_max < energy_cap:
+                        errors.append(
+                            'fixed storage capacity * energy_cap_per_storage_cap_max is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
     # Must define a resource capacity to ensure the Pyomo param is created

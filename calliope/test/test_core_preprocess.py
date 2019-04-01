@@ -423,7 +423,7 @@ class TestChecks:
         override5 = {
             'run.objective': 'minmax_cost_optimization',
             'run.objective_options': {
-                'cost_class': 'monetary',
+                'cost_class': {'monetary': 1},
                 'sense': 'minimize',
                 'unused_option': 'some_value'
             }
@@ -644,25 +644,6 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override2, scenario='simple_supply,one_day')
 
-    def test_missing_constraints(self):
-        """
-        A technology must define at least one constraint.
-        """
-
-        override = AttrDict.from_yaml_string(
-            """
-            techs:
-                supply_missing_constraint:
-                    essentials:
-                        parent: supply
-                        carrier: electricity
-                        name: supply missing constraint
-            locations.1.techs.supply_missing_constraint:
-            """
-        )
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, scenario='simple_supply,one_day')
-
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
@@ -672,14 +653,14 @@ class TestChecks:
         override_supply1 = AttrDict.from_yaml_string(
             """
             techs:
-                supply_missing_constraint:
+                demand_missing_constraint:
                     essentials:
-                        parent: supply
+                        parent: demand
                         carrier: electricity
-                        name: supply missing constraint
+                        name: demand missing constraint
                     constraints:
-                        resource_area_max: 10
-            locations.1.techs.supply_missing_constraint:
+                        resource_unit: power
+            locations.1.techs.demand_missing_constraint:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -765,7 +746,6 @@ class TestChecks:
 
         # should pass: exporting heat for conversion tech
         build_model(override_dict=override_converison_plus('heat'), scenario='simple_conversion_plus,one_day')
-
 
     def test_allowed_time_varying_constraints(self):
         """
@@ -980,6 +960,60 @@ class TestChecks:
             '`power` is an unknown resource unit for `test_supply_elec`'
         )
 
+    def test_fail_on_string(self):
+        with pytest.raises(calliope.exceptions.ModelError) as exception:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='illegal_string_cost_class'
+            )
+
+        assert check_error_or_warning(
+            exception,
+            '`run.objective_options.cost_class` must be a dictionary.'
+        )
+
+    def test_fail_on_empty(self):
+        with pytest.raises(calliope.exceptions.ModelError) as exception:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='empty_cost_class'
+            )
+
+        assert check_error_or_warning(
+            exception,
+            'No cost classes defined for use in the objective.'
+        )
+
+    def test_warn_on_using_default(self):
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='emissions_objective_without_removing_monetary_default'
+            )
+
+        assert check_error_or_warning(
+            warn,
+            'Monetary cost class with a weight of 1 is still included'
+        )
+
+    @pytest.mark.parametrize("override", [
+        ({'run.objective_options.cost_class': {'monetary': None}}),
+        ({'run.objective_options.cost_class': {'monetary': None, 'emissions': None}})
+    ])
+    def test_warn_on_no_weight(self, override):
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            model = build_model(
+                model_file='weighted_obj_func.yaml',
+                override_dict=override
+            )
+
+        assert check_error_or_warning(warn, 'cost class monetary has weight = None, setting weight to 1')
+        assert all(
+            model.run_config['objective_options']['cost_class'][i] == 1
+            for i in override['run.objective_options.cost_class'].keys()
+        )
+
 
 class TestDataset:
 
@@ -1153,14 +1187,6 @@ class TestDataset:
         assert 'lookup_datestep_last_cluster_timestep' not in model._model_data.data_vars
         assert 'lookup_datestep_cluster' not in model._model_data.data_vars
         assert 'timestep_cluster' in model._model_data.data_vars
-
-    #def test_future_warning(self):
-    #    """
-    #    Test and warnings to be uncommented when a futurewarning is present
-    #    """
-    #    with pytest.warns(FutureWarning) as warning:
-    #        build_model({}, override_groups='')
-    #    assert check_error_or_warning(warning, '')
 
 
 class TestUtil:
