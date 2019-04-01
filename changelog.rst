@@ -34,6 +34,8 @@ Release History
 
 |changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
 
+|fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
+
 |fixed| Name of data variables is retained when accessed through `model.get_formatted_array()`
 
 |fixed| Systemwide constraints work in models without transmission systems.
