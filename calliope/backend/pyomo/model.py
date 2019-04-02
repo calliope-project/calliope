@@ -114,6 +114,8 @@ def generate_model(model_data):
         key=lambda x: load_function('calliope.backend.pyomo.constraints.' + x + '.ORDER')
     )
 
+    logger.debug('constraints are loaded in the following order: {}'.format(constraints_to_add))
+
     for c in constraints_to_add:
         load_function(
             'calliope.backend.pyomo.constraints.' + c + '.load_constraints'
