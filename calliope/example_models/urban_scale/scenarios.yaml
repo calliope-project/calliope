@@ -25,9 +25,11 @@ overrides:
                         energy_cap: 35
                         purchase: 2000
             # boiler-end
+            # heat_pipes-start
             heat_pipes:
                 constraints:
                     force_asynchronous_prod_con: true
+            # heat_pipes-end
 
     mapbox_ready:
         locations:

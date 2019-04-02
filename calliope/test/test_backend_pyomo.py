@@ -1386,7 +1386,7 @@ class TestMILPConstraints:
             'simple_storage,investment_costs'
         )
         m_store.run(build_only=True)
-        assert hasattr(m_store._backend_model, 'operating_switch')
+        assert hasattr(m_store._backend_model, 'prod_con_switch')
         assert hasattr(m_store._backend_model, 'asynchronous_con_milp_constraint')
         assert hasattr(m_store._backend_model, 'asynchronous_prod_milp_constraint')
 
@@ -1395,7 +1395,7 @@ class TestMILPConstraints:
             'simple_storage,investment_costs'
         )
         m_trans.run(build_only=True)
-        assert hasattr(m_trans._backend_model, 'operating_switch')
+        assert hasattr(m_trans._backend_model, 'prod_con_switch')
         assert hasattr(m_trans._backend_model, 'asynchronous_con_milp_constraint')
         assert hasattr(m_trans._backend_model, 'asynchronous_prod_milp_constraint')
 

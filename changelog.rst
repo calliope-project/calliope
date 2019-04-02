@@ -6,6 +6,8 @@ Release History
 0.6.4 (dev)
 -----------
 
+|new| `asynchronous_prod_con` parameter added to the constraints, to allow a user to fix a storage or transmission technology to only be able to produce or consume energy in a given timestep. This ensures that unphysical dissipation of energy cannot occur in these technologies, by activating a binary variable (`prod_con_switch`) in the backend.
+
 |new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}`, which models an emissions price of 0.1 units of currency per unit of emissions)
 
 |new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, covering:

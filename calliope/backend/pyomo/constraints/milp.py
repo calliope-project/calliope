@@ -627,7 +627,7 @@ def asynchronous_con_milp_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
             - \\boldsymbol{carrier_con}[loc::tech::carrier, timestep] \\leq
-            \\text{bigM} \\times (1 - \\boldsymbol{operating_switch}[loc::tech, timestep])
+            \\text{bigM} \\times (1 - \\boldsymbol{prod_con_switch}[loc::tech, timestep])
             \\forall loc::tech \\in loc::techs_{asynchronous_prod_con},
             \\forall timestep \\in timesteps
 
@@ -637,7 +637,7 @@ def asynchronous_con_milp_constraint_rule(backend_model, loc_tech, timestep):
 
     return (
         -1 * backend_model.carrier_con[loc_tech_carrier, timestep] <=
-        (1 - backend_model.operating_switch[loc_tech, timestep]) * backend_model.bigM
+        (1 - backend_model.prod_con_switch[loc_tech, timestep]) * backend_model.bigM
     )
 
 
@@ -650,7 +650,7 @@ def asynchronous_prod_milp_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
             \\boldsymbol{carrier_prod}[loc::tech::carrier, timestep] \\leq
-            \\text{bigM} \\times \\boldsymbol{operating_switch}[loc::tech, timestep]
+            \\text{bigM} \\times \\boldsymbol{prod_con_switch}[loc::tech, timestep]
             \\forall loc::tech \\in loc::techs_{asynchronous_prod_con},
             \\forall timestep \\in timesteps
 
@@ -660,5 +660,5 @@ def asynchronous_prod_milp_constraint_rule(backend_model, loc_tech, timestep):
 
     return (
         backend_model.carrier_prod[loc_tech_carrier, timestep] <=
-        backend_model.operating_switch[loc_tech, timestep] * backend_model.bigM
+        backend_model.prod_con_switch[loc_tech, timestep] * backend_model.bigM
     )

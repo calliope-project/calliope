@@ -81,6 +81,8 @@ def save_csv(model_data, path, dropna=True):
     """
     os.makedirs(path, exist_ok=False)
 
+    # a MILP model which optimises to within the MIP gap, but does not fully
+    # converge on the LP relaxation, may return as 'feasible', not 'optimal'
     if ('termination_condition' not in model_data.attrs or
             model_data.attrs['termination_condition'] in ['optimal', 'feasible']):
         data_vars = model_data.data_vars
