@@ -185,6 +185,25 @@ class TestChecks:
         run_config = AttrDict.from_yaml_string(m._model_data.attrs['run_config'])
         assert run_config['cyclic_storage'] is False
 
+    @pytest.mark.parametrize('param', [('energy_eff'), ('resource_eff'), ('parasitic_eff')])
+    def test_loading_timeseries_operate_efficiencies(self, param):
+        m = build_model(
+            {'techs.test_supply_plus.constraints.' + param: 'file=supply_plus_resource.csv:1'},
+            'simple_supply_and_supply_plus,operate,investment_costs'
+        )
+        assert 'timesteps' in m._model_data[param].dims
+
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.run(build_only=True)  # will fail to complete run if there's a problem
+
+        # While we're here, check that some warnings are raised
+        assert check_error_or_warning(warning, [
+            'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied',
+            'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied',
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
+            'Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run'
+        ])
+
 
 class TestBalanceConstraints:
 

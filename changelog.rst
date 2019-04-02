@@ -22,6 +22,8 @@ Release History
 
 |new| Storage capacity can be tied to energy capacity with a new `energy_cap_per_storage_cap_equals` constraint.
 
+|changed| Error on required column not existing in CSV is more explicit.
+
 |changed| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.
 
 |changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
@@ -33,6 +35,10 @@ Release History
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
 |changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
+
+|fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
+
+|fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
 
 |fixed| Name of data variables is retained when accessed through `model.get_formatted_array()`
 
