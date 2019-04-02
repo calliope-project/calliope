@@ -17,6 +17,8 @@ from calliope.backend.pyomo.util import \
     get_loc_tech, \
     loc_tech_is_in
 
+ORDER = 3  # order in which to invoke constraints relative to other constraint files
+
 
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data['sets']
@@ -36,8 +38,8 @@ def load_constraints(backend_model):
 
     if 'loc_techs_update_costs_var_constraint' in sets:
         for cost, loc_tech, timestep in (backend_model.costs
-            * backend_model.loc_techs_update_costs_var_constraint
-            * backend_model.timesteps):
+                * backend_model.loc_techs_update_costs_var_constraint
+                * backend_model.timesteps):
             update_costs_var_constraint(backend_model, cost, loc_tech, timestep)
 
     if 'loc_tech_carriers_export_max_constraint' in sets:

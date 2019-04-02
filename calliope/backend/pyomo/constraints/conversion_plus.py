@@ -16,15 +16,18 @@ from calliope.backend.pyomo.util import \
     split_comma_list, \
     get_conversion_plus_io
 
+ORDER = 2  # order in which to invoke constraints relative to other constraint files
+
 
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data['sets']
 
-    backend_model.balance_conversion_plus_primary_constraint = po.Constraint(
-        backend_model.loc_techs_balance_conversion_plus_primary_constraint,
-        backend_model.timesteps,
-        rule=balance_conversion_plus_primary_constraint_rule
-    )
+    if 'loc_techs_balance_conversion_plus_primary_constraint' in sets:
+        backend_model.balance_conversion_plus_primary_constraint = po.Constraint(
+            backend_model.loc_techs_balance_conversion_plus_primary_constraint,
+            backend_model.timesteps,
+            rule=balance_conversion_plus_primary_constraint_rule
+        )
 
     if 'loc_techs_carrier_production_max_conversion_plus_constraint' in sets:
         backend_model.carrier_production_max_conversion_plus_constraint = po.Constraint(
