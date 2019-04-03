@@ -67,15 +67,13 @@ def load_constraints(backend_model):
 def cost_constraint_rule(backend_model, cost, loc_tech):
     """
     Combine investment and time varying costs into one cost per technology.
-    Variables r'$\phi$' and r'$\psi$' allow a weight to be applied disproportionatly to
-    either investment or operation costs, respectively.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
-            \\boldsymbol{cost}(cost, loc::tech) = \\boldsymbol{cost_{investment}}(cost, loc::tech) \\times \\phi
-            + \\sum_{timestep \\in timesteps} \\boldsymbol{cost_{var}}(cost, loc::tech, timestep) \\times \\psi
+            \\boldsymbol{cost}(cost, loc::tech) = \\boldsymbol{cost_{investment}}(cost, loc::tech)
+            + \\sum_{timestep \\in timesteps} \\boldsymbol{cost_{var}}(cost, loc::tech, timestep)
 
     """
     run_config = backend_model.__calliope_run_config
