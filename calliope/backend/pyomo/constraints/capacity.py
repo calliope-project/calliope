@@ -173,18 +173,24 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
 
             \\boldsymbol{energy_{cap}}(loc::tech)
             \\begin{cases}
+                \\geq \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_min(loc::tech)\\\\
                 \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_max(loc::tech)\\\\
                 = \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_equals(loc::tech)
             \\end{cases}
             \\forall loc::tech \\in loc::techs_{store}
 
     """
+    energy_cap_per_storage_cap_min = get_param(backend_model, 'energy_cap_per_storage_cap_min', loc_tech)
     energy_cap_per_storage_cap_max = get_param(backend_model, 'energy_cap_per_storage_cap_max', loc_tech)
     energy_cap_per_storage_cap_equals = get_param(backend_model, 'energy_cap_per_storage_cap_equals', loc_tech)
 
     if energy_cap_per_storage_cap_max:
         return backend_model.energy_cap[loc_tech] <= (
             backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap_max
+        )
+    elif energy_cap_per_storage_cap_min:
+        return backend_model.energy_cap[loc_tech] >= (
+            backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap_min
         )
     else:
         assert energy_cap_per_storage_cap_equals
