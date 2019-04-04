@@ -106,6 +106,7 @@ def generate_model(model_data):
         'network.load_constraints',
         'costs.load_constraints',
         'policy.load_constraints',
+        'milp.load_constraints',
         'group.load_constraints'
     ]
 
@@ -117,9 +118,6 @@ def generate_model(model_data):
 
     if hasattr(backend_model, 'loc_techs_conversion_plus'):
         constraints_to_add.append('conversion_plus.load_constraints')
-
-    if hasattr(backend_model, 'loc_techs_milp') or hasattr(backend_model, 'loc_techs_purchase'):
-        constraints_to_add.append('milp.load_constraints')
 
     # Export comes last as it can add to the cost expression, this could be
     # overwritten if it doesn't come last

@@ -71,6 +71,33 @@ class TestNationalScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(282487.35489)
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+class TestUrbanScaleMILP:
+    def test_asynchronous_prod_con(self):
+
+        def _get_prod_con(model, prod_con):
+            return (
+                model.get_formatted_array('carrier_{}'.format(prod_con))
+                     .loc[{'techs': 'heat_pipes:X1', 'carriers': 'heat'}]
+                     .to_pandas().dropna(how='all')
+            )
+        m = calliope.examples.urban_scale(override_dict={'run.zero_threshold': 1e-6})
+        m.run()
+        _prod = _get_prod_con(m, 'prod')
+        _con = _get_prod_con(m, 'con')
+        assert any(((_con < 0) & (_prod > 0)).any()) is True
+
+        m_bin = calliope.examples.urban_scale(
+            override_dict={'techs.heat_pipes.constraints.force_asynchronous_prod_con': True,
+                           'run.solver_options.mipgap': 0.05,
+                           'run.zero_threshold': 1e-6}
+        )
+        m_bin.run()
+        _prod = _get_prod_con(m_bin, 'prod')
+        _con = _get_prod_con(m_bin, 'con')
+        assert any(((_con < 0) & (_prod > 0)).any()) is False
+
+
 class TestModelSettings:
     def test_feasibility(self):
 

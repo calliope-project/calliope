@@ -361,6 +361,20 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     sets.loc_techs_milp = loc_techs_milp | transmission_milp
 
+    # Technologies with forced asynchronous production/consumption of energy
+    loc_techs_storage_asynchronous_prod_con = set(
+        k for k in sets.loc_techs_store
+        if 'force_asynchronous_prod_con' in loc_techs_config[k].constraints.keys_nested()
+    )
+
+    loc_techs_transmission_asynchronous_prod_con = set(
+        k for k in sets.loc_techs_transmission
+        if 'force_asynchronous_prod_con' in loc_techs_transmission_config[k].constraints.keys_nested()
+    )
+    sets.loc_techs_asynchronous_prod_con = (
+        loc_techs_storage_asynchronous_prod_con | loc_techs_transmission_asynchronous_prod_con
+    )
+
     ##
     # Sets based on specific costs being active
     # NB includes transmission techs

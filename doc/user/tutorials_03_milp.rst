@@ -33,6 +33,20 @@ By introducing this, the boiler now has a binary decision variable associated wi
 
 MILP functionality can be easily applied, but convergence is slower as a result of integer/binary variables. It is recommended to use a commercial solver (e.g. Gurobi, CPLEX) if you wish to utilise these variables outside this example model.
 
+Asynchronous energy production/consumption
+==========================================
+
+The heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This allows e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. The ``asynchronous_prod_con`` binary constraint ensures this phenomenon is avoided:
+
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+   :language: yaml
+   :dedent: 8
+   :start-after: # heat_pipes-start
+   :end-before: # heat_pipes-end
+
+Now, only one of ``carrier_prod`` and ``carrier_con`` can be non-zero in a given timestep. This constraint can also be applied to storage technologies, to similarly control charge/discharge.
+
 Running the model
 =================
 

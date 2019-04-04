@@ -602,4 +602,15 @@ def check_model_data(model_data):
         else:
             model_data.attrs['allow_operate_mode'] = 1
 
+    # Check for any milp constraints, and warn that the problem contains binary /
+    # integer decision variables
+    if any('_milp_constraint' in i for i in model_data.dims):
+        model_warnings.append(
+            'Integer and / or binary decision variables are included in this model. '
+            'This may adversely affect solution time, particularly if you are '
+            'using a non-commercial solver. To improve solution time, consider '
+            'changing MILP related solver options (e.g. `mipgap`) or removing '
+            'MILP constraints.'
+        )
+
     return model_data, comments, model_warnings, errors

@@ -92,7 +92,11 @@ def initialize_decision_variables(backend_model):
             for k, v in backend_model.units.items():
                 backend_model.energy_cap[k] = v * backend_model.energy_cap_per_unit[k]
 
+    if 'loc_techs_asynchronous_prod_con' in model_data_dict['sets']:
+        backend_model.prod_con_switch = po.Var(backend_model.loc_techs_asynchronous_prod_con, backend_model.timesteps, within=po.Binary)
+        backend_model.bigM = run_config.get('bigM', 1e10)
+
     if run_config.get('ensure_feasibility', False):
         backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
         backend_model.unused_supply = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NegativeReals)
-        backend_model.bigM = run_config.get('bigM')
+        backend_model.bigM = run_config.get('bigM', 1e10)

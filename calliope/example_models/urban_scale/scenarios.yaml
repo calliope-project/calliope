@@ -5,6 +5,7 @@
 overrides:
     milp:
         model.name: 'Urban-scale example model with MILP'
+        run.solver_options.mipgap: 0.05
         techs:
             # chp-start
             chp:
@@ -24,6 +25,11 @@ overrides:
                         energy_cap: 35
                         purchase: 2000
             # boiler-end
+            # heat_pipes-start
+            heat_pipes:
+                constraints:
+                    force_asynchronous_prod_con: true
+            # heat_pipes-end
 
     mapbox_ready:
         locations:
