@@ -1,6 +1,6 @@
---------------------
+====================
 Advanced constraints
---------------------
+====================
 
 This section, as the title suggests, contains more info and more details, and in particular, information on some of Calliope's more advanced functionality.
 
@@ -8,6 +8,7 @@ We suggest you read the :doc:`building`, :doc:`running` and :doc:`analysing` sec
 
 .. _supply_plus:
 
+------------------------
 The ``supply_plus`` tech
 ------------------------
 
@@ -26,6 +27,7 @@ See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitio
 
 .. _conversion_plus:
 
+----------------------------
 The ``conversion_plus`` tech
 ----------------------------
 
@@ -43,7 +45,7 @@ The efficiency of a ``conversion_plus`` tech dictates how many units of `carrier
 In this section, we give examples of a few ``conversion_plus`` technologies alongside the YAML formulation required to construct them:
 
 Combined heat and power
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
 A combined heat and power plant produces electricity, in this case from natural gas. Waste heat that is produced can be used to meet nearby heat demand (e.g. via district heating network). For every unit of electricity produced, 0.8 units of heat are always produced. This is analogous to the heat to power ratio (HTP). Here, the HTP is 0.8.
 
@@ -71,7 +73,7 @@ A combined heat and power plant produces electricity, in this case from natural 
 
 
 Air source heat pump
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
 The output energy from the heat pump can be *either* heat or cooling, simulating a heat pump that can be useful in both summer and winter. For each unit of electricity input, one unit of output is produced. Within this one unit of ``carrier_out``, there can be a combination of heat and cooling. Heat is produced with a COP of 5, cooling with a COP of 3. If only heat were produced in a timestep, 5 units of it would be available in carrier_out; similarly 3 units for cooling. In another timestep, both heat and cooling might be produced with e.g. 2.5 units heat + 1.5 units cooling = 1 unit of carrier_out.
 
@@ -95,7 +97,7 @@ The output energy from the heat pump can be *either* heat or cooling, simulating
                     cooling: 3
 
 Combined cooling, heat and power (CCHP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------
 
 A CCHP plant can use generated heat to produce cooling via an absorption chiller. As with the CHP plant, electricity is produced at 45% efficiency.  For every unit of electricity produced, 1 unit of ``carrier_out_2`` must be produced, which can be a combination of 0.8 units of heat and 0.5 units of cooling. Some example ways in which the model could decide to operate this unit in a given time step are:
 
@@ -127,7 +129,7 @@ A CCHP plant can use generated heat to produce cooling via an absorption chiller
                     carrier_ratios.carrier_out_2: {heat: 0.8, cooling: 0.5}
 
 Advanced gas turbine
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
 This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (energy_eff). If all hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (energy_eff * hydrogen carrier ratio).
 
@@ -148,7 +150,7 @@ This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:
                 carrier_in: {methane: 1, hydrogen: 0.5}
 
 Complex fictional technology
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 There are few instances where using the full capacity of a conversion_plus tech is physically possible. Here, we have a fictional technology that combines fossil fuels with biomass/waste to produce heat, cooling, and electricity. Different 'grades' of heat can be produced, the higher grades having an alternative. High grade heat (``high_T_heat``) is produced and can be used directly, or used to produce electricity (via e.g. organic rankine cycle). ``carrier_out`` is thus a combination of these two. `carrier_out_2` can be 0.3 units mid grade heat for every unit `carrier_out` or 0.2 units cooling. Finally, 0.1 units ``carrier_out_3``, low grade heat, is produced for every unit of `carrier_out`.
 
@@ -186,6 +188,7 @@ A ``primary_carrier_out`` must be defined when there are multiple ``carrier_out`
 
 .. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
 
+-------------------------
 Resource area constraints
 -------------------------
 
@@ -202,6 +205,7 @@ By default, ``resource_area_max`` is infinite and ``resource_area_min`` is 0 (ze
 
 .. _group_constraints:
 
+-----------------
 Group constraints
 -----------------
 
@@ -314,6 +318,7 @@ For specifics of the mathematical formulation of the available group constraints
 
 .. seealso:: The :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` shows two example uses of group constraints: limiting shared capacity with ``energy_cap_max`` and enforcing a minimum shared power generation with ``supply_share_min``.
 
+----------------------------------
 Per-distance constraints and costs
 ----------------------------------
 
@@ -346,6 +351,7 @@ The distance is specified in transmission links:
 
 If no distance is given, but the locations have been given lat and lon coordinates, Calliope will compute distances automatically (based on the length of a straight line connecting the locations).
 
+--------------------------
 One-way transmission links
 --------------------------
 
@@ -361,7 +367,7 @@ Transmission links are bidirectional by default. To force unidirectionality for 
 
 This will only allow transmission from ``location1`` to ``location2``. To swap the direction, the link name must be inverted, i.e. ``location2,location1``.
 
-
+--------------
 Cyclic storage
 --------------
 
@@ -373,6 +379,7 @@ Without cyclic storage in place (as was the case prior to v0.6.2), the storage t
 
 .. note:: Cyclic storage also functions when time clustering, if allowing storage to be tracked between clusters (see :ref:`time_clustering`). However, it cannot be used in ``operate`` run mode.
 
+------------------
 Revenue and export
 ------------------
 
@@ -384,6 +391,7 @@ Export is an extension of this, allowing an energy carrier to be removed from th
 
 .. _group_share:
 
+-------------------------------------------
 The ``group_share`` constraint (deprecated)
 -------------------------------------------
 
@@ -422,6 +430,7 @@ These can be implemented as, for example, to force at most 20% of ``energy_cap``
             csp,cold_fusion:
                 energy_cap_max: 0.20
 
+------------------------------------
 Binary and mixed-integer constraints
 ------------------------------------
 
@@ -436,3 +445,18 @@ By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, t
    Integer and binary variables are a recent addition to Calliope and may not cover all edge cases as intended. Please `raise an issue on GitHub <https://github.com/calliope-project/calliope/issues>`_ if you see unexpected behavior.
 
 .. seealso:: :ref:`milp_example_model`
+
+Asynchronous energy production/consumption
+------------------------------------------
+
+The ``asynchronous_prod_con`` binary constraint ensures that only one of ``carrier_prod`` and ``carrier_con`` can be non-zero in a given timestep.
+
+This constraint can be applied to storage or transmission technologies. This example shows use with a heat transmission technology:
+
+.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+   :language: yaml
+   :dedent: 8
+   :start-after: # heat_pipes-start
+   :end-before: # heat_pipes-end
+
+In the above example, heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This might allow e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. Enabling the ``asynchronous_prod_con`` constraint ensures that this does not happen.
