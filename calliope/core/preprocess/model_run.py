@@ -12,6 +12,7 @@ AttrDict, and building of associated debug information.
 
 import os
 import itertools
+import warnings
 
 import pandas as pd
 
@@ -54,7 +55,8 @@ def model_run_from_yaml(model_file, scenario=None, override_dict=None):
     )
 
     return generate_model_run(
-        config_with_overrides, debug_comments, overrides, scenario)
+        config_with_overrides, debug_comments, overrides, scenario
+    )
 
 
 def model_run_from_dict(config_dict, scenario=None, override_dict=None):
@@ -133,6 +135,10 @@ def apply_overrides(config, scenario=None, override_dict=None):
         config.config_path, config.model.timeseries_data_path
     )
 
+    # FutureWarning: check if config includes an explicit objective cost class.
+    # Added in 0.6.4-dev, to be removed in v0.7.0-dev.
+    has_explicit_cost_class = isinstance(config.get_key('run.objective_options.cost_class', None), dict)
+
     # The input files are allowed to override other model defaults
     config_model.union(config, allow_override=True)
 
@@ -144,8 +150,13 @@ def apply_overrides(config, scenario=None, override_dict=None):
         elif not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
 
-        warnings = checks.check_overrides(config_model, override_dict)
-        exceptions.print_warnings_and_raise_errors(warnings=warnings)
+        warning_messages = checks.check_overrides(config_model, override_dict)
+        exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
+
+        # FutureWarning: If config does not include an explicit objective cost class, check override dict.
+        # Added in 0.6.4-dev, to be removed in v0.7.0-dev.
+        if has_explicit_cost_class is False:
+            has_explicit_cost_class = isinstance(override_dict.get_key('run.objective_options.cost_class', None), dict)
 
         config_model.union(
             override_dict, allow_override=True, allow_replacement=True
@@ -180,8 +191,13 @@ def apply_overrides(config, scenario=None, override_dict=None):
 
         overrides_from_scenario = combine_overrides(config_model, overrides)
 
-        warnings = checks.check_overrides(config_model, overrides_from_scenario)
-        exceptions.print_warnings_and_raise_errors(warnings=warnings)
+        warning_messages = checks.check_overrides(config_model, overrides_from_scenario)
+        exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
+
+        # FutureWarning: If config nor override_dict include an explicit objective cost class, check scenario dict.
+        # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+        if has_explicit_cost_class is False:
+            has_explicit_cost_class = isinstance(overrides_from_scenario.get_key('run.objective_options.cost_class', None), dict)
 
         config_model.union(
             overrides_from_scenario, allow_override=True, allow_replacement=True
@@ -204,6 +220,18 @@ def apply_overrides(config, scenario=None, override_dict=None):
                 '{}'.format(k),
                 'Overridden via override dictionary.')
 
+    # FutureWarning: raise cost class warning here.
+    # Warning that there will be no default cost class in 0.7.0 #
+    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
+    if has_explicit_cost_class is False:
+        warnings.warn(
+            'There will be no default cost class for the objective function in '
+            'v0.7.0 (currently "monetary" with a weight of 1). '
+            'Explicitly specify the cost class(es) you would like to use '
+            'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
+            'replicate the current default.',
+            FutureWarning
+        )
     return config_model, debug_comments, overrides, scenario
 
 
@@ -509,8 +537,8 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     model_run['applied_overrides'] = ';'.join(applied_overrides)
 
     # 1) Initial checks on model configuration
-    warnings, errors = checks.check_initial(config)
-    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    warning_messages, errors = checks.check_initial(config)
+    exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 2) Fully populate techs
     # Raises ModelError if necessary
@@ -522,11 +550,11 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     model_run['tech_groups'] = process_tech_groups(config, model_run['techs'])
 
     # 4) Fully populate locations
-    model_run['locations'], debug_locs, warnings, errors = locations.process_locations(
+    model_run['locations'], debug_locs, warning_messages, errors = locations.process_locations(
         config, model_run['techs']
     )
     debug_comments.set_key('model_run.locations', debug_locs)
-    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
@@ -547,9 +575,9 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     model_run['constraint_sets'] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking
-    final_check_comments, warnings, errors = checks.check_final(model_run)
+    final_check_comments, warning_messages, errors = checks.check_final(model_run)
     debug_comments.union(final_check_comments)
-    exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+    exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
     debug_data = AttrDict({
