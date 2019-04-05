@@ -513,24 +513,24 @@ class TestCapacityConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'storage_capacity_constraint')
 
-    def test_loc_techs_energy_capacity_storage_constraint(self):
+    def test_loc_techs_energy_capacity_storage_max_constraint(self):
         """
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
         """
         m = build_model({}, 'simple_storage,two_hours,investment_costs')
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_max_constraint')
 
         m = build_model({}, 'simple_supply_and_supply_plus,two_hours,investment_costs')
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_max_constraint')
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_techs_energy_capacity_storage_milp_constraint(self):
         # constraint should exist in the MILP case too
         m = build_model({}, 'supply_and_supply_plus_milp,two_hours,investment_costs')
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_max_constraint')
 
     def test_loc_techs_resource_capacity_constraint(self):
         """
@@ -549,21 +549,21 @@ class TestCapacityConstraints:
             'simple_supply_and_supply_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_max_constraint')
 
         m = build_model(
             {'techs.test_supply_plus.constraints.resource_cap_min': 10},
             'simple_supply_and_supply_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_max_constraint')
 
         m = build_model(
             {'techs.test_supply_plus.constraints.resource_cap_equals': 10},
             'simple_supply_and_supply_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_max_constraint')
 
     def test_loc_techs_resource_capacity_equals_energy_capacity_constraint(self):
         """
