@@ -21,14 +21,26 @@ def load_constraints(backend_model):
 
     if 'loc_techs_storage_capacity_constraint' in sets:
         backend_model.storage_capacity_constraint = po.Constraint(
-                backend_model.loc_techs_storage_capacity_constraint,
-                rule=storage_capacity_constraint_rule
+            backend_model.loc_techs_storage_capacity_constraint,
+            rule=storage_capacity_constraint_rule
         )
 
-    if 'loc_techs_energy_capacity_storage_constraint' in sets:
+    if 'loc_techs_energy_capacity_storage_min_constraint' in sets:
         backend_model.energy_capacity_storage_constraint = po.Constraint(
-            backend_model.loc_techs_energy_capacity_storage_constraint,
-            rule=energy_capacity_storage_constraint_rule
+            backend_model.loc_techs_energy_capacity_storage_min_constraint,
+            rule=energy_capacity_storage_min_constraint_rule
+        )
+
+    if 'loc_techs_energy_capacity_storage_max_constraint' in sets:
+        backend_model.energy_capacity_storage_constraint = po.Constraint(
+            backend_model.loc_techs_energy_capacity_storage_max_constraint,
+            rule=energy_capacity_storage_max_constraint_rule
+        )
+
+    if 'loc_techs_energy_capacity_storage_equals_constraint' in sets:
+        backend_model.energy_capacity_storage_constraint = po.Constraint(
+            backend_model.loc_techs_energy_capacity_storage_equals_constraint,
+            rule=energy_capacity_storage_equals_constraint_rule
         )
 
     if 'loc_techs_energy_capacity_storage_constraint_old' in sets:
@@ -39,26 +51,26 @@ def load_constraints(backend_model):
 
     if 'loc_techs_resource_capacity_constraint' in sets:
         backend_model.resource_capacity_constraint = po.Constraint(
-                backend_model.loc_techs_resource_capacity_constraint,
-                rule=resource_capacity_constraint_rule
+            backend_model.loc_techs_resource_capacity_constraint,
+            rule=resource_capacity_constraint_rule
         )
 
     if 'loc_techs_resource_capacity_equals_energy_capacity_constraint' in sets:
         backend_model.resource_capacity_equals_energy_capacity_constraint = po.Constraint(
-                backend_model.loc_techs_resource_capacity_equals_energy_capacity_constraint,
-                rule=resource_capacity_equals_energy_capacity_constraint_rule
+            backend_model.loc_techs_resource_capacity_equals_energy_capacity_constraint,
+            rule=resource_capacity_equals_energy_capacity_constraint_rule
         )
 
     if 'loc_techs_resource_area_constraint' in sets:
         backend_model.resource_area_constraint = po.Constraint(
-                backend_model.loc_techs_resource_area_constraint,
-                rule=resource_area_constraint_rule
+            backend_model.loc_techs_resource_area_constraint,
+            rule=resource_area_constraint_rule
         )
 
     if 'loc_techs_resource_area_per_energy_capacity_constraint' in sets:
         backend_model.resource_area_per_energy_capacity_constraint = po.Constraint(
-                backend_model.loc_techs_resource_area_per_energy_capacity_constraint,
-                rule=resource_area_per_energy_capacity_constraint_rule
+            backend_model.loc_techs_resource_area_per_energy_capacity_constraint,
+            rule=resource_area_per_energy_capacity_constraint_rule
         )
 
     if 'locs_resource_area_capacity_per_loc_constraint' in sets:
@@ -163,7 +175,7 @@ def energy_capacity_storage_constraint_rule_old(backend_model, loc_tech):
     )
 
 
-def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
+def energy_capacity_storage_min_constraint_rule(backend_model, loc_tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -172,25 +184,49 @@ def energy_capacity_storage_constraint_rule(backend_model, loc_tech):
         .. math::
 
             \\boldsymbol{energy_{cap}}(loc::tech)
-            \\begin{cases}
-                \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_max(loc::tech)\\\\
-                = \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_equals(loc::tech)
-            \\end{cases}
+                \\geq \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_min(loc::tech)\\\\
             \\forall loc::tech \\in loc::techs_{store}
 
     """
-    energy_cap_per_storage_cap_max = get_param(backend_model, 'energy_cap_per_storage_cap_max', loc_tech)
-    energy_cap_per_storage_cap_equals = get_param(backend_model, 'energy_cap_per_storage_cap_equals', loc_tech)
+    return backend_model.energy_cap[loc_tech] >= (
+        backend_model.storage_cap[loc_tech] * get_param(backend_model, 'energy_cap_per_storage_cap_min', loc_tech)
+    )
 
-    if energy_cap_per_storage_cap_max:
-        return backend_model.energy_cap[loc_tech] <= (
-            backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap_max
-        )
-    else:
-        assert energy_cap_per_storage_cap_equals
-        return backend_model.energy_cap[loc_tech] == (
-            backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap_equals
-        )
+
+def energy_capacity_storage_max_constraint_rule(backend_model, loc_tech):
+    """
+    Limit energy capacities of storage technologies based on their storage capacities.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{energy_{cap}}(loc::tech)
+                \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_max(loc::tech)\\\\
+            \\forall loc::tech \\in loc::techs_{store}
+
+    """
+    return backend_model.energy_cap[loc_tech] <= (
+        backend_model.storage_cap[loc_tech] * get_param(backend_model, 'energy_cap_per_storage_cap_max', loc_tech)
+    )
+
+
+def energy_capacity_storage_equals_constraint_rule(backend_model, loc_tech):
+    """
+    Limit energy capacities of storage technologies based on their storage capacities.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\boldsymbol{energy_{cap}}(loc::tech)
+                = \\boldsymbol{storage_{cap}}(loc::tech) \\times energy\\_cap\\_per\\_storage\\_cap\\_equals(loc::tech)
+            \\forall loc::tech \\in loc::techs_{store}
+
+    """
+    return backend_model.energy_cap[loc_tech] == (
+        backend_model.storage_cap[loc_tech] * get_param(backend_model, 'energy_cap_per_storage_cap_equals', loc_tech)
+    )
 
 
 def resource_capacity_constraint_rule(backend_model, loc_tech):
@@ -294,7 +330,7 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
     area_per_energy_cap = get_param(backend_model, 'resource_area_per_energy_cap', loc_tech)
 
     return (backend_model.resource_area[loc_tech] ==
-                backend_model.energy_cap[loc_tech] * area_per_energy_cap)
+            backend_model.energy_cap[loc_tech] * area_per_energy_cap)
 
 
 def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
