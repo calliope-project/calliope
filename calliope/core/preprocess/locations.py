@@ -364,7 +364,7 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
                 'Includes value computed from energy_eff_per_distance'
             )
 
-        for k in tech_settings.costs.keys_nested(subkeys_as='list'):
+        for k in tech_settings.get('costs', AttrDict()).keys_nested(subkeys_as='list'):
             if 'energy_cap_per_distance' in k:
                 energy_cap_costs_per_distance = (
                     tech_settings.costs.get_key(k) *

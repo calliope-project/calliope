@@ -21,6 +21,7 @@ class TestModelPreproccesing:
     def test_preprocess_urban_scale(self):
         calliope.examples.urban_scale()
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
@@ -352,9 +353,10 @@ class TestUrbanScaleExampleModelSenseChecks:
         except ImportError:
             pytest.skip('Gurobi not installed')
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_example_results(self):
         model = calliope.examples.milp(
-            override_dict={'model.subset_time': '2005-01-01'}
+            override_dict={'model.subset_time': '2005-01-01', 'run.solver_options.mipgap': 0.001}
         )
         model.run()
 

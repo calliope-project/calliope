@@ -168,7 +168,9 @@ class ModelPlotMethods:
     def check_optimality(self):
         termination = self._model._model_data.attrs.get(
             'termination_condition', 'did_not_yet_run')
-        if termination not in ['optimal', 'did_not_yet_run']:
+        # a MILP model which optimises to within the MIP gap, but does not fully
+        # converge on the LP relaxation, may return as 'feasible', not 'optimal'
+        if termination not in ['optimal', 'did_not_yet_run', 'feasible']:
             warn('Model termination condition was not optimal. Plotting may fail!')
 
     def timeseries(self, **kwargs):

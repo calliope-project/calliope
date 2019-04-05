@@ -163,8 +163,8 @@ def generate_constraint_sets(model_run):
         constraint_sets['loc_techs_storage_max_constraint'] = sets.loc_techs_store
 
     # milp.py
-    constraint_sets['loc_techs_unit_commitment_constraint'] = sets.loc_techs_milp
-    constraint_sets['loc_techs_unit_capacity_constraint'] = sets.loc_techs_milp
+    constraint_sets['loc_techs_unit_commitment_milp_constraint'] = sets.loc_techs_milp
+    constraint_sets['loc_techs_unit_capacity_milp_constraint'] = sets.loc_techs_milp
     constraint_sets['loc_tech_carriers_carrier_production_max_milp_constraint'] = [
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
@@ -191,50 +191,51 @@ def generate_constraint_sets(model_run):
             sets.loc_techs_storage + sets.loc_techs_transmission
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
     ]
-    constraint_sets['loc_techs_energy_capacity_units_constraint'] = [
+    constraint_sets['loc_techs_energy_capacity_units_milp_constraint'] = [
         i for i in sets.loc_techs_milp
         if constraint_exists(model_run, i, 'constraints.energy_cap_per_unit')
         is not None
     ]
-    constraint_sets['loc_techs_storage_capacity_units_constraint'] = [
+    constraint_sets['loc_techs_storage_capacity_units_milp_constraint'] = [
         i for i in sets.loc_techs_milp if i in sets.loc_techs_store
     ]
-    constraint_sets['loc_techs_energy_capacity_max_purchase_constraint'] = [
+    constraint_sets['loc_techs_energy_capacity_max_purchase_milp_constraint'] = [
         i for i in sets.loc_techs_purchase
         if (constraint_exists(model_run, i, 'constraints.energy_cap_equals') is not None
             or (constraint_exists(model_run, i, 'constraints.energy_cap_max') is not None
                 and constraint_exists(model_run, i, 'constraints.energy_cap_max') != np.inf))
     ]
-    constraint_sets['loc_techs_energy_capacity_min_purchase_constraint'] = [
+    constraint_sets['loc_techs_energy_capacity_min_purchase_milp_constraint'] = [
         i for i in sets.loc_techs_purchase
         if (not constraint_exists(model_run, i, 'constraints.energy_cap_equals')
             and constraint_exists(model_run, i, 'constraints.energy_cap_min'))
     ]
-    constraint_sets['loc_techs_storage_capacity_max_purchase_constraint'] = [
+    constraint_sets['loc_techs_storage_capacity_max_purchase_milp_constraint'] = [
         i for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
         if (constraint_exists(model_run, i, 'constraints.storage_cap_equals') is not None
             or (constraint_exists(model_run, i, 'constraints.storage_cap_max') is not None
                 and constraint_exists(model_run, i, 'constraints.storage_cap_max') != np.inf))
     ]
-    constraint_sets['loc_techs_storage_capacity_min_purchase_constraint'] = [
+    constraint_sets['loc_techs_storage_capacity_min_purchase_milp_constraint'] = [
         i for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
         if (not constraint_exists(model_run, i, 'constraints.storage_cap_equals')
             and constraint_exists(model_run, i, 'constraints.storage_cap_min'))
     ]
-    constraint_sets['loc_techs_update_costs_investment_units_constraint'] = [
+    constraint_sets['loc_techs_update_costs_investment_units_milp_constraint'] = [
         i for i in sets.loc_techs_milp
         if i in sets.loc_techs_investment_cost and
         any(constraint_exists(model_run, i, 'costs.{}.purchase'.format(j))
             for j in model_run.sets.costs)
     ]
     # loc_techs_purchase technologies only exist because they have defined a purchase cost
-    constraint_sets['loc_techs_update_costs_investment_purchase_constraint'] = sets.loc_techs_purchase
+    constraint_sets['loc_techs_update_costs_investment_purchase_milp_constraint'] = sets.loc_techs_purchase
 
-    constraint_sets['techs_unit_capacity_systemwide_constraint'] = [
+    constraint_sets['techs_unit_capacity_systemwide_milp_constraint'] = [
         i for i in sets.techs
         if model_run.get_key('techs.{}.constraints.units_max_systemwide'.format(i), None)
         or model_run.get_key('techs.{}.constraints.units_equals_systemwide'.format(i), None)
     ]
+    constraint_sets['loc_techs_asynchronous_prod_con_milp_constraint'] = sets.loc_techs_asynchronous_prod_con
 
     # conversion.py
     constraint_sets['loc_techs_balance_conversion_constraint'] = sets.loc_techs_conversion
