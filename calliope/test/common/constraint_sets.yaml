@@ -12,7 +12,7 @@ model_national: # checked
     loc_techs_cost_investment_constraint: ['region1-1::csp', 'region1-2::csp', 'region1-3::csp', 'region1::ac_transmission:region2', 'region1::ccgt', 'region2::ac_transmission:region1', 'region2::battery']
     loc_techs_cost_var_constraint: ['region1-1::csp', 'region1-1::free_transmission:region1', 'region1-2::csp', 'region1-2::free_transmission:region1', 'region1-3::csp', 'region1-3::free_transmission:region1', 'region1::ac_transmission:region2', 'region1::ccgt', 'region1::free_transmission:region1-1', 'region1::free_transmission:region1-2', 'region1::free_transmission:region1-3', 'region2::ac_transmission:region1']
     loc_techs_energy_capacity_constraint: ['region1-1::csp', 'region1-1::free_transmission:region1', 'region1-2::csp', 'region1-2::free_transmission:region1', 'region1-3::csp', 'region1-3::free_transmission:region1', 'region1::ac_transmission:region2', 'region1::ccgt', 'region1::demand_power', 'region1::free_transmission:region1-1', 'region1::free_transmission:region1-2', 'region1::free_transmission:region1-3', 'region2::ac_transmission:region1', 'region2::battery', 'region2::demand_power']
-    loc_techs_energy_capacity_storage_constraint: ['region1-1::csp', 'region1-2::csp', 'region1-3::csp', 'region2::battery']
+    loc_techs_energy_capacity_storage_max_constraint: ['region1-1::csp', 'region1-2::csp', 'region1-3::csp', 'region2::battery']
     loc_techs_resource_area_constraint: ['region1-1::csp', 'region1-2::csp', 'region1-3::csp']
     loc_techs_resource_availability_supply_plus_constraint: ['region1-1::csp', 'region1-2::csp', 'region1-3::csp']
     loc_techs_resource_max_constraint: ['region1-1::csp', 'region1-2::csp', 'region1-3::csp']
