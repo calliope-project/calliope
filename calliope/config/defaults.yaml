@@ -84,7 +84,7 @@ default_tech:
         storage_cap_equals: false  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
         storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
         storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
-        storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology perchased.
+        storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
         storage_initial: 0  # name: Initial storage level ¦ unit: kWh ¦ Set stored energy in device at the first timestep
         storage_loss: 0  # name: Storage loss rate ¦ unit: hour :sup:`-1` ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
         units_equals: false  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.

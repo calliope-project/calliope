@@ -664,6 +664,7 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override2, scenario='simple_supply,one_day')
 
+    @pytest.mark.filterwarnings('ignore: defines force_resource but not a finite resource:calliope.exceptions.ModelWarning')
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
@@ -823,29 +824,29 @@ class TestChecks:
 
         # should fail: cannot have locations in one place and not in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, None), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, None), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Either all or no locations must have `coordinates` defined")
 
         # should fail: cannot have cartesian coordinates in one place and geographic in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_supply,one_day')
         check_error_or_warning(error, "All locations must use the same coordinate format")
 
         # should fail: cannot use a non-cartesian or non-geographic coordinate system
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Unidentified coordinate system")
 
         # should fail: coordinates must be given as key:value pairs
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_storage,one_day')
+            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Coordinates must be given in the format")
 
         # should pass: cartesian coordinates in both places
-        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_storage,one_day')
+        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_supply,one_day')
 
         # should pass: geographic coordinates in both places
-        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_storage,one_day')
+        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_supply,one_day')
 
     def test_one_way(self):
         """
@@ -988,7 +989,6 @@ class TestChecks:
         (None, {'purchase': 2}),
 
     ))
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_supply_warning(self, constraints, costs):
         override_constraints = {}
         override_costs = {}
@@ -1013,7 +1013,6 @@ class TestChecks:
         (None, {'purchase': 2}),
 
     ))
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_storage_warning(self, constraints, costs):
         override_constraints = {}
         override_costs = {}
