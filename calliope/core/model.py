@@ -317,17 +317,6 @@ class Model(object):
                 FutureWarning
             )
 
-        # Warning that there will be no default cost class in 0.7.0 #
-        # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-        if AttrDict.from_yaml_string(self._model_data.attrs['run_config']).objective_options.cost_class == {'monetary': 1}:
-            warnings.warn(
-                'There will be no default cost class for the objective function in '
-                'v0.7.0 (currently "monetary" with a weight of 1). '
-                'Explicitly specify the cost class(es) you would like to use '
-                'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
-                'replicate the current default.',
-                FutureWarning
-            )
 
         # Warning that charge rate will be removed in 0.7.0
         # Added in 0.6.4-dev, to be removed in 0.7.0-dev
