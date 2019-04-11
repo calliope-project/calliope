@@ -329,20 +329,22 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
             )
             # print('{} -- {}-{}: {}, {}'.format(r, loc_id, tech_id, single_ok, multiple_ok))
 
-    # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
-    if model_run.techs[tech_id].essentials.parent == 'supply_plus':
-        if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
-                and 'charge_rate' not in tech_config.constraints.keys()
-                and 'energy_cap_per_storage_cap_min' not in tech_config.constraints.keys()
-                and 'energy_cap_per_storage_cap_max' not in tech_config.constraints.keys()
-                and 'energy_cap_per_storage_cap_equals' not in tech_config.constraints.keys()):
-            errors.append(
-                '`{}` at `{}` fails to define '
-                'energy_cap_per_storage_cap, but is using storage'.format(tech_id, loc_id, required)
-            )
+    # If the technology involves storage, warn when energy_cap and storage_cap aren't connected
+    energy_cap_per_storage_cap_params = [
+        'charge_rate', 'energy_cap_per_storage_cap_min',
+        'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals'
+    ]
+    if (loc_id + '::' + tech_id in model_run.sets.loc_techs_store
+            and not any(i in tech_config.constraints.keys() for i in energy_cap_per_storage_cap_params)):
+        model_warnings.append(
+            '`{}` at `{}` has no constraint to explicitly connect `energy_cap` to '
+            '`storage_cap`, consider defining a `energy_cap_per_storage_cap_min/max/equals` '
+            'constraint'.format(tech_id, loc_id)
+        )
+
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (any(['units_' in k for k in tech_config.constraints.keys()])
-        and 'energy_cap_per_unit' not in tech_config.constraints.keys()):
+            and 'energy_cap_per_unit' not in tech_config.constraints.keys()):
         errors.append(
             '`{}` at `{}` fails to define energy_cap_per_unit when specifying '
             'technology in units_max/min/equals'.format(tech_id, loc_id, required)

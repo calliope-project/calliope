@@ -26,25 +26,25 @@ def load_constraints(backend_model):
         )
 
     if 'loc_techs_energy_capacity_storage_min_constraint' in sets:
-        backend_model.energy_capacity_storage_constraint = po.Constraint(
+        backend_model.energy_capacity_storage_min_constraint = po.Constraint(
             backend_model.loc_techs_energy_capacity_storage_min_constraint,
             rule=energy_capacity_storage_min_constraint_rule
         )
 
     if 'loc_techs_energy_capacity_storage_max_constraint' in sets:
-        backend_model.energy_capacity_storage_constraint = po.Constraint(
+        backend_model.energy_capacity_storage_max_constraint = po.Constraint(
             backend_model.loc_techs_energy_capacity_storage_max_constraint,
             rule=energy_capacity_storage_max_constraint_rule
         )
 
     if 'loc_techs_energy_capacity_storage_equals_constraint' in sets:
-        backend_model.energy_capacity_storage_constraint = po.Constraint(
+        backend_model.energy_capacity_storage_equals_constraint = po.Constraint(
             backend_model.loc_techs_energy_capacity_storage_equals_constraint,
             rule=energy_capacity_storage_equals_constraint_rule
         )
 
     if 'loc_techs_energy_capacity_storage_constraint_old' in sets:
-        backend_model.energy_capacity_storage_constraint = po.Constraint(
+        backend_model.energy_capacity_storage_constraint_old = po.Constraint(
             backend_model.loc_techs_energy_capacity_storage_constraint,
             rule=energy_capacity_storage_constraint_rule_old
         )

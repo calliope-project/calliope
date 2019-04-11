@@ -834,6 +834,7 @@ class TestEnergyCapacityPerStorageCapacity:
     def model_file(self):
         return "energy_cap_per_storage_cap.yaml"
 
+    @pytest.mark.filterwarnings("ignore:(?s).*`energy_cap_per_storage_cap_min/max/equals`:calliope.exceptions.ModelWarning")
     def test_no_constraint_set(self, model_file):
         model = build_model(model_file=model_file)
         model.run()

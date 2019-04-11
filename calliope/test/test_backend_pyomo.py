@@ -308,8 +308,7 @@ class TestBalanceConstraints:
         sets.loc_techs_store,
         """
         m = build_model(
-            {},
-            'simple_storage,one_day,investment_costs'
+            {}, 'simple_storage,one_day,investment_costs'
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'balance_storage_constraint')
@@ -513,26 +512,60 @@ class TestCapacityConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'storage_capacity_constraint')
 
-    def test_loc_techs_energy_capacity_storage_constraint(self):
+    @pytest.mark.parametrize('scenario,tech,override', [
+        i + (j,) for i in [('simple_supply_and_supply_plus', 'test_supply_plus'), ('simple_storage', 'test_storage')]
+        for j in ['max', 'equals', 'min']
+    ])
+    def test_loc_techs_energy_capacity_storage_constraint(self, scenario, tech, override):
         """
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
         """
-        m = build_model({}, 'simple_storage,two_hours,investment_costs')
+        m = build_model(
+            {'techs.{}.constraints.energy_cap_per_storage_cap_{}'.format(tech, override): 0.5},
+            '{},two_hours,investment_costs'.format(scenario)
+        )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
-
-        m = build_model({}, 'simple_supply_and_supply_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        assert hasattr(m._backend_model, 'energy_capacity_storage_{}_constraint'.format(override))
+        if override == 'equals':
+            assert not any([
+                hasattr(m._backend_model, 'energy_capacity_storage_{}_constraint'.format(i))
+                for i in set(['max', 'min'])
+            ])
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_energy_capacity_storage_milp_constraint(self):
-        # constraint should exist in the MILP case too
-        m = build_model({}, 'supply_and_supply_plus_milp,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+    @pytest.mark.parametrize('override', (('max', 'equals', 'min')))
+    def test_loc_techs_energy_capacity_milp_storage_constraint(self, override):
+        """
+        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
+        """
 
-    def test_loc_techs_resource_capacity_constraint(self):
+        m = build_model(
+            {'techs.test_supply_plus.constraints.energy_cap_per_storage_cap_{}'.format(override): 0.5},
+            'supply_and_supply_plus_milp,two_hours,investment_costs'
+        )
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'energy_capacity_storage_{}_constraint'.format(override))
+        if override == 'equals':
+            assert not any([
+                hasattr(m._backend_model, 'energy_capacity_storage_{}_constraint'.format(i))
+                for i in set(['max', 'min'])
+            ])
+
+    def test_no_loc_techs_energy_capacity_storage_constraint(self):
+        """
+        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
+        """
+        with pytest.warns(exceptions.ModelWarning, match='(?s).*consider defining a `energy_cap_per_storage_cap_min/max/equals` constraint'):
+            m = build_model(model_file='energy_cap_per_storage_cap.yaml')
+
+        m.run(build_only=True)
+        assert not any([
+            hasattr(m._backend_model, 'energy_capacity_storage_{}_constraint'.format(i))
+            for i in ['max', 'equals', 'min']
+        ])
+
+    @pytest.mark.parametrize('override', ((None, 'max', 'equals', 'min')))
+    def test_loc_techs_resource_capacity_constraint(self, override):
         """
         i for i in sets.loc_techs_finite_resource_supply_plus
         if any([constraint_exists(model_run, i, 'constraints.resource_cap_equals'),
@@ -540,30 +573,18 @@ class TestCapacityConstraints:
                 constraint_exists(model_run, i, 'constraints.resource_cap_min')])
         """
 
-        m = build_model({}, 'simple_supply_and_supply_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'resource_capacity_constraint')
+        if override is None:
+            m = build_model({}, 'simple_supply_and_supply_plus,two_hours,investment_costs')
+            m.run(build_only=True)
+            assert not hasattr(m._backend_model, 'resource_capacity_constraint')
 
-        m = build_model(
-            {'techs.test_supply_plus.constraints.resource_cap_max': 10},
-            'simple_supply_and_supply_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
-
-        m = build_model(
-            {'techs.test_supply_plus.constraints.resource_cap_min': 10},
-            'simple_supply_and_supply_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
-
-        m = build_model(
-            {'techs.test_supply_plus.constraints.resource_cap_equals': 10},
-            'simple_supply_and_supply_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'energy_capacity_storage_constraint')
+        else:
+            m = build_model(
+                {'techs.test_supply_plus.constraints.resource_cap_{}'.format(override): 10},
+                'simple_supply_and_supply_plus,two_hours,investment_costs'
+            )
+            m.run(build_only=True)
+            assert hasattr(m._backend_model, 'resource_capacity_constraint')
 
     def test_loc_techs_resource_capacity_equals_energy_capacity_constraint(self):
         """
