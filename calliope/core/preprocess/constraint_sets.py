@@ -89,12 +89,17 @@ def generate_constraint_sets(model_run):
         i for i in sets.loc_techs_store
         if constraint_exists(model_run, i, 'constraints.charge_rate')
     ]
-    constraint_sets['loc_techs_energy_capacity_storage_constraint'] = [
+    constraint_sets['loc_techs_energy_capacity_storage_equals_constraint'] = [
         i for i in sets.loc_techs_store
-        if any([
-            constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max'),
-            constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_equals'),
-        ])
+        if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_equals')
+    ]
+    constraint_sets['loc_techs_energy_capacity_storage_min_constraint'] = [
+        i for i in sets.loc_techs_store
+        if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_min')
+    ]
+    constraint_sets['loc_techs_energy_capacity_storage_max_constraint'] = [
+        i for i in sets.loc_techs_store
+        if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
     ]
     constraint_sets['loc_techs_resource_capacity_constraint'] = [
         i for i in sets.loc_techs_finite_resource_supply_plus

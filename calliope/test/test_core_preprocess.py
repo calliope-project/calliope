@@ -1094,21 +1094,20 @@ class TestDataset:
         Timesteps must be consistent?
         """
 
+    @pytest.mark.parametrize("model,expected_constraint_set", [
+        (calliope.examples.national_scale(), constraint_sets["model_national"]),
+        (calliope.examples.urban_scale(), constraint_sets["model_urban"]),
+        (calliope.examples.milp(), constraint_sets["model_milp"])
+    ])
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_unassigned_sets(self):
+    def test_unassigned_sets(self, model, expected_constraint_set):
         """
         Check that all sets in which there are possible loc:techs are assigned
         and have been filled
         """
-        models = dict()
-        models['model_national'] = calliope.examples.national_scale()
-        models['model_urban'] = calliope.examples.urban_scale()
-        models['model_milp'] = calliope.examples.milp()
-
-        for model_name, model in models.items():
-            for set_name, set_vals in model._model_data.coords.items():
-                if 'constraint' in set_name:
-                    assert set(set_vals.values) == set(constraint_sets[model_name][set_name])
+        for set_name, set_vals in model._model_data.coords.items():
+            if 'constraint' in set_name:
+                assert set(set_vals.values) == set(expected_constraint_set[set_name])
 
     def test_negative_cost_unassigned_cap(self):
         """

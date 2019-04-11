@@ -840,12 +840,37 @@ class TestEnergyCapacityPerStorageCapacity:
         assert model.results.termination_condition == "optimal"
         energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
         storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert energy_capacity == pytest.approx(10)
+        assert storage_capacity == pytest.approx(175)
         assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
 
-    def test_fixed_ratio(self, model_file):
-        model = build_model(model_file=model_file, scenario="fixed_ratio")
+    def test_equals(self, model_file):
+        model = build_model(model_file=model_file, scenario="equals")
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
         storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
         assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)
+
+    def test_max(self, model_file):
+        model = build_model(model_file=model_file, scenario="max")
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert energy_capacity == pytest.approx(10)
+        assert storage_capacity == pytest.approx(1000)
+
+    def test_min(self, model_file):
+        model = build_model(model_file=model_file, scenario="min")
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert energy_capacity == pytest.approx(175)
+        assert storage_capacity == pytest.approx(175)
+
+    def test_operate_mode(self, model_file):
+        model = build_model(model_file=model_file, scenario="operate_mode_min")
+        with pytest.raises(calliope.exceptions.ModelError):
+            model.run()

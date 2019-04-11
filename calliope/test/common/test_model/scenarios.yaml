@@ -282,3 +282,6 @@ overrides:
                     monetary:
                         interest_rate: 0.1
                         energy_cap: 10
+
+    explicit_cost_class:
+        run.objective_options.cost_class.monetary: 1

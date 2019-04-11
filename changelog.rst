@@ -24,6 +24,8 @@ Release History
 
 |new| Storage capacity can be tied to energy capacity with a new `energy_cap_per_storage_cap_equals` constraint.
 
+|new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
+
 |changed| Constraint files are auto-loaded in the pyomo backend and applied in the order set by 'ORDER' variables given in each constraint file (such that those constraints which depend on pyomo expressions existing are built after the expressions are built).
 
 |changed| Error on required column not existing in CSV is more explicit.

@@ -333,6 +333,7 @@ def _check_tech(model_run, tech_id, tech_config, loc_id, model_warnings, errors,
     if model_run.techs[tech_id].essentials.parent == 'supply_plus':
         if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
                 and 'charge_rate' not in tech_config.constraints.keys()
+                and 'energy_cap_per_storage_cap_min' not in tech_config.constraints.keys()
                 and 'energy_cap_per_storage_cap_max' not in tech_config.constraints.keys()
                 and 'energy_cap_per_storage_cap_equals' not in tech_config.constraints.keys()):
             errors.append(
