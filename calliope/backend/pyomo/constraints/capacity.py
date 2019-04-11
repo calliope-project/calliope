@@ -23,7 +23,7 @@ def load_constraints(backend_model):
 
     if backend_model.__calliope_run_config['mode'] == 'operate':
         return None
-    
+
     else:
         if 'loc_techs_storage_capacity_constraint' in sets:
             backend_model.storage_capacity_constraint = po.Constraint(
@@ -39,64 +39,64 @@ def load_constraints(backend_model):
 
         if 'loc_techs_energy_capacity_storage_max_constraint' in sets:
             backend_model.energy_capacity_storage_constraint = po.Constraint(
-                  backend_model.loc_techs_energy_capacity_storage_max_constraint,
-                  rule=energy_capacity_storage_max_constraint_rule
-              )
+                backend_model.loc_techs_energy_capacity_storage_max_constraint,
+                rule=energy_capacity_storage_max_constraint_rule
+            )
 
-          if 'loc_techs_energy_capacity_storage_equals_constraint' in sets:
-              backend_model.energy_capacity_storage_constraint = po.Constraint(
-                  backend_model.loc_techs_energy_capacity_storage_equals_constraint,
-                  rule=energy_capacity_storage_equals_constraint_rule
-              )
+        if 'loc_techs_energy_capacity_storage_equals_constraint' in sets:
+            backend_model.energy_capacity_storage_constraint = po.Constraint(
+                backend_model.loc_techs_energy_capacity_storage_equals_constraint,
+                rule=energy_capacity_storage_equals_constraint_rule
+            )
 
-          if 'loc_techs_energy_capacity_storage_constraint_old' in sets:
-              backend_model.energy_capacity_storage_constraint = po.Constraint(
-                  backend_model.loc_techs_energy_capacity_storage_constraint,
-                  rule=energy_capacity_storage_constraint_rule_old
-              )
+        if 'loc_techs_energy_capacity_storage_constraint_old' in sets:
+            backend_model.energy_capacity_storage_constraint = po.Constraint(
+                backend_model.loc_techs_energy_capacity_storage_constraint,
+                rule=energy_capacity_storage_constraint_rule_old
+            )
 
-          if 'loc_techs_resource_capacity_constraint' in sets:
-              backend_model.resource_capacity_constraint = po.Constraint(
-                  backend_model.loc_techs_resource_capacity_constraint,
-                  rule=resource_capacity_constraint_rule
-              )
+        if 'loc_techs_resource_capacity_constraint' in sets:
+            backend_model.resource_capacity_constraint = po.Constraint(
+                backend_model.loc_techs_resource_capacity_constraint,
+                rule=resource_capacity_constraint_rule
+            )
 
-          if 'loc_techs_resource_capacity_equals_energy_capacity_constraint' in sets:
-              backend_model.resource_capacity_equals_energy_capacity_constraint = po.Constraint(
-                  backend_model.loc_techs_resource_capacity_equals_energy_capacity_constraint,
-                  rule=resource_capacity_equals_energy_capacity_constraint_rule
-              )
+        if 'loc_techs_resource_capacity_equals_energy_capacity_constraint' in sets:
+            backend_model.resource_capacity_equals_energy_capacity_constraint = po.Constraint(
+                backend_model.loc_techs_resource_capacity_equals_energy_capacity_constraint,
+                rule=resource_capacity_equals_energy_capacity_constraint_rule
+            )
 
-          if 'loc_techs_resource_area_constraint' in sets:
-              backend_model.resource_area_constraint = po.Constraint(
-                  backend_model.loc_techs_resource_area_constraint,
-                  rule=resource_area_constraint_rule
-              )
+        if 'loc_techs_resource_area_constraint' in sets:
+            backend_model.resource_area_constraint = po.Constraint(
+                backend_model.loc_techs_resource_area_constraint,
+                rule=resource_area_constraint_rule
+            )
 
-          if 'loc_techs_resource_area_per_energy_capacity_constraint' in sets:
-              backend_model.resource_area_per_energy_capacity_constraint = po.Constraint(
-                  backend_model.loc_techs_resource_area_per_energy_capacity_constraint,
-                  rule=resource_area_per_energy_capacity_constraint_rule
-              )
+        if 'loc_techs_resource_area_per_energy_capacity_constraint' in sets:
+            backend_model.resource_area_per_energy_capacity_constraint = po.Constraint(
+                backend_model.loc_techs_resource_area_per_energy_capacity_constraint,
+                rule=resource_area_per_energy_capacity_constraint_rule
+            )
 
-          if 'locs_resource_area_capacity_per_loc_constraint' in sets:
-              backend_model.resource_area_capacity_per_loc_constraint = po.Constraint(
-                  backend_model.locs_resource_area_capacity_per_loc_constraint,
-                  rule=resource_area_capacity_per_loc_constraint_rule
-              )
+        if 'locs_resource_area_capacity_per_loc_constraint' in sets:
+            backend_model.resource_area_capacity_per_loc_constraint = po.Constraint(
+                backend_model.locs_resource_area_capacity_per_loc_constraint,
+                rule=resource_area_capacity_per_loc_constraint_rule
+            )
 
-          if 'loc_techs_energy_capacity_constraint' in sets:
-              backend_model.energy_capacity_constraint = po.Constraint(
-                  backend_model.loc_techs_energy_capacity_constraint,
-                  rule=energy_capacity_constraint_rule
-              )
+        if 'loc_techs_energy_capacity_constraint' in sets:
+            backend_model.energy_capacity_constraint = po.Constraint(
+                backend_model.loc_techs_energy_capacity_constraint,
+                rule=energy_capacity_constraint_rule
+            )
 
-          if 'techs_energy_capacity_systemwide_constraint' in sets:
-              backend_model.energy_capacity_systemwide_constraint = po.Constraint(
-                  backend_model.techs_energy_capacity_systemwide_constraint,
-                  rule=energy_capacity_systemwide_constraint_rule
-              )
-          
+        if 'techs_energy_capacity_systemwide_constraint' in sets:
+            backend_model.energy_capacity_systemwide_constraint = po.Constraint(
+                backend_model.techs_energy_capacity_systemwide_constraint,
+                rule=energy_capacity_systemwide_constraint_rule
+            )
+
 
 def get_capacity_constraint(backend_model, parameter, loc_tech,
                             _equals=None, _max=None, _min=None, scale=None):
