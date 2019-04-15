@@ -91,7 +91,7 @@ class TestNationalScaleExampleModelSenseChecks:
         model = calliope.examples.national_scale()
         model.run()
 
-        assert model.results.total_levelised_cost.item() == approx(0.067005)
+        assert model.results.total_levelised_cost.item() == approx(0.067005, abs=1e-5)
 
     def test_fails_gracefully_without_timeseries(self):
         override = {

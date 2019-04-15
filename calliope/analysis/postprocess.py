@@ -138,15 +138,19 @@ def systemwide_levelised_cost(results, model_data, total=False):
         returns overall system-wide levelised cost.
 
     """
-    cost = split_loc_techs(results['cost']).sum(dim='locs')
-    carrier_prod = (
-        # Here we scale production by timestep weight
-        split_loc_techs(results['carrier_prod']) * model_data.timestep_weights
-    ).sum(dim='timesteps').sum(dim='locs')
+    cost = results['cost']
+    # Here we scale production by timestep weight
+    carrier_prod = results['carrier_prod'] * model_data.timestep_weights
 
     if total:
-        cost = cost.sum(dim='techs')
-        carrier_prod = carrier_prod.sum(dim='techs')
+        cost = split_loc_techs(cost).sum(dim=['locs', 'techs'])
+        supply_only_carrier_prod = carrier_prod.sel(
+            loc_tech_carriers_prod=list(model_data.loc_tech_carriers_supply_all.values)
+        )
+        carrier_prod = split_loc_techs(supply_only_carrier_prod).sum(dim=['timesteps', 'locs', 'techs'])
+    else:
+        cost = split_loc_techs(cost).sum(dim=['locs'])
+        carrier_prod = split_loc_techs(carrier_prod).sum(['timesteps', 'locs'])
 
     levelised_cost = []
 
