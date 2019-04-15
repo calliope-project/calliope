@@ -127,6 +127,31 @@ overrides:
             techs: ["expensive_heat_supply"]
             demand_share_min:
                 heat: 0.4
+    transmission_not_included_in_demand:
+        techs:
+            free_transmission:
+                essentials:
+                    name: 'Power transmission'
+                    parent: transmission
+                    carrier: electricity
+                constraints:
+                    energy_cap_max: inf
+                    energy_eff: 1.0
+                costs:
+                    monetary:
+                        om_prod: 0
+        links:
+            0,1.techs:
+                free_transmission:
+        locations.1.techs.normal_elec_supply.exists: False
+        locations.1.techs.cheap_elec_supply.exists: False
+        locations.1.techs.expensive_elec_supply.exists: False
+        group_constraints.transmission_not_counted:
+            techs: ["cheap_elec_supply"]
+            locs: ["0"]
+            demand_share_max:
+                electricity: 0.4
+
 
 scenarios:
     multiple_carriers_max: ['demand_share_max_systemwide', 'second_carrier', 'heat_demand_share_max_systemwide']
