@@ -404,7 +404,7 @@ class TestDemandShareGroupConstraints:
         cheap_elec_supply_0 = generation.sel(locs="0", techs="cheap_elec_supply").item()
         demand_0 = demand.sel(locs="0", techs="electricity_demand").item()
 
-        assert cheap_elec_supply_0 / demand_0 <= 0.4
+        assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
 
 
 class TestResourceAreaGroupConstraints:
