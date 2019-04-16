@@ -30,10 +30,20 @@ techs:
                 energy_cap: 1500000
                 storage_cap: 300000
                 interest_rate: 0.1
+    my_dummy_supply:
+        # Unfortunately, the only supply tech in the region is broken.
+        # (Calliope expects at least one supply technology.)
+        essentials:
+            name: Broken Supply
+            carrier: electricity
+            parent: supply
+        constraints:
+            energy_cap_max: 0
 
 locations:
     0:
         techs:
+            my_dummy_supply:
             my_storage:
             electricity_demand:
 
