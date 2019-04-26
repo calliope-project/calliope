@@ -38,6 +38,7 @@ class TestModelRun:
         # test as dict
         calliope.Model(model_dict.as_dict())
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_valid_scenarios(self):
         """
         Test that valid scenario definition raises no error and results in applied scenario.
@@ -557,6 +558,7 @@ class TestChecks:
             'Unrecognised group constraint `foobar` in group `mygroup`'
         )
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_abstract_base_tech_group_override(self):
         """
         Abstract base technology groups can be overridden
@@ -673,6 +675,7 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override2, scenario='simple_supply,one_day')
 
+    @pytest.mark.filterwarnings('ignore: defines force_resource but not a finite resource:calliope.exceptions.ModelWarning')
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
@@ -866,29 +869,29 @@ class TestChecks:
 
         # should fail: cannot have locations in one place and not in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, None), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, None), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Either all or no locations must have `coordinates` defined")
 
         # should fail: cannot have cartesian coordinates in one place and geographic in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_supply,one_day')
         check_error_or_warning(error, "All locations must use the same coordinate format")
 
         # should fail: cannot use a non-cartesian or non-geographic coordinate system
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Unidentified coordinate system")
 
         # should fail: coordinates must be given as key:value pairs
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_storage,one_day')
+            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Coordinates must be given in the format")
 
         # should pass: cartesian coordinates in both places
-        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_storage,one_day')
+        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_supply,one_day')
 
         # should pass: geographic coordinates in both places
-        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_storage,one_day')
+        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_supply,one_day')
 
     def test_one_way(self):
         """
@@ -949,6 +952,7 @@ class TestChecks:
 
         assert 'Tech `test_conversion_plus` gives a carrier ratio' not in [str(i) for i in excinfo.list]
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):
         """
         If `units` is defined, but not `energy_cap_per_unit`, throw an error
@@ -1061,6 +1065,54 @@ class TestChecks:
             '`power` is an unknown resource unit for `test_supply_elec`'
         )
 
+    @pytest.mark.parametrize('constraints,costs', (
+        ({'units_max': 2, 'energy_cap_per_unit': 5}, None),
+        ({'units_equals': 2, 'energy_cap_per_unit': 5}, None),
+        ({'units_min': 2, 'energy_cap_per_unit': 5}, None),
+        (None, {'purchase': 2}),
+
+    ))
+    def test_milp_supply_warning(self, constraints, costs):
+        override_constraints = {}
+        override_costs = {}
+        if constraints is not None:
+            override_constraints.update({'techs.test_supply_elec.constraints': constraints})
+        if costs is not None:
+            override_costs.update({'techs.test_supply_elec.costs.monetary': costs})
+        override = {**override_constraints, **override_costs}
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(override_dict=override, scenario='simple_supply,one_day,investment_costs')
+
+        assert check_error_or_warning(
+            warn,
+            'Integer and / or binary decision variables are included in this model'
+        )
+
+    @pytest.mark.parametrize('constraints,costs', (
+        ({'units_max': 2, 'storage_cap_per_unit': 5, 'energy_cap_per_unit': 5}, None),
+        ({'units_equals': 2, 'storage_cap_per_unit': 5, 'energy_cap_per_unit': 5}, None),
+        ({'units_min': 2, 'storage_cap_per_unit': 5, 'energy_cap_per_unit': 5}, None),
+        (None, {'purchase': 2}),
+
+    ))
+    def test_milp_storage_warning(self, constraints, costs):
+        override_constraints = {}
+        override_costs = {}
+        if constraints is not None:
+            override_constraints.update({'techs.test_storage.constraints': constraints})
+        if costs is not None:
+            override_costs.update({'techs.test_storage.costs.monetary': costs})
+        override = {**override_constraints, **override_costs}
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(override_dict=override, scenario='simple_storage,one_day,investment_costs')
+
+        assert check_error_or_warning(
+            warn,
+            'Integer and / or binary decision variables are included in this model'
+        )
+
     def test_fail_on_string(self):
         with pytest.raises(calliope.exceptions.ModelError) as exception:
             build_model(
@@ -1124,20 +1176,20 @@ class TestDataset:
         Timesteps must be consistent?
         """
 
-    def test_unassigned_sets(self):
+    @pytest.mark.parametrize("model,expected_constraint_set", [
+        (calliope.examples.national_scale(), constraint_sets["model_national"]),
+        (calliope.examples.urban_scale(), constraint_sets["model_urban"]),
+        (calliope.examples.milp(), constraint_sets["model_milp"])
+    ])
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+    def test_unassigned_sets(self, model, expected_constraint_set):
         """
         Check that all sets in which there are possible loc:techs are assigned
         and have been filled
         """
-        models = dict()
-        models['model_national'] = calliope.examples.national_scale()
-        models['model_urban'] = calliope.examples.urban_scale()
-        models['model_milp'] = calliope.examples.milp()
-
-        for model_name, model in models.items():
-            for set_name, set_vals in model._model_data.coords.items():
-                if 'constraint' in set_name:
-                    assert set(set_vals.values) == set(constraint_sets[model_name][set_name])
+        for set_name, set_vals in model._model_data.coords.items():
+            if 'constraint' in set_name:
+                assert set(set_vals.values) == set(expected_constraint_set[set_name])
 
     def test_negative_cost_unassigned_cap(self):
         """

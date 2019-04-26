@@ -49,8 +49,30 @@ class TestPlotting:
             )
 
     @python36_or_higher
+    def test_urban_scale_plotting(self):
+        override = {'model.subset_time': ['2005-07-01 00:00:00', '2005-07-01 12:00:00']}
+        model = calliope.examples.urban_scale(override_dict=override)
+        model.run()
+
+        # Just try plotting each
+        model.plot.summary()
+        model.plot.capacity(html_only=True)
+        model.plot.timeseries(html_only=True)
+        model.plot.transmission(html_only=True)
+        model.plot.flows(html_only=True, timestep_index_subset=[0, 12])  # cover the use of timestep_index_subset
+
+        # Testing that the model catches an expected error on the model not
+        # defining coordinates
+        model._model_data = model._model_data.drop('loc_coordinates')
+        with pytest.raises(ValueError) as error:
+            model.plot.flows()
+            model.plot.transmission()
+        assert check_error_or_warning(error, 'Model does not define location coordinates')
+
+    @python36_or_higher
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_plotting(self):
-        override = {'model.subset_time': '2005-07-01'}
+        override = {'model.subset_time': ['2005-07-01 00:00:00', '2005-07-01 12:00:00']}
         model = calliope.examples.milp(override_dict=override)
         model.run()
 

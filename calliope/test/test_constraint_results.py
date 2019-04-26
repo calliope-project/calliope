@@ -71,6 +71,33 @@ class TestNationalScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(282487.35489)
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+class TestUrbanScaleMILP:
+    def test_asynchronous_prod_con(self):
+
+        def _get_prod_con(model, prod_con):
+            return (
+                model.get_formatted_array('carrier_{}'.format(prod_con))
+                     .loc[{'techs': 'heat_pipes:X1', 'carriers': 'heat'}]
+                     .to_pandas().dropna(how='all')
+            )
+        m = calliope.examples.urban_scale(override_dict={'run.zero_threshold': 1e-6})
+        m.run()
+        _prod = _get_prod_con(m, 'prod')
+        _con = _get_prod_con(m, 'con')
+        assert any(((_con < 0) & (_prod > 0)).any()) is True
+
+        m_bin = calliope.examples.urban_scale(
+            override_dict={'techs.heat_pipes.constraints.force_asynchronous_prod_con': True,
+                           'run.solver_options.mipgap': 0.05,
+                           'run.zero_threshold': 1e-6}
+        )
+        m_bin.run()
+        _prod = _get_prod_con(m_bin, 'prod')
+        _con = _get_prod_con(m_bin, 'con')
+        assert any(((_con < 0) & (_prod > 0)).any()) is False
+
+
 class TestModelSettings:
     def test_feasibility(self):
 
@@ -357,6 +384,27 @@ class TestDemandShareGroupConstraints:
         assert round(expensive_generation_0 / demand_elec_0, 5) >= 0.6
         assert expensive_generation_1 / demand_elec_1 == 0
         assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
+
+    def test_transmission_not_included_in_demand(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='transmission_not_included_in_demand'
+        )
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'carriers')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps', 'carriers')))
+
+        assert (generation.sel(locs="1", techs=["normal_elec_supply", "cheap_elec_supply", "expensive_elec_supply"])
+                          .sum(dim="techs")
+                          .item()) == pytest.approx(0)
+
+        cheap_elec_supply_0 = generation.sel(locs="0", techs="cheap_elec_supply").item()
+        demand_0 = demand.sel(locs="0", techs="electricity_demand").item()
+
+        assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
 
 
 class TestResourceAreaGroupConstraints:
@@ -807,18 +855,44 @@ class TestEnergyCapacityPerStorageCapacity:
     def model_file(self):
         return "energy_cap_per_storage_cap.yaml"
 
+    @pytest.mark.filterwarnings("ignore:(?s).*`energy_cap_per_storage_cap_min/max/equals`:calliope.exceptions.ModelWarning")
     def test_no_constraint_set(self, model_file):
         model = build_model(model_file=model_file)
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
         storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert energy_capacity == pytest.approx(10)
+        assert storage_capacity == pytest.approx(175)
         assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
 
-    def test_fixed_ratio(self, model_file):
-        model = build_model(model_file=model_file, scenario="fixed_ratio")
+    def test_equals(self, model_file):
+        model = build_model(model_file=model_file, scenario="equals")
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
         storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
         assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)
+
+    def test_max(self, model_file):
+        model = build_model(model_file=model_file, scenario="max")
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert energy_capacity == pytest.approx(10)
+        assert storage_capacity == pytest.approx(1000)
+
+    def test_min(self, model_file):
+        model = build_model(model_file=model_file, scenario="min")
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
+        storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
+        assert energy_capacity == pytest.approx(175)
+        assert storage_capacity == pytest.approx(175)
+
+    def test_operate_mode(self, model_file):
+        model = build_model(model_file=model_file, scenario="operate_mode_min")
+        with pytest.raises(calliope.exceptions.ModelError):
+            model.run()

@@ -126,6 +126,15 @@ def check_operate_params(model_data):
                             'fixed storage capacity * energy_cap_per_storage_cap_max is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
+            elif _is_in(loc_tech, 'energy_cap_per_storage_cap_min'):
+                storage_cap = model_data.storage_cap.loc[loc_tech].item()
+                if storage_cap and energy_cap:
+                    energy_cap_per_storage_cap_min = model_data['energy_cap_per_storage_cap_min'].loc[loc_tech].item()
+                    if storage_cap * energy_cap_per_storage_cap_min > energy_cap:
+                        errors.append(
+                            'fixed storage capacity * energy_cap_per_storage_cap_min is not smaller '
+                            'than fixed energy capacity for loc::tech {}'.format(loc_tech)
+                        )
     # Must define a resource capacity to ensure the Pyomo param is created
     # for it. But we just create an array of infs, so the capacity has no effect
     if ('resource_cap' not in model_data.data_vars.keys() and

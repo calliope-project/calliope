@@ -62,8 +62,8 @@ techs:
             resource_eff: 0.9
             energy_eff: 0.9
             storage_cap_max: 35
-            storage_loss: 0.01
             energy_cap_per_storage_cap_max: 0.5
+            storage_loss: 0.01
 
     test_storage:
         essentials:
@@ -72,8 +72,8 @@ techs:
             parent: storage
         constraints:
             energy_cap_max: 10
-            energy_cap_per_storage_cap_max: 0.5
             storage_cap_max: 15
+            energy_cap_per_storage_cap_max: 0.5
             energy_eff: 0.9
             storage_loss: 0.01
 

@@ -46,7 +46,8 @@ default_tech:
     constraints:
         carrier_ratios: {}  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
         charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
-        energy_cap_per_storage_cap_max: false # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
+        energy_cap_per_storage_cap_min: false # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
+        energy_cap_per_storage_cap_max: false # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
         energy_cap_per_storage_cap_equals: false # name: Tie energy capacity to storage capacity ¦ unit: fraction ¦
         energy_cap_equals: false  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
         energy_cap_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
@@ -63,6 +64,7 @@ default_tech:
         energy_ramping: false  # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum carrier production to a fraction of maximum capacity, which increases by that fraction at each timestep.
         export_cap: .inf  # name: Export capacity ¦ unit: kW ¦ Maximum allowed export of produced energy carrier for a technology.
         export_carrier: null  # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
+        force_asynchronous_prod_con: false  # if True, carrier_prod and carrier_con cannot both occur in the same timestep
         force_resource: false  # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
         lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
         parasitic_eff: 1.0  # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
@@ -82,7 +84,7 @@ default_tech:
         storage_cap_equals: false  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
         storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
         storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
-        storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology perchased.
+        storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
         storage_initial: 0  # name: Initial storage level ¦ unit: kWh ¦ Set stored energy in device at the first timestep
         storage_loss: 0  # name: Storage loss rate ¦ unit: hour :sup:`-1` ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
         units_equals: false  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.

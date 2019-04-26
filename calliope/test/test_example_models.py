@@ -21,6 +21,7 @@ class TestModelPreproccesing:
     def test_preprocess_urban_scale(self):
         calliope.examples.urban_scale()
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
@@ -81,6 +82,16 @@ class TestNationalScaleExampleModelSenseChecks:
             self.example_tester(solver='glpk')
         else:
             pytest.skip('GLPK not installed')
+
+    def test_considers_supply_generation_only_in_total_levelised_cost(self):
+        # calculation of expected value:
+        # costs = model.get_formatted_array("cost").sum(dim="locs")
+        # gen = model.get_formatted_array("carrier_prod").sum(dim=["timesteps", "locs"])
+        # lcoe = costs.sum(dim="techs") / gen.sel(techs=["ccgt", "csp"]).sum(dim="techs")
+        model = calliope.examples.national_scale()
+        model.run()
+
+        assert model.results.total_levelised_cost.item() == approx(0.067005, abs=1e-5)
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
@@ -352,9 +363,10 @@ class TestUrbanScaleExampleModelSenseChecks:
         except ImportError:
             pytest.skip('Gurobi not installed')
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_example_results(self):
         model = calliope.examples.milp(
-            override_dict={'model.subset_time': '2005-01-01'}
+            override_dict={'model.subset_time': '2005-01-01', 'run.solver_options.mipgap': 0.001}
         )
         model.run()
 

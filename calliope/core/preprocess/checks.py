@@ -377,9 +377,22 @@ def _check_tech_final(model_run, tech_id, tech_config, loc_id, model_warnings, e
                 'configure `{c}` as a carrier.'.format(t=tech_id, c=carrier)
             )
 
+    # If the technology involves storage, warn when energy_cap and storage_cap aren't connected
+    energy_cap_per_storage_cap_params = [
+        'charge_rate', 'energy_cap_per_storage_cap_min',
+        'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals'
+    ]
+    if (loc_id + '::' + tech_id in model_run.sets.loc_techs_store
+            and not any(i in tech_config.constraints.keys() for i in energy_cap_per_storage_cap_params)):
+        model_warnings.append(
+            '`{}` at `{}` has no constraint to explicitly connect `energy_cap` to '
+            '`storage_cap`, consider defining a `energy_cap_per_storage_cap_min/max/equals` '
+            'constraint'.format(tech_id, loc_id)
+        )
+
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (any(['units_' in k for k in tech_config.constraints.keys()])
-        and 'energy_cap_per_unit' not in tech_config.constraints.keys()):
+            and 'energy_cap_per_unit' not in tech_config.constraints.keys()):
         errors.append(
             '`{}` at `{}` fails to define energy_cap_per_unit when specifying '
             'technology in units_max/min/equals'.format(tech_id, loc_id, required)
@@ -639,5 +652,16 @@ def check_model_data(model_data):
             )
         else:
             model_data.attrs['allow_operate_mode'] = 1
+
+    # Check for any milp constraints, and warn that the problem contains binary /
+    # integer decision variables
+    if any('_milp_constraint' in i for i in model_data.dims):
+        model_warnings.append(
+            'Integer and / or binary decision variables are included in this model. '
+            'This may adversely affect solution time, particularly if you are '
+            'using a non-commercial solver. To improve solution time, consider '
+            'changing MILP related solver options (e.g. `mipgap`) or removing '
+            'MILP constraints.'
+        )
 
     return model_data, comments, model_warnings, errors
