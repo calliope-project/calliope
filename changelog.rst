@@ -40,6 +40,8 @@ Release History
 
 |changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
 
+|changed| Additional and improved pre-processing checks and errors for common model mistakes.
+
 |fixed| Total levelised cost of energy considers all costs, but energy generation only from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus``.
 
 |fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.

@@ -416,8 +416,8 @@ def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config
                     cost, tech_id, loc_or_link)
             )
             tech_config.costs.del_key(cost)
-            # If the cost class is empty, it is not enough to delete it,
-            # we need to skip it entirely
+            # If the cost class is empty and deleted, the rest of the loop
+            # is skipped entirely (as it expects the cost class to exist)
             continue
 
         plant_life = tech_config.constraints.get_key('lifetime', 0)

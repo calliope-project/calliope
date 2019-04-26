@@ -226,7 +226,7 @@ def check_initial(config_model):
                 'be defined (tech: {})'.format(t_name)
             )
 
-    # Check whether any techs are erroneously in top-level location definitions
+    # Check whether any techs are erroneously in top-level location or link definitions
     all_techs = config_model.techs.keys()
     for k, v in config_model.get('locations', {}).items():
         for loc_key in v:
@@ -234,6 +234,13 @@ def check_initial(config_model):
                 errors.append(
                     'Location `{l}` contains tech `{t}` at its top level. This '
                     'should be under `locations.{l}.techs.{t}` instead.'.format(l=k, t=loc_key)
+                )
+    for k, v in config_model.get('links', {}).items():
+        for loc_key in v:
+            if loc_key in all_techs:
+                errors.append(
+                    'Link `{l}` contains tech `{t}` at its top level. This '
+                    'should be under `links.{l}.techs.{t}` instead.'.format(l=k, t=loc_key)
                 )
 
     # Error if a constraint is loaded from file that must not be
