@@ -171,6 +171,21 @@ def check_initial(config_model):
                     'will be ignored - possibly a misspelling?'.format(key, group)
                 )
 
+    # Warn if loc/tech is defined in group constraint that doesn't exist in the model
+    for i in ['locs', 'techs']:
+        config_i = 'locations' if i == 'locs' else i
+        _missing = set()
+        for group, group_vals in config_model.get('group_constraints', {}).items():
+            if i in group_vals.keys() and set(group_vals[i]).difference(config_model[config_i].keys()):
+                _missing.update(set(group_vals[i]).difference(config_model[config_i].keys()))
+                group_vals[i] = list(set(group_vals[i]).intersection(config_model[config_i].keys()))
+        if _missing:
+            model_warnings.append(
+                'Possible misspelling in group constraints: {0} {1} given in '
+                'group constraints, but not defined as {0} in the model. They '
+                'will be ignored in the optimisation run'.format(i, _missing)
+            )
+
     # No techs may have the same identifier as a tech_group
     name_overlap = (
         set(config_model.tech_groups.keys()) &
