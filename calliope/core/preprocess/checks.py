@@ -171,21 +171,6 @@ def check_initial(config_model):
                     'will be ignored - possibly a misspelling?'.format(key, group)
                 )
 
-    # Warn if loc/tech is defined in group constraint that doesn't exist in the model
-    for i in ['locs', 'techs']:
-        config_i = 'locations' if i == 'locs' else i
-        _missing = set()
-        for group, group_vals in config_model.get('group_constraints', {}).items():
-            if i in group_vals.keys() and set(group_vals[i]).difference(config_model[config_i].keys()):
-                _missing.update(set(group_vals[i]).difference(config_model[config_i].keys()))
-                group_vals[i] = list(set(group_vals[i]).intersection(config_model[config_i].keys()))
-        if _missing:
-            model_warnings.append(
-                'Possible misspelling in group constraints: {0} {1} given in '
-                'group constraints, but not defined as {0} in the model. They '
-                'will be ignored in the optimisation run'.format(i, _missing)
-            )
-
     # No techs may have the same identifier as a tech_group
     name_overlap = (
         set(config_model.tech_groups.keys()) &
@@ -569,6 +554,30 @@ def check_final(model_run):
     for k, df in model_run['timeseries_data'].items():
         if df.index.duplicated().any():
             errors.append('Time series `{}` contains non-unique timestamp values.'.format(k))
+
+    # Warn if loc/tech is defined in group constraint that doesn't exist in the model
+    for i in ['locs', 'techs']:
+        config_i = 'locations' if i == 'locs' else i
+        _missing = set()
+        for group, group_vals in model_run.get('group_constraints', {}).items():
+            if i in group_vals.keys() and set(group_vals[i]).difference(model_run[config_i].keys()):
+                _missing.update(set(group_vals[i]).difference(model_run[config_i].keys()))
+                model_run['group_constraints'][group][i] = (
+                    list(set(group_vals[i]).intersection(model_run[config_i].keys()))
+                )
+                if model_run['group_constraints'][group][i] == []:
+                    model_warnings.append(
+                        'Constraint group `{}` will be completely ignored since '
+                        'none of the defined {} are valid for this model.'
+                        .format(group, i)
+                    )
+                    model_run['group_constraints'][group]['exists'] = False
+        if _missing:
+            model_warnings.append(
+                'Possible misspelling in group constraints: {0} {1} given in '
+                'group constraints, but not defined as {0} in the model. They '
+                'will be ignored in the optimisation run'.format(i, _missing)
+            )
 
     # FIXME:
     # make sure `comments` is at the the base level:

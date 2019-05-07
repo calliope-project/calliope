@@ -563,7 +563,7 @@ class TestChecks:
         }
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(override_dict=override, scenario='simple_supply', model_file='model.yaml')
+            m = build_model(override_dict=override, scenario='simple_supply')
 
         assert check_error_or_warning(excinfo, 'Possible misspelling in group constraints:')
 
@@ -571,6 +571,19 @@ class TestChecks:
         assert 'foo:test_supply_elec' not in loc_techs
         assert '1:bar' not in loc_techs
         assert 'foo:bar' not in loc_techs
+
+    def test_inexistent_group_constraint_empty_loc_tech(self):
+
+        override = {
+            'group_constraints.mygroup': {'energy_cap_max': 100, 'locs': ['foo']}
+        }
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            m = build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(excinfo, 'Constraint group `mygroup` will be completely ignored')
+
+        assert m._model_run.group_constraints.mygroup.get('exists', True) is False
 
     @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_abstract_base_tech_group_override(self):
