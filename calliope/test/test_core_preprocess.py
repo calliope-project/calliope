@@ -379,6 +379,14 @@ class TestModelRun:
         assert 'carbon' not in m._model_run.locations['1'].techs.test_supply_elec.costs.keys()
         assert 'carbon' not in m._model_data.coords['costs'].values
 
+    def test_strip_link(self):
+        override = {
+            'links.0, 2.techs': {'test_transmission_elec': None},
+            'locations.2.techs': {'test_supply_elec': None}
+        }
+        m = build_model(override_dict=override, scenario='simple_supply,one_day')
+        assert '2' in m._model_run.locations['0'].links.keys()
+
 
 class TestChecks:
 
@@ -563,6 +571,7 @@ class TestChecks:
         """
         Abstract base technology groups can be overridden
         """
+
         override = AttrDict.from_yaml_string(
             """
             tech_groups:
