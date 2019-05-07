@@ -5,7 +5,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 from calliope import exceptions
-from memory_profiler import profile
 import xarray as xr
 import pandas as pd
 
