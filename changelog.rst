@@ -26,6 +26,8 @@ Release History
 
 |new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
 
+|changed| `get_formatted_array` improved in both speed and memory consumption.
+
 |changed| Error on required column not existing in CSV is more explicit.
 
 |changed| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.

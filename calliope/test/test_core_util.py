@@ -6,6 +6,7 @@ import os
 import tempfile
 
 import xarray as xr
+import pandas as pd
 
 from calliope.core.util import dataset, observed_dict
 
@@ -13,11 +14,13 @@ from calliope.core.util.tools import \
     memoize, \
     memoize_instancemethod
 
+from calliope import exceptions
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
 from calliope.test.common.util import (
     python36_or_higher,
-    check_error_or_warning
+    check_error_or_warning,
+    build_test_model
 )
 
 _MODEL_NATIONAL = os.path.join(
@@ -40,6 +43,22 @@ class TestDataset:
         ]
         return loc_techs
 
+    @pytest.fixture()
+    def example_dataarray(self):
+        return xr.DataArray(
+            [[[0], [1], [2]], [[3], [4], [5]]], dims=('timesteps', 'loc_techs_bar', 'costs'),
+            coords={'timesteps': ['foo', 'bar'], 'loc_techs_bar': ['1::foo', '2::bar', '3::baz'],
+                    'costs': ['foo']}
+        )
+
+    @pytest.fixture()
+    def example_one_dim_dataarray(self):
+        return xr.DataArray([0, 1, 2], dims=('timesteps'), coords={'timesteps': ['foo', 'bar', 'baz']})
+
+    @pytest.fixture()
+    def example_dataset(self, example_dataarray):
+        return xr.Dataset({'foo': example_dataarray, 'bar': example_dataarray.squeeze()})
+
     def test_get_loc_techs_tech(self, loc_techs):
         loc_techs = dataset.get_loc_techs(loc_techs, tech='csp')
         assert loc_techs == [
@@ -56,6 +75,64 @@ class TestDataset:
         loc_techs = dataset.get_loc_techs(
             loc_techs, tech='demand_power', loc='region1')
         assert loc_techs == ['region1::demand_power']
+
+    def test_split_loc_tech_to_dataarray(self, example_dataarray):
+        formatted_array = dataset.split_loc_techs(example_dataarray)
+        assert isinstance(formatted_array, xr.DataArray)
+        assert formatted_array.dims == ('costs', 'locs', 'techs', 'timesteps')
+
+    def test_split_loc_tech_to_series(self, example_dataarray):
+        formatted_series = dataset.split_loc_techs(example_dataarray, as_='Series')
+        assert isinstance(formatted_series, pd.Series)
+        assert formatted_series.index.names == ['costs', 'locs', 'techs', 'timesteps']
+
+    def test_split_loc_tech_unknown_output(self, example_dataarray):
+        with pytest.raises(ValueError) as excinfo:
+            dataset.split_loc_techs(example_dataarray, as_='foo')
+        assert check_error_or_warning(
+            excinfo, '`as_` must be `DataArray` or `Series`'
+        )
+
+    def test_split_loc_tech_too_many_loc_tech_dims(self, example_dataarray):
+        _array = example_dataarray.rename({'costs': 'loc_techs_2'})
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            dataset.split_loc_techs(_array)
+        assert check_error_or_warning(
+            excinfo, 'Cannot split loc_techs or loc_tech_carriers dimension'
+        )
+
+    def test_split_loc_tech_one_dim_to_dataarray(self, example_one_dim_dataarray):
+        formatted_array = dataset.split_loc_techs(example_one_dim_dataarray)
+        assert isinstance(formatted_array, xr.DataArray)
+        assert formatted_array.dims == ('timesteps',)
+
+    def test_split_loc_tech_one_dim_to_series(self, example_one_dim_dataarray):
+        formatted_series = dataset.split_loc_techs(example_one_dim_dataarray, as_='Series')
+        assert isinstance(formatted_series, pd.Series)
+        assert formatted_series.index.names == ['timesteps']
+
+    def test_split_loc_tech_one_dim_unknown_output(self, example_one_dim_dataarray):
+        with pytest.raises(ValueError) as excinfo:
+            dataset.split_loc_techs(example_one_dim_dataarray, as_='foo')
+        assert check_error_or_warning(
+            excinfo, '`as_` must be `DataArray` or `Series`'
+        )
+
+    def test_reorganise_dataset_dimensions(self, example_dataset):
+        reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataset)
+        dataset_dims = [i for i in reorganised_dataset.dims.keys()]
+        assert dataset_dims == ['costs', 'loc_techs_bar', 'timesteps']
+
+    def test_reorganise_dataarray_dimensions(self, example_dataarray):
+        reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataarray)
+        assert reorganised_dataset.dims == ('costs', 'loc_techs_bar', 'timesteps')
+
+    def test_fail_reorganise_dimensions(self):
+        with pytest.raises(TypeError) as excinfo:
+            dataset.reorganise_xarray_dimensions(['timesteps', 'loc_techs_bar', 'costs'])
+        assert check_error_or_warning(
+            excinfo, 'Must provide either xarray Dataset or DataArray to be reorganised'
+        )
 
 
 class TestMemoization:

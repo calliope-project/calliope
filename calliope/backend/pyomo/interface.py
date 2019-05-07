@@ -5,7 +5,7 @@ from calliope.backend.pyomo.util import get_var
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
 
-from calliope.core.util.dataset import reorganise_dataset_dimensions
+from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
@@ -24,7 +24,7 @@ def access_pyomo_model_inputs(backend_model):
         if isinstance(i, po.base.param.IndexedParam)
     }
 
-    return reorganise_dataset_dimensions(xr.Dataset(all_params))
+    return reorganise_xarray_dimensions(xr.Dataset(all_params))
 
 
 def update_pyomo_param(backend_model, param, index, value):
