@@ -828,17 +828,56 @@ class TestChecks:
         A tech defined directly within a location rather than within techs
         inside that location is probably an oversight.
         """
-        override = AttrDict.from_yaml_string(
-            """
-            locations.1.test_supply_elec.costs.storage_cap: 10
-            """
+        override = {'locations.1.test_supply_elec.costs.storage_cap': 10}
+
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo, 'Location `1` contains tech `test_supply_elec` at its top level'
         )
+
+    def test_tech_defined_twice_in_links(self):
+        """
+        A technology can only be defined once for a link, even if that link is
+        defined twice (i.e. `A,B` and `B,A`).
+        """
+
+        override = {
+            'links.0,1.techs.test_transmission_elec': None,
+            'links.1,0.techs.test_transmission_elec': None
+        }
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario='simple_supply,one_day')
 
         assert check_error_or_warning(
             excinfo,
-            'Location `1` contains tech `test_supply_elec` at its top level')
+            'Technology test_transmission_elec defined twice on a link defined '
+            'in both directions (e.g. `A,B` and `B,A`)'
+        )
+
+        override = {
+            'links.0,1.techs': {'test_transmission_elec': None, 'test_transmission_heat': None},
+            'links.1,0.techs': {'test_transmission_elec': None, 'test_transmission_heat': None}
+        }
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo, ['test_transmission_elec', 'test_transmission_heat']
+        )
+
+        # We do allow a link to be defined twice, so long as the same tech isn't in both
+        override = {
+            'techs.test_transmission_heat_2': {
+                'essentials.name': 'Transmission heat tech',
+                'essentials.carrier': 'heat',
+                'essentials.parent': 'transmission'
+            },
+            'links.0,1.techs': {'test_transmission_elec': None},
+            'links.1,0.techs': {'test_transmission_heat_2': None}
+        }
+        build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_allowed_time_varying_constraints(self):
         """

@@ -26,6 +26,8 @@ Release History
 
 |new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
 
+|changed| Error on defining a technology in both directions of the same link.
+
 |changed| Any inexistent locations and / or technologies defined in model-wide (group) constraints will be caught and filtered out, raising a warning of their existence in the process.
 
 |changed| Error on required column not existing in CSV is more explicit.
