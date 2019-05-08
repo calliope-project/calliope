@@ -542,13 +542,7 @@ class TestChecks:
         """
         Unkown group constraints raise a warning, but don't crash
         """
-        override = AttrDict.from_yaml_string(
-            """
-            group_constraints:
-                mygroup:
-                    foobar: 0
-            """
-        )
+        override = {'group_constraints.mygroup.foobar': 0}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override, scenario='simple_supply')
@@ -557,6 +551,39 @@ class TestChecks:
             excinfo,
             'Unrecognised group constraint `foobar` in group `mygroup`'
         )
+
+    @pytest.mark.parametrize('loc_tech', (
+        ({'locs': ['1', 'foo']}), ({'techs': ['test_supply_elec', 'bar']}),
+        ({'locs': ['1', 'foo'], 'techs': ['test_supply_elec', 'bar']})
+    ))
+    def test_inexistent_group_constraint_loc_tech(self, loc_tech):
+
+        override = {
+            'group_constraints.mygroup': {'energy_cap_max': 100, **loc_tech}
+        }
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            m = build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(excinfo, 'Possible misspelling in group constraints:')
+
+        loc_techs = m._model_data.group_constraint_loc_techs_mygroup.values
+        assert 'foo:test_supply_elec' not in loc_techs
+        assert '1:bar' not in loc_techs
+        assert 'foo:bar' not in loc_techs
+
+    def test_inexistent_group_constraint_empty_loc_tech(self):
+
+        override = {
+            'group_constraints.mygroup': {'energy_cap_max': 100, 'locs': ['foo']}
+        }
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            m = build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(excinfo, 'Constraint group `mygroup` will be completely ignored')
+
+        assert m._model_run.group_constraints.mygroup.get('exists', True) is False
 
     @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_abstract_base_tech_group_override(self):
