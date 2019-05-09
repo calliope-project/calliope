@@ -12,6 +12,7 @@ Checks for model consistency and possible errors during preprocessing.
 import os
 
 import numpy as np
+import pandas as pd
 
 from inspect import signature
 
@@ -242,6 +243,23 @@ def check_initial(config_model):
                     'Link `{l}` contains tech `{t}` at its top level. This '
                     'should be under `links.{l}.techs.{t}` instead.'.format(l=k, t=loc_key)
                 )
+
+    # Error if a technology is defined twice, in opposite directions
+    link_techs = [
+        tuple(sorted(j.strip() for j in k.split(','))) + (i, )
+        for k, v in config_model.get('links', {}).items()
+        for i in v.get('techs', {}).keys()
+    ]
+    if len(link_techs) != len(set(link_techs)):
+        duplicated_techs = np.array(link_techs)[pd.Series(link_techs).duplicated().values]
+        duplicated_techs = set([i[-1] for i in duplicated_techs])
+        tech_end = 'y' if len(duplicated_techs) == 1 else 'ies'
+        errors.append(
+            'Technolog{} {} defined twice on a link defined in both directions '
+            '(e.g. `A,B` and `B,A`). A technology can only be defined on one link '
+            'even if it allows unidirectional flow in each direction '
+            '(i.e. `one_way: true`).'.format(tech_end, ', '.join(duplicated_techs))
+        )
 
     # Error if a constraint is loaded from file that must not be
     allowed_from_file = DEFAULTS['file_allowed']
@@ -509,6 +527,7 @@ def check_final(model_run):
                         'link {}:{}'.format(loc_id, link_id),
                         model_warnings, errors, comments
                     )
+
     # Either all locations or no locations must have coordinates
     all_locs = list(model_run.locations.keys())
     locs_with_coords = [
@@ -554,6 +573,30 @@ def check_final(model_run):
     for k, df in model_run['timeseries_data'].items():
         if df.index.duplicated().any():
             errors.append('Time series `{}` contains non-unique timestamp values.'.format(k))
+
+    # Warn if loc/tech is defined in group constraint that doesn't exist in the model
+    for i in ['locs', 'techs']:
+        config_i = 'locations' if i == 'locs' else i
+        _missing = set()
+        for group, group_vals in model_run.get('group_constraints', {}).items():
+            if i in group_vals.keys() and set(group_vals[i]).difference(model_run[config_i].keys()):
+                _missing.update(set(group_vals[i]).difference(model_run[config_i].keys()))
+                model_run['group_constraints'][group][i] = (
+                    list(set(group_vals[i]).intersection(model_run[config_i].keys()))
+                )
+                if model_run['group_constraints'][group][i] == []:
+                    model_warnings.append(
+                        'Constraint group `{}` will be completely ignored since '
+                        'none of the defined {} are valid for this model.'
+                        .format(group, i)
+                    )
+                    model_run['group_constraints'][group]['exists'] = False
+        if _missing:
+            model_warnings.append(
+                'Possible misspelling in group constraints: {0} {1} given in '
+                'group constraints, but not defined as {0} in the model. They '
+                'will be ignored in the optimisation run'.format(i, _missing)
+            )
 
     # FIXME:
     # make sure `comments` is at the the base level:
