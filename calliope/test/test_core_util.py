@@ -82,16 +82,15 @@ class TestDataset:
         assert formatted_array.dims == ('costs', 'locs', 'techs', 'timesteps')
 
     def test_split_loc_tech_to_series(self, example_dataarray):
-        formatted_series = dataset.split_loc_techs(example_dataarray, as_='Series')
+        formatted_series = dataset.split_loc_techs(example_dataarray, return_as='Series')
         assert isinstance(formatted_series, pd.Series)
         assert formatted_series.index.names == ['costs', 'locs', 'techs', 'timesteps']
 
-    def test_split_loc_tech_unknown_output(self, example_dataarray):
-        with pytest.raises(ValueError) as excinfo:
-            dataset.split_loc_techs(example_dataarray, as_='foo')
-        assert check_error_or_warning(
-            excinfo, '`as_` must be `DataArray` or `Series`'
-        )
+    def test_split_loc_tech_to_multiindex_dataarray(self, example_dataarray):
+        formatted_array = dataset.split_loc_techs(example_dataarray, return_as='MultiIndex DataArray')
+        assert isinstance(formatted_array, xr.DataArray)
+        assert formatted_array.dims == ('costs', 'loc_techs_bar', 'timesteps')
+        assert isinstance(formatted_array.loc_techs_bar.to_index(), pd.MultiIndex)
 
     def test_split_loc_tech_too_many_loc_tech_dims(self, example_dataarray):
         _array = example_dataarray.rename({'costs': 'loc_techs_2'})
@@ -107,15 +106,22 @@ class TestDataset:
         assert formatted_array.dims == ('timesteps',)
 
     def test_split_loc_tech_one_dim_to_series(self, example_one_dim_dataarray):
-        formatted_series = dataset.split_loc_techs(example_one_dim_dataarray, as_='Series')
+        formatted_series = dataset.split_loc_techs(example_one_dim_dataarray, return_as='Series')
         assert isinstance(formatted_series, pd.Series)
         assert formatted_series.index.names == ['timesteps']
 
-    def test_split_loc_tech_one_dim_unknown_output(self, example_one_dim_dataarray):
+    def test_split_loc_tech_one_dim_to_multiindex_dataarray(self, example_one_dim_dataarray):
+        formatted_array = dataset.split_loc_techs(example_one_dim_dataarray, return_as='MultiIndex DataArray')
+        assert isinstance(formatted_array, xr.DataArray)
+        assert formatted_array.dims == ('timesteps',)
+
+    @pytest.mark.parametrize('array', ((example_dataarray), (example_one_dim_dataarray)))
+    def test_split_loc_tech_unknown_output(self, array):
         with pytest.raises(ValueError) as excinfo:
-            dataset.split_loc_techs(example_one_dim_dataarray, as_='foo')
+            dataset.split_loc_techs(array, return_as='foo')
         assert check_error_or_warning(
-            excinfo, '`as_` must be `DataArray` or `Series`'
+            excinfo,
+            '`return_as` must be `DataArray`, `Series`, or `MultiIndex DataArray`'
         )
 
     def test_reorganise_dataset_dimensions(self, example_dataset):

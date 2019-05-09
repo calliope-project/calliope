@@ -78,7 +78,7 @@ def reorganise_xarray_dimensions(data):
     return updated_data
 
 
-def split_loc_techs(data_var, as_='DataArray'):
+def split_loc_techs(data_var, return_as='DataArray'):
     """
     Get a DataArray with locations technologies, and possibly carriers
     split into separate coordinates.
@@ -87,9 +87,10 @@ def split_loc_techs(data_var, as_='DataArray'):
     ----------
     data_var : xarray DataArray
         Variable from Calliope model_data, to split loc_techs dimension
-    as_ : string
-        'DataArray' to return xarray DataArray or 'Series' to return pandas
-        Series with dimensions as a MultiIndex
+    return_as : string
+        'DataArray' to return xarray DataArray, 'MultiIndex DataArray' to return
+        xarray DataArray with loc_techs as a MultiIndex,
+        or 'Series' to return pandas Series with dimensions as a MultiIndex
 
     Returns
     -------
@@ -102,13 +103,13 @@ def split_loc_techs(data_var, as_='DataArray'):
         loc_tech_dim = [i for i in data_var.dims if 'loc_carrier' in i]
 
     if not loc_tech_dim:
-        if as_ == 'Series':
+        if return_as == 'Series':
             return data_var.to_series()
-        elif as_ == 'DataArray':
+        elif return_as in ['DataArray', 'MultiIndex DataArray']:
             return data_var
         else:
-            raise ValueError('`as_` must be `DataArray` or `Series`, '
-                             'but `{}` given'.format(as_))
+            raise ValueError('`return_as` must be `DataArray`, `Series`, or '
+                             '`MultiIndex DataArray`, but `{}` given'.format(return_as))
 
     elif len(loc_tech_dim) > 1:
         e = exceptions.ModelError
@@ -130,14 +131,16 @@ def split_loc_techs(data_var, as_='DataArray'):
     # Replace the Datarray loc_tech_dim with this new MultiIndex
     updated_data_var = data_var.copy()
     updated_data_var.coords[loc_tech_dim] = data_var_midx
-    updated_data_var = reorganise_xarray_dimensions(updated_data_var.unstack())
 
-    if as_ == "Series":
-        return updated_data_var.to_series()
-
-    elif as_ == "DataArray":
+    if return_as == 'MultiIndex DataArray':
         return updated_data_var
 
+    elif return_as == "Series":
+        return reorganise_xarray_dimensions(updated_data_var.unstack()).to_series()
+
+    elif return_as == "DataArray":
+        return reorganise_xarray_dimensions(updated_data_var.unstack())
+
     else:
-        raise ValueError('`as_` must be `DataArray` or `Series`, '
-                         'but `{}` given'.format(as_))
+        raise ValueError('`return_as` must be `DataArray`, `Series`, or '
+                         '`MultiIndex DataArray`, but `{}` given'.format(return_as))
