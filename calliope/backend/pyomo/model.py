@@ -103,16 +103,25 @@ def generate_model(model_data):
     # Constraints
     constraints_to_add = [
         i.split('.py')[0] for i in os.listdir(constraints.__path__[0])
-        if '__' not in i
+        if i not in ['__init__.py', '__pycache__']
     ]
 
     # The list is sorted to ensure that some constraints are added after pyomo
     # expressions have been created in other constraint files.
     # Ordering is given by the number assigned to the variable ORDER within each
     # file (higher number = added later).
-    constraints_to_add.sort(
-        key=lambda x: load_function('calliope.backend.pyomo.constraints.' + x + '.ORDER')
-    )
+    try:
+        constraints_to_add.sort(
+            key=lambda x: load_function('calliope.backend.pyomo.constraints.' + x + '.ORDER')
+        )
+    except AttributeError as e:
+        raise AttributeError(
+            '{}. This attribute must be set to an integer value based '
+            ' on the order in which the constraints in the file {}.py should be '
+            'loaded relative to constraints in other constraint files. If order '
+            'does not matter, set ORDER to a value of 10.'
+            .format(e.args[0], e.args[0].split('.')[-1].split("'")[0])
+        )
 
     logger.debug('constraints are loaded in the following order: {}'.format(constraints_to_add))
 

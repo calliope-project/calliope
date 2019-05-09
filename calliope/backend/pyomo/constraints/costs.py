@@ -16,7 +16,7 @@ from calliope.backend.pyomo.util import \
     get_timestep_weight, \
     loc_tech_is_in
 
-ORDER = 1  # order in which to invoke constraints relative to other constraint files
+ORDER = 10  # order in which to invoke constraints relative to other constraint files
 
 
 def load_constraints(backend_model):

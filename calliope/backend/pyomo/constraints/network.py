@@ -11,7 +11,7 @@ Transmission/distribution network constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-ORDER = 1  # order in which to invoke constraints relative to other constraint files
+ORDER = 10  # order in which to invoke constraints relative to other constraint files
 
 
 def load_constraints(backend_model):

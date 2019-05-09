@@ -16,7 +16,7 @@ from calliope.backend.pyomo.util import \
     split_comma_list, \
     get_conversion_plus_io
 
-ORDER = 2  # order in which to invoke constraints relative to other constraint files
+ORDER = 20  # order in which to invoke constraints relative to other constraint files
 
 
 def load_constraints(backend_model):

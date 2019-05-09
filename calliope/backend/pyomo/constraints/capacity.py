@@ -15,7 +15,7 @@ import numpy as np
 from calliope.backend.pyomo.util import get_param, split_comma_list
 from calliope import exceptions
 
-ORDER = 1  # order in which to invoke constraints relative to other constraint files
+ORDER = 10  # order in which to invoke constraints relative to other constraint files
 
 
 def load_constraints(backend_model):
