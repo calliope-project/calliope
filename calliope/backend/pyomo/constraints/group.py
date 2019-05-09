@@ -108,15 +108,15 @@ def equalizer(lhs, rhs, sign):
 def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     """
     Enforces shares of demand of a carrier to be met by the given groups
-    of technologies at the given locations. All technologies producing
-    and demanding the given carrier are considered.
+    of technologies at the given locations. The share is relative
+    to ``demand`` technologies only.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
             \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq
-            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_con \\in given\\_locations, timestep\\in timesteps}
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_techs\\_demand \\in given\\_locations, timestep\\in timesteps}
             carrier_{con}(loc::tech::carrier, timestep)
 
     """
@@ -144,7 +144,7 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             if i.rsplit('::', 1)[0] in lhs_loc_techs and i.split('::')[-1] == carrier
         ]
         rhs_loc_tech_carriers = [
-            i for i in backend_model.loc_tech_carriers_con
+            i for i in backend_model.loc_tech_carriers_demand
             if i.split('::')[0] in lhs_locs and i.split('::')[-1] == carrier
         ]
 

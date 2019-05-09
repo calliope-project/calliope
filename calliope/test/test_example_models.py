@@ -83,6 +83,16 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip('GLPK not installed')
 
+    def test_considers_supply_generation_only_in_total_levelised_cost(self):
+        # calculation of expected value:
+        # costs = model.get_formatted_array("cost").sum(dim="locs")
+        # gen = model.get_formatted_array("carrier_prod").sum(dim=["timesteps", "locs"])
+        # lcoe = costs.sum(dim="techs") / gen.sel(techs=["ccgt", "csp"]).sum(dim="techs")
+        model = calliope.examples.national_scale()
+        model.run()
+
+        assert model.results.total_levelised_cost.item() == approx(0.067005, abs=1e-5)
+
     def test_fails_gracefully_without_timeseries(self):
         override = {
             "locations.region1.techs.demand_power.constraints.resource": -200,

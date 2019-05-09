@@ -281,7 +281,7 @@ def process_techs(config_model):
         tech_result.inheritance = get_parents(tech_id, config_model)
 
         # CHECK: A tech's parent must lead to one of the built-in tech_groups
-        builtin_tech_groups = checks.defaults_model.tech_groups.keys()
+        builtin_tech_groups = checks.DEFAULTS_MODEL.tech_groups.keys()
         if tech_result.inheritance[-1] not in builtin_tech_groups:
             errors.append(
                 'tech {} must inherit from a built-in tech group'.format(tech_id)

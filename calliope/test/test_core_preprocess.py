@@ -267,8 +267,8 @@ class TestModelRun:
         exploded location
         """
         override = {
-            'locations.0.test_supply_elec.constraints.resource': 10,
-            'locations.0,1.test_supply_elec.constraints.resource': 15
+            'locations.0.techs.test_supply_elec.constraints.resource': 10,
+            'locations.0,1.techs.test_supply_elec.constraints.resource': 15
         }
 
         with pytest.raises(KeyError):
@@ -373,7 +373,7 @@ class TestModelRun:
             m = build_model(override_dict=override1, scenario='simple_supply,one_day,investment_costs')
 
         assert check_error_or_warning(
-            warn_info, 'Deleting empty cost class `carbon` for technology `test_supply_elec`.'
+            warn_info, 'Deleting empty cost class `carbon` for technology `test_supply_elec` at `0`.'
         )
 
         assert 'carbon' not in m._model_run.locations['1'].techs.test_supply_elec.costs.keys()
@@ -394,6 +394,17 @@ class TestChecks:
 
         assert check_error_or_warning(
             excinfo, 'Unrecognised top-level configuration item: nonsensical_key'
+        )
+
+    def test_missing_config_key(self):
+        """
+        Check that missing 'locations' raises an error
+        """
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model()  # Not selecting any scenario means no locations are defined
+
+        assert check_error_or_warning(
+            excinfo, 'Model is missing required top-level configuration item: locations'
         )
 
     def test_unrecognised_model_run_keys(self):
@@ -531,13 +542,7 @@ class TestChecks:
         """
         Unkown group constraints raise a warning, but don't crash
         """
-        override = AttrDict.from_yaml_string(
-            """
-            group_constraints:
-                mygroup:
-                    foobar: 0
-            """
-        )
+        override = {'group_constraints.mygroup.foobar': 0}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override, scenario='simple_supply')
@@ -546,6 +551,39 @@ class TestChecks:
             excinfo,
             'Unrecognised group constraint `foobar` in group `mygroup`'
         )
+
+    @pytest.mark.parametrize('loc_tech', (
+        ({'locs': ['1', 'foo']}), ({'techs': ['test_supply_elec', 'bar']}),
+        ({'locs': ['1', 'foo'], 'techs': ['test_supply_elec', 'bar']})
+    ))
+    def test_inexistent_group_constraint_loc_tech(self, loc_tech):
+
+        override = {
+            'group_constraints.mygroup': {'energy_cap_max': 100, **loc_tech}
+        }
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            m = build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(excinfo, 'Possible misspelling in group constraints:')
+
+        loc_techs = m._model_data.group_constraint_loc_techs_mygroup.values
+        assert 'foo:test_supply_elec' not in loc_techs
+        assert '1:bar' not in loc_techs
+        assert 'foo:bar' not in loc_techs
+
+    def test_inexistent_group_constraint_empty_loc_tech(self):
+
+        override = {
+            'group_constraints.mygroup': {'energy_cap_max': 100, 'locs': ['foo']}
+        }
+
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            m = build_model(override_dict=override, scenario='simple_supply')
+
+        assert check_error_or_warning(excinfo, 'Constraint group `mygroup` will be completely ignored')
+
+        assert m._model_run.group_constraints.mygroup.get('exists', True) is False
 
     @pytest.mark.filterwarnings("ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning")
     def test_abstract_base_tech_group_override(self):
@@ -580,7 +618,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.1.test_supply_no_parent:
+            locations.1.techs.test_supply_no_parent:
             """
         )
 
@@ -602,7 +640,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.1.test_supply_tech_parent:
+            locations.1.techs.test_supply_tech_parent:
             """
         )
 
@@ -622,7 +660,7 @@ class TestChecks:
             techs.test_supply_tech_parent.essentials:
                         name: Supply tech
                         parent: test_supply_group
-            locations.1.test_supply_tech_parent:
+            locations.1.techs.test_supply_tech_parent:
             """
         )
 
@@ -664,6 +702,7 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override2, scenario='simple_supply,one_day')
 
+    @pytest.mark.filterwarnings('ignore: defines force_resource but not a finite resource:calliope.exceptions.ModelWarning')
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
@@ -740,6 +779,23 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario='simple_supply,one_day')
 
+    def test_defining_cost_class_with_name_of_cost(self):
+        """
+        A cost class with the same name as one of the possible cost types was
+        defined, suggesting a user mistake with indentation.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            techs.test_supply_elec.costs.storage_cap: 10
+            """
+        )
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            '`test_supply_elec` at `1` defines storage_cap as a cost class.')
+
     def test_exporting_unspecified_carrier(self):
         """
         User can only define an export carrier if it is defined in
@@ -766,6 +822,62 @@ class TestChecks:
 
         # should pass: exporting heat for conversion tech
         build_model(override_dict=override_converison_plus('heat'), scenario='simple_conversion_plus,one_day')
+
+    def test_tech_directly_in_locations(self):
+        """
+        A tech defined directly within a location rather than within techs
+        inside that location is probably an oversight.
+        """
+        override = {'locations.1.test_supply_elec.costs.storage_cap': 10}
+
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo, 'Location `1` contains tech `test_supply_elec` at its top level'
+        )
+
+    def test_tech_defined_twice_in_links(self):
+        """
+        A technology can only be defined once for a link, even if that link is
+        defined twice (i.e. `A,B` and `B,A`).
+        """
+
+        override = {
+            'links.0,1.techs.test_transmission_elec': None,
+            'links.1,0.techs.test_transmission_elec': None
+        }
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            'Technology test_transmission_elec defined twice on a link defined '
+            'in both directions (e.g. `A,B` and `B,A`)'
+        )
+
+        override = {
+            'links.0,1.techs': {'test_transmission_elec': None, 'test_transmission_heat': None},
+            'links.1,0.techs': {'test_transmission_elec': None, 'test_transmission_heat': None}
+        }
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(override_dict=override, scenario='simple_supply,one_day')
+
+        assert check_error_or_warning(
+            excinfo, ['test_transmission_elec', 'test_transmission_heat']
+        )
+
+        # We do allow a link to be defined twice, so long as the same tech isn't in both
+        override = {
+            'techs.test_transmission_heat_2': {
+                'essentials.name': 'Transmission heat tech',
+                'essentials.carrier': 'heat',
+                'essentials.parent': 'transmission'
+            },
+            'links.0,1.techs': {'test_transmission_elec': None},
+            'links.1,0.techs': {'test_transmission_heat_2': None}
+        }
+        build_model(override_dict=override, scenario='simple_supply,one_day')
 
     def test_allowed_time_varying_constraints(self):
         """
@@ -823,29 +935,29 @@ class TestChecks:
 
         # should fail: cannot have locations in one place and not in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, None), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, None), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Either all or no locations must have `coordinates` defined")
 
         # should fail: cannot have cartesian coordinates in one place and geographic in another
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(cartesian0, geographic1), scenario='simple_supply,one_day')
         check_error_or_warning(error, "All locations must use the same coordinate format")
 
         # should fail: cannot use a non-cartesian or non-geographic coordinate system
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_storage,one_day')
+            build_model(override_dict=_override(fictional0, fictional1), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Unidentified coordinate system")
 
         # should fail: coordinates must be given as key:value pairs
         with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_storage,one_day')
+            build_model(override_dict=_override([0, 1], [1, 1]), scenario='simple_supply,one_day')
         check_error_or_warning(error, "Coordinates must be given in the format")
 
         # should pass: cartesian coordinates in both places
-        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_storage,one_day')
+        build_model(override_dict=_override(cartesian0, cartesian1), scenario='simple_supply,one_day')
 
         # should pass: geographic coordinates in both places
-        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_storage,one_day')
+        build_model(override_dict=_override(geographic0, geographic1), scenario='simple_supply,one_day')
 
     def test_one_way(self):
         """
@@ -867,6 +979,44 @@ class TestChecks:
 
         for link in removed_con_links:
             assert link not in m._model_data.loc_tech_carriers_con.values
+
+    def test_carrier_ratio_for_inexistent_carrier(self):
+        """
+        A tech should not define a carrier ratio for a carrier it does
+        not actually use.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+                carrier_in:
+                    some_carrier: 1.0
+                carrier_out_2:
+                    another_carrier: 2.0
+            """
+        )
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
+
+        assert check_error_or_warning(
+            excinfo,
+            'Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually')
+
+    def test_carrier_ratio_for_specified_carrier(self):
+        """
+        The warning for not defining a carrier ratio for a carrier a tech does
+        not actually use should not be triggered if the carrier is defined.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+                carrier_in:
+                    heat: 1.0
+            """
+        )
+        with pytest.warns(None) as excinfo:
+            build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
+
+        assert 'Tech `test_conversion_plus` gives a carrier ratio' not in [str(i) for i in excinfo.list]
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):
@@ -988,7 +1138,6 @@ class TestChecks:
         (None, {'purchase': 2}),
 
     ))
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_supply_warning(self, constraints, costs):
         override_constraints = {}
         override_costs = {}
@@ -1013,7 +1162,6 @@ class TestChecks:
         (None, {'purchase': 2}),
 
     ))
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_storage_warning(self, constraints, costs):
         override_constraints = {}
         override_costs = {}

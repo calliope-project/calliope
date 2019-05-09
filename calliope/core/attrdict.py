@@ -11,6 +11,7 @@ used for managing model configuration.
 """
 
 import io
+from pathlib import Path
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
@@ -143,19 +144,25 @@ class AttrDict(dict):
     def from_yaml(cls, f, resolve_imports=True):
         """
         Returns an AttrDict initialized from the given path or
-        file object ``f``, which must point to a YAML file.
+        file object ``f``, which must point to a YAML file. The path can
+        be a string or a pathlib.Path.
 
-        If ``resolve_imports`` is True, top-level ``import:`` statements are
-        resolved recursively, else they are treated like any other key.
+        Parameters
+        ----------
 
-        If ``resolve_imports`` is a string, such as ``foobar``, import
-        statements underneath that key are resolved, i.e. ``foobar.import:``.
-
-        When resolving import statements, anything defined locally
-        overrides definitions in the imported file.
+        f : str or pathlib.Path
+        resolve_imports : bool or str, optional
+            If ``resolve_imports`` is True, top-level ``import:`` statements
+            are resolved recursively.
+            If ``resolve_imports is False, top-level ``import:`` statements
+            are treated like any other key and not further processed.
+            If ``resolve_imports`` is a string, such as ``foobar``, import
+            statements underneath that key are resolved, i.e. ``foobar.import:``.
+            When resolving import statements, anything defined locally
+            overrides definitions in the imported file.
 
         """
-        if isinstance(f, str):
+        if isinstance(f, str) or isinstance(f, Path):
             with open(f, 'r') as src:
                 loaded = cls(_yaml_load(src))
         else:

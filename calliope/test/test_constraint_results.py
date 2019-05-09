@@ -385,6 +385,27 @@ class TestDemandShareGroupConstraints:
         assert expensive_generation_1 / demand_elec_1 == 0
         assert round((cheap_generation_0 + cheap_generation_1) / (demand_elec_0 + demand_elec_1), 5) <= 0.3
 
+    def test_transmission_not_included_in_demand(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='transmission_not_included_in_demand'
+        )
+        model.run()
+        assert model.results.termination_condition == "optimal"
+        generation = (model.get_formatted_array("carrier_prod")
+                           .sum(dim=('timesteps', 'carriers')))
+        demand = (-model.get_formatted_array("carrier_con")
+                        .sum(dim=('timesteps', 'carriers')))
+
+        assert (generation.sel(locs="1", techs=["normal_elec_supply", "cheap_elec_supply", "expensive_elec_supply"])
+                          .sum(dim="techs")
+                          .item()) == pytest.approx(0)
+
+        cheap_elec_supply_0 = generation.sel(locs="0", techs="cheap_elec_supply").item()
+        demand_0 = demand.sel(locs="0", techs="electricity_demand").item()
+
+        assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
+
 
 class TestResourceAreaGroupConstraints:
 
@@ -834,6 +855,7 @@ class TestEnergyCapacityPerStorageCapacity:
     def model_file(self):
         return "energy_cap_per_storage_cap.yaml"
 
+    @pytest.mark.filterwarnings("ignore:(?s).*`energy_cap_per_storage_cap_min/max/equals`:calliope.exceptions.ModelWarning")
     def test_no_constraint_set(self, model_file):
         model = build_model(model_file=model_file)
         model.run()

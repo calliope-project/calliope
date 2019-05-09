@@ -10,7 +10,7 @@ Release History
 
 |new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}`, which models an emissions price of 0.1 units of currency per unit of emissions)
 
-|new| New model-wide constraint that can be applied to all or a subset of locations and technologies in a model, covering:
+|new| New model-wide constraint that can be applied to all, or a subset of, locations and technologies in a model, covering:
 
 * `demand_share_min` and `demand_share_max`, `energy_cap_share_min`, `energy_cap_share_max`, `supply_share_min`, `supply_share_max`, `demand_share_min`, and `demand_share_max`. These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
 * `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
@@ -28,6 +28,10 @@ Release History
 
 |changed| Constraint files are auto-loaded in the pyomo backend and applied in the order set by 'ORDER' variables given in each constraint file (such that those constraints which depend on pyomo expressions existing are built after the expressions are built).
 
+|changed| Error on defining a technology in both directions of the same link.
+
+|changed| Any inexistent locations and / or technologies defined in model-wide (group) constraints will be caught and filtered out, raising a warning of their existence in the process.
+
 |changed| Error on required column not existing in CSV is more explicit.
 
 |changed| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.
@@ -41,6 +45,10 @@ Release History
 |changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
 |changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
+
+|changed| Additional and improved pre-processing checks and errors for common model mistakes.
+
+|fixed| Total levelised cost of energy considers all costs, but energy generation only from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus``.
 
 |fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
 
