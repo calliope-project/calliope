@@ -16,7 +16,7 @@ from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
 from calliope.core.preprocess import checks
-from calliope.core.util.dataset import reorganise_dataset_dimensions
+from calliope.core.util.dataset import reorganise_xarray_dimensions
 
 
 def apply_time_clustering(model_data, model_run):
@@ -243,7 +243,7 @@ def final_timedimension_processing(model_data):
     model_data, final_check_comments, warns, errors = checks.check_model_data(model_data)
     exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
-    model_data = reorganise_dataset_dimensions(model_data)
+    model_data = reorganise_xarray_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)
 
     return model_data

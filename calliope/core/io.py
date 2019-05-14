@@ -95,7 +95,7 @@ def save_csv(model_data, path, dropna=True):
     for var in data_vars:
         in_out = 'results' if model_data[var].attrs['is_result'] else 'inputs'
         out_path = os.path.join(path, '{}_{}.csv'.format(in_out, var))
-        series = split_loc_techs(model_data[var], as_='Series')
+        series = split_loc_techs(model_data[var], return_as='Series')
         if dropna:
             series = series.dropna()
         series.to_csv(out_path)

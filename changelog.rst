@@ -26,6 +26,8 @@ Release History
 
 |new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
 
+|changed| `get_formatted_array` improved in both speed and memory consumption.
+
 |changed| Error on defining a technology in both directions of the same link.
 
 |changed| Any inexistent locations and / or technologies defined in model-wide (group) constraints will be caught and filtered out, raising a warning of their existence in the process.

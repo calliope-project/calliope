@@ -242,7 +242,7 @@ class Model(object):
 
         self.backend = interface(self)
 
-    def get_formatted_array(self, var):
+    def get_formatted_array(self, var, index_format='index'):
         """
         Return an xr.DataArray with locs, techs, and carriers as
         separate dimensions.
@@ -251,12 +251,23 @@ class Model(object):
         ----------
         var : str
             Decision variable for which to return a DataArray.
-
+        index_format : str, default = 'index'
+            'index' to return the `loc_tech(_carrier)` dimensions as individual
+            indexes, 'multiindex' to return them as a MultiIndex. The latter
+            has the benefit of having a smaller memory footprint, but you cannot
+            undertake dimension specific operations (e.g. formatted_array.sum('locs'))
         """
         if var not in self._model_data.data_vars:
             raise KeyError("Variable {} not in Model data".format(var))
 
-        return split_loc_techs(self._model_data[var])
+        if index_format not in ['index', 'multiindex']:
+            raise ValueError("Argument 'index_format' must be one of 'index' or 'multiindex'")
+        elif index_format == 'index':
+            return_as = 'DataArray'
+        elif index_format == 'multiindex':
+            return_as = 'MultiIndex DataArray'
+
+        return split_loc_techs(self._model_data[var], return_as=return_as)
 
     def to_netcdf(self, path):
         """

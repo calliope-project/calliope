@@ -55,10 +55,10 @@ class TestNationalScaleExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(38988.7442)
 
         assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.063543, abs=0.000001)
         assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.2642256, abs=0.000001)
 
     def test_nationalscale_example_results_cbc(self):
@@ -173,10 +173,10 @@ class TestNationalScaleResampledExampleModelSenseChecks:
         assert float(model.results.cost.sum()) == approx(37344.221869)
 
         assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.063543, abs=0.000001)
         assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.25, abs=0.000001)
 
     def test_nationalscale_resampled_example_results_cbc(self):
@@ -221,12 +221,12 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         # Full 1-hourly model run: 0.296973
         assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.111456, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.074809, abs=0.000001)
 
     def example_tester_mean(self, solver='cbc', solver_io=None):
@@ -236,7 +236,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         # Full 1-hourly model run: 0.296973
         assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.126099, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
@@ -252,12 +252,12 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         # Full 1-hourly model run: 0.296973
         assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.115866, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.074167, abs=0.000001)
 
     def test_nationalscale_clustered_example_closest_results_cbc(self):
@@ -288,12 +288,12 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         # Full 1-hourly model run: 0.296973
         assert float(
-            model.results.systemwide_levelised_cost.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.133111, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
+            model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
         ) == approx(0.071411, abs=0.000001)
 
     def test_storage_inter_cluster_no_storage(self):
