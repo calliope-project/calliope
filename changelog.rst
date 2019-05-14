@@ -28,6 +28,8 @@ Release History
 
 |changed| Constraint files are auto-loaded in the pyomo backend and applied in the order set by 'ORDER' variables given in each constraint file (such that those constraints which depend on pyomo expressions existing are built after the expressions are built).
 
+|changed| `get_formatted_array` improved in both speed and memory consumption.
+
 |changed| Error on defining a technology in both directions of the same link.
 
 |changed| Any inexistent locations and / or technologies defined in model-wide (group) constraints will be caught and filtered out, raising a warning of their existence in the process.
@@ -47,6 +49,8 @@ Release History
 |changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
 
 |changed| Additional and improved pre-processing checks and errors for common model mistakes.
+
+|fixed| If a space is left between two locations in a link (i.e. `A, B` instead of `A,B`), the space is stripped, instead of leading to the expectation of a location existing with the name ` B`.
 
 |fixed| Total levelised cost of energy considers all costs, but energy generation only from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus``.
 

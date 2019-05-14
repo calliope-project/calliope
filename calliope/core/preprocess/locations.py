@@ -178,7 +178,7 @@ def process_locations(model_config, modelrun_techs):
     # Generate all transmission links
     processed_links = AttrDict()
     for link in links_in:
-        loc_from, loc_to = link.split(',')
+        loc_from, loc_to = [i.strip() for i in link.split(',')]
         # Skip this link entirely if it has been told not to exist
         if not links_in[link].get('exists', True):
             continue

@@ -24,7 +24,7 @@ from calliope.backend.pyomo.util import get_var
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter, logger
-from calliope.core.util.dataset import reorganise_dataset_dimensions
+from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 
@@ -229,10 +229,10 @@ def get_result_array(backend_model, model_data):
         i.name not in model_data.data_vars.keys()
     }
 
-    results = reorganise_dataset_dimensions(xr.Dataset(all_variables))
+    results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
 
     if all_params:
-        additional_inputs = reorganise_dataset_dimensions(xr.Dataset(all_params))
+        additional_inputs = reorganise_xarray_dimensions(xr.Dataset(all_params))
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs['is_result'] = 0
         model_data.update(additional_inputs)
