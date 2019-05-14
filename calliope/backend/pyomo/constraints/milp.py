@@ -21,16 +21,20 @@ from calliope.backend.pyomo.util import \
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
 
+ORDER = 30  # order in which to invoke constraints relative to other constraint files
+
 
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data['sets']
     run_config = backend_model.__calliope_run_config
 
-    if 'loc_techs_milp' in sets:
+    if 'loc_techs_unit_commitment_milp_constraint' in sets:
         backend_model.unit_commitment_milp_constraint = po.Constraint(
             backend_model.loc_techs_unit_commitment_milp_constraint, backend_model.timesteps,
             rule=unit_commitment_milp_constraint_rule
         )
+
+    if 'loc_techs_unit_capacity_milp_constraint' in sets:
         backend_model.unit_capacity_milp_constraint = po.Constraint(
             backend_model.loc_techs_unit_capacity_milp_constraint,
             rule=unit_capacity_milp_constraint_rule

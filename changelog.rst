@@ -26,6 +26,8 @@ Release History
 
 |new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
 
+|changed| Constraint files are auto-loaded in the pyomo backend and applied in the order set by 'ORDER' variables given in each constraint file (such that those constraints which depend on pyomo expressions existing are built after the expressions are built).
+
 |changed| `get_formatted_array` improved in both speed and memory consumption.
 
 |changed| Error on defining a technology in both directions of the same link.

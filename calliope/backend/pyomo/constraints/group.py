@@ -12,6 +12,8 @@ Group constraints.
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
+ORDER = 20  # order in which to invoke constraints relative to other constraint files
+
 
 def load_constraints(backend_model):
     model_data_dict = backend_model.__calliope_model_data['data']

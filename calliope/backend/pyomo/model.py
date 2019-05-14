@@ -21,6 +21,7 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var
+from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter, logger
 from calliope.core.util.dataset import reorganise_xarray_dimensions
@@ -101,32 +102,32 @@ def generate_model(model_data):
 
     # Constraints
     constraints_to_add = [
-        'energy_balance.load_constraints',
-        'dispatch.load_constraints',
-        'network.load_constraints',
-        'costs.load_constraints',
-        'policy.load_constraints',
-        'milp.load_constraints',
-        'group.load_constraints'
+        i.split('.py')[0] for i in os.listdir(constraints.__path__[0])
+        if i not in ['__init__.py', '__pycache__']
     ]
 
-    if backend_model.__calliope_run_config['mode'] != 'operate':
-        constraints_to_add.append('capacity.load_constraints')
+    # The list is sorted to ensure that some constraints are added after pyomo
+    # expressions have been created in other constraint files.
+    # Ordering is given by the number assigned to the variable ORDER within each
+    # file (higher number = added later).
+    try:
+        constraints_to_add.sort(
+            key=lambda x: load_function('calliope.backend.pyomo.constraints.' + x + '.ORDER')
+        )
+    except AttributeError as e:
+        raise AttributeError(
+            '{}. This attribute must be set to an integer value based '
+            ' on the order in which the constraints in the file {}.py should be '
+            'loaded relative to constraints in other constraint files. If order '
+            'does not matter, set ORDER to a value of 10.'
+            .format(e.args[0], e.args[0].split('.')[-1].split("'")[0])
+        )
 
-    if hasattr(backend_model, 'loc_techs_conversion'):
-        constraints_to_add.append('conversion.load_constraints')
-
-    if hasattr(backend_model, 'loc_techs_conversion_plus'):
-        constraints_to_add.append('conversion_plus.load_constraints')
-
-    # Export comes last as it can add to the cost expression, this could be
-    # overwritten if it doesn't come last
-    if hasattr(backend_model, 'loc_techs_export'):
-        constraints_to_add.append('export.load_constraints')
+    logger.debug('constraints are loaded in the following order: {}'.format(constraints_to_add))
 
     for c in constraints_to_add:
         load_function(
-            'calliope.backend.pyomo.constraints.' + c
+            'calliope.backend.pyomo.constraints.' + c + '.load_constraints'
         )(backend_model)
 
     # FIXME: Optional constraints

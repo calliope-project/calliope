@@ -3,6 +3,8 @@ import numpy as np
 import xarray as xr
 import pyomo.core as po
 from pyomo.core.base.expr import identify_variables
+import tempfile
+import os
 
 from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
@@ -127,6 +129,29 @@ class TestUtil:
                 'random_param',
                 ('1::test_supply_elec')
             )
+
+
+class TestModel:
+    def test_load_constraints_no_order(self):
+        constr_dir = os.path.join(
+            os.path.dirname(__file__), '..', 'backend', 'pyomo', 'constraints'
+        )
+        with tempfile.NamedTemporaryFile(dir=constr_dir, suffix='.py', delete=False) as tmpf:
+            name = tmpf.name
+            basename = os.path.basename(tmpf.name).replace('.py', '')
+
+        # Should fail, since the empty .py file is included in the list, but
+        # has no attribute 'ORDER'.
+        with pytest.raises(AttributeError) as excinfo:
+            m = build_model({}, 'simple_supply,two_hours,investment_costs')
+            m.run(build_only=True)
+
+        assert check_error_or_warning(
+            excinfo,
+            "module 'calliope.backend.pyomo.constraints.{}' has no attribute 'ORDER'. "
+            "This attribute must be set to an integer value".format(basename)
+        )
+        os.remove(name)
 
 
 class TestInterface:

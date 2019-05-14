@@ -17,6 +17,8 @@ from calliope.backend.pyomo.util import \
     get_loc_tech, \
     get_previous_timestep
 
+ORDER = 10  # order in which to invoke constraints relative to other constraint files
+
 
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data['sets']
