@@ -42,6 +42,8 @@ Release History
 
 |changed| Additional and improved pre-processing checks and errors for common model mistakes.
 
+|fixed| If a space is left between two locations in a link (i.e. `A, B` instead of `A,B`), the space is stripped, instead of leading to the expectation of a location existing with the name ` B`.
+
 |fixed| Total levelised cost of energy considers all costs, but energy generation only from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus``.
 
 |fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
