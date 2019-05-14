@@ -136,20 +136,22 @@ class TestModel:
         constr_dir = os.path.join(
             os.path.dirname(__file__), '..', 'backend', 'pyomo', 'constraints'
         )
-        with tempfile.NamedTemporaryFile(dir=constr_dir, suffix='.py') as tmpf:
-            name = os.path.basename(tmpf.name).replace('.py', '')
+        with tempfile.NamedTemporaryFile(dir=constr_dir, suffix='.py', delete=False) as tmpf:
+            name = tmpf.name
+            basename = os.path.basename(tmpf.name).replace('.py', '')
 
-            # Should fail, since the empty .py file is included in the list, but
-            # has no attribute 'ORDER'.
-            with pytest.raises(AttributeError) as excinfo:
-                m = build_model({}, 'simple_supply,two_hours,investment_costs')
-                m.run(build_only=True)
+        # Should fail, since the empty .py file is included in the list, but
+        # has no attribute 'ORDER'.
+        with pytest.raises(AttributeError) as excinfo:
+            m = build_model({}, 'simple_supply,two_hours,investment_costs')
+            m.run(build_only=True)
 
-            assert check_error_or_warning(
-                excinfo,
-                "module 'calliope.backend.pyomo.constraints.{}' has no attribute 'ORDER'. "
-                "This attribute must be set to an integer value".format(name)
-            )
+        assert check_error_or_warning(
+            excinfo,
+            "module 'calliope.backend.pyomo.constraints.{}' has no attribute 'ORDER'. "
+            "This attribute must be set to an integer value".format(basename)
+        )
+        os.remove(name)
 
 
 class TestInterface:
