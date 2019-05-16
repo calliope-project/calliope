@@ -376,17 +376,6 @@ def _check_tech_final(model_run, tech_id, tech_config, loc_id, model_warnings, e
                 'all required constraints: {}'.format(tech_id, loc_id, required)
             )
 
-    # If the technology is supply_plus, check if it has storage_cap_max. If yes, it needs charge rate
-    if model_run.techs[tech_id].essentials.parent == 'supply_plus':
-        if (any(['storage_cap_' in k for k in tech_config.constraints.keys()])
-                and 'charge_rate' not in tech_config.constraints.keys()
-                and 'energy_cap_per_storage_cap_max' not in tech_config.constraints.keys()
-                and 'energy_cap_per_storage_cap_equals' not in tech_config.constraints.keys()):
-            errors.append(
-                '`{}` at `{}` fails to define '
-                'energy_cap_per_storage_cap, but is using storage'.format(tech_id, loc_id, required)
-            )
-
     # Warn if defining a carrier ratio for a conversion_plus tech,
     # but applying it to a carrier that isn't one of the carriers specified by that tech
     # e.g. carrier_ratios.carrier_in_2.cooling when cooling isn't a carrier`
