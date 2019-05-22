@@ -75,3 +75,8 @@ overrides:
             techs: ["expensive_supply"]
             supply_share_min:
                 electricity: 0.6
+    supply_share_per_timestep_equals:
+        group_constraints.example_supply_share_per_timestep_equals_constraint:
+            techs: ["expensive_supply"]
+            supply_share_per_timestep_equals:
+                electricity: 0.7

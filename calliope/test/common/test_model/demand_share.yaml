@@ -151,6 +151,16 @@ overrides:
             locs: ["0"]
             demand_share_max:
                 electricity: 0.4
+    demand_share_per_timestep_equals:
+        group_constraints.example_demand_share_per_timestep_equals_constraint:
+            techs: ["cheap_elec_supply"]
+            demand_share_per_timestep_equals:
+                electricity: 0.3
+    demand_share_per_timestep_min:
+        group_constraints.example_demand_share_per_timestep_min_constraint:
+            techs: ["expensive_elec_supply"]
+            demand_share_per_timestep_equals:
+                electricity: 0.8
 
 
 scenarios:

@@ -30,6 +30,33 @@ def load_constraints(backend_model):
             backend_model.carriers,
             ['max'], rule=demand_share_constraint_rule
         )
+    if 'group_demand_share_equals' in model_data_dict:
+        backend_model.group_demand_share_max_constraint = po.Constraint(
+            backend_model.group_names_demand_share_equals,
+            backend_model.carriers,
+            ['equals'], rule=demand_share_constraint_rule
+        )
+    if 'group_demand_share_per_timestep_min' in model_data_dict:
+        backend_model.group_demand_share_max_constraint = po.Constraint(
+            backend_model.group_names_demand_share_per_timestep_min,
+            backend_model.carriers,
+            backend_model.timesteps,
+            ['min'], rule=demand_share_per_timestep_constraint_rule
+        )
+    if 'group_demand_share_per_timestep_max' in model_data_dict:
+        backend_model.group_demand_share_max_constraint = po.Constraint(
+            backend_model.group_names_demand_share_per_timestep_max,
+            backend_model.carriers,
+            backend_model.timesteps,
+            ['max'], rule=demand_share_per_timestep_constraint_rule
+        )
+    if 'group_demand_share_per_timestep_equals' in model_data_dict:
+        backend_model.group_demand_share_max_constraint = po.Constraint(
+            backend_model.group_names_demand_share_per_timestep_equals,
+            backend_model.carriers,
+            backend_model.timesteps,
+            ['equals'], rule=demand_share_per_timestep_constraint_rule
+        )
     if 'group_supply_share_min' in model_data_dict:
         backend_model.group_supply_share_min_constraint = po.Constraint(
             backend_model.group_names_supply_share_min,
@@ -41,6 +68,33 @@ def load_constraints(backend_model):
             backend_model.group_names_supply_share_max,
             backend_model.carriers,
             ['max'], rule=supply_share_constraint_rule
+        )
+    if 'group_supply_share_equals' in model_data_dict:
+        backend_model.group_supply_share_max_constraint = po.Constraint(
+            backend_model.group_names_supply_share_equals,
+            backend_model.carriers,
+            ['equals'], rule=supply_share_constraint_rule
+        )
+    if 'group_supply_share_per_timestep_min' in model_data_dict:
+        backend_model.group_supply_share_max_constraint = po.Constraint(
+            backend_model.group_names_supply_share_per_timestep_min,
+            backend_model.carriers,
+            backend_model.timesteps,
+            ['min'], rule=supply_share_per_timestep_constraint_rule
+        )
+    if 'group_supply_share_per_timestep_max' in model_data_dict:
+        backend_model.group_supply_share_max_constraint = po.Constraint(
+            backend_model.group_names_supply_share_per_timestep_max,
+            backend_model.carriers,
+            backend_model.timesteps,
+            ['max'], rule=supply_share_per_timestep_constraint_rule
+        )
+    if 'group_supply_share_per_timestep_equals' in model_data_dict:
+        backend_model.group_supply_share_max_constraint = po.Constraint(
+            backend_model.group_names_supply_share_per_timestep_equals,
+            backend_model.carriers,
+            backend_model.timesteps,
+            ['equals'], rule=supply_share_per_timestep_constraint_rule
         )
     if 'group_energy_cap_share_min' in model_data_dict:
         backend_model.group_energy_cap_share_min_constraint = po.Constraint(
@@ -105,11 +159,28 @@ def equalizer(lhs, rhs, sign):
         raise ValueError('Invalid sign: {}'.format(sign))
 
 
+def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name, carrier):
+    lhs_loc_techs = getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    )
+    lhs_locs = set(loc_tech.split('::')[0] for loc_tech in lhs_loc_techs)
+    lhs_loc_tech_carriers = [
+        i for i in backend_model.loc_tech_carriers_prod
+        if i.rsplit('::', 1)[0] in lhs_loc_techs and i.split('::')[-1] == carrier
+    ]
+    rhs_loc_tech_carriers = [
+        i for i in backend_model.loc_tech_carriers_demand
+        if i.split('::')[0] in lhs_locs and i.split('::')[-1] == carrier
+    ]
+    return (lhs_loc_tech_carriers, rhs_loc_tech_carriers)
+
+
 def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     """
     Enforces shares of demand of a carrier to be met by the given groups
-    of technologies at the given locations. The share is relative
-    to ``demand`` technologies only.
+    of technologies at the given locations, on average over the entire
+    model period. The share is relative to ``demand`` technologies only.
 
     .. container:: scrolling-wrapper
 
@@ -124,35 +195,20 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
     share = model_data_dict['group_demand_share_{}'.format(what)].get(
         (carrier, group_name), np.nan
     )
-    # FIXME uncomment this once Bryn has merged his changes
-    # and import again: from calliope.backend.pyomo.util import get_param
-    # share = get_param(
-    #     backend_model,
-    #     'group_demand_share_{}'.format(what), (carrier, constraint_group)
-    # )
 
     if np.isnan(share):
         return po.Constraint.NoConstraint
     else:
-        lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(group_name)
+        lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+            backend_model, group_name, carrier
         )
-        lhs_locs = set(loc_tech.split('::')[0] for loc_tech in lhs_loc_techs)
-        lhs_loc_tech_carriers = [
-            i for i in backend_model.loc_tech_carriers_prod
-            if i.rsplit('::', 1)[0] in lhs_loc_techs and i.split('::')[-1] == carrier
-        ]
-        rhs_loc_tech_carriers = [
-            i for i in backend_model.loc_tech_carriers_demand
-            if i.split('::')[0] in lhs_locs and i.split('::')[-1] == carrier
-        ]
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech_carrier, timestep]
             for loc_tech_carrier in lhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
+
         rhs = share * -1 * sum(
             backend_model.carrier_con[loc_tech_carrier, timestep]
             for loc_tech_carrier in rhs_loc_tech_carriers
@@ -162,10 +218,64 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
         return equalizer(lhs, rhs, what)
 
 
+def demand_share_per_timestep_constraint_rule(backend_model, group_name, carrier, timestep, what):
+    """
+    Enforces shares of demand of a carrier to be met by the given groups
+    of technologies at the given locations, in each timestep.
+    The share is relative to ``demand`` technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group} carrier_{prod}(loc::tech::carrier, timestep) \\leq
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_techs\\_demand \\in given\\_locations}
+            carrier_{con}(loc::tech::carrier, timestep) for timestep \\in timesteps
+
+    """
+    model_data_dict = backend_model.__calliope_model_data['data']
+    share = model_data_dict['group_demand_share_per_timestep_{}'.format(what)].get(
+        (carrier, group_name), np.nan
+    )
+
+    if np.isnan(share):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+            backend_model, group_name, carrier
+        )
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech_carrier, timestep]
+            for loc_tech_carrier in lhs_loc_tech_carriers
+        )
+
+        rhs = share * -1 * sum(
+            backend_model.carrier_con[loc_tech_carrier, timestep]
+            for loc_tech_carrier in rhs_loc_tech_carriers
+        )
+
+        return equalizer(lhs, rhs, what)
+
+
+def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):
+    lhs_loc_techs = getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(group_name)
+    )
+    lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+    rhs_loc_techs = [
+        i for i in backend_model.loc_techs_supply_all
+        if i.split('::')[0] in lhs_locs
+    ]
+    return (lhs_loc_techs, rhs_loc_techs)
+
+
 def supply_share_constraint_rule(backend_model, constraint_group, carrier, what):
     """
-    Enforces shares of carrier_prod for groups of technologies and locations. The
-    share is relative to ``supply`` and ``supply_plus`` technologies only.
+    Enforces shares of carrier_prod for groups of technologies and locations,
+    on average over the entire model period. The share is relative to
+    ``supply`` and ``supply_plus`` technologies only.
 
     .. container:: scrolling-wrapper
 
@@ -182,15 +292,10 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
     if np.isnan(share):
         return po.Constraint.NoConstraint
     else:
-        lhs_loc_techs = getattr(
+        lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
             backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
+            constraint_group
         )
-        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
-        rhs_loc_techs = [
-            i for i in backend_model.loc_techs_supply_all
-            if i.split('::')[0] in lhs_locs
-        ]
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
@@ -201,6 +306,44 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
             backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
             for loc_tech in rhs_loc_techs
             for timestep in backend_model.timesteps
+        )
+
+        return equalizer(lhs, rhs, what)
+
+
+def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, carrier, timestep, what):
+    """
+    Enforces shares of carrier_prod for groups of technologies and locations,
+    in each timestep. The share is relative to ``supply`` and ``supply_plus``
+    technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group} carrier_{prod}(loc::tech::carrier, timestep) \\leq
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_carriers\\_supply\\_all \\in given\\_locations}
+            carrier_{prod}(loc::tech::carrier, timestep) for timestep \\in timesteps
+
+    """
+    model_data_dict = backend_model.__calliope_model_data['data']
+    share = model_data_dict['group_supply_share_per_timestep_{}'.format(what)][(carrier, constraint_group)]
+
+    if np.isnan(share):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
+            backend_model,
+            constraint_group
+        )
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in lhs_loc_techs
+        )
+        rhs = share * sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in rhs_loc_techs
         )
 
         return equalizer(lhs, rhs, what)

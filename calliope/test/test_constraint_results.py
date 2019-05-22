@@ -396,6 +396,39 @@ class TestDemandShareGroupConstraints:
 
         assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
 
+    def test_demand_share_per_timestep_equals(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_per_timestep_equals'
+        )
+        model.run()
+        cheap_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "cheap_elec_supply", 'carriers': "electricity"}].sum('locs')
+        demand = -1 * model.get_formatted_array("carrier_con").sum('locs')
+        # assert share in each timestep is 0.3
+        assert ((cheap_generation / demand).round(5) == 0.3).all()
+
+    def test_demand_share_per_timestep_min(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_per_timestep_min'
+        )
+        model.run()
+        expensive_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum('locs')
+        demand = -1 * model.get_formatted_array("carrier_con").sum('locs')
+        # assert share in each timestep is 0.8
+        assert ((expensive_generation / demand).round(5) == 0.8).all()
+
+    def test_supply_share_per_timestep_equals(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_per_timestep_equals'
+        )
+        model.run()
+        expensive_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_supply", 'carriers': "electricity"}].sum('locs')
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+        # assert share in each timestep is 0.7
+        assert ((expensive_supply / supply).round(5) == 0.7).all()
+
 
 class TestResourceAreaGroupConstraints:
 
