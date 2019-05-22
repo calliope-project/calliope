@@ -173,7 +173,7 @@ def cli(ctx, version):
         click.secho(_get_version())
 
 
-@cli.command(short_help='Create a new model based on a built-in example.')
+@cli.command(name='new', short_help='Create a new model based on a built-in example.')
 @click.argument('path')
 @click.option('--template', type=str, default=None)
 @_debug
@@ -230,7 +230,7 @@ def _run_setup_model(
     return model
 
 
-@cli.command(short_help='Build and run a model.')
+@cli.command(name='run', short_help='Build and run a model.')
 @click.argument('model_file')
 @click.option('--scenario')
 @click.option('--model_format')
@@ -318,7 +318,10 @@ def run(model_file, scenario, model_format, override_dict,
                 raise BackendError("Problem is infeasible.")
 
 
-@cli.command(short_help='Generate a script to run multiple models.')
+@cli.command(
+    name='generate_runs',
+    short_help='Generate a script to run multiple models.'
+)
 @click.argument('model_file')
 @click.argument('out_file')
 @click.option('--kind', help='One of: "bash", "bsub", "sbatch", or "windows".')
@@ -356,7 +359,10 @@ def generate_runs(
         generate(kind, **kwargs)
 
 
-@cli.command(short_help='Generate scenario definitions from given combinations of overrides.')
+@cli.command(
+    name='generate_scenarios',
+    short_help='Generate scenario definitions from given combinations of overrides.'
+)
 @click.argument('model_file')
 @click.argument('out_file')
 @click.argument('overrides', nargs=-1)

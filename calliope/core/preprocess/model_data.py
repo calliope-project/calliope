@@ -68,14 +68,14 @@ def build_model_data(model_run, debug=False):
     data_dict.update(carrier_specific_to_dataset(model_run))
     data_dict.update(group_constraints_to_dataset(model_run))
 
-    data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
+    data = data.merge(xr.Dataset.from_dict(data_dict))
 
-    add_lookup_arrays(data, model_run)
+    data = add_lookup_arrays(data, model_run)
 
     if debug:
         data_pre_time = data.copy(deep=True)
 
-    add_time_dimension(data, model_run)
+    data = add_time_dimension(data, model_run)
 
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset

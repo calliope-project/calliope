@@ -48,7 +48,7 @@ setup(
     package_data={'calliope': find_calliope_package_data()},
     install_requires=[
         "bottleneck >= 1.2",
-        "click >= 3.3, < 7",  # v7.0 changes '_' to '-' in subcommands
+        "click >= 7, < 8",
         "ipython >= 7",
         "ipdb >= 0.11",
         "jinja2 >= 2.10",
@@ -56,12 +56,12 @@ setup(
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.15",
-        "pandas >= 0.23, < 0.24",
+        "pandas >= 0.24, < 0.25",
         "plotly >= 3.3, < 4.0",
-        "pyomo >= 5.5, < 5.6",
+        "pyomo >= 5.6, < 5.7",
         "ruamel.yaml >= 0.15.71, < 0.16",
         "scikit-learn >= 0.20, < 0.21",
-        "xarray >= 0.10.8, < 0.11",
+        "xarray >= 0.12, < 0.13",
     ],
     entry_points={
         'console_scripts': [
@@ -73,8 +73,7 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3 :: Only'
     ],
-    keywords=['energy systems', 'optimization', 'mathematical programming']
+    keywords=['energy systems', 'optimisation', 'mathematical programming']
 )

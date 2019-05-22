@@ -28,19 +28,21 @@ def add_lookup_arrays(data, model_run):
         lookup_loc_techs=lookup_loc_techs_non_conversion(model_run)
     )
 
-    data.merge(xr.Dataset.from_dict(data_dict), inplace=True)
+    data = data.merge(xr.Dataset.from_dict(data_dict))
 
     if model_run.sets['loc_techs_conversion']:
-        lookup_loc_techs_conversion(data, model_run)
+        data = lookup_loc_techs_conversion(data, model_run)
 
     if model_run.sets['loc_techs_conversion_plus']:
-        lookup_loc_techs_conversion_plus(data, model_run)
+        data = lookup_loc_techs_conversion_plus(data, model_run)
 
     if model_run.sets['loc_techs_export']:
-        lookup_loc_techs_export(data)
+        data = lookup_loc_techs_export(data)
 
     if model_run.sets['loc_techs_area']:
-        lookup_loc_techs_area(data)
+        data = lookup_loc_techs_area(data)
+
+    return data
 
 
 def lookup_loc_carriers(model_run):
@@ -141,10 +143,11 @@ def lookup_loc_techs_conversion(dataset, model_run):
                 dict(loc_techs_conversion=loc_tech, carrier_tiers=["in", "out"])
             ] = [loc_tech_carrier_in[0], loc_tech_carrier_out[0]]
 
-    dataset.merge(loc_techs_conversion_array
-                  .to_dataset(name="lookup_loc_techs_conversion"), inplace=True)
+    dataset = dataset.merge(
+        loc_techs_conversion_array.to_dataset(name="lookup_loc_techs_conversion")
+    )
 
-    return None
+    return dataset
 
 
 def lookup_loc_techs_conversion_plus(dataset, model_run):
@@ -200,7 +203,7 @@ def lookup_loc_techs_conversion_plus(dataset, model_run):
         }
     )
 
-    return None
+    return dataset
 
 
 def lookup_loc_techs_export(dataset):
@@ -215,7 +218,7 @@ def lookup_loc_techs_export(dataset):
 
     dataset['lookup_loc_techs_export'] = xr.DataArray.from_dict(data_dict)
 
-    return None
+    return dataset
 
 
 def lookup_loc_techs_area(dataset):
@@ -235,7 +238,7 @@ def lookup_loc_techs_area(dataset):
 
     dataset['lookup_loc_techs_area'] = xr.DataArray.from_dict(data_dict)
 
-    return None
+    return dataset
 
 
 def lookup_clusters(dataset):
@@ -271,4 +274,4 @@ def lookup_clusters(dataset):
             ))
         dataset['lookup_datestep_last_cluster_timestep'] = xr.DataArray.from_dict(last_timesteps)
 
-    return None
+    return dataset

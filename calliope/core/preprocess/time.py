@@ -201,7 +201,7 @@ def add_time_dimension(data, model_run):
         dims=['timesteps']
     )
 
-    return None
+    return data
 
 
 def add_max_demand_timesteps(model_data):

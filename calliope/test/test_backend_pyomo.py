@@ -2,7 +2,7 @@ import pytest  # pylint: disable=unused-import
 import numpy as np
 import xarray as xr
 import pyomo.core as po
-from pyomo.core.base.expr import identify_variables
+from pyomo.core.expr.current import identify_variables
 import tempfile
 import os
 

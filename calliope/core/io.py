@@ -98,7 +98,7 @@ def save_csv(model_data, path, dropna=True):
         series = split_loc_techs(model_data[var], return_as='Series')
         if dropna:
             series = series.dropna()
-        series.to_csv(out_path)
+        series.to_csv(out_path, header=True)
 
 
 def save_lp(model, path):
