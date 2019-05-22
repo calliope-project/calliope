@@ -247,15 +247,10 @@ class TestDemandShareGroupConstraints:
             scenario='demand_share_max_systemwide'
         )
         model.run()
-        cheap_generation = (model.get_formatted_array("carrier_prod")
-                                 .to_dataframe()
-                                 .reset_index()
-                                 .groupby("techs")
-                                 .carrier_prod
-                                 .sum()
-                                 .transform(lambda x: x / x.sum())
-                                 .loc["cheap_elec_supply"])
-        assert round(cheap_generation, 5) <= 0.3
+        cheap_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "cheap_elec_supply", 'carriers': "electricity"}].sum()
+        demand = -1 * model.get_formatted_array("carrier_con").sum()
+        # assert share in each timestep is 0.6
+        assert (cheap_generation / demand).round(5) <= 0.3
 
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
@@ -263,15 +258,21 @@ class TestDemandShareGroupConstraints:
             scenario='demand_share_min_systemwide'
         )
         model.run()
-        expensive_generation = (model.get_formatted_array("carrier_prod")
-                                     .to_dataframe()
-                                     .reset_index()
-                                     .groupby("techs")
-                                     .carrier_prod
-                                     .sum()
-                                     .transform(lambda x: x / x.sum())
-                                     .loc["expensive_elec_supply"])
-        assert round(expensive_generation, 5) >= 0.6
+        expensive_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum()
+        demand = -1 * model.get_formatted_array("carrier_con").sum()
+        # assert share in each timestep is 0.6
+        assert (expensive_generation / demand).round(5) >= 0.6
+
+    def test_systemwide_demand_share_equals_constraint(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_equals_systemwide'
+        )
+        model.run()
+        expensive_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum()
+        demand = -1 * model.get_formatted_array("carrier_con").sum()
+        # assert share in each timestep is 0.6
+        assert (expensive_generation / demand).round(5) == 0.6
 
     def test_location_specific_demand_share_max_constraint(self):
         model = build_model(
@@ -395,6 +396,39 @@ class TestDemandShareGroupConstraints:
         demand_0 = demand.sel(locs="0", techs="electricity_demand").item()
 
         assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
+
+    def test_demand_share_per_timestep_max(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_per_timestep_max'
+        )
+        model.run()
+        cheap_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "cheap_elec_supply", 'carriers': "electricity"}].sum('locs')
+        demand = -1 * model.get_formatted_array("carrier_con").sum('locs')
+        # assert share in each timestep is 0.6
+        assert ((cheap_generation / demand).round(5) <= 0.3).all()
+
+    def test_demand_share_per_timestep_min(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_per_timestep_min'
+        )
+        model.run()
+        expensive_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum('locs')
+        demand = -1 * model.get_formatted_array("carrier_con").sum('locs')
+        # assert share in each timestep is 0.6
+        assert ((expensive_generation / demand).round(5) >= 0.6).all()
+
+    def test_demand_share_per_timestep_equals(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_per_timestep_equals'
+        )
+        model.run()
+        expensive_generation = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum('locs')
+        demand = -1 * model.get_formatted_array("carrier_con").sum('locs')
+        # assert share in each timestep is 0.6
+        assert ((expensive_generation / demand).round(5) == 0.6).all()
 
 
 class TestResourceAreaGroupConstraints:
@@ -666,6 +700,38 @@ class TestSupplyShareGroupConstraints:
         assert round(expensive_generation0 / (cheap_generation0 + expensive_generation0), 5) >= 0.6
         assert expensive_generation1 == 0
 
+    def test_supply_share_per_timestep_max(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_per_timestep_max'
+        )
+        model.run()
+        cheap_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "cheap_supply", 'carriers': "electricity"}].sum('locs')
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+        # assert share in each timestep is 0.4
+        assert ((cheap_supply / supply).round(5) <= 0.4).all()
+
+    def test_supply_share_per_timestep_min(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_per_timestep_min'
+        )
+        model.run()
+        expensive_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_supply", 'carriers': "electricity"}].sum('locs')
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+        # assert share in each timestep is 0.6
+        assert ((expensive_supply / supply).round(5) >= 0.6).all()
+
+    def test_supply_share_per_timestep_equals(self):
+        model = build_model(
+            model_file='supply_share.yaml',
+            scenario='supply_share_per_timestep_equals'
+        )
+        model.run()
+        expensive_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_supply", 'carriers': "electricity"}].sum('locs')
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+        # assert share in each timestep is 0.6
+        assert ((expensive_supply / supply).round(5) == 0.6).all()
 
 class TestEnergyCapShareGroupConstraints:
 

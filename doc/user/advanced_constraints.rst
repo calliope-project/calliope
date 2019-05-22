@@ -248,6 +248,8 @@ When specifying group constraints, a named group must give at least one constrai
 
 The below table lists all available group constraints.
 
+Note that when computing the share for ``demand_share`` constraints, only ``demand`` technologies are counted, and that when computing the share for ``supply_share`` constraints, ``supply`` and ``supply_plus`` technologies are counted.
+
 .. list-table:: Group constraints
    :widths: 15 15 60
    :header-rows: 1
@@ -257,16 +259,40 @@ The below table lists all available group constraints.
      - Description
    * - ``demand_share_min``
      - carriers
-     - Minimum share of carrier demand met from a set of technologies across a set of locations.
+     - Minimum share of carrier demand met from a set of technologies across a set of locations, on average over the entire model period.
    * - ``demand_share_max``
      - carriers
-     - Maximum share of carrier demand met from a set of technologies across a set of locations.
+     - Maximum share of carrier demand met from a set of technologies across a set of locations, on average over the entire model period.
+   * - ``demand_share_equals``
+     - carriers
+     - Share of carrier demand met from a set of technologies across a set of locations, on average over the entire model period.
+   * - ``demand_share_per_timestep_min``
+     - carriers
+     - Minimum share of carrier demand met from a set of technologies across a set of locations, in each individual timestep.
+   * - ``demand_share_per_timestep_max``
+     - carriers
+     - Maximum share of carrier demand met from a set of technologies across a set of locations, in each individual timestep.
+   * - ``demand_share_per_timestep_equals``
+     - carriers
+     - Share of carrier demand met from a set of technologies across a set of locations, in each individual timestep.
    * - ``supply_share_min``
      - carriers
-     - Minimum share of carrier production met from a set of technologies across a set of locations.
+     - Minimum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
    * - ``supply_share_max``
      - carriers
-     - Maximum share of carrier production met from a set of technologies across a set of locations.
+     - Maximum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
+   * - ``supply_share_equals``
+     - carriers
+     - Share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
+   * - ``supply_share_per_timestep_min``
+     - carriers
+     - Minimum share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
+   * - ``supply_share_per_timestep_max``
+     - carriers
+     - Maximum share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
+   * - ``supply_share_per_timestep_equals``
+     - carriers
+     - Share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
    * - ``cost_max``
      - costs
      - Maximum total cost from a set of technologies across a set of locations.

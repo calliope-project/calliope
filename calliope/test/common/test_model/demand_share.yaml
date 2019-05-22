@@ -78,6 +78,11 @@ overrides:
             techs: ["expensive_elec_supply"]
             demand_share_min:
                 electricity: 0.6
+    demand_share_equals_systemwide:
+        group_constraints.example_demand_share_min_constraint:
+            techs: ["expensive_elec_supply"]
+            demand_share_equals:
+                electricity: 0.6
     demand_share_max_location_0:
         group_constraints.example_demand_share_max_constraint:
             locs: ["0"]
@@ -151,6 +156,21 @@ overrides:
             locs: ["0"]
             demand_share_max:
                 electricity: 0.4
+    demand_share_per_timestep_max:
+        group_constraints.example_demand_share_per_timestep_min_constraint:
+            techs: ["cheap_elec_supply"]
+            demand_share_per_timestep_max:
+                electricity: 0.3
+    demand_share_per_timestep_min:
+        group_constraints.example_demand_share_per_timestep_min_constraint:
+            techs: ["expensive_elec_supply"]
+            demand_share_per_timestep_min:
+                electricity: 0.6
+    demand_share_per_timestep_equals:
+        group_constraints.example_demand_share_per_timestep_equals_constraint:
+            techs: ["expensive_elec_supply"]
+            demand_share_per_timestep_equals:
+                electricity: 0.6
 
 
 scenarios:
