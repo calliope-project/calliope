@@ -287,6 +287,17 @@ class TestDemandShareGroupConstraints:
         assert round(cheap_generation0 / demand0, 5) <= 0.3
         assert expensive_generation1 == 0
 
+    def test_location_specific_demand_share_max_constraint_two_techs(self):
+        model = build_model(
+            model_file='demand_share.yaml',
+            scenario='demand_share_max_location_0_two_techs'
+        )
+        model.run()
+        generation = model.get_formatted_array("carrier_prod").sum(dim='timesteps').loc[{'carriers': "electricity"}]
+        demand0 = -model.get_formatted_array("carrier_con").loc[{'locs': '0'}].sum().item()
+        generation0 = generation.loc[{'locs': "0", 'techs': ["cheap_elec_supply", "normal_elec_supply"]}].sum('techs').item()
+        assert round(generation0 / demand0, 5) <= 0.4
+
     def test_location_specific_demand_share_min_constraint(self):
         model = build_model(
             model_file='demand_share.yaml',

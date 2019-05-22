@@ -89,6 +89,12 @@ overrides:
             techs: ["cheap_elec_supply"]
             demand_share_max:
                 electricity: 0.3
+    demand_share_max_location_0_two_techs:
+        group_constraints.example_demand_share_max_constraint:
+            locs: ["0"]
+            techs: ["cheap_elec_supply", "normal_elec_supply"]
+            demand_share_max:
+                electricity: 0.4
     demand_share_min_location_0:
         group_constraints.example_demand_share_min_constraint:
             locs: ["0"]
