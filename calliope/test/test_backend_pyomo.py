@@ -3,7 +3,6 @@ import numpy as np
 import xarray as xr
 import pyomo.core as po
 from pyomo.core.expr.current import identify_variables
-import tempfile
 import os
 
 from calliope.backend.pyomo.util import get_param
@@ -132,13 +131,15 @@ class TestUtil:
 
 
 class TestModel:
+    @pytest.mark.serial  # Cannot run in parallel with other tests
     def test_load_constraints_no_order(self):
-        constr_dir = os.path.join(
-            os.path.dirname(__file__), '..', 'backend', 'pyomo', 'constraints'
+        temp_file = os.path.join(
+            os.path.dirname(__file__), '..', 'backend', 'pyomo', 'constraints', 'temp_constraint_file_for_testing.py'
         )
-        with tempfile.NamedTemporaryFile(dir=constr_dir, suffix='.py', delete=False) as tmpf:
-            name = tmpf.name
-            basename = os.path.basename(tmpf.name).replace('.py', '')
+
+        # Write an empty file
+        with open(temp_file, 'w') as f:
+            f.write('')
 
         # Should fail, since the empty .py file is included in the list, but
         # has no attribute 'ORDER'.
@@ -146,12 +147,15 @@ class TestModel:
             m = build_model({}, 'simple_supply,two_hours,investment_costs')
             m.run(build_only=True)
 
+        # We can't use `with` because reasons related to Windows,
+        # so we manually remove the temp file in the end
+        os.remove(temp_file)
+
         assert check_error_or_warning(
             excinfo,
-            "module 'calliope.backend.pyomo.constraints.{}' has no attribute 'ORDER'. "
-            "This attribute must be set to an integer value".format(basename)
+            "module 'calliope.backend.pyomo.constraints.temp_constraint_file_for_testing' "
+            "has no attribute 'ORDER'"
         )
-        os.remove(name)
 
 
 class TestInterface:

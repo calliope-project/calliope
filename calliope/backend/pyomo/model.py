@@ -103,7 +103,7 @@ def generate_model(model_data):
     # Constraints
     constraints_to_add = [
         i.split('.py')[0] for i in os.listdir(constraints.__path__[0])
-        if i not in ['__init__.py', '__pycache__']
+        if not i.startswith('_') and not i.startswith('.')
     ]
 
     # The list is sorted to ensure that some constraints are added after pyomo
@@ -117,7 +117,7 @@ def generate_model(model_data):
     except AttributeError as e:
         raise AttributeError(
             '{}. This attribute must be set to an integer value based '
-            ' on the order in which the constraints in the file {}.py should be '
+            'on the order in which the constraints in the file {}.py should be '
             'loaded relative to constraints in other constraint files. If order '
             'does not matter, set ORDER to a value of 10.'
             .format(e.args[0], e.args[0].split('.')[-1].split("'")[0])
