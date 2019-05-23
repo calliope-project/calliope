@@ -13,6 +13,7 @@ Release History
 |new| New model-wide constraint that can be applied to all, or a subset of, locations and technologies in a model, covering:
 
 * `demand_share`, `supply_share`, `demand_share_per_timestep`, `supply_share_per_timestep`, each of which can specify `min`, `max`, and `equals`, as well as `energy_cap_share_min` and `energy_cap_share_max`. These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
+* `demand_share_per_timestep_decision`, allowing the model to make decisions on the per-timestep shares of carrier demand met from different technologies.
 * `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
 * `energy_cap_min`, `energy_cap_max`, `resource_area_min`, `resource_area_max` which allow to constrain installed capacities of groups of technologies in specific locations.
 

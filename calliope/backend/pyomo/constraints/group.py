@@ -31,31 +31,44 @@ def load_constraints(backend_model):
             ['max'], rule=demand_share_constraint_rule
         )
     if 'group_demand_share_equals' in model_data_dict:
-        backend_model.group_demand_share_max_constraint = po.Constraint(
+        backend_model.group_demand_share_equals_constraint = po.Constraint(
             backend_model.group_names_demand_share_equals,
             backend_model.carriers,
             ['equals'], rule=demand_share_constraint_rule
         )
     if 'group_demand_share_per_timestep_min' in model_data_dict:
-        backend_model.group_demand_share_max_constraint = po.Constraint(
+        backend_model.group_demand_share_per_timestep_min_constraint = po.Constraint(
             backend_model.group_names_demand_share_per_timestep_min,
             backend_model.carriers,
             backend_model.timesteps,
             ['min'], rule=demand_share_per_timestep_constraint_rule
         )
     if 'group_demand_share_per_timestep_max' in model_data_dict:
-        backend_model.group_demand_share_max_constraint = po.Constraint(
+        backend_model.group_demand_share_per_timestep_max_constraint = po.Constraint(
             backend_model.group_names_demand_share_per_timestep_max,
             backend_model.carriers,
             backend_model.timesteps,
             ['max'], rule=demand_share_per_timestep_constraint_rule
         )
     if 'group_demand_share_per_timestep_equals' in model_data_dict:
-        backend_model.group_demand_share_max_constraint = po.Constraint(
+        backend_model.group_demand_share_per_timestep_equals_constraint = po.Constraint(
             backend_model.group_names_demand_share_per_timestep_equals,
             backend_model.carriers,
             backend_model.timesteps,
             ['equals'], rule=demand_share_per_timestep_constraint_rule
+        )
+    if 'group_demand_share_per_timestep_decision' in model_data_dict:
+        backend_model.group_demand_share_per_timestep_decision_main_constraint = po.Constraint(
+            backend_model.group_names_demand_share_per_timestep_decision,
+            backend_model.carriers,
+            backend_model.techs,
+            backend_model.timesteps,
+            rule=demand_share_per_timestep_decision_main_constraint_rule
+        )
+        backend_model.group_demand_share_per_timestep_decision_sum_constraint = po.Constraint(
+            backend_model.group_names_demand_share_per_timestep_decision,
+            backend_model.carriers,
+            rule=demand_share_per_timestep_decision_sum_constraint_rule
         )
     if 'group_supply_share_min' in model_data_dict:
         backend_model.group_supply_share_min_constraint = po.Constraint(
@@ -70,27 +83,27 @@ def load_constraints(backend_model):
             ['max'], rule=supply_share_constraint_rule
         )
     if 'group_supply_share_equals' in model_data_dict:
-        backend_model.group_supply_share_max_constraint = po.Constraint(
+        backend_model.group_supply_share_equals_constraint = po.Constraint(
             backend_model.group_names_supply_share_equals,
             backend_model.carriers,
             ['equals'], rule=supply_share_constraint_rule
         )
     if 'group_supply_share_per_timestep_min' in model_data_dict:
-        backend_model.group_supply_share_max_constraint = po.Constraint(
+        backend_model.group_supply_share_per_timestep_min_constraint = po.Constraint(
             backend_model.group_names_supply_share_per_timestep_min,
             backend_model.carriers,
             backend_model.timesteps,
             ['min'], rule=supply_share_per_timestep_constraint_rule
         )
     if 'group_supply_share_per_timestep_max' in model_data_dict:
-        backend_model.group_supply_share_max_constraint = po.Constraint(
+        backend_model.group_supply_share_per_timestep_max_constraint = po.Constraint(
             backend_model.group_names_supply_share_per_timestep_max,
             backend_model.carriers,
             backend_model.timesteps,
             ['max'], rule=supply_share_per_timestep_constraint_rule
         )
     if 'group_supply_share_per_timestep_equals' in model_data_dict:
-        backend_model.group_supply_share_max_constraint = po.Constraint(
+        backend_model.group_supply_share_per_timestep_equals_constraint = po.Constraint(
             backend_model.group_names_supply_share_per_timestep_equals,
             backend_model.carriers,
             backend_model.timesteps,
@@ -160,6 +173,12 @@ def equalizer(lhs, rhs, sign):
 
 
 def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name, carrier):
+    """
+    Returns
+    -------
+    (lhs_loc_tech_carriers, rhs_loc_tech_carriers):
+        lhs are the supply technologies, rhs are the demand technologies
+    """
     lhs_loc_techs = getattr(
         backend_model,
         'group_constraint_loc_techs_{}'.format(group_name)
@@ -256,6 +275,86 @@ def demand_share_per_timestep_constraint_rule(backend_model, group_name, carrier
         )
 
         return equalizer(lhs, rhs, what)
+
+
+def demand_share_per_timestep_decision_main_constraint_rule(backend_model, group_name, carrier, tech, timestep):
+    """
+    Allows the model to decide on how a fraction demand for a carrier is met
+    by the given groups, which will all have the same share in each timestep.
+    The share is relative to the actual demand from ``demand`` technologies only.
+
+    The main constraint enforces that the shares are the same in each timestep.
+
+    FIXME add equation
+
+    """
+    model_data_dict = backend_model.__calliope_model_data['data']
+    share_of_carrier_demand = model_data_dict['group_demand_share_per_timestep_decision'].get(
+        (carrier, group_name), np.nan
+    )
+
+    if np.isnan(share_of_carrier_demand):
+        return po.Constraint.NoConstraint
+    else:
+        # lhs are the supply technologies, rhs are the demand technologies
+        lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+            backend_model, group_name, carrier
+        )
+        # Filter the supply loc_tech_carriers by the current tech
+        lhs_loc_tech_carriers = [i for i in lhs_loc_tech_carriers if '::{}::'.format(tech) in i]
+
+        # Only techs that are in the given group are considered
+        if len(lhs_loc_tech_carriers) == 0:
+            return po.Constraint.NoConstraint
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech_carrier, timestep]
+            for loc_tech_carrier in lhs_loc_tech_carriers
+        )
+
+        rhs = -1 * sum(
+            backend_model.required_resource[rhs_loc_tech_carrier.rsplit('::', 1)[0], timestep]
+            for rhs_loc_tech_carrier in rhs_loc_tech_carriers
+        ) * sum(
+            backend_model.demand_share_per_timestep_decision[lhs_loc_tech_carrier]
+            for lhs_loc_tech_carrier in lhs_loc_tech_carriers
+        )
+
+        return equalizer(lhs, rhs, 'equals')
+
+
+def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_name, carrier):
+    """
+    Allows the model to decide on how a fraction of demand for a carrier is met
+    by the given groups, which will all have the same share in each timestep.
+    The share is relative to the actual demand from ``demand`` technologies only.
+
+    The sum constraint ensures that all decision shares add up to the share of
+    carrier demand specified in the constraint.
+
+    This constraint is only applied if the share of carrier demand has been
+    set to a not-None value.
+
+    FIXME add equation
+
+    """
+    model_data_dict = backend_model.__calliope_model_data['data']
+    share_of_carrier_demand = model_data_dict['group_demand_share_per_timestep_decision'].get(
+        (carrier, group_name), np.nan
+    )
+
+    # If inf was given that means that we don't limit the total share
+    if np.isinf(share_of_carrier_demand) or np.isnan(share_of_carrier_demand):
+        return po.Constraint.NoConstraint
+    else:
+        lhs_loc_tech_carriers, _ = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+            backend_model, group_name, carrier
+        )
+
+        return share_of_carrier_demand == sum(
+            backend_model.demand_share_per_timestep_decision[loc_tech_carrier]
+            for loc_tech_carrier in lhs_loc_tech_carriers
+        )
 
 
 def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):

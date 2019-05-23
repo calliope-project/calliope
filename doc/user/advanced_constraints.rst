@@ -275,6 +275,9 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``demand_share_per_timestep_equals``
      - carriers
      - Share of carrier demand met from a set of technologies across a set of locations, in each individual timestep.
+   * - ``demand_share_per_timestep_decision``
+     - carriers
+     - Turns the per-timestep share of carrier demand met from a set of technologies across a set of locations into a model decision variable.
    * - ``supply_share_min``
      - carriers
      - Minimum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
@@ -343,6 +346,14 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
 .. seealso:: The :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` shows two example uses of group constraints: limiting shared capacity with ``energy_cap_max`` and enforcing a minimum shared power generation with ``supply_share_min``.
+
+
+``demand_share_per_timestep_decision``
+--------------------------------------
+
+The ``demand_share_per_timestep_decision`` constraint is a special case amongst group constraints, as it introduces a new decision variable, allowing the model to set the share of demand met by each technology given in the constraint's group, across the locations given in the group. The fraction set in the constraint is the fraction of total demand over which the model has control. Setting this to anything else than ``1.0`` only makes sense when a subset of technologies is targeted by the constraint.
+
+.. Warning:: It is easy to create an infeasible model by setting several conflicting group constraints, in particular when ``demand_share_per_timestep_decision`` is involved. Make sure you think through the implications when setting up these constraints!
 
 ----------------------------------
 Per-distance constraints and costs
