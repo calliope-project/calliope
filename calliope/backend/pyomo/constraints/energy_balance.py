@@ -44,7 +44,7 @@ def load_constraints(backend_model):
         )
 
     if 'loc_techs_balance_demand_constraint' in sets:
-        # Add a required_resource expression to share computed between constraints
+        # Add a required_resource expression to share computed values between constraints
         backend_model.required_resource = po.Expression(
             backend_model.loc_techs_balance_demand_constraint,
             backend_model.timesteps,

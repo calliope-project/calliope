@@ -233,6 +233,14 @@ class TestChecks:
             'Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run'
         ])
 
+    def test_operate_group_demand_share_per_timestep_decision(self):
+        """Cannot have group_demand_share_per_timestep_decision in operate mode"""
+        m = build_model({}, 'simple_supply,investment_costs,operate,enable_group_demand_share_per_timestep_decision')
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.run(build_only=True)
+        assert check_error_or_warning(warning, '`demand_share_per_timestep_decision` group constraints cannot be')
+        assert 'group_demand_share_per_timestep_decision' not in m._model_data
+
 
 class TestBalanceConstraints:
 

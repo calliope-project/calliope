@@ -353,6 +353,10 @@ For specifics of the mathematical formulation of the available group constraints
 
 The ``demand_share_per_timestep_decision`` constraint is a special case amongst group constraints, as it introduces a new decision variable, allowing the model to set the share of demand met by each technology given in the constraint's group, across the locations given in the group. The fraction set in the constraint is the fraction of total demand over which the model has control. Setting this to anything else than ``1.0`` only makes sense when a subset of technologies is targeted by the constraint.
 
+It can also be set to ``.inf`` to permit Calliope to decide on the fraction of total demand to cover by the constraint. This can be necessary in cases where there are sources of carrier consumption other than demand in the locations covered by the group constraint: when using conversion techs or when there are losses from storage and transmission, as the share may then be higher than 1, leading to an infeasible model if it is forced to ``1.0``.
+
+This constraint can be useful in large-scale models where individual technologies should not fluctuate in their relative share from time step to time step, for example, when modelling the relative share of heating demand from different heating technologies.
+
 .. Warning:: It is easy to create an infeasible model by setting several conflicting group constraints, in particular when ``demand_share_per_timestep_decision`` is involved. Make sure you think through the implications when setting up these constraints!
 
 ----------------------------------
