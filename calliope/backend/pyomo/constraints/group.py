@@ -372,7 +372,7 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
     share = model_data_dict['group_supply_share_{}'.format(what)][(carrier, constraint_group)]
 
     if np.isnan(share):
-        return return_noconstraint('supply_share', group_name)
+        return return_noconstraint('supply_share', constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
             backend_model,
@@ -412,7 +412,7 @@ def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, c
     share = model_data_dict['group_supply_share_per_timestep_{}'.format(what)][(carrier, constraint_group)]
 
     if np.isnan(share):
-        return return_noconstraint('supply_share_per_timestep', group_name)
+        return return_noconstraint('supply_share_per_timestep', constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
             backend_model,
@@ -447,7 +447,7 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
     share = model_data_dict['group_energy_cap_share_{}'.format(what)][(constraint_group)]
 
     if np.isnan(share):
-        return return_noconstraint('energy_cap_share', group_name)
+        return return_noconstraint('energy_cap_share', constraint_group)
     else:
         lhs_loc_techs = getattr(
             backend_model,
@@ -489,7 +489,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
     threshold = model_data_dict['group_energy_cap_{}'.format(what)][(constraint_group)]
 
     if np.isnan(threshold):
-        return return_noconstraint('energy_cap', group_name)
+        return return_noconstraint('energy_cap', constraint_group)
     else:
         lhs_loc_techs = getattr(
             backend_model,
@@ -639,7 +639,7 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
     threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]
 
     if np.isnan(threshold):
-        return return_noconstraint('resource_area', group_name)
+        return return_noconstraint('resource_area', constraint_group)
     else:
         lhs_loc_techs = getattr(
             backend_model,
