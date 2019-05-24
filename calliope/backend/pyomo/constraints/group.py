@@ -285,7 +285,22 @@ def demand_share_per_timestep_decision_main_constraint_rule(backend_model, group
 
     The main constraint enforces that the shares are the same in each timestep.
 
-    FIXME add equation
+    .. container:: scrolling-wrapper
+
+        .. math::
+            \\sum_{loc::tech::carrier \\in given\\_group} carrier_{prod}(loc::tech::carrier, timestep)
+
+            =
+
+            \\sum_{loc::tech::carrier \\in given\\_group}
+            required\\_resource(loc::tech::carrier, timestep)
+
+            \\times \\sum_{loc::tech::carrier \\in given\\_group}
+            demand\\_share\\_per\\_timestep\\_decision(loc::tech::carrier)
+
+            \\forall timestep \\in timesteps
+
+            \\forall tech \\in techs
 
     """
     model_data_dict = backend_model.__calliope_model_data['data']
@@ -335,7 +350,12 @@ def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_
     This constraint is only applied if the share of carrier demand has been
     set to a not-None value.
 
-    FIXME add equation
+ .. container:: scrolling-wrapper
+
+        .. math::
+            share = \\sum_{loc::tech::carrier \\in given\\_group}
+            demand\\_share\\_per\\_timestep\\_decision(loc::tech::carrier)
+
 
     """
     model_data_dict = backend_model.__calliope_model_data['data']
