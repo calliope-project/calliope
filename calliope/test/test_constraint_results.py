@@ -496,6 +496,46 @@ class TestDemandShareGroupConstraints:
         assert (shares.loc[pd.IndexSlice['1', :, :]].unstack()['cheap_elec_supply'] == 0.125).all()
         assert (shares.loc[pd.IndexSlice['1', :, :]].unstack()['normal_elec_supply'] == 0.875).all()
 
+    def test_demand_share_per_timestep_decision_inf_with_transmission(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_inf,with_electricity_transmission'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('techs').to_series()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].to_series()
+        shares = supply.div(demand, axis=0)
+
+        assert all([i == pytest.approx(0.12373737) for i in shares.loc[pd.IndexSlice['0', :, :]].unstack()['cheap_elec_supply'].values])
+        assert all([i == pytest.approx(0.87626263) for i in shares.loc[pd.IndexSlice['0', :, :]].unstack()['normal_elec_supply'].values])
+        assert (shares.loc[pd.IndexSlice['1', :, :]].unstack()['electricity_transmission:0'] == 1.0).all()
+
+    def test_demand_share_per_timestep_decision_inf_with_heat_cosntrain_electricity(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_inf,with_electricity_conversion_tech'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('locs').sum('techs').to_pandas()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').to_pandas().T
+        shares = supply.div(demand, axis=0)
+
+        assert all([i == pytest.approx(0.175926) for i in shares['cheap_elec_supply'].values])
+        assert all([i == pytest.approx(0.824074) for i in shares['normal_elec_supply'].values])
+
+    def test_demand_share_per_timestep_decision_inf_with_heat_constrain_heat(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_inf_with_heat,with_electricity_conversion_tech'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "heat"}].sum('locs').sum('techs').to_pandas()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "heat"}].sum('locs').to_pandas().T
+        shares = supply.div(demand, axis=0)
+
+        assert all([i == pytest.approx(0.5) for i in shares['elec_to_heat'].values])
+        assert all([i == pytest.approx(0.5) for i in shares['heating'].values])
+
 
 class TestResourceAreaGroupConstraints:
 
