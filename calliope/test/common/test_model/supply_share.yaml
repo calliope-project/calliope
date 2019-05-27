@@ -96,3 +96,25 @@ overrides:
             techs: ["expensive_supply"]
             supply_share_per_timestep_equals:
                 electricity: 0.6
+
+    transmission_link:
+        techs.electricity_transmission:
+            essentials:
+                name: Electricity transmission
+                carrier: electricity
+                parent: transmission
+            constraints:
+                energy_eff: 0.99
+        techs.expensive_supply.costs.monetary.om_prod: file=cost.csv
+        links.0,1.techs: {electricity_transmission}
+    storage_tech:
+        techs.storage_tech:
+            essentials:
+                name: Electricity storage
+                carrier: electricity
+                parent: storage
+            constraints:
+                storage_loss: 0.001
+                energy_eff: 0.99
+        techs.expensive_supply.costs.monetary.om_prod: file=cost.csv
+        locations.0,1.techs: {storage_tech}
