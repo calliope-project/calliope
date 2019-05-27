@@ -6,10 +6,6 @@ Release History
 0.6.4 (dev)
 -----------
 
-|new| `asynchronous_prod_con` parameter added to the constraints, to allow a user to fix a storage or transmission technology to only be able to produce or consume energy in a given timestep. This ensures that unphysical dissipation of energy cannot occur in these technologies, by activating a binary variable (`prod_con_switch`) in the backend.
-
-|new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}`, which models an emissions price of 0.1 units of currency per unit of emissions)
-
 |new| New model-wide constraint that can be applied to all, or a subset of, locations and technologies in a model, covering:
 
 * `demand_share`, `supply_share`, `demand_share_per_timestep`, `supply_share_per_timestep`, each of which can specify `min`, `max`, and `equals`, as well as `energy_cap_share_min` and `energy_cap_share_max`. These supersede the `group_share` constraints, which are now deprecated and will be removed in v0.7.0.
@@ -17,19 +13,27 @@ Release History
 * `cost_max`, `cost_min`, `cost_equals`, `cost_var_max`, `cost_var_min`, `cost_var_equals`, `cost_investment_max`, `cost_investment_min`, `cost_investment_equals`, which allow a user to constrain costs, including those not used in the objective.
 * `energy_cap_min`, `energy_cap_max`, `resource_area_min`, `resource_area_max` which allow to constrain installed capacities of groups of technologies in specific locations.
 
+|new| `asynchronous_prod_con` parameter added to the constraints, to allow a user to fix a storage or transmission technology to only be able to produce or consume energy in a given timestep. This ensures that unphysical dissipation of energy cannot occur in these technologies, by activating a binary variable (`prod_con_switch`) in the backend.
+
+|new| Multi-objective optimisation problems can be defined by linear scalarisation of cost classes, using `run.objective_options.cost_class` (e.g. `{'monetary': 1, 'emissions': 0.1}`, which models an emissions price of 0.1 units of currency per unit of emissions)
+
+|new| Storage capacity can be tied to energy capacity with a new `energy_cap_per_storage_cap_equals` constraint.
+
+|new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
+
 |new| Easier way to save an LP file with a ``--save_lp`` command-line option and a ``Model.to_lp`` method
 
 |new| Documentation has a new layout, better search, and is restructured with various content additions, such as a section on troubleshooting.
 
 |new| Documentation for developers has been improved to include an overview of the internal package structure and a guide to contributing code via a pull request.
 
-|new| Storage capacity can be tied to energy capacity with a new `energy_cap_per_storage_cap_equals` constraint.
+|changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
 
-|new| The ratio of energy capacity and storage capacity can be constrained with a new `energy_cap_per_storage_cap_min` constraint.
+|changed| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.
+
+|changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
 
 |changed| Constraint files are auto-loaded in the pyomo backend and applied in the order set by 'ORDER' variables given in each constraint file (such that those constraints which depend on pyomo expressions existing are built after the expressions are built).
-
-|changed| `get_formatted_array` improved in both speed and memory consumption.
 
 |changed| Error on defining a technology in both directions of the same link.
 
@@ -37,27 +41,21 @@ Release History
 
 |changed| Error on required column not existing in CSV is more explicit.
 
-|changed| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.
+|changed| |backwards-incompatible| Exit code for infeasible problems now is 1 (no success). This is a breaking change when relying on the exit code.
+
+|changed| `get_formatted_array` improved in both speed and memory consumption.
 
 |changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
 
 |changed| All tests and example models have been updated to solve with Coin-CBC, instead of GLPK. Documentation has been updated to reflect this, and aid in installing CBC (which is not simple for Windows users).
 
-|changed| |backwards-incompatible| Exit code for infeasible problems now is 1 (no success). This is a breaking change when relying on the exit code.
-
-|changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
-
-|changed| |backwards-incompatible| Scenarios in YAML files defined as list of override names, not comma-separated strings: `fusion_scenario: cold_fusion,high_cost` becomes `fusion_scenario: ['cold_fusion', 'high_cost']`. No change to the command-line interface.
-
 |changed| Additional and improved pre-processing checks and errors for common model mistakes.
-
-|fixed| If a space is left between two locations in a link (i.e. `A, B` instead of `A,B`), the space is stripped, instead of leading to the expectation of a location existing with the name ` B`.
 
 |fixed| Total levelised cost of energy considers all costs, but energy generation only from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus``.
 
-|fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
+|fixed| If a space is left between two locations in a link (i.e. `A, B` instead of `A,B`), the space is stripped, instead of leading to the expectation of a location existing with the name ` B`.
 
-|fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
+|fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
 
 |fixed| Name of data variables is retained when accessed through `model.get_formatted_array()`
 
@@ -68,6 +66,8 @@ Release History
 |fixed| Models without time series data fail gracefully.
 
 |fixed| Unknown technology parameters are detected and the user is warned.
+
+|fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
 
 0.6.3 (2018-10-03)
 ------------------

@@ -97,6 +97,8 @@ We tested solution time for various solver choices on our example models, extend
 Understanding infeasibility and numerical instability
 -----------------------------------------------------
 
+.. note:: A good first step when faced with an infeasible model is often to remove constraints, in particular more complex constraints. For example, different combinations of group constraints can easily introduce mutually exclusive requirements on capacities or output from specific technologies. Once a minimal model works, more complex constraints can be turned on again one after the other.
+
 Using the Gurobi solver
 ^^^^^^^^^^^^^^^^^^^^^^^
 
