@@ -147,7 +147,7 @@ overrides:
                     carrier: electricity
                 constraints:
                     energy_cap_max: inf
-                    energy_eff: 1.0
+                    energy_eff: 0.99
                 costs:
                     monetary:
                         om_prod: 0
