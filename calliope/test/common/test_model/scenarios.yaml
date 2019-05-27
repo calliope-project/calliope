@@ -285,3 +285,8 @@ overrides:
 
     explicit_cost_class:
         run.objective_options.cost_class.monetary: 1
+
+    enable_group_demand_share_per_timestep_decision:
+        group_constraints.demand_share_per_timestep_decision_inf_constraint:
+            demand_share_per_timestep_decision:
+                electricity: .inf

@@ -82,6 +82,9 @@ def initialize_decision_variables(backend_model):
     if 'loc_techs_purchase' in model_data_dict['sets'] and run_config['mode'] != 'operate':
         backend_model.purchased = po.Var(backend_model.loc_techs_purchase, within=po.Binary)
 
+    if 'group_demand_share_per_timestep_decision' in model_data_dict['data'] and run_config['mode'] != 'operate':
+        backend_model.demand_share_per_timestep_decision = po.Var(backend_model.loc_tech_carriers_prod, within=po.NonNegativeReals)
+
     if 'loc_techs_milp' in model_data_dict['sets']:
         if run_config['mode'] != 'operate':
             backend_model.units = po.Var(backend_model.loc_techs_milp, within=po.NonNegativeIntegers)

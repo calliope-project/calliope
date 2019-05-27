@@ -1,10 +1,9 @@
 import pytest
 from pytest import approx
+import pandas as pd
 
 import calliope
 from calliope.test.common.util import build_test_model as build_model
-
-RELATIVE_TOLERANCE = 0.0001
 
 
 class TestNationalScaleExampleModelSenseChecks:
@@ -440,6 +439,62 @@ class TestDemandShareGroupConstraints:
         demand = -1 * model.get_formatted_array("carrier_con").sum('locs')
         # assert share in each timestep is 0.6
         assert ((expensive_generation / demand).round(5) == 0.6).all()
+
+    def test_demand_share_per_timestep_decision_inf(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_inf'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('locs').sum('techs').to_pandas()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').to_pandas().T
+        shares = supply.div(demand, axis=0)
+
+        assert (shares['cheap_elec_supply'] == 0.1875).all()
+        assert (shares['normal_elec_supply'] == 0.8125).all()
+
+    def test_demand_share_per_timestep_decision_simple(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_simple'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('locs').sum('techs').to_pandas()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').to_pandas().T
+        shares = supply.div(demand, axis=0)
+
+        assert (shares['cheap_elec_supply'] == 0.1875).all()
+        assert (shares['normal_elec_supply'] == 0.8125).all()
+
+    def test_demand_share_per_timestep_decision_not_one(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_not_one'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('locs').sum('techs').to_pandas()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').to_pandas().T
+        shares = supply.div(demand, axis=0)
+
+        assert (shares['cheap_elec_supply'] == 0.1).all()
+        assert (shares['normal_elec_supply'] == 0.9).all()
+        assert shares['expensive_elec_supply'].mean() + shares['normal_elec_supply'].mean() == 0.9
+
+    def test_demand_share_per_timestep_decision_per_location(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_per_location'
+        )
+        model.run()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('techs').to_series()
+        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].to_series()
+        shares = supply.div(demand, axis=0)
+
+        assert (shares.loc[pd.IndexSlice['0', :, :]].unstack()['cheap_elec_supply'] == 0.25).all()
+        assert (shares.loc[pd.IndexSlice['0', :, :]].unstack()['normal_elec_supply'] == 0.75).all()
+
+        assert (shares.loc[pd.IndexSlice['1', :, :]].unstack()['cheap_elec_supply'] == 0.125).all()
+        assert (shares.loc[pd.IndexSlice['1', :, :]].unstack()['normal_elec_supply'] == 0.875).all()
 
 
 class TestResourceAreaGroupConstraints:

@@ -44,6 +44,12 @@ def load_constraints(backend_model):
         )
 
     if 'loc_techs_balance_demand_constraint' in sets:
+        # Add a required_resource expression to share computed values between constraints
+        backend_model.required_resource = po.Expression(
+            backend_model.loc_techs_balance_demand_constraint,
+            backend_model.timesteps,
+            initialize=0.0
+        )
         backend_model.balance_demand_constraint = po.Constraint(
             backend_model.loc_techs_balance_demand_constraint,
             backend_model.timesteps,
@@ -254,10 +260,14 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     else:
         required_resource = resource * resource_scale
 
+    # We save the expression to the backend_model so it can be used elsewhere,
+    # e.g. in the group constraints
+    backend_model.required_resource[loc_tech, timestep] = required_resource
+
     if po.value(force_resource):
-        return carrier_con == required_resource
+        return carrier_con == backend_model.required_resource[loc_tech, timestep]
     else:
-        return carrier_con >= required_resource
+        return carrier_con >= backend_model.required_resource[loc_tech, timestep]
 
 
 def resource_availability_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
