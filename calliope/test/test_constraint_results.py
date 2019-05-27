@@ -516,7 +516,7 @@ class TestDemandShareGroupConstraints:
             scenario='demand_share_per_timestep_decision_inf,with_electricity_conversion_tech'
         )
         model.run()
-        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum('locs').sum('techs').to_pandas()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "electricity"}].sum(['locs', 'techs']).to_pandas()
         supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').to_pandas().T
         shares = supply.div(demand, axis=0)
 
@@ -529,12 +529,38 @@ class TestDemandShareGroupConstraints:
             scenario='demand_share_per_timestep_decision_inf_with_heat,with_electricity_conversion_tech'
         )
         model.run()
-        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "heat"}].sum('locs').sum('techs').to_pandas()
+        demand = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "heat"}].sum(['locs', 'techs']).to_pandas()
         supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "heat"}].sum('locs').to_pandas().T
         shares = supply.div(demand, axis=0)
 
         assert all([i == pytest.approx(0.5) for i in shares['elec_to_heat'].values])
         assert all([i == pytest.approx(0.5) for i in shares['heating'].values])
+
+    def test_demand_share_per_timestep_decision_inf_with_heat_constrain_heat_and_electricity(self):
+        model = build_model(
+            model_file='demand_share_decision.yaml',
+            scenario='demand_share_per_timestep_decision_inf_with_heat,demand_share_per_timestep_decision_not_one,with_electricity_conversion_tech'
+        )
+        model.run()
+        demand_heat = -1 * model.get_formatted_array("carrier_con").loc[{'carriers': "heat"}].sum(['locs', 'techs']).to_pandas()
+        supply_heat = model.get_formatted_array("carrier_prod").loc[{'carriers': "heat"}].sum('locs').to_pandas().T
+        shares_heat = supply_heat.div(demand_heat, axis=0)
+
+        demand_elec = -1 * (
+            model._model_data.carrier_con.loc[{
+                'loc_tech_carriers_con': [
+                    i for i in model._model_data.loc_tech_carriers_demand.values
+                    if 'electricity' in i
+                ]
+            }].sum(['loc_tech_carriers_con']).to_pandas()
+        )
+        supply_elec = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').to_pandas().T
+        shares_elec = supply_elec.div(demand_elec, axis=0)
+
+        assert all([i == pytest.approx(0.5) for i in shares_heat['elec_to_heat'].values])
+        assert all([i == pytest.approx(0.5) for i in shares_heat['heating'].values])
+        assert all([i == pytest.approx(0.9) for i in shares_elec['normal_elec_supply'].values])
+        assert all([round(i, 5) >= 0.1 for i in shares_elec['cheap_elec_supply'].values])
 
 
 class TestResourceAreaGroupConstraints:
