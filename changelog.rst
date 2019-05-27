@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.4 (dev)
------------
+0.6.4 (2019-05-27)
+------------------
 
 |new| New model-wide constraint that can be applied to all, or a subset of, locations and technologies in a model, covering:
 
