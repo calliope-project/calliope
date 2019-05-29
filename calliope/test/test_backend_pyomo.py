@@ -102,7 +102,7 @@ class TestUtil:
             'resource_cap_min',
             ('0::test_supply_plus')
         )
-        assert po.value(param) == 0  # see defaults.
+        assert po.value(param) == 0  # see defaults.yaml
 
         param = get_param(
             m._backend_model,
@@ -1837,6 +1837,7 @@ class TestPolicyConstraints:
 
 
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestGroupConstraints:
 
     def _build_group_model(self, scenario, model_file):

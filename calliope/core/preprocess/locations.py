@@ -42,7 +42,7 @@ def process_locations(model_config, modelrun_techs):
     locations_in = model_config.locations
     links_in = model_config.get('links', AttrDict())
 
-    allowed_from_file = DEFAULTS['file_allowed']
+    allowed_from_file = DEFAULTS.model.file_allowed
 
     warnings = []
     errors = []
@@ -300,7 +300,7 @@ def cleanup_undesired_keys(tech_settings):
     # we do not want them here
     keys_to_kill = [
         'essentials', 'allowed_constraints', 'allowed_costs',
-        'required_constraints'
+        'required_constraints', 'allowed_group_constraints'
     ]
     for k in keys_to_kill:
         try:

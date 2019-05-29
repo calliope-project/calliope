@@ -124,11 +124,9 @@ def apply_overrides(config, scenario=None, override_dict=None):
     """
     debug_comments = AttrDict()
 
-    base_model_config_file = os.path.join(
-        os.path.dirname(calliope.__file__),
-        'config', 'model.yaml'
-    )
-    config_model = AttrDict.from_yaml(base_model_config_file)
+    config_model = AttrDict.from_yaml(os.path.join(
+        os.path.dirname(calliope.__file__), 'config', 'defaults.yaml'
+    ))
 
     # Interpret timeseries_data_path as relative
     config.model.timeseries_data_path = relative_path(
@@ -232,6 +230,13 @@ def apply_overrides(config, scenario=None, override_dict=None):
             'replicate the current default.',
             FutureWarning
         )
+
+    # Drop default locations, links, and techs
+    config_model.del_key('techs.default_tech')
+    config_model.del_key('locations.default_location')
+    config_model.del_key('links.default_location_from,default_location_to')
+    config_model.del_key('group_constraints.default_group')
+
     return config_model, debug_comments, overrides, scenario
 
 
@@ -281,7 +286,7 @@ def process_techs(config_model):
         tech_result.inheritance = get_parents(tech_id, config_model)
 
         # CHECK: A tech's parent must lead to one of the built-in tech_groups
-        builtin_tech_groups = checks.DEFAULTS_MODEL.tech_groups.keys()
+        builtin_tech_groups = checks.DEFAULTS.tech_groups.keys()
         if tech_result.inheritance[-1] not in builtin_tech_groups:
             errors.append(
                 'tech {} must inherit from a built-in tech group'.format(tech_id)
@@ -311,7 +316,7 @@ def process_techs(config_model):
         )
 
         # Add allowed_constraints and required_constraints from base tech
-        keys_to_add = ['required_constraints', 'allowed_constraints', 'allowed_costs']
+        keys_to_add = ['required_constraints', 'allowed_constraints', 'allowed_group_constraints', 'allowed_costs']
         for k in keys_to_add:
             tech_result[k] = config_model.tech_groups[tech_result.inheritance[-1]].get(k, [])
 

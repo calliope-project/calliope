@@ -14,6 +14,8 @@ import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.core.util.logging import logger
 
+from calliope.backend.pyomo.util import loc_tech_is_in
+
 ORDER = 20  # order in which to invoke constraints relative to other constraint files
 
 
@@ -24,6 +26,32 @@ def return_noconstraint(*args):
 
 def load_constraints(backend_model):
     model_data_dict = backend_model.__calliope_model_data['data']
+
+    for sense in ['min', 'max']:
+        if 'group_energy_cap_share_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_energy_cap_share_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_energy_cap_share_{}'.format(sense)),
+                    [sense], rule=energy_cap_share_constraint_rule
+                )
+            )
+        if 'group_energy_cap_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_energy_cap_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_energy_cap_{}'.format(sense)),
+                    [sense], rule=energy_cap_constraint_rule
+                )
+            )
+        if 'group_resource_area_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_resource_area_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_resource_area_{}'.format(sense)),
+                    [sense], rule=resource_area_constraint_rule
+                )
+            )
 
     for sense in ['min', 'max', 'equals']:
         if 'group_demand_share_{}'.format(sense) in model_data_dict:
@@ -36,26 +64,53 @@ def load_constraints(backend_model):
         if 'group_demand_share_per_timestep_{}'.format(sense) in model_data_dict:
             setattr(
                 backend_model, 'group_demand_share_per_timestep_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_demand_share_per_timestep_{}'.format(sense)),
-                              backend_model.carriers,
-                              backend_model.timesteps,
-                              [sense], rule=demand_share_per_timestep_constraint_rule)
+                po.Constraint(
+                    getattr(backend_model, 'group_names_demand_share_per_timestep_{}'.format(sense)),
+                    backend_model.carriers, backend_model.timesteps,
+                    [sense], rule=demand_share_per_timestep_constraint_rule
+                )
             )
 
         if 'group_supply_share_{}'.format(sense) in model_data_dict:
             setattr(
                 backend_model, 'group_supply_share_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_supply_share_{}'.format(sense)),
-                              backend_model.carriers, [sense], rule=supply_share_constraint_rule)
+                po.Constraint(
+                    getattr(backend_model, 'group_names_supply_share_{}'.format(sense)),
+                    backend_model.carriers, [sense], rule=supply_share_constraint_rule
+                )
             )
 
         if 'group_supply_share_per_timestep_{}'.format(sense) in model_data_dict:
             setattr(
                 backend_model, 'group_supply_share_per_timestep_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_supply_share_per_timestep_{}'.format(sense)),
-                              backend_model.carriers,
-                              backend_model.timesteps,
-                              [sense], rule=supply_share_per_timestep_constraint_rule)
+                po.Constraint(
+                    getattr(backend_model, 'group_names_supply_share_per_timestep_{}'.format(sense)),
+                    backend_model.carriers, backend_model.timesteps,
+                    [sense], rule=supply_share_per_timestep_constraint_rule
+                )
+            )
+
+        if 'group_cost_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_cost_{}'.format(sense)),
+                    backend_model.costs, [sense], rule=cost_cap_constraint_rule
+                )
+            )
+        if 'group_cost_var_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_var_{}_constraint'.format(sense),
+                po.Constraint(getattr(backend_model, 'group_names_cost_var_{}'.format(sense)),
+                              backend_model.costs, [sense], rule=cost_var_cap_constraint_rule)
+            )
+        if 'group_cost_investment_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_cost_investment_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_cost_investment_{}'.format(sense)),
+                    backend_model.costs, [sense], rule=cost_investment_cap_constraint_rule
+                )
             )
 
     if 'group_demand_share_per_timestep_decision' in model_data_dict:
@@ -71,58 +126,6 @@ def load_constraints(backend_model):
             backend_model.carriers,
             rule=demand_share_per_timestep_decision_sum_constraint_rule
         )
-
-    if 'group_energy_cap_share_min' in model_data_dict:
-        backend_model.group_energy_cap_share_min_constraint = po.Constraint(
-            backend_model.group_names_energy_cap_share_min,
-            ['min'], rule=energy_cap_share_constraint_rule
-        )
-    if 'group_energy_cap_share_max' in model_data_dict:
-        backend_model.group_energy_cap_share_max_constraint = po.Constraint(
-            backend_model.group_names_energy_cap_share_max,
-            ['max'], rule=energy_cap_share_constraint_rule
-        )
-    if 'group_energy_cap_min' in model_data_dict:
-        backend_model.group_energy_cap_min_constraint = po.Constraint(
-            backend_model.group_names_energy_cap_min,
-            ['min'], rule=energy_cap_constraint_rule
-        )
-    if 'group_energy_cap_max' in model_data_dict:
-        backend_model.group_energy_cap_max_constraint = po.Constraint(
-            backend_model.group_names_energy_cap_max,
-            ['max'], rule=energy_cap_constraint_rule
-        )
-    if 'group_resource_area_min' in model_data_dict:
-        backend_model.group_resource_area_min_constraint = po.Constraint(
-            backend_model.group_names_resource_area_min,
-            ['min'], rule=resource_area_constraint_rule
-        )
-    if 'group_resource_area_max' in model_data_dict:
-        backend_model.group_resource_area_max_constraint = po.Constraint(
-            backend_model.group_names_resource_area_max,
-            ['max'], rule=resource_area_constraint_rule
-        )
-
-    for sense in ['min', 'max', 'equals']:
-        if 'group_cost_{}'.format(sense) in model_data_dict:
-            setattr(
-                backend_model, 'group_cost_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_cost_{}'.format(sense)),
-                              backend_model.costs, [sense], rule=cost_cap_constraint_rule)
-            )
-        if 'group_cost_var_{}'.format(sense) in model_data_dict:
-            setattr(
-                backend_model, 'group_cost_var_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_cost_var_{}'.format(sense)),
-                              backend_model.costs, [sense], rule=cost_var_cap_constraint_rule)
-            )
-        if 'group_cost_investment_{}'.format(sense) in model_data_dict:
-            setattr(
-                backend_model, 'group_cost_investment_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_cost_investment_{}'.format(sense)),
-                              backend_model.costs, [sense], rule=cost_investment_cap_constraint_rule)
-            )
-
 
 def equalizer(lhs, rhs, sign):
     if sign == 'max':
@@ -495,10 +498,20 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
             backend_model,
             'group_constraint_loc_techs_{}'.format(constraint_group)
         )
-        lhs = sum(
-            backend_model.energy_cap[loc_tech]
-            for loc_tech in lhs_loc_techs
-        )
+
+        # Transmission techs only contribute half their capacity in each direction
+        lhs = None
+        for loc_tech in lhs_loc_techs:
+            if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+                weight = 0.5
+            else:
+                weight = 1
+
+            if lhs is not None:
+                lhs += weight * backend_model.energy_cap[loc_tech]
+            else:
+                lhs = weight * backend_model.energy_cap[loc_tech]
+
         rhs = threshold
 
         return equalizer(lhs, rhs, what)
