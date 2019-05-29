@@ -30,10 +30,6 @@ exec(open('../calliope/_version.py').read())
 # Generates the tables and source code files
 generate_tables.process()
 
-# Generate tutorial HTML files from notebooks
-generate_tutorials.generate_tutorials()
-
-
 ##
 # Mock modules for Read The Docs autodoc generation
 ##
