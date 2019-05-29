@@ -6,6 +6,9 @@ Release History
 0.6.5 (dev)
 -----------
 
+|fixed| Fix an issue preventing the deprecated `charge_rate` constraint from working in 0.6.4.
+
+|fixed| Fix an issue that prevented 0.6.4 from loading NetCDF models saved with older versions of Calliope. It is still recommended to only load models with the same version of Calliope that they were saved with, as not all functionality will work when mixing versions.
 
 0.6.4 (2019-05-27)
 ------------------

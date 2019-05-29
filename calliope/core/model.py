@@ -131,11 +131,11 @@ class Model(object):
         self._model_data = model_data
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.model_config = UpdateObserverDict(
-            initial_yaml_string=model_data.attrs.get('model_config', ''),
+            initial_yaml_string=model_data.attrs.get('model_config', '{}'),
             name='model_config', observer=self._model_data
         )
         self.run_config = UpdateObserverDict(
-            initial_yaml_string=model_data.attrs.get('run_config', ''),
+            initial_yaml_string=model_data.attrs.get('run_config', '{}'),
             name='run_config', observer=self._model_data
         )
 
