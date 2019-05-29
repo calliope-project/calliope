@@ -50,7 +50,7 @@ def load_constraints(backend_model):
 
         if 'loc_techs_energy_capacity_storage_constraint_old' in sets:
             backend_model.energy_capacity_storage_constraint_old = po.Constraint(
-                backend_model.loc_techs_energy_capacity_storage_constraint,
+                backend_model.loc_techs_energy_capacity_storage_constraint_old,
                 rule=energy_capacity_storage_constraint_rule_old
             )
 
