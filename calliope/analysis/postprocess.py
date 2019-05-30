@@ -146,7 +146,7 @@ def systemwide_levelised_cost(results, model_data, total=False):
     if total:
         cost = split_loc_techs(cost).sum(dim=['locs', 'techs'])
         supply_only_carrier_prod = carrier_prod.sel(
-            loc_tech_carriers_prod=list(model_data.loc_tech_carriers_supply_all.values)
+            loc_tech_carriers_prod=list(model_data.loc_tech_carriers_supply_conversion_all.values)
         )
         carrier_prod = split_loc_techs(supply_only_carrier_prod).sum(dim=['timesteps', 'locs', 'techs'])
     else:

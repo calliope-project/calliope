@@ -850,7 +850,7 @@ class TestSupplyShareGroupConstraints:
         supply = (
             model._model_data.carrier_prod
             .loc[{"loc_tech_carriers_prod":
-                  model._model_data.loc_tech_carriers_supply_all.values}]
+                  model._model_data.loc_tech_carriers_supply_conversion_all.values}]
             .sum().item()
         )
 
@@ -869,7 +869,7 @@ class TestSupplyShareGroupConstraints:
         supply = (
             model._model_data.carrier_prod
             .loc[{"loc_tech_carriers_prod":
-                  model._model_data.loc_tech_carriers_supply_all.values}]
+                  model._model_data.loc_tech_carriers_supply_conversion_all.values}]
             .sum().item()
         )
 

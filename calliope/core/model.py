@@ -119,7 +119,7 @@ class Model(object):
 
         model_config = {
             k: v for k, v in model_run.get('model', {}).items()
-            if k not in ['file_allowed', 'allowed_group_constraints']
+            if k != 'file_allowed'
         }
         self.model_config = UpdateObserverDict(
             initial_dict=model_config, name='model_config', observer=self._model_data

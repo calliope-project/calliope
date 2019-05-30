@@ -350,7 +350,7 @@ def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):
     )
     lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
     rhs_loc_techs = [
-        i for i in backend_model.loc_techs_supply_all
+        i for i in backend_model.loc_techs_supply_conversion_all
         if i.split('::')[0] in lhs_locs
     ]
     return (lhs_loc_techs, rhs_loc_techs)
@@ -458,7 +458,7 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
         )
         lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
         rhs_loc_techs = [
-            i for i in backend_model.loc_techs_supply_all
+            i for i in backend_model.loc_techs_supply_conversion_all
             if i.split('::')[0] in lhs_locs
         ]
 

@@ -274,6 +274,10 @@ def generate_loc_tech_sets(model_run, simple_sets):
         sets.loc_techs_conversion |
         sets.loc_techs_conversion_plus
     )
+    # All techs that can be used to generate a carrier (not just store or move it)
+    sets.loc_techs_supply_conversion_all = (
+        sets.loc_techs_supply_all | sets.loc_techs_conversion_all
+    )
 
     ##
     # Sets based on specific constraints being active
@@ -497,10 +501,21 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # loc_tech_carriers for all supply technologies
     sets.loc_tech_carriers_supply_all = set(
         '{}::{}'.format(k, carrier)
-        for k in sets.loc_techs_supply_all | sets.loc_techs_conversion_all
+        for k in sets.loc_techs_supply_all
         for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='out')
     )
 
+    # loc_tech_carriers for all conversion technologies
+    sets.loc_tech_carriers_conversion_all = set(
+        '{}::{}'.format(k, carrier)
+        for k in sets.loc_techs_conversion_all
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='out')
+    )
+
+    # loc_tech_carriers for all supply and conversion technologies
+    sets.loc_tech_carriers_supply_conversion_all = (
+        sets.loc_tech_carriers_supply_all | sets.loc_tech_carriers_conversion_all
+    )
     # loc_tech_carriers for all demand technologies
     sets.loc_tech_carriers_demand = set(
         '{}::{}'.format(k, carrier)
