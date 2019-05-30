@@ -92,7 +92,6 @@ def check_initial(config_model):
 
     """
     errors = []
-    info = []
     model_warnings = []
 
     # Check for version mismatch

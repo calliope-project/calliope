@@ -4,7 +4,6 @@ import logging
 import datetime
 import os
 import tempfile
-import logging
 
 import xarray as xr
 import pandas as pd
