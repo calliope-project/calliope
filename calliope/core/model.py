@@ -126,19 +126,17 @@ class Model(object):
             name='run_config', observer=self._model_data
         )
 
-        # Attach _model_run and _debug_data to _model_data
-        _model_run_to_save = self._model_run.copy()
-        del _model_run_to_save['timeseries_data']  # Can't be serialised!
-        self._model_data.attrs['_model_run'] = _model_run_to_save.to_yaml()
-        self._model_data.attrs['_debug_data'] = self._debug_data.to_yaml()
-
     def _init_from_model_data(self, model_data):
-        self._model_run = AttrDict.from_yaml_string(
-            model_data.attrs.get('_model_run', '{}')
-        )
-        self._debug_data = AttrDict.from_yaml_string(
-            model_data.attrs.get('_debug_data', '{}')
-        )
+        if '_model_run' in model_data.attrs:
+            self._model_run = AttrDict.from_yaml_string(
+                model_data.attrs['_model_run'])
+            del model_data.attrs['_model_run']
+
+        if '_debug_data' in model_data.attrs:
+            self._debug_data = AttrDict.from_yaml_string(
+                model_data.attrs['_debug_data'])
+            del model_data.attrs['_debug_data']
+
         self._model_data = model_data
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.model_config = UpdateObserverDict(
@@ -299,7 +297,7 @@ class Model(object):
         to a NetCDF file at the given ``path``.
 
         """
-        io.save_netcdf(self._model_data, path)
+        io.save_netcdf(self._model_data, path, model=self)
 
     def to_csv(self, path, dropna=True):
         """
