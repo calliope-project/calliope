@@ -178,6 +178,7 @@ class TestModelSettings:
         assert not model._model_data.attrs['termination_condition'] == 'optimal'
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestGroupConstraints:
 
     def test_no_group_constraint(self):
@@ -227,6 +228,7 @@ class TestGroupConstraints:
         assert round(expensive_generation, 5) >= 0.8
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestDemandShareGroupConstraints:
     def test_no_demand_share_constraint(self):
         model = build_model(model_file='demand_share.yaml')
@@ -563,6 +565,7 @@ class TestDemandShareGroupConstraints:
         assert all([round(i, 5) >= 0.1 for i in shares_elec['cheap_elec_supply'].values])
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestResourceAreaGroupConstraints:
 
     def test_no_energy_cap_share_constraint(self):
@@ -617,6 +620,7 @@ class TestResourceAreaGroupConstraints:
         assert expensive_resource_area1 == 0
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestCostCapGroupConstraint:
 
     def test_systemwide_cost_max_constraint(self):
@@ -763,6 +767,7 @@ class TestCostCapGroupConstraint:
         assert round(clean_emissions, 5) <= 300
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestSupplyShareGroupConstraints:
 
     def test_no_supply_share_constraint(self):
@@ -845,7 +850,7 @@ class TestSupplyShareGroupConstraints:
         supply = (
             model._model_data.carrier_prod
             .loc[{"loc_tech_carriers_prod":
-                  model._model_data.loc_tech_carriers_supply_all.values}]
+                  model._model_data.loc_tech_carriers_supply_conversion_all.values}]
             .sum().item()
         )
 
@@ -864,7 +869,7 @@ class TestSupplyShareGroupConstraints:
         supply = (
             model._model_data.carrier_prod
             .loc[{"loc_tech_carriers_prod":
-                  model._model_data.loc_tech_carriers_supply_all.values}]
+                  model._model_data.loc_tech_carriers_supply_conversion_all.values}]
             .sum().item()
         )
 
@@ -904,6 +909,7 @@ class TestSupplyShareGroupConstraints:
         assert ((expensive_supply / supply).round(5) == 0.6).all()
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestEnergyCapShareGroupConstraints:
 
     def test_no_energy_cap_share_constraint(self):
@@ -974,6 +980,7 @@ class TestEnergyCapShareGroupConstraints:
         assert expensive_capacity1 == 0
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestEnergyCapGroupConstraints:
 
     def test_no_energy_cap_constraint(self):
@@ -1028,6 +1035,7 @@ class TestEnergyCapGroupConstraints:
         assert expensive_capacity1 == 0
 
 
+@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestEnergyCapacityPerStorageCapacity:
 
     @pytest.fixture

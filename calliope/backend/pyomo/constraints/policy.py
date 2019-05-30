@@ -112,7 +112,7 @@ def group_share_energy_cap_constraint_rule(backend_model, techlist, what):
 def group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, what):
     """
     Enforce shares in carrier_prod for groups of technologies. Applied
-    to ``loc_tech_carriers_supply_all``, which includes supply,
+    to ``loc_tech_carriers_supply_conversion_all``, which includes supply,
     supply_plus, conversion, and conversion_plus.
 
     .. container:: scrolling-wrapper
@@ -128,11 +128,11 @@ def group_share_carrier_prod_constraint_rule(backend_model, techlist_carrier, wh
     fraction = model_data_dict['group_share_carrier_prod_{}'.format(what)][(carrier, techlist)]
 
     rhs_loc_tech_carriers = [
-        i for i in backend_model.loc_tech_carriers_supply_all
+        i for i in backend_model.loc_tech_carriers_supply_conversion_all
         if i.split('::')[-1] == carrier
     ]
     lhs_loc_tech_carriers = [
-        i for i in backend_model.loc_tech_carriers_supply_all
+        i for i in backend_model.loc_tech_carriers_supply_conversion_all
         if i.split('::')[1] in techlist.split(',')
         and i.split('::')[-1] == carrier
     ]
@@ -172,7 +172,7 @@ def reserve_margin_constraint_rule(backend_model, carrier):
     return (
         sum(  # Sum all supply capacity for this carrier
             backend_model.energy_cap[loc_tech_carrier.rsplit('::', 1)[0]]
-            for loc_tech_carrier in backend_model.loc_tech_carriers_supply_all
+            for loc_tech_carrier in backend_model.loc_tech_carriers_supply_conversion_all
             if loc_tech_carrier.split('::')[-1] == carrier
         )
         >=

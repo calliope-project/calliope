@@ -23,19 +23,8 @@ from calliope.core.preprocess.util import get_all_carriers, flatten_list
 from calliope.core.util.logging import logger
 from calliope.core.util.tools import load_function
 
-_defaults_files = {
-    k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
-    for k in ['model', 'defaults']
-}
-
-DEFAULTS = AttrDict.from_yaml(_defaults_files['defaults'])
-ALL_DEFAULT_CONSTRAINTS = list(DEFAULTS.default_tech.constraints.keys())
-DEFAULTS_MODEL = AttrDict.from_yaml(_defaults_files['model'])
-POSSIBLE_COSTS = set(
-    flatten_list([
-        DEFAULTS_MODEL.tech_groups[k].allowed_costs
-        for k in DEFAULTS_MODEL.tech_groups
-    ]))
+DEFAULTS = AttrDict.from_yaml(os.path.join(os.path.dirname(calliope.__file__), 'config', 'defaults.yaml'))
+POSSIBLE_COSTS = [i for i in DEFAULTS.techs.default_tech.costs.default_cost.keys()]
 
 
 def check_overrides(config_model, override):
@@ -133,7 +122,7 @@ def check_initial(config_model):
     # Exclude solver_options and objective_options.cost_class from checks,
     # as we don't know all possible options for all solvers
     for k in config_model['run'].keys_nested():
-        if (k not in DEFAULTS_MODEL['run'].keys_nested() and
+        if (k not in DEFAULTS['run'].keys_nested() and
                 'solver_options' not in k and 'objective_options.cost_class' not in k):
             model_warnings.append(
                 'Unrecognised setting in run configuration: {}'.format(k)
@@ -141,7 +130,7 @@ def check_initial(config_model):
 
     # Check model configuration, but top-level keys only
     for k in config_model['model'].keys():
-        if k not in DEFAULTS_MODEL['model'].keys():
+        if k not in DEFAULTS['model'].keys():
             model_warnings.append(
                 'Unrecognised setting in model configuration: {}'.format(k)
             )
@@ -159,10 +148,7 @@ def check_initial(config_model):
             )
 
     # Warn if any unknown group constraints are defined
-    permitted_group_constraints = ['techs', 'locs', 'exists'] + \
-        DEFAULTS.allowed_group_constraints.per_carrier + \
-        DEFAULTS.allowed_group_constraints.per_cost + \
-        DEFAULTS.allowed_group_constraints.general
+    permitted_group_constraints = DEFAULTS.group_constraints.default_group.keys()
 
     for group in config_model.get('group_constraints', {}).keys():
         for key in config_model.group_constraints[group].keys():
@@ -187,7 +173,7 @@ def check_initial(config_model):
     # * All user-defined tech and tech_groups must specify a parent
     # * techs cannot be parents, only tech groups can
     # * No carrier may be called 'resource'
-    default_tech_groups = list(DEFAULTS_MODEL.tech_groups.keys())
+    default_tech_groups = list(DEFAULTS.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
         if tg_name in default_tech_groups:
             continue
@@ -209,7 +195,7 @@ def check_initial(config_model):
 
     for t_name, t_config in config_model.techs.items():
         for key in t_config.keys():
-            if key not in DEFAULTS["default_tech"].keys():
+            if key not in DEFAULTS.techs.default_tech.keys():
                 model_warnings.append("Unknown key `{}` defined for tech {}.".format(key, t_name))
         if not t_config.get_key('essentials.parent'):
             errors.append(
@@ -227,21 +213,55 @@ def check_initial(config_model):
                 'be defined (tech: {})'.format(t_name)
             )
 
-    # Check whether any techs are erroneously in top-level location or link definitions
-    all_techs = config_model.techs.keys()
+    # Check whether any unrecognised mid-level keys are defined in techs, locations, or links
     for k, v in config_model.get('locations', {}).items():
-        for loc_key in v:
-            if loc_key in all_techs:
+        unrecognised_keys = [
+            i for i in v.keys()
+            if i not in DEFAULTS.locations.default_location.keys()
+        ]
+        if len(unrecognised_keys) > 0:
+            errors.append(
+                'Location `{}` contains unrecognised keys {}. '
+                'These could be mispellings or a technology not defined '
+                'under the `techs` key.'.format(k, unrecognised_keys)
+            )
+        for loc_tech_key, loc_tech_val in v.get('techs', {}).items():
+            if loc_tech_val is None:
+                continue
+            unrecognised_keys = [
+                i for i in loc_tech_val.keys()
+                if i not in DEFAULTS.techs.default_tech.keys()
+            ]
+            if len(unrecognised_keys) > 0:
                 errors.append(
-                    'Location `{l}` contains tech `{t}` at its top level. This '
-                    'should be under `locations.{l}.techs.{t}` instead.'.format(l=k, t=loc_key)
+                    'Technology `{}` in location `{}` contains unrecognised keys {}; '
+                    'these are most likely mispellings'.format(loc_tech_key, k, unrecognised_keys)
                 )
+
+    default_link = DEFAULTS.links['default_location_from,default_location_to']
     for k, v in config_model.get('links', {}).items():
-        for loc_key in v:
-            if loc_key in all_techs:
+        unrecognised_keys = [
+            i for i in v.keys()
+            if i not in default_link.keys()
+        ]
+        if len(unrecognised_keys) > 0:
+            errors.append(
+                'Link `{}` contains unrecognised keys {}. '
+                'These could be mispellings or a technology not defined '
+                'under the `techs` key.'.format(k, unrecognised_keys)
+            )
+        for link_tech_key, link_tech_val in v.get('techs', {}).items():
+            if link_tech_val is None:
+                continue
+            unrecognised_keys = [
+                i for i in link_tech_val.keys()
+                if i not in default_link.techs.default_tech.keys()
+                and i not in DEFAULTS.techs.default_tech.keys()
+            ]
+            if len(unrecognised_keys) > 0:
                 errors.append(
-                    'Link `{l}` contains tech `{t}` at its top level. This '
-                    'should be under `links.{l}.techs.{t}` instead.'.format(l=k, t=loc_key)
+                    'Technology `{}` in link `{}` contains unrecognised keys {}; '
+                    'these are most likely mispellings'.format(link_tech_key, k, unrecognised_keys)
                 )
 
     # Error if a technology is defined twice, in opposite directions
@@ -262,7 +282,7 @@ def check_initial(config_model):
         )
 
     # Error if a constraint is loaded from file that must not be
-    allowed_from_file = DEFAULTS['file_allowed']
+    allowed_from_file = DEFAULTS.model.file_allowed
     for k, v in config_model.as_dict_flat().items():
         if 'file=' in str(v):
             constraint_name = k.split('.')[-1]
@@ -438,7 +458,7 @@ def _check_tech_final(model_run, tech_id, tech_config, loc_id, model_warnings, e
     # Warn if something is defined that's not allowed, but is not in defaults
     # (it could be a misspelling)
     for k in remaining:
-        if k in ALL_DEFAULT_CONSTRAINTS:
+        if k in DEFAULTS.techs.default_tech.constraints.keys():
             errors.append(
                 '`{}` at `{}` defines non-allowed '
                 'constraint `{}`'.format(tech_id, loc_id, k)
@@ -585,6 +605,53 @@ def check_final(model_run):
                 'Possible misspelling in group constraints: {0} {1} given in '
                 'group constraints, but not defined as {0} in the model. They '
                 'will be ignored in the optimisation run'.format(i, _missing)
+            )
+
+    # Warn if a group constraint will ignore tech(s)
+    group_constraints = {
+        name: data for name, data in model_run['group_constraints'].items()
+        if data.get("exists", True)
+    }
+    for group_constraint_name, group_constraint in group_constraints.items():
+        techs = {
+            i: model_run.get_key('techs.{}.inheritance'.format(i))[-1]
+            for i in set(group_constraint.get('techs', model_run.sets['techs']))
+        }
+        tech_groups = [
+            [k for k, v in DEFAULTS.tech_groups.items() if i in v['allowed_group_constraints']]
+            for i in group_constraint.keys() if i not in ['techs', 'locs', 'exists']
+        ]
+        allowed_tech_groups = set(tech_groups[0]).intersection(*tech_groups)
+        group_techs = model_run.constraint_sets['group_constraint_loc_techs_{}'.format(group_constraint_name)]
+
+        _mismatch = None
+        _dropped_techs = None
+        if set(techs.keys()).difference(group_techs):
+            # Mismatch between allowed tech groups for certain constraints
+            if len(set(map(tuple, tech_groups))) > 1:
+                lost_tech_groups = (
+                    set([item for sublist in tech_groups for item in sublist])
+                    - allowed_tech_groups
+                )
+                _mismatch = [group_constraint_name, allowed_tech_groups, lost_tech_groups]
+
+            # No mismatch, but still removing some techs from those given by the group
+            else:
+                _dropped_techs = [group_constraint_name, allowed_tech_groups]
+
+        if _mismatch is not None:
+            model_warnings.append(
+                'Not all requested techs have been retained in group constraint '
+                '`{}`. Based on the constraints given, only technologies from '
+                'tech group(s) {} are permitted. Some constraints would also '
+                'allow tech group(s) {}, but this requires the group to be '
+                'split up.'.format(*_mismatch)
+            )
+        if _dropped_techs is not None:
+            model_warnings.append(
+                'Not all requested techs have been retained in group constraint '
+                '`{}`. Based on the constraints given, only technologies from '
+                'tech group(s) {} are permitted.'.format(*_dropped_techs)
             )
 
     # FIXME:

@@ -11,7 +11,7 @@ from calliope.core.preprocess import time
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import \
-    constraint_sets, defaults, defaults_model, check_error_or_warning
+    constraint_sets, defaults, check_error_or_warning
 
 
 class TestModelRun:
@@ -843,7 +843,7 @@ class TestChecks:
             build_model(override_dict=override, scenario='simple_supply,one_day')
 
         assert check_error_or_warning(
-            excinfo, 'Location `1` contains tech `test_supply_elec` at its top level'
+            excinfo, "Location `1` contains unrecognised keys ['test_supply_elec']"
         )
 
     def test_tech_defined_twice_in_links(self):
@@ -895,13 +895,13 @@ class TestChecks:
         """
 
         allowed_constraints_no_file = list(
-            set(defaults_model.tech_groups.storage.allowed_constraints)
-            .difference(defaults.file_allowed)
+            set(defaults.tech_groups.storage.allowed_constraints)
+            .difference(defaults.model.file_allowed)
         )
 
         allowed_constraints_file = list(
-            set(defaults_model.tech_groups.storage.allowed_constraints)
-            .intersection(defaults.file_allowed)
+            set(defaults.tech_groups.storage.allowed_constraints)
+            .intersection(defaults.model.file_allowed)
         )
 
         override = lambda param: AttrDict.from_yaml_string(
@@ -1081,7 +1081,7 @@ class TestChecks:
             },
             'links': {
                 'X1,X2.techs.power_lines.distance': 10,
-                'X1,X3.techs.power_lines.istance': 5,
+                'X1,X3.techs.power_lines.distance': 5,
                 'X1,N1.techs.heat_pipes.distance': 3,
                 'N1,X2.techs.heat_pipes.distance': 3,
                 'N1,X3.techs.heat_pipes.distance': 4

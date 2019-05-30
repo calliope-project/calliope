@@ -15,7 +15,7 @@ from itertools import product
 import numpy as np
 
 from calliope.core.preprocess.util import constraint_exists, concat_iterable
-
+from calliope.core.preprocess import checks
 
 def generate_constraint_sets(model_run):
     """
@@ -310,10 +310,27 @@ def generate_constraint_sets(model_run):
     }
     constraint_sets['constraint_groups'] = list(group_constraints.keys())
 
-    for k, v in group_constraints.items():
-        # For now, transmission techs are not supported in group constraints
-        techs = v.get('techs', sets['techs_non_transmission'])
-        locs = v.get('locs', sets['locs'])
+    for group_constraint_name, group_constraint in group_constraints.items():
+        tech_groups = [
+            [k for k, v in checks.DEFAULTS.tech_groups.items()
+             if i in v['allowed_group_constraints']]
+            for i in group_constraint.keys()
+            if i not in ['techs', 'locs', 'exists']
+        ]
+        allowed_tech_groups = set(tech_groups[0]).intersection(*tech_groups)
+        allowed_techs = sum([sets['techs_{}'.format(i)] for i in allowed_tech_groups], [])
+        # If the group constraint defines its own techs, remove those that are
+        # not allowed (there is a warning for this in checks.py)
+        techs = list(set(group_constraint.get('techs', allowed_techs)).intersection(allowed_techs))
+
+        locs = group_constraint.get('locs', sets['locs'])
+
+        # If there are transmission techs, keep only those that link to allowed locations
+        techs = [i for i in techs if ':' not in techs or i.split(':')[-1] in locs]
+        trans_techs = set(techs).intersection(sets['techs_transmission_names'])
+        for i in trans_techs:
+            techs += [i + ':' + j for j in locs]
+            techs.remove(i)
 
         # All possible loc_techs for this constraint
         loc_techs_all = list(set(concat_iterable(
@@ -325,6 +342,6 @@ def generate_constraint_sets(model_run):
         # so we must filter with actually exising loc_techs
         loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
 
-        constraint_sets['group_constraint_loc_techs_{}'.format(k)] = loc_techs
+        constraint_sets['group_constraint_loc_techs_{}'.format(group_constraint_name)] = loc_techs
 
     return constraint_sets

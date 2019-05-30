@@ -9,12 +9,7 @@ from calliope import AttrDict
 
 constraint_sets = AttrDict.from_yaml(os.path.join(os.path.dirname(__file__), 'constraint_sets.yaml'))
 
-_defaults_files = {
-    k: os.path.join(os.path.dirname(calliope.__file__), 'config', k + '.yaml')
-    for k in ['model', 'defaults']
-}
-defaults = AttrDict.from_yaml(_defaults_files['defaults'])
-defaults_model = AttrDict.from_yaml(_defaults_files['model'])
+defaults = AttrDict.from_yaml(os.path.join(os.path.dirname(calliope.__file__), 'config', 'defaults.yaml'))
 
 
 python36_or_higher = pytest.mark.skipif(

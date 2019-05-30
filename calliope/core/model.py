@@ -116,9 +116,13 @@ class Model(object):
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = 0
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
+
+        model_config = {
+            k: v for k, v in model_run.get('model', {}).items()
+            if k != 'file_allowed'
+        }
         self.model_config = UpdateObserverDict(
-            initial_dict=model_run.get('model', {}),
-            name='model_config', observer=self._model_data
+            initial_dict=model_config, name='model_config', observer=self._model_data
         )
         self.run_config = UpdateObserverDict(
             initial_dict=model_run.get('run', {}),

@@ -47,44 +47,41 @@ def process():
 
     write_csv(
         './user/includes/default_essentials.csv',
-        get_section(defaults['default_tech']['essentials'])
+        get_section(defaults['techs']['default_tech']['essentials'])
     )
     write_csv(
         './user/includes/default_constraints.csv',
-        get_section(defaults['default_tech']['constraints'])
+        get_section(defaults['techs']['default_tech']['constraints'])
     )
     write_csv(
         './user/includes/default_costs.csv',
-        get_section(defaults['default_tech']['costs']['default'])
+        get_section(defaults['techs']['default_tech']['costs']['default_cost'])
     )
-
-    with open('../calliope/config/model.yaml', 'r') as f:
-        model = yaml.round_trip_load(f)
 
     write_csv(
         './user/includes/model_settings.csv',
-        get_section(model['model'])
+        get_section(defaults['model'])
     )
     write_csv(
         './user/includes/run_settings.csv',
-        get_section(model['run'])
+        get_section(defaults['run'])
     )
 
     y = yaml.YAML()
 
-    for tech_group in model['tech_groups']:
+    for tech_group in defaults['tech_groups']:
         defaults = {
-            'essentials': model['tech_groups'][tech_group].get('essentials', {}),
-            'constraints': model['tech_groups'][tech_group].get('constraints', {}),
-            'costs': model['tech_groups'][tech_group].get('costs', {})
+            'essentials': defaults['tech_groups'][tech_group].get('essentials', {}),
+            'constraints': defaults['tech_groups'][tech_group].get('constraints', {}),
+            'costs': defaults['tech_groups'][tech_group].get('costs', {})
         }
         with open('./user/includes/basetech_{}.yaml'.format(tech_group), 'w') as f:
             f.write(yaml.dump(defaults, Dumper=yaml.RoundTripDumper))
 
         required_allowed = {
-            'required_constraints': y.seq(model['tech_groups'][tech_group].get('required_constraints', [])),
-            'allowed_constraints': y.seq(model['tech_groups'][tech_group].get('allowed_constraints', [])),
-            'allowed_costs': y.seq(model['tech_groups'][tech_group].get('allowed_costs', []))
+            'required_constraints': y.seq(defaults['tech_groups'][tech_group].get('required_constraints', [])),
+            'allowed_constraints': y.seq(defaults['tech_groups'][tech_group].get('allowed_constraints', [])),
+            'allowed_costs': y.seq(defaults['tech_groups'][tech_group].get('allowed_costs', []))
         }
         with open('./user/includes/required_allowed_{}.yaml'.format(tech_group), 'w') as f:
             f.write(yaml.dump(required_allowed, indent=4, Dumper=yaml.RoundTripDumper))

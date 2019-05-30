@@ -118,9 +118,13 @@ def generate_simple_sets(model_run):
 
     sets.locs = set(model_run.locations.keys())
 
-    sets.techs_non_transmission = set(
-        k for k, v in model_run.techs.items()
-        if v.inheritance[-1] != 'transmission')
+    sets.techs_non_transmission = set()
+    tech_groups = ['demand', 'supply', 'supply_plus', 'conversion', 'conversion_plus', 'storage']
+    for tech_group in tech_groups:
+        sets['techs_{}'.format(tech_group)] = set(
+            k for k, v in model_run.techs.items() if v.inheritance[-1] == tech_group
+        )
+        sets.techs_non_transmission.update(sets['techs_{}'.format(tech_group)])
 
     sets.techs_transmission_names = set(
         k for k, v in model_run.techs.items()
@@ -262,9 +266,17 @@ def generate_loc_tech_sets(model_run, simple_sets):
     # Techs that introduce energy into the system
     sets.loc_techs_supply_all = (
         sets.loc_techs_supply |
-        sets.loc_techs_supply_plus |
+        sets.loc_techs_supply_plus
+    )
+
+    # Techs that change the energy carrier in the system
+    sets.loc_techs_conversion_all = (
         sets.loc_techs_conversion |
         sets.loc_techs_conversion_plus
+    )
+    # All techs that can be used to generate a carrier (not just store or move it)
+    sets.loc_techs_supply_conversion_all = (
+        sets.loc_techs_supply_all | sets.loc_techs_conversion_all
     )
 
     ##
@@ -493,6 +505,17 @@ def generate_loc_tech_sets(model_run, simple_sets):
         for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='out')
     )
 
+    # loc_tech_carriers for all conversion technologies
+    sets.loc_tech_carriers_conversion_all = set(
+        '{}::{}'.format(k, carrier)
+        for k in sets.loc_techs_conversion_all
+        for carrier in get_all_carriers(model_run.techs[k.split('::')[1].split(':')[0]].essentials, direction='out')
+    )
+
+    # loc_tech_carriers for all supply and conversion technologies
+    sets.loc_tech_carriers_supply_conversion_all = (
+        sets.loc_tech_carriers_supply_all | sets.loc_tech_carriers_conversion_all
+    )
     # loc_tech_carriers for all demand technologies
     sets.loc_tech_carriers_demand = set(
         '{}::{}'.format(k, carrier)
