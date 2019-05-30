@@ -70,13 +70,13 @@ def process():
     y = yaml.YAML()
 
     for tech_group in defaults['tech_groups']:
-        defaults = {
+        this_group_defaults = {
             'essentials': defaults['tech_groups'][tech_group].get('essentials', {}),
             'constraints': defaults['tech_groups'][tech_group].get('constraints', {}),
             'costs': defaults['tech_groups'][tech_group].get('costs', {})
         }
         with open('./user/includes/basetech_{}.yaml'.format(tech_group), 'w') as f:
-            f.write(yaml.dump(defaults, Dumper=yaml.RoundTripDumper))
+            f.write(yaml.dump(this_group_defaults, Dumper=yaml.RoundTripDumper))
 
         required_allowed = {
             'required_constraints': y.seq(defaults['tech_groups'][tech_group].get('required_constraints', [])),
