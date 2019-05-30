@@ -10,6 +10,7 @@ Checks for model consistency and possible errors during preprocessing.
 """
 
 import os
+import logging
 
 import numpy as np
 import pandas as pd
@@ -19,9 +20,10 @@ from inspect import signature
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers, flatten_list
-from calliope.core.util.logging import logger
+from calliope.core.preprocess.util import get_all_carriers
 from calliope.core.util.tools import load_function
+
+logger = logging.getLogger(__name__)
 
 DEFAULTS = AttrDict.from_yaml(os.path.join(os.path.dirname(calliope.__file__), 'config', 'defaults.yaml'))
 POSSIBLE_COSTS = [i for i in DEFAULTS.techs.default_tech.costs.default_cost.keys()]
@@ -90,6 +92,7 @@ def check_initial(config_model):
 
     """
     errors = []
+    info = []
     model_warnings = []
 
     # Check for version mismatch
@@ -418,7 +421,7 @@ def _check_tech_final(model_run, tech_id, tech_config, loc_id, model_warnings, e
     ]
     if (loc_id + '::' + tech_id in model_run.sets.loc_techs_store
             and not any(i in tech_config.constraints.keys() for i in energy_cap_per_storage_cap_params)):
-        model_warnings.append(
+        logger.info(
             '`{}` at `{}` has no constraint to explicitly connect `energy_cap` to '
             '`storage_cap`, consider defining a `energy_cap_per_storage_cap_min/max/equals` '
             'constraint'.format(tech_id, loc_id)

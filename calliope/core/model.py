@@ -10,6 +10,7 @@ Implements the core Model class.
 """
 
 from io import StringIO
+import logging
 import warnings
 
 import numpy as np
@@ -30,6 +31,8 @@ from calliope.core.util.tools import apply_to_dict
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
+
+logger = logging.getLogger(__name__)
 
 
 def read_netcdf(path):
@@ -66,7 +69,7 @@ class Model(object):
         self._timings = {}
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
-        log_time(self._timings, 'model_creation', comment='Model: initialising')
+        log_time(logger, self._timings, 'model_creation', comment='Model: initialising')
         if isinstance(config, str):
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
             self._init_from_model_run(model_run, debug_data)
@@ -89,10 +92,10 @@ class Model(object):
     def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run
         self._debug_data = debug_data
-        log_time(self._timings, 'model_run_creation', comment='Model: preprocessing stage 1 (model_run)')
+        log_time(logger, self._timings, 'model_run_creation', comment='Model: preprocessing stage 1 (model_run)')
 
         self._model_data_original = build_model_data(model_run)
-        log_time(self._timings, 'model_data_original_creation', comment='Model: preprocessing stage 2 (model_data)')
+        log_time(logger, self._timings, 'model_data_original_creation', comment='Model: preprocessing stage 2 (model_data)')
 
         random_seed = self._model_run.get_key('model.random_seed', None)
         if random_seed:
@@ -108,7 +111,7 @@ class Model(object):
             )
         self._model_data = final_timedimension_processing(_model_data)
         log_time(
-            self._timings, 'model_data_creation',
+            logger, self._timings, 'model_data_creation',
             comment='Model: preprocessing complete',
             time_since_start=True
         )
@@ -147,7 +150,7 @@ class Model(object):
         if len(results.data_vars) > 0:
             self.results = results
         log_time(
-            self._timings, 'model_data_loaded',
+            logger, self._timings, 'model_data_loaded',
             comment='Model: loaded model_data',
             time_since_start=True
         )

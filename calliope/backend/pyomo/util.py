@@ -11,8 +11,9 @@ import pandas as pd
 import xarray as xr
 
 from calliope.core.util.tools import memoize
-from calliope.core.util.logging import logger
 from calliope import exceptions
+
+logger = logging.getLogger(__name__)
 
 
 @memoize

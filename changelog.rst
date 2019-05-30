@@ -6,6 +6,8 @@ Release History
 0.6.5 (dev)
 -----------
 
+|changed| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled interactively by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
+
 |fixed| Fix an issue preventing the deprecated `charge_rate` constraint from working in 0.6.4.
 
 |fixed| Fix an issue that prevented 0.6.4 from loading NetCDF models saved with older versions of Calliope. It is still recommended to only load models with the same version of Calliope that they were saved with, as not all functionality will work when mixing versions.

@@ -53,4 +53,4 @@ Utility classes: AttrDict, Exceptions, Logging
     :members:
 
 .. automodule:: calliope.core.util.logging
-    :members: set_log_level
+    :members: set_log_verbosity

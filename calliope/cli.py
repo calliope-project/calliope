@@ -24,7 +24,7 @@ import click
 from calliope import AttrDict, Model, examples, read_netcdf
 from calliope._version import __version__
 from calliope.core.util.generate_runs import generate
-from calliope.core.util.logging import logger, set_log_level
+from calliope.core.util.logging import set_log_verbosity
 from calliope.exceptions import BackendError
 
 _time_format = '%Y-%m-%d %H:%M:%S'
@@ -63,25 +63,10 @@ _fail_when_infeasible = click.option(
     help='Return fail on command line when problem is infeasible (default True).'
 )
 
-
-if logger.hasHandlers():
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-
-formatter = logging.Formatter(
-    '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format
-)
-console = logging.StreamHandler(stream=sys.stderr)
-console.setFormatter(formatter)
-logger.addHandler(console)
-
-
 @contextlib.contextmanager
 def format_exceptions(
         debug=False, pdb=False, profile=False,
         profile_filename=None, start_time=None):
-    if debug:
-        set_log_level('DEBUG')
 
     try:
         if profile:
@@ -110,22 +95,12 @@ def format_exceptions(
             stack = traceback.extract_tb(e.__traceback__)
             # Get last stack trace entry still in Calliope
             last = [i for i in stack if 'calliope' in i[0]][-1]
-            if debug:
-                err_string = '\nError in {}, {}:{}'.format(last[2], last[0], last[1])
-            else:
-                err_string = '\nError in {}:'.format(last[2])
+            err_string = '\nError in {}, {}:{}'.format(last[2], last[0], last[1])
             click.secho(err_string, fg='red')
             click.secho(str(e), fg='red')
             if start_time:
                 print_end_time(start_time, msg='aborted due to an error')
         sys.exit(1)
-
-
-def set_quietness_level(quiet):
-    if quiet:
-        set_log_level('WARNING')
-    else:
-        set_log_level('SOLVER')
 
 
 def print_end_time(start_time, msg='complete'):
@@ -147,14 +122,40 @@ def _cli_start(debug, quiet):
     Returns ``start_time`` (datetime timestamp)
 
     """
-    if debug:
-        click.secho(_get_version())
+    root_logger = logging.getLogger()  # Get the root logger
 
-    set_quietness_level(quiet)
+    # Remove any existing output handlers from root logger
+    if root_logger.hasHandlers():
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
 
+    # Create a console log handler with decent formatting and attach it
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format)
+    console = logging.StreamHandler(stream=sys.stderr)
+    console.setFormatter(formatter)
+    root_logger.addHandler(console)
+
+    # Also attach the console handler to captured warnings logger
     logging.captureWarnings(True)
     pywarning_logger = logging.getLogger('py.warnings')
     pywarning_logger.addHandler(console)
+
+    if debug:
+        click.secho(_get_version())
+
+    if debug:
+        verbosity = 'debug'
+        log_solver = True
+    else:
+        if quiet:
+            verbosity = 'warning'
+            log_solver = False
+        else:  # Default option
+            verbosity = 'info'
+            log_solver = True
+
+    set_log_verbosity(verbosity, include_solver_output=log_solver, logger=root_logger)
 
     start_time = datetime.datetime.now()
 

@@ -3,7 +3,8 @@ Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
-import ruamel.yaml
+import logging
+
 import numpy as np
 import xarray as xr
 
@@ -14,6 +15,8 @@ from calliope.backend.pyomo import model as run_pyomo
 from calliope.backend.pyomo import interface as pyomo_interface
 
 from calliope.core.attrdict import AttrDict
+
+logger = logging.getLogger(__name__)
 
 
 def run(model_data, timings, build_only=False):
@@ -58,13 +61,13 @@ def run(model_data, timings, build_only=False):
 
 def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
-    log_time(timings, 'run_start', comment='Backend: starting model run')
+    log_time(logger, timings, 'run_start', comment='Backend: starting model run')
 
     if not backend_rerun:
         backend_model = backend.generate_model(model_data)
 
         log_time(
-            timings, 'run_backend_model_generated', time_since_start=True,
+            logger, timings, 'run_backend_model_generated', time_since_start=True,
             comment='Backend: model generated'
         )
 
@@ -82,7 +85,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
     else:
         log_time(
-            timings, 'run_solver_start',
+            logger, timings, 'run_solver_start',
             comment='Backend: sending model to solver'
         )
 
@@ -92,14 +95,14 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         )
 
         log_time(
-            timings, 'run_solver_exit', time_since_start=True,
+            logger, timings, 'run_solver_exit', time_since_start=True,
             comment='Backend: solver finished running'
         )
 
         termination = backend.load_results(backend_model, results)
 
         log_time(
-            timings, 'run_results_loaded',
+            logger, timings, 'run_results_loaded',
             comment='Backend: loaded results'
         )
 
@@ -107,7 +110,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         results.attrs['termination_condition'] = termination
 
         log_time(
-            timings, 'run_solution_returned', time_since_start=True,
+            logger, timings, 'run_solution_returned', time_since_start=True,
             comment='Backend: generated solution array'
         )
 
@@ -120,7 +123,7 @@ def run_operate(model_data, timings, backend, build_only):
     iteratively run within Pyomo.
 
     """
-    log_time(timings, 'run_start',
+    log_time(logger, timings, 'run_start',
              comment='Backend: starting model run in operational mode')
 
     defaults = AttrDict.from_yaml_string(model_data.attrs['defaults'])
@@ -240,7 +243,7 @@ def run_operate(model_data, timings, backend, build_only):
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
-                timings, 'model_gen_1',
+                logger, timings, 'model_gen_1',
                 comment='Backend: generating initial model'
             )
 
@@ -255,7 +258,7 @@ def run_operate(model_data, timings, backend, build_only):
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
-                timings, 'model_gen_{}'.format(i + 1),
+                logger, timings, 'model_gen_{}'.format(i + 1),
                 comment=(
                     'Backend: iteration {}: generating new model for '
                     'end of timeseries, with horizon = {} timesteps'
@@ -273,7 +276,7 @@ def run_operate(model_data, timings, backend, build_only):
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
-                timings, 'model_gen_{}'.format(i + 1),
+                logger, timings, 'model_gen_{}'.format(i + 1),
                 comment='Backend: iteration {}: updating model parameters'.format(i + 1)
             )
             # Pyomo model sees the same timestamps each time, we just change the
@@ -291,7 +294,7 @@ def run_operate(model_data, timings, backend, build_only):
 
         if not build_only:
             log_time(
-                timings, 'model_run_{}'.format(i + 1), time_since_start=True,
+                logger, timings, 'model_run_{}'.format(i + 1), time_since_start=True,
                 comment='Backend: iteration {}: sending model to solver'.format(i + 1)
             )
             # After iteration 1, warmstart = True, which should speed up the process
@@ -302,7 +305,7 @@ def run_operate(model_data, timings, backend, build_only):
             )
 
             log_time(
-                timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
+                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
                 comment='Backend: iteration {}: solver finished running'.format(i + 1)
             )
             # xarray dataset is built for each iteration
@@ -336,7 +339,7 @@ def run_operate(model_data, timings, backend, build_only):
                     v.set_value(operated_units.to_series().dropna().to_dict()[k])
 
             log_time(
-                timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
+                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
                 comment='Backend: iteration {}: generated solution array'.format(i + 1)
             )
 
@@ -352,7 +355,7 @@ def run_operate(model_data, timings, backend, build_only):
             results.attrs['termination_condition'] = ','.join(terminations)
 
         log_time(
-            timings, 'run_solution_returned', time_since_start=True,
+            logger, timings, 'run_solution_returned', time_since_start=True,
             comment='Backend: generated full solution array'
         )
 

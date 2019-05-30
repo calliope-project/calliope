@@ -12,12 +12,14 @@ used for managing model configuration.
 
 import io
 from pathlib import Path
+import logging
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
 
 from calliope.core.util.tools import relative_path
-from calliope.core.util.logging import logger
+
+logger = logging.getLogger(__name__)
 
 
 class __Missing(object):

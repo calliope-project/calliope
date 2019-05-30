@@ -10,53 +10,40 @@ Create the Calliope logger object and apply other logging tools/functionality
 
 """
 
+import datetime
 import logging
 import sys
-import datetime
-
-SOLVER = 19
-logging.addLevelName(SOLVER, 'SOLVER')
-logger = logging.getLogger('calliope')
-logger.propagate = False
-
-if logger.hasHandlers():
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-
-formatter = logging.Formatter(
-    '[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt="%Y-%m-%d %H:%M:%S")
-console = logging.StreamHandler(stream=sys.stdout)
-console.setFormatter(formatter)
-logger.addHandler(console)
 
 
-def set_log_level(level):
+def set_log_verbosity(verbosity='info', include_solver_output=True, logger=None):
     """
-    Set the minimum logging verbosity in a Python console. Higher verbosity levels
-    will include their output and all those of following levels.
-    Level options (in descending order of verbosity):
+    Set the verbosity of logging.
 
-    * 'DEBUG'
-    * 'SOLVER' -> Calliope custom level, assigned value of 19,
-                  returns solver (e.g. GLPK) stream
-    * 'INFO'
-    * 'WARNING' -> default level
-    * 'ERROR'
-    * 'CRITICAL'
+    Parameters
+    ----------
+    verbosity : str, default 'info'
+        Logging level to display across all of Calliope. Can be one of
+        'debug', 'info', 'warning', 'error', or 'critical'.
+    include_solver_output : bool, default True
+        If True, the logging level for just the backend model is set to
+        DEBUG, which turns on display of solver output.
+    logger : logging.Logger, optional
+        For most cases this can be ignored. If not given, the root logger
+        is used, and a StreamHandler to log to sys.stdout is attached to it.
+
     """
+    if include_solver_output:
+        backend_logger = logging.getLogger('calliope.backend.pyomo.model')
+        backend_logger.setLevel(logging.DEBUG)
+    if logger is None:
+        logger = logging.getLogger()  # Root logger
+        logger.propagate = False
+        console = logging.StreamHandler(stream=sys.stdout)
+        logger.addHandler(console)
+    logger.setLevel(verbosity.upper())
 
-    if level == 'DEBUG':
-        logger.setLevel(logging.DEBUG)
 
-    elif level == 'SOLVER':
-        logger.setLevel(SOLVER)
-
-    else:
-        logger.setLevel(getattr(logging, level))
-
-
-def log_time(timings, identifier, comment=None, level='info', time_since_start=False):
+def log_time(logger, timings, identifier, comment=None, level='info', time_since_start=False):
     if comment is None:
         comment = identifier
 
@@ -70,7 +57,8 @@ def log_time(timings, identifier, comment=None, level='info', time_since_start=F
 
 
 class LogWriter:
-    def __init__(self, level, strip=False):
+    def __init__(self, logger, level, strip=False):
+        self.logger = logger
         self.level = level
         self.strip = strip
 
@@ -78,10 +66,7 @@ class LogWriter:
         if message != '\n':
             if self.strip:
                 message = message.strip()
-            if self.level == 'solver':
-                logger.log(SOLVER, message)
-            else:
-                getattr(logger, self.level)(message)
+            getattr(self.logger, self.level)(message)
 
     def flush(self):
         pass

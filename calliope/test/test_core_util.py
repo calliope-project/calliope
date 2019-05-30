@@ -4,6 +4,7 @@ import logging
 import datetime
 import os
 import tempfile
+import logging
 
 import xarray as xr
 import pandas as pd
@@ -166,32 +167,19 @@ class TestMemoization:
 
 
 class TestLogging:
-    def test_set_log_level(self):
-
-        # We assign a handler to the Calliope logger on loading calliope
-        assert calliope._logger.hasHandlers() is True
-        assert len(calliope._logger.handlers) == 1
-
-        for level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
-            calliope.set_log_level(level)
-            assert calliope._logger.level == getattr(logging, level)
-
-        # We have a custom level 'SOLVER' at level 19
-        calliope.set_log_level('SOLVER')
-        assert calliope._logger.level == 19
-
     def test_timing_log(self):
         timings = {'model_creation': datetime.datetime.now()}
+        logger = logging.getLogger('calliope.testlogger')
 
         # TODO: capture logging output and check that comment is in string
-        log_time(timings, 'test', comment='test_comment', level='info')
+        log_time(logger, timings, 'test', comment='test_comment', level='info')
         assert isinstance(timings['test'], datetime.datetime)
 
-        log_time(timings, 'test2', comment=None, level='info')
+        log_time(logger, timings, 'test2', comment=None, level='info')
         assert isinstance(timings['test2'], datetime.datetime)
 
         # TODO: capture logging output and check that time_since_start is in the string
-        log_time(timings, 'test', comment=None, level='info', time_since_start=True)
+        log_time(logger, timings, 'test', comment=None, level='info', time_since_start=True)
 
 
 class TestGenerateRuns:
