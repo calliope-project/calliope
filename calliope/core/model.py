@@ -113,6 +113,7 @@ class Model(object):
             time_since_start=True
         )
 
+        # Ensure model and run attributes of _model_data update themselves
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = 0
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
@@ -125,9 +126,19 @@ class Model(object):
             name='run_config', observer=self._model_data
         )
 
+        # Attach _model_run and _debug_data to _model_data
+        _model_run_to_save = self._model_run.copy()
+        del _model_run_to_save['timeseries_data']  # Can't be serialised!
+        self._model_data.attrs['_model_run'] = _model_run_to_save.to_yaml()
+        self._model_data.attrs['_debug_data'] = self._debug_data.to_yaml()
+
     def _init_from_model_data(self, model_data):
-        self._model_run = None
-        self._debug_data = None
+        self._model_run = AttrDict.from_yaml_string(
+            model_data.attrs.get('_model_run', '{}')
+        )
+        self._debug_data = AttrDict.from_yaml_string(
+            model_data.attrs.get('_debug_data', '{}')
+        )
         self._model_data = model_data
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.model_config = UpdateObserverDict(
@@ -158,10 +169,23 @@ class Model(object):
         formulation.
 
         """
+        if not self._model_run or not self._debug_data:
+            raise KeyError(
+                'This model does not have the fully built model attached, '
+                'so `save_commented_model_yaml` is not available. Likely '
+                'reason is that the model was built with a verion of Calliope '
+                'prior to 0.6.5.'
+            )
+
         yaml = ruamel_yaml.YAML()
 
         model_run_debug = self._model_run.copy()
-        del model_run_debug['timeseries_data']  # Can't be serialised!
+        try:
+            del model_run_debug['timeseries_data']  # Can't be serialised!
+        except KeyError:
+            # Possible that timeseries_data is already gone if the model
+            # was read from a NetCDF file
+            pass
 
         # Turn sets in model_run into lists for YAML serialization
         for k, v in model_run_debug.sets.items():
