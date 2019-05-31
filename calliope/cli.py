@@ -63,6 +63,7 @@ _fail_when_infeasible = click.option(
     help='Return fail on command line when problem is infeasible (default True).'
 )
 
+
 @contextlib.contextmanager
 def format_exceptions(
         debug=False, pdb=False, profile=False,
@@ -122,24 +123,6 @@ def _cli_start(debug, quiet):
     Returns ``start_time`` (datetime timestamp)
 
     """
-    root_logger = logging.getLogger()  # Get the root logger
-
-    # Remove any existing output handlers from root logger
-    if root_logger.hasHandlers():
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
-
-    # Create a console log handler with decent formatting and attach it
-    formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format)
-    console = logging.StreamHandler(stream=sys.stderr)
-    console.setFormatter(formatter)
-    root_logger.addHandler(console)
-
-    # Also attach the console handler to captured warnings logger
-    logging.captureWarnings(True)
-    pywarning_logger = logging.getLogger('py.warnings')
-    pywarning_logger.addHandler(console)
 
     if debug:
         click.secho(_get_version())
@@ -155,7 +138,10 @@ def _cli_start(debug, quiet):
             verbosity = 'info'
             log_solver = True
 
-    set_log_verbosity(verbosity, include_solver_output=log_solver, logger=root_logger)
+    set_log_verbosity(
+        verbosity, include_solver_output=log_solver,
+        capture_warnings=True
+    )
 
     start_time = datetime.datetime.now()
 

@@ -55,7 +55,7 @@ def postprocess_model_results(results, model_data, timings):
     results = clean_results(results, run_config.get('zero_threshold', 0), timings)
 
     log_time(
-        logger, timings, 'post_process_end', time_since_start=True,
+        logger, timings, 'post_process_end', time_since_run_start=True,
         comment='Postprocessing: ended'
     )
 

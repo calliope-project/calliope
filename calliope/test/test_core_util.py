@@ -166,6 +166,25 @@ class TestMemoization:
 
 
 class TestLogging:
+    def test_set_log_verbosity(self):
+        calliope.set_log_verbosity('CRITICAL', include_solver_output=True)
+
+        assert logging.getLogger('calliope').getEffectiveLevel() == 50
+        assert logging.getLogger('py.warnings').getEffectiveLevel() == 50
+        assert logging.getLogger('calliope.backend.pyomo.model').getEffectiveLevel() == 10
+
+        calliope.set_log_verbosity('CRITICAL', include_solver_output=False)
+
+        assert logging.getLogger('calliope').getEffectiveLevel() == 50
+        assert logging.getLogger('py.warnings').getEffectiveLevel() == 50
+        assert logging.getLogger('calliope.backend.pyomo.model').getEffectiveLevel() == 50
+
+        calliope.set_log_verbosity()
+
+        assert logging.getLogger('calliope').getEffectiveLevel() == 20
+        assert logging.getLogger('py.warnings').getEffectiveLevel() == 20
+        assert logging.getLogger('calliope.backend.pyomo.model').getEffectiveLevel() == 10
+
     def test_timing_log(self):
         timings = {'model_creation': datetime.datetime.now()}
         logger = logging.getLogger('calliope.testlogger')
@@ -177,8 +196,8 @@ class TestLogging:
         log_time(logger, timings, 'test2', comment=None, level='info')
         assert isinstance(timings['test2'], datetime.datetime)
 
-        # TODO: capture logging output and check that time_since_start is in the string
-        log_time(logger, timings, 'test', comment=None, level='info', time_since_start=True)
+        # TODO: capture logging output and check that time_since_run_start is in the string
+        log_time(logger, timings, 'test', comment=None, level='info', time_since_run_start=True)
 
 
 class TestGenerateRuns:

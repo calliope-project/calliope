@@ -112,8 +112,7 @@ class Model(object):
         self._model_data = final_timedimension_processing(_model_data)
         log_time(
             logger, self._timings, 'model_data_creation',
-            comment='Model: preprocessing complete',
-            time_since_start=True
+            comment='Model: preprocessing complete'
         )
 
         for var in self._model_data.data_vars:
@@ -151,8 +150,7 @@ class Model(object):
             self.results = results
         log_time(
             logger, self._timings, 'model_data_loaded',
-            comment='Model: loaded model_data',
-            time_since_start=True
+            comment='Model: loaded model_data'
         )
 
     def save_commented_model_yaml(self, path):
@@ -205,7 +203,6 @@ class Model(object):
         Additional kwargs are passed to the backend.
 
         """
-
         # Check that results exist and are non-empty
         if hasattr(self, 'results') and self.results.data_vars and not force_rerun:
             raise exceptions.ModelError(

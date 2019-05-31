@@ -67,7 +67,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         backend_model = backend.generate_model(model_data)
 
         log_time(
-            logger, timings, 'run_backend_model_generated', time_since_start=True,
+            logger, timings, 'run_backend_model_generated', time_since_run_start=True,
             comment='Backend: model generated'
         )
 
@@ -95,7 +95,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         )
 
         log_time(
-            logger, timings, 'run_solver_exit', time_since_start=True,
+            logger, timings, 'run_solver_exit', time_since_run_start=True,
             comment='Backend: solver finished running'
         )
 
@@ -110,7 +110,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         results.attrs['termination_condition'] = termination
 
         log_time(
-            logger, timings, 'run_solution_returned', time_since_start=True,
+            logger, timings, 'run_solution_returned', time_since_run_start=True,
             comment='Backend: generated solution array'
         )
 
@@ -294,7 +294,7 @@ def run_operate(model_data, timings, backend, build_only):
 
         if not build_only:
             log_time(
-                logger, timings, 'model_run_{}'.format(i + 1), time_since_start=True,
+                logger, timings, 'model_run_{}'.format(i + 1), time_since_run_start=True,
                 comment='Backend: iteration {}: sending model to solver'.format(i + 1)
             )
             # After iteration 1, warmstart = True, which should speed up the process
@@ -305,7 +305,7 @@ def run_operate(model_data, timings, backend, build_only):
             )
 
             log_time(
-                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
+                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_run_start=True,
                 comment='Backend: iteration {}: solver finished running'.format(i + 1)
             )
             # xarray dataset is built for each iteration
@@ -339,7 +339,7 @@ def run_operate(model_data, timings, backend, build_only):
                     v.set_value(operated_units.to_series().dropna().to_dict()[k])
 
             log_time(
-                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_start=True,
+                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_run_start=True,
                 comment='Backend: iteration {}: generated solution array'.format(i + 1)
             )
 
@@ -355,7 +355,7 @@ def run_operate(model_data, timings, backend, build_only):
             results.attrs['termination_condition'] = ','.join(terminations)
 
         log_time(
-            logger, timings, 'run_solution_returned', time_since_start=True,
+            logger, timings, 'run_solution_returned', time_since_run_start=True,
             comment='Backend: generated full solution array'
         )
 
