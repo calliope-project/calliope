@@ -1,8 +1,12 @@
+import os
+
 import pytest
 from pytest import approx
 import pandas as pd
 
+
 import calliope
+from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
 
 
@@ -10,54 +14,41 @@ from calliope.test.common.util import build_test_model as build_model
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestBuildGroupConstraints:
 
-    def _build_group_model(self, scenario, model_file):
-        model = build_model(
-            model_file=model_file + '.yaml',
-            scenario=scenario
-        )
-        model.run(build_only=True)
+    metadata_yaml = os.path.join(
+        os.path.dirname(__file__), 'common', 'test_model',
+        'model_config_group', 'scenarios_metadata.yaml'
+    )
 
-        return model
-
-    _test_vars = [
-        ('demand_share_max_systemwide', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
-        ('demand_share_min_systemwide', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
-        ('demand_share_max_location_0', ['example_demand_share_max_constraint'], ['demand_share_max'], 'demand_share'),
-        ('demand_share_min_location_0', ['example_demand_share_min_constraint'], ['demand_share_min'], 'demand_share'),
-        ('multiple_constraints', ['example_demand_share_max_constraint', 'example_demand_share_min_constraint'], ['demand_share_max', 'demand_share_min'], 'demand_share'),
-        ('cheap_cost_max_systemwide', ['example_cost_max_constraint'], ['cost_max'], 'model_cost_cap'),
-        ('expensive_cost_min_systemwide', ['example_cost_min_constraint'], ['cost_min'], 'model_cost_cap'),
-        ('cheap_cost_equals_systemwide', ['example_cost_equals_constraint'], ['cost_equals'], 'model_cost_cap'),
-        ('cheap_cost_max_location_0', ['example_cheap_cost_max_location_0_constraint'], ['cost_max'], 'model_cost_cap'),
-        ('multiple_costs_constraint', ['example_emissions_max_constraint', 'example_cost_min_constraint'], ['cost_max', 'cost_min'], 'model_cost_cap'),
-        ('cheap_cost_var_max_systemwide', ['example_cost_var_max_constraint'], ['cost_var_max'], 'model_cost_cap'),
-        ('cheap_cost_investment_max_systemwide', ['example_cost_investment_max_constraint'], ['cost_investment_max'], 'model_cost_cap')
+    scenario_metadata = AttrDict.from_yaml(metadata_yaml)
+    test_vars = [
+        (k, v['constraint'], v['group_name'], v['loc_techs'])
+        for k, v in scenario_metadata.items()
     ]
 
-    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
-    def test_constraint_names(self, scenario, group_name, constraints, model_file):
-        model = self._build_group_model(scenario, model_file)
-        assert all('group_names_' + i in model._model_data.dims for i in constraints)
+    @pytest.mark.parametrize("scenario, constraints, group_names, loc_techs", test_vars)
+    def test_build_group_constraint(self, scenario, constraints, group_names, loc_techs):
 
-    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
-    def test_group_names(self, scenario, group_name, constraints, model_file):
-        model = self._build_group_model(scenario, model_file)
-        assert all(
-            group_name[i] in model._model_data['group_names_' + constraints[i]].values
-            for i in range(len(constraints))
+        scenario_model = build_model(
+            model_file=os.path.join('model_config_group', 'base_model.yaml'),
+            scenario=scenario
         )
 
-    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
-    def test_group_variables(self, scenario, group_name, constraints, model_file):
-        model = self._build_group_model(scenario, model_file)
-        assert all('group_' + i in model._model_data.data_vars.keys() for i in constraints)
+        assert all('group_names_' + i in scenario_model._model_data.dims for i in constraints)
+        assert all(
+            group_names[i] in scenario_model._model_data['group_names_' + constraints[i]].values
+            for i in range(len(constraints))
+        )
+        assert all('group_' + i in scenario_model._model_data.data_vars.keys() for i in constraints)
+        assert all(
+            len(set(loc_techs[i]) -
+                set(scenario_model._model_data['group_constraint_loc_techs_' + group_names[i]].values))
+            == 0 for i in range(len(group_names))
+        )
 
-    @pytest.mark.parametrize("scenario,group_name,constraints,model_file", _test_vars)
-    def test_group_constraints(self, scenario, group_name, constraints, model_file):
-        model = self._build_group_model(scenario, model_file)
-        assert all(hasattr(model._backend_model, 'group_' + i + '_constraint')
-                   for i in constraints)
-
+        scenario_model.run()
+        assert all(
+            hasattr(scenario_model._backend_model, 'group_' + i + '_constraint') for i in constraints
+        )
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")

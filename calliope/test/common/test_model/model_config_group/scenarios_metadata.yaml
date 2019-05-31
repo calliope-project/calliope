@@ -1,0 +1,84 @@
+energy_cap_max_supply:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[0::cheap_elec_supply, 1::cheap_elec_supply]]
+energy_cap_min_supply:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply]]
+energy_cap_min_max_supply:
+    constraint: [energy_cap_max, energy_cap_min]
+    group_name: [example_energy_cap_constraint, example_energy_cap_min_constraint]
+    loc_techs: [[0::cheap_elec_supply, 1::cheap_elec_supply], [0::expensive_elec_supply, 1::expensive_elec_supply]]
+energy_cap_max_supply_loc_0:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[0::cheap_elec_supply]]
+energy_cap_min_supply_loc_0:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_min_constraint]
+    loc_techs: [[0::expensive_elec_supply]]
+energy_cap_min_max_supply_loc_0:
+    constraint: [energy_cap_max, energy_cap_min]
+    group_name: [example_energy_cap_constraint, example_energy_cap_min_constraint]
+    loc_techs: [[0::cheap_elec_supply], [0::expensive_elec_supply]]
+energy_cap_max_transmission:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[0::cheap_elec_transmission:1, 1::cheap_elec_transmission:0]]
+energy_cap_min_transmission:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[0::expensive_elec_transmission:1, 1::expensive_elec_transmission:0]]
+energy_cap_max_storage:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_storage]]
+energy_cap_min_storage:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_storage]]
+energy_cap_max_conversion:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_to_heat]]
+energy_cap_min_conversion:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_to_heat]]
+energy_cap_max_conversion_plus_linked:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_to_heat_cool_linked]]
+energy_cap_min_conversion_plus_linked:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_to_heat_cool_linked]]
+energy_cap_max_conversion_plus_unlinked:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_to_heat_cool_unlinked]]
+energy_cap_min_conversion_plus_unlinked:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [[1::elec_to_heat_cool_unlinked]]
+energy_cap_min_all_techs:
+    constraint: [energy_cap_min]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [['0::expensive_elec_transmission:1', '1::elec_to_heat_cool_unlinked',
+                 '1::expensive_elec_transmission:0', '0::cheap_elec_supply',
+                 '1::elec_to_heat_cool_linked', '1::elec_to_heat',
+                 '1::expensive_elec_supply', '0::cheap_elec_transmission:1',
+                 '1::cheap_elec_supply', '0::normal_elec_supply',
+                 '1::normal_elec_supply', '1::elec_storage', '0::expensive_elec_supply',
+                 '1::cheap_elec_transmission:0']]
+energy_cap_max_all_techs:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [['0::expensive_elec_transmission:1', '1::elec_to_heat_cool_unlinked',
+                 '1::expensive_elec_transmission:0', '0::cheap_elec_supply',
+                 '1::elec_to_heat_cool_linked', '1::elec_to_heat',
+                 '1::expensive_elec_supply', '0::cheap_elec_transmission:1',
+                 '1::cheap_elec_supply', '0::normal_elec_supply',
+                 '1::normal_elec_supply', '1::elec_storage', '0::expensive_elec_supply',
+                 '1::cheap_elec_transmission:0']]

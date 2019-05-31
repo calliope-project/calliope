@@ -623,7 +623,7 @@ def check_final(model_run):
         ]
         unallowed_tech_groups = (
             set([item for sublist in allowed_tech_groups for item in sublist])
-            .difference(DEFAULTS.tech_groups.keys())
+            .symmetric_difference(DEFAULTS.tech_groups.keys())
         )
 
         stripped_allowed_tech_groups = set(allowed_tech_groups[0]).intersection(*allowed_tech_groups)
@@ -643,7 +643,7 @@ def check_final(model_run):
         if not requested_techs:
             model_warnings.append(
                 'All technologies were requested for inclusion in group constraint '
-                '`{}`, but those from tech groups `{}` have been ignored as one '
+                '`{}`, but those from tech group(s) `{}` have been ignored as one '
                 'or more of the constraints cannot be applied to technologies '
                 'in these groups'
                 .format(group_constraint_name, dropped_tech_groups | unallowed_tech_groups)

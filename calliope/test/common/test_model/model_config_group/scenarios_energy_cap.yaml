@@ -9,6 +9,10 @@ overrides:
         group_constraints.example_energy_cap_constraint:
             energy_cap_max: 6
 
+    energy_cap_max_high:
+        group_constraints.example_energy_cap_constraint:
+            energy_cap_max: 30
+
     energy_cap_loc_0:
         group_constraints.example_energy_cap_constraint:
             locs: ["0"]
@@ -90,4 +94,14 @@ scenarios:
         add_cheap_heat_supply, add_cheap_cooling_supply,
         add_elec_to_heat_cooling_unlinked_conversion_plus,
         add_heat_demand, add_cooling_demand
+    ]
+    energy_cap_min_all_techs: [
+        energy_cap_min, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+    ]
+    energy_cap_max_all_techs: [
+        energy_cap_max_high, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
     ]
