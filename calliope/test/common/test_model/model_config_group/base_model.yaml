@@ -8,7 +8,7 @@ model:
 
 run:
     mode: plan
-    solver: cplex
+    solver: cbc
     objective_options.cost_class: {monetary: 1}
 
 tech_groups:
