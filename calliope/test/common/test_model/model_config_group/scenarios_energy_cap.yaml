@@ -13,6 +13,10 @@ overrides:
         group_constraints.example_energy_cap_constraint:
             energy_cap_max: 26
 
+    energy_cap_max_low:
+        group_constraints.example_energy_cap_constraint:
+            energy_cap_max: 1
+
     energy_cap_loc_0:
         group_constraints.example_energy_cap_constraint:
             locs: ["0"]
@@ -58,11 +62,9 @@ overrides:
         group_constraints.example_energy_cap_constraint:
             techs: ["elec_to_heat_cool_unlinked"]
 
-    energy_cap_conversion_all:
+    energy_cap_non_conversion:
         group_constraints.example_energy_cap_constraint:
-            techs: ["elec_to_heat_cool_unlinked",
-                    "elec_to_heat", "elec_to_heat_cool_linked",
-                    "elec_to_heat_cool_unlinked"]
+            techs: ["cheap_cool_supply", "cheap_heat_supply"]
 
 scenarios:
     energy_cap_max_supply: [energy_cap_max, energy_cap_cheap_supply]
@@ -107,8 +109,10 @@ scenarios:
         add_elec_to_heat_cooling_unlinked_conversion_plus,
         add_heat_demand, add_cooling_demand
     ]
-    energy_cap_min_conversion_all: [
-        energy_cap_min, energy_cap_conversion_all, add_elec_to_heat_conversion,
+    energy_cap_max_non_conversion_all: [
+        energy_cap_max_low, energy_cap_non_conversion,
+        add_cheap_heat_supply, add_cheap_cooling_supply,
+        add_elec_to_heat_conversion,
         add_elec_to_heat_cooling_linked_conversion_plus,
         add_elec_to_heat_cooling_unlinked_conversion_plus,
         add_heat_demand, add_cooling_demand

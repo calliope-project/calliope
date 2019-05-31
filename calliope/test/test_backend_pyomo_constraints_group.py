@@ -962,21 +962,25 @@ class TestEnergyCapGroupConstraints:
         storage = capacity.loc[{'locs': "1", 'techs': "elec_storage"}].item()
         assert round(storage, 5) >= 6
 
-    # All conversion technologies, but insufficient energy_cap_max to use the
-    # unlinked conversion_plus tech to meet cooling demand
-    def test_energy_cap_min_conversion_all_constraint(self, model_file):
+    # All conversion technologies with insufficient energy_cap_max to use the
+    # cheap direct heat/cooling supply techs
+    def test_energy_cap_max_non_conversion_all_constraint(self, model_file):
         model = build_model(
             model_file=model_file,
-            scenario='energy_cap_min_conversion_all'
+            scenario='energy_cap_max_non_conversion_all'
         )
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         elec_to_heat = capacity.loc[{'locs': "1", 'techs': "elec_to_heat"}].item()
         elec_to_heat_cool_linked = capacity.loc[{'locs': "1", 'techs': "elec_to_heat_cool_linked"}].item()
         elec_to_heat_cool_unlinked = capacity.loc[{'locs': "1", 'techs': "elec_to_heat_cool_unlinked"}].item()
-        assert elec_to_heat == approx(4)
-        assert elec_to_heat_cool_linked == approx(2)
+        cheap_heat = capacity.loc[{'locs': "1", 'techs': "cheap_heat_supply"}].item()
+        cheap_cool = capacity.loc[{'locs': "1", 'techs': "cheap_cool_supply"}].item()
+        assert cheap_heat == approx(0.8333, rel=0.001)
+        assert cheap_cool == approx(0.1667, rel=0.001)
+        assert elec_to_heat_cool_linked == approx(1.6667, rel=0.001)
         assert elec_to_heat_cool_unlinked == 0
+        assert elec_to_heat == 0
 
     # All technologies, but insufficient energy_cap_max for enough installed capacity to meet demand
     @pytest.mark.filterwarnings("ignore:(?s).*`{'demand'}` have been ignored*:calliope.exceptions.ModelWarning")

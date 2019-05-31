@@ -10,18 +10,18 @@ energy_cap_min_max_supply:
     constraint: [energy_cap_min, energy_cap_max]
     group_name: [example_energy_cap_constraint, example_energy_cap_max_constraint]
     loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply], [0::cheap_elec_supply, 1::cheap_elec_supply]]
-energy_cap_max_supply_loc_0:
+energy_cap_max_supply_loc_1:
     constraint: [energy_cap_max]
     group_name: [example_energy_cap_max_constraint]
-    loc_techs: [[0::cheap_elec_supply]]
+    loc_techs: [[1::cheap_elec_supply]]
 energy_cap_min_supply_loc_0:
     constraint: [energy_cap_min]
     group_name: [example_energy_cap_constraint]
     loc_techs: [[0::expensive_elec_supply]]
-energy_cap_min_max_supply_loc_0:
+energy_cap_min_max_supply_loc_0_1:
     constraint: [energy_cap_min, energy_cap_max]
     group_name: [example_energy_cap_constraint, example_energy_cap_max_constraint]
-    loc_techs: [[0::expensive_elec_supply], [0::cheap_elec_supply]]
+    loc_techs: [[0::expensive_elec_supply], [1::cheap_elec_supply]]
 energy_cap_max_transmission:
     constraint: [energy_cap_max]
     group_name: [example_energy_cap_constraint]
@@ -62,6 +62,10 @@ energy_cap_min_conversion_plus_unlinked:
     constraint: [energy_cap_min]
     group_name: [example_energy_cap_constraint]
     loc_techs: [[1::elec_to_heat_cool_unlinked]]
+energy_cap_max_non_conversion_all:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [['1::cheap_heat_supply', '1::cheap_cool_supply']]
 energy_cap_min_all_techs:
     constraint: [energy_cap_min]
     group_name: [example_energy_cap_constraint]
@@ -73,6 +77,16 @@ energy_cap_min_all_techs:
                  '1::normal_elec_supply', '1::elec_storage', '0::expensive_elec_supply',
                  '1::cheap_elec_transmission:0']]
 energy_cap_max_all_techs:
+    constraint: [energy_cap_max]
+    group_name: [example_energy_cap_constraint]
+    loc_techs: [['0::expensive_elec_transmission:1', '1::elec_to_heat_cool_unlinked',
+                 '1::expensive_elec_transmission:0', '0::cheap_elec_supply',
+                 '1::elec_to_heat_cool_linked', '1::elec_to_heat',
+                 '1::expensive_elec_supply', '0::cheap_elec_transmission:1',
+                 '1::cheap_elec_supply', '0::normal_elec_supply',
+                 '1::normal_elec_supply', '1::elec_storage', '0::expensive_elec_supply',
+                 '1::cheap_elec_transmission:0']]
+energy_cap_max_all_techs_infeasible:
     constraint: [energy_cap_max]
     group_name: [example_energy_cap_constraint]
     loc_techs: [['0::expensive_elec_transmission:1', '1::elec_to_heat_cool_unlinked',
