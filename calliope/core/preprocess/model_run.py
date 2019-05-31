@@ -11,6 +11,7 @@ AttrDict, and building of associated debug information.
 """
 
 import os
+import logging
 import itertools
 import warnings
 
@@ -19,9 +20,10 @@ import pandas as pd
 import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.logging import logger
 from calliope.core.util.tools import relative_path
 from calliope.core.preprocess import locations, sets, checks, constraint_sets, util
+
+logger = logging.getLogger(__name__)
 
 
 # Output of: sns.color_palette('cubehelix', 10).as_hex()

@@ -4,6 +4,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+import logging
 import os
 from contextlib import redirect_stdout, redirect_stderr
 
@@ -23,10 +24,12 @@ from pyutilib.services import TempfileManager  # pylint: disable=import-error
 from calliope.backend.pyomo.util import get_var
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
-from calliope.core.util.logging import LogWriter, logger
+from calliope.core.util.logging import LogWriter
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
+
+logger = logging.getLogger(__name__)
 
 
 def generate_model(model_data):
@@ -123,7 +126,7 @@ def generate_model(model_data):
             .format(e.args[0], e.args[0].split('.')[-1].split("'")[0])
         )
 
-    logger.debug('constraints are loaded in the following order: {}'.format(constraints_to_add))
+    logger.info('constraints are loaded in the following order: {}'.format(constraints_to_add))
 
     for c in constraints_to_add:
         load_function(
@@ -177,8 +180,8 @@ def solve_model(backend_model, solver,
         )
         del solve_kwargs['warmstart']
 
-    with redirect_stdout(LogWriter('solver', strip=True)):
-        with redirect_stderr(LogWriter('error', strip=True)):
+    with redirect_stdout(LogWriter(logger, 'debug', strip=True)):
+        with redirect_stderr(LogWriter(logger, 'error', strip=True)):
             results = opt.solve(backend_model, tee=True, **solve_kwargs)
 
     return results
