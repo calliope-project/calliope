@@ -22,7 +22,6 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.preprocess.util import get_all_carriers, flatten_list
 from calliope.core.util.logging import logger
 from calliope.core.util.tools import load_function
-from calliope.core.util.dataset import get_loc_techs
 
 DEFAULTS = AttrDict.from_yaml(os.path.join(os.path.dirname(calliope.__file__), 'config', 'defaults.yaml'))
 POSSIBLE_COSTS = [i for i in DEFAULTS.techs.default_tech.costs.default_cost.keys()]
