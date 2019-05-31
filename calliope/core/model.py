@@ -113,6 +113,7 @@ class Model(object):
             time_since_start=True
         )
 
+        # Ensure model and run attributes of _model_data update themselves
         for var in self._model_data.data_vars:
             self._model_data[var].attrs['is_result'] = 0
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
@@ -130,8 +131,16 @@ class Model(object):
         )
 
     def _init_from_model_data(self, model_data):
-        self._model_run = None
-        self._debug_data = None
+        if '_model_run' in model_data.attrs:
+            self._model_run = AttrDict.from_yaml_string(
+                model_data.attrs['_model_run'])
+            del model_data.attrs['_model_run']
+
+        if '_debug_data' in model_data.attrs:
+            self._debug_data = AttrDict.from_yaml_string(
+                model_data.attrs['_debug_data'])
+            del model_data.attrs['_debug_data']
+
         self._model_data = model_data
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.model_config = UpdateObserverDict(
@@ -162,10 +171,23 @@ class Model(object):
         formulation.
 
         """
+        if not self._model_run or not self._debug_data:
+            raise KeyError(
+                'This model does not have the fully built model attached, '
+                'so `save_commented_model_yaml` is not available. Likely '
+                'reason is that the model was built with a verion of Calliope '
+                'prior to 0.6.5.'
+            )
+
         yaml = ruamel_yaml.YAML()
 
         model_run_debug = self._model_run.copy()
-        del model_run_debug['timeseries_data']  # Can't be serialised!
+        try:
+            del model_run_debug['timeseries_data']  # Can't be serialised!
+        except KeyError:
+            # Possible that timeseries_data is already gone if the model
+            # was read from a NetCDF file
+            pass
 
         # Turn sets in model_run into lists for YAML serialization
         for k, v in model_run_debug.sets.items():
@@ -279,7 +301,7 @@ class Model(object):
         to a NetCDF file at the given ``path``.
 
         """
-        io.save_netcdf(self._model_data, path)
+        io.save_netcdf(self._model_data, path, model=self)
 
     def to_csv(self, path, dropna=True):
         """
