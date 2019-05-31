@@ -5,6 +5,7 @@ import pytest  # pylint: disable=unused-import
 
 import calliope
 from calliope import exceptions
+from calliope.test.common.util import check_error_or_warning
 
 
 class TestIO:
@@ -82,6 +83,27 @@ class TestIO:
 
             model_from_disk = calliope.read_netcdf(out_path)
             # FIXME test for some data in model_from_disk
+
+    def test_netcdf_roundtrip_modelrun_to_yaml(self, model):
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path_nc = os.path.join(tempdir, 'model.nc')
+            out_path_yaml = os.path.join(tempdir, 'modelrun.yaml')
+            model.to_netcdf(out_path_nc)
+            model_from_disk = calliope.read_netcdf(out_path_nc)
+
+            model_from_disk.save_commented_model_yaml(out_path_yaml)
+            assert os.path.isfile(out_path_yaml)
+
+    def test_netcdf_to_yaml_raises_if_attrs_missing(self, model):
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path_yaml = os.path.join(tempdir, 'modelrun.yaml')
+            model._model_run = {}
+            with pytest.raises(KeyError) as error:
+                model.save_commented_model_yaml(out_path_yaml)
+
+        assert check_error_or_warning(
+            error, 'This model does not have the fully built model attached'
+        )
 
     def test_save_lp(self, model):
         with tempfile.TemporaryDirectory() as tempdir:

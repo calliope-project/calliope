@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 io.py
@@ -38,24 +38,35 @@ def read_netcdf(path):
     return model_data
 
 
-def save_netcdf(model_data, path):
+def save_netcdf(model_data, path, model=None):
     encoding = {k: {'zlib': True, 'complevel': 4} for k in model_data.data_vars}
+
+    original_model_data_attrs = model_data.attrs
+    model_data_attrs = model_data.attrs.copy()
+
+    if model is not None:
+        # Attach _model_run and _debug_data to _model_data
+        model_run_to_save = model._model_run.copy()
+        if 'timeseries_data' in model_run_to_save:
+            del model_run_to_save['timeseries_data']  # Can't be serialised!
+        model_data_attrs['_model_run'] = model_run_to_save.to_yaml()
+        model_data_attrs['_debug_data'] = model._debug_data.to_yaml()
 
     # Convert boolean attrs to ints
     bool_attrs = [
-        k for k, v in model_data.attrs.items()
+        k for k, v in model_data_attrs.items()
         if isinstance(v, bool)
     ]
     for k in bool_attrs:
-        model_data.attrs[k] = int(model_data.attrs[k])
+        model_data_attrs[k] = int(model_data_attrs[k])
 
     # Convert None attrs to 'None'
     none_attrs = [
-        k for k, v in model_data.attrs.items()
+        k for k, v in model_data_attrs.items()
         if v is None
     ]
     for k in none_attrs:
-        model_data.attrs[k] = 'None'
+        model_data_attrs[k] = 'None'
 
     # Convert `object` dtype coords to string
     # FIXME: remove once xarray issue https://github.com/pydata/xarray/issues/2404 is resolved
@@ -64,13 +75,11 @@ def save_netcdf(model_data, path):
             model_data[k] = v.astype('<U{}'.format(max([len(i.item()) for i in v])))
 
     try:
+        model_data.attrs = model_data_attrs
         model_data.to_netcdf(path, format='netCDF4', encoding=encoding)
         model_data.close()  # Force-close NetCDF file after writing
-    finally:  # Convert ints back to bools, 'None' back to None
-        for k in bool_attrs:
-            model_data.attrs[k] = bool(model_data.attrs[k])
-        for k in none_attrs:
-            model_data.attrs[k] = None
+    finally:  # Revert model_data.attrs back
+        model_data.attrs = original_model_data_attrs
 
 
 def save_csv(model_data, path, dropna=True):
