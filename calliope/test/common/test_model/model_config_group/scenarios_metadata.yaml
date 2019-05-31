@@ -7,21 +7,21 @@ energy_cap_min_supply:
     group_name: [example_energy_cap_constraint]
     loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply]]
 energy_cap_min_max_supply:
-    constraint: [energy_cap_max, energy_cap_min]
-    group_name: [example_energy_cap_constraint, example_energy_cap_min_constraint]
-    loc_techs: [[0::cheap_elec_supply, 1::cheap_elec_supply], [0::expensive_elec_supply, 1::expensive_elec_supply]]
+    constraint: [energy_cap_min, energy_cap_max]
+    group_name: [example_energy_cap_constraint, example_energy_cap_max_constraint]
+    loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply], [0::cheap_elec_supply, 1::cheap_elec_supply]]
 energy_cap_max_supply_loc_0:
     constraint: [energy_cap_max]
-    group_name: [example_energy_cap_constraint]
+    group_name: [example_energy_cap_max_constraint]
     loc_techs: [[0::cheap_elec_supply]]
 energy_cap_min_supply_loc_0:
     constraint: [energy_cap_min]
-    group_name: [example_energy_cap_min_constraint]
+    group_name: [example_energy_cap_constraint]
     loc_techs: [[0::expensive_elec_supply]]
 energy_cap_min_max_supply_loc_0:
-    constraint: [energy_cap_max, energy_cap_min]
-    group_name: [example_energy_cap_constraint, example_energy_cap_min_constraint]
-    loc_techs: [[0::cheap_elec_supply], [0::expensive_elec_supply]]
+    constraint: [energy_cap_min, energy_cap_max]
+    group_name: [example_energy_cap_constraint, example_energy_cap_max_constraint]
+    loc_techs: [[0::expensive_elec_supply], [0::cheap_elec_supply]]
 energy_cap_max_transmission:
     constraint: [energy_cap_max]
     group_name: [example_energy_cap_constraint]

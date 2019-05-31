@@ -56,6 +56,7 @@ overrides:
                 monetary:
                     interest_rate: 0.1
                     om_con: 0.001
+                    energy_cap: 0.001
         locations.1.techs: {elec_to_heat}
 
     add_elec_to_heat_cooling_linked_conversion_plus:
@@ -76,6 +77,7 @@ overrides:
                 monetary:
                     interest_rate: 0.1
                     om_con: 0.001
+                    energy_cap: 0.001
         locations.1.techs: {elec_to_heat_cool_linked}
 
     add_elec_to_heat_cooling_unlinked_conversion_plus:
@@ -95,6 +97,7 @@ overrides:
                 monetary:
                     interest_rate: 0.1
                     om_con: 0.001
+                    energy_cap: 0.001
         locations.1.techs: {elec_to_heat_cool_unlinked}
 
     add_heat_demand:
@@ -130,6 +133,7 @@ overrides:
             costs:
                 monetary:
                     interest_rate: 0.1
+                    om_prod: 0.001
                     energy_cap: 10
         links.0,1.techs: {expensive_elec_transmission}
 
@@ -140,6 +144,12 @@ overrides:
                 carrier: electricity
                 parent: storage
             constraints:
+                lifetime: 15
                 storage_loss: 0.001
                 energy_eff: 0.99
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    om_prod: 0.001
+                    energy_cap: 0.001
         locations.1.techs: {elec_storage}

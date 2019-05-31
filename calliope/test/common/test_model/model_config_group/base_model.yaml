@@ -18,7 +18,6 @@ tech_groups:
         constraints:
             lifetime: 25
             energy_cap_max: .inf
-            resource: file=supply_simple.csv
         costs:
             monetary:
                 interest_rate: 0.1
