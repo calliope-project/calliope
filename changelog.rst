@@ -6,6 +6,10 @@ Release History
 0.6.5 (dev)
 -----------
 
+|changed| All model defaults have been moved to `defaults.yaml`, removing the need for `model.yaml`. A default location, link and group constraint have been added to `defaults.yaml` to validate input model keys.
+
+|fixed| Tech groups are used to filter technologies to which group constraints can be applied. This ensures that transmission and storage technologies are included in cost and energy capacity group constraints. More comprehensive tests have been added accordingly.
+
 |fixed| Models saved to NetCDF now include the fully built internal YAML model and debug data so that `Model.save_commented_model_yaml()` is available after loading a NetCDF model from disk
 
 |fixed| Fix an issue preventing the deprecated `charge_rate` constraint from working in 0.6.4.
