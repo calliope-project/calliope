@@ -1,3 +1,5 @@
+import logging
+
 import xarray as xr
 import pyomo.core as po  # pylint: disable=import-error
 
@@ -9,6 +11,9 @@ from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
+
+
+logger = logging.getLogger(__name__)
 
 
 def access_pyomo_model_inputs(backend_model):
@@ -125,7 +130,7 @@ def rerun_pyomo_model(model_data, backend_model):
         )
 
     timings = {}
-    log_time(timings, 'model_creation')
+    log_time(logger, timings, 'model_creation')
 
     results, backend_model = backend_run.run_plan(
         model_data, timings, run_pyomo,

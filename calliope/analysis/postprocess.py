@@ -9,12 +9,16 @@ Functionality to post-process model results.
 
 """
 
+import logging
+
 import xarray as xr
 import numpy as np
 
 from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
+
+logger = logging.getLogger(__name__)
 
 
 def postprocess_model_results(results, model_data, timings):
@@ -39,7 +43,7 @@ def postprocess_model_results(results, model_data, timings):
 
     """
     log_time(
-        timings, 'post_process_start',
+        logger, timings, 'post_process_start',
         comment='Postprocessing: started'
     )
 
@@ -51,7 +55,7 @@ def postprocess_model_results(results, model_data, timings):
     results = clean_results(results, run_config.get('zero_threshold', 0), timings)
 
     log_time(
-        timings, 'post_process_end', time_since_start=True,
+        logger, timings, 'post_process_end', time_since_run_start=True,
         comment='Postprocessing: ended'
     )
 
@@ -185,7 +189,7 @@ def clean_results(results, zero_threshold, timings):
         comment = 'zero threshold of {} not required'.format(zero_threshold)
 
     log_time(
-        timings, 'threshold_applied',
+        logger, timings, 'threshold_applied',
         comment='Postprocessing: ' + comment
     )
 
@@ -201,7 +205,7 @@ def clean_results(results, zero_threshold, timings):
         if not results.unmet_demand.sum():
 
             log_time(
-                timings, 'delete_unmet_demand',
+                logger, timings, 'delete_unmet_demand',
                 comment='Postprocessing: Model was feasible, deleting unmet_demand variable'
             )
             results = results.drop('unmet_demand')

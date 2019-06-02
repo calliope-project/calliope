@@ -4,6 +4,7 @@ import xarray as xr
 import pyomo.core as po
 from pyomo.core.expr.current import identify_variables
 import os
+import logging
 
 from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
@@ -588,12 +589,14 @@ class TestCapacityConstraints:
                 for i in set(['max', 'min'])
             ])
 
-    def test_no_loc_techs_energy_capacity_storage_constraint(self):
+    def test_no_loc_techs_energy_capacity_storage_constraint(self, caplog):
         """
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
         """
-        with pytest.warns(exceptions.ModelWarning, match='(?s).*consider defining a `energy_cap_per_storage_cap_min/max/equals` constraint'):
+        with caplog.at_level(logging.INFO):
             m = build_model(model_file='energy_cap_per_storage_cap.yaml')
+
+        assert 'consider defining a `energy_cap_per_storage_cap_min/max/equals` constraint' in caplog.text
 
         m.run(build_only=True)
         assert not any([

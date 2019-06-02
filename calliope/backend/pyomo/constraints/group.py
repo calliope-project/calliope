@@ -9,12 +9,14 @@ Group constraints.
 
 """
 
+import logging
+
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.core.util.logging import logger
-
 from calliope.backend.pyomo.util import loc_tech_is_in
+
+logger = logging.getLogger(__name__)
 
 ORDER = 20  # order in which to invoke constraints relative to other constraint files
 

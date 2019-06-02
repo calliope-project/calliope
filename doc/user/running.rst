@@ -111,12 +111,12 @@ There are two ways to override a base model when running interactively, analogou
 Tracking progress
 -----------------
 
-When running Calliope in the command line, logging of model pre-processing and solving occurs automatically. Interactively, for example in a Jupyter notebook, you can enable verbose logging by setting the log level using ``calliope.set_log_level(level)`` immediately after importing the Calliope package. Possible levels are (from least to most verbose):
+When running Calliope in the command line, logging of model pre-processing and solving occurs automatically. Interactively, for example in a Jupyter notebook, you can enable verbose logging by setting the log level using ``calliope.set_log_verbosity(level)`` immediately after importing the Calliope package. By default, ``calliope.set_log_verbosity()`` also sets the log level for the backend model to `DEBUG`, which turns on output of solver output. This can be disabled by ``calliope.set_log_verbosity(level, include_solver_output=False)``. Possible log levels are (from least to most verbose):
 
-1. `ERROR`: only print errors.
-2. `WARNING`: print errors and warnings (default level).
-3. `INFO`: print errors, warnings, and Calliope messages. This prints a message at each stage of pre-processing, sending the model to the solver, and post-processing, including timestamps.
-4. `SOLVER`: INFO logging, with added print-out of the solver status as it converges on a solution.
+1. `CRITICAL`: only show critical errors.
+2. `ERROR`: only show errors.
+3. `WARNING`: show errors and warnings (default level).
+4. `INFO`: show errors, warnings, and informative messages. Calliope uses the INFO level to show a message at each stage of pre-processing, sending the model to the solver, and post-processing, including timestamps.
 5. `DEBUG`: SOLVER logging, with heavily verbose logging of a number of function outputs. Only for use when troubleshooting failing runs or developing new functionality in Calliope.
 
 --------------------------------------

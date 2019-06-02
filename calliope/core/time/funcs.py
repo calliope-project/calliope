@@ -9,6 +9,8 @@ Functions to process time series data.
 
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -16,8 +18,9 @@ import xarray as xr
 from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
 from calliope.core.time import clustering
-from calliope.core.util.logging import logger
 from calliope.core.preprocess.lookup import lookup_clusters
+
+logger = logging.getLogger(__name__)
 
 
 def get_daily_timesteps(data, check_uniformity=False):

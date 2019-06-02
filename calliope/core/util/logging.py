@@ -10,67 +10,87 @@ Create the Calliope logger object and apply other logging tools/functionality
 
 """
 
+import datetime
 import logging
 import sys
-import datetime
 
-SOLVER = 19
-logging.addLevelName(SOLVER, 'SOLVER')
-logger = logging.getLogger('calliope')
-logger.propagate = False
-
-if logger.hasHandlers():
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-
-formatter = logging.Formatter(
-    '[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt="%Y-%m-%d %H:%M:%S")
-console = logging.StreamHandler(stream=sys.stdout)
-console.setFormatter(formatter)
-logger.addHandler(console)
+_time_format = '%Y-%m-%d %H:%M:%S'
 
 
-def set_log_level(level):
+def setup_root_logger(verbosity, capture_warnings):
+    root_logger = logging.getLogger()  # Get the root logger
+
+    # Remove any existing output handlers from root logger
+    if root_logger.hasHandlers():
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
+
+    # Create a console log handler with decent formatting and attach it
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)-8s %(message)s', datefmt=_time_format)
+    console = logging.StreamHandler(stream=sys.stdout)
+    console.setFormatter(formatter)
+    root_logger.addHandler(console)
+    root_logger.setLevel(verbosity.upper())
+
+    if capture_warnings:
+        logging.captureWarnings(True)
+        pywarning_logger = logging.getLogger('py.warnings')
+        pywarning_logger.setLevel(verbosity.upper())
+
+    return root_logger
+
+
+def set_log_verbosity(
+    verbosity='info',
+    include_solver_output=True,
+    capture_warnings=True
+):
     """
-    Set the minimum logging verbosity in a Python console. Higher verbosity levels
-    will include their output and all those of following levels.
-    Level options (in descending order of verbosity):
+    Set the verbosity of logging and setup the root logger to log to
+    console (stdout) with timestamp output formatting.
 
-    * 'DEBUG'
-    * 'SOLVER' -> Calliope custom level, assigned value of 19,
-                  returns solver (e.g. GLPK) stream
-    * 'INFO'
-    * 'WARNING' -> default level
-    * 'ERROR'
-    * 'CRITICAL'
+    Parameters
+    ----------
+    verbosity : str, default 'info'
+        Logging level to display across all of Calliope. Can be one of
+        'debug', 'info', 'warning', 'error', or 'critical'.
+    include_solver_output : bool, default True
+        If True, the logging level for just the backend model is set to
+        DEBUG, which turns on display of solver output.
+    capture_warnings : bool, default True
+        If True, also capture all warnings and log them to the WARNING
+        level. This results in more consistent output when running
+        interactively.
+
     """
-
-    if level == 'DEBUG':
-        logger.setLevel(logging.DEBUG)
-
-    elif level == 'SOLVER':
-        logger.setLevel(SOLVER)
-
+    backend_logger = logging.getLogger('calliope.backend.pyomo.model')
+    if include_solver_output is True:
+        backend_logger.setLevel('DEBUG')
     else:
-        logger.setLevel(getattr(logging, level))
+        backend_logger.setLevel(verbosity.upper())
+
+    setup_root_logger(
+        verbosity=verbosity, capture_warnings=capture_warnings
+    )
 
 
-def log_time(timings, identifier, comment=None, level='info', time_since_start=False):
+def log_time(logger, timings, identifier, comment=None, level='info', time_since_run_start=False):
     if comment is None:
         comment = identifier
 
     timings[identifier] = now = datetime.datetime.now()
 
-    if time_since_start:
-        time_diff = now - timings['model_creation']
-        comment += '. Time since start: {}'.format(time_diff)
+    if time_since_run_start and 'run_start' in timings:
+        time_diff = now - timings['run_start']
+        comment += '. Time since start of model run: {}'.format(time_diff)
 
     getattr(logger, level)(comment)
 
 
 class LogWriter:
-    def __init__(self, level, strip=False):
+    def __init__(self, logger, level, strip=False):
+        self.logger = logger
         self.level = level
         self.strip = strip
 
@@ -78,10 +98,7 @@ class LogWriter:
         if message != '\n':
             if self.strip:
                 message = message.strip()
-            if self.level == 'solver':
-                logger.log(SOLVER, message)
-            else:
-                getattr(logger, self.level)(message)
+            getattr(self.logger, self.level)(message)
 
     def flush(self):
         pass
