@@ -10,6 +10,15 @@ from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
 
 
+def get_supply_conversion_techs(model):
+    available_techs = [
+        'elec_to_heat_cool_unlinked', 'cheap_elec_supply', 'elec_to_heat_cool_linked',
+        'elec_to_heat', 'expensive_elec_supply', 'normal_elec_supply',
+        'cheap_heat_supply', 'cheap_cool_supply', 'normal_heat_supply',
+        'expensive_heat_supply', 'normal_cool_supply', 'expensive_cool_supply'
+    ]
+    return [i for i in available_techs if i in model._model_data.techs.values]
+
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestBuildGroupConstraints:
@@ -787,76 +796,137 @@ class TestSupplyShareGroupConstraints:
         assert ((expensive_elec_supply / supply).round(5) == 0.6).all()
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
-@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestEnergyCapShareGroupConstraints:
 
-    def test_no_energy_cap_share_constraint(self):
-        model = build_model(model_file='energy_cap_share.yaml')
+    @pytest.fixture(scope='module')
+    def model_file(self):
+        return os.path.join('model_config_group', 'base_model.yaml')
+
+    def test_no_energy_cap_share_constraint(self, model_file):
+        model = build_model(model_file=model_file)
         model.run()
-        expensive_capacity = (model.get_formatted_array("energy_cap")
-                                   .loc[{'techs': "expensive_elec_supply"}].sum())
+        capacity = model.get_formatted_array("energy_cap")
+        expensive_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
         assert expensive_capacity == 0
 
-    def test_systemwide_energy_cap_share_max_constraint(self):
+    def test_energy_cap_share_max_supply_constraint(self, model_file):
         model = build_model(
-            model_file='energy_cap_share.yaml',
-            scenario='energy_cap_share_max_systemwide'
-        )
-        model.run()
-        cheap_capacity = (model.get_formatted_array("energy_cap")
-                               .to_dataframe()
-                               .reset_index()
-                               .groupby("techs")
-                               .energy_cap
-                               .sum()
-                               .loc[["expensive_elec_supply", "cheap_elec_supply"]]  # remove demand
-                               .transform(lambda x: x / x.sum())
-                               .loc["cheap_elec_supply"])
-        assert cheap_capacity <= 0.4
-
-    def test_systemwide_energy_cap_share_min_constraint(self):
-        model = build_model(
-            model_file='energy_cap_share.yaml',
-            scenario='energy_cap_share_min_systemwide'
-        )
-        model.run()
-        expensive_capacity = (model.get_formatted_array("energy_cap")
-                                   .to_dataframe()
-                                   .reset_index()
-                                   .groupby("techs")
-                                   .energy_cap
-                                   .sum()
-                                   .loc[["expensive_elec_supply", "cheap_elec_supply"]]  # remove demand
-                                   .transform(lambda x: x / x.sum())
-                                   .loc["expensive_elec_supply"])
-        assert expensive_capacity >= 0.6
-
-    def test_location_specific_energy_cap_share_max_constraint(self):
-        model = build_model(
-            model_file='energy_cap_share.yaml',
-            scenario='energy_cap_share_max_location_0'
+            model_file=model_file,
+            scenario='energy_cap_share_max_supply'
         )
         model.run()
         capacity = model.get_formatted_array("energy_cap")
-        cheap_capacity0 = capacity.loc[{'locs': "0", 'techs': "cheap_elec_supply"}].item()
-        expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
-        expensive_capacity1 = capacity.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
-        assert cheap_capacity0 / (cheap_capacity0 + expensive_capacity0) <= 0.4
-        assert expensive_capacity1 == 0
+        capacity_supply_conversion_all = (
+            capacity.loc[{'techs': get_supply_conversion_techs(model)}]
+        )
+        cheap_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_capacity / capacity_supply_conversion_all.sum().item(), 5) <= 0.5
 
-    def test_location_specific_energy_cap_share_min_constraint(self):
+    def test_energy_cap_share_min_supply_constraint(self, model_file):
         model = build_model(
-            model_file='energy_cap_share.yaml',
-            scenario='energy_cap_share_min_location_0'
+            model_file=model_file,
+            scenario='energy_cap_share_min_supply'
         )
         model.run()
         capacity = model.get_formatted_array("energy_cap")
-        cheap_capacity0 = capacity.loc[{'locs': "0", 'techs': "cheap_elec_supply"}].item()
+        capacity_supply_conversion_all = (
+            capacity.loc[{'techs': get_supply_conversion_techs(model)}]
+        )
+        expensive_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(expensive_capacity / capacity_supply_conversion_all.sum().item(), 5) >= 0.4
+
+    def test_energy_cap_share_min_max_supply_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='energy_cap_share_min_max_supply'
+        )
+        model.run()
+        capacity = model.get_formatted_array("energy_cap")
+        capacity_supply_conversion_all = (
+            capacity.loc[{'techs': get_supply_conversion_techs(model)}]
+        )
+        cheap_capacity = capacity.loc[{'techs': "cheap_elec_supply"}].sum().item()
+        expensive_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_capacity / capacity_supply_conversion_all.sum().item(), 5) <= 0.2
+        assert round(expensive_capacity / capacity_supply_conversion_all.sum().item(), 5) >= 0.4
+
+    def test_energy_cap_share_max_supply_loc_1_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='energy_cap_share_max_supply_loc_1'
+        )
+        model.run()
+        capacity = model.get_formatted_array("energy_cap")
+        capacity_supply_conversion_all_loc1 = (
+            capacity.loc[{'locs': "1", 'techs': get_supply_conversion_techs(model)}]
+        )
+        cheap_capacity1 = capacity.loc[{'locs': "1", 'techs': "cheap_elec_supply"}].item()
+        expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
+        assert round(cheap_capacity1 / capacity_supply_conversion_all_loc1.sum().item(), 5) <= 0.2
+        assert expensive_capacity0 == 0
+
+    def test_energy_cap_share_min_supply_loc_0_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='energy_cap_share_min_supply_loc_0'
+        )
+        model.run()
+        capacity = model.get_formatted_array("energy_cap")
+        capacity_supply_conversion_all_loc0 = (
+            capacity.loc[{'locs': "0", 'techs': get_supply_conversion_techs(model)}]
+        )
         expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
         expensive_capacity1 = capacity.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
-        assert expensive_capacity0 / (cheap_capacity0 + expensive_capacity0) >= 0.6
+        assert round(expensive_capacity0 / capacity_supply_conversion_all_loc0.sum().item(), 5) >= 0.4
         assert expensive_capacity1 == 0
+
+    def test_energy_cap_share_min_max_supply_loc0_1_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='energy_cap_share_min_max_supply_loc_0_1'
+        )
+        model.run()
+        capacity = model.get_formatted_array("energy_cap")
+        capacity_supply_conversion_all_loc0 = (
+            capacity.loc[{'locs': "0", 'techs': get_supply_conversion_techs(model)}]
+        )
+        capacity_supply_conversion_all_loc1 = (
+            capacity.loc[{'locs': "1", 'techs': get_supply_conversion_techs(model)}]
+        )
+        cheap_capacity1 = capacity.loc[{'locs': "1", 'techs': "cheap_elec_supply"}].item()
+        expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
+        expensive_capacity1 = capacity.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
+        assert round(cheap_capacity1 / capacity_supply_conversion_all_loc1.sum().item(), 5) <= 0.2
+        assert round(expensive_capacity0 / capacity_supply_conversion_all_loc0.sum().item(), 5) >= 0.4
+        assert expensive_capacity1 == 0
+
+    # All conversion technologies with insufficient energy_cap_max to use the
+    # cheap direct heat/cooling supply techs
+    def test_energy_cap_share_max_non_conversion_all_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='energy_cap_share_max_non_conversion_all'
+        )
+        model.run()
+        capacity = model.get_formatted_array("energy_cap")
+        capacity_supply_conversion_all_loc1 = (
+            capacity.loc[{'locs': "1", 'techs': get_supply_conversion_techs(model)}]
+        )
+        cheap_heat = capacity.loc[{'locs': "1", 'techs': "cheap_heat_supply"}].item()
+        cheap_cool = capacity.loc[{'locs': "1", 'techs': "cheap_cool_supply"}].item()
+        assert (cheap_heat + cheap_cool) / capacity_supply_conversion_all_loc1.sum().item() <= 0.1
+
+    # All technologies, but insufficient energy_cap_max for enough installed capacity to meet demand
+    @pytest.mark.filterwarnings("ignore:(?s).*`{'demand'}` have been ignored*:calliope.exceptions.ModelWarning")
+    def test_energy_cap_share_max_all_techs_infeasible_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='energy_cap_share_max_all_techs_infeasible'
+        )
+
+        model.run()
+
+        assert model._model_data.attrs['termination_condition'] != 'optimal'
 
 
 class TestEnergyCapGroupConstraints:
@@ -928,7 +998,7 @@ class TestEnergyCapGroupConstraints:
         assert round(expensive_capacity0, 5) >= 6
         assert expensive_capacity1 == 0
 
-    def test_energy_cap_min_max_supply_loc01_constraint(self, model_file):
+    def test_energy_cap_min_max_supply_loc0_1_constraint(self, model_file):
         model = build_model(
             model_file=model_file,
             scenario='energy_cap_min_max_supply_loc_0_1'
@@ -941,26 +1011,6 @@ class TestEnergyCapGroupConstraints:
         assert round(cheap_capacity1, 5) <= 4
         assert round(expensive_capacity0, 5) >= 6
         assert expensive_capacity1 == 0
-
-    def test_energy_cap_min_transmission_constraint(self, model_file):
-        model = build_model(
-            model_file=model_file,
-            scenario='energy_cap_min_transmission'
-        )
-        model.run()
-        capacity = model.get_formatted_array("energy_cap")
-        expensive_transmission = capacity.loc[{'locs': "0", 'techs': "expensive_elec_transmission:1"}].item()
-        assert round(expensive_transmission, 5) >= 6
-
-    def test_energy_cap_min_storage_constraint(self, model_file):
-        model = build_model(
-            model_file=model_file,
-            scenario='energy_cap_min_storage'
-        )
-        model.run()
-        capacity = model.get_formatted_array("energy_cap")
-        storage = capacity.loc[{'locs': "1", 'techs': "elec_storage"}].item()
-        assert round(storage, 5) >= 6
 
     # All conversion technologies with insufficient energy_cap_max to use the
     # cheap direct heat/cooling supply techs

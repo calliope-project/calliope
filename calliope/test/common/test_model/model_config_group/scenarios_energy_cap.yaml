@@ -38,30 +38,6 @@ overrides:
         group_constraints.example_energy_cap_constraint:
             techs: ["expensive_elec_supply"]
 
-    energy_cap_cheap_transmission:
-        group_constraints.example_energy_cap_constraint:
-            techs: ["cheap_elec_transmission"]
-
-    energy_cap_expensive_transmission:
-        group_constraints.example_energy_cap_constraint:
-            techs: ["expensive_elec_transmission"]
-
-    energy_cap_storage:
-        group_constraints.example_energy_cap_constraint:
-            techs: ["elec_storage"]
-
-    energy_cap_elec_to_heat:
-        group_constraints.example_energy_cap_constraint:
-            techs: ["elec_to_heat"]
-
-    energy_cap_elec_to_heat_cooling_linked:
-        group_constraints.example_energy_cap_constraint:
-            techs: ["elec_to_heat_cool_linked"]
-
-    energy_cap_elec_to_heat_cooling_unlinked:
-        group_constraints.example_energy_cap_constraint:
-            techs: ["elec_to_heat_cool_unlinked"]
-
     energy_cap_non_conversion:
         group_constraints.example_energy_cap_constraint:
             techs: ["cheap_cool_supply", "cheap_heat_supply"]
@@ -73,42 +49,6 @@ scenarios:
     energy_cap_max_supply_loc_1: [energy_cap_max_loc_1, energy_cap_max_cheap_supply]
     energy_cap_min_supply_loc_0: [energy_cap_min, energy_cap_loc_0, energy_cap_expensive_supply]
     energy_cap_min_max_supply_loc_0_1: [energy_cap_min, energy_cap_max_loc_1, energy_cap_max_cheap_supply, energy_cap_loc_0, energy_cap_expensive_supply]
-    energy_cap_max_transmission: [energy_cap_max, energy_cap_cheap_transmission]
-    energy_cap_min_transmission: [energy_cap_min, energy_cap_expensive_transmission, add_expensive_elec_transmission]
-    energy_cap_max_storage: [energy_cap_max, energy_cap_storage, add_elec_storage]
-    energy_cap_min_storage: [energy_cap_min, energy_cap_storage, add_elec_storage]
-    energy_cap_max_conversion: [
-        energy_cap_max, energy_cap_elec_to_heat,
-        add_expensive_heat_supply, add_elec_to_heat_conversion, add_heat_demand
-    ]
-    energy_cap_min_conversion: [
-        energy_cap_min, energy_cap_elec_to_heat,
-        add_expensive_heat_supply, add_elec_to_heat_conversion, add_heat_demand
-    ]
-    energy_cap_max_conversion_plus_linked: [
-        energy_cap_max, energy_cap_elec_to_heat_cooling_linked,
-        add_expensive_heat_supply, add_expensive_cooling_supply,
-        add_elec_to_heat_cooling_linked_conversion_plus,
-        add_heat_demand, add_cooling_demand
-    ]
-    energy_cap_min_conversion_plus_linked: [
-        energy_cap_min, energy_cap_elec_to_heat_cooling_linked,
-        add_expensive_heat_supply, add_expensive_cooling_supply,
-        add_elec_to_heat_cooling_linked_conversion_plus,
-        add_heat_demand, add_cooling_demand
-    ]
-    energy_cap_max_conversion_plus_unlinked: [
-        energy_cap_max, energy_cap_elec_to_heat_cooling_unlinked,
-        add_expensive_heat_supply, add_expensive_cooling_supply,
-        add_elec_to_heat_cooling_unlinked_conversion_plus,
-        add_heat_demand, add_cooling_demand
-    ]
-    energy_cap_min_conversion_plus_unlinked: [
-        energy_cap_min, energy_cap_elec_to_heat_cooling_unlinked,
-        add_expensive_heat_supply, add_expensive_cooling_supply,
-        add_elec_to_heat_cooling_unlinked_conversion_plus,
-        add_heat_demand, add_cooling_demand
-    ]
     energy_cap_max_non_conversion_all: [
         energy_cap_max_low, energy_cap_non_conversion,
         add_cheap_heat_supply, add_cheap_cooling_supply,
