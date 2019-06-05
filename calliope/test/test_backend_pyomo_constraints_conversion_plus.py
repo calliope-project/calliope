@@ -1,17 +1,7 @@
 import pytest  # pylint: disable=unused-import
-import numpy as np
-import xarray as xr
-import pyomo.core as po
-from pyomo.core.expr.current import identify_variables
-import os
-import logging
-
-from calliope.backend.pyomo.util import get_param
-import calliope.exceptions as exceptions
-from calliope.core.attrdict import AttrDict
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import check_error_or_warning, check_variable_exists
+from calliope.test.common.util import check_variable_exists
 
 
 class TestBuildConversionPlusConstraints:
@@ -301,7 +291,7 @@ class TestConversionPlusConstraintResults:
         assert all(
             (carrier_prod_conversion_plus.loc['heat'] /
              carrier_prod_conversion_plus.loc['electricity']).dropna()
-             == 0.8
+            == 0.8
         )
 
         m = build_model(
@@ -323,12 +313,10 @@ class TestConversionPlusConstraintResults:
         ).sum('locs').to_pandas()
 
         prod_ratios = (
-            carrier_prod_conversion_plus.loc['heat'] /
-            carrier_prod_conversion_plus.loc['electricity']
+            carrier_prod_conversion_plus.loc['heat'] / carrier_prod_conversion_plus.loc['electricity']
         ).dropna()
         con_ratios = (
-            carrier_con_conversion_plus.loc['coal'] /
-            carrier_prod_conversion_plus.sum(axis=0)
+            carrier_con_conversion_plus.loc['coal'] / carrier_prod_conversion_plus.sum(axis=0)
         ).dropna()
 
         assert (
