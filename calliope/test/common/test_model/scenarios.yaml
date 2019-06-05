@@ -125,6 +125,7 @@ overrides:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
+                    test_supply_coal:
                     test_conversion:
                     test_conversion_plus:
                     test_demand_elec:

@@ -2,6 +2,7 @@ import os
 import sys
 
 import pytest
+from pyomo.core.expr.current import identify_variables
 
 import calliope
 from calliope import AttrDict
@@ -38,3 +39,20 @@ def check_error_or_warning(error_warning, test_string_or_strings):
         result = test_string_or_strings in output
 
     return result
+
+
+def check_variable_exists(backend_model, constraint, variable):
+    """
+    Search for existence of a decision variable in a Pyomo constraint.
+
+    Parameters
+    ----------
+    backend_model : Pyomo ConcreteModel
+    constraint : str, name of constraint which could exist in the backend
+    variable : str, string to search in the list of variables to check if existing
+    """
+    exists = []
+    for v in getattr(backend_model, constraint).values():
+        variables = identify_variables(v.body)
+        exists.append(any(variable in j.getname() for j in list(variables)))
+    return any(exists)

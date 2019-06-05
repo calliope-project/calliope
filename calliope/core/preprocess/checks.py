@@ -287,11 +287,14 @@ def check_initial(config_model):
     allowed_from_file = DEFAULTS.model.file_allowed
     for k, v in config_model.as_dict_flat().items():
         if 'file=' in str(v):
-            constraint_name = k.split('.')[-1]
-            if constraint_name not in allowed_from_file:
+
+            possible_identifiers = k.split('.')
+            is_time_varying = any('_time_varying' in i for i in possible_identifiers)
+            if is_time_varying:
+                model_warnings.append('Using custom constraint `{}` with time-varying data.'.format(k))
+            elif not set(possible_identifiers).intersection(allowed_from_file) and not is_time_varying:
                 errors.append(
-                    'Cannot load `{}` from file for configuration {}'
-                    .format(constraint_name, k)
+                    'Cannot load data from file for configuration `{}`.'.format(k)
                 )
 
     # Check the objective function being used has all the appropriate

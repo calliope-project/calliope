@@ -914,7 +914,8 @@ class TestChecks:
                 build_model(override_dict=override(param), scenario='simple_storage,one_day')
             assert check_error_or_warning(
                 errors,
-                'Cannot load `{}` from file for configuration'.format(param)
+                'Cannot load data from file for configuration'
+                ' `techs.test_storage.constraints.{}`'.format(param)
             )
 
         # should pass: can have `file=` on the following constraints
@@ -1008,7 +1009,8 @@ class TestChecks:
 
         assert check_error_or_warning(
             excinfo,
-            'Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually')
+            'Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually'
+        )
 
     def test_carrier_ratio_for_specified_carrier(self):
         """
@@ -1026,6 +1028,21 @@ class TestChecks:
             build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
 
         assert 'Tech `test_conversion_plus` gives a carrier ratio' not in [str(i) for i in excinfo.list]
+
+    def test_carrier_ratio_from_file(self):
+        """
+        It is possible to load a timeseries carrier_ratio from file
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+                carrier_out.heat: file=carrier_ratio.csv
+            """
+        )
+        with pytest.warns(None) as excinfo:
+            build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
+
+        assert 'Cannot load data from file for configuration' not in [str(i) for i in excinfo.list]
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):

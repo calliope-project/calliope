@@ -78,6 +78,13 @@ def load_constraints(backend_model):
             rule=balance_conversion_plus_tiers_constraint_rule
         )
 
+    if 'loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint' in sets:
+        backend_model.conversion_plus_prod_con_to_zero_constraint = po.Constraint(
+            backend_model.loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint,
+            backend_model.timesteps,
+            rule=conversion_plus_prod_con_to_zero_constraint_rule
+        )
+
 
 def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, timestep):
     """
@@ -106,18 +113,23 @@ def balance_conversion_plus_primary_constraint_rule(backend_model, loc_tech, tim
 
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
-    carrier_prod = sum(
-        backend_model.carrier_prod[loc_tech_carrier, timestep] /
-        get_param(backend_model, 'carrier_ratios', ('out', loc_tech_carrier))
-        for loc_tech_carrier in loc_tech_carriers_out
-    )
+    carrier_prod = []
+    for loc_tech_carrier in loc_tech_carriers_out:
+        carrier_ratio = get_param(
+            backend_model, 'carrier_ratios', ('out', loc_tech_carrier, timestep)
+        )
+        if po.value(carrier_ratio) != 0:
+            carrier_prod.append(
+                backend_model.carrier_prod[loc_tech_carrier, timestep] / carrier_ratio
+            )
+
     carrier_con = sum(
         backend_model.carrier_con[loc_tech_carrier, timestep] *
-        get_param(backend_model, 'carrier_ratios', ('in', loc_tech_carrier))
+        get_param(backend_model, 'carrier_ratios', ('in', loc_tech_carrier, timestep))
         for loc_tech_carrier in loc_tech_carriers_in
     )
 
-    return carrier_prod == -1 * carrier_con * energy_eff
+    return sum(carrier_prod) == -1 * carrier_con * energy_eff
 
 
 def carrier_production_max_conversion_plus_constraint_rule(backend_model, loc_tech, timestep):
@@ -275,11 +287,42 @@ def balance_conversion_plus_tiers_constraint_rule(backend_model, tier, loc_tech,
         model_data_dict['lookup_loc_techs_conversion_plus'][tier, loc_tech]
     )
 
-    c_1 = sum(decision_variable[loc_tech_carrier, timestep]
-        / get_param(backend_model, 'carrier_ratios', (primary_tier, loc_tech_carrier))
-        for loc_tech_carrier in loc_tech_carriers_1)
-    c_2 = sum(decision_variable[loc_tech_carrier, timestep]
-        / get_param(backend_model, 'carrier_ratios', (tier, loc_tech_carrier))
-        for loc_tech_carrier in loc_tech_carriers_2)
+    c_1 = []
+    c_2 = []
+    for loc_tech_carrier in loc_tech_carriers_1:
+        carrier_ratio_1 = get_param(
+            backend_model, 'carrier_ratios', (primary_tier, loc_tech_carrier, timestep)
+        )
+        if po.value(carrier_ratio_1) != 0:
+            c_1.append(
+                decision_variable[loc_tech_carrier, timestep] / carrier_ratio_1
+            )
+    for loc_tech_carrier in loc_tech_carriers_2:
+        carrier_ratio_2 = get_param(
+            backend_model, 'carrier_ratios', (tier, loc_tech_carrier, timestep)
+        )
+        if po.value(carrier_ratio_2) != 0:
+            c_2.append(
+                decision_variable[loc_tech_carrier, timestep] / carrier_ratio_2
+            )
+    if len(c_2) == 0:
+        return po.Constraint.Skip
+    else:
+        return sum(c_1) == sum(c_2)
 
-    return c_1 == c_2
+
+def conversion_plus_prod_con_to_zero_constraint_rule(backend_model, loc_tech_carrier_tier, timestep):
+    """
+    Force any carrier production or consumption for a conversion plus technology to
+    zero in timesteps where its carrier_ratio is zero
+    """
+    loc_tech_carrier, tier = loc_tech_carrier_tier.rsplit('::', 1)
+    primary_tier, decision_variable = get_conversion_plus_io(backend_model, tier)
+
+    carrier_ratio = get_param(
+        backend_model, 'carrier_ratios', (tier, loc_tech_carrier, timestep)
+    )
+    if po.value(carrier_ratio) == 0:
+        return decision_variable[loc_tech_carrier, timestep] == 0
+    else:
+        return po.Constraint.Skip

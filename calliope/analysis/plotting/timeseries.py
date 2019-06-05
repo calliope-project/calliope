@@ -25,6 +25,7 @@ def _get_relevant_vars(model, dataset, array):
     allowed_input_vars = [
         k for k, v in model.inputs.data_vars.items()
         if 'timesteps' in v.dims and len(v.dims) > 1
+        and k != 'carrier_ratios'
     ]
     allowed_result_vars = [
         'results', 'inputs', 'all', 'storage', 'storage_inter_cluster',
