@@ -83,7 +83,7 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             rule=balance_storage_constraint_rule
         )
-        
+    if 'loc_techs_storage_dod' in sets:
         backend_model.dod_storage_constraint = po.Constraint(
             backend_model.loc_techs_balance_storage_constraint,
             backend_model.timesteps,
@@ -459,31 +459,8 @@ def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
 
             some maths should go in here
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    run_config = backend_model.__calliope_run_config
-    
-    current_timestep = backend_model.timesteps.order_dict[timestep]
-    if current_timestep == 0 and not run_config['cyclic_storage']:
-        storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
-    elif (hasattr(backend_model, 'storage_inter_cluster') and
-            model_data_dict['lookup_cluster_first_timestep'][timestep]):
-        storage_previous_step = 0
-    else:
-        if (hasattr(backend_model, 'clusters') and
-                model_data_dict['lookup_cluster_first_timestep'][timestep]):
-            previous_step = model_data_dict['lookup_cluster_last_timestep'][timestep]
-        elif current_timestep == 0 and run_config['cyclic_storage']:
-            previous_step = backend_model.timesteps[-1]
-        else:
-            previous_step = get_previous_timestep(backend_model.timesteps, timestep)
-        storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
-        storage_dod = get_param(backend_model, 'storage_dod', loc_tech)
-        time_resolution = backend_model.timestep_resolution[previous_step]
-        storage_previous_step = (
-            ((1 - storage_loss) ** time_resolution) *
-            backend_model.storage[loc_tech, previous_step]
-        )
 
+    storage_dod = get_param(backend_model, 'storage_dod', loc_tech)
     return (
         backend_model.storage[loc_tech, timestep] >=
         storage_dod
@@ -522,10 +499,16 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
     current_timestep = backend_model.timesteps.order_dict[timestep]
     if current_timestep == 0 and not run_config['cyclic_storage']:
-        storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+        if hasattr(backend_model, 'storage_dod'):
+            storage_previous_step = get_param(backend_model, 'storage_dod', loc_tech)
+        else:
+            storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
     elif (hasattr(backend_model, 'storage_inter_cluster') and
             model_data_dict['lookup_cluster_first_timestep'][timestep]):
-        storage_previous_step = 0
+        if hasattr(backend_model, 'storage_dod'):
+            storage_previous_step = get_param(backend_model, 'storage_dod', loc_tech)
+        else:
+            storage_previous_step = 0
     else:
         if (hasattr(backend_model, 'clusters') and
                 model_data_dict['lookup_cluster_first_timestep'][timestep]):
@@ -625,7 +608,10 @@ def storage_initial_rule(backend_model, loc_tech):
     Where :math:`timestep_{final}` is the last timestep of the timeseries
     """
 
-    storage_initial = get_param(backend_model, 'storage_initial', loc_tech)
+    if hasattr(backend_model, 'storage_dod'):
+        storage_initial = get_param(backend_model, 'storage_dod', loc_tech)
+    else:
+        storage_initial = get_param(backend_model, 'storage_initial', loc_tech)
 
     storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
     if hasattr(backend_model, 'storage_inter_cluster'):

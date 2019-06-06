@@ -43,6 +43,10 @@ def generate_constraint_sets(model_run):
             i for i in sets.loc_techs_store
             if constraint_exists(model_run, i, 'constraints.storage_initial') is not None
         ]
+    constraint_sets['loc_techs_storage_dod'] = [
+        i for i in sets.loc_techs_store 
+        if constraint_exists(model_run, i, 'constraints.storage_dod')
+        ]
     constraint_sets['carriers_reserve_margin_constraint'] = [
         i for i in sets.carriers
         if i in model_run.model.get_key('reserve_margin', {}).keys()
