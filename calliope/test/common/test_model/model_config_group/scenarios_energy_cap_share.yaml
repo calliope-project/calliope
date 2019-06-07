@@ -1,0 +1,76 @@
+
+overrides:
+
+    energy_cap_share_min:
+        group_constraints.example_energy_cap_share_constraint:
+            energy_cap_share_min: 0.4
+
+    energy_cap_share_max:
+        group_constraints.example_energy_cap_share_constraint:
+            energy_cap_share_max: 0.5
+
+    energy_cap_share_max_low:
+        group_constraints.example_energy_cap_share_constraint:
+            energy_cap_share_max: 0.1
+
+    energy_cap_share_max_high:
+        group_constraints.example_energy_cap_share_constraint:
+            energy_cap_share_max: 1
+
+    energy_cap_share_loc_0:
+        group_constraints.example_energy_cap_share_constraint:
+            locs: ["0"]
+
+    energy_cap_share_max_cheap_supply:
+        group_constraints.example_energy_cap_share_max_constraint:
+            energy_cap_share_max: 0.2
+            techs: ["cheap_elec_supply"]
+
+    energy_cap_share_max_loc_1:
+        group_constraints.example_energy_cap_share_max_constraint:
+            locs: ["1"]
+
+    energy_cap_share_cheap_supply:
+        group_constraints.example_energy_cap_share_constraint:
+            techs: ["cheap_elec_supply"]
+
+    energy_cap_share_expensive_supply:
+        group_constraints.example_energy_cap_share_constraint:
+            techs: ["expensive_elec_supply"]
+
+    energy_cap_share_non_conversion:
+        group_constraints.example_energy_cap_share_constraint:
+            techs: ["cheap_cool_supply", "cheap_heat_supply"]
+
+scenarios:
+    energy_cap_share_max_supply: [energy_cap_share_max, energy_cap_share_cheap_supply]
+    energy_cap_share_min_supply:  [energy_cap_share_min, energy_cap_share_expensive_supply]
+    energy_cap_share_min_max_supply: [energy_cap_share_max_cheap_supply, energy_cap_share_min, energy_cap_share_expensive_supply]
+    energy_cap_share_max_supply_loc_1: [energy_cap_share_max_loc_1, energy_cap_share_max_cheap_supply]
+    energy_cap_share_min_supply_loc_0: [energy_cap_share_min, energy_cap_share_loc_0, energy_cap_share_expensive_supply]
+    energy_cap_share_min_max_supply_loc_0_1: [
+        energy_cap_share_min, energy_cap_share_max_loc_1,
+        energy_cap_share_max_cheap_supply, energy_cap_share_loc_0, energy_cap_share_expensive_supply
+    ]
+    energy_cap_share_max_non_conversion_all: [
+        energy_cap_share_max_low, energy_cap_share_non_conversion, add_cheap_heat_supply,
+        add_cheap_cooling_supply, add_elec_to_heat_conversion,
+        add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus,
+        add_heat_demand, add_cooling_demand
+    ]
+    energy_cap_share_min_all_techs: [
+        energy_cap_share_min, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+    ]
+    energy_cap_share_max_all_techs: [
+        energy_cap_share_max_high, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+    ]
+    energy_cap_share_max_all_techs_infeasible: [
+        energy_cap_share_max, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+    ]

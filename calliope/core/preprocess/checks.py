@@ -615,46 +615,55 @@ def check_final(model_run):
         if data.get("exists", True)
     }
     for group_constraint_name, group_constraint in group_constraints.items():
-        techs = {
-            i: model_run.get_key('techs.{}.inheritance'.format(i))[-1]
-            for i in set(group_constraint.get('techs', model_run.sets['techs']))
-        }
-        tech_groups = [
+        requested_techs = [i for i in group_constraint.get('techs', [])]
+        requested_locs = group_constraint.get('locs', model_run.sets.locs)
+
+        allowed_tech_groups = [
             [k for k, v in DEFAULTS.tech_groups.items() if i in v['allowed_group_constraints']]
             for i in group_constraint.keys() if i not in ['techs', 'locs', 'exists']
         ]
-        allowed_tech_groups = set(tech_groups[0]).intersection(*tech_groups)
-        group_techs = model_run.constraint_sets['group_constraint_loc_techs_{}'.format(group_constraint_name)]
+        unallowed_tech_groups = (
+            set([item for sublist in allowed_tech_groups for item in sublist])
+            .symmetric_difference(DEFAULTS.tech_groups.keys())
+        )
 
-        _mismatch = None
-        _dropped_techs = None
-        if set(techs.keys()).difference(group_techs):
-            # Mismatch between allowed tech groups for certain constraints
-            if len(set(map(tuple, tech_groups))) > 1:
-                lost_tech_groups = (
-                    set([item for sublist in tech_groups for item in sublist])
-                    - allowed_tech_groups
+        stripped_allowed_tech_groups = set(allowed_tech_groups[0]).intersection(*allowed_tech_groups)
+        group_loc_techs = model_run.constraint_sets['group_constraint_loc_techs_{}'.format(group_constraint_name)]
+        dropped_tech_groups = (
+            set([item for sublist in allowed_tech_groups for item in sublist])
+            - stripped_allowed_tech_groups
+        )
+
+        if not group_loc_techs:
+            model_warnings.append(
+                'Group constraint `{}` cannot be applied as there are no valid loc_tech '
+                'combinations available.'.format(group_constraint_name)
+            )
+            continue
+
+        if not requested_techs:
+            model_warnings.append(
+                'All technologies were requested for inclusion in group constraint '
+                '`{}`, but those from tech group(s) `{}` have been ignored as one '
+                'or more of the constraints cannot be applied to technologies '
+                'in these groups'
+                .format(group_constraint_name, dropped_tech_groups | unallowed_tech_groups)
+            )
+        else:
+            trans_techs = set(requested_techs).intersection(model_run.sets['techs_transmission_names'])
+            for i in trans_techs:
+                requested_techs += [i + ':' + j for j in requested_locs]
+                requested_techs.remove(i)
+            group_techs = set(i.split('::')[1] for i in group_loc_techs)
+            dropped_techs = set(requested_techs).difference(group_techs)
+            if dropped_techs:
+                _mismatch = [group_constraint_name, dropped_techs, unallowed_tech_groups, dropped_tech_groups]
+                model_warnings.append(
+                    'The following requested techs have been removed in group constraint '
+                    '`{}`: {}. This has been caused by no constraints allowing '
+                    'techs from tech group(s) {} and some constraints not '
+                    'allowing techs from tech group(s) {}.'.format(*_mismatch)
                 )
-                _mismatch = [group_constraint_name, allowed_tech_groups, lost_tech_groups]
-
-            # No mismatch, but still removing some techs from those given by the group
-            else:
-                _dropped_techs = [group_constraint_name, allowed_tech_groups]
-
-        if _mismatch is not None:
-            model_warnings.append(
-                'Not all requested techs have been retained in group constraint '
-                '`{}`. Based on the constraints given, only technologies from '
-                'tech group(s) {} are permitted. Some constraints would also '
-                'allow tech group(s) {}, but this requires the group to be '
-                'split up.'.format(*_mismatch)
-            )
-        if _dropped_techs is not None:
-            model_warnings.append(
-                'Not all requested techs have been retained in group constraint '
-                '`{}`. Based on the constraints given, only technologies from '
-                'tech group(s) {} are permitted.'.format(*_dropped_techs)
-            )
 
     # FIXME:
     # make sure `comments` is at the the base level:
