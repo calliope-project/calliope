@@ -99,6 +99,9 @@ def initialize_decision_variables(backend_model):
         backend_model.prod_con_switch = po.Var(backend_model.loc_techs_asynchronous_prod_con, backend_model.timesteps, within=po.Binary)
         backend_model.bigM = run_config.get('bigM', 1e10)
 
+    if 'loc_techs_on_off_prod' in model_data_dict['sets']:
+        backend_model.on_off_switch = po.Var(backend_model.loc_techs_on_off_prod, backend_model.timesteps, within=po.Binary)
+
     if run_config.get('ensure_feasibility', False):
         backend_model.unmet_demand = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NonNegativeReals)
         backend_model.unused_supply = po.Var(backend_model.loc_carriers, backend_model.timesteps, within=po.NegativeReals)

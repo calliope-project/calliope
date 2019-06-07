@@ -85,7 +85,7 @@ def load_constraints(backend_model):
         )
     if 'loc_techs_storage_dod' in sets:
         backend_model.dod_storage_constraint = po.Constraint(
-            backend_model.loc_techs_balance_storage_constraint,
+            backend_model.loc_techs_storage_dod,
             backend_model.timesteps,
             rule=storage_dod_constraint_rule
         )
@@ -457,7 +457,7 @@ def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            some maths should go in here
+            [some math should be here]
     """
 
     storage_dod = get_param(backend_model, 'storage_dod', loc_tech)

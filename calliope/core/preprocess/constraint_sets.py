@@ -238,6 +238,7 @@ def generate_constraint_sets(model_run):
         any(constraint_exists(model_run, i, 'costs.{}.purchase'.format(j))
             for j in model_run.sets.costs)
     ]
+    
     # loc_techs_purchase technologies only exist because they have defined a purchase cost
     constraint_sets['loc_techs_update_costs_investment_purchase_milp_constraint'] = sets.loc_techs_purchase
 
@@ -247,6 +248,8 @@ def generate_constraint_sets(model_run):
         or model_run.get_key('techs.{}.constraints.units_equals_systemwide'.format(i), None)
     ]
     constraint_sets['loc_techs_asynchronous_prod_con_milp_constraint'] = sets.loc_techs_asynchronous_prod_con
+    
+    constraint_sets['loc_techs_on_off_prod_milp_constraint'] = sets.loc_techs_on_off_prod
 
     # conversion.py
     constraint_sets['loc_techs_balance_conversion_constraint'] = sets.loc_techs_conversion

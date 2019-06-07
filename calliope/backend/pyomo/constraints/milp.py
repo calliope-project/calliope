@@ -142,6 +142,18 @@ def load_constraints(backend_model):
             rule=asynchronous_prod_milp_constraint_rule
         )
 
+    if 'loc_techs_on_off_prod_milp_constraint' in sets:
+        backend_model.on_off_max_prod_milp_constraint = po.Constraint(
+            backend_model.loc_techs_on_off_prod_milp_constraint,
+            backend_model.timesteps,
+            rule=on_off_max_prod_milp_constraint_rule
+        )
+        backend_model.on_off_min_prod_milp_constraint = po.Constraint(
+            backend_model.loc_techs_on_off_prod_milp_constraint,
+            backend_model.timesteps,
+            rule=on_off_min_prod_milp_constraint_rule
+        )
+
 
 def unit_commitment_milp_constraint_rule(backend_model, loc_tech, timestep):
     """
@@ -666,3 +678,57 @@ def asynchronous_prod_milp_constraint_rule(backend_model, loc_tech, timestep):
         backend_model.carrier_prod[loc_tech_carrier, timestep] <=
         backend_model.prod_con_switch[loc_tech, timestep] * backend_model.bigM
     )
+
+def on_off_max_prod_milp_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Limits maximum production for on/off technology type.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            [some math should be here]
+
+    """
+    model_dict = backend_model.__calliope_model_data
+    loc_tech_carrier = model_dict['data']['lookup_loc_techs_conversion']['out', loc_tech]
+    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
+    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
+    
+    if po.value(energy_cap_equals):
+        return (
+            backend_model.carrier_prod[loc_tech_carrier, timestep] <=
+            backend_model.on_off_switch[loc_tech, timestep] * energy_cap_equals
+        )
+    else:
+        return (
+            backend_model.carrier_prod[loc_tech_carrier, timestep] <=
+            backend_model.on_off_switch[loc_tech, timestep] * energy_cap_max
+        )
+
+def on_off_min_prod_milp_constraint_rule(backend_model, loc_tech, timestep):
+    """
+    Limits minimum production for on/off technology type.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            [some math should be here]
+
+    """
+    model_dict = backend_model.__calliope_model_data
+    loc_tech_carrier = model_dict['data']['lookup_loc_techs_conversion']['out', loc_tech]
+    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
+    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
+    
+    if po.value(energy_cap_equals):
+        return (
+            backend_model.carrier_prod[loc_tech_carrier, timestep] >=
+            backend_model.energy_cap[loc_tech] - (1-backend_model.on_off_switch[loc_tech, timestep])*energy_cap_equals*1e+6
+        )
+    else:
+        return (
+            backend_model.carrier_prod[loc_tech_carrier, timestep] >=
+            backend_model.energy_cap[loc_tech] - (1-backend_model.on_off_switch[loc_tech, timestep])*energy_cap_max
+        )
