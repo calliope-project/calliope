@@ -14,7 +14,7 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.core.util.tools import load_function
 
 
-def minmax_cost_optimization(backend_model, cost_class, sense):
+def minmax_cost_optimization(backend_model):
     """
     Minimize or maximise total system cost for specified cost class or a set of cost classes.
     cost_class is a string or dictionary. If a string, it is automatically converted to a
@@ -38,7 +38,6 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
     """
 
     def obj_rule(backend_model):
-        nonlocal cost_class
         if backend_model.__calliope_run_config.get('ensure_feasibility', False):
             unmet_demand = sum(
                 (backend_model.unmet_demand[loc_carrier, timestep] -
@@ -47,7 +46,7 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
                 for loc_carrier in backend_model.loc_carriers
                 for timestep in backend_model.timesteps
             ) * backend_model.bigM
-            if sense == 'maximize':
+            if backend_model.objective_sense == 'maximize':
                 unmet_demand *= -1
         else:
             unmet_demand = 0
@@ -56,16 +55,16 @@ def minmax_cost_optimization(backend_model, cost_class, sense):
             sum(
                 backend_model.cost[k, loc_tech] * v
                 for loc_tech in backend_model.loc_techs_cost
-                for k, v in cost_class.items()
+                for k, v in backend_model.objective_cost_class.items()
             ) + unmet_demand
         )
 
-    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + sense),
+    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + backend_model.objective_sense),
                                      rule=obj_rule)
     backend_model.obj.domain = po.Reals
 
 
-def check_feasibility(backend_model, **kwargs):
+def check_feasibility(backend_model):
     """
     Dummy objective, to check that there are no conflicting constraints.
 

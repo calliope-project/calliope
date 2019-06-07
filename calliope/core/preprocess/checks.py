@@ -294,25 +294,6 @@ def check_initial(config_model):
                     .format(constraint_name, k)
                 )
 
-    # Check the objective function being used has all the appropriate
-    # options set in objective_options, and that no options are unused
-    objective_function = 'calliope.backend.pyomo.objective.' + config_model.run.objective
-    objective_args_expected = list(signature(load_function(objective_function)).parameters.keys())
-    objective_args_expected = [arg for arg in objective_args_expected
-                               if arg not in ['backend_model', 'kwargs']]
-    for arg in objective_args_expected:
-        if arg not in config_model.run.objective_options:
-            errors.append(
-                'Objective function argument `{}` not found in run.objective_options'
-                .format(arg)
-            )
-    for arg in config_model.run.objective_options:
-        if arg not in objective_args_expected:
-            model_warnings.append(
-                'Objective function argument `{}` given but not used by objective function `{}`'
-                .format(arg, config_model.run.objective)
-            )
-
     # We no longer allow cost_class in objective_obtions to be a string
     _cost_class = config_model.run.objective_options.get('cost_class', {})
 
@@ -655,6 +636,18 @@ def check_final(model_run):
                 '`{}`. Based on the constraints given, only technologies from '
                 'tech group(s) {} are permitted.'.format(*_dropped_techs)
             )
+
+    # Warn if objective cost class is not defined elsewhere in the model
+    objective_cost_class = set(model_run.run.objective_options.cost_class.keys())
+    cost_classes = model_run.sets.costs
+    cost_classes_mismatch = objective_cost_class.difference(cost_classes)
+    if cost_classes_mismatch:
+        model_warnings.append(
+                'Cost classes `{}` are defined in the objective options but not '
+                'defined elsewhere in the model. They will be ignored in the ' 
+                'objective function.'.format(cost_classes_mismatch)
+            )
+
 
     # FIXME:
     # make sure `comments` is at the the base level:
