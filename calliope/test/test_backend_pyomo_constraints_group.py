@@ -19,6 +19,7 @@ def get_supply_conversion_techs(model):
     ]
     return [i for i in available_techs if i in model._model_data.techs.values]
 
+
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestBuildGroupConstraints:
