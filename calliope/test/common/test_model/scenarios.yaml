@@ -176,12 +176,6 @@ overrides:
 
         links.0,1.exists: false
 
-    simple_export_demand:
-        locations:
-            0:
-                techs:
-                    test_demand_elec.costs.monetary.om_con: -0.04
-
     simple_storage:
         locations:
             0:
