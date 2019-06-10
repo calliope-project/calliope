@@ -59,6 +59,14 @@ def postprocess_model_results(results, model_data, timings):
         comment='Postprocessing: ended'
     )
 
+    if 'run_solution_returned' in timings.keys():
+        results.attrs['solution_time'] = (
+            timings['run_solution_returned'] -  timings['run_start']
+        ).total_seconds()
+        results.attrs['time_finished'] = (
+            timings['run_solution_returned'].strftime('%Y-%m-%d %H:%M:%S')
+        )
+
     return results
 
 

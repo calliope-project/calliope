@@ -3,6 +3,7 @@ import logging
 import xarray as xr
 import pyomo.core as po  # pylint: disable=import-error
 
+import calliope
 from calliope.backend.pyomo.util import get_var
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
@@ -11,7 +12,7 @@ from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
-
+from calliope.analysis.postprocess import postprocess_model_results
 
 logger = logging.getLogger(__name__)
 
@@ -55,18 +56,18 @@ def update_pyomo_param(backend_model, param, index, value):
     """
     if not hasattr(backend_model, param):
         raise exceptions.ModelError(
-            'Parameter {} not in the Pyomo Backend. Check that the string '
+            'Parameter `{}` not in the Pyomo Backend. Check that the string '
             'matches the corresponding constraint/cost in the model.inputs '
             'xarray Dataset'.format(param)
         )
     elif not isinstance(getattr(backend_model, param), po.base.param.IndexedParam):
         raise exceptions.ModelError(
-            '{} not a Parameter in the Pyomo Backend. Sets and decision variables '
+            '`{}` not a Parameter in the Pyomo Backend. Sets and decision variables '
             'cannot be updated by the user'.format(param)
         )
     elif index not in getattr(backend_model, param):
         raise exceptions.ModelError(
-            'Index {} not in the Pyomo Parameter {}. call '
+            'Index `{}` not in the Pyomo Parameter `{}`. call '
             'model.backend.access_model_inputs() to see the indeces of the Pyomo '
             'Parameters'.format(index, param)
         )
@@ -94,15 +95,15 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
     """
     if not hasattr(backend_model, constraint):
         raise exceptions.ModelError(
-            'constraint/objective {} not in the Pyomo Backend.'.format(constraint)
+            'constraint/objective `{}` not in the Pyomo Backend.'.format(constraint)
         )
     elif not isinstance(getattr(backend_model, constraint), po.base.Constraint):
         raise exceptions.ModelError(
-            '{} not a constraint in the Pyomo Backend.'.format(constraint)
+            '`{}` not a constraint in the Pyomo Backend.'.format(constraint)
         )
-    elif active:
+    elif active is True:
         getattr(backend_model, constraint).activate()
-    elif not active:
+    elif active is False:
         getattr(backend_model, constraint).deactivate()
     else:
         raise ValueError('Argument `active` must be True or False')
@@ -116,10 +117,8 @@ def rerun_pyomo_model(model_data, backend_model):
 
     Returns
     -------
-    run_data : xarray.Dataset
-        Raw data from this rerun, including both inputs and results.
-        to filter inputs/results, use `run_data.filter_by_attrs(is_result=...)`
-        with 0 for inputs and 1 for results.
+    new_model : calliope.Model
+        New calliope model, including both inputs and results, but no backend interface.
     """
     backend_model.__calliope_run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
 
@@ -136,27 +135,33 @@ def rerun_pyomo_model(model_data, backend_model):
         model_data, timings, run_pyomo,
         build_only=False, backend_rerun=backend_model
     )
-    for k, v in timings.items():
-        results.attrs['timings.' + k] = v
 
-    exceptions.ModelWarning(
-        'model.results will only be updated on running the model from '
-        '`model.run()`. We provide results of this rerun as a standalone xarray '
-        'Dataset'
-    )
+    inputs = access_pyomo_model_inputs(backend_model)
 
-    results.attrs.update(model_data.attrs)
     for key, var in results.data_vars.items():
         var.attrs['is_result'] = 1
 
-    inputs = access_pyomo_model_inputs(backend_model)
     for key, var in inputs.data_vars.items():
         var.attrs['is_result'] = 0
 
-    results.update(inputs)
-    run_data = results
+    new_model_data = results.copy()
+    new_model_data.attrs.update(model_data.attrs)
+    new_model_data.coords.update(model_data.coords)
+    new_model_data.update(inputs)
 
-    return run_data
+    # Add additional post-processed result variables to results
+    if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
+        results = postprocess_model_results(results, new_model_data, timings)
+
+    raise exceptions.ModelWarning(
+        'The results of rerunning the backend model are only available within '
+        'the Calliope model returned by this function call.'
+    )
+
+    new_calliope_model = calliope.Model(config=None, model_data=new_model_data)
+    new_calliope_model._timings = timings
+
+    return new_calliope_model
 
 
 class BackendInterfaceMethods:
