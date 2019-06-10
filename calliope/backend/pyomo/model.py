@@ -97,7 +97,7 @@ def generate_model(model_data):
                            for i in model_data_dict['dims'][k]],
                          initialize=v, mutable=True)
             )
-    
+
     for option_name, option_val in backend_model.__calliope_run_config['objective_options'].items():
         if option_name == 'cost_class':
             objective_cost_class = {
