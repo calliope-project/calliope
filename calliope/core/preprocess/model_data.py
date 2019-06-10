@@ -281,9 +281,6 @@ def carrier_specific_to_dataset(model_run):
         data_dict['carrier_ratios'] = dict(
             dims=['carrier_tiers', 'loc_tech_carriers_conversion_plus'], data=[]
         )
-        data_dict['carrier_ratios_min'] = dict(
-            dims=['carrier_tiers', 'loc_techs_conversion_plus'], data=[]
-        )
         for carrier_tier in carrier_tiers:
             data = []
             for loc_tech_carrier in model_run.sets['loc_tech_carriers_conversion_plus']:
@@ -296,9 +293,6 @@ def carrier_specific_to_dataset(model_run):
                 data.append(carrier_ratio)
                 loc_tech_dict[loc + '::' + tech].append(carrier_ratio)
             data_dict['carrier_ratios']['data'].append(data)
-            data_dict['carrier_ratios_min']['data'].append(
-                [min(i) for i in loc_tech_dict.values()]
-            )
 
     # Additional system-wide constraints from model_run.model
     if model_run.model.get('reserve_margin', {}) != {}:
