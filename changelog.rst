@@ -6,6 +6,8 @@ Release History
 0.6.5 (dev)
 -----------
 
+|changed| Carrier ratios can be loaded from file, to allow timeseries carrier ratios to be defined, e.g. ``carrier_ratios.carrier_out_2.heat: file=ratios.csv``.
+
 |changed| Objective function options turned into Pyomo parameters. This allows them to update through the `Model.backend.update_param()` functionality.
 
 |changed| All model defaults have been moved to `defaults.yaml`, removing the need for `model.yaml`. A default location, link and group constraint have been added to `defaults.yaml` to validate input model keys.

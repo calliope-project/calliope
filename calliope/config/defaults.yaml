@@ -37,7 +37,7 @@ model:
     timeseries_data_path: null  # Path to time series data
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
-    file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios']  # List of configuration options allowed to specify "file=". Updating this will likely make things break
+    file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios']  # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
 
 ##
 # Base technology groups
