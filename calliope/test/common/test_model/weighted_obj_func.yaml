@@ -81,3 +81,5 @@ overrides:
         run.objective_options.cost_class: {'monetary': 0, 'emissions': 1}
     weighted_objective:
         run.objective_options.cost_class: {'monetary': 0.9, 'emissions': 0.1}
+    undefined_class_objective:
+        run.objective_options.cost_class: {'monetary': 0.8, 'emissions': 0.1, 'random_class': 0.2}

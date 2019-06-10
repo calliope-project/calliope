@@ -458,22 +458,6 @@ class TestChecks:
             excinfo, 'Unrecognised setting in run configuration: subset_time'
         )
 
-        override5 = {
-            'run.objective': 'minmax_cost_optimization',
-            'run.objective_options': {
-                'cost_class': {'monetary': 1},
-                'sense': 'minimize',
-                'unused_option': 'some_value'
-            }
-        }
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override5, scenario='simple_supply')
-
-        assert check_error_or_warning(
-            excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
-        )
-
     @pytest.mark.parametrize("invalid_key", [
         ("monetary"), ("emissions"), ("name"), ("anything_else_really")
     ])
@@ -914,7 +898,8 @@ class TestChecks:
                 build_model(override_dict=override(param), scenario='simple_storage,one_day')
             assert check_error_or_warning(
                 errors,
-                'Cannot load `{}` from file for configuration'.format(param)
+                'Cannot load data from file for configuration'
+                ' `techs.test_storage.constraints.{}`'.format(param)
             )
 
         # should pass: can have `file=` on the following constraints
@@ -1008,7 +993,8 @@ class TestChecks:
 
         assert check_error_or_warning(
             excinfo,
-            'Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually')
+            'Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually'
+        )
 
     def test_carrier_ratio_for_specified_carrier(self):
         """
@@ -1026,6 +1012,21 @@ class TestChecks:
             build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
 
         assert 'Tech `test_conversion_plus` gives a carrier ratio' not in [str(i) for i in excinfo.list]
+
+    def test_carrier_ratio_from_file(self):
+        """
+        It is possible to load a timeseries carrier_ratio from file
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+                carrier_out.heat: file=carrier_ratio.csv
+            """
+        )
+        with pytest.warns(None) as excinfo:
+            build_model(override_dict=override, scenario='simple_conversion_plus,one_day')
+
+        assert 'Cannot load data from file for configuration' not in [str(i) for i in excinfo.list]
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):
@@ -1240,6 +1241,19 @@ class TestChecks:
         assert all(
             model.run_config['objective_options']['cost_class'][i] == 1
             for i in override['run.objective_options.cost_class'].keys()
+        )
+
+    def test_warn_on_undefined_cost_classes(self):
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='undefined_class_objective'
+            )
+
+        assert check_error_or_warning(
+            warn,
+            "Cost classes `{'random_class'}` are defined in the objective options but not "
         )
 
 

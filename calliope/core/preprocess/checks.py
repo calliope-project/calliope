@@ -287,31 +287,15 @@ def check_initial(config_model):
     allowed_from_file = DEFAULTS.model.file_allowed
     for k, v in config_model.as_dict_flat().items():
         if 'file=' in str(v):
-            constraint_name = k.split('.')[-1]
-            if constraint_name not in allowed_from_file:
-                errors.append(
-                    'Cannot load `{}` from file for configuration {}'
-                    .format(constraint_name, k)
-                )
 
-    # Check the objective function being used has all the appropriate
-    # options set in objective_options, and that no options are unused
-    objective_function = 'calliope.backend.pyomo.objective.' + config_model.run.objective
-    objective_args_expected = list(signature(load_function(objective_function)).parameters.keys())
-    objective_args_expected = [arg for arg in objective_args_expected
-                               if arg not in ['backend_model', 'kwargs']]
-    for arg in objective_args_expected:
-        if arg not in config_model.run.objective_options:
-            errors.append(
-                'Objective function argument `{}` not found in run.objective_options'
-                .format(arg)
-            )
-    for arg in config_model.run.objective_options:
-        if arg not in objective_args_expected:
-            model_warnings.append(
-                'Objective function argument `{}` given but not used by objective function `{}`'
-                .format(arg, config_model.run.objective)
-            )
+            possible_identifiers = k.split('.')
+            is_time_varying = any('_time_varying' in i for i in possible_identifiers)
+            if is_time_varying:
+                model_warnings.append('Using custom constraint `{}` with time-varying data.'.format(k))
+            elif not set(possible_identifiers).intersection(allowed_from_file) and not is_time_varying:
+                errors.append(
+                    'Cannot load data from file for configuration `{}`.'.format(k)
+                )
 
     # We no longer allow cost_class in objective_obtions to be a string
     _cost_class = config_model.run.objective_options.get('cost_class', {})
@@ -615,46 +599,66 @@ def check_final(model_run):
         if data.get("exists", True)
     }
     for group_constraint_name, group_constraint in group_constraints.items():
-        techs = {
-            i: model_run.get_key('techs.{}.inheritance'.format(i))[-1]
-            for i in set(group_constraint.get('techs', model_run.sets['techs']))
-        }
-        tech_groups = [
+        requested_techs = [i for i in group_constraint.get('techs', [])]
+        requested_locs = group_constraint.get('locs', model_run.sets.locs)
+
+        allowed_tech_groups = [
             [k for k, v in DEFAULTS.tech_groups.items() if i in v['allowed_group_constraints']]
             for i in group_constraint.keys() if i not in ['techs', 'locs', 'exists']
         ]
-        allowed_tech_groups = set(tech_groups[0]).intersection(*tech_groups)
-        group_techs = model_run.constraint_sets['group_constraint_loc_techs_{}'.format(group_constraint_name)]
+        unallowed_tech_groups = (
+            set([item for sublist in allowed_tech_groups for item in sublist])
+            .symmetric_difference(DEFAULTS.tech_groups.keys())
+        )
 
-        _mismatch = None
-        _dropped_techs = None
-        if set(techs.keys()).difference(group_techs):
-            # Mismatch between allowed tech groups for certain constraints
-            if len(set(map(tuple, tech_groups))) > 1:
-                lost_tech_groups = (
-                    set([item for sublist in tech_groups for item in sublist])
-                    - allowed_tech_groups
+        stripped_allowed_tech_groups = set(allowed_tech_groups[0]).intersection(*allowed_tech_groups)
+        group_loc_techs = model_run.constraint_sets['group_constraint_loc_techs_{}'.format(group_constraint_name)]
+        dropped_tech_groups = (
+            set([item for sublist in allowed_tech_groups for item in sublist])
+            - stripped_allowed_tech_groups
+        )
+
+        if not group_loc_techs:
+            model_warnings.append(
+                'Group constraint `{}` cannot be applied as there are no valid loc_tech '
+                'combinations available.'.format(group_constraint_name)
+            )
+            continue
+
+        if not requested_techs:
+            model_warnings.append(
+                'All technologies were requested for inclusion in group constraint '
+                '`{}`, but those from tech group(s) `{}` have been ignored as one '
+                'or more of the constraints cannot be applied to technologies '
+                'in these groups'
+                .format(group_constraint_name, dropped_tech_groups | unallowed_tech_groups)
+            )
+        else:
+            trans_techs = set(requested_techs).intersection(model_run.sets['techs_transmission_names'])
+            for i in trans_techs:
+                requested_techs += [i + ':' + j for j in requested_locs]
+                requested_techs.remove(i)
+            group_techs = set(i.split('::')[1] for i in group_loc_techs)
+            dropped_techs = set(requested_techs).difference(group_techs)
+            if dropped_techs:
+                _mismatch = [group_constraint_name, dropped_techs, unallowed_tech_groups, dropped_tech_groups]
+                model_warnings.append(
+                    'The following requested techs have been removed in group constraint '
+                    '`{}`: {}. This has been caused by no constraints allowing '
+                    'techs from tech group(s) {} and some constraints not '
+                    'allowing techs from tech group(s) {}.'.format(*_mismatch)
                 )
-                _mismatch = [group_constraint_name, allowed_tech_groups, lost_tech_groups]
 
-            # No mismatch, but still removing some techs from those given by the group
-            else:
-                _dropped_techs = [group_constraint_name, allowed_tech_groups]
-
-        if _mismatch is not None:
-            model_warnings.append(
-                'Not all requested techs have been retained in group constraint '
-                '`{}`. Based on the constraints given, only technologies from '
-                'tech group(s) {} are permitted. Some constraints would also '
-                'allow tech group(s) {}, but this requires the group to be '
-                'split up.'.format(*_mismatch)
-            )
-        if _dropped_techs is not None:
-            model_warnings.append(
-                'Not all requested techs have been retained in group constraint '
-                '`{}`. Based on the constraints given, only technologies from '
-                'tech group(s) {} are permitted.'.format(*_dropped_techs)
-            )
+    # Warn if objective cost class is not defined elsewhere in the model
+    objective_cost_class = set(model_run.run.objective_options.cost_class.keys())
+    cost_classes = model_run.sets.costs
+    cost_classes_mismatch = objective_cost_class.difference(cost_classes)
+    if cost_classes_mismatch:
+        model_warnings.append(
+            'Cost classes `{}` are defined in the objective options but not '
+            'defined elsewhere in the model. They will be ignored in the '
+            'objective function.'.format(cost_classes_mismatch)
+        )
 
     # FIXME:
     # make sure `comments` is at the the base level:

@@ -105,18 +105,11 @@ class TestNationalScaleExampleModelSenseChecks:
 
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            model = calliope.examples.national_scale(
-                scenario='check_feasibility',
-                override_dict={'run.cyclic_storage': False}
-            )
 
-        expected_warnings = [
-            'Objective function argument `cost_class` given but not used by objective function `check_feasibility`',
-            'Objective function argument `sense` given but not used by objective function `check_feasibility`'
-        ]
-
-        assert check_error_or_warning(excinfo, expected_warnings)
+        model = calliope.examples.national_scale(
+            scenario='check_feasibility',
+            override_dict={'run.cyclic_storage': False}
+        )
 
         model.run()
 
