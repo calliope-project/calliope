@@ -432,11 +432,11 @@ class TestCostConstraints:
             'simple_supply'
         )
         m.run()
-        assert ['0::test_demand_elec','1::test_demand_elec'] in m._model_data.loc_techs_om_cost.values
-        assert ['0::test_demand_elec','1::test_demand_elec'] in m._model_data.loc_techs_cost.values
-        cost_var_demand = m.results.cost_var.loc[{'costs':'monetary','loc_techs_om_cost': ['0::test_demand_elec','1::test_demand_elec']}].values.sum()
-        carrier_con_demand = -m.results.carrier_con.loc[{'loc_tech_carriers_con':['0::test_demand_elec::electricity','1::test_demand_elec::electricity']}].values.sum()
-        demand_om_cost = m.inputs.cost_om_con.loc[{'loc_techs_om_cost':['0::test_demand_elec']}].values
+        assert ['0::test_demand_elec', '1::test_demand_elec'] in m._model_data.loc_techs_om_cost.values
+        assert ['0::test_demand_elec', '1::test_demand_elec'] in m._model_data.loc_techs_cost.values
+        cost_var_demand = m.results.cost_var.loc[{'costs': 'monetary', 'loc_techs_om_cost': ['0::test_demand_elec', '1::test_demand_elec']}].values.sum()
+        carrier_con_demand = - m.results.carrier_con.loc[{'loc_tech_carriers_con': ['0::test_demand_elec::electricity', '1::test_demand_elec::electricity']}].values.sum()
+        demand_om_cost = m.inputs.cost_om_con.loc[{'loc_techs_om_cost': ['0::test_demand_elec']}].values
         assert (cost_var_demand == carrier_con_demand * demand_om_cost)
 
 
