@@ -652,11 +652,10 @@ def check_final(model_run):
     cost_classes_mismatch = objective_cost_class.difference(cost_classes)
     if cost_classes_mismatch:
         model_warnings.append(
-                'Cost classes `{}` are defined in the objective options but not '
-                'defined elsewhere in the model. They will be ignored in the ' 
-                'objective function.'.format(cost_classes_mismatch)
-            )
-
+            'Cost classes `{}` are defined in the objective options but not '
+            'defined elsewhere in the model. They will be ignored in the '
+            'objective function.'.format(cost_classes_mismatch)
+        )
 
     # FIXME:
     # make sure `comments` is at the the base level:
