@@ -197,7 +197,7 @@ For example, the first few lines of a CSV file giving a resource potential for t
 .. Note::
 
    * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
-   * Only the subset of parameters listed in the :ref:`model configuration <config_reference_model>` can be loaded from file. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
+   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
