@@ -458,22 +458,6 @@ class TestChecks:
             excinfo, 'Unrecognised setting in run configuration: subset_time'
         )
 
-        override5 = {
-            'run.objective': 'minmax_cost_optimization',
-            'run.objective_options': {
-                'cost_class': {'monetary': 1},
-                'sense': 'minimize',
-                'unused_option': 'some_value'
-            }
-        }
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override5, scenario='simple_supply')
-
-        assert check_error_or_warning(
-            excinfo, 'Objective function argument `unused_option` given but not used by objective function `minmax_cost_optimization`'
-        )
-
     @pytest.mark.parametrize("invalid_key", [
         ("monetary"), ("emissions"), ("name"), ("anything_else_really")
     ])
@@ -1257,6 +1241,19 @@ class TestChecks:
         assert all(
             model.run_config['objective_options']['cost_class'][i] == 1
             for i in override['run.objective_options.cost_class'].keys()
+        )
+
+    def test_warn_on_undefined_cost_classes(self):
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(
+                model_file='weighted_obj_func.yaml',
+                scenario='undefined_class_objective'
+            )
+
+        assert check_error_or_warning(
+            warn,
+            "Cost classes `{'random_class'}` are defined in the objective options but not "
         )
 
 
