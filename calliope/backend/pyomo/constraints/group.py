@@ -480,21 +480,18 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
     )
 
     # Transmission techs only contribute half their capacity in each direction
-    lhs = None
+    lhs = []
     for loc_tech in lhs_loc_techs:
         if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
             weight = 0.5
         else:
             weight = 1
 
-        if lhs is not None:
-            lhs += weight * backend_model.energy_cap[loc_tech]
-        else:
-            lhs = weight * backend_model.energy_cap[loc_tech]
+        lhs.append(weight * backend_model.energy_cap[loc_tech])
 
     rhs = threshold
 
-    return equalizer(lhs, rhs, what)
+    return equalizer(sum(lhs), rhs, what)
 
 
 def cost_cap_constraint_rule(backend_model, group_name, cost, what):
