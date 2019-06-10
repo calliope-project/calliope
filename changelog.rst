@@ -6,7 +6,7 @@ Release History
 0.6.5 (dev)
 -----------
 
-|changed| Objective function options turned into pyomo parameters, allowing now to update them through the update_param() functionality
+|changed| Objective function options turned into Pyomo parameters. This allows them to update through the `Model.backend.update_param()` functionality.
 
 |changed| All model defaults have been moved to `defaults.yaml`, removing the need for `model.yaml`. A default location, link and group constraint have been added to `defaults.yaml` to validate input model keys.
 
