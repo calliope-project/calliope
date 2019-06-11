@@ -291,7 +291,7 @@ def map_clusters_to_data(data, clusters, how, daily_timesteps, storage_inter_clu
         timestamps = pd.DataFrame.from_dict(chosen_ts, orient='index')[0]
         cluster_diff = len(clusters.unique()) - len(timestamps.unique())
         if cluster_diff > 0:
-            raise exceptions.ModelWarning(
+            exceptions.ModelWarning(
                 'Creating {} fewer clusters as some clusters share the same '
                 'closest day'.format(cluster_diff)
             )

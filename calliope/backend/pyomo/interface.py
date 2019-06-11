@@ -153,7 +153,7 @@ def rerun_pyomo_model(model_data, backend_model):
     if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
         results = postprocess_model_results(results, new_model_data, timings)
 
-    raise exceptions.ModelWarning(
+    exceptions.ModelWarning(
         'The results of rerunning the backend model are only available within '
         'the Calliope model returned by this function call.'
     )
