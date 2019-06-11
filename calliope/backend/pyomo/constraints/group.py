@@ -14,7 +14,7 @@ import logging
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import loc_tech_is_in
+from calliope.backend.pyomo.util import loc_tech_is_in, get_param
 
 logger = logging.getLogger(__name__)
 
@@ -178,12 +178,9 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             carrier_{con}(loc::tech::carrier, timestep)
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share = model_data_dict['group_demand_share_{}'.format(what)].get(
-        (carrier, group_name), np.nan
-    )
+    share = get_param(backend_model, 'group_demand_share_{}'.format(what), (carrier, group_name))
 
-    if np.isnan(share):
+    if share is None:
         return return_noconstraint('demand_share', group_name)
     else:
         lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
@@ -220,12 +217,9 @@ def demand_share_per_timestep_constraint_rule(backend_model, group_name, carrier
             carrier_{con}(loc::tech::carrier, timestep) for timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share = model_data_dict['group_demand_share_per_timestep_{}'.format(what)].get(
-        (carrier, group_name), np.nan
-    )
+    share = get_param(backend_model, 'group_demand_share_per_timestep_{}'.format(what), (carrier, group_name))
 
-    if np.isnan(share):
+    if share is None:
         return return_noconstraint('demand_share_per_timestep', group_name)
     else:
         lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
@@ -271,12 +265,9 @@ def demand_share_per_timestep_decision_main_constraint_rule(backend_model, group
             \\forall tech \\in techs
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share_of_carrier_demand = model_data_dict['group_demand_share_per_timestep_decision'].get(
-        (carrier, group_name), np.nan
-    )
+    share_of_carrier_demand = get_param(backend_model, 'group_demand_share_per_timestep_decision', (carrier, group_name))
 
-    if np.isnan(share_of_carrier_demand):
+    if share_of_carrier_demand is None:
         return return_noconstraint('demand_share_per_timestep_decision_main', group_name)
     else:
         # lhs are the supply technologies, rhs are the demand technologies
@@ -326,13 +317,10 @@ def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_
 
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share_of_carrier_demand = model_data_dict['group_demand_share_per_timestep_decision'].get(
-        (carrier, group_name), np.nan
-    )
+    share_of_carrier_demand = get_param(backend_model, 'group_demand_share_per_timestep_decision', (carrier, group_name))
 
     # If inf was given that means that we don't limit the total share
-    if np.isinf(share_of_carrier_demand) or np.isnan(share_of_carrier_demand):
+    if share_of_carrier_demand is None or np.isinf(share_of_carrier_demand):
         return return_noconstraint('demand_share_per_timestep_decision_sum', group_name)
     else:
         lhs_loc_tech_carriers, _ = get_demand_share_lhs_and_rhs_loc_tech_carriers(
@@ -373,10 +361,9 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
             carrier_{prod}(loc::tech::carrier, timestep)
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share = model_data_dict['group_supply_share_{}'.format(what)][(carrier, constraint_group)]
+    share = get_param(backend_model, 'group_supply_share_{}'.format(what), (carrier, constraint_group))
 
-    if np.isnan(share):
+    if share is None:
         return return_noconstraint('supply_share', constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
@@ -413,10 +400,9 @@ def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, c
             carrier_{prod}(loc::tech::carrier, timestep) for timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share = model_data_dict['group_supply_share_per_timestep_{}'.format(what)][(carrier, constraint_group)]
+    share = get_param(backend_model, 'group_supply_share_per_timestep_{}'.format(what), (carrier, constraint_group))
 
-    if np.isnan(share):
+    if share is None:
         return return_noconstraint('supply_share_per_timestep', constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
@@ -448,32 +434,28 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\leq
             share \\times \\sum_{loc::tech \\in loc\\_tech\\_supply\\_all \\in given\\_locations} energy_{cap}(loc::tech)
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    share = model_data_dict['group_energy_cap_share_{}'.format(what)][(constraint_group)]
+    share = get_param(backend_model, 'group_energy_cap_share_{}'.format(what), (constraint_group))
 
-    if np.isnan(share):
-        return return_noconstraint('energy_cap_share', constraint_group)
-    else:
-        lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
-        )
-        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
-        rhs_loc_techs = [
-            i for i in backend_model.loc_techs_supply_conversion_all
-            if i.split('::')[0] in lhs_locs
-        ]
+    lhs_loc_techs = getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(constraint_group)
+    )
+    lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+    rhs_loc_techs = [
+        i for i in backend_model.loc_techs_supply_conversion_all
+        if i.split('::')[0] in lhs_locs
+    ]
 
-        lhs = sum(
-            backend_model.energy_cap[loc_tech]
-            for loc_tech in lhs_loc_techs
-        )
-        rhs = share * sum(
-            backend_model.energy_cap[loc_tech]
-            for loc_tech in rhs_loc_techs
-        )
+    lhs = sum(
+        backend_model.energy_cap[loc_tech]
+        for loc_tech in lhs_loc_techs
+    )
+    rhs = share * sum(
+        backend_model.energy_cap[loc_tech]
+        for loc_tech in rhs_loc_techs
+    )
 
-        return equalizer(lhs, rhs, what)
+    return equalizer(lhs, rhs, what)
 
 
 def energy_cap_constraint_rule(backend_model, constraint_group, what):
@@ -490,33 +472,26 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\geq energy\\_cap\\_min
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    threshold = model_data_dict['group_energy_cap_{}'.format(what)][(constraint_group)]
+    threshold = get_param(backend_model, 'group_energy_cap_{}'.format(what), (constraint_group))
 
-    if np.isnan(threshold):
-        return return_noconstraint('energy_cap', constraint_group)
-    else:
-        lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
-        )
+    lhs_loc_techs = getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(constraint_group)
+    )
 
-        # Transmission techs only contribute half their capacity in each direction
-        lhs = None
-        for loc_tech in lhs_loc_techs:
-            if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
-                weight = 0.5
-            else:
-                weight = 1
+    # Transmission techs only contribute half their capacity in each direction
+    lhs = []
+    for loc_tech in lhs_loc_techs:
+        if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+            weight = 0.5
+        else:
+            weight = 1
 
-            if lhs is not None:
-                lhs += weight * backend_model.energy_cap[loc_tech]
-            else:
-                lhs = weight * backend_model.energy_cap[loc_tech]
+        lhs.append(weight * backend_model.energy_cap[loc_tech])
 
-        rhs = threshold
+    rhs = threshold
 
-        return equalizer(lhs, rhs, what)
+    return equalizer(sum(lhs), rhs, what)
 
 
 def cost_cap_constraint_rule(backend_model, group_name, cost, what):
@@ -538,19 +513,15 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
             \\end{cases}
 
     """
+    cost_cap = get_param(backend_model, 'group_cost_{}'.format(what), (cost, group_name))
+
+    if cost_cap is None:
+        return return_noconstraint('cost_cap', group_name)
 
     loc_techs = [i for i in getattr(
         backend_model,
         'group_constraint_loc_techs_{}'.format(group_name)
     ) if i in backend_model.loc_techs_cost]
-
-    model_data_dict = backend_model.__calliope_model_data['data']
-    cost_cap = model_data_dict['group_cost_{}'.format(what)].get(
-        (cost, group_name), np.nan
-    )
-
-    if np.isnan(cost_cap):
-        return return_noconstraint('cost_cap', group_name)
 
     sum_cost = sum(backend_model.cost[cost, loc_tech] for loc_tech in loc_techs)
 
@@ -576,19 +547,15 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
             \\end{cases}
 
     """
+    cost_cap = get_param(backend_model, 'group_cost_investment_{}'.format(what), (cost, group_name))
+
+    if cost_cap is None:
+        return return_noconstraint('cost_investment_cap', group_name)
 
     loc_techs = [i for i in getattr(
         backend_model,
         'group_constraint_loc_techs_{}'.format(group_name)
     ) if i in backend_model.loc_techs_investment_cost]
-
-    model_data_dict = backend_model.__calliope_model_data['data']
-    cost_cap = model_data_dict['group_cost_investment_{}'.format(what)].get(
-        (cost, group_name), np.nan
-    )
-
-    if np.isnan(cost_cap):
-        return return_noconstraint('cost_investment_cap', group_name)
 
     sum_cost = sum(backend_model.cost_investment[cost, loc_tech] for loc_tech in loc_techs)
 
@@ -614,19 +581,15 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
             \\end{cases}
 
     """
+    cost_cap = get_param(backend_model, 'group_cost_var_{}'.format(what), (cost, group_name))
+
+    if cost_cap is None:
+        return return_noconstraint('cost_var_cap', group_name)
 
     loc_techs = [i for i in getattr(
         backend_model,
         'group_constraint_loc_techs_{}'.format(group_name)
     ) if i in backend_model.loc_techs_om_cost]
-
-    model_data_dict = backend_model.__calliope_model_data['data']
-    cost_cap = model_data_dict['group_cost_var_{}'.format(what)].get(
-        (cost, group_name), np.nan
-    )
-
-    if np.isnan(cost_cap):
-        return return_noconstraint('cost_var_cap', group_name)
 
     sum_cost = sum(
         backend_model.cost_var[cost, loc_tech, timestep]
@@ -650,21 +613,17 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
             \\boldsymbol{resource_{area}}(loc::tech) \\geq group\\_resource\\_area\\_min
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
-    threshold = model_data_dict['group_resource_area_{}'.format(what)][(constraint_group)]
+    threshold = get_param(backend_model, 'group_resource_area_{}'.format(what), (constraint_group))
 
-    if np.isnan(threshold):
-        return return_noconstraint('resource_area', constraint_group)
-    else:
-        lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
-        )
+    lhs_loc_techs = getattr(
+        backend_model,
+        'group_constraint_loc_techs_{}'.format(constraint_group)
+    )
 
-        lhs = sum(
-            backend_model.resource_area[loc_tech]
-            for loc_tech in lhs_loc_techs
-        )
-        rhs = threshold
+    lhs = sum(
+        backend_model.resource_area[loc_tech]
+        for loc_tech in lhs_loc_techs
+    )
+    rhs = threshold
 
-        return equalizer(lhs, rhs, what)
+    return equalizer(lhs, rhs, what)

@@ -237,13 +237,45 @@ def add_max_demand_timesteps(model_data):
     return model_data
 
 
+def add_zero_carrier_ratio_sets(model_data):
+    carrier_ratios = model_data.get('carrier_ratios', None)
+
+    if carrier_ratios is None:
+        return model_data
+
+    zero_dims = (
+        carrier_ratios
+        .where(carrier_ratios == 0)
+        .dropna('loc_tech_carriers_conversion_plus', how='all')
+        .dropna('carrier_tiers', how='all')
+    )
+
+    if zero_dims.any().item() is False:
+        return model_data
+
+    zero_dims = zero_dims.stack(
+        loc_tech_carrier_tiers_conversion_plus_zero_ratio=[
+            'loc_tech_carriers_conversion_plus', 'carrier_tiers'
+        ]
+    ).dropna('loc_tech_carrier_tiers_conversion_plus_zero_ratio', how='all')
+
+    return model_data.assign_coords(
+        loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint=[
+            '::'.join(i) for i in
+            zero_dims.loc_tech_carrier_tiers_conversion_plus_zero_ratio.values
+        ]
+    )
+
+
 def final_timedimension_processing(model_data):
 
     # Final checking of the data
     model_data, final_check_comments, warns, errors = checks.check_model_data(model_data)
     exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
-    model_data = reorganise_xarray_dimensions(model_data)
     model_data = add_max_demand_timesteps(model_data)
+    model_data = add_zero_carrier_ratio_sets(model_data)
+
+    model_data = reorganise_xarray_dimensions(model_data)
 
     return model_data

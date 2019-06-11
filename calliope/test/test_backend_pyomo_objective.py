@@ -57,3 +57,22 @@ class TestCostMinimisationObjective:
                 for i in range(len(cost_class))
             ) == approx(po.value(model._backend_model.obj))
         )
+
+    def test_update_cost_classes_weights(self):
+        model = build_model(
+            model_file='weighted_obj_func.yaml',
+            scenario='weighted_objective'
+        )
+
+        model.run()
+        obj_value = model._backend_model.obj()
+        total_cost = model.results.cost.sum()
+        model.backend.update_param('objective_cost_class', 'monetary', 1.8)
+        model.backend.update_param('objective_cost_class', 'emissions', 0.2)
+
+        new_results = model.backend.rerun()
+        updated_obj_value = model._backend_model.obj()
+        updated_total_cost = new_results.cost.sum()
+
+        assert updated_obj_value == 2 * obj_value
+        assert updated_total_cost == total_cost

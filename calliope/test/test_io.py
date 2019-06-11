@@ -57,14 +57,10 @@ class TestIO:
                 assert 'demand_power' in f.read()
 
     def test_save_csv_not_optimal(self):
-        # Not checking for content of warnings here, since
-        # check_feasibility-related warnings are tested for in
-        # test_example_models
-        with pytest.warns(exceptions.ModelWarning):
-            model = calliope.examples.national_scale(
-                scenario='check_feasibility',
-                override_dict={'run.cyclic_storage': False}
-            )
+        model = calliope.examples.national_scale(
+            scenario='check_feasibility',
+            override_dict={'run.cyclic_storage': False}
+        )
 
         model.run()
 

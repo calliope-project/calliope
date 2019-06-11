@@ -66,8 +66,8 @@ def update_pyomo_param(backend_model, param, index, value):
         )
     elif index not in getattr(backend_model, param):
         raise exceptions.ModelError(
-            'index {} not in the Pyomo Parameter {}. call '
-            'model.access_backend_model_inputs to see the indeces of the Pyomo '
+            'Index {} not in the Pyomo Parameter {}. call '
+            'model.backend.access_model_inputs() to see the indeces of the Pyomo '
             'Parameters'.format(index, param)
         )
     else:
