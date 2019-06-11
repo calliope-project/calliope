@@ -1268,7 +1268,7 @@ class TestChecks:
             "Cost classes `{'random_class'}` are defined in the objective options but not "
         )
 
-        
+
 class TestDataset:
 
     # FIXME: What are we testing here?
