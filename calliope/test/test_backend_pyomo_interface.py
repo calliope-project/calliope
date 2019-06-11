@@ -1,18 +1,11 @@
 import pytest  # pylint: disable=unused-import
-import numpy as np
-import xarray as xr
 import pandas as pd
-import pyomo.core as po
-import os
-import logging
 
 import calliope
-from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
-from calliope.core.attrdict import AttrDict
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import check_error_or_warning, check_variable_exists
+from calliope.test.common.util import check_error_or_warning
 
 
 @pytest.fixture(scope='module')
