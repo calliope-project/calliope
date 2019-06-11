@@ -68,7 +68,7 @@ tech_groups:
         required_constraints: ['resource']
         allowed_constraints: ['energy_con', 'force_resource', 'resource', 'resource_area_equals', 'resource_scale', 'resource_unit']
         allowed_group_constraints: []
-        allowed_costs: []
+        allowed_costs: [om_con]
         essentials:
             parent: null
         constraints:
