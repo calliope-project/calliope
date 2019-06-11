@@ -189,6 +189,12 @@ overrides:
                     test_storage:
                     test_demand_elec:
 
+    storage_dod:
+        techs:
+            test_storage:
+                constraints:
+                    storage_dod: 13
+
     storage_milp:
         locations:
             0:

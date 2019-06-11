@@ -1242,6 +1242,17 @@ class TestChecks:
             for i in override['run.objective_options.cost_class'].keys()
         )
 
+    def test_storage_initial_smaller_than_dod(self):
+        """
+        Check that the storage_initial value is at least equalt to the storage_dod
+        """
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            model = build_model({'techs.test_storage.constraints.storage_initial': 0},
+        'simple_storage,two_hours,investment_costs,storage_dod')
+
+        assert check_error_or_warning(
+            warn, 'storage_initial is smaller than storage_dod.'
+        )
 
 class TestDataset:
 

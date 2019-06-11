@@ -772,4 +772,17 @@ def check_model_data(model_data):
             'MILP constraints.'
         )
 
+    #Check for storage_initial being greater than or equal to the storage_dod
+
+    if hasattr(model_data, 'loc_techs_storage'):
+        for loc_tech in model_data.loc_techs_storage.values:
+            if hasattr(model_data, 'storage_initial') and hasattr(model_data, 'storage_dod'):
+                if (model_data.storage_initial.loc[{'loc_techs_store': loc_tech}].values
+                    < model_data.storage_dod.loc[{'loc_techs_store': loc_tech}].values):
+                    model_data.storage_initial.loc[{'loc_techs_store': loc_tech}] = model_data.storage_dod.loc[{'loc_techs_store': loc_tech}]
+                    model_warnings.append(
+                            'storage_initial is smaller than storage_dod.'
+                            ' The former will be set equal to the storage_dod.'
+                    )
+
     return model_data, comments, model_warnings, errors

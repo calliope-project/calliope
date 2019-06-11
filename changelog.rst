@@ -6,6 +6,7 @@ Release History
 0.6.5 (dev)
 -----------
 
+|new| Introduced a `storage_dod` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology
 
 |changed| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled interactively by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
 

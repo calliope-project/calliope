@@ -84,7 +84,7 @@ def load_constraints(backend_model):
             rule=balance_storage_constraint_rule
         )
     if 'loc_techs_storage_dod' in sets:
-        backend_model.dod_storage_constraint = po.Constraint(
+        backend_model.storage_dod_constraint = po.Constraint(
             backend_model.loc_techs_storage_dod,
             backend_model.timesteps,
             rule=storage_dod_constraint_rule
@@ -457,7 +457,8 @@ def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
 
         .. math::
 
-            [some math should be here]
+            \\boldsymbol{storage}(loc::tech, timestep) >=
+            \\boldsymbol{storage_DoD}\\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
     """
 
     storage_dod = get_param(backend_model, 'storage_dod', loc_tech)
@@ -499,10 +500,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
     current_timestep = backend_model.timesteps.order_dict[timestep]
     if current_timestep == 0 and not run_config['cyclic_storage']:
-        if hasattr(backend_model, 'storage_dod'):
-            storage_previous_step = get_param(backend_model, 'storage_dod', loc_tech)
-        else:
-            storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+        storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
     elif (hasattr(backend_model, 'storage_inter_cluster') and
             model_data_dict['lookup_cluster_first_timestep'][timestep]):
         if hasattr(backend_model, 'storage_dod'):
@@ -608,10 +606,7 @@ def storage_initial_rule(backend_model, loc_tech):
     Where :math:`timestep_{final}` is the last timestep of the timeseries
     """
 
-    if hasattr(backend_model, 'storage_dod'):
-        storage_initial = get_param(backend_model, 'storage_dod', loc_tech)
-    else:
-        storage_initial = get_param(backend_model, 'storage_initial', loc_tech)
+    storage_initial = get_param(backend_model, 'storage_initial', loc_tech)
 
     storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
     if hasattr(backend_model, 'storage_inter_cluster'):

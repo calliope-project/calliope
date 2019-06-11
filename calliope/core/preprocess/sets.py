@@ -387,15 +387,6 @@ def generate_loc_tech_sets(model_run, simple_sets):
         loc_techs_storage_asynchronous_prod_con | loc_techs_transmission_asynchronous_prod_con
     )
 
-    # Technologies with on_off_prod MILP constraint
-    loc_techs_on_off_prod = set(
-        k for k in sets.loc_techs_non_transmission
-        if any('force_on_off_prod' in i
-               for i in loc_techs_config[k].constraints.keys_nested())
-    )
-
-    sets.loc_techs_on_off_prod = loc_techs_on_off_prod
-
     ##
     # Sets based on specific costs being active
     # NB includes transmission techs

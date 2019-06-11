@@ -341,6 +341,30 @@ class TestBalanceConstraints:
         assert hasattr(m._backend_model, 'balance_storage_constraint')
         assert not hasattr(m._backend_model, 'storage_initial_constraint')
 
+    def test_loc_techs_balance_storage_dod_constraint(self):
+        """
+        sets.loc_techs_storage,
+        """
+        m = build_model({}, 'simple_storage,two_hours,investment_costs,storage_dod')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'storage_dod_constraint')
+        assert not hasattr(m._backend_model, 'storage_initial_constraint')
+
+        m2 = build_model(
+            {'techs.test_storage.constraints.storage_initial': 0},
+            'simple_storage,one_day,investment_costs,storage_dod'
+        )
+        m2.run(build_only=True)
+        assert (m2._model_data.storage_initial.values == m2._model_data.storage_dod.values).all()
+
+        m3 = build_model(
+            {'techs.test_storage.constraints.storage_initial': 15},
+            'simple_storage,one_day,investment_costs,storage_dod'
+        )
+        m3.run(build_only=True)
+        assert (m3._model_data.storage_initial.values > m3._model_data.storage_dod.values).all()
+
+
     def test_storage_initial_constraint(self):
         """
         sets.loc_techs_store,
