@@ -109,6 +109,9 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         results = backend.get_result_array(backend_model, model_data)
         results.attrs['termination_condition'] = termination
 
+        if results.attrs['termination_condition'] in ['optimal', 'feasible']:
+            results.attrs['objective_function_value'] = backend_model.obj()
+
         log_time(
             logger, timings, 'run_solution_returned', time_since_run_start=True,
             comment='Backend: generated solution array'
@@ -165,7 +168,7 @@ def run_operate(model_data, timings, backend, build_only):
                          dims='loc_techs_store')
         )
         model_data['storage_initial'].attrs['is_result'] = 0
-        exceptions.ModelWarning(
+        exceptions.warn(
             'Initial stored energy not defined, set to zero for all '
             'loc::techs in loc_techs_store, for use in iterative optimisation'
         )
@@ -178,7 +181,7 @@ def run_operate(model_data, timings, backend, build_only):
         )
         model_data['operated_units'].attrs['is_result'] = 1
         model_data['operated_units'].attrs['operate_param'] = 1
-        exceptions.ModelWarning(
+        exceptions.warn(
             'daily operated units not defined, set to zero for all '
             'loc::techs in loc_techs_milp, for use in iterative optimisation'
         )
@@ -351,6 +354,8 @@ def run_operate(model_data, timings, backend, build_only):
         results = xr.concat(result_array, dim='timesteps')
         if all(i == 'optimal' for i in terminations):
             results.attrs['termination_condition'] = 'optimal'
+        elif all(i in ['optimal', 'feasible'] for i in terminations):
+            results.attrs['termination_condition'] = 'feasible'
         else:
             results.attrs['termination_condition'] = ','.join(terminations)
 

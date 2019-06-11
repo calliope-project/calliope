@@ -8,6 +8,10 @@ Release History
 
 |new| Introduced a `storage_dod` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology
 
+|changed| Allowed `om_con` cost for demand technologies. This is conceived to allow better representing generic international exports as demand sinks with a given revenue (e.g. the average electricity price on a given bidding zone), not restricted to any particular type of technology. 
+
+|changed| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
+
 |changed| Carrier ratios can be loaded from file, to allow timeseries carrier ratios to be defined, e.g. ``carrier_ratios.carrier_out_2.heat: file=ratios.csv``.
 
 |changed| Objective function options turned into Pyomo parameters. This allows them to update through the `Model.backend.update_param()` functionality.

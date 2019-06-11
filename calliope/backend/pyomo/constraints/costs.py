@@ -222,6 +222,8 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
             cost_con = cost_om_con * weight * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff)
         else:
             cost_con = 0
+    elif loc_tech_is_in(backend_model, loc_tech, 'loc_techs_demand') and cost_om_con:
+        cost_con = cost_om_con * weight * (-1) * backend_model.carrier_con[loc_tech_carrier, timestep]
     else:
         cost_con = 0
 
