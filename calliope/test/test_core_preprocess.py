@@ -1255,6 +1255,28 @@ class TestChecks:
             warn, 'storage_initial is smaller than storage_dod.'
         )
 
+    def test_storage_inter_cluster_vs_storage_dod(self):
+        """
+        Check that the storage_inter_cluster is not used together with storage_dod
+        """
+        with pytest.raises(exceptions.ModelError) as error:
+            override = {
+                'model.subset_time': ['2005-01-01', '2005-01-04'],
+                'model.time': {
+                    'function': 'apply_clustering',
+                    'function_options': {
+                        'clustering_func': 'file=cluster_days.csv:0', 'how': 'mean',
+                        'storage_inter_cluster': True
+                    }
+                }
+            }
+
+            build_model(override, 'simple_storage,storage_dod')
+
+        assert check_error_or_warning(
+            error, 'storage_dod is currently not allowed when time clustering is active.'
+        )
+
     def test_warn_on_undefined_cost_classes(self):
 
         with pytest.warns(exceptions.ModelWarning) as warn:

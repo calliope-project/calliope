@@ -504,9 +504,6 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
         storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
     elif (hasattr(backend_model, 'storage_inter_cluster') and
             model_data_dict['lookup_cluster_first_timestep'][timestep]):
-        if hasattr(backend_model, 'storage_dod'):
-            storage_previous_step = get_param(backend_model, 'storage_dod', loc_tech)
-        else:
             storage_previous_step = 0
     else:
         if (hasattr(backend_model, 'clusters') and

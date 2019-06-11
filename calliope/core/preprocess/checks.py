@@ -789,4 +789,10 @@ def check_model_data(model_data):
                             ' The former will be set equal to the storage_dod.'
                     )
 
+    # Check for storage_inter_cluster not being used together with storage_dod
+    if hasattr(model_data, 'clusters') and hasattr(model_data, 'storage_dod'):
+        errors.append(
+                'storage_dod is currently not allowed when time clustering is active.'
+            )
+
     return model_data, comments, model_warnings, errors
