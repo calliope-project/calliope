@@ -6,6 +6,8 @@ Release History
 0.6.5 (dev)
 -----------
 
+|changed| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
+
 |changed| Carrier ratios can be loaded from file, to allow timeseries carrier ratios to be defined, e.g. ``carrier_ratios.carrier_out_2.heat: file=ratios.csv``.
 
 |changed| Objective function options turned into Pyomo parameters. This allows them to update through the `Model.backend.update_param()` functionality.

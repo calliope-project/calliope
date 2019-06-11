@@ -185,7 +185,7 @@ def solve_model(backend_model, solver,
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
     if 'warmstart' in solve_kwargs.keys() and solver in ['glpk', 'cbc']:
-        exceptions.ModelWarning(
+        exceptions.warn(
             'The chosen solver, {}, does not suport warmstart, which may '
             'impact performance.'.format(solver)
         )
