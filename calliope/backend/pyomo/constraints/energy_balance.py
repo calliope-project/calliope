@@ -449,6 +449,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
             storage_previous_step + resource - carrier_prod
         )
 
+
 def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
     """
     Forces storage state of charge to be greater than the allowed depth of discharge.
