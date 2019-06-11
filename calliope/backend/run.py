@@ -168,7 +168,7 @@ def run_operate(model_data, timings, backend, build_only):
                          dims='loc_techs_store')
         )
         model_data['storage_initial'].attrs['is_result'] = 0
-        exceptions.ModelWarning(
+        exceptions.warn(
             'Initial stored energy not defined, set to zero for all '
             'loc::techs in loc_techs_store, for use in iterative optimisation'
         )
@@ -181,7 +181,7 @@ def run_operate(model_data, timings, backend, build_only):
         )
         model_data['operated_units'].attrs['is_result'] = 1
         model_data['operated_units'].attrs['operate_param'] = 1
-        exceptions.ModelWarning(
+        exceptions.warn(
             'daily operated units not defined, set to zero for all '
             'loc::techs in loc_techs_milp, for use in iterative optimisation'
         )

@@ -34,10 +34,26 @@ class TestUpdateParam:
         test that the function update_param works with a single dimension
         """
 
-        model.backend.update_param('energy_cap_max', '1::test_supply_elec', 20)
+        model.backend.update_param('energy_cap_max', {'1::test_supply_elec': 20})
 
         assert (
             model._backend_model.energy_cap_max.extract_values()['1::test_supply_elec'] == 20
+        )
+
+    def test_update_param_multiple_vals(self, model):
+        """
+        test that the function update_param works with a single dimension
+        """
+
+        model.backend.update_param(
+            'energy_cap_max', {'1::test_supply_elec': 20, '0::test_supply_elec': 30}
+        )
+
+        assert (
+            model._backend_model.energy_cap_max.extract_values()['1::test_supply_elec'] == 20
+        )
+        assert (
+            model._backend_model.energy_cap_max.extract_values()['0::test_supply_elec'] == 30
         )
 
     def test_update_param_multiple_dim(self, model):
@@ -46,7 +62,7 @@ class TestUpdateParam:
         """
 
         model.backend.update_param(
-            'resource', ('0::test_demand_elec', pd.Timestamp('2005-01-01 01:00:00')), -10
+            'resource', {('0::test_demand_elec', pd.Timestamp('2005-01-01 01:00:00')): -10}
         )
 
         assert (
@@ -61,7 +77,7 @@ class TestUpdateParam:
 
         with pytest.raises(exceptions.ModelError) as excinfo:
             model.backend.update_param(
-                'unknown_param', ('1::test_supply_elec'), 20
+                'unknown_param', {('1::test_supply_elec'): 20}
             )
 
         assert check_error_or_warning(excinfo, 'Parameter `unknown_param` not in the Pyomo Backend.')
@@ -72,14 +88,14 @@ class TestUpdateParam:
         """
         with pytest.raises(exceptions.ModelError) as excinfo:
             model.backend.update_param(
-                'energy_cap', '1::test_supply_elec', 20
+                'energy_cap', {'1::test_supply_elec': 20}
             )
 
         assert check_error_or_warning(excinfo, '`energy_cap` not a Parameter in the Pyomo Backend.')
 
         with pytest.raises(exceptions.ModelError) as excinfo:
             model.backend.update_param(
-                'loc_techs', '1::test_supply_elec', 20
+                'loc_techs', {'1::test_supply_elec': 20}
             )
 
         assert check_error_or_warning(excinfo, '`loc_techs` not a Parameter in the Pyomo Backend.')
@@ -88,24 +104,16 @@ class TestUpdateParam:
         """
         Raise error when accessing unknown index
         """
-        with pytest.raises(exceptions.ModelError) as excinfo:
+
+        with pytest.raises(KeyError, match=r"Index 'region1-xc1::csp'"):
             model.backend.update_param(
-                'energy_cap_max', '2::test_supply_elec', 20
+                'energy_cap_max', {'2::test_supply_elec': 20}
             )
 
-        assert check_error_or_warning(
-            excinfo, 'Index `2::test_supply_elec` not in the Pyomo Parameter `energy_cap_max`'
-        )
-
-        with pytest.raises(exceptions.ModelError) as excinfo:
+        with pytest.raises(KeyError, match=r"Index 'region1-xc1::csp'"):
             model.backend.update_param(
-                'resource', ('0::test_demand_elec', '2005-01-01 01:00:00'), 1000
+                'energy_cap_max', {'1::test_supply_elec': 20, '2::test_supply_elec': 20}
             )
-
-        assert check_error_or_warning(
-            excinfo,
-            "Index `('0::test_demand_elec', '2005-01-01 01:00:00')` not in the Pyomo Parameter `resource`"
-        )
 
 
 class TestActivateConstraint:
@@ -163,11 +171,11 @@ class TestBackendRerun:
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             new_model = model.backend.rerun()
 
-            assert isinstance(new_model, calliope.Model)
-            for i in ['_timings', 'inputs', 'results']:
-                assert hasattr(new_model, i)
+        assert isinstance(new_model, calliope.Model)
+        for i in ['_timings', 'inputs', 'results']:
+            assert hasattr(new_model, i)
 
-            assert new_model.inputs.equals(model.backend.access_model_inputs())
+        assert new_model.inputs.equals(model.backend.access_model_inputs().reindex(new_model.inputs.coords))
 
         assert check_error_or_warning(
             excinfo,
@@ -178,11 +186,11 @@ class TestBackendRerun:
         """
         test that the function rerun works
         """
+        model.backend.update_param('energy_cap_max', {'1::test_supply_elec': 20})
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            model.backend.update_param('energy_cap_max', '1::test_supply_elec', 20)
             new_model = model.backend.rerun()
 
-            assert new_model.inputs.energy_cap_max.loc[{'loc_techs': '1::test_supply_elec'}] == 20
+        assert new_model.inputs.energy_cap_max.loc[{'loc_techs': '1::test_supply_elec'}] == 20
 
         assert check_error_or_warning(
             excinfo,
@@ -191,8 +199,8 @@ class TestBackendRerun:
 
     def test_rerun_fail_on_operate(self, model):
         # should fail if the run mode is not 'plan'
+        model.run_config['mode'] = 'operate'
         with pytest.raises(exceptions.ModelError) as excinfo:
-            model.run_config['mode'] = 'operate'
             model.backend.rerun()
         assert check_error_or_warning(
             excinfo, 'Cannot rerun the backend in operate run mode'

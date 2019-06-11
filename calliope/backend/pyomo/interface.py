@@ -33,7 +33,7 @@ def access_pyomo_model_inputs(backend_model):
     return reorganise_xarray_dimensions(xr.Dataset(all_params))
 
 
-def update_pyomo_param(backend_model, param, index, value):
+def update_pyomo_param(backend_model, param, update_dict):
     """
     A Pyomo Param value can be updated without the user directly accessing the
     backend model.
@@ -42,15 +42,14 @@ def update_pyomo_param(backend_model, param, index, value):
     ----------
     param : str
         Name of the parameter to update
-    index : tuple of strings
-        Tuple of dimension indeces, in the order given in model.inputs for the
-        reciprocal parameter
-    value : int, float, bool, or str
-        Value to assign to the Pyomo Param at the given index
+    update_dict : dict
+        keys are parameter indeces (either strings or tuples of strings,
+        depending on whether there is one or more than one dimension). Values
+        are the new values being assigned to the parameter at the given indeces.
 
     Returns
     -------
-    Value will be updated in-place, requiring the user to run the model again to
+    Value(s) will be updated in-place, requiring the user to run the model again to
     see the effect on results.
 
     """
@@ -65,19 +64,16 @@ def update_pyomo_param(backend_model, param, index, value):
             '`{}` not a Parameter in the Pyomo Backend. Sets and decision variables '
             'cannot be updated by the user'.format(param)
         )
-    elif index not in getattr(backend_model, param):
-        raise exceptions.ModelError(
-            'Index `{}` not in the Pyomo Parameter `{}`. call '
-            'model.backend.access_model_inputs() to see the indeces of the Pyomo '
-            'Parameters'.format(index, param)
-        )
+    elif not isinstance(update_dict, dict):
+        raise TypeError('`update_dict` must be a dictionary')
+
     else:
         print(
             'Warning: we currently do not check that the updated value is the '
             'correct data type for this Pyomo Parameter, this is your '
             'responsibility to check!'
         )
-        getattr(backend_model, param)[index] = value
+        getattr(backend_model, param).store_values(update_dict)
 
 
 def activate_pyomo_constraint(backend_model, constraint, active=True):
@@ -146,14 +142,14 @@ def rerun_pyomo_model(model_data, backend_model):
 
     new_model_data = results.copy()
     new_model_data.attrs.update(model_data.attrs)
-    new_model_data.coords.update(model_data.coords)
+    new_model_data.update(model_data.coords)
     new_model_data.update(inputs)
-
+    new_model_data = new_model_data.reindex(model_data.coords)
     # Add additional post-processed result variables to results
     if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
         results = postprocess_model_results(results, new_model_data, timings)
 
-    exceptions.ModelWarning(
+    exceptions.warn(
         'The results of rerunning the backend model are only available within '
         'the Calliope model returned by this function call.'
     )
