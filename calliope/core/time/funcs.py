@@ -178,7 +178,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
 
         df = model_run.timeseries_data[file]
         if isinstance(df, pd.Series) and column is not None:
-            raise exceptions.ModelWarning(
+            exceptions.warn(
                 '{} given as time clustering column, but only one column to '
                 'choose from in {}.'.format(column, file)
             )

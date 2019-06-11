@@ -67,12 +67,12 @@ class TestCostMinimisationObjective:
         model.run()
         obj_value = model._backend_model.obj()
         total_cost = model.results.cost.sum()
-        model.backend.update_param('objective_cost_class', 'monetary', 1.8)
-        model.backend.update_param('objective_cost_class', 'emissions', 0.2)
+        model.backend.update_param('objective_cost_class', {'monetary': 1.8})
+        model.backend.update_param('objective_cost_class', {'emissions': 0.2})
 
-        new_results = model.backend.rerun()
+        new_model = model.backend.rerun()
         updated_obj_value = model._backend_model.obj()
-        updated_total_cost = new_results.cost.sum()
+        updated_total_cost = new_model.results.cost.sum()
 
         assert updated_obj_value == 2 * obj_value
         assert updated_total_cost == total_cost
