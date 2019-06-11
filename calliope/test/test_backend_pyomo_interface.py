@@ -167,7 +167,7 @@ class TestBackendRerun:
         """
         test that the function rerun works
         """
-        with pytest.raises(exceptions.ModelWarning) as excinfo:
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
             new_model = model.backend.rerun()
 
             assert isinstance(new_model, calliope.Model)
@@ -185,7 +185,7 @@ class TestBackendRerun:
         """
         test that the function rerun works
         """
-        with pytest.raises(exceptions.ModelWarning) as excinfo:
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
             model.backend.update_param('energy_cap_max', '1::test_supply_elec', 20)
             new_model = model.backend.rerun()
 
