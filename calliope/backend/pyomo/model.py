@@ -98,6 +98,18 @@ def generate_model(model_data):
                          initialize=v, mutable=True)
             )
 
+    for option_name, option_val in backend_model.__calliope_run_config['objective_options'].items():
+        if option_name == 'cost_class':
+            objective_cost_class = {
+                k: v for k, v in option_val.items() if k in backend_model.costs
+            }
+
+            backend_model.objective_cost_class = po.Param(
+                backend_model.costs, initialize=objective_cost_class, mutable=True
+            )
+        else:
+            setattr(backend_model, 'objective_' + option_name, option_val)
+
     # Variables
     load_function(
         'calliope.backend.pyomo.variables.initialize_decision_variables'
@@ -146,8 +158,7 @@ def generate_model(model_data):
     # if they are present
     objective_function = ('calliope.backend.pyomo.objective.' +
                           backend_model.__calliope_run_config['objective'])
-    objective_args = backend_model.__calliope_run_config['objective_options']
-    load_function(objective_function)(backend_model, **objective_args)
+    load_function(objective_function)(backend_model)
 
     return backend_model
 

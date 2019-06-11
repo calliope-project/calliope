@@ -161,11 +161,6 @@ This will create an ``unmet_demand`` decision variable in the optimisation, whic
 Time series data
 ----------------
 
-.. Note::
-
-   If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
-
-
 For parameters that vary in time, time series data can be read from CSV files, by specifying ``resource: file=filename.csv`` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
 By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: ``resource: file=filename.csv:column``
@@ -198,6 +193,11 @@ For example, the first few lines of a CSV file giving a resource potential for t
     2005-01-01 04:00:00,11,110
     2005-01-01 05:00:00,45,300
     2005-01-01 06:00:00,90,458
+
+.. Note::
+
+   * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
+   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
