@@ -6,11 +6,19 @@ Release History
 0.6.5 (dev)
 -----------
 
+|changed| Allowed `om_con` cost for demand technologies. This is conceived to allow better representing generic international exports as demand sinks with a given revenue (e.g. the average electricity price on a given bidding zone), not restricted to any particular type of technology. 
+
+|changed| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
+
+|changed| Carrier ratios can be loaded from file, to allow timeseries carrier ratios to be defined, e.g. ``carrier_ratios.carrier_out_2.heat: file=ratios.csv``.
+
 |changed| Objective function options turned into Pyomo parameters. This allows them to update through the `Model.backend.update_param()` functionality.
 
 |changed| All model defaults have been moved to `defaults.yaml`, removing the need for `model.yaml`. A default location, link and group constraint have been added to `defaults.yaml` to validate input model keys.
 
 |changed| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled interactively by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
+
+|changed| All group constraint values are parameters so they can be updated in the backend model
 
 |fixed| Tech groups are used to filter technologies to which group constraints can be applied. This ensures that transmission and storage technologies are included in cost and energy capacity group constraints. More comprehensive tests have been added accordingly.
 

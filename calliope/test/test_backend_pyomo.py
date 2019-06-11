@@ -2,7 +2,6 @@ import pytest  # pylint: disable=unused-import
 import numpy as np
 import xarray as xr
 import pyomo.core as po
-from pyomo.core.expr.current import identify_variables
 import os
 import logging
 
@@ -11,24 +10,7 @@ import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import check_error_or_warning
-
-
-def check_variable_exists(backend_model, constraint, variable):
-    """
-    Search for existence of a decision variable in a Pyomo constraint.
-
-    Parameters
-    ----------
-    backend_model : Pyomo ConcreteModel
-    constraint : str, name of constraint which could exist in the backend
-    variable : str, string to search in the list of variables to check if existing
-    """
-    exists = []
-    for v in getattr(backend_model, constraint).values():
-        variables = identify_variables(v.body)
-        exists.append(any(variable in j.getname() for j in list(variables)))
-    return any(exists)
+from calliope.test.common.util import check_error_or_warning, check_variable_exists
 
 
 def check_standard_warning(info, warning):
@@ -157,51 +139,6 @@ class TestModel:
             "module 'calliope.backend.pyomo.constraints.temp_constraint_file_for_testing' "
             "has no attribute 'ORDER'"
         )
-
-
-class TestInterface:
-    def test_get_input_params(self):
-        """
-        Test that the function access_model_inputs works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        m.backend.access_model_inputs()
-
-    def test_update_param(self):
-        """
-        test that the function update_param works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        m.backend.update_param('energy_cap_max', '1::test_supply_elec', 20)
-        assert (
-            m._backend_model.energy_cap_max.extract_values()['1::test_supply_elec'] == 20
-        )
-
-    def test_activate_constraint(self):
-        """
-        test that the function activate_constraint works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        m.backend.activate_constraint('system_balance_constraint', active=False)
-        assert not m._backend_model.system_balance_constraint.active
-
-    def test_rerun(self):
-        """
-        test that the function rerun works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        returned_dataset = m.backend.rerun()
-        assert isinstance(returned_dataset, xr.Dataset)
-
-        # should fail if the run mode is not 'plan'
-        with pytest.raises(exceptions.ModelError) as error:
-            m.run_config['mode'] = 'operate'
-            m.backend.rerun()
-        assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
 
 
 class TestChecks:
@@ -398,7 +335,7 @@ class TestCostConstraints:
 
         assert hasattr(m._backend_model, 'cost_investment_constraint')
 
-    def test_loc_techs_cost_var_constraint(self):
+    def test_loc_techs_not_cost_var_constraint(self):
         """
         i for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion
 
@@ -407,40 +344,34 @@ class TestCostConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_constraint')
 
+    @pytest.mark.parametrize("tech,scenario,cost", (
+        ('test_conversion', 'simple_conversion', 'om_con'),
+        ('test_conversion_plus', 'simple_conversion_plus', 'om_prod')
+    ))
+    def test_loc_techs_cost_var_rhs(self, tech, scenario, cost):
         m = build_model(
-            {'techs.test_conversion.costs.monetary.om_con': 1},
-            'simple_conversion,two_hours'
+            {'techs.{}.costs.monetary.{}'.format(tech, cost): 1},
+            '{},two_hours'.format(scenario)
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_rhs')
         assert not hasattr(m._backend_model, 'cost_var_constraint')
 
-        m = build_model(
-            {'techs.test_conversion_plus.costs.monetary.om_prod': 1},
-            'simple_conversion_plus,two_hours'
-        )
+    @pytest.mark.parametrize("tech,scenario,cost", (
+        ('test_supply_elec', 'simple_supply', 'om_prod'),
+        ('test_supply_elec', 'simple_supply', 'om_con'),
+        ('test_supply_plus', 'simple_supply_and_supply_plus', 'om_con'),
+        ('test_demand_elec', 'simple_supply', 'om_con'),
+        ('test_transmission_elec', 'simple_supply', 'om_prod')
+    ))
+    def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
+        """
+        i for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion
 
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_rhs')
-        assert not hasattr(m._backend_model, 'cost_var_constraint')
-
+        """
         m = build_model(
-            {'techs.test_supply_elec.costs.monetary.om_prod': 1},
-            'simple_supply,two_hours'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_constraint')
-
-        m = build_model(
-            {'techs.test_supply_elec.costs.monetary.om_con': 1},
-            'simple_supply,two_hours'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_constraint')
-
-        m = build_model(
-            {'techs.test_supply_plus.costs.monetary.om_con': 1},
-            'simple_supply_and_supply_plus,two_hours'
+            {'techs.{}.costs.monetary.{}'.format(tech, cost): 1},
+            '{},two_hours'.format(scenario)
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_constraint')
@@ -1521,226 +1452,6 @@ class TestConversionConstraints:
         assert not check_variable_exists(
             m._backend_model, 'cost_var_conversion_constraint', 'carrier_prod'
         )
-
-class TestConversionPlusConstraints:
-    # conversion_plus.py
-    def test_loc_techs_balance_conversion_plus_primary_constraint(self):
-        """
-        sets.loc_techs_conversion_plus,
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_out': ['electricity', 'heat']},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in': ['coal', 'gas'], 'primary_carrier_in': 'gas'
-            }},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_primary_constraint')
-
-    def test_loc_techs_carrier_production_max_conversion_plus_constraint(self):
-        """
-        i for i in sets.loc_techs_conversion_plus
-        if i not in sets.loc_techs_milp
-        """
-
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'carrier_production_max_conversion_plus_constraint')
-
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(self):
-        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'carrier_production_max_conversion_plus_constraint')
-
-    def test_loc_techs_carrier_production_min_conversion_plus_constraint(self):
-        """
-        i for i in sets.loc_techs_conversion_plus
-        if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
-        and i not in sets.loc_techs_milp
-        """
-
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(self):
-        m = build_model({}, 'conversion_plus_milp,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.constraints.energy_cap_min_use': 0.1},
-            'conversion_plus_milp,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'carrier_production_min_conversion_plus_constraint')
-
-    def test_loc_techs_cost_var_conversion_plus_constraint(self):
-        """
-        sets.loc_techs_om_cost_conversion_plus,
-        """
-        # no conversion_plus = no constraint
-        m = build_model(
-            {'techs.test_supply_elec.costs.monetary.om_prod': 0.1},
-            'simple_supply,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-
-        # no conversion_plus = no constraint
-        m = build_model(
-            {'techs.test_conversion.costs.monetary.om_prod': 0.1},
-            'simple_conversion,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-
-        # no variable costs for conversion_plus = no constraint
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-
-        # om_prod creates constraint and populates it with carrier_prod driven cost
-        m = build_model(
-            {'techs.test_conversion_plus.costs.monetary.om_prod': 0.1},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-        assert check_variable_exists(
-            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_prod'
-        )
-        assert not check_variable_exists(
-            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_con'
-        )
-
-        # om_con creates constraint and populates it with carrier_con driven cost
-        m = build_model(
-            {'techs.test_conversion_plus.costs.monetary.om_con': 0.1},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_conversion_plus_constraint')
-        assert check_variable_exists(
-            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_con'
-        )
-        assert not check_variable_exists(
-            m._backend_model, 'cost_var_conversion_plus_constraint', 'carrier_prod'
-        )
-
-    def test_loc_techs_balance_conversion_plus_in_2_constraint(self):
-        """
-        sets.loc_techs_in_2,
-        """
-
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in_2': 'coal', 'primary_carrier_in': 'gas'
-            }},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in_2': ['coal', 'heat'], 'primary_carrier_in': 'gas'
-            }},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_in_2_constraint')
-
-    def test_loc_techs_balance_conversion_plus_in_3_constraint(self):
-        """
-        sets.loc_techs_in_3,
-        """
-
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in_3': 'coal', 'primary_carrier_in': 'gas'
-            }},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in_3': ['coal', 'heat'], 'primary_carrier_in': 'gas'
-            }},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_in_3_constraint')
-
-    def test_loc_techs_balance_conversion_plus_out_2_constraint(self):
-        """
-        sets.loc_techs_out_2,
-        """
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_out_2': ['coal', 'heat']},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_out_2_constraint')
-
-    def test_loc_techs_balance_conversion_plus_out_3_constraint(self):
-        """
-        sets.loc_techs_out_3,
-        """
-
-        m = build_model({}, 'simple_conversion_plus,two_hours,investment_costs')
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_out_3': 'coal'},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
-
-        m = build_model(
-            {'techs.test_conversion_plus.essentials.carrier_out_3': ['coal', 'heat']},
-            'simple_conversion_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'balance_conversion_plus_out_3_constraint')
-
 
 class TestNetworkConstraints:
     # network.py

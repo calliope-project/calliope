@@ -281,9 +281,6 @@ def carrier_specific_to_dataset(model_run):
         data_dict['carrier_ratios'] = dict(
             dims=['carrier_tiers', 'loc_tech_carriers_conversion_plus'], data=[]
         )
-        data_dict['carrier_ratios_min'] = dict(
-            dims=['carrier_tiers', 'loc_techs_conversion_plus'], data=[]
-        )
         for carrier_tier in carrier_tiers:
             data = []
             for loc_tech_carrier in model_run.sets['loc_tech_carriers_conversion_plus']:
@@ -296,9 +293,6 @@ def carrier_specific_to_dataset(model_run):
                 data.append(carrier_ratio)
                 loc_tech_dict[loc + '::' + tech].append(carrier_ratio)
             data_dict['carrier_ratios']['data'].append(data)
-            data_dict['carrier_ratios_min']['data'].append(
-                [min(i) for i in loc_tech_dict.values()]
-            )
 
     # Additional system-wide constraints from model_run.model
     if model_run.model.get('reserve_margin', {}) != {}:
@@ -463,12 +457,33 @@ def add_attributes(model_run):
     attr_dict['applied_overrides'] = model_run['applied_overrides']
     attr_dict['scenario'] = model_run['scenario']
 
+    ##
+    # Build the `defaults` attribute that holds all default settings
+    # used in get_param() lookups inside the backend
+    ##
+
     default_tech_dict = checks.DEFAULTS.techs.default_tech.as_dict()
     default_location_dict = checks.DEFAULTS.locations.default_location.as_dict()
+
+    # Group constraint defaults are a little bit more involved
+    default_group_constraint_keys = [
+        i for i in checks.DEFAULTS.group_constraints.default_group.keys()
+        if i not in ['locs', 'techs', 'exists']
+    ]
+    default_group_constraint_dict = {}
+    for k in default_group_constraint_keys:
+        k_default = checks.DEFAULTS.group_constraints.default_group[k]
+        if isinstance(k_default, dict):
+            assert len(k_default.keys()) == 1
+            default_group_constraint_dict['group_' + k] = k_default[list(k_default.keys())[0]]
+        else:
+            default_group_constraint_dict['group_' + k] = k_default
+
     attr_dict['defaults'] = ruamel.yaml.dump({
         **default_tech_dict['constraints'],
         **{'cost_{}'.format(k): v for k, v in default_tech_dict['costs']['default_cost'].items()},
-        **default_location_dict
+        **default_location_dict,
+        **default_group_constraint_dict
     })
 
     return attr_dict
