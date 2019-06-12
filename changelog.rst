@@ -6,7 +6,9 @@ Release History
 0.6.5 (dev)
 -----------
 
-|changed| Allowed `om_con` cost for demand technologies. This is conceived to allow better representing generic international exports as demand sinks with a given revenue (e.g. the average electricity price on a given bidding zone), not restricted to any particular type of technology. 
+|changed| |backwards-incompatible| The backend interface to update a parameter value (`Model.backend.update_param()`) has been updated to allow multiple values in a parameter to be updated at once, using a dictionary.
+
+|changed| Allowed `om_con` cost for demand technologies. This is conceived to allow better representing generic international exports as demand sinks with a given revenue (e.g. the average electricity price on a given bidding zone), not restricted to any particular type of technology.
 
 |changed| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
 
