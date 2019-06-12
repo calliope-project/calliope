@@ -159,7 +159,6 @@ techs:
             export_cap: .inf  # name: Export capacity ¦ unit: kW ¦ Maximum allowed export of produced energy carrier for a technology.
             export_carrier: null  # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
             force_asynchronous_prod_con: false  # if True, carrier_prod and carrier_con cannot both occur in the same timestep
-            force_on_off_prod: false # if True, forces energy production only at full power, as an on/off device
             force_resource: false  # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
             lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
             one_way: false  # Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`
