@@ -12,6 +12,7 @@ class TestIO:
     @pytest.fixture(scope='module')
     def model(self):
         model = calliope.examples.national_scale()
+        model.run()
         return model
 
     def test_save_netcdf(self, model):
@@ -70,8 +71,6 @@ class TestIO:
                 model.to_csv(out_path, dropna=False)
 
     def test_solve_save_read_netcdf(self, model):
-        model.run()
-
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, 'model.nc')
             model.to_netcdf(out_path)
@@ -79,6 +78,20 @@ class TestIO:
 
             model_from_disk = calliope.read_netcdf(out_path)
             # FIXME test for some data in model_from_disk
+
+    def test_save_read_solve_save_netcdf(self, model):
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'model.nc')
+            model.to_netcdf(out_path)
+            model_from_disk = calliope.read_netcdf(out_path)
+
+        model_from_disk.run(force_rerun=True)
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, 'model.nc')
+            model_from_disk.to_netcdf(out_path)
+            assert os.path.isfile(out_path)
 
     def test_netcdf_roundtrip_modelrun_to_yaml(self, model):
         with tempfile.TemporaryDirectory() as tempdir:
