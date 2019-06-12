@@ -134,20 +134,30 @@ def rerun_pyomo_model(model_data, backend_model):
 
     inputs = access_pyomo_model_inputs(backend_model)
 
+    # Add additional post-processed result variables to results
+    if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
+        results = postprocess_model_results(
+            results, model_data.reindex(results.coords), timings
+        )
+
     for key, var in results.data_vars.items():
         var.attrs['is_result'] = 1
 
     for key, var in inputs.data_vars.items():
         var.attrs['is_result'] = 0
 
-    new_model_data = results.copy()
+    new_model_data = xr.merge((results, inputs))
     new_model_data.attrs.update(model_data.attrs)
-    new_model_data.update(model_data.coords)
-    new_model_data.update(inputs)
+
+    # Only add coordinates from the original model_data that don't already exist
+    new_coords = [
+        i for i in model_data.coords.keys() if i not in new_model_data.coords.keys()
+    ]
+    new_model_data = new_model_data.update(model_data[new_coords])
+
+    # Reorganise the coordinates so that model data and new model data share
+    # the same order of items in each dimension
     new_model_data = new_model_data.reindex(model_data.coords)
-    # Add additional post-processed result variables to results
-    if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
-        results = postprocess_model_results(results, new_model_data, timings)
 
     exceptions.warn(
         'The results of rerunning the backend model are only available within '
