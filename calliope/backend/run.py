@@ -291,9 +291,8 @@ def run_operate(model_data, timings, backend, build_only):
                 var_series.index = backend_model.__calliope_model_data['data'][var].keys()
                 var_dict = var_series.to_dict()
                 # Update pyomo Param with new dictionary
-                for k, v in getattr(backend_model, var).items():
-                    if k in var_dict:
-                        v.set_value(var_dict[k])
+
+                getattr(backend_model, var).store_values(var_dict)
 
         if not build_only:
             log_time(
@@ -331,15 +330,17 @@ def run_operate(model_data, timings, backend, build_only):
             if 'loc_techs_store' in model_data.dims.keys():
                 storage_initial = _results.storage.loc[{'timesteps': window_ends.index[i]}].drop('timesteps')
                 model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
-                for k, v in backend_model.storage_initial.items():
-                    v.set_value(storage_initial.to_series().dropna().to_dict()[k])
+                backend_model.storage_initial.store_values(
+                    storage_initial.to_series().dropna().to_dict()
+                )
 
             # Set up total operated units for the next iteration
             if 'loc_techs_milp' in model_data.dims.keys():
                 operated_units = _results.operating_units.sum('timesteps').astype(np.int)
                 model_data['operated_units'].loc[{}] += operated_units.values
-                for k, v in backend_model.operated_units.items():
-                    v.set_value(operated_units.to_series().dropna().to_dict()[k])
+                backend_model.operated_units.store_values(
+                    operated_units.to_series().dropna().to_dict()
+                )
 
             log_time(
                 logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_run_start=True,
