@@ -259,9 +259,9 @@ You can use this interface to:
     By running ``model.backend.get_input_params()`` a user get an xarray Dataset which will look very similar to ``model.inputs``, except that assumed default values will be included. You may also spot a bug, where a value in ``model.inputs`` is different to the value returned by this function.
 
 2. Update a parameter value.
-    If you are interested in updating a few values in the model, you can run ``model.backend.update_param()``. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run ``model.backend.update_param('energy_eff', 'region1::ccgt`, 0.1)``. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
+    If you are interested in updating a few values in the model, you can run ``model.backend.update_param()``. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run ``model.backend.update_param('energy_eff', {'region1::ccgt`: 0.1})``. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
 
-.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. ``model.backend.update_param('objective_cost_class', 'monetary', 0.5)``.
+.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. ``model.backend.update_param('objective_cost_class', {'monetary': 0.5})``.
 
 3. Activate / Deactivate a constraint or objective.
     Constraints can be activated and deactivate such that they will or will not have an impact on the optimisation. All constraints are active by default, but you might like to remove, for example, a capacity constraint if you don't want there to be a capacity limit for any technologies. Similarly, if you had multiple objectives, you could deactivate one and activate another. The result would be to have a different objective when rerunning the backend.
@@ -269,7 +269,7 @@ You can use this interface to:
 .. note:: Currently Calliope does not allow you to build multiple objectives, you will need to `understand Pyomo <http://www.pyomo.org/documentation/>`_ and add an additional objective yourself to make use of this functionality. The Pyomo ConcreteModel() object can be accessed at ``model._backend_model``.
 
 4. Rerunning the backend.
-    If you have edited parameters or constraint activation, you will need to rerun the optimisation to propagate the effects. By calling ``model.backend.rerun()``, the optimisation will run again, with the updated backend. This will not affect your model, but instead will return a dataset of the inputs/results associated with that *specific* rerun. It is up to you to store this dataset as you see fit. ``model.results`` will remain to be the initial run, and can only be overwritten by ``model.run(force_rerun=True)``.
+    If you have edited parameters or constraint activation, you will need to rerun the optimisation to propagate the effects. By calling ``model.backend.rerun()``, the optimisation will run again, with the updated backend. This will not affect your model, but instead will return a new calliope Model object associated with that *specific* rerun. You can analyse the results and inputs in this new model, but there is no backend interface available. You'll need to return to the original model to access the backend again, or run the returned model using ``new_model.run(force_rerun=True)``. In the original model, ``model.results`` will not change, and can only be overwritten by ``model.run(force_rerun=True)``.
 
 .. note:: By calling ``model.run(force_rerun=True)`` any updates you have made to the backend will be overwritten.
 

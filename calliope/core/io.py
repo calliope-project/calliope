@@ -44,7 +44,7 @@ def save_netcdf(model_data, path, model=None):
     original_model_data_attrs = model_data.attrs
     model_data_attrs = model_data.attrs.copy()
 
-    if model is not None:
+    if model is not None and hasattr(model, '_model_run'):
         # Attach _model_run and _debug_data to _model_data
         model_run_to_save = model._model_run.copy()
         if 'timeseries_data' in model_run_to_save:

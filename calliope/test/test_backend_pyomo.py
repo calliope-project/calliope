@@ -141,51 +141,6 @@ class TestModel:
         )
 
 
-class TestInterface:
-    def test_get_input_params(self):
-        """
-        Test that the function access_model_inputs works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        m.backend.access_model_inputs()
-
-    def test_update_param(self):
-        """
-        test that the function update_param works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        m.backend.update_param('energy_cap_max', '1::test_supply_elec', 20)
-        assert (
-            m._backend_model.energy_cap_max.extract_values()['1::test_supply_elec'] == 20
-        )
-
-    def test_activate_constraint(self):
-        """
-        test that the function activate_constraint works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        m.backend.activate_constraint('system_balance_constraint', active=False)
-        assert not m._backend_model.system_balance_constraint.active
-
-    def test_rerun(self):
-        """
-        test that the function rerun works
-        """
-        m = build_model({}, 'simple_supply,two_hours,investment_costs')
-        m.run()
-        returned_dataset = m.backend.rerun()
-        assert isinstance(returned_dataset, xr.Dataset)
-
-        # should fail if the run mode is not 'plan'
-        with pytest.raises(exceptions.ModelError) as error:
-            m.run_config['mode'] = 'operate'
-            m.backend.rerun()
-        assert check_error_or_warning(error, 'Cannot rerun the backend in operate run mode')
-
-
 class TestChecks:
     def test_operate_cyclic_storage(self):
         """Cannot have cyclic storage in operate mode"""
@@ -380,7 +335,7 @@ class TestCostConstraints:
 
         assert hasattr(m._backend_model, 'cost_investment_constraint')
 
-    def test_loc_techs_cost_var_constraint(self):
+    def test_loc_techs_not_cost_var_constraint(self):
         """
         i for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion
 
@@ -389,40 +344,34 @@ class TestCostConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'cost_var_constraint')
 
+    @pytest.mark.parametrize("tech,scenario,cost", (
+        ('test_conversion', 'simple_conversion', 'om_con'),
+        ('test_conversion_plus', 'simple_conversion_plus', 'om_prod')
+    ))
+    def test_loc_techs_cost_var_rhs(self, tech, scenario, cost):
         m = build_model(
-            {'techs.test_conversion.costs.monetary.om_con': 1},
-            'simple_conversion,two_hours'
+            {'techs.{}.costs.monetary.{}'.format(tech, cost): 1},
+            '{},two_hours'.format(scenario)
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_rhs')
         assert not hasattr(m._backend_model, 'cost_var_constraint')
 
-        m = build_model(
-            {'techs.test_conversion_plus.costs.monetary.om_prod': 1},
-            'simple_conversion_plus,two_hours'
-        )
+    @pytest.mark.parametrize("tech,scenario,cost", (
+        ('test_supply_elec', 'simple_supply', 'om_prod'),
+        ('test_supply_elec', 'simple_supply', 'om_con'),
+        ('test_supply_plus', 'simple_supply_and_supply_plus', 'om_con'),
+        ('test_demand_elec', 'simple_supply', 'om_con'),
+        ('test_transmission_elec', 'simple_supply', 'om_prod')
+    ))
+    def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
+        """
+        i for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion
 
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_rhs')
-        assert not hasattr(m._backend_model, 'cost_var_constraint')
-
+        """
         m = build_model(
-            {'techs.test_supply_elec.costs.monetary.om_prod': 1},
-            'simple_supply,two_hours'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_constraint')
-
-        m = build_model(
-            {'techs.test_supply_elec.costs.monetary.om_con': 1},
-            'simple_supply,two_hours'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'cost_var_constraint')
-
-        m = build_model(
-            {'techs.test_supply_plus.costs.monetary.om_con': 1},
-            'simple_supply_and_supply_plus,two_hours'
+            {'techs.{}.costs.monetary.{}'.format(tech, cost): 1},
+            '{},two_hours'.format(scenario)
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'cost_var_constraint')

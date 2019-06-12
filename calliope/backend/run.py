@@ -109,6 +109,9 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         results = backend.get_result_array(backend_model, model_data)
         results.attrs['termination_condition'] = termination
 
+        if results.attrs['termination_condition'] in ['optimal', 'feasible']:
+            results.attrs['objective_function_value'] = backend_model.obj()
+
         log_time(
             logger, timings, 'run_solution_returned', time_since_run_start=True,
             comment='Backend: generated solution array'
@@ -165,7 +168,7 @@ def run_operate(model_data, timings, backend, build_only):
                          dims='loc_techs_store')
         )
         model_data['storage_initial'].attrs['is_result'] = 0
-        exceptions.ModelWarning(
+        exceptions.warn(
             'Initial stored energy not defined, set to zero for all '
             'loc::techs in loc_techs_store, for use in iterative optimisation'
         )
@@ -178,7 +181,7 @@ def run_operate(model_data, timings, backend, build_only):
         )
         model_data['operated_units'].attrs['is_result'] = 1
         model_data['operated_units'].attrs['operate_param'] = 1
-        exceptions.ModelWarning(
+        exceptions.warn(
             'daily operated units not defined, set to zero for all '
             'loc::techs in loc_techs_milp, for use in iterative optimisation'
         )
@@ -288,9 +291,8 @@ def run_operate(model_data, timings, backend, build_only):
                 var_series.index = backend_model.__calliope_model_data['data'][var].keys()
                 var_dict = var_series.to_dict()
                 # Update pyomo Param with new dictionary
-                for k, v in getattr(backend_model, var).items():
-                    if k in var_dict:
-                        v.set_value(var_dict[k])
+
+                getattr(backend_model, var).store_values(var_dict)
 
         if not build_only:
             log_time(
@@ -328,15 +330,17 @@ def run_operate(model_data, timings, backend, build_only):
             if 'loc_techs_store' in model_data.dims.keys():
                 storage_initial = _results.storage.loc[{'timesteps': window_ends.index[i]}].drop('timesteps')
                 model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
-                for k, v in backend_model.storage_initial.items():
-                    v.set_value(storage_initial.to_series().dropna().to_dict()[k])
+                backend_model.storage_initial.store_values(
+                    storage_initial.to_series().dropna().to_dict()
+                )
 
             # Set up total operated units for the next iteration
             if 'loc_techs_milp' in model_data.dims.keys():
                 operated_units = _results.operating_units.sum('timesteps').astype(np.int)
                 model_data['operated_units'].loc[{}] += operated_units.values
-                for k, v in backend_model.operated_units.items():
-                    v.set_value(operated_units.to_series().dropna().to_dict()[k])
+                backend_model.operated_units.store_values(
+                    operated_units.to_series().dropna().to_dict()
+                )
 
             log_time(
                 logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_run_start=True,
@@ -351,6 +355,8 @@ def run_operate(model_data, timings, backend, build_only):
         results = xr.concat(result_array, dim='timesteps')
         if all(i == 'optimal' for i in terminations):
             results.attrs['termination_condition'] = 'optimal'
+        elif all(i in ['optimal', 'feasible'] for i in terminations):
+            results.attrs['termination_condition'] = 'feasible'
         else:
             results.attrs['termination_condition'] = ','.join(terminations)
 

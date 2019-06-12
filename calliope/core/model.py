@@ -245,7 +245,7 @@ class Model(object):
         )
 
         # Add additional post-processed result variables to results
-        if results.attrs.get('termination_condition', None) == 'optimal':
+        if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
             results = postprocess.postprocess_model_results(
                 results, self._model_data, self._timings
             )
@@ -255,14 +255,6 @@ class Model(object):
 
         self._model_data.update(results)
         self._model_data.attrs.update(results.attrs)
-
-        if 'run_solution_returned' in self._timings.keys():
-            self._model_data.attrs['solution_time'] = (
-                self._timings['run_solution_returned'] -
-                self._timings['run_start']).total_seconds()
-            self._model_data.attrs['time_finished'] = (
-                self._timings['run_solution_returned'].strftime('%Y-%m-%d %H:%M:%S')
-            )
 
         self.results = self._model_data.filter_by_attrs(is_result=1)
 
