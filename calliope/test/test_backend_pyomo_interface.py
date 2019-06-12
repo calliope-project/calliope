@@ -8,7 +8,7 @@ from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_error_or_warning
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='class')
 def model():
     m = build_model({}, 'simple_supply,two_hours,investment_costs')
     m.run()
@@ -175,7 +175,11 @@ class TestBackendRerun:
         for i in ['_timings', 'inputs', 'results']:
             assert hasattr(new_model, i)
 
+        # In new_model.inputs all NaN values have been replace by their default,
+        # so we can't directly compare new_model.inputs and model.inputs
         assert new_model.inputs.equals(model.backend.access_model_inputs().reindex(new_model.inputs.coords))
+
+        assert new_model.results.equals(model.results)
 
         assert check_error_or_warning(
             excinfo,

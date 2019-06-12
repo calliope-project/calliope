@@ -785,14 +785,14 @@ def check_model_data(model_data):
                         < model_data.storage_dod.loc[{'loc_techs_store': loc_tech}].values):
                     model_data.storage_initial.loc[{'loc_techs_store': loc_tech}] = model_data.storage_dod.loc[{'loc_techs_store': loc_tech}]
                     model_warnings.append(
-                            'storage_initial is smaller than storage_dod.'
-                            ' The former will be set equal to the storage_dod.'
+                        'storage_initial is smaller than storage_dod.'
+                        ' The former will be set equal to the storage_dod.'
                     )
 
     # Check for storage_inter_cluster not being used together with storage_dod
     if hasattr(model_data, 'clusters') and hasattr(model_data, 'storage_dod'):
         errors.append(
-                'storage_dod is currently not allowed when time clustering is active.'
-            )
+            'storage_dod is currently not allowed when time clustering is active.'
+        )
 
     return model_data, comments, model_warnings, errors

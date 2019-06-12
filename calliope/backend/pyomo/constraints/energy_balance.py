@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2018 Calliope contributors listed in AUTHORS.
+Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 energy_balance.py
@@ -460,13 +460,10 @@ def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
 
             \\boldsymbol{storage}(loc::tech, timestep) >=
             \\boldsymbol{storage_DoD}\\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
-    """
 
+    """
     storage_dod = get_param(backend_model, 'storage_dod', loc_tech)
-    return (
-        backend_model.storage[loc_tech, timestep] >=
-        storage_dod
-    )
+    return backend_model.storage[loc_tech, timestep] >= storage_dod
 
 
 def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
