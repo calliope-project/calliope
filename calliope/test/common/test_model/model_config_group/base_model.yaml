@@ -2,6 +2,7 @@ import:
     - scenarios_add_techs.yaml
     - scenarios_energy_cap.yaml
     - scenarios_energy_cap_share.yaml
+    - scenarios_resource_area.yaml
 
 model:
     name: Group share constraint test model
@@ -19,6 +20,7 @@ tech_groups:
         constraints:
             lifetime: 25
             energy_cap_max: .inf
+            resource_area_per_energy_cap: 2
         costs:
             monetary:
                 interest_rate: 0.1
@@ -29,6 +31,7 @@ tech_groups:
         constraints:
             lifetime: 25
             energy_cap_max: .inf
+            resource_area_per_energy_cap: 2
         costs:
             monetary:
                 interest_rate: 0.1
@@ -39,6 +42,7 @@ tech_groups:
         constraints:
             lifetime: 25
             energy_cap_max: .inf
+            resource_area_per_energy_cap: 2
         costs:
             monetary:
                 interest_rate: 0.1

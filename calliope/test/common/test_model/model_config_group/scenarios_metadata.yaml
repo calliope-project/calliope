@@ -19,7 +19,8 @@ energy_cap_min_all_techs:
                  '1::expensive_elec_supply', '0::cheap_elec_transmission:1',
                  '1::cheap_elec_supply', '0::normal_elec_supply',
                  '1::normal_elec_supply', '1::elec_storage', '0::expensive_elec_supply',
-                 '1::cheap_elec_transmission:0']]
+                 '1::cheap_elec_transmission:0', '0::elec_supply_plus',
+                 '1::elec_supply_plus']]
 energy_cap_max_all_techs:
     constraint: [energy_cap_max]
     group_name: [example_energy_cap_constraint]
@@ -29,7 +30,8 @@ energy_cap_max_all_techs:
                  '1::expensive_elec_supply', '0::cheap_elec_transmission:1',
                  '1::cheap_elec_supply', '0::normal_elec_supply',
                  '1::normal_elec_supply', '1::elec_storage', '0::expensive_elec_supply',
-                 '1::cheap_elec_transmission:0']]
+                 '1::cheap_elec_transmission:0', '0::elec_supply_plus',
+                 '1::elec_supply_plus']]
 
 energy_cap_share_min_max_supply:
     constraint: [energy_cap_share_min, energy_cap_share_max]
@@ -50,7 +52,8 @@ energy_cap_share_min_all_techs:
                  '1::elec_to_heat_cool_linked', '1::elec_to_heat',
                  '1::expensive_elec_supply', '1::cheap_elec_supply',
                  '0::normal_elec_supply', '1::normal_elec_supply',
-                 '0::expensive_elec_supply']]
+                 '0::expensive_elec_supply', '0::elec_supply_plus',
+                 '1::elec_supply_plus']]
 energy_cap_share_max_all_techs:
     constraint: [energy_cap_share_max]
     group_name: [example_energy_cap_share_constraint]
@@ -58,4 +61,29 @@ energy_cap_share_max_all_techs:
                  '1::elec_to_heat_cool_linked', '1::elec_to_heat',
                  '1::expensive_elec_supply', '1::cheap_elec_supply',
                  '0::normal_elec_supply', '1::normal_elec_supply',
-                 '0::expensive_elec_supply']]
+                 '0::expensive_elec_supply', '0::elec_supply_plus',
+                 '1::elec_supply_plus']]
+
+
+resource_area_min_max_supply:
+    constraint: [resource_area_min, resource_area_max]
+    group_name: [example_resource_area_constraint, example_resource_area_max_constraint]
+    loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply], [0::cheap_elec_supply, 1::cheap_elec_supply]]
+resource_area_min_max_supply_loc_0_1:
+    constraint: [resource_area_min, resource_area_max]
+    group_name: [example_resource_area_constraint, example_resource_area_max_constraint]
+    loc_techs: [[0::expensive_elec_supply], [1::cheap_elec_supply]]
+resource_area_min_all_techs:
+    constraint: [resource_area_min]
+    group_name: [example_resource_area_constraint]
+    loc_techs: [['0::cheap_elec_supply', '1::cheap_elec_supply',
+                 '0::expensive_elec_supply', '1::expensive_elec_supply',
+                 '0::normal_elec_supply', '1::normal_elec_supply',
+                 '0::elec_supply_plus', '1::elec_supply_plus']]
+resource_area_max_all_techs:
+    constraint: [resource_area_max]
+    group_name: [example_resource_area_constraint]
+    loc_techs: [['0::cheap_elec_supply', '1::cheap_elec_supply',
+                 '0::expensive_elec_supply', '1::expensive_elec_supply',
+                 '0::normal_elec_supply', '1::normal_elec_supply',
+                 '0::elec_supply_plus', '1::elec_supply_plus']]
