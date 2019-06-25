@@ -776,23 +776,35 @@ def check_model_data(model_data):
             'MILP constraints.'
         )
 
-    # Check for storage_initial being greater than or equal to the storage_dod
+    # Check for storage_initial being a fractional value
 
     if hasattr(model_data, 'loc_techs_storage'):
-        for loc_tech in model_data.loc_techs_storage.values:
-            if hasattr(model_data, 'storage_initial') and hasattr(model_data, 'storage_dod'):
+        for loc_tech in model_data.loc_techs_store.values:
+            if hasattr(model_data, 'storage_initial'):
+                if model_data.storage_initial.loc[{'loc_techs_store': loc_tech}].values > 1:
+                    errors.append(
+                        'storage_initial values larger than 1 are not allowed.'
+                    )
+                if model_data.storage_initial.loc[{'loc_techs_store': loc_tech}].values == 0:
+                    model_data.storage_initial.loc[{'loc_techs_store': loc_tech}] = 0.0
+
+    # Check for storage_initial being greater than or equal to the storage_discharge_depth
+
+    if hasattr(model_data, 'loc_techs_store'):
+        for loc_tech in model_data.loc_techs_store.values:
+            if hasattr(model_data, 'storage_initial') and hasattr(model_data, 'storage_discharge_depth'):
                 if (model_data.storage_initial.loc[{'loc_techs_store': loc_tech}].values
-                        < model_data.storage_dod.loc[{'loc_techs_store': loc_tech}].values):
-                    model_data.storage_initial.loc[{'loc_techs_store': loc_tech}] = model_data.storage_dod.loc[{'loc_techs_store': loc_tech}]
+                        < model_data.storage_discharge_depth.loc[{'loc_techs_store': loc_tech}].values):
+                    model_data.storage_initial.loc[{'loc_techs_store': loc_tech}] = np.array(float(model_data.storage_discharge_depth.loc[{'loc_techs_store': loc_tech}].values))
                     model_warnings.append(
-                        'storage_initial is smaller than storage_dod.'
-                        ' The former will be set equal to the storage_dod.'
+                        'storage_initial is smaller than storage_discharge_depth.'
+                        ' The former will be set equal to the storage_discharge_depth.'
                     )
 
-    # Check for storage_inter_cluster not being used together with storage_dod
-    if hasattr(model_data, 'clusters') and hasattr(model_data, 'storage_dod'):
+    # Check for storage_inter_cluster not being used together with storage_discharge_depth
+    if hasattr(model_data, 'clusters') and hasattr(model_data, 'storage_discharge_depth'):
         errors.append(
-            'storage_dod is currently not allowed when time clustering is active.'
+            'storage_discharge_depth is currently not allowed when time clustering is active.'
         )
 
     return model_data, comments, model_warnings, errors

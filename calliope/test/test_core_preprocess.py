@@ -1243,21 +1243,33 @@ class TestChecks:
             for i in override['run.objective_options.cost_class'].keys()
         )
 
-    def test_storage_initial_smaller_than_dod(self):
+    def test_storage_initial_fractional_value(self):
         """
-        Check that the storage_initial value is at least equalt to the storage_dod
+        Check that the storage_initial value is a fraction
+        """
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model({'techs.test_storage.constraints.storage_initial': 5},
+            'simple_storage,two_hours,investment_costs')
+
+        assert check_error_or_warning(
+            error, 'storage_initial values larger than 1 are not allowed.'
+        )
+
+    def test_storage_initial_smaller_than_discharge_depth(self):
+        """
+        Check that the storage_initial value is at least equalt to the storage_discharge_depth
         """
         with pytest.warns(exceptions.ModelWarning) as warn:
             build_model({'techs.test_storage.constraints.storage_initial': 0},
-            'simple_storage,two_hours,investment_costs,storage_dod')
+            'simple_storage,two_hours,investment_costs,storage_discharge_depth')
 
         assert check_error_or_warning(
-            warn, 'storage_initial is smaller than storage_dod.'
+            warn, 'storage_initial is smaller than storage_discharge_depth.'
         )
 
-    def test_storage_inter_cluster_vs_storage_dod(self):
+    def test_storage_inter_cluster_vs_storage_discharge_depth(self):
         """
-        Check that the storage_inter_cluster is not used together with storage_dod
+        Check that the storage_inter_cluster is not used together with storage_discharge_depth
         """
         with pytest.raises(exceptions.ModelError) as error:
             override = {
@@ -1271,10 +1283,10 @@ class TestChecks:
                 }
             }
 
-            build_model(override, 'simple_storage,storage_dod')
+            build_model(override, 'simple_storage,storage_discharge_depth')
 
         assert check_error_or_warning(
-            error, 'storage_dod is currently not allowed when time clustering is active.'
+            error, 'storage_discharge_depth is currently not allowed when time clustering is active.'
         )
 
     def test_warn_on_undefined_cost_classes(self):

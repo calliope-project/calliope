@@ -164,10 +164,10 @@ def run_operate(model_data, timings, backend, build_only):
     if ('loc_techs_store' in model_data.dims.keys() and
         'storage_initial' not in model_data.data_vars.keys()):
         model_data['storage_initial'] = (
-            xr.DataArray([0 for loc_tech in model_data.loc_techs_store.values],
+            xr.DataArray([0.0 for loc_tech in model_data.loc_techs_store.values],
                          dims='loc_techs_store')
         )
-        model_data['storage_initial'].attrs['is_result'] = 0
+        model_data['storage_initial'].attrs['is_result'] = 0.0
         exceptions.warn(
             'Initial stored energy not defined, set to zero for all '
             'loc::techs in loc_techs_store, for use in iterative optimisation'

@@ -83,11 +83,11 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             rule=balance_storage_constraint_rule
         )
-    if 'loc_techs_storage_dod' in sets:
-        backend_model.storage_dod_constraint = po.Constraint(
-            backend_model.loc_techs_storage_dod,
+    if 'loc_techs_storage_discharge_depth' in sets:
+        backend_model.storage_discharge_depth_constraint = po.Constraint(
+            backend_model.loc_techs_storage_discharge_depth,
             backend_model.timesteps,
-            rule=storage_dod_constraint_rule
+            rule=storage_discharge_depth_constraint_rule
         )
 
     if 'loc_techs_balance_storage_inter_cluster_constraint' in sets:
@@ -425,7 +425,10 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
         resource = backend_model.resource_con[loc_tech, timestep] * resource_eff
         current_timestep = backend_model.timesteps.order_dict[timestep]
         if current_timestep == 0 and not run_config['cyclic_storage']:
-            storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+            storage_previous_step = (
+                get_param(backend_model, 'storage_initial', loc_tech) *
+                backend_model.storage_cap[loc_tech]
+            )
         elif (hasattr(backend_model, 'storage_inter_cluster') and
                 model_data_dict['lookup_cluster_first_timestep'][timestep]):
             storage_previous_step = 0
@@ -450,7 +453,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
         )
 
 
-def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
+def storage_discharge_depth_constraint_rule(backend_model, loc_tech, timestep):
     """
     Forces storage state of charge to be greater than the allowed depth of discharge.
 
@@ -459,11 +462,11 @@ def storage_dod_constraint_rule(backend_model, loc_tech, timestep):
         .. math::
 
             \\boldsymbol{storage}(loc::tech, timestep) >=
-            \\boldsymbol{storage_DoD}\\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
+            \\boldsymbol{storage_discharge_depth}\\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
 
     """
-    storage_dod = get_param(backend_model, 'storage_dod', loc_tech)
-    return backend_model.storage[loc_tech, timestep] >= storage_dod
+    storage_discharge_depth = get_param(backend_model, 'storage_discharge_depth', loc_tech)
+    return backend_model.storage[loc_tech, timestep] >= storage_discharge_depth * backend_model.storage_cap[loc_tech]
 
 
 def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
@@ -498,10 +501,13 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
     current_timestep = backend_model.timesteps.order_dict[timestep]
     if current_timestep == 0 and not run_config['cyclic_storage']:
-        storage_previous_step = get_param(backend_model, 'storage_initial', loc_tech)
+        storage_previous_step = (
+            get_param(backend_model, 'storage_initial', loc_tech) *
+            backend_model.storage_cap[loc_tech]
+        )
     elif (hasattr(backend_model, 'storage_inter_cluster') and
             model_data_dict['lookup_cluster_first_timestep'][timestep]):
-            storage_previous_step = 0
+        storage_previous_step = 0
     else:
         if (hasattr(backend_model, 'clusters') and
                 model_data_dict['lookup_cluster_first_timestep'][timestep]):
@@ -584,7 +590,7 @@ def storage_initial_rule(backend_model, loc_tech):
         .. math::
 
             \\boldsymbol{storage_{inter\\_cluster}}(loc::tech, datestep_{final})
-            \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech)
+            \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech) \\times storage_{cap}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall datestep \\in datesteps
 
     Where :math:`datestep_{final}` is the last datestep of the timeseries
@@ -595,7 +601,7 @@ def storage_initial_rule(backend_model, loc_tech):
         .. math::
 
             \\boldsymbol{storage}(loc::tech, timestep_{final})
-            \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech)
+            \\times ((1 - storage_loss) ** 24) = storage_{initial}(loc::tech) \\times storage_{cap}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{store}, \\forall timestep \\in timesteps
 
     Where :math:`timestep_{final}` is the last timestep of the timeseries
@@ -615,5 +621,5 @@ def storage_initial_rule(backend_model, loc_tech):
 
     return (
         storage[loc_tech, final_step] * ((1 - storage_loss) ** time_resolution)
-        == storage_initial
+        == storage_initial * backend_model.storage_cap[loc_tech]
     )

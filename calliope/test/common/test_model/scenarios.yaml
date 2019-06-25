@@ -190,11 +190,11 @@ overrides:
                     test_storage:
                     test_demand_elec:
 
-    storage_dod:
+    storage_discharge_depth:
         techs:
             test_storage:
                 constraints:
-                    storage_dod: 13
+                    storage_discharge_depth: 0.8
 
     storage_milp:
         locations:
