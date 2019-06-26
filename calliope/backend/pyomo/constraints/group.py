@@ -333,7 +333,7 @@ def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_
         )
 
 
-def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):
+def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name, carrier):
     lhs_loc_techs = getattr(
         backend_model,
         'group_constraint_loc_techs_{}'.format(group_name)
@@ -342,6 +342,7 @@ def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):
     rhs_loc_techs = [
         i for i in backend_model.loc_techs_supply_conversion_all
         if i.split('::')[0] in lhs_locs
+        if "{i}::{carrier}".format(i=i, carrier=carrier) in backend_model.loc_tech_carriers_prod
     ]
     return (lhs_loc_techs, rhs_loc_techs)
 
@@ -363,12 +364,13 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
     """
     share = get_param(backend_model, 'group_supply_share_{}'.format(what), (carrier, constraint_group))
 
-    if share is None:
+    if share.value is None:
         return return_noconstraint('supply_share', constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
             backend_model,
-            constraint_group
+            constraint_group,
+            carrier=carrier
         )
 
         lhs = sum(
@@ -402,12 +404,13 @@ def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, c
     """
     share = get_param(backend_model, 'group_supply_share_per_timestep_{}'.format(what), (carrier, constraint_group))
 
-    if share is None:
+    if share.value is None:
         return return_noconstraint('supply_share_per_timestep', constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
             backend_model,
-            constraint_group
+            constraint_group,
+            carrier=carrier
         )
 
         lhs = sum(

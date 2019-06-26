@@ -1,0 +1,71 @@
+
+overrides:
+    supply_share_max_systemwide:
+        group_constraints.example_supply_share_max_constraint:
+            techs: ["cheap_elec_supply"]
+            supply_share_max:
+                electricity: 0.4
+    supply_share_min_systemwide:
+        group_constraints.example_supply_share_min_constraint:
+            techs: ["expensive_elec_supply"]
+            supply_share_min:
+                electricity: 0.6
+    supply_share_equals_systemwide:
+        group_constraints.example_supply_share_equals_constraint:
+            techs: ["expensive_elec_supply"]
+            supply_share_equals:
+                electricity: 0.6
+    supply_share_max_location_0:
+        group_constraints.example_supply_share_max_constraint:
+            locs: ["0"]
+            techs: ["cheap_elec_supply"]
+            supply_share_max:
+                electricity: 0.4
+    supply_share_min_location_0:
+        group_constraints.example_supply_share_min_constraint:
+            locs: ["0"]
+            techs: ["expensive_elec_supply"]
+            supply_share_min:
+                electricity: 0.6
+    supply_share_per_timestep_max:
+        group_constraints.example_supply_share_per_timestep_max_constraint:
+            techs: ["cheap_elec_supply"]
+            supply_share_per_timestep_max:
+                electricity: 0.4
+    supply_share_per_timestep_min:
+        group_constraints.example_supply_share_per_timestep_min_constraint:
+            techs: ["expensive_elec_supply"]
+            supply_share_per_timestep_min:
+                electricity: 0.6
+    supply_share_per_timestep_equals:
+        group_constraints.example_supply_share_per_timestep_equals_constraint:
+            techs: ["expensive_elec_supply"]
+            supply_share_per_timestep_equals:
+                electricity: 0.6
+    storage_tech:
+        techs.storage_tech:
+            essentials:
+                name: Electricity storage
+                carrier: electricity
+                parent: storage
+            constraints:
+                storage_loss: 0.001
+                energy_eff: 0.99
+        techs.expensive_elec_supply.costs.monetary.om_prod: file=cost.csv
+        locations.0,1.techs: {storage_tech}
+scenarios:
+    supply_share_min_systemwide_all_techs: [
+        supply_share_min_systemwide, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
+    supply_share_max_systemwide_all_techs: [
+        supply_share_max_systemwide, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
+    supply_share_equals_systemwide_all_techs: [
+        supply_share_equals_systemwide, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]

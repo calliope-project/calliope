@@ -20,6 +20,11 @@ def get_supply_conversion_techs(model):
     return [i for i in available_techs if i in model._model_data.techs.values]
 
 
+@pytest.fixture(scope='module')
+def model_file():
+    return os.path.join('model_config_group', 'base_model.yaml')
+
+
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestBuildGroupConstraints:
@@ -654,147 +659,84 @@ class TestCostCapGroupConstraint:
         assert round(clean_emissions, 5) <= 300
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestSupplyShareGroupConstraints:
 
-    def test_no_supply_share_constraint(self):
-        model = build_model(model_file='supply_share.yaml')
-        model.run()
-        expensive_generation = (model.get_formatted_array("carrier_prod")
-                                     .loc[{'techs': "expensive_elec_supply"}].sum()).item()
+    @pytest.fixture
+    def supply_generation_for_scenario(self, model_file):
+        def __run(scenario=None):
+            model = build_model(model_file=model_file, scenario=scenario)
+            model.run()
+            return (model.get_formatted_array("carrier_prod")
+                         .sel(techs=model._model_data.techs_supply.rename(techs_supply="techs"))
+                         .sel(carriers="electricity"))
+        return __run
+
+    def test_no_supply_share_constraint(self, supply_generation_for_scenario):
+        generation = supply_generation_for_scenario(None)
+        expensive_generation = generation.sel(techs="expensive_elec_supply").sum().item()
         assert expensive_generation == 0
 
-    def test_systemwide_supply_share_max_constraint(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_max_systemwide'
-        )
-        model.run()
-        cheap_generation = (model.get_formatted_array("carrier_prod")
-                                 .to_dataframe()
-                                 .reset_index()
-                                 .groupby("techs")
-                                 .carrier_prod
-                                 .sum()
-                                 .transform(lambda x: x / x.sum())
-                                 .loc["cheap_elec_supply"])
-        assert round(cheap_generation, 5) <= 0.4
+    @pytest.mark.parametrize(
+        "scenario",
+        ["supply_share_max_systemwide", "supply_share_max_systemwide_all_techs"])
+    def test_systemwide_supply_share_max_constraint(self, supply_generation_for_scenario, scenario):
+        generation = supply_generation_for_scenario(scenario).sum(["locs", "timesteps"])
+        cheap_generation = generation.sel(techs="cheap_elec_supply").item()
+        total_supply = generation.sum("techs").item()
+        assert round(cheap_generation / total_supply, 5) <= 0.4
 
-    def test_systemwide_supply_share_min_constraint(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_min_systemwide'
-        )
-        model.run()
-        expensive_generation = (model.get_formatted_array("carrier_prod")
-                                     .to_dataframe()
-                                     .reset_index()
-                                     .groupby("techs")
-                                     .carrier_prod
-                                     .sum()
-                                     .transform(lambda x: x / x.sum())
-                                     .loc["expensive_elec_supply"])
-        assert round(expensive_generation, 5) >= 0.6
+    @pytest.mark.parametrize(
+        "scenario",
+        ["supply_share_min_systemwide", "supply_share_min_systemwide,storage_tech",
+         "supply_share_min_systemwide_all_techs"])
+    def test_systemwide_supply_share_min_constraint(self, supply_generation_for_scenario, scenario):
+        generation = supply_generation_for_scenario(scenario).sum(["locs", "timesteps"])
+        expensive_generation = generation.sel(techs="expensive_elec_supply").item()
+        total_supply = generation.sum("techs").item()
+        assert round(expensive_generation / total_supply, 5) >= 0.6
 
-    def test_location_specific_supply_share_max_constraint(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_max_location_0'
-        )
-        model.run()
-        generation = (model.get_formatted_array("carrier_prod")
-                           .sum(dim='timesteps').loc[{'carriers': 'electricity'}])
-        cheap_generation0 = generation.loc[{'locs': "0", 'techs': "cheap_elec_supply"}].item()
-        expensive_generation0 = generation.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
-        expensive_generation1 = generation.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
-        assert round(cheap_generation0 / (cheap_generation0 + expensive_generation0), 5) <= 0.4
-        assert expensive_generation1 == 0
+    @pytest.mark.parametrize(
+        "scenario",
+        ["supply_share_equals_systemwide", "supply_share_equals_systemwide_all_techs"])
+    def test_systemwide_supply_share_equals_constraint(self, supply_generation_for_scenario, scenario):
+        generation = supply_generation_for_scenario(scenario).sum(["locs", "timesteps"])
+        expensive_generation = generation.sel(techs="expensive_elec_supply").item()
+        total_supply = generation.sum("techs").item()
+        assert round(expensive_generation / total_supply, 5) == 0.6
 
-    def test_location_specific_supply_share_min_constraint(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_min_location_0'
-        )
-        model.run()
-        generation = (model.get_formatted_array("carrier_prod")
-                           .sum(dim='timesteps').loc[{'carriers': 'electricity'}])
-        cheap_generation0 = generation.loc[{'locs': "0", 'techs': "cheap_elec_supply"}].item()
-        expensive_generation0 = generation.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
-        expensive_generation1 = generation.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
-        assert round(expensive_generation0 / (cheap_generation0 + expensive_generation0), 5) >= 0.6
-        assert expensive_generation1 == 0
+    def test_location_specific_supply_share_max_constraint(self, supply_generation_for_scenario):
+        generation = supply_generation_for_scenario("supply_share_max_location_0").sum(dim='timesteps')
+        cheap_generation0 = generation.sel(locs="0", techs="cheap_elec_supply").item()
+        total_supply0 = generation.sel(locs="0").sum().item()
+        assert round(cheap_generation0 / total_supply0, 5) <= 0.4
 
-    def test_supply_share_with_transmission(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_min_systemwide,transmission_link'
-        )
-        model.run()
-        expensive_generation = (
-            model.get_formatted_array("carrier_prod")
-                 .loc[{"techs": "expensive_elec_supply"}].sum().item()
-        )
-        supply = (
-            model._model_data.carrier_prod
-            .loc[{"loc_tech_carriers_prod":
-                  model._model_data.loc_tech_carriers_supply_conversion_all.values}]
-            .sum().item()
-        )
+    def test_location_specific_supply_share_min_constraint(self, supply_generation_for_scenario):
+        generation = supply_generation_for_scenario("supply_share_min_location_0").sum(dim='timesteps')
+        expensive_generation0 = generation.sel(locs="0", techs="expensive_elec_supply").item()
+        total_supply0 = generation.sel(locs="0").sum().item()
+        assert round(expensive_generation0 / total_supply0, 5) >= 0.6
 
-        assert round(expensive_generation / supply, 5) >= 0.6
-
-    def test_supply_share_with_storage(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_min_systemwide,storage_tech'
-        )
-        model.run()
-        expensive_generation = (
-            model.get_formatted_array("carrier_prod")
-                 .loc[{"techs": "expensive_elec_supply"}].sum().item()
-        )
-        supply = (
-            model._model_data.carrier_prod
-            .loc[{"loc_tech_carriers_prod":
-                  model._model_data.loc_tech_carriers_supply_conversion_all.values}]
-            .sum().item()
-        )
-
-        assert round(expensive_generation / supply, 5) >= 0.6
-
-    def test_supply_share_per_timestep_max(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_per_timestep_max'
-        )
-        model.run()
-        cheap_elec_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "cheap_elec_supply", 'carriers': "electricity"}].sum('locs')
-        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+    def test_supply_share_per_timestep_max(self, supply_generation_for_scenario):
+        generation = supply_generation_for_scenario("supply_share_per_timestep_max").sum("locs")
+        cheap_generation = generation.sel(techs="cheap_elec_supply")
+        supply = generation.sum("techs")
         # assert share in each timestep is 0.4
-        assert ((cheap_elec_supply / supply).round(5) <= 0.4).all()
+        assert ((cheap_generation / supply).round(5) <= 0.4).all()
 
-    def test_supply_share_per_timestep_min(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_per_timestep_min'
-        )
-        model.run()
-        expensive_elec_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum('locs')
-        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+    def test_supply_share_per_timestep_min(self, supply_generation_for_scenario):
+        generation = supply_generation_for_scenario("supply_share_per_timestep_min").sum("locs")
+        expensive_generation = generation.sel(techs="expensive_elec_supply")
+        supply = generation.sum("techs")
         # assert share in each timestep is 0.6
-        assert ((expensive_elec_supply / supply).round(5) >= 0.6).all()
+        assert ((expensive_generation / supply).round(5) >= 0.6).all()
 
-    def test_supply_share_per_timestep_equals(self):
-        model = build_model(
-            model_file='supply_share.yaml',
-            scenario='supply_share_per_timestep_equals'
-        )
-        model.run()
-        expensive_elec_supply = model.get_formatted_array("carrier_prod").loc[{'techs': "expensive_elec_supply", 'carriers': "electricity"}].sum('locs')
-        supply = model.get_formatted_array("carrier_prod").loc[{'carriers': "electricity"}].sum('locs').sum('techs')
+    def test_supply_share_per_timestep_equals(self, supply_generation_for_scenario):
+        generation = supply_generation_for_scenario("supply_share_per_timestep_equals").sum("locs")
+        expensive_generation = generation.sel(techs="expensive_elec_supply")
+        supply = generation.sum("techs")
         # assert share in each timestep is 0.6
-        assert ((expensive_elec_supply / supply).round(5) == 0.6).all()
+        assert ((expensive_generation / supply).round(5) == 0.6).all()
 
 
 class TestEnergyCapShareGroupConstraints:

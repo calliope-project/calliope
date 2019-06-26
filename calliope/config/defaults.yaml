@@ -239,9 +239,9 @@ group_constraints:
         demand_share_per_timestep_decision:
             default_carrier: null
         supply_share_min:
-            default_carrier: 0
+            default_carrier: null
         supply_share_max:
-            default_carrier: .inf
+            default_carrier: null
         supply_share_equals:
             default_carrier: null
         supply_share_per_timestep_min:
