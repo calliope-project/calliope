@@ -1,6 +1,5 @@
 import os
 import sys
-import warnings
 
 import pytest
 from pyomo.core.expr.current import identify_variables
