@@ -1,0 +1,74 @@
+
+overrides:
+
+    resource_area_min:
+        group_constraints.example_resource_area_constraint:
+            resource_area_min:  12
+
+    resource_area_max:
+        group_constraints.example_resource_area_constraint:
+            resource_area_max:  28
+
+    resource_area_max_high:
+        group_constraints.example_resource_area_constraint:
+            resource_area_max:  46
+
+    resource_area_max_low:
+        group_constraints.example_resource_area_constraint:
+            resource_area_max:  2
+
+    resource_area_loc_0:
+        group_constraints.example_resource_area_constraint:
+            locs: ["0"]
+
+    resource_area_max_cheap_supply:
+        group_constraints.example_resource_area_max_constraint:
+            resource_area_max: 8
+            techs: ["cheap_elec_supply"]
+
+    resource_area_max_loc_1:
+        group_constraints.example_resource_area_max_constraint:
+            locs: ["1"]
+
+    resource_area_cheap_supply:
+        group_constraints.example_resource_area_constraint:
+            techs: ["cheap_elec_supply"]
+
+    resource_area_expensive_supply:
+        group_constraints.example_resource_area_constraint:
+            techs: ["expensive_elec_supply"]
+
+scenarios:
+    resource_area_max_supply: [resource_area_max, resource_area_cheap_supply]
+    resource_area_min_supply:  [resource_area_min, resource_area_expensive_supply]
+    resource_area_min_max_supply: [
+        resource_area_max_cheap_supply, resource_area_min,
+        resource_area_expensive_supply
+    ]
+    resource_area_max_supply_loc_1: [resource_area_max_loc_1, resource_area_max_cheap_supply]
+    resource_area_min_supply_loc_0: [
+        resource_area_min, resource_area_loc_0,
+        resource_area_expensive_supply
+    ]
+    resource_area_min_max_supply_loc_0_1: [
+        resource_area_min, resource_area_max_loc_1,
+        resource_area_max_cheap_supply, resource_area_loc_0, resource_area_expensive_supply
+    ]
+    resource_area_min_all_techs: [
+        resource_area_min, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand,
+        add_elec_supply_plus
+    ]
+    resource_area_max_all_techs: [
+        resource_area_max_high, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand,
+        add_elec_supply_plus
+    ]
+    resource_area_max_all_techs_infeasible: [
+        resource_area_max, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand,
+        add_elec_supply_plus
+    ]

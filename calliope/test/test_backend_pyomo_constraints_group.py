@@ -15,13 +15,19 @@ def get_supply_conversion_techs(model):
         'elec_to_heat_cool_unlinked', 'cheap_elec_supply', 'elec_to_heat_cool_linked',
         'elec_to_heat', 'expensive_elec_supply', 'normal_elec_supply',
         'cheap_heat_supply', 'cheap_cool_supply', 'normal_heat_supply',
-        'expensive_heat_supply', 'normal_cool_supply', 'expensive_cool_supply'
+        'expensive_heat_supply', 'normal_cool_supply', 'expensive_cool_supply',
+        'elec_supply_plus'
     ]
     return [i for i in available_techs if i in model._model_data.techs.values]
 
 
+@pytest.fixture(scope='module')
+def model_file():
+    return os.path.join('model_config_group', 'base_model.yaml')
+
+
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
-@pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
+@pytest.mark.filterwarnings("ignore:(?s).*All technologies were requested:calliope.exceptions.ModelWarning")
 class TestBuildGroupConstraints:
 
     metadata_yaml = os.path.join(
@@ -55,11 +61,10 @@ class TestBuildGroupConstraints:
             == 0 for i in range(len(group_names))
         )
 
-        scenario_model.run()
+        scenario_model.run(build_only=True)
         assert all(
             hasattr(scenario_model._backend_model, 'group_' + i + '_constraint') for i in constraints
         )
-
 
 @pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
@@ -450,60 +455,100 @@ class TestDemandShareGroupConstraints:
         assert all([round(i, 5) >= 0.1 for i in shares_elec['cheap_elec_supply'].values])
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings("ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning")
 class TestResourceAreaGroupConstraints:
 
-    def test_no_energy_cap_share_constraint(self):
-        model = build_model(model_file='resource_area.yaml')
+    def test_no_resource_area_constraint(self, model_file):
+        model = build_model(model_file=model_file)
         model.run()
-        cheap_resource_area = (model.get_formatted_array("resource_area")
-                                    .loc[{'techs': "cheap_elec_supply"}].sum()).item()
-        assert cheap_resource_area == 40
+        capacity = model.get_formatted_array("resource_area")
+        expensive_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert expensive_capacity == 0
 
-    def test_systemwide_resource_area_max_constraint(self):
+    def test_resource_area_max_supply_constraint(self, model_file):
         model = build_model(
-            model_file='resource_area.yaml',
-            scenario='resource_area_max_systemwide'
+            model_file=model_file,
+            scenario='resource_area_max_supply'
         )
         model.run()
-        cheap_resource_area = (model.get_formatted_array("resource_area")
-                                    .loc[{'techs': "cheap_elec_supply"}].sum()).item()
-        assert cheap_resource_area == 20
+        capacity = model.get_formatted_array("resource_area")
+        cheap_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_capacity, 5) <= 28
 
-    def test_systemwide_resource_area_min_constraint(self):
+    def test_resource_area_min_supply_constraint(self, model_file):
         model = build_model(
-            model_file='resource_area.yaml',
-            scenario='resource_area_min_systemwide'
+            model_file=model_file,
+            scenario='resource_area_min_supply'
         )
         model.run()
-        resource_area = model.get_formatted_array("resource_area")
-        assert resource_area.loc[{'techs': "cheap_elec_supply"}].sum().item() == 0
-        assert resource_area.loc[{'techs': "expensive_elec_supply"}].sum().item() == 20
+        capacity = model.get_formatted_array("resource_area")
+        expensive_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(expensive_capacity, 5) >= 12
 
-    def test_location_specific_resource_area_max_constraint(self):
+    def test_resource_area_min_max_supply_constraint(self, model_file):
         model = build_model(
-            model_file='resource_area.yaml',
-            scenario='resource_area_max_location_0'
+            model_file=model_file,
+            scenario='resource_area_min_max_supply'
         )
         model.run()
-        resource_area = model.get_formatted_array("resource_area")
-        cheap_resource_area0 = resource_area.loc[{'locs': "0", 'techs': 'cheap_elec_supply'}].item()
-        cheap_resource_area1 = resource_area.loc[{'locs': "1", 'techs': 'cheap_elec_supply'}].item()
-        assert cheap_resource_area0 == 10
-        assert cheap_resource_area1 == 20
+        capacity = model.get_formatted_array("resource_area")
+        cheap_capacity = capacity.loc[{'techs': "cheap_elec_supply"}].sum().item()
+        expensive_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_capacity, 5) <= 8
+        assert round(expensive_capacity, 5) >= 12
 
-    def test_location_specific_resource_area_min_constraint(self):
+    def test_resource_area_max_supply_loc_1_constraint(self, model_file):
         model = build_model(
-            model_file='resource_area.yaml',
-            scenario='resource_area_min_location_0'
+            model_file=model_file,
+            scenario='resource_area_max_supply_loc_1'
         )
         model.run()
-        resource_area = model.get_formatted_array("resource_area")
-        expensive_resource_area0 = resource_area.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
-        expensive_resource_area1 = resource_area.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
-        assert expensive_resource_area0 == 10
-        assert expensive_resource_area1 == 0
+        capacity = model.get_formatted_array("resource_area")
+        cheap_capacity1 = capacity.loc[{'locs': "1", 'techs': "cheap_elec_supply"}].item()
+        expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
+        assert round(cheap_capacity1, 5) <= 8
+        assert expensive_capacity0 == 0
+
+    def test_resource_area_min_supply_loc_0_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='resource_area_min_supply_loc_0'
+        )
+        model.run()
+        capacity = model.get_formatted_array("resource_area")
+        expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
+        expensive_capacity1 = capacity.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
+        assert round(expensive_capacity0, 5) >= 12
+        assert expensive_capacity1 == 0
+
+    def test_resource_area_min_max_supply_loc0_1_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='resource_area_min_max_supply_loc_0_1'
+        )
+        model.run()
+        capacity = model.get_formatted_array("resource_area")
+        cheap_capacity1 = capacity.loc[{'locs': "1", 'techs': "cheap_elec_supply"}].item()
+        expensive_capacity0 = capacity.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].item()
+        expensive_capacity1 = capacity.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].item()
+        assert round(cheap_capacity1, 5) <= 8
+        assert round(expensive_capacity0, 5) >= 12
+        assert expensive_capacity1 == 0
+
+    # All technologies, but insufficient resource_area_max for enough installed capacity to meet demand
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*['conversion', 'conversion_plus', 'demand', 'storage', "
+        "'transmission'].*:calliope.exceptions.ModelWarning"
+    )
+    def test_resource_area_max_all_techs_infeasible_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='resource_area_max_all_techs_infeasible'
+        )
+
+        model.run()
+
+        assert model._model_data.attrs['termination_condition'] != 'optimal'
 
 
 @pytest.mark.xfail(reason="Tests not yet implemented.")
@@ -918,7 +963,7 @@ class TestEnergyCapShareGroupConstraints:
         assert (cheap_heat + cheap_cool) / capacity_supply_conversion_all_loc1.sum().item() <= 0.1
 
     # All technologies, but insufficient energy_cap_max for enough installed capacity to meet demand
-    @pytest.mark.filterwarnings("ignore:(?s).*`{'demand'}` have been ignored*:calliope.exceptions.ModelWarning")
+    @pytest.mark.filterwarnings("ignore:(?s).*`['demand']` have been ignored*:calliope.exceptions.ModelWarning")
     def test_energy_cap_share_max_all_techs_infeasible_constraint(self, model_file):
         model = build_model(
             model_file=model_file,
@@ -931,10 +976,6 @@ class TestEnergyCapShareGroupConstraints:
 
 
 class TestEnergyCapGroupConstraints:
-
-    @pytest.fixture(scope='module')
-    def model_file(self):
-        return os.path.join('model_config_group', 'base_model.yaml')
 
     def test_no_energy_cap_constraint(self, model_file):
         model = build_model(model_file=model_file)
@@ -1034,7 +1075,7 @@ class TestEnergyCapGroupConstraints:
         assert elec_to_heat == 0
 
     # All technologies, but insufficient energy_cap_max for enough installed capacity to meet demand
-    @pytest.mark.filterwarnings("ignore:(?s).*`{'demand'}` have been ignored*:calliope.exceptions.ModelWarning")
+    @pytest.mark.filterwarnings("ignore:(?s).*`['demand']` have been ignored*:calliope.exceptions.ModelWarning")
     def test_energy_cap_max_all_techs_infeasible_constraint(self, model_file):
         model = build_model(
             model_file=model_file,
