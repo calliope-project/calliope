@@ -778,7 +778,7 @@ def check_model_data(model_data):
 
     # Check for storage_initial being a fractional value
 
-    if hasattr(model_data, 'loc_techs_storage'):
+    if hasattr(model_data, 'loc_techs_store'):
         for loc_tech in model_data.loc_techs_store.values:
             if hasattr(model_data, 'storage_initial'):
                 if model_data.storage_initial.loc[{'loc_techs_store': loc_tech}].values > 1:
@@ -795,10 +795,10 @@ def check_model_data(model_data):
             if hasattr(model_data, 'storage_initial') and hasattr(model_data, 'storage_discharge_depth'):
                 if (model_data.storage_initial.loc[{'loc_techs_store': loc_tech}].values
                         < model_data.storage_discharge_depth.loc[{'loc_techs_store': loc_tech}].values):
-                    model_data.storage_initial.loc[{'loc_techs_store': loc_tech}] = np.array(float(model_data.storage_discharge_depth.loc[{'loc_techs_store': loc_tech}].values))
-                    model_warnings.append(
+                    errors.append(
                         'storage_initial is smaller than storage_discharge_depth.'
-                        ' The former will be set equal to the storage_discharge_depth.'
+                        ' Please change the model configuration to ensure that'
+                        ' storage initial is greater than or equal to storage_discharge_depth'
                     )
 
     # Check for storage_inter_cluster not being used together with storage_discharge_depth

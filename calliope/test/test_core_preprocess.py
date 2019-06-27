@@ -1259,12 +1259,12 @@ class TestChecks:
         """
         Check that the storage_initial value is at least equalt to the storage_discharge_depth
         """
-        with pytest.warns(exceptions.ModelWarning) as warn:
+        with pytest.raises(exceptions.ModelError) as error:
             build_model({'techs.test_storage.constraints.storage_initial': 0},
             'simple_storage,two_hours,investment_costs,storage_discharge_depth')
 
         assert check_error_or_warning(
-            warn, 'storage_initial is smaller than storage_discharge_depth.'
+            error, 'storage_initial is smaller than storage_discharge_depth.'
         )
 
     def test_storage_inter_cluster_vs_storage_discharge_depth(self):
@@ -1272,18 +1272,8 @@ class TestChecks:
         Check that the storage_inter_cluster is not used together with storage_discharge_depth
         """
         with pytest.raises(exceptions.ModelError) as error:
-            override = {
-                'model.subset_time': ['2005-01-01', '2005-01-04'],
-                'model.time': {
-                    'function': 'apply_clustering',
-                    'function_options': {
-                        'clustering_func': 'file=cluster_days.csv:0', 'how': 'mean',
-                        'storage_inter_cluster': True
-                    }
-                }
-            }
-
-            build_model(override, 'simple_storage,storage_discharge_depth')
+            override = {'model.subset_time': ['2005-01-01', '2005-01-04']}
+            build_model(override, 'clustering,simple_storage,storage_discharge_depth')
 
         assert check_error_or_warning(
             error, 'storage_discharge_depth is currently not allowed when time clustering is active.'

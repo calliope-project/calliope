@@ -287,13 +287,17 @@ class TestBalanceConstraints:
         assert hasattr(m._backend_model, 'storage_discharge_depth_constraint')
         assert not hasattr(m._backend_model, 'storage_initial_constraint')
 
-        m2 = build_model(
-            {'techs.test_storage.constraints.storage_initial': 0.0},
-            'simple_storage,one_day,investment_costs,storage_discharge_depth'
-        )
-        m2.run(build_only=True)
-        assert (m2._model_data.storage_initial.values == m2._model_data.storage_discharge_depth.values).all()
+        with pytest.raises(exceptions.ModelError) as error:
+            m2 = build_model(
+                {'techs.test_storage.constraints.storage_initial': 0.0},
+                'simple_storage,one_day,investment_costs,storage_discharge_depth'
+            )
+            m2.run(build_only=True)
 
+        assert check_error_or_warning(
+            error,
+            'storage_initial is smaller than storage_discharge_depth.'
+        )
         m3 = build_model(
             {'techs.test_storage.constraints.storage_initial': 1},
             'simple_storage,one_day,investment_costs,storage_discharge_depth'

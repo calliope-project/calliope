@@ -83,12 +83,6 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             rule=balance_storage_constraint_rule
         )
-    if 'loc_techs_storage_discharge_depth' in sets:
-        backend_model.storage_discharge_depth_constraint = po.Constraint(
-            backend_model.loc_techs_storage_discharge_depth,
-            backend_model.timesteps,
-            rule=storage_discharge_depth_constraint_rule
-        )
 
     if 'loc_techs_balance_storage_inter_cluster_constraint' in sets:
         backend_model.balance_storage_inter_cluster_constraint = po.Constraint(
@@ -451,22 +445,6 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
             backend_model.storage[loc_tech, timestep] ==
             storage_previous_step + resource - carrier_prod
         )
-
-
-def storage_discharge_depth_constraint_rule(backend_model, loc_tech, timestep):
-    """
-    Forces storage state of charge to be greater than the allowed depth of discharge.
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{storage}(loc::tech, timestep) >=
-            \\boldsymbol{storage_discharge_depth}\\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
-
-    """
-    storage_discharge_depth = get_param(backend_model, 'storage_discharge_depth', loc_tech)
-    return backend_model.storage[loc_tech, timestep] >= storage_discharge_depth * backend_model.storage_cap[loc_tech]
 
 
 def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
