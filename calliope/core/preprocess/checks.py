@@ -630,8 +630,10 @@ def check_final(model_run):
                 'All technologies were requested for inclusion in group constraint '
                 '`{}`, but those from tech group(s) `{}` have been ignored as one '
                 'or more of the constraints cannot be applied to technologies '
-                'in these groups'
-                .format(group_constraint_name, dropped_tech_groups | unallowed_tech_groups)
+                'in these groups'.format(
+                    group_constraint_name,
+                    sorted(dropped_tech_groups | unallowed_tech_groups)
+                )
             )
         else:
             trans_techs = set(requested_techs).intersection(model_run.sets['techs_transmission_names'])
