@@ -153,3 +153,22 @@ overrides:
                     om_prod: 0.001
                     energy_cap: 0.001
         locations.1.techs: {elec_storage}
+
+    add_elec_supply_plus:
+        techs.elec_supply_plus:
+            essentials:
+                name: Electricity supply plus
+                carrier: electricity
+                parent: supply_plus
+            constraints:
+                lifetime: 15
+                storage_loss: 0.001
+                resource: file=supply_simple.csv
+                parasitic_eff: 0.95
+                resource_area_per_energy_cap: 2
+            costs:
+                monetary:
+                    interest_rate: 0.1
+                    om_prod: 0.001
+                    energy_cap: 0.001
+        locations.0,1.techs: {elec_supply_plus}

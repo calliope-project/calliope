@@ -56,3 +56,30 @@ def check_variable_exists(backend_model, constraint, variable):
         variables = identify_variables(v.body)
         exists.append(any(variable in j.getname() for j in list(variables)))
     return any(exists)
+
+
+def get_indexed_constraint_body(backend_model, constraint, input_index):
+    """
+    Return all indeces of a specific decision variable used in a constraint.
+    This is useful to check that all expected loc_techs are in a summation.
+
+    Parameters
+    ----------
+    backend_model : Pyomo ConcreteModel
+    constraint : str,
+        Name of constraint which could exist in the backend
+    input_index : tuple or string,
+        The index of the constraint in which to look for a the variable.
+        The index may impact the index of the decision ariable
+
+    """
+    constraint_index = [
+        v for v in getattr(backend_model, constraint).values()
+        if v.index() == input_index
+    ]
+    if len(constraint_index) == 0:
+        raise KeyError(
+            'Unable to find index {} in constraint {}'.format(input_index, constraint)
+        )
+    else:
+        return constraint_index[0].body
