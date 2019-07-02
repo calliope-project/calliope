@@ -18,6 +18,7 @@ install:
   - set CONDA_CHANS=conda-forge defaults
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
+  - activate
   - conda info -a
   - "python utils\\conda_create.py requirements\\base.yml --python_version=%PYTHON_VERSION% --channels %CONDA_CHANS% --ignore %CONDA_IGNORE% --run"
   - activate calliope
