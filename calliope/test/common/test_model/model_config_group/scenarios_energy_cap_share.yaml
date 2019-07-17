@@ -62,15 +62,15 @@ scenarios:
     energy_cap_share_min_all_techs: [
         energy_cap_share_min, add_expensive_elec_transmission, add_elec_storage,
         add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
-        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
     ]
     energy_cap_share_max_all_techs: [
         energy_cap_share_max_high, add_expensive_elec_transmission, add_elec_storage,
         add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
-        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
     ]
     energy_cap_share_max_all_techs_infeasible: [
         energy_cap_share_max, add_expensive_elec_transmission, add_elec_storage,
         add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
-        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
     ]
