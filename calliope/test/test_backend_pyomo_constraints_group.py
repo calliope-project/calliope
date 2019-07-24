@@ -1123,6 +1123,12 @@ class TestNetImportShareGroupConstraints:
         imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
         assert imports == pytest.approx(0)
 
+    @pytest.mark.xfail(reason="One cannot define transmission techs explicitely.")
+    def test_no_imports_explicit_tech(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,no-imports-explicit-tech")
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(0)
+
     def test_some_imports_allowed(self, results_for_scenario):
         results = results_for_scenario("expensive-1,some-imports-allowed")
         demand = self.retrieve_demand(results).sel(locs="1").sum(["timesteps"]).item()

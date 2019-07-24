@@ -11,6 +11,13 @@ overrides:
             net_import_share_max:
                 electricity: 0
 
+    no-imports-explicit-tech:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["1"]
+            techs: ["cheap_elec_transmission"]
+            net_import_share_max:
+                electricity: 0
+
     some-imports-allowed:
         group_constraints.example_net_import_share_constraint:
             locs: ["1"]
