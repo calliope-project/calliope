@@ -482,20 +482,6 @@ def net_import_share_constraint_rule(backend_model, constraint_group, carrier, w
         return equalizer(lhs, rhs, what)
 
 
-def get_import_share_lhs_and_rhs_loc_techs(backend_model, group_name, carrier):
-    trans_loc_tech = getattr(
-        backend_model,
-        'group_constraint_loc_techs_{}'.format(group_name)
-    )
-    locs = set(loc_tech.split('::')[0] for loc_tech in trans_loc_tech)
-    trans_loc_tech = filter(lambda loc_tec: loc_tec.split(":")[-1] not in locs, trans_loc_tech)
-    demand_loc_tech = [
-        i for i in backend_model.loc_tech_carriers_demand
-        if i.split('::')[0] in locs
-    ]
-    return (trans_loc_tech, demand_loc_tech)
-
-
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
     """
     Enforces shares of energy_cap for groups of technologies and locations. The
