@@ -3,6 +3,7 @@ import:
     - scenarios_energy_cap.yaml
     - scenarios_energy_cap_share.yaml
     - scenarios_resource_area.yaml
+    - scenarios_net_import_share.yaml
 
 model:
     name: Group share constraint test model

@@ -1085,3 +1085,70 @@ class TestEnergyCapGroupConstraints:
         model.run()
 
         assert model._model_data.attrs['termination_condition'] != 'optimal'
+
+
+class TestNetImportShareGroupConstraints:
+
+    @pytest.fixture
+    def results_for_scenario(self, model_file):
+        def __run(scenario=None):
+            model = build_model(model_file=model_file, scenario=scenario)
+            model.run()
+            return model
+        return __run
+
+    @staticmethod
+    def retrieve_imports(results):
+        carrier_prod = results.get_formatted_array("carrier_prod").sel(carriers="electricity")
+        return carrier_prod.sel(techs=["transmission" in str(tech) for tech in carrier_prod.techs])
+
+    @staticmethod
+    def retrieve_demand(results):
+        return results.get_formatted_array("carrier_con").sel(carriers="electricity").sel(techs="electricity_demand")
+
+    def test_only_imports_without_constraint(self, results_for_scenario):
+        results = results_for_scenario("expensive-1")
+        demand = self.retrieve_demand(results).sel(locs="1").sum(["timesteps"]).item()
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(- demand)
+
+    def test_only_imports_with_wrong_carrier(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,other-carrier")
+        demand = self.retrieve_demand(results).sel(locs="1").sum(["timesteps"]).item()
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(- demand)
+
+    def test_no_imports(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,no-imports")
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(0)
+
+    @pytest.mark.xfail(reason="One cannot define transmission techs explicitely.")
+    def test_no_imports_explicit_tech(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,no-imports-explicit-tech")
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(0)
+
+    def test_some_imports_allowed(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,some-imports-allowed")
+        demand = self.retrieve_demand(results).sel(locs="1").sum(["timesteps"]).item()
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports <= - 0.2 * demand
+
+    def test_some_imports_enforced(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,some-imports-enforced")
+        demand = self.retrieve_demand(results).sel(locs="1").sum(["timesteps"]).item()
+        imports = self.retrieve_imports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(- 0.2 * demand)
+
+    def test_some_expensive_imports_enforced(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,some-expensive-imports-enforced")
+        demand = self.retrieve_demand(results).sel(locs="0").sum(["timesteps"]).item()
+        imports = self.retrieve_imports(results).sel(locs="0").sum(["techs", "timesteps"]).item()
+        assert imports >= - 0.2 * demand
+
+    def test_ignores_imports_within_group(self, results_for_scenario):
+        results = results_for_scenario("expensive-1,ignores-imports-within-group")
+        demand = self.retrieve_demand(results).sel(locs=["1"]).sum(["timesteps"]).item()
+        imports = self.retrieve_imports(results).sel(locs=["1"]).sum(["techs", "timesteps"]).item()
+        assert imports == pytest.approx(- demand)
