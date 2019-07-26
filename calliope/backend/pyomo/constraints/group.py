@@ -92,6 +92,15 @@ def load_constraints(backend_model):
                 )
             )
 
+        if 'group_net_import_share_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_net_import_share_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_net_import_share_{}'.format(sense)),
+                    backend_model.carriers, [sense], rule=net_import_share_constraint_rule
+                )
+            )
+
         if 'group_cost_{}'.format(sense) in model_data_dict:
             setattr(
                 backend_model, 'group_cost_{}_constraint'.format(sense),
@@ -128,6 +137,7 @@ def load_constraints(backend_model):
             backend_model.carriers,
             rule=demand_share_per_timestep_decision_sum_constraint_rule
         )
+
 
 def equalizer(lhs, rhs, sign):
     if sign == 'max':
@@ -419,6 +429,56 @@ def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, c
             for loc_tech in rhs_loc_techs
         )
 
+        return equalizer(lhs, rhs, what)
+
+
+def net_import_share_constraint_rule(backend_model, constraint_group, carrier, what):
+    """
+    Enforces demand shares of net imports from transmission technologies for groups of locations,
+    on average over the entire model period. Transmission within the group are ignored. The share
+    is relative to ``demand`` technologies only.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_transmission \\in given\\_locations, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep)
+            + \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers\\_transmission \\in given\\_locations, timestep \\in timesteps} carrier_{con}(loc::tech::carrier, timestep) \\leq
+            share \\times \\sum_{loc::tech:carrier \\in loc\\_tech\\_demand \\in given\\_locations, timestep\\in timesteps}
+            carrier_{con}(loc::tech::carrier, timestep)
+
+    """
+    share = get_param(backend_model, 'group_net_import_share_{}'.format(what), (carrier, constraint_group))
+
+    if share.value is None:
+        return return_noconstraint('net_import_share', constraint_group)
+    else:
+        trans_loc_tech = getattr(
+            backend_model,
+            'group_constraint_loc_techs_{}'.format(constraint_group)
+        )
+        locs = set(loc_tech.split('::')[0] for loc_tech in trans_loc_tech)
+        trans_loc_tech = filter(lambda loc_tec: loc_tec.split(":")[-1] not in locs, trans_loc_tech)
+        demand_loc_tech = [
+            i for i in backend_model.loc_tech_carriers_demand
+            if i.split('::')[0] in locs
+        ]
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in trans_loc_tech
+            for timestep in backend_model.timesteps
+        ) + sum(
+            backend_model.carrier_con[loc_tech + '::' + carrier, timestep]
+            for loc_tech in trans_loc_tech
+            for timestep in backend_model.timesteps
+
+        )
+        rhs = - share * sum(
+            backend_model.carrier_con[loc_tech, timestep]
+            for loc_tech in demand_loc_tech
+            for timestep in backend_model.timesteps
+        )
         return equalizer(lhs, rhs, what)
 
 

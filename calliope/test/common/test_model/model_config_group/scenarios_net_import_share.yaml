@@ -1,0 +1,49 @@
+
+overrides:
+
+    expensive-1:
+        locations.1.techs.cheap_elec_supply.exists: False
+        techs.cheap_elec_transmission.costs.monetary.energy_cap: 0
+
+    no-imports:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["1"]
+            net_import_share_max:
+                electricity: 0
+
+    no-imports-explicit-tech:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["1"]
+            techs: ["cheap_elec_transmission"]
+            net_import_share_max:
+                electricity: 0
+
+    some-imports-allowed:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["1"]
+            net_import_share_max:
+                electricity: 0.2
+
+    some-imports-enforced:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["1"]
+            net_import_share_equals:
+                electricity: 0.2
+
+    some-expensive-imports-enforced:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["0"]
+            net_import_share_min:
+                electricity: 0.2
+
+    other-carrier:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["1"]
+            net_import_share_max:
+                wimbsi: 0
+
+    ignores-imports-within-group:
+        group_constraints.example_net_import_share_constraint:
+            locs: ["0", "1"]
+            net_import_share_max:
+                electricity: 0

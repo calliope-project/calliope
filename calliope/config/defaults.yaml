@@ -112,7 +112,7 @@ tech_groups:
     transmission:
         required_constraints: []
         allowed_constraints: ['energy_cap_equals', 'energy_cap_max', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_eff_per_distance', 'energy_prod', 'force_asynchronous_prod_con', 'lifetime', 'one_way']
-        allowed_group_constraints: [cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_min, energy_cap_max]
+        allowed_group_constraints: [cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_min, energy_cap_max, net_import_share_min, net_import_share_max, net_import_share_equals]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'energy_cap_per_distance', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'purchase_per_distance']
         essentials:
             parent: null
@@ -249,6 +249,12 @@ group_constraints:
         supply_share_per_timestep_max:
             default_carrier: .inf
         supply_share_per_timestep_equals:
+            default_carrier: null
+        net_import_share_max:
+            default_carrier: null
+        net_import_share_min:
+            default_carrier: null
+        net_import_share_equals:
             default_carrier: null
         cost_max:
             default_cost: .inf
