@@ -5,13 +5,13 @@ overrides:
         locations.1.techs.cheap_elec_supply.exists: False
         techs.cheap_elec_transmission.costs.monetary.energy_cap: 0
 
-    no-imports:
+    no-net-imports:
         group_constraints.example_net_import_share_constraint:
             locs: ["1"]
             net_import_share_max:
                 electricity: 0
 
-    no-imports-explicit-tech:
+    no-net-imports-explicit-tech:
         group_constraints.example_net_import_share_constraint:
             locs: ["1"]
             techs: ["cheap_elec_transmission"]
