@@ -6,6 +6,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 import logging
 import os
+import io
 from contextlib import redirect_stdout, redirect_stderr
 
 import numpy as np
@@ -191,10 +192,10 @@ def solve_model(backend_model, solver,
         )
         del solve_kwargs['warmstart']
 
-    with redirect_stdout(LogWriter(logger, 'debug', strip=True)):
+    stdout_eater = LogWriter(logger, 'debug', strip=True) if solver != "gurobi" else io.StringIO()
+    with redirect_stdout(stdout_eater):
         with redirect_stderr(LogWriter(logger, 'error', strip=True)):
             results = opt.solve(backend_model, tee=True, **solve_kwargs)
-
     return results
 
 
