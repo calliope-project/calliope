@@ -1103,6 +1103,11 @@ class TestNetImportShareGroupConstraints:
         return carrier_prod.sel(techs=["transmission" in str(tech) for tech in carrier_prod.techs])
 
     @staticmethod
+    def retrieve_exports(results):
+        carrier_prod = results.get_formatted_array("carrier_con").sel(carriers="electricity")
+        return carrier_prod.sel(techs=["transmission" in str(tech) for tech in carrier_prod.techs]) * (-1)
+
+    @staticmethod
     def retrieve_demand(results):
         return results.get_formatted_array("carrier_con").sel(carriers="electricity").sel(techs="electricity_demand")
 
@@ -1152,3 +1157,14 @@ class TestNetImportShareGroupConstraints:
         demand = self.retrieve_demand(results).sel(locs=["1"]).sum(["timesteps"]).item()
         imports = self.retrieve_imports(results).sel(locs=["1"]).sum(["techs", "timesteps"]).item()
         assert imports == pytest.approx(- demand)
+
+    def test_allows_gross_imports(self, results_for_scenario):
+        results = results_for_scenario("no-imports,alternating-costs")
+        gross_imports = self.retrieve_imports(results).sel(locs=["1"]).sum(["techs", "timesteps"]).item()
+        assert gross_imports > 0
+
+    def test_no_net_imports_despite_gross_imports(self, results_for_scenario):
+        results = results_for_scenario("no-imports,alternating-costs")
+        gross_imports = self.retrieve_imports(results).sel(locs=["1"]).sum(["techs", "timesteps"]).item()
+        gross_exports = self.retrieve_exports(results).sel(locs="1").sum(["techs", "timesteps"]).item()
+        assert gross_imports <= gross_exports
