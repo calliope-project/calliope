@@ -465,14 +465,10 @@ def net_import_share_constraint_rule(backend_model, constraint_group, carrier, w
         ]
 
         lhs = sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            (backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+             + backend_model.carrier_con[loc_tech + '::' + carrier, timestep])
             for loc_tech in trans_loc_tech
             for timestep in backend_model.timesteps
-        ) + sum(
-            backend_model.carrier_con[loc_tech + '::' + carrier, timestep]
-            for loc_tech in trans_loc_tech
-            for timestep in backend_model.timesteps
-
         )
         rhs = - share * sum(
             backend_model.carrier_con[loc_tech, timestep]
