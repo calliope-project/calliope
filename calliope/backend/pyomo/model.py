@@ -193,8 +193,10 @@ def solve_model(backend_model, solver,
 
     with redirect_stdout(LogWriter(logger, 'debug', strip=True)):
         with redirect_stderr(LogWriter(logger, 'error', strip=True)):
+            # Ignore most of gurobipy's logging, as it's output is
+            # already captured through STDOUT
+            logging.getLogger('gurobipy').setLevel(logging.ERROR)
             results = opt.solve(backend_model, tee=True, **solve_kwargs)
-
     return results
 
 
