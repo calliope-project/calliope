@@ -6,7 +6,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 import logging
 import os
-import io
 from contextlib import redirect_stdout, redirect_stderr
 
 import numpy as np
