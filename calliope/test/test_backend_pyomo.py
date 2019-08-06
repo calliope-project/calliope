@@ -1,8 +1,8 @@
 import pytest  # pylint: disable=unused-import
 import numpy as np
-import xarray as xr
 import pyomo.core as po
 import os
+import collections
 import logging
 
 from calliope.backend.pyomo.util import get_param
@@ -1615,3 +1615,24 @@ class TestClusteringConstraints:
             assert not hasattr(m._backend_model, constraint)
 
         assert hasattr(m._backend_model, 'storage_max_constraint')
+
+
+class TestLogging:
+
+    @pytest.fixture(scope='module')
+    def gurobi_model(self):
+        pytest.importorskip("gurobipy")
+        model_file = os.path.join('model_config_group', 'base_model.yaml')
+        return build_model(
+            model_file=model_file,
+            override_dict={"run": {"solver": "gurobi", "solver_io": "python"}}
+        )
+
+    def test_no_duplicate_log_message(self, caplog, gurobi_model):
+        caplog.set_level(logging.DEBUG)
+        gurobi_model.run()
+        all_log_messages = [r.msg for r in caplog.records]
+        duplicates = [item for item, count in collections.Counter(all_log_messages).items()
+                      if count > 1
+                      if item != '']
+        assert duplicates == []
