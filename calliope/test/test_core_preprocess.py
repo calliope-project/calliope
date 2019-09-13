@@ -1243,6 +1243,42 @@ class TestChecks:
             for i in override['run.objective_options.cost_class'].keys()
         )
 
+    def test_storage_initial_fractional_value(self):
+        """
+        Check that the storage_initial value is a fraction
+        """
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model({'techs.test_storage.constraints.storage_initial': 5},
+            'simple_storage,two_hours,investment_costs')
+
+        assert check_error_or_warning(
+            error, 'storage_initial values larger than 1 are not allowed.'
+        )
+
+    def test_storage_initial_smaller_than_discharge_depth(self):
+        """
+        Check that the storage_initial value is at least equalt to the storage_discharge_depth
+        """
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model({'techs.test_storage.constraints.storage_initial': 0},
+            'simple_storage,two_hours,investment_costs,storage_discharge_depth')
+
+        assert check_error_or_warning(
+            error, 'storage_initial is smaller than storage_discharge_depth.'
+        )
+
+    def test_storage_inter_cluster_vs_storage_discharge_depth(self):
+        """
+        Check that the storage_inter_cluster is not used together with storage_discharge_depth
+        """
+        with pytest.raises(exceptions.ModelError) as error:
+            override = {'model.subset_time': ['2005-01-01', '2005-01-04']}
+            build_model(override, 'clustering,simple_storage,storage_discharge_depth')
+
+        assert check_error_or_warning(
+            error, 'storage_discharge_depth is currently not allowed when time clustering is active.'
+        )
+
     def test_warn_on_undefined_cost_classes(self):
 
         with pytest.warns(exceptions.ModelWarning) as warn:

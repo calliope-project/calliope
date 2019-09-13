@@ -143,6 +143,7 @@ def load_constraints(backend_model):
         )
 
 
+
 def unit_commitment_milp_constraint_rule(backend_model, loc_tech, timestep):
     """
     Constraining the number of integer units

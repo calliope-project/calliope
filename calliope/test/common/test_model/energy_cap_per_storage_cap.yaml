@@ -23,7 +23,7 @@ techs:
             parent: storage
         constraints:
             energy_cap_max: inf
-            storage_initial: 180
+            storage_initial: 1.0
             lifetime: 60
         costs:
             monetary:
