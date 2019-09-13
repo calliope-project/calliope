@@ -77,7 +77,7 @@ tech_groups:
             resource_unit: energy
     storage:
         required_constraints: []
-        allowed_constraints: ['charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'storage_discharge_depth', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_group_constraints: [cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'storage_cap']
         essentials:
@@ -180,7 +180,8 @@ techs:
             storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
             storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
             storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
-            storage_initial: 0  # name: Initial storage level ¦ unit: kWh ¦ Set stored energy in device at the first timestep
+            storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
+            storage_initial: 0  # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
             storage_loss: 0  # name: Storage loss rate ¦ unit: hour :sup:`-1` ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
             units_equals: false  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
             units_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.

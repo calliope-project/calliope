@@ -43,6 +43,10 @@ def generate_constraint_sets(model_run):
             i for i in sets.loc_techs_store
             if constraint_exists(model_run, i, 'constraints.storage_initial') is not None
         ]
+    constraint_sets['loc_techs_storage_discharge_depth'] = [
+        i for i in sets.loc_techs_store
+        if constraint_exists(model_run, i, 'constraints.storage_discharge_depth')
+    ]
     constraint_sets['carriers_reserve_margin_constraint'] = [
         i for i in sets.carriers
         if i in model_run.model.get_key('reserve_margin', {}).keys()
@@ -234,6 +238,7 @@ def generate_constraint_sets(model_run):
         any(constraint_exists(model_run, i, 'costs.{}.purchase'.format(j))
             for j in model_run.sets.costs)
     ]
+
     # loc_techs_purchase technologies only exist because they have defined a purchase cost
     constraint_sets['loc_techs_update_costs_investment_purchase_milp_constraint'] = sets.loc_techs_purchase
 

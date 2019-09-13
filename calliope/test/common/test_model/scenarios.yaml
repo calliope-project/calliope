@@ -190,6 +190,12 @@ overrides:
                     test_storage:
                     test_demand_elec:
 
+    storage_discharge_depth:
+        techs:
+            test_storage:
+                constraints:
+                    storage_discharge_depth: 0.8
+
     storage_milp:
         locations:
             0:
@@ -214,6 +220,14 @@ overrides:
                     test_demand_elec:
 
         links.0,1.exists: false
+
+    clustering:
+        model.time:
+            function: apply_clustering
+            function_options:
+                clustering_func: file=cluster_days.csv:0
+                how: 'mean'
+                storage_inter_cluster: True
 
     group_share_energy_cap_min:
         model.group_share.test_supply_elec,test_supply_gas.energy_cap_min: 0.5

@@ -192,7 +192,7 @@ class TestEnergyCapacityPerStorageCapacity:
         energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
         storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
         assert energy_capacity == pytest.approx(10)
-        assert storage_capacity == pytest.approx(175)
+        assert storage_capacity == pytest.approx(180)
         assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
 
     def test_equals(self, model_file):
@@ -218,8 +218,8 @@ class TestEnergyCapacityPerStorageCapacity:
         assert model.results.termination_condition == "optimal"
         energy_capacity = model.get_formatted_array("energy_cap").loc[{'techs': 'my_storage'}].sum().item()
         storage_capacity = model.get_formatted_array("storage_cap").loc[{'techs': 'my_storage'}].sum().item()
-        assert energy_capacity == pytest.approx(175)
-        assert storage_capacity == pytest.approx(175)
+        assert energy_capacity == pytest.approx(180)
+        assert storage_capacity == pytest.approx(180)
 
     def test_operate_mode(self, model_file):
         model = build_model(model_file=model_file, scenario="operate_mode_min")
