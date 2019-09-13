@@ -296,6 +296,15 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``supply_share_per_timestep_equals``
      - carriers
      - Share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
+   * - ``net_import_share_min``
+     - carriers
+     - Minimum share of demand met from transmission technologies into a set of locations, on average over the entire model period. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly.
+   * - ``net_import_share_max``
+     - carriers
+     - Maximum share of demand met from transmission technologies into a set of locations, on average over the entire model period. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly.
+   * - ``net_import_share_equals``
+     - carriers
+     - Share of demand met from transmission technologies into a set of locations, on average over the entire model. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly. period.
    * - ``cost_max``
      - costs
      - Maximum total cost from a set of technologies across a set of locations.
