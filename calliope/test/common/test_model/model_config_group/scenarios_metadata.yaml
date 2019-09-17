@@ -87,3 +87,26 @@ resource_area_max_all_techs:
                  '0::expensive_elec_supply', '1::expensive_elec_supply',
                  '0::normal_elec_supply', '1::normal_elec_supply',
                  '0::elec_supply_plus', '1::elec_supply_plus']]
+
+
+supply_min_max_supply:
+    constraint: [supply_min, supply_max]
+    group_name: [example_supply_constraint, example_supply_max_constraint]
+    loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply], [0::cheap_elec_supply, 1::cheap_elec_supply]]
+supply_min_max_supply_loc_0_1:
+    constraint: [supply_min, supply_max]
+    group_name: [example_supply_constraint, example_supply_max_constraint]
+    loc_techs: [[0::expensive_elec_supply], [1::cheap_elec_supply]]
+supply_min_all_techs:
+    constraint: [supply_min]
+    group_name: [example_supply_constraint]
+    loc_techs: [['1::elec_to_heat_cool_unlinked', '0::cheap_elec_supply',
+                 '1::elec_to_heat_cool_linked', '1::elec_to_heat',
+                 '1::expensive_elec_supply', '1::cheap_elec_supply',
+                 '0::normal_elec_supply', '1::normal_elec_supply',
+                 '0::expensive_elec_supply',
+                 '0::elec_supply_plus', '1::elec_supply_plus']]
+supply_max_non_conversion_all:
+    constraint: [supply_max]
+    group_name: [example_supply_constraint]
+    loc_techs: [['1::cheap_cool_supply', '1::cheap_heat_supply',]]

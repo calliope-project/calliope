@@ -991,7 +991,7 @@ class TestEnergyCapGroupConstraints:
         )
         model.run()
         capacity = model.get_formatted_array("energy_cap")
-        cheap_capacity = capacity.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        cheap_capacity = capacity.loc[{'techs': "cheap_elec_supply"}].sum().item()
         assert round(cheap_capacity, 5) <= 14
 
     def test_energy_cap_min_supply_constraint(self, model_file):
@@ -1180,3 +1180,116 @@ class TestNetImportShareGroupConstraints:
         results = results_for_scenario("no-net-imports,alternating-costs")
         net_imports = self.retrieve_net_imports(results).sel(locs="1")
         assert net_imports <= 0
+
+
+class TestSupplyGroupConstraints:
+
+    def test_no_supply_constraint(self, model_file):
+        model = build_model(model_file=model_file)
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        expensive_prod = prod.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert expensive_prod == 0
+
+    def test_supply_max_supply_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_max_supply'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        cheap_prod = prod.loc[{'techs': "cheap_elec_supply"}].sum().item()
+        assert round(cheap_prod, 5) <= 40
+
+    def test_supply_min_supply_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_min_supply'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        expensive_prod = prod.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(expensive_prod, 5) >= 10
+
+    def test_supply_min_max_supply_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_min_max_supply'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        cheap_prod = prod.loc[{'techs': "cheap_elec_supply"}].sum().item()
+        expensive_prod = prod.loc[{'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_prod, 5) <= 40
+        assert round(expensive_prod, 5) >= 10
+
+    def test_supply_max_supply_loc_1_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_max_supply_loc_1'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        cheap_prod1 = prod.loc[{'locs': "1", 'techs': "cheap_elec_supply"}].sum().item()
+        expensive_prod0 = prod.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_prod1, 5) <= 40
+        assert expensive_prod0 == 0
+
+    def test_supply_min_supply_loc_0_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_min_supply_loc_0'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        expensive_prod0 = prod.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].sum().item()
+        expensive_prod1 = prod.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].sum().item()
+        assert round(expensive_prod0, 5) >= 10
+        assert expensive_prod1 == 0
+
+    def test_supply_min_max_supply_loc0_1_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_min_max_supply_loc_0_1'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        cheap_prod1 = prod.loc[{'locs': "1", 'techs': "cheap_elec_supply"}].sum().item()
+        expensive_prod0 = prod.loc[{'locs': "0", 'techs': "expensive_elec_supply"}].sum().item()
+        expensive_prod1 = prod.loc[{'locs': "1", 'techs': "expensive_elec_supply"}].sum().item()
+        assert round(cheap_prod1, 5) <= 40
+        assert round(expensive_prod0, 5) >= 10
+        assert expensive_prod1 == 0
+
+    # All conversion technologies with insufficient supply_max to use the
+    # cheap direct heat/cooling supply techs
+    def test_supply_max_non_conversion_all_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_max_non_conversion_all'
+        )
+        model.run()
+        prod = model.get_formatted_array("carrier_prod")
+        elec_to_heat = prod.loc[{'locs': "1", 'techs': "elec_to_heat"}].sum().item()
+        elec_to_heat_cool_linked = prod.loc[{'locs': "1", 'techs': "elec_to_heat_cool_linked"}].sum('timesteps')
+        elec_to_heat_cool_unlinked = prod.loc[{'locs': "1", 'techs': "elec_to_heat_cool_unlinked"}].sum().item()
+        cheap_heat = prod.loc[{'locs': "1", 'techs': "cheap_heat_supply"}].sum().item()
+        cheap_cool = prod.loc[{'locs': "1", 'techs': "cheap_cool_supply"}].sum().item()
+        assert round(cheap_heat, 5) <= 10
+        assert round(cheap_cool, 5) <= 5
+        assert round(elec_to_heat_cool_linked.loc[{'carriers': 'cool'}].item()) >= 1
+        assert round(elec_to_heat_cool_linked.loc[{'carriers': 'heat'}].item()) >= 5
+        assert elec_to_heat_cool_unlinked == 0
+        assert elec_to_heat == 0
+
+    # All technologies, but insufficient supply_max for enough installed capacity to meet demand
+    @pytest.mark.filterwarnings("ignore:(?s).*`['demand', 'storage', 'transmission']` have been ignored*:calliope.exceptions.ModelWarning")
+    def test_supply_max_all_techs_infeasible_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='supply_max_all_techs_infeasible'
+        )
+
+        model.run()
+
+        assert model._model_data.attrs['termination_condition'] != 'optimal'
