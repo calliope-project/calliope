@@ -207,7 +207,7 @@ techs:
 locations:
     default_location:
         transmission_node: false # true only if no techs are defined (including complete ommission of the `techs` key). Automatically added during processing if not defined by user.
-        coordinates: {x: 0, y: 0}  # The location's x-y coordinates for distance calculations and plotting. Also possible: {lat: ..., lon: ...}
+        coordinates: {}  # The location's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
         available_area: null  # This location's available land area (required if constraining technology deployment by area).
         techs: None  # A list of technologies, optionally with location-specific settings overriding the technology's global settings.
         exists: true
