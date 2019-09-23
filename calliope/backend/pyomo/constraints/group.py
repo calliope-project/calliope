@@ -55,6 +55,15 @@ def load_constraints(backend_model):
                 )
             )
 
+        if 'group_supply_{}'.format(sense) in model_data_dict:
+            setattr(
+                backend_model, 'group_supply_{}_constraint'.format(sense),
+                po.Constraint(
+                    getattr(backend_model, 'group_names_supply_{}'.format(sense)),
+                    backend_model.carriers, [sense], rule=supply_constraint_rule
+                )
+            )
+
     for sense in ['min', 'max', 'equals']:
         if 'group_demand_share_{}'.format(sense) in model_data_dict:
             setattr(
@@ -476,6 +485,39 @@ def net_import_share_constraint_rule(backend_model, constraint_group, carrier, w
             for timestep in backend_model.timesteps
         )
         return equalizer(lhs, rhs, what)
+
+
+def supply_constraint_rule(backend_model, constraint_group, carrier, what):
+    """
+    Enforces carrier_prod for groups of technologies and locations,
+    as a sum over the entire model period.
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq supply_max
+
+    """
+    limit = get_param(backend_model, 'group_supply_{}'.format(what), (carrier, constraint_group))
+
+    if limit is None or (np.isinf(limit.value) and what is 'max') or (limit.value == 0 and what is 'min'):
+        return return_noconstraint('supply', constraint_group)
+    else:
+        # We won't actually use the rhs techs
+        lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
+            backend_model,
+            constraint_group
+        )
+
+        lhs = sum(
+            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            for loc_tech in lhs_loc_techs
+            for timestep in backend_model.timesteps
+            if loc_tech + '::' + carrier in backend_model.loc_tech_carriers_prod
+        )
+
+        return equalizer(lhs, limit, what)
 
 
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):

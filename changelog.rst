@@ -6,6 +6,8 @@ Release History
 0.6.5 (dev)
 -----------
 
+|new| New model-wide constraints `supply_min` and `supply_max` which restrict the absolute energy produced by a subgroup of technologies and locations.
+
 |new| Introduced a `storage_dod` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology.
 
 |new| New model-wide constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.

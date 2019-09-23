@@ -305,6 +305,12 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``net_import_share_equals``
      - carriers
      - Share of demand met from transmission technologies into a set of locations, on average over the entire model. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly. period.
+   * - ``supply_min``
+     - carriers
+     - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+   * - ``supply_max``
+     - carriers
+     - Minimum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
    * - ``cost_max``
      - costs
      - Maximum total cost from a set of technologies across a set of locations.
