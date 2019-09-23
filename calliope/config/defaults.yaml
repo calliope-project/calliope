@@ -47,7 +47,7 @@ tech_groups:
     conversion:
         required_constraints: []
         allowed_constraints: ['energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max]
+        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max, supply_min, supply_max]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
         essentials:
             parent: null
@@ -57,7 +57,7 @@ tech_groups:
     conversion_plus:
         required_constraints: []
         allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max]
+        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max, supply_min, supply_max]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
         essentials:
             parent: null
@@ -89,7 +89,7 @@ tech_groups:
     supply:
         required_constraints: []
         allowed_constraints: ['energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'force_resource', 'lifetime', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_min_use', 'resource_scale', 'resource_unit', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max, resource_area_min, resource_area_max]
+        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max, resource_area_min, resource_area_max, supply_min, supply_max]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area']
         essentials:
             parent: null
@@ -100,7 +100,7 @@ tech_groups:
     supply_plus:
         required_constraints: []
         allowed_constraints: ['charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'force_resource', 'lifetime', 'parasitic_eff', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_cap_equals', 'resource_cap_equals_energy_cap', 'resource_cap_max', 'resource_cap_min', 'resource_eff', 'resource_min_use', 'resource_scale', 'resource_unit', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max, resource_area_min, resource_area_max]
+        allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, supply_share_min, supply_share_max, supply_share_equals, supply_share_per_timestep_min, supply_share_per_timestep_max, supply_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max, resource_area_min, resource_area_max, supply_min, supply_max]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area', 'resource_cap', 'storage_cap']
         essentials:
             parent: null
@@ -257,6 +257,10 @@ group_constraints:
             default_carrier: null
         net_import_share_equals:
             default_carrier: null
+        supply_min:
+            default_carrier: 0
+        supply_max:
+            default_carrier: .inf
         cost_max:
             default_cost: .inf
         cost_min:

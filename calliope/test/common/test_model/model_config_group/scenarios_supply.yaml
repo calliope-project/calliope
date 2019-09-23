@@ -1,0 +1,76 @@
+
+overrides:
+
+    supply_min:
+        group_constraints.example_supply_constraint:
+            supply_min.electricity: 10
+
+    supply_max:
+        group_constraints.example_supply_constraint:
+            supply_max.electricity: 40
+
+    supply_max_high:
+        group_constraints.example_supply_constraint:
+            supply_max.electricity: 106
+
+    supply_max_low:
+        group_constraints.example_supply_constraint:
+            supply_max.electricity: 10
+
+    supply_loc_0:
+        group_constraints.example_supply_constraint:
+            locs: ["0"]
+
+    supply_max_cheap_supply:
+        group_constraints.example_supply_max_constraint:
+            supply_max.electricity: 10
+            techs: ["cheap_elec_supply"]
+
+    supply_max_loc_1:
+        group_constraints.example_supply_max_constraint:
+            locs: ["1"]
+
+    supply_cheap_supply:
+        group_constraints.example_supply_constraint:
+            techs: ["cheap_elec_supply"]
+
+    supply_expensive_supply:
+        group_constraints.example_supply_constraint:
+            techs: ["expensive_elec_supply"]
+
+    supply_non_conversion:
+        group_constraints.example_supply_constraint:
+            supply_max.heat: 10
+            supply_max.cool: 5
+            techs: ["cheap_cool_supply", "cheap_heat_supply"]
+
+scenarios:
+    supply_max_supply: [supply_max, supply_cheap_supply]
+    supply_min_supply:  [supply_min, supply_expensive_supply]
+    supply_min_max_supply: [supply_max_cheap_supply, supply_min, supply_expensive_supply]
+    supply_max_supply_loc_1: [supply_max_loc_1, supply_max_cheap_supply]
+    supply_min_supply_loc_0: [supply_min, supply_loc_0, supply_expensive_supply]
+    supply_min_max_supply_loc_0_1: [supply_min, supply_max_loc_1, supply_max_cheap_supply, supply_loc_0, supply_expensive_supply]
+    supply_max_non_conversion_all: [
+        supply_max, supply_non_conversion,
+        add_cheap_heat_supply, add_cheap_cooling_supply,
+        add_elec_to_heat_conversion,
+        add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus,
+        add_heat_demand, add_cooling_demand
+    ]
+    supply_min_all_techs: [
+        supply_min, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
+    supply_max_all_techs: [
+        supply_max_high, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
+    supply_max_all_techs_infeasible: [
+        supply_max, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
