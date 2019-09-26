@@ -305,12 +305,15 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``net_import_share_equals``
      - carriers
      - Share of demand met from transmission technologies into a set of locations, on average over the entire model. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly. period.
-   * - ``supply_min``
+   * - ``carrier_prod_min``
      - carriers
      - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
-   * - ``supply_max``
+   * - ``carrier_prod_max``
      - carriers
-     - Minimum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+     - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+   * - ``carrier_prod_equals``
+     - carriers
+     - Exact absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
    * - ``cost_max``
      - costs
      - Maximum total cost from a set of technologies across a set of locations.
@@ -343,19 +346,28 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
      - Minimum share of installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_share_max``
      - –
-     - Maximums share of installed capacity from a set of technologies across a set of locations.
+     - Maximum share of installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_share_equals``
+     - –
+     - Exact share of installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_min``
      - –
      - Minimum installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_max``
      - –
      - Maximum installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_equals``
+     - –
+     - Exact installed capacity from a set of technologies across a set of locations.
    * - ``resource_area_min``
      - –
      - Minimum resource area used by a set of technologies across a set of locations.
    * - ``resource_area_max``
      - –
      - Maximum resource area used by a set of technologies across a set of locations.
+   * - ``resource_area_equals``
+     - –
+     - Exact resource area used by a set of technologies across a set of locations.
 
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.

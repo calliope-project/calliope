@@ -140,9 +140,9 @@ def check_initial(config_model):
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
     # are allowed as carrier tiers
     for key in config_model.as_dict_flat().keys():
-        if ('.carrier_' in key and key.split('.carrier_')[-1].split('.')[0] not
-                in ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3', 'ratios'] and
-                'group_share' not in key):
+        if ('essentials.carrier_' in key
+                and key.split('.carrier_')[-1].split('.')[0] not in
+                ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']):
             errors.append(
                 "Invalid carrier tier found at {}. Only "
                 "'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3'] "

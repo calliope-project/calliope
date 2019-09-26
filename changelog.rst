@@ -6,7 +6,9 @@ Release History
 0.6.5 (dev)
 -----------
 
-|new| New model-wide constraints `supply_min` and `supply_max` which restrict the absolute energy produced by a subgroup of technologies and locations.
+|new| New model-wide constraints `energy_cap_equals`, `resource_area_equals`, and  `energy_cap_share_equals` to add the equality constraint to existing `min/max` group constraints.
+
+|new| New model-wide constraints `carrier_prod_min`, `carrier_prod_max`, and  `carrier_prod_equals` which restrict the absolute energy produced by a subgroup of technologies and locations.
 
 |new| Introduced a `storage_dod` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology.
 

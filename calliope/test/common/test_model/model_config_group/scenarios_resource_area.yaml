@@ -9,6 +9,10 @@ overrides:
         group_constraints.example_resource_area_constraint:
             resource_area_max:  28
 
+    resource_area_equals:
+        group_constraints.example_resource_area_constraint:
+            resource_area_equals:  20
+
     resource_area_max_high:
         group_constraints.example_resource_area_constraint:
             resource_area_max:  46
@@ -41,6 +45,7 @@ overrides:
 scenarios:
     resource_area_max_supply: [resource_area_max, resource_area_cheap_supply]
     resource_area_min_supply:  [resource_area_min, resource_area_expensive_supply]
+    resource_area_equals_supply:  [resource_area_equals, resource_area_expensive_supply]
     resource_area_min_max_supply: [
         resource_area_max_cheap_supply, resource_area_min,
         resource_area_expensive_supply

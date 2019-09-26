@@ -1,0 +1,81 @@
+
+overrides:
+
+    carrier_prod_min:
+        group_constraints.example_carrier_prod_constraint:
+            carrier_prod_min.electricity: 10
+
+    carrier_prod_max:
+        group_constraints.example_carrier_prod_constraint:
+            carrier_prod_max.electricity: 40
+
+    carrier_prod_equals:
+        group_constraints.example_carrier_prod_constraint:
+            carrier_prod_equals.electricity: 30
+
+    carrier_prod_max_high:
+        group_constraints.example_carrier_prod_constraint:
+            carrier_prod_max.electricity: 106
+
+    carrier_prod_max_low:
+        group_constraints.example_carrier_prod_constraint:
+            carrier_prod_max.electricity: 10
+
+    carrier_prod_loc_0:
+        group_constraints.example_carrier_prod_constraint:
+            locs: ["0"]
+
+    carrier_prod_max_cheap_supply:
+        group_constraints.example_carrier_prod_max_constraint:
+            carrier_prod_max.electricity: 10
+            techs: ["cheap_elec_supply"]
+
+    carrier_prod_max_loc_1:
+        group_constraints.example_carrier_prod_max_constraint:
+            locs: ["1"]
+
+    carrier_prod_cheap_supply:
+        group_constraints.example_carrier_prod_constraint:
+            techs: ["cheap_elec_supply"]
+
+    carrier_prod_expensive_supply:
+        group_constraints.example_carrier_prod_constraint:
+            techs: ["expensive_elec_supply"]
+
+    carrier_prod_non_conversion:
+        group_constraints.example_carrier_prod_constraint:
+            carrier_prod_max.heat: 10
+            carrier_prod_max.cool: 5
+            techs: ["cheap_cool_supply", "cheap_heat_supply"]
+
+scenarios:
+    carrier_prod_max_supply: [carrier_prod_max, carrier_prod_cheap_supply]
+    carrier_prod_min_supply:  [carrier_prod_min, carrier_prod_expensive_supply]
+    carrier_prod_equals_supply:  [carrier_prod_equals, carrier_prod_expensive_supply]
+    carrier_prod_min_max_supply: [carrier_prod_max_cheap_supply, carrier_prod_min, carrier_prod_expensive_supply]
+    carrier_prod_max_supply_loc_1: [carrier_prod_max_loc_1, carrier_prod_max_cheap_supply]
+    carrier_prod_min_supply_loc_0: [carrier_prod_min, carrier_prod_loc_0, carrier_prod_expensive_supply]
+    carrier_prod_min_max_supply_loc_0_1: [carrier_prod_min, carrier_prod_max_loc_1, carrier_prod_max_cheap_supply, carrier_prod_loc_0, carrier_prod_expensive_supply]
+    carrier_prod_max_non_conversion_all: [
+        carrier_prod_max, carrier_prod_non_conversion,
+        add_cheap_heat_supply, add_cheap_cooling_supply,
+        add_elec_to_heat_conversion,
+        add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus,
+        add_heat_demand, add_cooling_demand
+    ]
+    carrier_prod_min_all_techs: [
+        carrier_prod_min, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
+    carrier_prod_max_all_techs: [
+        carrier_prod_max_high, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
+    carrier_prod_max_all_techs_infeasible: [
+        carrier_prod_max, add_expensive_elec_transmission, add_elec_storage,
+        add_elec_to_heat_conversion, add_elec_to_heat_cooling_linked_conversion_plus,
+        add_elec_to_heat_cooling_unlinked_conversion_plus, add_heat_demand, add_cooling_demand, add_elec_supply_plus
+    ]
