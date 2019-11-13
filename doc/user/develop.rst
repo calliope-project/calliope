@@ -18,27 +18,27 @@ Installing a development version
 
 As when installing a stable version, using ``conda`` is recommended.
 
-If you only want to track the latest commit, without having a local Calliope
-repository, then download the `base.yml <https://raw.githubusercontent.com/calliope-project/calliope/master/requirements/base.yml>`_ requirements files and run::
+To actively contribute to Calliope development, or simply track the latest development version, you'll instead want to clone our GitHub repository. This will provide you with the master branch in a known location on your local device.
 
-   conda env create -n calliope_latest --file=base.yml
-   conda activate calliope_latest
-   pip install git+https://github.com/calliope-project/calliope.git
+First, clone the repository
 
-To actively contribute to Calliope development, you'll instead want to clone the repository, giving you an editable copy. This will provide you with the master branch in a known location on your local device.
+  .. code-block:: fishshell
 
-First, clone the repository::
+    $ git clone https://github.com/calliope-project/calliope
 
-   git clone https://github.com/calliope-project/calliope
+Using conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``
 
-Using conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``::
 
-   conda env create -f calliope/requirements/base.yml -n calliope_dev
-   conda activate calliope_dev
+  .. code-block:: fishshell
 
-Then install Calliope itself with pip::
+    $ conda env create -f calliope/requirements/base.yml -n calliope_dev
+    $ conda activate calliope_dev
 
-   pip install -e calliope
+Then install Calliope itself with pip
+
+  .. code-block:: fishshell
+
+    $ pip install -e calliope
 
 Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. To install solvers other than GLPK, see our `solver installation instructions <install_solvers>`.
 
@@ -110,38 +110,52 @@ Have a bug fix or feature addition you'd like to see in the next stable release 
 Implementing a change
 ---------------------
 
-When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope master branch and can be 'cloned' to provide you with the repository on your own device::
+When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope master branch and can be 'cloned' to provide you with the repository on your own device
 
-   $ git clone https://github.com/your_username/calliope
+  .. code-block:: fishshell
 
-If you want the local version of your fork to be in the same folder as your local version of the main Calliope repository, then you just need to specify a new directory name::
+    $ git clone https://github.com/your_username/calliope
 
-   $ git clone https://github.com/your_username/calliope your_new_directory_name
+If you want the local version of your fork to be in the same folder as your local version of the main Calliope repository, then you just need to specify a new directory name
+
+  .. code-block:: fishshell
+
+    $ git clone https://github.com/your_username/calliope your_new_directory_name
 
 Following the instructions for :ref:`installing a development environment of Calliope <installing_dev>`, you can create an environment specific to this installation of Calliope.
 
-In making changes to your local version, it's a good idea to create a branch first, to not have your master branch diverge from that of the main Calliope repository::
+In making changes to your local version, it's a good idea to create a branch first, to not have your master branch diverge from that of the main Calliope repository
 
-   $ git branch new-fix-or-feature
+  .. code-block:: fishshell
 
-Then, 'checkout' the branch so that the folder contents are specific to that branch::
+    $ git branch new-fix-or-feature
 
-   $ git checkout new-fix-or-feature
+Then, 'checkout' the branch so that the folder contents are specific to that branch
 
-Finally, push the branch online, so it's existence is also in your remote fork of the Calliope repository (you'll find it in the dropdown list of branches at https://github.com/your_repository/calliope)::
+  .. code-block:: fishshell
 
-   $ git push -u origin new-fix-or-feature
+    $ git checkout new-fix-or-feature
 
-Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in::
+Finally, push the branch online, so it's existence is also in your remote fork of the Calliope repository (you'll find it in the dropdown list of branches at https://github.com/your_repository/calliope)
 
-   $ pytest calliope/test/test_filename.py::ClassName::function_name
+  .. code-block:: fishshell
+
+    $ git push -u origin new-fix-or-feature
+
+Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in
+
+  .. code-block:: fishshell
+
+    $ pytest calliope/test/test_filename.py::ClassName::function_name
 
 If tests are failing, you can debug them by using the pytest arguments ``-x`` (stop at the first failed test) and ``--pdb`` (enter into the debug console).
 
-Once everything has been updated as you'd like (see the contribution checklist below for more on this), you can commit those changes. This stores all edited files in the directory, ready for pushing online::
+Once everything has been updated as you'd like (see the contribution checklist below for more on this), you can commit those changes. This stores all edited files in the directory, ready for pushing online
 
-   $ git add .
-   $ git checkout -m "Short message explaining what has been done in this commit."
+  .. code-block:: fishshell
+
+    $ git add .
+    $ git checkout -m "Short message explaining what has been done in this commit."
 
 If you only want a subset of edited files to go into this commit, you can specify them in the call to `git add`; the period adds all edited files.
 
@@ -149,7 +163,9 @@ If you're happy with your commit(s) then it is time to 'push' everything online 
 
 Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://help.github.com/articles/about-pull-requests/>`_. One of the core Calliope team will review the pull request and either accept it or request some changes before it's merged into the main Calliope repository. If any changes are requested, you can make those changes on your local branch, commit them, and push them online -- your pull request will update automatically with those changes.
 
-Once a pull request has been accepted, you can return your fork back to its master branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project master::
+Once a pull request has been accepted, you can return your fork back to its master branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project master
+
+  .. code-block:: fishshell
 
    $ git remote add upstream https://github.com/calliope-project/calliope
    $ git fetch upstream master

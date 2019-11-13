@@ -79,7 +79,7 @@ The model configuration specifies all aspects of the model to run. It is structu
 
 Besides the model's name (``name``) and the path for CSV time series data (``timeseries_data_path``), group constraints can be set, like ``reserve_margin``.
 
-To speed up model runs, the above example specifies a time subset to run the model over only five days of time series data (``subset_time: ['2005-01-01', '2005-01-05']``)-- this is entirely optional. Usually, a full model will contain at least one year of data, but subsetting time can be useful to speed up a model for testing purposes.
+To speed up model runs, the above example specifies a time subset to run the model over only five days of time series data (:yaml:`subset_time: ['2005-01-01', '2005-01-05']`)-- this is entirely optional. Usually, a full model will contain at least one year of data, but subsetting time can be useful to speed up a model for testing purposes.
 
 .. seealso::
 
@@ -130,11 +130,11 @@ The ``costs`` section gives costs for the technology. Calliope uses the concept 
 
 By default, only the ``monetary`` cost class is used in the objective function, i.e., the default objective is to minimize total costs.
 
-Multiple cost classes can be considered in the objective by setting the `cost_class` key. It must be a dictionary of cost classes and their weights in the objective, e.g. ``objective_options: {'cost_class': {'monetary': 1, 'emissions': 0.1}}``. In this example, monetary costs are summed as usual and emissions are added to this, scaled by 0.1 (emulating a carbon price).
+Multiple cost classes can be considered in the objective by setting the `cost_class` key. It must be a dictionary of cost classes and their weights in the objective, e.g. :yaml:`objective_options: {'cost_class': {'monetary': 1, 'emissions': 0.1}}`. In this example, monetary costs are summed as usual and emissions are added to this, scaled by 0.1 (emulating a carbon price).
 
-To use a different sense (minimize/maximize) you can set `sense`: ``objective_options: {'cost_class': ..., 'sense': 'minimize'}``.
+To use a different sense (minimize/maximize) you can set `sense`: :yaml:`objective_options: {'cost_class': ..., 'sense': 'minimize'}`.
 
-To use a single alternative cost class, disabling the consideration of the default `monetary`, set the weight of the monetary cost class to zero to stop considering it and the weight of another cost class to a non-zero value, e.g. ``objective_options: {'cost_class': {'monetary': 0, 'emissions': 1}}``.
+To use a single alternative cost class, disabling the consideration of the default `monetary`, set the weight of the monetary cost class to zero to stop considering it and the weight of another cost class to a non-zero value, e.g. :yaml:`objective_options: {'cost_class': {'monetary': 0, 'emissions': 1}}`.
 
 .. seealso::
 
@@ -153,7 +153,7 @@ For a model to find a feasible solution, supply must always be able to meet dema
 This will create an ``unmet_demand`` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all energy carriers. It has a very high cost associated with its use, so it will only appear when absolutely necessary.
 
 .. note::
-    When ensuring feasibility, you can also set a `big M value <https://en.wikipedia.org/wiki/Big_M_method>`_ (``run.bigM``). This is the "cost" of unmet demand. It is possible to make model convergence very slow if bigM is set too high. default bigM is 1x10 :sup:`9`, but should be close to the maximum total system cost that you can imagine. This is perhaps closer to 1x10 :sup:`6` for urban scale models.
+    When ensuring feasibility, you can also set a `big M value <https://en.wikipedia.org/wiki/Big_M_method>`_ (:yaml:`run.bigM`). This is the "cost" of unmet demand. It is possible to make model convergence very slow if bigM is set too high. default bigM is 1x10 :sup:`9`, but should be close to the maximum total system cost that you can imagine. This is perhaps closer to 1x10 :sup:`6` for urban scale models.
 
 .. _configuration_timeseries:
 
@@ -161,9 +161,9 @@ This will create an ``unmet_demand`` decision variable in the optimisation, whic
 Time series data
 ----------------
 
-For parameters that vary in time, time series data can be read from CSV files, by specifying ``resource: file=filename.csv`` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
+For parameters that vary in time, time series data can be read from CSV files, by specifying :yaml:`resource: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
-By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: ``resource: file=filename.csv:column``
+By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: file=filename.csv:column`
 
 For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour electricity generation data might look like this:
 
@@ -179,7 +179,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             resource: file=pv_resource.csv
             energy_cap_max: 10000  # kW
 
-By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting ``model.timeseries_dateformat`` based on ``strftime` directives <http://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
+By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <http://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
 For example, the first few lines of a CSV file giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
@@ -198,6 +198,7 @@ For example, the first few lines of a CSV file giving a resource potential for t
 
    * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
    * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
+   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file, i.e. :yaml:`resource: file = filename.csv` is not valid.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
