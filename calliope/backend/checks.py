@@ -34,10 +34,12 @@ def check_operate_params(model_data):
     """
     defaults = UpdateObserverDict(
         initial_yaml_string=model_data.attrs['defaults'],
-        name='defaults', observer=model_data)
+        name='defaults', observer=model_data
+    )
     run_config = UpdateObserverDict(
         initial_yaml_string=model_data.attrs['run_config'],
-        name='run_config', observer=model_data)
+        name='run_config', observer=model_data
+    )
 
     warnings, errors = [], []
     comments = AttrDict()
@@ -66,46 +68,79 @@ def check_operate_params(model_data):
             )
 
         elif _is_in(loc_tech, 'loc_techs_finite_resource'):
+            # Cannot have infinite resource area if linking resource and area (resource_unit = energy_per_area)
+            if _is_in(loc_tech, 'loc_techs_area') and model_data.resource_unit.loc[loc_tech].item() == 'energy_per_area':
+                if _is_in(loc_tech, 'resource_area'):
+                    area = model_data.resource_area.loc[loc_tech].item()
+                else:
+                    area = None
+                if pd.isnull(area) or np.isinf(area):
+                    errors.append(
+                        'Operate mode: User must define a finite resource_area '
+                        '(via resource_area_equals or resource_area_max) for {}, '
+                        'as available resource is linked to resource_area '
+                        '(resource_unit = `energy_per_area`)'.format(loc_tech)
+                    )
+
             # force resource overrides capacity constraints, so set capacity constraints to infinity
             if _is_in(loc_tech, 'force_resource'):
+
                 if not _is_in(loc_tech, 'loc_techs_store'):
-                    energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
-                    warnings.append(
-                        'Energy capacity constraint removed from {} as '
-                        'force_resource is applied'.format(loc_tech)
-                    )
+                    # set resource_area to inf if the resource is linked to energy_cap using energy_per_cap
+                    if model_data.resource_unit.loc[loc_tech].item() == 'energy_per_cap':
+                        if _is_in(loc_tech, 'resource_area'):
+                            resource_area = model_data.resource_area.loc[loc_tech] = np.inf
+                            warnings.append(
+                                'Resource area constraint removed from {} as '
+                                'force_resource is applied and resource is linked '
+                                'to energy flow using `energy_per_cap`'.format(loc_tech)
+                            )
+                    # set energy_cap to inf if the resource is linked to resource_area using energy_per_area
+                    elif model_data.resource_unit.loc[loc_tech].item() == 'energy_per_area':
+                        energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
+                        warnings.append(
+                            'Energy capacity constraint removed from {} as '
+                            'force_resource is applied and resource is linked '
+                            'to energy flow using `energy_per_area`'.format(loc_tech)
+                        )
+                    # set both energy_cap and resource_area to inf if the resource is not linked to anything
+                    elif model_data.resource_unit.loc[loc_tech].item() == 'energy':
+                        if _is_in(loc_tech, 'resource_area'):
+                            resource_area = model_data.resource_area.loc[loc_tech] = np.inf
+                            warnings.append(
+                                'Resource area constraint removed from {} as '
+                                'force_resource is applied and resource is not linked '
+                                'to energy flow (resource_unit = `energy`)'.format(loc_tech)
+                            )
+                        energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
+                        warnings.append(
+                            'Energy capacity constraint removed from {} as '
+                            'force_resource is applied and resource is not linked '
+                            'to energy flow (resource_unit = `energy`)'.format(loc_tech)
+                        )
+
                 if _is_in(loc_tech, 'resource_cap'):
-                    print(loc_tech, model_data.resource_cap.loc_techs_supply_plus)
                     model_data.resource_cap.loc[loc_tech] = np.inf
                     warnings.append(
                         'Resource capacity constraint removed from {} as '
                         'force_resource is applied'.format(loc_tech)
                     )
-            # Cannot have infinite resource area (physically impossible)
-            if _is_in(loc_tech, 'loc_techs_area'):
-                area = model_data.resource_area.loc[loc_tech].item()
-                if pd.isnull(area) or np.isinf(area):
-                    errors.append(
-                        'Operate mode: User must define a finite resource_area '
-                        '(via resource_area_equals or resource_area_max) for {}, '
-                        'as a finite available resource is considered'.format(loc_tech)
-                    )
             # Cannot have consumed resource being higher than energy_cap, as
             # constraints will clash. Doesn't affect supply_plus techs with a
             # storage buffer prior to carrier production.
             elif not _is_in(loc_tech, 'loc_techs_store'):
-                resource_scale = _get_param(loc_tech, 'resource_scale')
-                energy_cap_scale = _get_param(loc_tech, 'energy_cap_scale')
-                resource_eff = _get_param(loc_tech, 'resource_eff')
-                energy_eff = _get_param(loc_tech, 'energy_eff')
-                resource = model_data.resource.loc[loc_tech].values
-                if (energy_cap is not None and
-                    any(resource * resource_scale * resource_eff >
-                        energy_cap * energy_cap_scale * energy_eff)):
-                    errors.append(
-                        'Operate mode: resource is forced to be higher than '
-                        'fixed energy cap for `{}`'.format(loc_tech)
-                    )
+                if energy_cap is not None and not np.isnan(energy_cap):
+                    resource_scale = _get_param(loc_tech, 'resource_scale')
+                    energy_cap_scale = _get_param(loc_tech, 'energy_cap_scale')
+                    resource_eff = _get_param(loc_tech, 'resource_eff')
+                    energy_eff = _get_param(loc_tech, 'energy_eff')
+                    resource = model_data.resource.loc[loc_tech].values
+                    if any(resource * resource_scale * resource_eff >
+                           energy_cap * energy_cap_scale * energy_eff):
+                        errors.append(
+                            'Operate mode: resource is forced to be higher than '
+                            'fixed energy cap for `{}`'.format(loc_tech)
+                        )
         if _is_in(loc_tech, 'loc_techs_store'):
             if _is_in(loc_tech, 'charge_rate'):
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()

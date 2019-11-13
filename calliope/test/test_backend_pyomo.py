@@ -165,8 +165,8 @@ class TestChecks:
 
         # While we're here, check that some warnings are raised
         assert check_error_or_warning(warning, [
-            'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied',
-            'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied',
+            'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+            'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
             'Resource capacity constraint defined and set to infinity for all supply_plus techs',
             'Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run'
         ])
@@ -179,6 +179,77 @@ class TestChecks:
         assert check_error_or_warning(warning, '`demand_share_per_timestep_decision` group constraints cannot be')
         assert 'group_demand_share_per_timestep_decision' not in m._model_data
 
+    @pytest.mark.parametrize('resource_unit', [('energy'), ('energy_per_cap'), ('energy_per_area')])
+    def test_operate_resource_unit_with_resource_area(self, resource_unit):
+        """Different resource unit affects the capacities which are set to infinite"""
+        m = build_model(
+            {'techs.test_supply_elec.constraints.resource_unit': resource_unit,
+             'techs.test_supply_elec.constraints.resource_area_max': 10,
+             'techs.test_supply_elec.constraints.resource': 'file=supply_plus_resource.csv:1'},
+            'simple_supply_and_supply_plus,operate,investment_costs'
+        )
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.run(build_only=True)
+
+        if resource_unit == 'energy':
+            _warnings = [
+                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
+            ]
+        elif resource_unit == 'energy_per_area':
+            _warnings = [
+                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_area`'
+            ]
+        elif resource_unit == 'energy_per_cap':
+            _warnings = [
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`'
+            ]
+        assert check_error_or_warning(warning, _warnings)
+
+    @pytest.mark.parametrize('resource_unit', [('energy'), ('energy_per_cap'), ('energy_per_area')])
+    def test_operate_resource_unit_without_resource_area(self, resource_unit):
+        """Different resource unit affects the capacities which are set to infinite"""
+        m = build_model(
+            {'techs.test_supply_elec.constraints.resource_unit': resource_unit,
+             'techs.test_supply_elec.constraints.resource': 'file=supply_plus_resource.csv:1'},
+            'simple_supply_and_supply_plus,operate,investment_costs'
+        )
+
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            # energy_per_area without a resource_cap will cause an error, which we have to catch here
+            if resource_unit == 'energy_per_area':
+                with pytest.raises(exceptions.ModelError) as error:
+                    m.run(build_only=True)
+            else:
+                m.run(build_only=True)
+
+        if resource_unit == 'energy':
+            _warnings = [
+                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
+            ]
+            not_warnings = [
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
+            ]
+        elif resource_unit == 'energy_per_area':
+            _warnings = [
+                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_area`'
+            ]
+            not_warnings = [
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`'
+            ]
+            # energy_per_area without a resource_cap will cause an error
+            check_error_or_warning(
+                error, 'Operate mode: User must define a finite resource_area '
+                '(via resource_area_equals or resource_area_max) for 0::test_supply_elec'
+            )
+        elif resource_unit == 'energy_per_cap':
+            _warnings = []
+            not_warnings = [
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`',
+                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
+            ]
+        assert check_error_or_warning(warning, _warnings)
+        assert not check_error_or_warning(warning, not_warnings)
 
 class TestBalanceConstraints:
 

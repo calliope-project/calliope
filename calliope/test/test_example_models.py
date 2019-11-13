@@ -131,8 +131,8 @@ class TestNationalScaleExampleModelOperate:
             model.run()
 
         expected_warnings = [
-            'Energy capacity constraint removed from region1::demand_power as force_resource is applied',
-            'Energy capacity constraint removed from region2::demand_power as force_resource is applied',
+            'Energy capacity constraint removed from region1::demand_power as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+            'Energy capacity constraint removed from region2::demand_power as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
             'Resource capacity constraint defined and set to infinity for all supply_plus techs'
         ]
 
@@ -385,7 +385,8 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         expected_warnings = [
             'Energy capacity constraint removed',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs'
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
+            'Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run'
         ]
 
         assert check_error_or_warning(excinfo, expected_warnings)
