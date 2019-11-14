@@ -61,7 +61,10 @@ def check_operate_params(model_data):
     for loc_tech in model_data.loc_techs.values:
         energy_cap = model_data.energy_cap.loc[loc_tech].item()
         # Must have energy_cap defined for all relevant techs in the model
-        if (pd.isnull(energy_cap) or np.isinf(energy_cap)) and not _is_in(loc_tech, 'force_resource'):
+        if ((pd.isnull(energy_cap) or np.isinf(energy_cap)) and
+                (not _is_in(loc_tech, 'force_resource') or
+                 (_is_in(loc_tech, 'force_resource') and
+                  model_data.force_resource.loc[loc_tech].item() != 1))):
             errors.append(
                 'Operate mode: User must define a finite energy_cap (via '
                 'energy_cap_equals or energy_cap_max) for {}'.format(loc_tech)
@@ -83,7 +86,7 @@ def check_operate_params(model_data):
                     )
 
             # force resource overrides capacity constraints, so set capacity constraints to infinity
-            if _is_in(loc_tech, 'force_resource'):
+            if _is_in(loc_tech, 'force_resource') and model_data.force_resource.loc[loc_tech].item() == 1:
 
                 if not _is_in(loc_tech, 'loc_techs_store'):
                     # set resource_area to inf if the resource is linked to energy_cap using energy_per_cap

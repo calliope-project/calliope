@@ -4,6 +4,7 @@ import pyomo.core as po
 import os
 import collections
 import logging
+from itertools import product
 
 from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
@@ -179,14 +180,15 @@ class TestChecks:
         assert check_error_or_warning(warning, '`demand_share_per_timestep_decision` group constraints cannot be')
         assert 'group_demand_share_per_timestep_decision' not in m._model_data
 
-    @pytest.mark.parametrize('resource_unit', [('energy'), ('energy_per_cap'), ('energy_per_area')])
-    def test_operate_resource_unit_with_resource_area(self, resource_unit):
+    @pytest.mark.parametrize('resource_unit,force',
+        list(product(('energy', 'energy_per_cap', 'energy_per_area'), (True, False))))
+    def test_operate_resource_unit_with_resource_area(self, resource_unit, force):
         """Different resource unit affects the capacities which are set to infinite"""
         m = build_model(
-            {'techs.test_supply_elec.constraints.resource_unit': resource_unit,
-             'techs.test_supply_elec.constraints.resource_area_max': 10,
-             'techs.test_supply_elec.constraints.resource': 'file=supply_plus_resource.csv:1'},
-            'simple_supply_and_supply_plus,operate,investment_costs'
+            {'techs.test_supply_elec.constraints': {
+                'resource_unit': resource_unit, 'resource_area_max': 10,
+                'resource': 'file=supply_plus_resource.csv:1', 'force_resource': force
+            }}, 'simple_supply_and_supply_plus,operate,investment_costs'
         )
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)
@@ -204,15 +206,20 @@ class TestChecks:
             _warnings = [
                 'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`'
             ]
-        assert check_error_or_warning(warning, _warnings)
+
+        if force is True:
+            assert check_error_or_warning(warning, _warnings)
+        elif force is False:
+            assert ~check_error_or_warning(warning, _warnings)
 
     @pytest.mark.parametrize('resource_unit', [('energy'), ('energy_per_cap'), ('energy_per_area')])
     def test_operate_resource_unit_without_resource_area(self, resource_unit):
         """Different resource unit affects the capacities which are set to infinite"""
         m = build_model(
-            {'techs.test_supply_elec.constraints.resource_unit': resource_unit,
-             'techs.test_supply_elec.constraints.resource': 'file=supply_plus_resource.csv:1'},
-            'simple_supply_and_supply_plus,operate,investment_costs'
+            {'techs.test_supply_elec.constraints': {
+                'resource_unit': resource_unit, 'force_resource': True,
+                'resource': 'file=supply_plus_resource.csv:1',
+            }}, 'simple_supply_and_supply_plus,operate,investment_costs'
         )
 
         with pytest.warns(exceptions.ModelWarning) as warning:
