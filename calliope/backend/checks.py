@@ -58,6 +58,17 @@ def check_operate_params(model_data):
         except (KeyError, AttributeError):
             return False
 
+    def _set_inf_and_warn(loc_tech, var, warnings, warning_text):
+        if np.isinf(model_data[var].loc[loc_tech].item()):
+            return (np.inf, warnings)
+        elif model_data[var].loc[loc_tech].isnull().item():
+            var_name = model_data[var].loc[loc_tech] = np.inf
+            return (var_name, warnings)
+        else:
+            var_name = model_data[var].loc[loc_tech] = np.inf
+            warnings.append(warning_text)
+            return var_name, warnings
+
     for loc_tech in model_data.loc_techs.values:
         energy_cap = model_data.energy_cap.loc[loc_tech].item()
         # Must have energy_cap defined for all relevant techs in the model
@@ -92,16 +103,16 @@ def check_operate_params(model_data):
                     # set resource_area to inf if the resource is linked to energy_cap using energy_per_cap
                     if model_data.resource_unit.loc[loc_tech].item() == 'energy_per_cap':
                         if _is_in(loc_tech, 'resource_area'):
-                            resource_area = model_data.resource_area.loc[loc_tech] = np.inf
-                            warnings.append(
+                            resource_area, warnings = _set_inf_and_warn(
+                                loc_tech, 'resource_area', warnings,
                                 'Resource area constraint removed from {} as '
                                 'force_resource is applied and resource is linked '
                                 'to energy flow using `energy_per_cap`'.format(loc_tech)
                             )
                     # set energy_cap to inf if the resource is linked to resource_area using energy_per_area
                     elif model_data.resource_unit.loc[loc_tech].item() == 'energy_per_area':
-                        energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
-                        warnings.append(
+                        energy_cap, warnings = _set_inf_and_warn(
+                            loc_tech, 'energy_cap', warnings,
                             'Energy capacity constraint removed from {} as '
                             'force_resource is applied and resource is linked '
                             'to energy flow using `energy_per_area`'.format(loc_tech)
@@ -109,22 +120,22 @@ def check_operate_params(model_data):
                     # set both energy_cap and resource_area to inf if the resource is not linked to anything
                     elif model_data.resource_unit.loc[loc_tech].item() == 'energy':
                         if _is_in(loc_tech, 'resource_area'):
-                            resource_area = model_data.resource_area.loc[loc_tech] = np.inf
-                            warnings.append(
+                            resource_area, warnings = _set_inf_and_warn(
+                                loc_tech, 'resource_area', warnings,
                                 'Resource area constraint removed from {} as '
                                 'force_resource is applied and resource is not linked '
                                 'to energy flow (resource_unit = `energy`)'.format(loc_tech)
                             )
-                        energy_cap = model_data.energy_cap.loc[loc_tech] = np.inf
-                        warnings.append(
+                        energy_cap, warnings = _set_inf_and_warn(
+                            loc_tech, 'energy_cap', warnings,
                             'Energy capacity constraint removed from {} as '
                             'force_resource is applied and resource is not linked '
                             'to energy flow (resource_unit = `energy`)'.format(loc_tech)
                         )
 
                 if _is_in(loc_tech, 'resource_cap'):
-                    model_data.resource_cap.loc[loc_tech] = np.inf
-                    warnings.append(
+                    resource_cap, warnings = _set_inf_and_warn(
+                        loc_tech, 'resource_cap', warnings,
                         'Resource capacity constraint removed from {} as '
                         'force_resource is applied'.format(loc_tech)
                     )

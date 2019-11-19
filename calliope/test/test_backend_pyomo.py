@@ -164,14 +164,6 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)  # will fail to complete run if there's a problem
 
-        # While we're here, check that some warnings are raised
-        assert check_error_or_warning(warning, [
-            'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
-            'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
-            'Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run'
-        ])
-
     def test_operate_group_demand_share_per_timestep_decision(self):
         """Cannot have group_demand_share_per_timestep_decision in operate mode"""
         m = build_model({}, 'simple_supply,investment_costs,operate,enable_group_demand_share_per_timestep_decision')
@@ -235,14 +227,18 @@ class TestChecks:
                 'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
             ]
             not_warnings = [
-                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+                'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+                'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
             ]
         elif resource_unit == 'energy_per_area':
             _warnings = [
                 'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_area`'
             ]
             not_warnings = [
-                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`'
+                'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`',
+                'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+                'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
             ]
             # energy_per_area without a resource_cap will cause an error
             check_error_or_warning(
@@ -253,7 +249,9 @@ class TestChecks:
             _warnings = []
             not_warnings = [
                 'Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`',
-                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
+                'Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+                'Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
+                'Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)'
             ]
         assert check_error_or_warning(warning, _warnings)
         assert not check_error_or_warning(warning, not_warnings)
