@@ -130,13 +130,9 @@ class TestNationalScaleExampleModelOperate:
                 scenario='operate')
             model.run()
 
-        expected_warnings = [
-            'Energy capacity constraint removed from region1::demand_power as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
-            'Energy capacity constraint removed from region2::demand_power as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs'
-        ]
+        expected_warning = 'Resource capacity constraint defined and set to infinity for all supply_plus techs'
 
-        assert check_error_or_warning(excinfo, expected_warnings)
+        assert check_error_or_warning(excinfo, expected_warning)
         assert all(model.results.timesteps == pd.date_range('2005-01', '2005-01-03 23:00:00', freq='H'))
 
     def test_nationalscale_example_results_cbc(self):

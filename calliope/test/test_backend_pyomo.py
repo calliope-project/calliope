@@ -172,6 +172,43 @@ class TestChecks:
         assert check_error_or_warning(warning, '`demand_share_per_timestep_decision` group constraints cannot be')
         assert 'group_demand_share_per_timestep_decision' not in m._model_data
 
+    @pytest.mark.parametrize('force', (True, False))
+    def test_operate_energy_cap_min_use(self, force):
+        """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
+        m = build_model(
+            {'techs.test_supply_elec.constraints': {
+                'force_resource': force, 'energy_cap_min_use': 0.1,
+                'resource': 'file=supply_plus_resource.csv:1',
+                'energy_cap_equals': np.inf
+            }}, 'simple_supply_and_supply_plus,operate,investment_costs'
+        )
+
+        with pytest.raises(exceptions.ModelError) as error:
+            with pytest.warns(exceptions.ModelWarning) as warning:
+                m.run(build_only=True)
+
+        assert check_error_or_warning(error, ['Operate mode: User must define a finite energy_cap'])
+
+    @pytest.mark.parametrize('force', (True, False))
+    def test_operate_energy_cap_resource_unit(self, force):
+        """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
+        m = build_model(
+            {'techs.test_supply_elec.constraints': {
+                'force_resource': force, 'resource_unit': 'energy_per_cap',
+                'resource': 'file=supply_plus_resource.csv:1',
+                'energy_cap_equals': np.inf
+            }}, 'simple_supply_and_supply_plus,operate,investment_costs'
+        )
+
+        if force is True:
+            with pytest.raises(exceptions.ModelError) as error:
+                with pytest.warns(exceptions.ModelWarning) as warning:
+                    m.run(build_only=True)
+            assert check_error_or_warning(error, ['Operate mode: User must define a finite energy_cap'])
+        elif force is False:
+            with pytest.warns(exceptions.ModelWarning) as warning:
+                m.run(build_only=True)
+
     @pytest.mark.parametrize('resource_unit,force',
         list(product(('energy', 'energy_per_cap', 'energy_per_area'), (True, False))))
     def test_operate_resource_unit_with_resource_area(self, resource_unit, force):

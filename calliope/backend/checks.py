@@ -72,10 +72,10 @@ def check_operate_params(model_data):
     for loc_tech in model_data.loc_techs.values:
         energy_cap = model_data.energy_cap.loc[loc_tech].item()
         # Must have energy_cap defined for all relevant techs in the model
-        if ((pd.isnull(energy_cap) or np.isinf(energy_cap)) and
-                (not _is_in(loc_tech, 'force_resource') or
-                 (_is_in(loc_tech, 'force_resource') and
-                  model_data.force_resource.loc[loc_tech].item() != 1))):
+        if ((np.isinf(energy_cap) or np.isnan(energy_cap)) and
+                (_is_in(loc_tech, 'energy_cap_min_use') or
+                 (_get_param(loc_tech, 'force_resource') and
+                  _get_param(loc_tech, 'resource_unit') == 'energy_per_cap'))):
             errors.append(
                 'Operate mode: User must define a finite energy_cap (via '
                 'energy_cap_equals or energy_cap_max) for {}'.format(loc_tech)
