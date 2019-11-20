@@ -328,7 +328,7 @@ def process_techs(config_model):
             if tech_result.inheritance[-1] in ['supply', 'supply_plus']:
                 tech_result.essentials.carrier_in = 'resource'
             elif tech_result.inheritance[-1] in ['demand', 'transmission',
-                                                 'storage']:
+                                                 'storage', 'storage_plus']:
                 try:
                     tech_result.essentials.carrier_in = \
                         tech_result.essentials.carrier
@@ -350,7 +350,7 @@ def process_techs(config_model):
             if tech_result.inheritance[-1] == 'demand':
                 tech_result.essentials.carrier_out = 'resource'
             elif tech_result.inheritance[-1] in ['supply', 'supply_plus',
-                                                 'transmission', 'storage']:
+                                                 'transmission', 'storage', 'storage_plus']:
                 try:
                     tech_result.essentials.carrier_out = \
                         tech_result.essentials.carrier

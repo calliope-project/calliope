@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from calliope import exceptions
+from calliope.backend.pyomo.util import get_param
 
 
 def add_lookup_arrays(data, model_run):
@@ -25,7 +26,7 @@ def add_lookup_arrays(data, model_run):
     """
     data_dict = dict(
         lookup_loc_carriers=lookup_loc_carriers(model_run),
-        lookup_loc_techs=lookup_loc_techs_non_conversion(model_run)
+        lookup_loc_techs=lookup_loc_techs_single_carrier(model_run)
     )
 
     data = data.merge(xr.Dataset.from_dict(data_dict))
@@ -36,11 +37,15 @@ def add_lookup_arrays(data, model_run):
     if model_run.sets['loc_techs_conversion_plus']:
         data = lookup_loc_techs_conversion_plus(data, model_run)
 
+    if model_run.sets['loc_techs_storage_plus']:
+        data = lookup_loc_techs_storage_plus(data, model_run)
+
     if model_run.sets['loc_techs_export']:
         data = lookup_loc_techs_export(data)
 
     if model_run.sets['loc_techs_area']:
         data = lookup_loc_techs_area(data)
+
 
     return data
 
@@ -67,16 +72,16 @@ def lookup_loc_carriers(model_run):
     return lookup_loc_carriers_dict
 
 
-def lookup_loc_techs_non_conversion(model_run):
+def lookup_loc_techs_single_carrier(model_run):
     """
     loc_techs be linked to their loc_tech_carriers, based on their carrier_in or
     carrier_out attribute. E.g. `X1::ccgt` will be linked to `X1::ccgt::power`
     as carrier_out for the ccgt is `power`.
     """
-    lookup_loc_techs_dict = dict(dims=['loc_techs_non_conversion'])
+    lookup_loc_techs_dict = dict(dims=['loc_techs_single_carrier'])
 
     data = []
-    for loc_tech in model_run.sets['loc_techs_non_conversion']:
+    for loc_tech in model_run.sets['loc_techs_single_carrier']:
         # For any non-conversion technology, there is only one carrier (either
         # produced or consumed)
         loc_tech_carrier = list(set(
@@ -205,6 +210,59 @@ def lookup_loc_techs_conversion_plus(dataset, model_run):
 
     return dataset
 
+def lookup_loc_techs_storage_plus(dataset, model_run):
+    """
+    Storage plus technologies are seperated from other technologies
+    as there can be more than one carrier associated with a single loc_tech. Here,
+    the link is made per carrier tier (`out`, `in`, `out_2`, `in_2`, `out_3`,
+    `in_3` are the possible carrier tiers). Multiple carriers may be associated
+    with a single loc_tech tier, so a comma delimited string will be created.
+    """
+    # Get the string name for a loc_tech which includes all the carriers in
+    # and out associated with that technology (for storage_plus technologies)
+    carrier_tiers = model_run.sets['carrier_tiers']
+    loc_techs_storage_plus = model_run.sets['loc_techs_storage_plus']
+
+    loc_techs_storage_plus_array = (
+        np.empty((len(loc_techs_storage_plus), len(carrier_tiers)), dtype=np.object)
+    )
+    primary_carrier_data = {'_in': [], '_out': []}
+    for loc_tech_idx, loc_tech in enumerate(loc_techs_storage_plus):
+        _tech = loc_tech.split('::', 1)[1]
+        for k, v in primary_carrier_data.items():
+            primary_carrier = (
+                model_run.techs[_tech].essentials.get('primary_carrier' + k, '')
+            )
+            v.append(loc_tech + "::" + primary_carrier)
+        for carrier_tier_idx, carrier_tier in enumerate(carrier_tiers):
+            # create a list of carriers for the given technology that fits
+            # the current carrier_tier.
+            relevant_carriers = model_run.techs[_tech].essentials.get(
+                'carrier_' + carrier_tier, None)
+
+            if relevant_carriers and isinstance(relevant_carriers, list):
+                loc_tech_carriers = ','.join([loc_tech + "::" + i
+                                              for i in relevant_carriers])
+            elif relevant_carriers:
+                loc_tech_carriers = loc_tech + "::" + relevant_carriers
+            else:
+                continue
+            loc_techs_storage_plus_array[loc_tech_idx, carrier_tier_idx] = loc_tech_carriers
+    for k, v in primary_carrier_data.items():
+        primary_carrier_data_array = xr.DataArray.from_dict({
+            'data': v, 'dims': ['loc_techs_storage_plus']
+        })
+        dataset['lookup_primary_loc_tech_carriers' + k] = primary_carrier_data_array
+    dataset['lookup_loc_techs_storage_plus'] = xr.DataArray(
+        data=loc_techs_storage_plus_array,
+        dims=['loc_techs_storage_plus', 'carrier_tiers'],
+        coords={
+            'loc_techs_storage_plus': loc_techs_storage_plus,
+            'carrier_tiers': carrier_tiers
+        }
+    )
+    return dataset
+
 
 def lookup_loc_techs_export(dataset):
     """
@@ -275,3 +333,4 @@ def lookup_clusters(dataset):
         dataset['lookup_datestep_last_cluster_timestep'] = xr.DataArray.from_dict(last_timesteps)
 
     return dataset
+

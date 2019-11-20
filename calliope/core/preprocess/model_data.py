@@ -21,7 +21,7 @@ from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.core.preprocess import checks
 from calliope.core.preprocess.util import split_loc_techs_transmission, concat_iterable
-from calliope.core.preprocess.time import add_time_dimension
+from calliope.core.preprocess.time import add_time_dimension, add_storage_time_lookup
 from calliope.core.preprocess.lookup import add_lookup_arrays
 
 
@@ -69,13 +69,15 @@ def build_model_data(model_run, debug=False):
     data_dict.update(group_constraints_to_dataset(model_run))
 
     data = data.merge(xr.Dataset.from_dict(data_dict))
-
     data = add_lookup_arrays(data, model_run)
 
     if debug:
         data_pre_time = data.copy(deep=True)
 
     data = add_time_dimension(data, model_run)
+
+    if model_run.sets['loc_techs_storage_time_min_per_timestep']:
+        data = add_storage_time_lookup(data, model_run)
 
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset
@@ -127,6 +129,12 @@ def constraints_to_dataset(model_run):
             return 'loc_techs_supply_plus'
         elif 'resource' in constraint: # i.e. everything with 'resource' in the name that isn't resource_cap
             return 'loc_techs_finite_resource'
+        elif 'storage_cap_equals_per_timestep' in constraint:
+            return 'loc_techs_storage_plus_cap_per_time'
+        elif 'storage_time_min_per_timestep' in constraint:
+            return 'loc_techs_storage_time_min_per_timestep'
+        elif 'storage_time_min' in constraint:
+            return 'loc_techs_storage_time_min'
         elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:
@@ -258,7 +266,7 @@ def carrier_specific_to_dataset(model_run):
     """
     Extract carrier information from the processed dictionary (model.model_run)
     and return an xarray Dataset with DataArray variables describing carrier_in,
-    carrier_out, and carrier_ratio (for conversion plus technologies) information.
+    carrier_out, and carrier_ratio (for conversion plus and storage plus technologies) information.
 
     Parameters
     ----------
@@ -271,19 +279,19 @@ def carrier_specific_to_dataset(model_run):
 
     """
     carrier_tiers = model_run.sets['carrier_tiers']
-    loc_tech_dict = {k: [] for k in model_run.sets['loc_techs_conversion_plus']}
+    loc_tech_dict = {k: [] for k in model_run.sets['loc_techs_conversion_plus'] or model_run.sets['loc_techs_storage_plus']}    # loc_tech_dict[k] = [] for k in model_run.sets['loc_techs_conversion_plus']
     data_dict = dict()
     # Set information per carrier tier ('out', 'out_2', 'in', etc.)
     # for conversion-plus technologies
-    if model_run.sets['loc_techs_conversion_plus']:
+    if any([model_run.sets['loc_techs_conversion_plus'], model_run.sets['loc_techs_storage_plus']]):
         # carrier ratios are the floating point numbers used to compare one
         # carrier_in/_out value with another carrier_in/_out value
         data_dict['carrier_ratios'] = dict(
-            dims=['carrier_tiers', 'loc_tech_carriers_conversion_plus'], data=[]
+            dims=['carrier_tiers', 'loc_tech_carriers_carrier_ratios'], data=[]
         )
         for carrier_tier in carrier_tiers:
             data = []
-            for loc_tech_carrier in model_run.sets['loc_tech_carriers_conversion_plus']:
+            for loc_tech_carrier in model_run.sets['loc_tech_carriers_carrier_ratios']:
                 loc, tech, carrier = loc_tech_carrier.split('::')
                 carrier_ratio = (
                     model_run.locations[loc].techs[tech].constraints.get_key(
@@ -301,7 +309,6 @@ def carrier_specific_to_dataset(model_run):
                      for c in model_run.sets['carriers']],
             'dims': 'carriers'
         }
-
     return data_dict
 
 

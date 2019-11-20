@@ -85,6 +85,19 @@ def generate_constraint_sets(model_run):
         ) is not None
     ]
 
+    # storage_plus.py
+    constraint_sets['loc_techs_storage_plus_max_constraint'] = sets.loc_techs_storage_plus_cap_per_time
+    constraint_sets['loc_techs_storage_plus_discharge_depth_constraint'] = [ 
+        i for i in sets.loc_techs_storage_plus
+        if any([
+            constraint_exists(model_run, i, 'constraints.storage_discharge_depth'),
+            constraint_exists(model_run, i, 'constraints.storage_discharge_depth_per_timestep')
+            ])
+    ]
+    constraint_sets['loc_techs_storage_plus_balance_constraint'] = sets.loc_techs_storage_plus
+    constraint_sets['loc_techs_storage_plus_shared_storage_constraint'] = sets.loc_techs_storage_plus_shared_storage
+    constraint_sets['loc_techs_storage_plus_storage_time_min_constraint'] = sets.loc_techs_storage_plus_storage_time_min
+
     # capacity.py
     constraint_sets['loc_techs_storage_capacity_constraint'] = [
         i for i in sets.loc_techs_store if i not in sets.loc_techs_milp

@@ -34,6 +34,7 @@ Location-technology subsets
 Technology groups
 
 * loc_techs_storage
+* loc_techs_storage_plus
 * loc_techs_transmission
 * loc_techs_demand
 * loc_techs_supply
@@ -45,6 +46,11 @@ Subsets based on active constraints
 
 * loc_techs_area
 * loc_techs_store
+* loc_techs_storage_plus_cap_per_time
+* loc_techs_storage_plus_discharge_depth_per_time
+* loc_techs_storage_time_min_per_timestep
+* loc_techs_storage_plus_shared_storage
+* loc_techs_storage_plus_storage_time_min
 * loc_techs_finite_resource
 * loc_techs_finite_resource_supply
 * loc_techs_finite_resource_demand
@@ -67,6 +73,8 @@ Subsets that include carrier
 * loc_tech_carriers_prod
 * loc_tech_carriers_con
 * loc_tech_carriers_conversion_plus
+* loc_tech_carriers_storage_plus
+* loc_tech_carriers_carrier_ratios
 * loc_tech_carriers_export
 * loc_carriers
 
@@ -119,7 +127,7 @@ def generate_simple_sets(model_run):
     sets.locs = set(model_run.locations.keys())
 
     sets.techs_non_transmission = set()
-    tech_groups = ['demand', 'supply', 'supply_plus', 'conversion', 'conversion_plus', 'storage']
+    tech_groups = ['demand', 'supply', 'supply_plus', 'conversion', 'conversion_plus', 'storage', 'storage_plus']
     for tech_group in tech_groups:
         sets['techs_{}'.format(tech_group)] = set(
             k for k, v in model_run.techs.items() if v.inheritance[-1] == tech_group
@@ -249,7 +257,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     ##
 
     for group in [
-            'storage', 'demand', 'supply', 'supply_plus',
+            'storage', 'storage_plus', 'demand', 'supply', 'supply_plus',
             'conversion', 'conversion_plus']:
         tech_set = set(
             k for k in sets.loc_techs_non_transmission
@@ -257,10 +265,11 @@ def generate_loc_tech_sets(model_run, simple_sets):
         )
         sets['loc_techs_{}'.format(group)] = tech_set
 
-    sets.loc_techs_non_conversion = set(
+    sets.loc_techs_single_carrier = set(
         k for k in sets.loc_techs_non_transmission
         if k not in sets.loc_techs_conversion and
-        k not in sets.loc_techs_conversion_plus
+        k not in sets.loc_techs_conversion_plus and
+        k not in sets.loc_techs_storage_plus
     ) | sets.loc_techs_transmission
 
     # Techs that introduce energy into the system
@@ -292,13 +301,39 @@ def generate_loc_tech_sets(model_run, simple_sets):
         )
     )
 
-    # Technologies that define storage, which can include `supply_plus`
-    # and `storage` groups.
+    # Technologies that define storage, which can include `supply_plus`,
+    # `storage` and `storage_plus` groups.
     sets.loc_techs_store = set(
         k for k in sets.loc_techs_supply_plus
         if any('storage_' in i
                for i in loc_techs_config[k].constraints.keys_nested())
-    ) | sets.loc_techs_storage
+    ) | sets.loc_techs_storage | sets.loc_techs_storage_plus 
+
+    sets.loc_techs_storage_plus_cap_per_time = set(
+        k for k in sets.loc_techs_storage_plus
+        if loc_techs_config[k].constraints.get('storage_cap_equals_per_timestep')
+    )
+
+    sets.loc_techs_storage_plus_discharge_depth_per_time = set(
+        k for k in sets.loc_techs_storage_plus
+        if loc_techs_config[k].constraints.get('storage_discharge_depth_per_timestep')
+    )
+
+    sets.loc_techs_storage_time_min_per_timestep = set(
+        k for k in sets.loc_techs_storage_plus
+        if loc_techs_config[k].constraints.get('storage_time_min_per_timestep')
+    )
+
+    sets.loc_techs_storage_plus_shared_storage = set(
+        k for k in sets.loc_techs_storage_plus
+        if loc_techs_config[k].constraints.get('shared_storage_tech')
+    )
+
+    sets.loc_techs_storage_plus_storage_time_min = set(
+        k for k in sets.loc_techs_storage_plus
+        if any('storage_time_min_' in i
+               for i in loc_techs_config[k].constraints.keys_nested())
+    )
 
     # technologies that specify a finite resource
     sets.loc_techs_finite_resource = set(
@@ -536,6 +571,17 @@ def generate_loc_tech_sets(model_run, simple_sets):
         if k.rsplit('::', 1)[0] in sets.loc_techs_conversion_plus
     )
 
+    # loc_tech_carriers for `storage_plus` technologies
+    sets.loc_tech_carriers_storage_plus = set(
+        k for k in sets.loc_tech_carriers_con | sets.loc_tech_carriers_prod
+        if k.rsplit('::', 1)[0] in sets.loc_techs_storage_plus
+    )
+
+    # loc_tech_carriers for technologies with potentially more than one carrier
+    sets.loc_tech_carriers_carrier_ratios = set(
+        k for k in sets.loc_tech_carriers_con | sets.loc_tech_carriers_prod
+        if k.rsplit('::', 1)[0] in sets.loc_techs_storage_plus | sets.loc_techs_conversion_plus
+    )
     # loc_carrier combinations that exist with either a con or prod tech
     sets.loc_carriers = set(
         '{0}::{2}'.format(*k.split('::'))
