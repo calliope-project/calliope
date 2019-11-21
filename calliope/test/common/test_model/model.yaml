@@ -77,6 +77,19 @@ techs:
             energy_eff: 0.9
             storage_loss: 0.01
 
+            
+    test_storage_plus:
+        essentials:
+            name: Storage plus tech
+            carrier_in: electricity
+            carrier_out: [electricity, virtual_electricity]
+            parent: storage_plus
+        constraints:
+            storage_cap_max: 15
+            energy_cap_per_storage_cap_max: 0.5
+            energy_eff: 0.9
+            storage_loss: 0.01
+
     test_conversion:
         essentials:
             name: Conversion tech

@@ -331,7 +331,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
 
     sets.loc_techs_storage_plus_storage_time_min = set(
         k for k in sets.loc_techs_storage_plus
-        if any('storage_time_min_' in i
+        if any('storage_time_min' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
 

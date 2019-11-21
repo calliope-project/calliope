@@ -256,7 +256,7 @@ def add_zero_carrier_ratio_sets(model_data):
 
     zero_dims = zero_dims.stack(
         loc_tech_carrier_tiers_conversion_plus_zero_ratio=[
-            'loc_tech_carriers_conversion_plus', 'carrier_tiers'
+            'loc_tech_carriers_carrier_ratios', 'carrier_tiers'
         ]
     ).dropna('loc_tech_carrier_tiers_conversion_plus_zero_ratio', how='all')
 

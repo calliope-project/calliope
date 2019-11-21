@@ -123,8 +123,13 @@ def split_loc_techs(data_var, return_as='DataArray'):
 
     # carrier_prod, carrier_con, and carrier_export will return an index_list
     # of size 3, all others will be an index list of size 2
-    possible_names = ['loc', 'tech', 'carrier']
-    names = [i + 's' for i in possible_names if i in loc_tech_dim]
+    possible_names = {
+        'loc_tech_carriers': ['locs', 'techs', 'carriers'],
+        'loc_carriers': ['locs', 'carriers'],
+        'loc_techs': ['locs', 'techs']
+    }
+    # Take first result, as we actually only expect 1 result
+    names = [v for k, v in possible_names.items() if loc_tech_dim.startswith(k)][0]
 
     data_var_midx = pd.MultiIndex.from_tuples(index_list, names=names)
 

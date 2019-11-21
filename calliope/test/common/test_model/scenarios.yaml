@@ -175,6 +175,36 @@ overrides:
                     test_demand_heat:
 
         links.0,1.exists: false
+    
+    simple_storage_plus:
+        locations:
+            0:
+                techs:
+                    test_supply_elec:
+                    test_supply_gas:
+                    test_supply_coal:
+                    test_storage_plus:
+                    test_demand_elec:
+                    test_demand_heat:
+
+        links.0,1.exists: false
+
+
+    storage_plus_shared_storage:
+        locations:
+            0:
+                techs:
+                    test_supply_elec:
+                    test_supply_gas:
+                    test_supply_coal:
+                    test_storage_plus:
+                    test_demand_elec:
+                    test_demand_heat:
+            1:
+                techs: 
+                    test_storage_plus:
+
+        links.0,1.exists: true
 
     simple_storage:
         locations:

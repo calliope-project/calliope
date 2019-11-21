@@ -134,7 +134,7 @@ def constraints_to_dataset(model_run):
         elif 'storage_time_min_per_timestep' in constraint:
             return 'loc_techs_storage_time_min_per_timestep'
         elif 'storage_time_min' in constraint:
-            return 'loc_techs_storage_time_min'
+            return 'loc_techs_storage_plus_storage_time_min'
         elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:

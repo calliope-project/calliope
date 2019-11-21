@@ -56,7 +56,7 @@ def load_constraints(backend_model):
         backend_model.storage_plus_time_min_constraint = po.Constraint(
             backend_model.loc_techs_storage_plus_storage_time_min_constraint,
             backend_model.timesteps,
-            rule=storage_plus_time_min_per_time_constraint_rule
+            rule=storage_plus_time_min_constraint_rule
         )
 
     if 'loc_techs_storage_plus_shared_storage_constraint' in sets:
@@ -73,14 +73,14 @@ def storage_plus_max_constraint_rule(backend_model, loc_tech, timestep):
 
 def storage_plus_discharge_depth_constraint_rule(backend_model, loc_tech, timestep):
 # Storage level must be greater than or equal to the discharge depth
-    if loc_tech in backend_model.loc_techs_storage_plus_cap_per_time:
+    try:# loc_tech in backend_model.loc_techs_storage_plus_cap_per_time: # this set might not exist!
         storage_cap = backend_model.storage_cap_equals_per_timestep[loc_tech, timestep]
-    else:
+    except:
         storage_cap = backend_model.storage_cap[loc_tech]
     
-    if loc_tech in backend_model.loc_techs_storage_plus_discharge_depth_per_time:
+    try: # loc_tech in backend_model.loc_techs_storage_plus_discharge_depth_per_time:
         sdd = backend_model.storage_discharge_depth_per_timestep[loc_tech, timestep]
-    else:
+    except:
         sdd = get_param(backend_model, 'storage_discharge_depth', loc_tech)
 
     return backend_model.storage[loc_tech, timestep] >= sdd * storage_cap
@@ -134,7 +134,7 @@ def storage_plus_balance_constraint_rule(backend_model, loc_tech, timestep):
     return (backend_model.storage[loc_tech, timestep] == storage_previous_step - carrier_con - carrier_prod)
 
 
-def storage_plus_time_min_per_time_constraint_rule(backend_model, loc_tech, timestep):
+def storage_plus_time_min_constraint_rule(backend_model, loc_tech, timestep):
 
     # if you have set a storage min you have to say what the primary carrier is which this applies to
     # needs to be in terms of loc_tech_carriers
@@ -148,25 +148,25 @@ def storage_plus_time_min_per_time_constraint_rule(backend_model, loc_tech, time
     )[0] # change this so it looks for primary carrier instead - should amount to the same thing
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier_in, timestep]
     
-    if loc_tech in backend_model.loc_techs_storage_time_min_per_timestep:
+    try: # loc_tech in backend_model.loc_techs_storage_time_min_per_timestep:
         try:
             contributing_times = split_comma_list(
                 model_data_dict['lookup_storage_time_min'][(loc_tech, timestep)]
             )
         except(KeyError):
             contributing_times = []
-    else:
+    except:
         contributing_times = list(timestep + pd.to_timedelta(get_param(backend_model, 'storage_time_min', loc_tech), unit = 'h'))
 
-    if loc_tech in backend_model.loc_techs_storage_plus_discharge_depth_per_time:
+    if loc_tech in backend_model.loc_techs_storage_plus_discharge_depth_per_time: #this needs fixing
         sdd_string = 'storage_discharge_depth_per_timestep'
     else:
         sdd_string = 'storage_discharge_depth'
 
     def storage_cap_finder(loc_tech, contributing_time):
-        if loc_tech in backend_model.loc_techs_storage_plus_cap_per_time:
+        try: # loc_tech in backend_model.loc_techs_storage_plus_cap_per_time:
             storage_cap = backend_model.storage_cap_equals_per_timestep[loc_tech, pd.Timestamp(contributing_time)]
-        else:
+        except:
             storage_cap = backend_model.storage_cap[loc_tech]
         return storage_cap
 
