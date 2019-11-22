@@ -1,6 +1,5 @@
 [![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square)](https://gitter.im/calliope-project/calliope)
-[![Build status on Linux](https://img.shields.io/travis/calliope-project/calliope/master.svg?style=flat-square)](https://travis-ci.org/calliope-project/calliope)
-[![Build status on Windows](https://img.shields.io/appveyor/ci/sjpfenninger/calliope/master.svg?style=flat-square&label=windows%20build)](https://ci.appveyor.com/project/sjpfenninger/calliope)
+[![Master branch build status](https://img.shields.io/azure-devops/build/calliope-project/371cbbaa-fa6b-4efb-9b23-c4283a8e33eb/1?style=flat-square)](https://dev.azure.com/calliope-project/calliope/_build?definitionId=1)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?style=flat-square)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://img.shields.io/coveralls/calliope-project/calliope.svg?style=flat-square)](https://coveralls.io/r/calliope-project/calliope)
 [![PyPI version](https://img.shields.io/pypi/v/calliope.svg?style=flat-square)](https://pypi.python.org/pypi/calliope)
