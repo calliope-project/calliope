@@ -51,24 +51,28 @@ steps:
   - bash: |
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
-      conda install ruamel_yaml
       conda info -a
     displayName: Configure and update conda
 
   - bash: |
-      python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      python utils/conda_create.py requirements/base.yml requirements/unix.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       source activate calliope
       pip install --no-cache-dir --verbose -e .
       py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
-    displayName: Create and populate environment; run tests (UNIX)
+    displayName: Set up environment and run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
   - script: |
-      python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      call activate  # Must manually activate base environment else conda_create.py fails
+      python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
+      curl -o cbc.zip https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip
+      7z x cbc.zip -ocbc
+      set PATH=cbc/bin;%PATH%
+      call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
       py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
-    displayName: Create and populate environment; run tests (Windows)
+    displayName: Set up environment and run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - bash: |
