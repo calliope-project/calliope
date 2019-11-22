@@ -45,7 +45,7 @@ def check_operate_params(model_data):
     comments = AttrDict()
 
     def _get_param(loc_tech, var):
-        if _is_in(loc_tech, var) and not any((pd.isnull((model_data[var].loc[loc_tech].values, )),)):
+        if _is_in(loc_tech, var) and not model_data[var].loc[loc_tech].isnull().any():
             param = model_data[var].loc[loc_tech].values
         else:
             param = defaults[var]
@@ -73,7 +73,7 @@ def check_operate_params(model_data):
         energy_cap = model_data.energy_cap.loc[loc_tech].item()
         # Must have energy_cap defined for all relevant techs in the model
         if ((np.isinf(energy_cap) or np.isnan(energy_cap)) and
-                (_is_in(loc_tech, 'energy_cap_min_use') or
+                (_get_param(loc_tech, 'energy_cap_min_use') or
                  (_get_param(loc_tech, 'force_resource') and
                   _get_param(loc_tech, 'resource_unit') == 'energy_per_cap'))):
             errors.append(
@@ -97,7 +97,7 @@ def check_operate_params(model_data):
                     )
 
             # force resource overrides capacity constraints, so set capacity constraints to infinity
-            if _is_in(loc_tech, 'force_resource') and model_data.force_resource.loc[loc_tech].item() == 1:
+            if _get_param(loc_tech, 'force_resource').item() is True:
 
                 if not _is_in(loc_tech, 'loc_techs_store'):
                     # set resource_area to inf if the resource is linked to energy_cap using energy_per_cap
@@ -156,7 +156,7 @@ def check_operate_params(model_data):
                             'fixed energy cap for `{}`'.format(loc_tech)
                         )
         if _is_in(loc_tech, 'loc_techs_store'):
-            if _is_in(loc_tech, 'charge_rate'):
+            if _get_param(loc_tech, 'charge_rate') is not False:
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()
                 if storage_cap and energy_cap:
                     charge_rate = model_data['charge_rate'].loc[loc_tech].item()
@@ -166,7 +166,7 @@ def check_operate_params(model_data):
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
         if _is_in(loc_tech, 'loc_techs_store'):
-            if _is_in(loc_tech, 'energy_cap_per_storage_cap_max'):
+            if _get_param(loc_tech, 'energy_cap_per_storage_cap_max') is not False:
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()
                 if storage_cap and energy_cap:
                     energy_cap_per_storage_cap_max = model_data['energy_cap_per_storage_cap_max'].loc[loc_tech].item()
@@ -175,7 +175,7 @@ def check_operate_params(model_data):
                             'fixed storage capacity * energy_cap_per_storage_cap_max is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
-            elif _is_in(loc_tech, 'energy_cap_per_storage_cap_min'):
+            elif _get_param(loc_tech, 'energy_cap_per_storage_cap_min') is not False:
                 storage_cap = model_data.storage_cap.loc[loc_tech].item()
                 if storage_cap and energy_cap:
                     energy_cap_per_storage_cap_min = model_data['energy_cap_per_storage_cap_min'].loc[loc_tech].item()

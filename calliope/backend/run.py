@@ -132,16 +132,21 @@ def run_operate(model_data, timings, backend, build_only):
     defaults = AttrDict.from_yaml_string(model_data.attrs['defaults'])
     run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
 
-    operate_params = ['purchased'] + [
-        i.replace('_max', '') for i in defaults if i[-4:] == '_max'
-    ]
+    # New param defaults = old maximum param defaults (e.g. energy_cap gets default from energy_cap_max)
+    operate_params = {
+        k.replace('_max', ''): v for k, v in defaults.items() if k.endswith('_max')
+    }
+    operate_params['purchased'] = 0  # no _max to work from here, so we hardcode a default
+
+    defaults.update(operate_params)
+    model_data.attrs['defaults'] = defaults.to_yaml()
 
     # Capacity results (from plan mode) can be used as the input to operate mode
     if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
             run_config.get('operation.use_cap_results', False)):
         # Anything with is_result = 1 will be ignored in the Pyomo model
         for varname, varvals in model_data.data_vars.items():
-            if varname in operate_params:
+            if varname in operate_params.keys():
                 varvals.attrs['is_result'] = 1
                 varvals.attrs['operate_param'] = 1
 
