@@ -51,6 +51,7 @@ steps:
   - bash: |
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
+      conda install ruamel_yaml
       conda info -a
     displayName: Configure and update conda
 
