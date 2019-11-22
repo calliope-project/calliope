@@ -8,7 +8,7 @@ pool:
   vmImage: $(IMAGE_NAME)
 
 strategy:
-  maxParallel: 4
+  maxParallel: 8
   matrix:
     linux-python-3.6:
       IMAGE_NAME: ubuntu-latest
@@ -48,24 +48,27 @@ steps:
     displayName: Take ownership of conda installation
     condition: eq( variables['Agent.OS'], 'Darwin' )
 
-  - script: |
+  - bash: |
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
     displayName: Configure and update conda
 
-  - script: |
+  - bash: |
+      conda init bash
       python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       conda activate calliope
       pip install --no-cache-dir --verbose -e .
     displayName: Create and populate environment
 
-  - script: |
+  - bash: |
+      conda init bash
       conda activate calliope
       py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
     displayName: Run tests
 
   - bash: |
+      conda init bash
       conda activate calliope
       coveralls
     displayName: Send results to coveralls
