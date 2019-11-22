@@ -61,9 +61,12 @@ steps:
     displayName: Create and populate environment
 
   - script: |
+      conda activate calliope
       py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
     displayName: Run tests
 
-  - bash: coveralls
+  - bash: |
+      conda activate calliope
+      coveralls
     displayName: Send results to coveralls
     condition: eq( variables['COVERAGE'], 'True' )
