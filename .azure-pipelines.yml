@@ -45,7 +45,7 @@ steps:
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - bash: sudo chown -R $USER $CONDA
-    displayName: Take ownership of conda installation
+    displayName: Take ownership of conda installation (macOS)
     condition: eq( variables['Agent.OS'], 'Darwin' )
 
   - bash: |
@@ -55,21 +55,21 @@ steps:
     displayName: Configure and update conda
 
   - bash: |
-      conda init bash
       python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
-      conda activate calliope
+      source activate calliope
       pip install --no-cache-dir --verbose -e .
-    displayName: Create and populate environment
-
-  - bash: |
-      conda init bash
-      conda activate calliope
       py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
-    displayName: Run tests
+    displayName: Create and populate environment; run tests (UNIX)
+
+  - script: |
+      python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      call activate calliope
+      pip install --no-cache-dir --verbose -e .
+      py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
+    displayName: Create and populate environment; run tests (Windows)
 
   - bash: |
-      conda init bash
-      conda activate calliope
+      source activate calliope
       coveralls
     displayName: Send results to coveralls
     condition: eq( variables['COVERAGE'], 'True' )
