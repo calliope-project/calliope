@@ -1,0 +1,69 @@
+trigger:
+  - master
+
+pr:
+  - master
+
+pool:
+  vmImage: $(IMAGE_NAME)
+
+strategy:
+  maxParallel: 4
+  matrix:
+    linux-python-3.6:
+      IMAGE_NAME: ubuntu-latest
+      PYTHON_VERSION: 3.6
+      COVERAGE: False
+    linux-python-3.7:
+      IMAGE_NAME: ubuntu-latest
+      PYTHON_VERSION: 3.7
+      COVERAGE: True
+    macos-python-3.6:
+      IMAGE_NAME: macOS-latest
+      PYTHON_VERSION: 3.6
+      COVERAGE: False
+    macos-python-3.7:
+      IMAGE_NAME: macOS-latest
+      PYTHON_VERSION: 3.7
+      COVERAGE: False
+    windows-python-3.6:
+      IMAGE_NAME: windows-latest
+      PYTHON_VERSION: 3.6
+      COVERAGE: False
+    windows-python-3.7:
+      IMAGE_NAME: windows-latest
+      PYTHON_VERSION: 3.7
+      COVERAGE: False
+
+steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Enable conda (Windows)
+    condition: ne( variables['Agent.OS'], 'Windows_NT' )
+
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Enable conda (UNIX)
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+  - bash: sudo chown -R $USER $CONDA
+    displayName: Take ownership of conda installation
+    condition: eq( variables['Agent.OS'], 'Darwin' )
+
+  - script: |
+      conda config --set always_yes yes --set changeps1 no
+      conda update -q conda
+      conda info -a
+    displayName: Configure and update conda
+
+  - script: |
+      python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      conda activate calliope
+      pip install --no-cache-dir --verbose -e .
+    displayName: Create and populate environment
+
+  - script: |
+      py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
+    displayName: Run tests
+
+  - bash: coveralls
+    displayName: Send results to coveralls
+    condition: eq( variables['COVERAGE'], 'True' )
