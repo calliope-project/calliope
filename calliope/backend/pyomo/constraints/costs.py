@@ -110,7 +110,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
             cost_{fractional\\_om}(cost, loc::tech) +
             cost_{fixed\\_om}(cost, loc::tech) + cost_{con}(cost, loc::tech)
 
-            cost_{con}(cost, loc::tech) =
+            cost_{cap}(cost, loc::tech) =
             depreciation\\_rate * ts\\_weight *
             (cost_{energy\\_cap}(cost, loc::tech) \\times \\boldsymbol{energy_{cap}}(loc::tech)
             + cost_{storage\\_cap}(cost, loc::tech) \\times \\boldsymbol{storage_{cap}}(loc::tech)
@@ -155,7 +155,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     ts_weight = get_timestep_weight(backend_model)
     depreciation_rate = model_data_dict['data']['cost_depreciation_rate'].get((cost, loc_tech), 0)
 
-    cost_con = (
+    cost_cap = (
         depreciation_rate * ts_weight *
         (cost_energy_cap + cost_storage_cap + cost_resource_cap +
          cost_resource_area)
@@ -163,13 +163,13 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
     if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
-            cost_con = cost_con / 2
+            cost_cap = cost_cap / 2
 
-    cost_fractional_om = cost_om_annual_investment_fraction * cost_con
+    cost_fractional_om = cost_om_annual_investment_fraction * cost_cap
     cost_fixed_om = cost_om_annual * backend_model.energy_cap[loc_tech] * ts_weight
 
     backend_model.cost_investment_rhs[cost, loc_tech].expr = (
-        cost_fractional_om + cost_fixed_om + cost_con
+        cost_fractional_om + cost_fixed_om + cost_cap
     )
 
     return (

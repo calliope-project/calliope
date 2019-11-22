@@ -1,0 +1,14 @@
+Usage: calliope [OPTIONS] COMMAND [ARGS]...
+
+  Calliope: a multi-scale energy systems modelling framework
+
+Options:
+  --version  Display version.
+  --help     Show this message and exit.
+
+Commands:
+  generate_runs       Generate a script to run multiple models.
+  generate_scenarios  Generate scenario definitions from given combinations of
+                      overrides.
+  new                 Create a new model based on a built-in example.
+  run                 Build and run a model.
