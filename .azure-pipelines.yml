@@ -62,8 +62,9 @@ steps:
     displayName: Set up environment and run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
+  # Must manually activate base environment else conda_create.py fails
   - script: |
-      call activate  # Must manually activate base environment else conda_create.py fails
+      call activate base
       python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
