@@ -58,7 +58,7 @@ steps:
       python utils/conda_create.py requirements/base.yml requirements/unix.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       source activate calliope
       pip install --no-cache-dir --verbose -e .
-      py.test --junitxml=junit/test-results.xml --cov calliope --cov-report term-missing -W ignore::FutureWarning
+      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml --cov-report=html -W ignore::FutureWarning
     displayName: Set up environment and run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
@@ -68,11 +68,11 @@ steps:
       python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
-      curl 'https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip' -o cbc.zip
+      curl https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip -o cbc.zip
       7z x cbc.zip -ocbc
       set PATH=cbc/bin;%PATH%
       call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
-      py.test --junitxml=junit/test-results.xml --cov calliope --cov-report term-missing -W ignore::FutureWarning
+      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml --cov-report=html -W ignore::FutureWarning
     displayName: Set up environment and run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
@@ -80,6 +80,14 @@ steps:
     condition: succeededOrFailed()
     inputs:
       testResultsFiles: '**/test-*.xml'
+      testRunTitle: '$(Agent.JobName)'
+
+  - task: PublishCodeCoverageResults@1
+    condition: succeededOrFailed()
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
 
   - bash: |
       source activate calliope
