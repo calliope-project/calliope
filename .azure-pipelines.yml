@@ -99,4 +99,12 @@ steps:
     displayName: Send results to coveralls
     condition: eq( variables['COVERAGE'], 'True' )
     env:
+      # Pretend to be AppVeyor: https://github.com/gulpjs/gulp/pull/2306
+      APPVEYOR: true
+      APPVEYOR_BUILD_NUMBER: $(Build.BuildNumber)
+      APPVEYOR_BUILD_ID: $(Agent.JobName)
+      APPVEYOR_REPO_COMMIT: $(Build.SourceVersion)
+      APPVEYOR_REPO_BRANCH: $(Build.SourceBranchName)
+      COVERALLS_SERVICE_NAME: Azure Pipelines
       COVERALLS_REPO_TOKEN: $(CoverallsRepoToken)
+      CI_PULL_REQUEST: $(System.PullRequest.PullRequestNumber)
