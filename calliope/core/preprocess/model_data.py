@@ -76,7 +76,7 @@ def build_model_data(model_run, debug=False):
 
     data = add_time_dimension(data, model_run)
 
-    if model_run.sets['loc_techs_storage_time_min_per_timestep']:
+    if model_run.sets['loc_techs_storage_time_per_timestep']:
         data = add_storage_time_lookup(data, model_run)
 
     # Carrier information uses DataArray indexing in the function, so we merge
@@ -131,10 +131,10 @@ def constraints_to_dataset(model_run):
             return 'loc_techs_finite_resource'
         elif 'storage_cap_equals_per_timestep' in constraint:
             return 'loc_techs_storage_plus_cap_per_time'
-        elif 'storage_time_min_per_timestep' in constraint:
-            return 'loc_techs_storage_time_min_per_timestep'
-        elif 'storage_time_min' in constraint:
-            return 'loc_techs_storage_plus_storage_time_min'
+        elif 'storage_time_per_timestep' in constraint:
+            return 'loc_techs_storage_time_per_timestep'
+        elif 'storage_time' in constraint:
+            return 'loc_techs_storage_plus_storage_time'
         elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:

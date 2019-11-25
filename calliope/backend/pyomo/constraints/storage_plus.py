@@ -11,7 +11,7 @@ Storage plus technology constraints.
 'loc_techs_storage_plus_max_constraint'
 'loc_techs_storage_plus_discharge_depth_constraint'
 'loc_techs_storage_plus_balance_constraint'
-'loc_techs_storage_plus_storage_time_min_constraint'
+'loc_techs_storage_plus_storage_time_constraint'
 'loc_techs_storage_plus_shared_cap_per_time_constraint'
 'loc_techs_storage_plus_shared_storage_constraint'
 
@@ -52,9 +52,9 @@ def load_constraints(backend_model):
             rule=storage_plus_balance_constraint_rule
         )
 
-    if 'loc_techs_storage_plus_storage_time_min_constraint' in sets:
+    if 'loc_techs_storage_plus_storage_time_constraint' in sets:
         backend_model.storage_plus_time_min_constraint = po.Constraint(
-            backend_model.loc_techs_storage_plus_storage_time_min_constraint,
+            backend_model.loc_techs_storage_plus_storage_time_constraint,
             backend_model.timesteps,
             rule=storage_plus_time_min_constraint_rule
         )
@@ -87,7 +87,10 @@ def storage_plus_discharge_depth_constraint_rule(backend_model, loc_tech, timest
     
 def storage_plus_balance_constraint_rule(backend_model, loc_tech, timestep):
 # Sum of carriers in and carriers out minus losses plus storage in previous timestep is new storage
+    run_config = backend_model.__calliope_run_config
     model_data_dict = backend_model.__calliope_model_data['data']
+    
+    # Read in loc_carriers_in and _out from storage plus lookup
     loc_tech_carriers_out = split_comma_list(
         model_data_dict['lookup_loc_techs_storage_plus']['out', loc_tech] 
     )
@@ -96,17 +99,18 @@ def storage_plus_balance_constraint_rule(backend_model, loc_tech, timestep):
     )
     energy_eff = get_param(backend_model, 'energy_eff', (loc_tech, timestep))
 
+    # Carrier_con is equal to sum of carrier_con * energy_eff * carrier_ratio for all carriers in
     carrier_con = sum(
         backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff * 
         get_param(backend_model, 'carrier_ratios', ('in', loc_tech_carrier, timestep))
         for loc_tech_carrier in loc_tech_carriers_in
     )
 
+    # Check to see if sum of product of energy_eff and carrier_ratio for carriers out is zero - avoid div 0
     energy_eff_carrier_ratio_check = sum(
         po.value(energy_eff) * get_param(backend_model, 'carrier_ratios', ('out', loc_tech_carrier, timestep))
         for loc_tech_carrier in loc_tech_carriers_out
     )
-
     if energy_eff_carrier_ratio_check == 0:
         carrier_prod = 0
     else:
@@ -115,15 +119,24 @@ def storage_plus_balance_constraint_rule(backend_model, loc_tech, timestep):
             get_param(backend_model, 'carrier_ratios', ('out', loc_tech_carrier, timestep)))
             for loc_tech_carrier in loc_tech_carriers_out
         )
-
+    # Find current timestep and previous timestep
     current_timestep = backend_model.timesteps.order_dict[timestep]
-    if current_timestep == 0:
+    if current_timestep == 0 and not run_config['cyclic_storage']:
         storage_previous_step = (
             get_param(backend_model, 'storage_initial', loc_tech) *
             backend_model.storage_cap[loc_tech]
         )
+    elif (hasattr(backend_model, 'storage_inter_cluster') and
+            model_data_dict['lookup_cluster_first_timestep'][timestep]):
+        storage_previous_step = 0
     else:
-        previous_step = get_previous_timestep(backend_model.timesteps, timestep)
+        if (hasattr(backend_model, 'clusters') and
+                model_data_dict['lookup_cluster_first_timestep'][timestep]):
+            previous_step = model_data_dict['lookup_cluster_last_timestep'][timestep]
+        elif current_timestep == 0 and run_config['cyclic_storage']:
+            previous_step = backend_model.timesteps[-1]
+        else:
+            previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         storage_loss = get_param(backend_model, 'storage_loss', loc_tech)
         time_resolution = backend_model.timestep_resolution[previous_step]
         storage_previous_step = (
@@ -148,19 +161,20 @@ def storage_plus_time_min_constraint_rule(backend_model, loc_tech, timestep):
     )[0] # change this so it looks for primary carrier instead - should amount to the same thing
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier_in, timestep]
     
-    try: # loc_tech in backend_model.loc_techs_storage_time_min_per_timestep:
+    try: # loc_tech in backend_model.loc_techs_storage_time_per_timestep:
         try:
             contributing_times = split_comma_list(
-                model_data_dict['lookup_storage_time_min'][(loc_tech, timestep)]
+                model_data_dict['lookup_storage_time'][(loc_tech, timestep)]
             )
         except(KeyError):
             contributing_times = []
     except:
-        contributing_times = list(timestep + pd.to_timedelta(get_param(backend_model, 'storage_time_min', loc_tech), unit = 'h'))
+        contributing_times = list(timestep + pd.to_timedelta(get_param(backend_model, 'storage_time', loc_tech), unit = 'h'))
 
-    if loc_tech in backend_model.loc_techs_storage_plus_discharge_depth_per_time: #this needs fixing
+    try:
+        assert loc_tech in backend_model.loc_techs_storage_plus_discharge_depth_per_time #this needs fixing
         sdd_string = 'storage_discharge_depth_per_timestep'
-    else:
+    except:
         sdd_string = 'storage_discharge_depth'
 
     def storage_cap_finder(loc_tech, contributing_time):
@@ -187,14 +201,14 @@ def storage_plus_time_min_constraint_rule(backend_model, loc_tech, timestep):
 def storage_plus_shared_cap_constraint_rule(backend_model, loc_tech, timestep):
     share_destination = get_param(backend_model, 'shared_storage_tech', loc_tech).value
     storage_cap_A = backend_model.storage_cap[loc_tech]
-    if loc_tech in backend_model.loc_techs_storage_plus_cap_per_time:
+    try: # loc_tech in backend_model.loc_techs_storage_plus_cap_per_time:
         storage_cap_A = backend_model.storage_cap_equals_per_timestep[loc_tech, timestep]
-    else:
+    except:
         storage_cap_A = backend_model.storage_cap[loc_tech]
 
-    if share_destination in backend_model.loc_techs_storage_plus_cap_per_time:
+    try: # share_destination in backend_model.loc_techs_storage_plus_cap_per_time:
         storage_cap_B = backend_model.storage_cap_equals_per_timestep[share_destination, timestep]
-    else:
+    except:
         storage_cap_B = backend_model.storage_cap[share_destination]
     return storage_cap_A + backend_model.storage[share_destination, timestep] <= storage_cap_B
     

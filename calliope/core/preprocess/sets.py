@@ -48,9 +48,9 @@ Subsets based on active constraints
 * loc_techs_store
 * loc_techs_storage_plus_cap_per_time
 * loc_techs_storage_plus_discharge_depth_per_time
-* loc_techs_storage_time_min_per_timestep
+* loc_techs_storage_time_per_timestep
 * loc_techs_storage_plus_shared_storage
-* loc_techs_storage_plus_storage_time_min
+* loc_techs_storage_plus_storage_time
 * loc_techs_finite_resource
 * loc_techs_finite_resource_supply
 * loc_techs_finite_resource_demand
@@ -319,9 +319,9 @@ def generate_loc_tech_sets(model_run, simple_sets):
         if loc_techs_config[k].constraints.get('storage_discharge_depth_per_timestep')
     )
 
-    sets.loc_techs_storage_time_min_per_timestep = set(
+    sets.loc_techs_storage_time_per_timestep = set(
         k for k in sets.loc_techs_storage_plus
-        if loc_techs_config[k].constraints.get('storage_time_min_per_timestep')
+        if loc_techs_config[k].constraints.get('storage_time_per_timestep')
     )
 
     sets.loc_techs_storage_plus_shared_storage = set(
@@ -329,9 +329,9 @@ def generate_loc_tech_sets(model_run, simple_sets):
         if loc_techs_config[k].constraints.get('shared_storage_tech')
     )
 
-    sets.loc_techs_storage_plus_storage_time_min = set(
+    sets.loc_techs_storage_plus_storage_time = set(
         k for k in sets.loc_techs_storage_plus
-        if any('storage_time_min' in i
+        if any('storage_time' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
 

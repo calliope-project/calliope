@@ -274,16 +274,17 @@ def add_storage_time_lookup(dataset, model_data):
     them is created as a comma delimited string.
     """
     # need to apadt this so it can handle more than just one loc_tech
+    run_config = backend_model.__calliope_run_config
+
     timesteps = model_data.sets['timesteps']
-    store_time_contribs = dataset['storage_time_min_per_timestep'].to_dataframe().reset_index()
+    store_time_contribs = dataset['storage_time_per_timestep'].to_dataframe().reset_index()
     store_time_contribs['in_times'] = math.nan
     max_index = max(store_time_contribs.index.to_list())
     for row in store_time_contribs.index.to_list():
-        out_time_index = int(row + store_time_contribs.iloc[row]['storage_time_min_per_timestep'])
+        out_time_index = int(row + store_time_contribs.iloc[row]['storage_time_per_timestep'])
         if out_time_index > max_index:
-            if 'cyclic_storage' in model_data:
-                if model_data['cyclic_storage'] == True:
-                    out_time_index = out_time_index - max_index
+            if run_config['cyclic_storage']:
+                out_time_index = out_time_index - max_index
             else:
                 continue
         if type(store_time_contribs.iloc[out_time_index]['in_times']) != str:
@@ -292,12 +293,12 @@ def add_storage_time_lookup(dataset, model_data):
             temp_str = str(store_time_contribs.iloc[out_time_index]['in_times']) + ',' + str(store_time_contribs.iloc[row]['timesteps'])
         store_time_contribs.loc[out_time_index,'in_times'] = temp_str
 
-    store_time_contribs = store_time_contribs.drop(columns=['loc_techs_storage_time_min_per_timestep','storage_time_min_per_timestep']).set_index('timesteps')
+    store_time_contribs = store_time_contribs.drop(columns=['loc_techs_storage_time_per_timestep','storage_time_per_timestep']).set_index('timesteps')
 
-    dataset['lookup_storage_time_min'] = xr.DataArray(
+    dataset['lookup_storage_time'] = xr.DataArray(
         data=store_time_contribs.to_numpy(),
-        dims=['timesteps', 'loc_techs_storage_time_min_per_timestep'],
-        # coords={'loc_techs_storage_time_min_per_timestep': 'loc_techs_storage_time_min_per_timestep', 'timesteps': timesteps}
+        dims=['timesteps', 'loc_techs_storage_time_per_timestep'],
+        # coords={'loc_techs_storage_time_per_timestep': 'loc_techs_storage_time_per_timestep', 'timesteps': timesteps}
     )
 
     return dataset

@@ -81,66 +81,84 @@ class TestBuildStoragePlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_balance_constraint')
 
-######
 
-    def test_loc_techs_loc_techs_storage_plus_storage_time_min_constraint(self):
+    def test_loc_techs_loc_techs_storage_plus_storage_time_constraint(self):
         """
-        sets.loc_techs_om_cost_conversion_plus,
+        sets.loc_techs_storage_plus_storage_time, 
         """
         
         m = build_model({},'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_min_constraint')
+        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
         
         m = build_model({}, 'simple_storage_plus,two_hours,investment_costs')
         m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_min_constraint')
+        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
         m = build_model({}, 'storage_plus_shared_storage,two_hours,investment_costs')
         m.run(build_only=True)
-        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_min_constraint')
+        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
         m = build_model(
-            {'techs.test_storage_plus.constraints':{'storage_time_min':3}},
+            {'techs.test_storage_plus.constraints':{'storage_time':3}},
             'simple_storage_plus,two_hours,investment_costs'
             )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_min_constraint')
+        assert hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
         m = build_model(
             {'techs.test_storage_plus.constraints':
-                {'storage_time_min_per_timestep':'file=storage_plus_storage_time_min.csv'}}, 
+                {'storage_time_per_timestep':'file=storage_plus_storage_time.csv'}}, 
                 'simple_storage_plus,two_hours,investment_costs'
             )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_min_constraint')
+        assert hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
     def test_loc_techs_loc_techs_storage_plus_shared_storage_constraint(self):
         """
-        sets.loc_techs_in_2,
+        sets.loc_techs_storage_plus_shared_storage
         """
+
+        m = build_model({}, 'simple_supply,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert not hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
+
+        m = build_model(
+            {'techs.test_storage_plus.constraints':
+            {'shared_storage_tech':'1::test_storage'}},
+            'storage_plus_shared_storage,two_hours,investment_costs')
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
 
         m = build_model({}, 'simple_storage_plus,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
 
-        m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in_2': 'coal', 'primary_carrier_in': 'gas'
-            }},
-            'simple_storage_plus,two_hours,investment_costs'
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
+class TestStoragePlusConstraintResults:
 
+    def test_storage_cap_per_time_from_file(self):
         m = build_model(
-            {'techs.test_conversion_plus.essentials': {
-                'carrier_in_2': ['coal', 'heat'], 'primary_carrier_in': 'gas'
-            }},
-            'simple_storage_plus,two_hours,investment_costs'
+            {'techs.test_storage_plus':{'storage_cap_equals_per_timestep': 'file='}}, 'simple_storage_plus,two_hours,investment_costs')
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
 
+
+        return
+
+    def test_shared_storage_link(self):
+
+        return
     
+    def test_storage_time(self):
+
+        return
+
+    def test_storage_time_per_time(self):
+
+        return
+
+    def test_storage_discharge_depth_per_time_from_file(self):
+
+        return
+
+

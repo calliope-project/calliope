@@ -96,7 +96,7 @@ def generate_constraint_sets(model_run):
     ]
     constraint_sets['loc_techs_storage_plus_balance_constraint'] = sets.loc_techs_storage_plus
     constraint_sets['loc_techs_storage_plus_shared_storage_constraint'] = sets.loc_techs_storage_plus_shared_storage
-    constraint_sets['loc_techs_storage_plus_storage_time_min_constraint'] = sets.loc_techs_storage_plus_storage_time_min
+    constraint_sets['loc_techs_storage_plus_storage_time_constraint'] = sets.loc_techs_storage_plus_storage_time
 
     # capacity.py
     constraint_sets['loc_techs_storage_capacity_constraint'] = [
