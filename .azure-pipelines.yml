@@ -68,7 +68,7 @@ steps:
       python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
-      curl https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-x86_64-w64-mingw32.zip -o cbc.zip
+      wget https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-x86_64-w64-mingw32.zip -o cbc.zip
       7z x cbc.zip -ocbc
       set PATH=cbc/bin;%PATH%
       call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
