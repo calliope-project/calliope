@@ -98,3 +98,5 @@ steps:
       coveralls
     displayName: Send results to coveralls
     condition: eq( variables['COVERAGE'], 'True' )
+    env:
+      COVERALLS_REPO_TOKEN: $(CoverallsRepoToken)
