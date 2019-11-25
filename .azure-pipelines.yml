@@ -44,6 +44,13 @@ steps:
     displayName: Enable conda (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
+  - powershell: |
+      wget https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip -O cbc.zip
+      7z x cbc.zip -ocbc
+      set PATH=cbc/bin;%PATH%
+    displayName: Download and set path for CBC (Windows)
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
+    
   - bash: sudo chown -R $USER $CONDA
     displayName: Take ownership of conda installation (macOS)
     condition: eq( variables['Agent.OS'], 'Darwin' )
@@ -58,7 +65,8 @@ steps:
       python utils/conda_create.py requirements/base.yml requirements/unix.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       source activate calliope
       pip install --no-cache-dir --verbose -e .
-    displayName: Set up environment (UNIX)
+      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml --cov-report=html -W ignore::FutureWarning
+    displayName: Set up environment and run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
   # Must manually activate base environment else conda_create.py fails
@@ -67,17 +75,10 @@ steps:
       python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
-      wget https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip -O cbc.zip
-      7z x cbc.zip -ocbc
-      set PATH=cbc/bin;%PATH%
-      call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
-    displayName: Set up environment (Windows)
+      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml --cov-report=html -W ignore::FutureWarning
+    displayName: Set up environment and run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
     
-  - bash: |
-      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml --cov-report=html -W ignore::FutureWarning
-    displayName: Run tests
-
   - task: PublishTestResults@2
     condition: succeededOrFailed()
     inputs:
