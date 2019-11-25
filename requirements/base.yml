@@ -6,7 +6,7 @@ channels:
 dependencies:
     - bottleneck
     - click<8
-    - glpk=4.65
+    - glpk=4.61
     - hdf5
     - ipython
     - ipdb
