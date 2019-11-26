@@ -10,12 +10,12 @@ Accessing model data and results
 
 A model which solved successfully has two primary Datasets with data of interest:
 
-* ``model.inputs``: contains all input data, such as renewable resource capacity factors
-* ``model.results``: contains all results data, such as dispatch decisions and installed capacities
+* :python:`model.inputs`: contains all input data, such as renewable resource capacity factors
+* :python:`model.results`: contains all results data, such as dispatch decisions and installed capacities
 
 In both of these, variables are indexed over concatenated sets of locations and technologies, over a dimension we call ``loc_techs``. For example, if a technology called ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then it will have a single entry in the loc_techs dimension called ``X1::boiler``. For parameters which also consider different energy carriers, we use a ``loc_tech_carrier`` dimension, such that we would have, in the case of the prior boiler example, ``X1::boiler::heat``.
 
-This concatenated set formulation is memory-efficient but cumbersome to deal with, so the ``model.get_formatted_array(name_of_variable)`` function can be used to retrieve a DataArray indexed over separate dimensions (any of `techs`, `locs`, `carriers`, `costs`, `timesteps`, depending on the desired variable).
+This concatenated set formulation is memory-efficient but cumbersome to deal with, so the :python:`model.get_formatted_array(name_of_variable)` function can be used to retrieve a DataArray indexed over separate dimensions (any of `techs`, `locs`, `carriers`, `costs`, `timesteps`, depending on the desired variable).
 
 .. note:: On saving to CSV (see the :ref:`command-line interface documentation <running_cli>`), all variables are saved to a single file each, which are always indexed over all dimensions rather than just the concatenated dimensions.
 
@@ -37,7 +37,7 @@ The following example shows a timeseries plot of the built-in urban scale exampl
 .. raw:: html
    :file: images/plot_timeseries.html
 
-In Python, we get this function by calling ``model.plot.timeseries()``. It includes all relevant timeseries information, from both inputs and results. We can force it to only have particular results in the dropdown menu:
+In Python, we get this function by calling :python:`model.plot.timeseries()`. It includes all relevant timeseries information, from both inputs and results. We can force it to only have particular results in the dropdown menu:
 
 .. code-block:: python
 
@@ -80,7 +80,7 @@ The following example shows a capacity plot of the built-in urban scale example 
 .. raw:: html
    :file: images/plot_capacity.html
 
-Functionality is similar to timeseries, this time called by ``model.plot.capacity()``. Here we show capacity limits set at input and chosen capacities at output. Choosing dropdowns and subsetting works in the same way as for timeseries plots
+Functionality is similar to timeseries, this time called by :python:`model.plot.capacity()`. Here we show capacity limits set at input and chosen capacities at output. Choosing dropdowns and subsetting works in the same way as for timeseries plots
 
 Plotting transmission
 ---------------------
@@ -90,9 +90,9 @@ The following example shows a transmission plot of the built-in urban scale exam
 .. raw:: html
    :file: images/plot_transmission_token.html
 
-By calling ``model.plot.transmission()`` you will see installed links, their capacities (on hover), and the locations of the nodes. This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location.
+By calling :python:`model.plot.transmission()` you will see installed links, their capacities (on hover), and the locations of the nodes. This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location.
 
-The above plot uses `Mapbox <https://www.mapbox.com/>`_ to overlay our transmission plot on Openstreetmap. By creating an account at Mapbox and acquiring a Mapbox access token, you can also create similar visualisations by giving the token to the plotting function: ``model.plot.transmission(mapbox_access_token='your token here')``.
+The above plot uses `Mapbox <https://www.mapbox.com/>`_ to overlay our transmission plot on Openstreetmap. By creating an account at Mapbox and acquiring a Mapbox access token, you can also create similar visualisations by giving the token to the plotting function: :python:`model.plot.transmission(mapbox_access_token='your token here')`.
 
 Without the token, the plot will fall back on simple country-level outlines. In this urban scale example, the background is thus just grey (zoom out to see the UK!):
 
@@ -109,7 +109,7 @@ The following example shows an energy flow plot of the built-in urban scale exam
 .. raw:: html
    :file: images/plot_flows.html
 
-By calling ``model.plot.flows()`` you will see a plot similar to `transmission`. However, you can see carrier production at each node and along links, at every timestep (controlled by moving a slider). This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location. It is possible to look at only a subset of the timesteps in the model using the `timestep_index_subset` argument, or to show only every ``X`` timestep (where ``X`` is an integer) using the `timestep_cycle` argument.
+By calling :python:`model.plot.flows()` you will see a plot similar to `transmission`. However, you can see carrier production at each node and along links, at every timestep (controlled by moving a slider). This functionality only works if you have physically pinpointed your locations using the ``coordinates`` key for your location. It is possible to look at only a subset of the timesteps in the model using the `timestep_index_subset` argument, or to show only every ``X`` timestep (where ``X`` is an integer) using the `timestep_cycle` argument.
 
 .. note::
     If the timestep dimension is particularly large in your model, you will find this visualisation to be slow. Time subsetting is recommended for such a case.
@@ -120,7 +120,7 @@ By calling ``model.plot.flows()`` you will see a plot similar to `transmission`.
 
 Summary plots
 -------------
-If you want all the data in one place, you can run ``model.plot.summary(to_file='path/to/file.html')``, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to 'path/to/file.html'. This HTML file can be opened in a web browser to show all the plots. This funcionality is made available in the command line interface by using the command ``--save_plots=filename.html`` when running the model.
+If you want all the data in one place, you can run :python:`model.plot.summary(to_file='path/to/file.html')`, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to 'path/to/file.html'. This HTML file can be opened in a web browser to show all the plots. This funcionality is made available in the command line interface by using the command :sh:`--save_plots=filename.html` when running the model.
 
 See an `example of such a HTML plot here <../_static/plot_summary.html>`_.
 
@@ -133,7 +133,7 @@ On calling any of the three primary plotting functions, you can also set ``to_fi
 
 .. note::
 
-    For similar results in the command line interface, you'll currently need to save your model to netcdf (``--save_netcdf={filename.nc}``) then load it into a Calliope Model object in Python. Once there, you can use the above functions to get your SVGs.
+    For similar results in the command line interface, you'll currently need to save your model to netcdf (:sh:`--save_netcdf={filename.nc}`) then load it into a Calliope Model object in Python. Once there, you can use the above functions to get your SVGs.
 
 -----------------
 Reading solutions
@@ -145,7 +145,7 @@ Calliope provides functionality to read a previously-saved model from a single N
 
    solved_model = calliope.read_netcdf('my_saved_model.nc')
 
-In the above example, the model's input data will be available under ``solved_model.inputs``, while the results (if the model had previously been solved) are available under ``solved_model.results``.
+In the above example, the model's input data will be available under :python:`solved_model.inputs`, while the results (if the model had previously been solved) are available under :python:`solved_model.results`.
 
 Both of these are `xarray.Datasets <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ and can be further processed with Python.
 

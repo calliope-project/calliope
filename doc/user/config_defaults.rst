@@ -32,7 +32,7 @@ Run configuration
 Per-tech constraints
 --------------------
 
-The following table lists all available technology constraint settings and their default values. All of these can be set by ``tech_identifier.constraints.constraint_name``, e.g. ``nuclear.constraints.energy_cap.max``.
+The following table lists all available technology constraint settings and their default values. All of these can be set by :yaml:`tech_identifier.constraints.constraint_name`, e.g. :yaml:`nuclear.constraints.energy_cap.max`.
 
 .. csv-table::
    :file: includes/default_constraints.csv
@@ -45,7 +45,7 @@ The following table lists all available technology constraint settings and their
 Per-tech costs
 --------------
 
-These are all the available costs, which are set to :math:`0` by default for every defined cost class. Costs are set by ``tech_identifier.costs.cost_class.cost_name``, e.g. ``nuclear.costs.monetary.energy_cap``.
+These are all the available costs, which are set to :math:`0` by default for every defined cost class. Costs are set by :yaml:`tech_identifier.costs.cost_class.cost_name`, e.g. :yaml:`nuclear.costs.monetary.energy_cap`.
 
 .. csv-table::
    :file: includes/default_costs.csv
