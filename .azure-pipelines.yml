@@ -1,6 +1,5 @@
 trigger:
   - master
-  - '*'
 
 pr:
   - master
