@@ -91,7 +91,6 @@ steps:
     inputs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
 
   - bash: |
       source activate calliope
@@ -99,12 +98,13 @@ steps:
     displayName: Send results to coveralls
     condition: eq( variables['COVERAGE'], 'True' )
     env:
-      # Pretend to be AppVeyor: https://github.com/gulpjs/gulp/pull/2306
+      # Pretend to be AppVeyor
+      # https://coveralls-python.readthedocs.io/en/latest/usage/tox.html#appveyor
       APPVEYOR: true
       APPVEYOR_BUILD_NUMBER: $(Build.BuildNumber)
-      APPVEYOR_BUILD_ID: $(Agent.JobName)
       APPVEYOR_REPO_COMMIT: $(Build.SourceVersion)
       APPVEYOR_REPO_BRANCH: $(Build.SourceBranchName)
+      APPVEYOR_PULL_REQUEST_NUMBER: $(System.PullRequest.PullRequestNumber)
       COVERALLS_SERVICE_NAME: Azure Pipelines
       COVERALLS_REPO_TOKEN: $(CoverallsRepoToken)
-      CI_PULL_REQUEST: $(System.PullRequest.PullRequestNumber)
+      COVERALLS_PARALLEL: false  # We only report coverage from a single build
