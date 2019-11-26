@@ -19,7 +19,7 @@ dependencies:
     - pandas<0.25
     - plotly<4.0
     - pyomo<5.7
-    - pytest
+    - pytest<5.3  # 5.3 fails with KeyError: '__name__' when collecting items
     - pytest-cov
     - ruamel.yaml<0.16
     - scikit-learn<0.21
