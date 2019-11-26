@@ -11,30 +11,19 @@ pool:
 strategy:
   maxParallel: 8
   matrix:
-    linux-python-3.6:
+    linux-py3.6:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.6
-      COVERAGE: False
-    linux-python-3.7:
+    linux-py3.7:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.7
-      COVERAGE: True
-    macos-python-3.6:
-      IMAGE_NAME: macOS-latest
-      PYTHON_VERSION: 3.6
-      COVERAGE: False
-    macos-python-3.7:
+      COVERALLS: True  # Only run coveralls on one build
+    macos-py3.7:
       IMAGE_NAME: macOS-latest
       PYTHON_VERSION: 3.7
-      COVERAGE: False
-    windows-python-3.6:
-      IMAGE_NAME: windows-latest
-      PYTHON_VERSION: 3.6
-      COVERAGE: False
-    windows-python-3.7:
+    windows-py3.7:
       IMAGE_NAME: windows-latest
       PYTHON_VERSION: 3.7
-      COVERAGE: False
 
 steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -97,7 +86,7 @@ steps:
       source activate calliope
       coveralls
     displayName: Send results to coveralls
-    condition: eq( variables['COVERAGE'], 'True' )
+    condition: eq( variables['COVERALLS'], 'True' )
     env:
       # Pretend to be AppVeyor
       # https://coveralls-python.readthedocs.io/en/latest/usage/tox.html#appveyor
