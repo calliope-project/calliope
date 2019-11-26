@@ -16,7 +16,7 @@ strategy:
     linux-py3.7:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.7
-      COVERALLS: True  # Only run coveralls on one build
+      CODECOV: True  # Only run on one build
     macos-py3.7:
       IMAGE_NAME: macOS-latest
       PYTHON_VERSION: 3.7
@@ -83,17 +83,8 @@ steps:
 
   - bash: |
       source activate calliope
-      coveralls
-    displayName: Send results to coveralls
-    condition: eq( variables['COVERALLS'], 'True' )
+      codecov
+    displayName: Send results to Codecov
+    condition: eq( variables['CODECOV'], 'True' )
     env:
-      # Pretend to be AppVeyor
-      # https://coveralls-python.readthedocs.io/en/latest/usage/tox.html#appveyor
-      APPVEYOR: true
-      APPVEYOR_PULL_REQUEST_NUMBER: $(System.PullRequest.PullRequestNumber)
-      APPVEYOR_BUILD_NUMBER: $(Build.BuildNumber)
-      APPVEYOR_REPO_COMMIT: $(Build.SourceVersion)
-      APPVEYOR_REPO_BRANCH: $(Build.SourceBranchName)
-      COVERALLS_SERVICE_NAME: Azure Pipelines
-      COVERALLS_REPO_TOKEN: $(CoverallsRepoToken)
-      COVERALLS_PARALLEL: false  # We only report coverage from a single build
+      CODECOV_TOKEN: $(CodecovToken)
