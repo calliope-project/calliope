@@ -8,62 +8,83 @@ pool:
   vmImage: $(IMAGE_NAME)
 
 strategy:
-  maxParallel: 4
+  maxParallel: 8
   matrix:
-    linux-python-3.6:
+    linux-py3.6:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.6
-      COVERAGE: False
-    linux-python-3.7:
+    linux-py3.7:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.7
-      COVERAGE: True
-    macos-python-3.6:
-      IMAGE_NAME: macOS-latest
-      PYTHON_VERSION: 3.6
-      COVERAGE: False
-    macos-python-3.7:
+      CODECOV: True  # Only run on one build
+    macos-py3.7:
       IMAGE_NAME: macOS-latest
       PYTHON_VERSION: 3.7
-      COVERAGE: False
-    windows-python-3.6:
-      IMAGE_NAME: windows-latest
-      PYTHON_VERSION: 3.6
-      COVERAGE: False
-    windows-python-3.7:
+    windows-py3.7:
       IMAGE_NAME: windows-latest
       PYTHON_VERSION: 3.7
-      COVERAGE: False
 
 steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
-    displayName: Enable conda (Windows)
+    displayName: Enable conda (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
-    displayName: Enable conda (UNIX)
+    displayName: Enable conda (Windows)
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+  - powershell: |
+      wget https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip -O cbc.zip
+      7z x cbc.zip -ocbc
+    displayName: Download and set path for CBC (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - bash: sudo chown -R $USER $CONDA
-    displayName: Take ownership of conda installation
+    displayName: Take ownership of conda installation (macOS)
     condition: eq( variables['Agent.OS'], 'Darwin' )
 
-  - script: |
+  - bash: |
       conda config --set always_yes yes --set changeps1 no
       conda update -q conda
       conda info -a
     displayName: Configure and update conda
 
-  - script: |
-      python utils/conda_create.py requirements/base.yml requirements/travis.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
-      conda activate calliope
+  - bash: |
+      python utils/conda_create.py requirements/base.yml requirements/unix.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      source activate calliope
       pip install --no-cache-dir --verbose -e .
-    displayName: Create and populate environment
+      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
+    displayName: Set up environment and run tests (UNIX)
+    condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
+  # Must manually activate base environment else conda_create.py fails
   - script: |
-      py.test --cov calliope --cov-report term-missing -W ignore::FutureWarning
-    displayName: Run tests
+      set PATH=cbc/bin;%PATH%
+      call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
+      call activate base
+      python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      call activate calliope
+      pip install --no-cache-dir --verbose -e .
+      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
+    displayName: Set up environment and run tests (Windows)
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
-  - bash: coveralls
-    displayName: Send results to coveralls
-    condition: eq( variables['COVERAGE'], 'True' )
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: '$(Agent.JobName)'
+
+  - task: PublishCodeCoverageResults@1
+    condition: succeededOrFailed()
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+
+  - bash: |
+      source activate calliope
+      codecov
+    displayName: Send results to Codecov
+    condition: eq( variables['CODECOV'], 'True' )
+    env:
+      CODECOV_TOKEN: $(CodecovToken)
