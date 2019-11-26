@@ -1,5 +1,6 @@
 trigger:
   - master
+  - '*'
 
 pr:
   - master
@@ -101,10 +102,10 @@ steps:
       # Pretend to be AppVeyor
       # https://coveralls-python.readthedocs.io/en/latest/usage/tox.html#appveyor
       APPVEYOR: true
+      APPVEYOR_PULL_REQUEST_NUMBER: $(System.PullRequest.PullRequestNumber)
       APPVEYOR_BUILD_NUMBER: $(Build.BuildNumber)
       APPVEYOR_REPO_COMMIT: $(Build.SourceVersion)
       APPVEYOR_REPO_BRANCH: $(Build.SourceBranchName)
-      APPVEYOR_PULL_REQUEST_NUMBER: $(System.PullRequest.PullRequestNumber)
       COVERALLS_SERVICE_NAME: Azure Pipelines
       COVERALLS_REPO_TOKEN: $(CoverallsRepoToken)
       COVERALLS_PARALLEL: false  # We only report coverage from a single build
