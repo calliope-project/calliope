@@ -53,10 +53,10 @@ def load_constraints(backend_model):
         )
 
     if 'loc_techs_storage_plus_storage_time_constraint' in sets:
-        backend_model.storage_plus_time_min_constraint = po.Constraint(
+        backend_model.storage_plus_time_constraint = po.Constraint(
             backend_model.loc_techs_storage_plus_storage_time_constraint,
             backend_model.timesteps,
-            rule=storage_plus_time_min_constraint_rule
+            rule=storage_plus_time_constraint_rule
         )
 
     if 'loc_techs_storage_plus_shared_storage_constraint' in sets:
@@ -147,7 +147,7 @@ def storage_plus_balance_constraint_rule(backend_model, loc_tech, timestep):
     return (backend_model.storage[loc_tech, timestep] == storage_previous_step - carrier_con - carrier_prod)
 
 
-def storage_plus_time_min_constraint_rule(backend_model, loc_tech, timestep):
+def storage_plus_time_constraint_rule(backend_model, loc_tech, timestep):
 
     # if you have set a storage min you have to say what the primary carrier is which this applies to
     # needs to be in terms of loc_tech_carriers

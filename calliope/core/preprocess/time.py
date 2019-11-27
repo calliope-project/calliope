@@ -274,31 +274,45 @@ def add_storage_time_lookup(dataset, model_data):
     them is created as a comma delimited string.
     """
     # need to apadt this so it can handle more than just one loc_tech
-    run_config = backend_model.__calliope_run_config
+    run_config = model_data['run']
 
     timesteps = model_data.sets['timesteps']
+    loc_techs_storage_time_per_timestep = model_data.sets['loc_techs_storage_time_per_timestep']
     store_time_contribs = dataset['storage_time_per_timestep'].to_dataframe().reset_index()
-    store_time_contribs['in_times'] = math.nan
-    max_index = max(store_time_contribs.index.to_list())
-    for row in store_time_contribs.index.to_list():
-        out_time_index = int(row + store_time_contribs.iloc[row]['storage_time_per_timestep'])
-        if out_time_index > max_index:
-            if run_config['cyclic_storage']:
-                out_time_index = out_time_index - max_index
-            else:
-                continue
-        if type(store_time_contribs.iloc[out_time_index]['in_times']) != str:
-            temp_str = str(store_time_contribs.iloc[row]['timesteps'])
-        else: 
-            temp_str = str(store_time_contribs.iloc[out_time_index]['in_times']) + ',' + str(store_time_contribs.iloc[row]['timesteps'])
-        store_time_contribs.loc[out_time_index,'in_times'] = temp_str
+    store_time_contribs = store_time_contribs.pivot(index='timesteps', columns='loc_techs_storage_time_per_timestep', values='storage_time_per_timestep').reset_index()
 
-    store_time_contribs = store_time_contribs.drop(columns=['loc_techs_storage_time_per_timestep','storage_time_per_timestep']).set_index('timesteps')
+    max_index_length = max(store_time_contribs.index.to_list())
+    time_length = len(timesteps)
+    max_index = min(max_index_length, time_length)
+    # for each column (loctech) make a temp column - read data, do analysis, overwrite the loctech column with the string values
+    store_time_contribs['temp_df'] = math.nan
+
+    for column in store_time_contribs:
+        if column == 'timesteps' or column == 'temp_df':
+            continue
+        else:
+            store_time_contribs['temp_df'] = store_time_contribs[column]
+            store_time_contribs[column] = math.nan
+            for row in store_time_contribs.index.to_list():
+                out_time_index = int(row + int(store_time_contribs.iloc[row]['temp_df']))
+                if out_time_index > max_index:
+                    if run_config['cyclic_storage']:
+                        multiplier = int(out_time_index/max_index_length)
+                        out_time_index = out_time_index - max_index * multiplier # works unless out_time_index is more than twice max_index
+                    else:
+                        continue
+                if type(store_time_contribs.iloc[out_time_index][column]) != str: #change in_times to the column the loop is on
+                    temp_str = str(store_time_contribs.iloc[row]['timesteps'])
+                else: 
+                    temp_str = str(store_time_contribs.iloc[out_time_index][column]) + ',' + str(store_time_contribs.iloc[row]['timesteps'])
+                store_time_contribs.loc[out_time_index,column] = temp_str
+
+    store_time_contribs = store_time_contribs.drop(columns=['temp_df']).set_index('timesteps')
 
     dataset['lookup_storage_time'] = xr.DataArray(
         data=store_time_contribs.to_numpy(),
-        dims=['timesteps', 'loc_techs_storage_time_per_timestep'],
-        # coords={'loc_techs_storage_time_per_timestep': 'loc_techs_storage_time_per_timestep', 'timesteps': timesteps}
+        dims=['timesteps', 'loc_techs_storage_time_per_timestep']#,
+        # coords={'loc_techs_storage_time_per_timestep': loc_techs_storage_time_per_timestep, 'timesteps': timesteps}
     )
 
     return dataset

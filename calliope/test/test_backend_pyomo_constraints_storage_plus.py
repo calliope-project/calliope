@@ -135,30 +135,30 @@ class TestBuildStoragePlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
 
-class TestStoragePlusConstraintResults:
+# class TestStoragePlusConstraintResults:
 
-    def test_storage_cap_per_time_from_file(self):
-        m = build_model(
-            {'techs.test_storage_plus':{'storage_cap_equals_per_timestep': 'file='}}, 'simple_storage_plus,two_hours,investment_costs')
-        )
+#     def test_storage_cap_per_time_from_file(self):
+#         m = build_model(
+#             {'techs.test_storage_plus':{'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'}}, 'simple_storage_plus,two_hours,investment_costs')
+#         )
+#         m.run()
 
+#         assert 
 
-        return
+#     def test_shared_storage_link(self):
 
-    def test_shared_storage_link(self):
-
-        return
+#         return
     
-    def test_storage_time(self):
+#     def test_storage_time(self):
 
-        return
+#         return
 
-    def test_storage_time_per_time(self):
+#     def test_storage_time_per_time(self):
 
-        return
+#         return
 
-    def test_storage_discharge_depth_per_time_from_file(self):
+#     def test_storage_discharge_depth_per_time_from_file(self):
 
-        return
+#         return
 
 
