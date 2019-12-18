@@ -41,7 +41,7 @@ class TestPlotting:
 
         # Testing that the model can handle not having supply_plus technologies
         # Wrapped in temporary directory as we can't stop it saving an HTML file
-        model._model_data = model._model_data.drop('resource_con')
+        model._model_data = model._model_data.drop_vars('resource_con')
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, 'test_plot.html')
             model.plot.timeseries(
@@ -63,7 +63,7 @@ class TestPlotting:
 
         # Testing that the model catches an expected error on the model not
         # defining coordinates
-        model._model_data = model._model_data.drop('loc_coordinates')
+        model._model_data = model._model_data.drop_vars('loc_coordinates')
         with pytest.raises(ValueError) as error:
             model.plot.flows()
             model.plot.transmission()
