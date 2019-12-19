@@ -10,9 +10,6 @@ pool:
 strategy:
   maxParallel: 8
   matrix:
-    linux-py3.6:
-      IMAGE_NAME: ubuntu-latest
-      PYTHON_VERSION: 3.6
     linux-py3.7:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.7
