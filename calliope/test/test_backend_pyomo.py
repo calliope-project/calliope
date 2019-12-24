@@ -143,15 +143,25 @@ class TestModel:
 
 
 class TestChecks:
-    def test_operate_cyclic_storage(self):
+    @pytest.mark.parametrize('on', (True, False))
+    def test_operate_cyclic_storage(self, on):
         """Cannot have cyclic storage in operate mode"""
-        m = build_model({}, 'simple_supply,operate,investment_costs')
-        assert m.run_config['cyclic_storage'] is True
+        if on is True:
+            override = {}  # cyclic storage is True by default
+            m = build_model(override, 'simple_supply_and_supply_plus,operate,investment_costs')
+            assert m.run_config['cyclic_storage'] is True
+        elif on is False:
+            override = {'run.cyclic_storage': False}
+            m = build_model(override, 'simple_supply_and_supply_plus,operate,investment_costs')
+            assert m.run_config['cyclic_storage'] is False
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)
-        assert check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
-        run_config = AttrDict.from_yaml_string(m._model_data.attrs['run_config'])
-        assert run_config['cyclic_storage'] is False
+        check_warn = check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
+        if on is True:
+            assert check_warn
+        elif on is True:
+            assert not check_warn
+        assert AttrDict.from_yaml_string(m._model_data.attrs['run_config']).cyclic_storage is False
 
     @pytest.mark.parametrize('param', [('energy_eff'), ('resource_eff'), ('parasitic_eff')])
     def test_loading_timeseries_operate_efficiencies(self, param):
@@ -184,7 +194,7 @@ class TestChecks:
         )
 
         with pytest.raises(exceptions.ModelError) as error:
-            with pytest.warns(exceptions.ModelWarning) as warning:
+            with pytest.warns(exceptions.ModelWarning):
                 m.run(build_only=True)
 
         assert check_error_or_warning(error, ['Operate mode: User must define a finite energy_cap'])
@@ -316,26 +326,6 @@ class TestChecks:
                 'Storage cannot be cyclic in operate run mode'
             ]
         )
-
-    @pytest.mark.parametrize('on', (True, False))
-    def test_operate_cyclic_storage(self, on):
-        """Some constraints, if not defined, will throw a warning and possibly change values in model_data"""
-
-        if on is False:
-            override = {}
-        else:
-            override = {'run.cyclic_storage': False}
-        m = build_model(
-            override, 'simple_supply_and_supply_plus,operate,investment_costs'
-        )
-        with pytest.warns(exceptions.ModelWarning) as warning:
-            m.run(build_only=True)
-        if on is False:
-            assert check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
-            assert AttrDict.from_yaml_string(m._model_data.attrs['run_config']).cyclic_storage is False
-        elif on is True:
-            assert not check_error_or_warning(warning, 'Storage cannot be cyclic in operate run mode')
-            assert AttrDict.from_yaml_string(m._model_data.attrs['run_config']).cyclic_storage is False
 
     @pytest.mark.parametrize('on', (True, False))
     def test_operate_resource_cap_max(self, on):

@@ -69,10 +69,9 @@ def check_operate_params(model_data):
             warnings.append(warning_text)
             return var_name, warnings
 
-
     # Storage initial is carried over between iterations, so must be defined along with storage
     if ('loc_techs_store' in model_data.dims.keys() and
-        'storage_initial' not in model_data.data_vars.keys()):
+            'storage_initial' not in model_data.data_vars.keys()):
         model_data['storage_initial'] = (
             xr.DataArray([0.0 for loc_tech in model_data.loc_techs_store.values],
                          dims='loc_techs_store')
@@ -85,7 +84,7 @@ def check_operate_params(model_data):
 
     # Operated units is carried over between iterations, so must be defined in a milp model
     if ('loc_techs_milp' in model_data.dims.keys() and
-        'operated_units' not in model_data.data_vars.keys()):
+            'operated_units' not in model_data.data_vars.keys()):
         model_data['operated_units'] = (
             xr.DataArray([0 for loc_tech in model_data.loc_techs_milp.values],
                          dims='loc_techs_milp')
