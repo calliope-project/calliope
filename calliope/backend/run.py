@@ -14,6 +14,7 @@ from calliope.backend import checks
 from calliope.backend.pyomo import model as run_pyomo
 from calliope.backend.pyomo import interface as pyomo_interface
 
+from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope.core.attrdict import AttrDict
 
 logger = logging.getLogger(__name__)
@@ -129,8 +130,12 @@ def run_operate(model_data, timings, backend, build_only):
     log_time(logger, timings, 'run_start',
              comment='Backend: starting model run in operational mode')
 
-    defaults = AttrDict.from_yaml_string(model_data.attrs['defaults'])
-    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
+    defaults = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['defaults'], name='defaults', observer=model_data
+    )
+    run_config = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['run_config'], name='run_config', observer=model_data
+    )
 
     # New param defaults = old maximum param defaults (e.g. energy_cap gets default from energy_cap_max)
     operate_params = {
@@ -139,7 +144,6 @@ def run_operate(model_data, timings, backend, build_only):
     operate_params['purchased'] = 0  # no _max to work from here, so we hardcode a default
 
     defaults.update(operate_params)
-    model_data.attrs['defaults'] = defaults.to_yaml()
 
     # Capacity results (from plan mode) can be used as the input to operate mode
     if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
@@ -164,32 +168,6 @@ def run_operate(model_data, timings, backend, build_only):
             cap.attrs['is_result'] = 1
             cap.attrs['operate_param'] = 1
         model_data.update(caps)
-
-    # Storage initial is carried over between iterations, so must be defined along with storage
-    if ('loc_techs_store' in model_data.dims.keys() and
-        'storage_initial' not in model_data.data_vars.keys()):
-        model_data['storage_initial'] = (
-            xr.DataArray([0.0 for loc_tech in model_data.loc_techs_store.values],
-                         dims='loc_techs_store')
-        )
-        model_data['storage_initial'].attrs['is_result'] = 0.0
-        exceptions.warn(
-            'Initial stored energy not defined, set to zero for all '
-            'loc::techs in loc_techs_store, for use in iterative optimisation'
-        )
-    # Operated units is carried over between iterations, so must be defined in a milp model
-    if ('loc_techs_milp' in model_data.dims.keys() and
-        'operated_units' not in model_data.data_vars.keys()):
-        model_data['operated_units'] = (
-            xr.DataArray([0 for loc_tech in model_data.loc_techs_milp.values],
-                         dims='loc_techs_milp')
-        )
-        model_data['operated_units'].attrs['is_result'] = 1
-        model_data['operated_units'].attrs['operate_param'] = 1
-        exceptions.warn(
-            'daily operated units not defined, set to zero for all '
-            'loc::techs in loc_techs_milp, for use in iterative optimisation'
-        )
 
     comments, warnings, errors = checks.check_operate_params(model_data)
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)

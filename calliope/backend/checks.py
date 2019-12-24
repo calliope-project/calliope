@@ -69,6 +69,34 @@ def check_operate_params(model_data):
             warnings.append(warning_text)
             return var_name, warnings
 
+
+    # Storage initial is carried over between iterations, so must be defined along with storage
+    if ('loc_techs_store' in model_data.dims.keys() and
+        'storage_initial' not in model_data.data_vars.keys()):
+        model_data['storage_initial'] = (
+            xr.DataArray([0.0 for loc_tech in model_data.loc_techs_store.values],
+                         dims='loc_techs_store')
+        )
+        model_data['storage_initial'].attrs['is_result'] = 0.0
+        warnings.append(
+            'Initial stored energy not defined, set to zero for all '
+            'loc::techs in loc_techs_store, for use in iterative optimisation'
+        )
+
+    # Operated units is carried over between iterations, so must be defined in a milp model
+    if ('loc_techs_milp' in model_data.dims.keys() and
+        'operated_units' not in model_data.data_vars.keys()):
+        model_data['operated_units'] = (
+            xr.DataArray([0 for loc_tech in model_data.loc_techs_milp.values],
+                         dims='loc_techs_milp')
+        )
+        model_data['operated_units'].attrs['is_result'] = 1
+        model_data['operated_units'].attrs['operate_param'] = 1
+        warnings.append(
+            'daily operated units not defined, set to zero for all '
+            'loc::techs in loc_techs_milp, for use in iterative optimisation'
+        )
+
     for loc_tech in model_data.loc_techs.values:
         energy_cap = model_data.energy_cap.loc[loc_tech].item()
         # Must have energy_cap defined for all relevant techs in the model
@@ -97,7 +125,7 @@ def check_operate_params(model_data):
                     )
 
             # force resource overrides capacity constraints, so set capacity constraints to infinity
-            if _get_param(loc_tech, 'force_resource').item() is True:
+            if _get_param(loc_tech, 'force_resource'):
 
                 if not _is_in(loc_tech, 'loc_techs_store'):
                     # set resource_area to inf if the resource is linked to energy_cap using energy_per_cap
@@ -139,45 +167,25 @@ def check_operate_params(model_data):
                         'Resource capacity constraint removed from {} as '
                         'force_resource is applied'.format(loc_tech)
                     )
-            # Cannot have consumed resource being higher than energy_cap, as
-            # constraints will clash. Doesn't affect supply_plus techs with a
-            # storage buffer prior to carrier production.
-            elif not _is_in(loc_tech, 'loc_techs_store'):
-                if energy_cap is not None and not np.isnan(energy_cap):
-                    resource_scale = _get_param(loc_tech, 'resource_scale')
-                    energy_cap_scale = _get_param(loc_tech, 'energy_cap_scale')
-                    resource_eff = _get_param(loc_tech, 'resource_eff')
-                    energy_eff = _get_param(loc_tech, 'energy_eff')
-                    resource = model_data.resource.loc[loc_tech].values
-                    if any(resource * resource_scale * resource_eff >
-                           energy_cap * energy_cap_scale * energy_eff):
-                        errors.append(
-                            'Operate mode: resource is forced to be higher than '
-                            'fixed energy cap for `{}`'.format(loc_tech)
-                        )
+
         if _is_in(loc_tech, 'loc_techs_store'):
-            if _get_param(loc_tech, 'charge_rate') is not False:
-                storage_cap = model_data.storage_cap.loc[loc_tech].item()
-                if storage_cap and energy_cap:
+            storage_cap = model_data.storage_cap.loc[loc_tech].item()
+            if not pd.isnull(storage_cap) and not pd.isnull(energy_cap):
+                if _get_param(loc_tech, 'charge_rate') is not False:
                     charge_rate = model_data['charge_rate'].loc[loc_tech].item()
                     if storage_cap * charge_rate < energy_cap:
                         errors.append(
-                            'fixed storage capacity * charge rate is not larger '
+                            'fixed storage capacity * charge_rate is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
-        if _is_in(loc_tech, 'loc_techs_store'):
-            if _get_param(loc_tech, 'energy_cap_per_storage_cap_max') is not False:
-                storage_cap = model_data.storage_cap.loc[loc_tech].item()
-                if storage_cap and energy_cap:
+                if _get_param(loc_tech, 'energy_cap_per_storage_cap_max') is not False:
                     energy_cap_per_storage_cap_max = model_data['energy_cap_per_storage_cap_max'].loc[loc_tech].item()
                     if storage_cap * energy_cap_per_storage_cap_max < energy_cap:
                         errors.append(
                             'fixed storage capacity * energy_cap_per_storage_cap_max is not larger '
                             'than fixed energy capacity for loc::tech {}'.format(loc_tech)
                         )
-            elif _get_param(loc_tech, 'energy_cap_per_storage_cap_min') is not False:
-                storage_cap = model_data.storage_cap.loc[loc_tech].item()
-                if storage_cap and energy_cap:
+                if _get_param(loc_tech, 'energy_cap_per_storage_cap_min') is not False:
                     energy_cap_per_storage_cap_min = model_data['energy_cap_per_storage_cap_min'].loc[loc_tech].item()
                     if storage_cap * energy_cap_per_storage_cap_min > energy_cap:
                         errors.append(
