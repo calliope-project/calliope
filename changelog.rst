@@ -12,6 +12,8 @@ Release History
 
 |new| New model-wide constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
 
+|changed| Allowed 'energy_cap_min' for transmission technologies.
+
 |changed| Minor additions made to troubleshooting and development documentation.
 
 |changed| |backwards-incompatible| The backend interface to update a parameter value (`Model.backend.update_param()`) has been updated to allow multiple values in a parameter to be updated at once, using a dictionary.
