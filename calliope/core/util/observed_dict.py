@@ -5,7 +5,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-from collections import Mapping
+from collections.abc import Mapping
 from calliope.core.attrdict import AttrDict
 
 

@@ -23,23 +23,28 @@ The easiest way to get a working Calliope installation is to use the free ``cond
 
 To get ``conda``, `download and install the "Miniconda" distribution for your operating system <https://conda.io/miniconda.html>`_ (using the version for Python 3).
 
-With Miniconda installed, you can create a new Python 3.6 environment called ``"calliope"`` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window::
+With Miniconda installed, you can create a new Python 3.6 environment called ``"calliope"`` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window
 
-   $ conda create -c conda-forge -n calliope python=3.6 calliope
+  .. code-block:: fishshell
 
-To use Calliope, you need to activate the ``calliope`` environment each time::
+    $ conda create -c conda-forge -n calliope python=3.6 calliope
 
-   $ conda activate calliope
+To use Calliope, you need to activate the ``calliope`` environment each time
+
+  .. code-block:: fishshell
+
+    $ conda activate calliope
 
 You are now ready to use Calliope together with the free and open source GLPK solver. However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result). Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step. Read the next section for more information on installing alternative solvers.
 
 Updating an existing installation
 =================================
 
-If following the recommended installation method above, the following command, assuming the conda environment is active, will update Calliope to the newest version::
+If following the recommended installation method above, the following command, assuming the conda environment is active, will update Calliope to the newest version
 
-   $ conda update -c conda-forge calliope
+  .. code-block:: fishshell
 
+    $ conda update -c conda-forge calliope
 
 .. _install_solvers:
 
@@ -63,7 +68,7 @@ Gurobi
 
 `Gurobi <https://www.gurobi.com/>`_ is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
 
-While Gurobi can be installed via conda (```conda install -c gurobi gurobi```) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
+While Gurobi can be installed via conda (:sh:`conda install -c gurobi gurobi`) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
 
 After installing, log on to the `Gurobi website <https://www.gurobi.com/>`_ and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
 

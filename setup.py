@@ -56,12 +56,12 @@ setup(
         "netcdf4 >= 1.2.2",
         "numexpr >= 2.3.1",
         "numpy >= 1.15",
-        "pandas >= 0.24, < 0.25",
+        "pandas >= 0.25, < 0.26",
         "plotly >= 3.3, < 4.0",
         "pyomo >= 5.6, < 5.7",
-        "ruamel.yaml >= 0.15.71, < 0.16",
-        "scikit-learn >= 0.20, < 0.21",
-        "xarray >= 0.12, < 0.13",
+        "ruamel.yaml >= 0.16",
+        "scikit-learn >= 0.22",
+        "xarray >= 0.14, < 0.15",
     ],
     entry_points={
         'console_scripts': [

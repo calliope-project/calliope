@@ -10,9 +10,13 @@ Release History
 
 |new| New model-wide constraints `carrier_prod_min`, `carrier_prod_max`, and  `carrier_prod_equals` which restrict the absolute energy produced by a subgroup of technologies and locations.
 
-|new| Introduced a `storage_dod` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology.
+|new| Introduced a `storage_discharge_depth` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology.
 
 |new| New model-wide constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
+
+|changed| Allowed 'energy_cap_min' for transmission technologies.
+
+|changed| Minor additions made to troubleshooting and development documentation.
 
 |changed| |backwards-incompatible| The backend interface to update a parameter value (`Model.backend.update_param()`) has been updated to allow multiple values in a parameter to be updated at once, using a dictionary.
 
@@ -30,6 +34,8 @@ Release History
 
 |changed| All group constraint values are parameters so they can be updated in the backend model
 
+|fixed| Documentation distinctly renders inline Python, YAML, and shell code snippets.
+
 |fixed| Tech groups are used to filter technologies to which group constraints can be applied. This ensures that transmission and storage technologies are included in cost and energy capacity group constraints. More comprehensive tests have been added accordingly.
 
 |fixed| Models saved to NetCDF now include the fully built internal YAML model and debug data so that `Model.save_commented_model_yaml()` is available after loading a NetCDF model from disk
@@ -37,6 +43,8 @@ Release History
 |fixed| Fix an issue preventing the deprecated `charge_rate` constraint from working in 0.6.4.
 
 |fixed| Fix an issue that prevented 0.6.4 from loading NetCDF models saved with older versions of Calliope. It is still recommended to only load models with the same version of Calliope that they were saved with, as not all functionality will work when mixing versions.
+
+|fixed| |backwards-incompatible| Updated to require pandas 0.25, xarray 0.14, and scikit-learn 0.22, and verified Python 3.8 compatibility. Because of a bugfix in scikit-learn 0.22, models using k-means clustering with a specified random seed may return different clusters from Calliope 0.6.5 on.
 
 0.6.4 (2019-05-27)
 ------------------

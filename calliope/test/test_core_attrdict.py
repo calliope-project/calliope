@@ -99,7 +99,7 @@ class TestAttrDict:
 
     def test_from_yaml_string_dot_strings_duplicate(self):
         yaml_string = 'a.b.c: 1\na.b.c: 2'
-        with pytest.warns(ruamel_yaml.constructor.DuplicateKeyFutureWarning):
+        with pytest.raises(ruamel_yaml.constructor.DuplicateKeyError):
             AttrDict.from_yaml_string(yaml_string)
 
     def test_simple_invalid_yaml(self):
