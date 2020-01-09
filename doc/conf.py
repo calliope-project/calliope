@@ -117,6 +117,19 @@ templates_path = ['_templates']
 # The suffix of source filenames.
 source_suffix = '.rst'
 
+#A string of reStructuredText that will be included at the beginning of every
+# source file that is read
+rst_prolog = """
+.. role:: python(code)
+   :language: python
+
+.. role:: yaml(code)
+   :language: yaml
+
+.. role:: sh(code)
+   :language: sh
+"""
+
 # A string of reStructuredText that will be included at the end
 # of every source file that is read. This is the right place to add
 # substitutions that should be available in every file.

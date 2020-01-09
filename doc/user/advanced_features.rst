@@ -38,11 +38,11 @@ The available options include:
                 how: mean
                 k: 20
 
-When using representative days, a number of additional constraints are added, based on the study undertaken by `Kotzur et al <https://doi.org/10.1016/j.apenergy.2018.01.023>`_. These constraints require a new decision variable ``storage_inter_cluster``, which tracks storage between all the dates of the original timeseries. This particular functionality can be disabled by including ``storage_inter_cluster: false`` in the `function_options` given above.
+When using representative days, a number of additional constraints are added, based on the study undertaken by `Kotzur et al <https://doi.org/10.1016/j.apenergy.2018.01.023>`_. These constraints require a new decision variable ``storage_inter_cluster``, which tracks storage between all the dates of the original timeseries. This particular functionality can be disabled by including :yaml:`storage_inter_cluster: false` in the `function_options` given above.
 
 .. note::
 
-    It is also possible to load user-defined representative days, by pointing to a file in `clustering_func` in the same format as pointing to timeseries files in constraints, e.g. ``clustering_func: file=clusters.csv:column_name``. Clusters are unique per datestep, so the clustering file is most readable if the index is at datestep resolution. But, the clustering file index can be in timesteps (e.g. if sharing the same file as a constraint timeseries), with the cluster number repeated per timestep in a day. Cluster values should be integer, starting at zero.
+    It is also possible to load user-defined representative days, by pointing to a file in `clustering_func` in the same format as pointing to timeseries files in constraints, e.g. :yaml:`clustering_func: file=clusters.csv:column_name`. Clusters are unique per datestep, so the clustering file is most readable if the index is at datestep resolution. But, the clustering file index can be in timesteps (e.g. if sharing the same file as a constraint timeseries), with the cluster number repeated per timestep in a day. Cluster values should be integer, starting at zero.
 
 3. Heuristic selection of time steps, that is, the application of one or more of the masks defined in :mod:`calliope.time.masks`, which will mark areas of the time series to retain at maximum resolution (unmasked) and areas where resolution can be lowered (masked). Options can be passed to the masking functions by specifying ``options``. A ``time.function`` can still be specified and will be applied to the masked areas (i.e. those areas of the time series not selected to remain at the maximum resolution), as in this example, which looks for the week of minimum and maximum potential wind generation (assuming a ``wind`` technology was specified), then reduces the rest of the input time series to 6-hourly resolution:
 
@@ -58,7 +58,7 @@ When using representative days, a number of additional constraints are added, ba
 
 .. Warning::
 
-  When using time clustering or time masking, the resulting timesteps will be assigned different weights depending on how long a period of time they represent. Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. The weighting is accessible in the model data, e.g. through ``Model.inputs.timestep_weights``. The interpretation of results when weights are not 1 for all timesteps requires caution. Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function. This means that costs and production values are not consistent without manually post-processing them by either multipyling production by weight (production would then be inconsistent with capacity) or dividing costs by weight. The computation of levelised costs and of capacity factors takes weighting into account, so these values are consisten and can be used as usual.
+  When using time clustering or time masking, the resulting timesteps will be assigned different weights depending on how long a period of time they represent. Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. The weighting is accessible in the model data, e.g. through :python:`model.inputs.timestep_weights`. The interpretation of results when weights are not 1 for all timesteps requires caution. Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function. This means that costs and production values are not consistent without manually post-processing them by either multipyling production by weight (production would then be inconsistent with capacity) or dividing costs by weight. The computation of levelised costs and of capacity factors takes weighting into account, so these values are consisten and can be used as usual.
 
 .. seealso::
 
@@ -67,7 +67,7 @@ When using representative days, a number of additional constraints are added, ba
 Setting a random seed
 ---------------------
 
-By specifying ``model.random_seed`` in the model configuration, any alphanumeric string can be used to initialise the random number generator at the very start of model processing.
+By specifying :yaml:`model.random_seed` in the model configuration, any alphanumeric string can be used to initialise the random number generator at the very start of model processing.
 
 This is useful for full reproducibility of model results where time series clustering is used, as clustering methods such as k-means depend on randomly generated initial conditions.
 
@@ -133,16 +133,16 @@ None of the ``tech_groups`` appear in model results, they are only used to group
 Removing techs, locations and links
 -----------------------------------
 
-By specifying ``exists: false`` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
+By specifying :yaml:`exists: false` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
 
 This works for:
 
-* Techs: ``techs.tech_name.exists: false``
-* Locations: ``locations.location_name.exists: false``
-* Links: ``links.location1,location2.exists: false``
-* Techs at a specific location:  ``locations.location_name.techs.tech_name.exists: false``
-* Transmission techs at a specific location: ``links.location1,location2.techs.transmission_tech.exists: false``
-* Group constraints: ``group_constraints.my_constraint.exists: false``
+* Techs: :yaml:`techs.tech_name.exists: false`
+* Locations: :yaml:`locations.location_name.exists: false`
+* Links: :yaml:`links.location1,location2.exists: false`
+* Techs at a specific location:  :yaml:`locations.location_name.techs.tech_name.exists: false`
+* Transmission techs at a specific location: :yaml:`links.location1,location2.techs.transmission_tech.exists: false`
+* Group constraints: :yaml:`group_constraints.my_constraint.exists: false`
 
 .. _operational_mode:
 
@@ -171,14 +171,14 @@ Generating scripts to run a model many times
 
 :ref:`Scenarios and overrides <building_overrides>` can be used to run a given model multiple times with slightly changed settings or constraints.
 
-This functionality can be used together with the ``calliope generate_runs`` and ``calliope generate_scenarios`` command-line tools to generate scripts that run a model many times over in a fully automated way, for example, to explore the effect of different technology costs on model results.
+This functionality can be used together with the :sh:`calliope generate_runs` and :sh:`calliope generate_scenarios` command-line tools to generate scripts that run a model many times over in a fully automated way, for example, to explore the effect of different technology costs on model results.
 
-``calliope generate_runs``, at a minimum, must be given the following arguments:
+:sh:`calliope generate_runs`, at a minimum, must be given the following arguments:
 
 * the model configuration file to use
 * the name of the script to create
-* ``--kind``: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, ``bsub`` creates a submission script for a LSF-based high-performance cluster, and ``sbatch`` creates a submission script for a SLURM-based high-performance cluster.
-* ``--scenarios``: A semicolon-separated list of scenarios (or overrides/combinations of overrides) to generate scripts for, for example, ``scenario1;scenario2`` or ``override1,override2a;override1,override2b``. Note that when not using manually defined scenario names, a comma is used to group overrides together into a single model -- in the above example, ``override1,override2a`` would be applied to the first run and ``override1,override2b`` be applied to the second run
+* :sh:`--kind`: Currently, three options are available. ``windows`` creates a Windows batch (``.bat``) script that runs all models sequentially, ``bash`` creates an equivalent script to run on Linux or macOS, ``bsub`` creates a submission script for a LSF-based high-performance cluster, and ``sbatch`` creates a submission script for a SLURM-based high-performance cluster.
+* :sh:`--scenarios`: A semicolon-separated list of scenarios (or overrides/combinations of overrides) to generate scripts for, for example, ``scenario1;scenario2`` or ``override1,override2a;override1,override2b``. Note that when not using manually defined scenario names, a comma is used to group overrides together into a single model -- in the above example, ``override1,override2a`` would be applied to the first run and ``override1,override2b`` be applied to the second run
 
 A fully-formed command generating a Windows batch script to run a model four times with each of the scenarios "run1", "run2", "run3", and "run4":
 
@@ -188,11 +188,11 @@ A fully-formed command generating a Windows batch script to run a model four tim
 
 Optional arguments are:
 
-* ``--cluster_threads``: specifies the number of threads to request on a HPC cluster
-* ``--cluster_mem``: specifies the memory to request on a HPC cluster
-* ``--cluster_time``: specifies the run time to request on a HPC cluster
-* ``--additional_args``: A text string of any additional arguments to pass directly through to ``calliope run`` in the generated scripts, for example, ``--additional_args="--debug"``.
-* ``--debug``: Print additional debug information when running the run generation script.
+* :sh:`--cluster_threads`: specifies the number of threads to request on a HPC cluster
+* :sh:`--cluster_mem`: specifies the memory to request on a HPC cluster
+* :sh:`--cluster_time`: specifies the run time to request on a HPC cluster
+* :sh:`--additional_args`: A text string of any additional arguments to pass directly through to :sh:`calliope run` in the generated scripts, for example, :sh:`--additional_args="--debug"`.
+* :sh:`--debug`: Print additional debug information when running the run generation script.
 
 An example generating a script to run on a ``bsub``-type high-performance cluster, with additional arguments to specify the resources to request from the cluster:
 
@@ -207,7 +207,7 @@ Running this will create two files:
 
 In all cases, results are saved into the same directory as the script, with filenames of the form ``out_{run_number}_{scenario_name}.nc`` (model results) and ``plots_{run_number}_{scenario_name}.html`` (HTML plots), where ``{run_number}`` is the run number and ``{scenario_name}`` is the name of the scenario (or the string defining the overrides applied). On a cluster, log files are saved to files with names starting with ``log_`` in the same directory.
 
-Finally, the  ``calliope generate_scenarios`` tool can be used to quickly generate a file with ``scenarios`` definition for inclusion in a model, if a large enough number of overrides exist to make it tedious to manually combine them into scenarios. Assuming that in ``model.yaml`` a range of overrides exist that specify a subset of time for the years 2000 through 2010, called "y2000" through "y2010", and a set of cost-related overrides called "cost_low", "cost_medium" and "cost_high", the following command would generate scenarios with combinations of all years and cost overrides, calling them "run_1", "run_2", and so on, and saving them to ``scenarios.yaml``:
+Finally, the :sh:`calliope generate_scenarios` tool can be used to quickly generate a file with ``scenarios`` definition for inclusion in a model, if a large enough number of overrides exist to make it tedious to manually combine them into scenarios. Assuming that in ``model.yaml`` a range of overrides exist that specify a subset of time for the years 2000 through 2010, called "y2000" through "y2010", and a set of cost-related overrides called "cost_low", "cost_medium" and "cost_high", the following command would generate scenarios with combinations of all years and cost overrides, calling them "run_1", "run_2", and so on, and saving them to ``scenarios.yaml``:
 
 .. code-block:: shell
 
@@ -251,27 +251,27 @@ This is equivalent to the following override:
 Interfacing with the solver backend
 -----------------------------------
 
-On loading a model, there is no solver backend, only the input dataset. The backend is generated when a user calls `run()` on their model. Currently this will call back to Pyomo to build the model and send it off to the solver, given by the user in the run configuration ``run.solver``. Once built, solved, and returned, the user has access to the results dataset ``model.results`` and interface functions with the backend ``model.backend``.
+On loading a model, there is no solver backend, only the input dataset. The backend is generated when a user calls `run()` on their model. Currently this will call back to Pyomo to build the model and send it off to the solver, given by the user in the run configuration :yaml:`run.solver`. Once built, solved, and returned, the user has access to the results dataset :python:`model.results` and interface functions with the backend :python:`model.backend`.
 
 You can use this interface to:
 
 1. Get the raw data on the inputs used in the optimisation.
-    By running ``model.backend.get_input_params()`` a user get an xarray Dataset which will look very similar to ``model.inputs``, except that assumed default values will be included. You may also spot a bug, where a value in ``model.inputs`` is different to the value returned by this function.
+    By running :python:`model.backend.get_input_params()` a user get an xarray Dataset which will look very similar to :python:`model.inputs`, except that assumed default values will be included. You may also spot a bug, where a value in :python:`model.inputs` is different to the value returned by this function.
 
 2. Update a parameter value.
-    If you are interested in updating a few values in the model, you can run ``model.backend.update_param()``. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run ``model.backend.update_param('energy_eff', {'region1::ccgt`: 0.1})``. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
+    If you are interested in updating a few values in the model, you can run :python:`model.backend.update_param()`. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run :python:`model.backend.update_param('energy_eff', {'region1::ccgt`: 0.1})`. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
 
-.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. ``model.backend.update_param('objective_cost_class', {'monetary': 0.5})``.
+.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. :python:`model.backend.update_param('objective_cost_class', {'monetary': 0.5})`.
 
 3. Activate / Deactivate a constraint or objective.
     Constraints can be activated and deactivate such that they will or will not have an impact on the optimisation. All constraints are active by default, but you might like to remove, for example, a capacity constraint if you don't want there to be a capacity limit for any technologies. Similarly, if you had multiple objectives, you could deactivate one and activate another. The result would be to have a different objective when rerunning the backend.
 
-.. note:: Currently Calliope does not allow you to build multiple objectives, you will need to `understand Pyomo <http://www.pyomo.org/documentation/>`_ and add an additional objective yourself to make use of this functionality. The Pyomo ConcreteModel() object can be accessed at ``model._backend_model``.
+.. note:: Currently Calliope does not allow you to build multiple objectives, you will need to `understand Pyomo <http://www.pyomo.org/documentation/>`_ and add an additional objective yourself to make use of this functionality. The Pyomo ConcreteModel() object can be accessed at :python:`model._backend_model`.
 
 4. Rerunning the backend.
-    If you have edited parameters or constraint activation, you will need to rerun the optimisation to propagate the effects. By calling ``model.backend.rerun()``, the optimisation will run again, with the updated backend. This will not affect your model, but instead will return a new calliope Model object associated with that *specific* rerun. You can analyse the results and inputs in this new model, but there is no backend interface available. You'll need to return to the original model to access the backend again, or run the returned model using ``new_model.run(force_rerun=True)``. In the original model, ``model.results`` will not change, and can only be overwritten by ``model.run(force_rerun=True)``.
+    If you have edited parameters or constraint activation, you will need to rerun the optimisation to propagate the effects. By calling :python:`model.backend.rerun()`, the optimisation will run again, with the updated backend. This will not affect your model, but instead will return a new calliope Model object associated with that *specific* rerun. You can analyse the results and inputs in this new model, but there is no backend interface available. You'll need to return to the original model to access the backend again, or run the returned model using :python:`new_model.run(force_rerun=True)`. In the original model, :python:`model.results` will not change, and can only be overwritten by :python:`model.run(force_rerun=True)`.
 
-.. note:: By calling ``model.run(force_rerun=True)`` any updates you have made to the backend will be overwritten.
+.. note:: By calling :python:`model.run(force_rerun=True)` any updates you have made to the backend will be overwritten.
 
 .. seealso:: :ref:`api_backend_interface`
 

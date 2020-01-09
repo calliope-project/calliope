@@ -5,7 +5,7 @@ channels:
 
 dependencies:
     - bottleneck
-    - click<8
+    - click
     - glpk=4.61
     - hdf5
     - ipython
@@ -16,11 +16,12 @@ dependencies:
     - netcdf4
     - numexpr
     - numpy
-    - pandas<0.25
+    - pandas=0.25
     - plotly<4.0
-    - pyomo<5.7
-    - pytest<5.3  # 5.3 fails with KeyError: '__name__' when collecting items
+    - pyomo=5.6
+    - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
     - pytest-cov
-    - ruamel.yaml<0.16
-    - scikit-learn<0.21
-    - xarray<0.13
+    - pytest-xdist  # pytest distributed testing plugin
+    - ruamel.yaml=0.16
+    - scikit-learn
+    - xarray=0.14

@@ -109,7 +109,7 @@ def _drop_timestep_vars(data, timesteps):
     if timesteps is not None:
         timeseries_data = timeseries_data.loc[{'timesteps': timesteps}]
 
-    timeseries_data = timeseries_data.drop([
+    timeseries_data = timeseries_data.drop_vars([
         varname for varname, vardata in data.data_vars.items()
         if 'timesteps' not in vardata.dims
     ])
@@ -159,7 +159,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
     # and get all coordinates of the original dataset, to reinstate later
     data_to_cluster, data_coords = _drop_timestep_vars(data, timesteps)
 
-    data_to_cluster = data_to_cluster.drop(['timestep_weights', 'timestep_resolution'])
+    data_to_cluster = data_to_cluster.drop_vars(['timestep_weights', 'timestep_resolution'])
 
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
@@ -231,7 +231,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
 
     if timesteps is not None:
         data_new = _copy_non_t_vars(data, data_new)
-        data_new = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_new)
+        data_new = _combine_datasets(data.drop_sel(timesteps=timesteps), data_new)
         data_new = _copy_non_t_vars(data, data_new)
 
 
@@ -298,7 +298,7 @@ def resample(data, timesteps, resolution):
                     'float is expected for timeseries resampling.'
                     .format(var, data_rs[var].dtype)
                 )
-                data_rs = data_rs.drop(var)
+                data_rs = data_rs.drop_vars(var)
 
     # Get rid of the filled-in NaN timestamps
     data_rs = data_rs.dropna(dim='timesteps', how='all')
@@ -313,7 +313,7 @@ def resample(data, timesteps, resolution):
 
     if timesteps is not None:
         # Combine leftover parts of passed in data with new data
-        data_rs = _combine_datasets(data.drop(timesteps, dim='timesteps'), data_rs)
+        data_rs = _combine_datasets(data.drop_sel(timesteps=timesteps), data_rs)
         data_rs = _copy_non_t_vars(data, data_rs)
         # Having timesteps with different lengths does not permit operational mode
         data_rs.attrs['allow_operate_mode'] = 0
@@ -347,7 +347,7 @@ def drop(data, timesteps):
     # 'Distribute weight' of the dropped timesteps onto the remaining ones
     dropped_weight = data.timestep_weights.loc[{'timesteps': timesteps_pd}].sum()
 
-    data = data.drop(timesteps_pd, dim='timesteps')
+    data = data.drop_sel(timesteps=timesteps_pd)
 
     data['timestep_weights'] = data['timestep_weights'] + (dropped_weight / len(data['timestep_weights']))
 
