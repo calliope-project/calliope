@@ -56,6 +56,12 @@ def run(model_data, timings, build_only=False):
             backend=BACKEND[run_config.backend], build_only=build_only
         )
 
+    elif run_config['mode'] == 'spores':
+        results, backend = run_spores(
+            model_data, timings,
+            backend=BACKEND[run_config.backend], build_only=build_only
+        )
+
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
@@ -118,6 +124,91 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
         )
 
     return results, backend_model
+
+
+def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
+    """
+    For use when mode is 'spores', to allow the model to be built, edited, and
+    iteratively run within Pyomo, modifying, at each iteration, the score of 
+    each loc::tech in such a way to generate Spatially explicit Practically Optimal
+    RESults (SPORES).
+
+    """
+    log_time(logger, timings, 'run_start',
+             comment='Backend: starting model run in SPORES mode')
+
+    if not backend_rerun:
+        backend_model = backend.generate_model(model_data)
+
+        log_time(
+            logger, timings, 'run_backend_model_generated', time_since_run_start=True,
+            comment='Backend: model generated'
+        )
+
+    else:
+        backend_model = backend_rerun
+
+    run_config = backend_model.__calliope_run_config
+    solver = run_config['solver']
+    solver_io = run_config.get('solver_io', None)
+    solver_options = run_config.get('solver_options', None)
+    save_logs = run_config.get('save_logs', None)
+
+    n_spores_std = 50
+    n_spores_excl_ith = 3
+    slack = 0.2
+    spores_dict = {}
+
+    # Iterate over the number of SPORES requested by the user
+    for j in range(0,(n_spores_std+1))
+        
+        # First iteration, cost-optimal solution
+        if j == 0: 
+
+            if build_only:
+                results = xr.Dataset()
+
+            else:
+                log_time(
+                    logger, timings, 'run_solver_start',
+                    comment='Backend: sending model_{} to solver'.format(j)
+                )
+
+                results = backend.solve_model(
+                    backend_model, solver=solver,
+                    solver_io=solver_io, solver_options=solver_options, save_logs=save_logs
+                )
+
+                log_time(
+                    logger, timings, 'run_solver_exit', time_since_run_start=True,
+                    comment='Backend: solver finished running'
+                )
+
+                termination = backend.load_results(backend_model, results)
+
+                log_time(
+                    logger, timings, 'run_results_loaded',
+                    comment='Backend: loaded results'
+                )
+
+                results = backend.get_result_array(backend_model, model_data)
+                results.attrs['termination_condition'] = termination
+
+                if results.attrs['termination_condition'] in ['optimal', 'feasible']:
+                    results.attrs['objective_function_value'] = backend_model.obj()
+                    # Converting the cost-optimal objective function value to a slack constraint
+                    # for subsequent SPORES generation
+                    slack_constraint = results.attrs['objective_function_value']*(1+slack)
+                    # Storing results in the wider SPORES dictionary
+                    spores_dict[j] = results
+
+                log_time(
+                    logger, timings, 'run_solution_returned', time_since_run_start=True,
+                    comment='Backend: generated solution array for the cost-optimal case'
+                )
+        
+        elif j != 0:
+
 
 
 def run_operate(model_data, timings, backend, build_only):
