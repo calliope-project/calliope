@@ -4,8 +4,11 @@ channels:
     - conda-forge
 
 dependencies:
-    - python=3.5  # As of June 2017, readthedocs does not support Python 3.6
-    - sphinx>=1.5
+    - python=3.7  # https://docs.readthedocs.io/en/stable/config-file/v2.html#python-version
+    - sphinx>=2.3
     - numpydoc
-    - ruamel.yaml<=0.15
+    - ruamel.yaml
     - nbconvert  # To generate HTML files from example notebooks
+    - pip
+    - pip:
+        - "git+https://github.com/readthedocs/readthedocs-sphinx-search@master"

@@ -163,7 +163,7 @@ techs:
             lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
             one_way: false  # Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`
             parasitic_eff: 1.0  # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
-            resource: 0  # name: Available resource ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``reosurce_unit``
+            resource: 0  # name: Available resource ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``resource_unit``
             resource_area_equals: false  # name: Specific installed resource area ¦ unit: m\ :sup:`2` ¦
             resource_area_max: .inf  # name: Maximum usable resource area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
             resource_area_min: 0  # name: Minimum usable resource area ¦ unit: m\ :sup:`2` ¦
