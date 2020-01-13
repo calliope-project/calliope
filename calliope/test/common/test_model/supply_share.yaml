@@ -53,48 +53,48 @@ locations:
             electricity_demand:
 
 overrides:
-    supply_share_max_systemwide:
-        group_constraints.example_supply_share_max_constraint:
+    carrier_prod_share_max_systemwide:
+        group_constraints.example_carrier_prod_share_max_constraint:
             techs: ["cheap_supply"]
-            supply_share_max:
+            carrier_prod_share_max:
                 electricity: 0.4
-    supply_share_min_systemwide:
-        group_constraints.example_supply_share_min_constraint:
+    carrier_prod_share_min_systemwide:
+        group_constraints.example_carrier_prod_share_min_constraint:
             techs: ["expensive_supply"]
-            supply_share_min:
+            carrier_prod_share_min:
                 electricity: 0.6
-    supply_share_equals_systemwide:
-        group_constraints.example_supply_share_equals_constraint:
+    carrier_prod_share_equals_systemwide:
+        group_constraints.example_carrier_prod_share_equals_constraint:
             techs: ["expensive_supply"]
-            supply_share_equals:
+            carrier_prod_share_equals:
                 electricity: 0.6
-    supply_share_max_location_0:
-        group_constraints.example_supply_share_max_constraint:
+    carrier_prod_share_max_location_0:
+        group_constraints.example_carrier_prod_share_max_constraint:
             locs: ["0"]
             techs: ["cheap_supply"]
-            supply_share_max:
+            carrier_prod_share_max:
                 electricity: 0.4
-    supply_share_min_location_0:
-        group_constraints.example_supply_share_min_constraint:
+    carrier_prod_share_min_location_0:
+        group_constraints.example_carrier_prod_share_min_constraint:
             locs: ["0"]
             techs: ["expensive_supply"]
-            supply_share_min:
+            carrier_prod_share_min:
                 electricity: 0.6
 
-    supply_share_per_timestep_max:
-        group_constraints.example_supply_share_per_timestep_max_constraint:
+    carrier_prod_share_per_timestep_max:
+        group_constraints.example_carrier_prod_share_per_timestep_max_constraint:
             techs: ["cheap_supply"]
-            supply_share_per_timestep_max:
+            carrier_prod_share_per_timestep_max:
                 electricity: 0.4
-    supply_share_per_timestep_min:
-        group_constraints.example_supply_share_per_timestep_min_constraint:
+    carrier_prod_share_per_timestep_min:
+        group_constraints.example_carrier_prod_share_per_timestep_min_constraint:
             techs: ["expensive_supply"]
-            supply_share_per_timestep_min:
+            carrier_prod_share_per_timestep_min:
                 electricity: 0.6
-    supply_share_per_timestep_equals:
-        group_constraints.example_supply_share_per_timestep_equals_constraint:
+    carrier_prod_share_per_timestep_equals:
+        group_constraints.example_carrier_prod_share_per_timestep_equals_constraint:
             techs: ["expensive_supply"]
-            supply_share_per_timestep_equals:
+            carrier_prod_share_per_timestep_equals:
                 electricity: 0.6
 
     transmission_link:

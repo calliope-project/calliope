@@ -278,22 +278,22 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``demand_share_per_timestep_decision``
      - carriers
      - Turns the per-timestep share of carrier demand met from a set of technologies across a set of locations into a model decision variable.
-   * - ``supply_share_min``
+   * - ``carrier_prod_share_min``
      - carriers
      - Minimum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
-   * - ``supply_share_max``
+   * - ``carrier_prod_share_max``
      - carriers
      - Maximum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
-   * - ``supply_share_equals``
+   * - ``carrier_prod_share_equals``
      - carriers
      - Share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
-   * - ``supply_share_per_timestep_min``
+   * - ``carrier_prod_share_per_timestep_min``
      - carriers
      - Minimum share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
-   * - ``supply_share_per_timestep_max``
+   * - ``carrier_prod_share_per_timestep_max``
      - carriers
      - Maximum share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
-   * - ``supply_share_per_timestep_equals``
+   * - ``carrier_prod_share_per_timestep_equals``
      - carriers
      - Share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
    * - ``net_import_share_min``
@@ -372,7 +372,7 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
-.. seealso:: The :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` shows two example uses of group constraints: limiting shared capacity with ``energy_cap_max`` and enforcing a minimum shared power generation with ``supply_share_min``.
+.. seealso:: The :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` shows two example uses of group constraints: limiting shared capacity with ``energy_cap_max`` and enforcing a minimum shared power generation with ``carrier_prod_share_min``.
 
 
 ``demand_share_per_timestep_decision``

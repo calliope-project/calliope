@@ -113,9 +113,9 @@ overrides:
 
     cold_fusion_prod_share:
         group_constraints:
-            min_supply_share_group:
+            min_carrier_prod_share_group:
                 techs: ['csp', 'cold_fusion']
-                supply_share_min:
+                carrier_prod_share_min:
                     # At least 85% of power supply must come from CSP and cold fusion together
                     power: 0.85
 

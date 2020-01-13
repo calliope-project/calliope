@@ -83,22 +83,22 @@ def load_constraints(backend_model):
                 )
             )
 
-        if 'group_supply_share_{}'.format(sense) in model_data_dict:
+        if 'group_carrier_prod_share_{}'.format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_supply_share_{}_constraint'.format(sense),
+                backend_model, 'group_carrier_prod_share_{}_constraint'.format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_supply_share_{}'.format(sense)),
-                    backend_model.carriers, [sense], rule=supply_share_constraint_rule
+                    getattr(backend_model, 'group_names_carrier_prod_share_{}'.format(sense)),
+                    backend_model.carriers, [sense], rule=carrier_prod_share_constraint_rule
                 )
             )
 
-        if 'group_supply_share_per_timestep_{}'.format(sense) in model_data_dict:
+        if 'group_carrier_prod_share_per_timestep_{}'.format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_supply_share_per_timestep_{}_constraint'.format(sense),
+                backend_model, 'group_carrier_prod_share_per_timestep_{}_constraint'.format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_supply_share_per_timestep_{}'.format(sense)),
+                    getattr(backend_model, 'group_names_carrier_prod_share_per_timestep_{}'.format(sense)),
                     backend_model.carriers, backend_model.timesteps,
-                    [sense], rule=supply_share_per_timestep_constraint_rule
+                    [sense], rule=carrier_prod_share_per_timestep_constraint_rule
                 )
             )
 
@@ -353,7 +353,7 @@ def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_
         )
 
 
-def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):
+def get_carrier_prod_share_lhs_and_rhs_loc_techs(backend_model, group_name):
     lhs_loc_techs = getattr(
         backend_model,
         'group_constraint_loc_techs_{}'.format(group_name)
@@ -366,7 +366,7 @@ def get_supply_share_lhs_and_rhs_loc_techs(backend_model, group_name):
     return (lhs_loc_techs, rhs_loc_techs)
 
 
-def supply_share_constraint_rule(backend_model, constraint_group, carrier, what):
+def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier, what):
     """
     Enforces shares of carrier_prod for groups of technologies and locations,
     on average over the entire model period. The share is relative to
@@ -381,12 +381,12 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
             carrier_{prod}(loc::tech::carrier, timestep)
 
     """
-    share = get_param(backend_model, 'group_supply_share_{}'.format(what), (carrier, constraint_group))
+    share = get_param(backend_model, 'group_carrier_prod_share_{}'.format(what), (carrier, constraint_group))
 
     if share is None:
         return return_noconstraint('supply_share', constraint_group)
     else:
-        lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
+        lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
             backend_model,
             constraint_group
         )
@@ -405,7 +405,7 @@ def supply_share_constraint_rule(backend_model, constraint_group, carrier, what)
         return equalizer(lhs, rhs, what)
 
 
-def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, carrier, timestep, what):
+def carrier_prod_share_per_timestep_constraint_rule(backend_model, constraint_group, carrier, timestep, what):
     """
     Enforces shares of carrier_prod for groups of technologies and locations,
     in each timestep. The share is relative to ``supply`` and ``supply_plus``
@@ -420,12 +420,12 @@ def supply_share_per_timestep_constraint_rule(backend_model, constraint_group, c
             carrier_{prod}(loc::tech::carrier, timestep) for timestep \\in timesteps
 
     """
-    share = get_param(backend_model, 'group_supply_share_per_timestep_{}'.format(what), (carrier, constraint_group))
+    share = get_param(backend_model, 'group_carrier_prod_share_per_timestep_{}'.format(what), (carrier, constraint_group))
 
     if share is None:
-        return return_noconstraint('supply_share_per_timestep', constraint_group)
+        return return_noconstraint('carrier_prod_share_per_timestep', constraint_group)
     else:
-        lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
+        lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
             backend_model,
             constraint_group
         )
@@ -506,7 +506,7 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, carrier, what)
         return return_noconstraint('carrier_prod', constraint_group)
     else:
         # We won't actually use the rhs techs
-        lhs_loc_techs, rhs_loc_techs = get_supply_share_lhs_and_rhs_loc_techs(
+        lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
             backend_model,
             constraint_group
         )
