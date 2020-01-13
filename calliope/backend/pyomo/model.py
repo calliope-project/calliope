@@ -242,7 +242,7 @@ def get_result_array(backend_model, model_data):
         i.name: get_var(backend_model, i.name)
         for i in backend_model.component_objects()
         if isinstance(i, po.base.param.IndexedParam) and
-        i.name not in model_data.data_vars.keys()
+        i.name not in model_data.data_vars.keys() and 'objective_' not in i.name
     }
 
     results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
