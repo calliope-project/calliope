@@ -4,6 +4,9 @@ Mathematical formulation
 
 This section details the mathematical formulation of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
 
+.. note::
+    Make sure to also refer to the detailed :doc:`listing of constraints and costs along with their units and default values <config_defaults>`.
+
 Decision variables
 ------------------
 
