@@ -32,6 +32,8 @@ Release History
 
 |changed| All group constraint values are parameters so they can be updated in the backend model
 
+|fixed| Operate mode checks cleaned up to warn less frequently and to not be so aggressive at editing a users model to fit the operate mode requirements.
+
 |fixed| Documentation distinctly renders inline Python, YAML, and shell code snippets.
 
 |fixed| Tech groups are used to filter technologies to which group constraints can be applied. This ensures that transmission and storage technologies are included in cost and energy capacity group constraints. More comprehensive tests have been added accordingly.
