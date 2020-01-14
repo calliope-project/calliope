@@ -9,6 +9,10 @@ overrides:
         group_constraints.example_energy_cap_share_constraint:
             energy_cap_share_max: 0.5
 
+    energy_cap_share_equals:
+        group_constraints.example_energy_cap_share_constraint:
+            energy_cap_share_equals: 0.3
+
     energy_cap_share_max_low:
         group_constraints.example_energy_cap_share_constraint:
             energy_cap_share_max: 0.1
@@ -45,6 +49,7 @@ overrides:
 scenarios:
     energy_cap_share_max_supply: [energy_cap_share_max, energy_cap_share_cheap_supply]
     energy_cap_share_min_supply:  [energy_cap_share_min, energy_cap_share_expensive_supply]
+    energy_cap_share_equals_supply:  [energy_cap_share_equals, energy_cap_share_expensive_supply]
     energy_cap_share_min_max_supply: [energy_cap_share_max_cheap_supply, energy_cap_share_min, energy_cap_share_expensive_supply]
     energy_cap_share_max_supply_loc_1: [energy_cap_share_max_loc_1, energy_cap_share_max_cheap_supply]
     energy_cap_share_min_supply_loc_0: [energy_cap_share_min, energy_cap_share_loc_0, energy_cap_share_expensive_supply]

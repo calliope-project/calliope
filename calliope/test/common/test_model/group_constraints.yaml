@@ -64,5 +64,5 @@ overrides:
             techs: ["expensive_supply"]
             demand_share_min:
                 electricity: 0.6
-            supply_share_min:
+            carrier_prod_share_min:
                 electricity: 0.8

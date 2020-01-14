@@ -278,22 +278,22 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``demand_share_per_timestep_decision``
      - carriers
      - Turns the per-timestep share of carrier demand met from a set of technologies across a set of locations into a model decision variable.
-   * - ``supply_share_min``
+   * - ``carrier_prod_share_min``
      - carriers
      - Minimum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
-   * - ``supply_share_max``
+   * - ``carrier_prod_share_max``
      - carriers
      - Maximum share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
-   * - ``supply_share_equals``
+   * - ``carrier_prod_share_equals``
      - carriers
      - Share of carrier production met from a set of technologies across a set of locations, on average over the entire model period.
-   * - ``supply_share_per_timestep_min``
+   * - ``carrier_prod_share_per_timestep_min``
      - carriers
      - Minimum share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
-   * - ``supply_share_per_timestep_max``
+   * - ``carrier_prod_share_per_timestep_max``
      - carriers
      - Maximum share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
-   * - ``supply_share_per_timestep_equals``
+   * - ``carrier_prod_share_per_timestep_equals``
      - carriers
      - Share of carrier production met from a set of technologies across a set of locations, in each individual timestep.
    * - ``net_import_share_min``
@@ -305,12 +305,15 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``net_import_share_equals``
      - carriers
      - Share of demand met from transmission technologies into a set of locations, on average over the entire model. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly. period.
-   * - ``supply_min``
+   * - ``carrier_prod_min``
      - carriers
      - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
-   * - ``supply_max``
+   * - ``carrier_prod_max``
      - carriers
-     - Minimum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+     - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+   * - ``carrier_prod_equals``
+     - carriers
+     - Exact absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
    * - ``cost_max``
      - costs
      - Maximum total cost from a set of technologies across a set of locations.
@@ -343,24 +346,33 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
      - Minimum share of installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_share_max``
      - –
-     - Maximums share of installed capacity from a set of technologies across a set of locations.
+     - Maximum share of installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_share_equals``
+     - –
+     - Exact share of installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_min``
      - –
      - Minimum installed capacity from a set of technologies across a set of locations.
    * - ``energy_cap_max``
      - –
      - Maximum installed capacity from a set of technologies across a set of locations.
+   * - ``energy_cap_equals``
+     - –
+     - Exact installed capacity from a set of technologies across a set of locations.
    * - ``resource_area_min``
      - –
      - Minimum resource area used by a set of technologies across a set of locations.
    * - ``resource_area_max``
      - –
      - Maximum resource area used by a set of technologies across a set of locations.
+   * - ``resource_area_equals``
+     - –
+     - Exact resource area used by a set of technologies across a set of locations.
 
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
-.. seealso:: The :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` shows two example uses of group constraints: limiting shared capacity with ``energy_cap_max`` and enforcing a minimum shared power generation with ``supply_share_min``.
+.. seealso:: The :ref:`built-in national-scale example <examplemodels_nationalscale_settings>`'s ``scenarios.yaml`` shows two example uses of group constraints: limiting shared capacity with ``energy_cap_max`` and enforcing a minimum shared power generation with ``carrier_prod_share_min``.
 
 
 ``demand_share_per_timestep_decision``
