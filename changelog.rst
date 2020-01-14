@@ -14,7 +14,7 @@ Release History
 
 |new| New model-wide constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
 
-|changed| |backwards-incompatible| Update model-wide constraints with the prefix `supply_share` to `carrier_prod_share`.
+|changed| |backwards-incompatible| Group constraints with the prefix `supply_share` are renamed to use the prefix `carrier_prod_share`. This ensures consistent naming for all group constraints.
 
 |changed| Allowed 'energy_cap_min' for transmission technologies.
 
