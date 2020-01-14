@@ -22,3 +22,5 @@ run:
     ensure_feasibility: true # Switching on unmet demand
 
     bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+
+    objective_options.cost_class: {monetary: 1}

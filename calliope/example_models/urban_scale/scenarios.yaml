@@ -39,7 +39,7 @@ overrides:
             N1.coordinates: {lat: 51.4450766, lon: -0.1247183}
         links:
             X1,X2.techs.power_lines.distance: 10
-            X1,X3.techs.power_lines.istance: 5
+            X1,X3.techs.power_lines.distance: 5
             X1,N1.techs.heat_pipes.distance: 3
             N1,X2.techs.heat_pipes.distance: 3
             N1,X3.techs.heat_pipes.distance: 4
