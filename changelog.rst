@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.5 (dev)
------------
+0.6.5 (2020-01-14)
+------------------
 
 |new| New group constraints `energy_cap_equals`, `resource_area_equals`, and  `energy_cap_share_equals` to add the equality constraint to existing `min/max` group constraints.
 
