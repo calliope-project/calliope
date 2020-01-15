@@ -37,6 +37,7 @@ def load_constraints(backend_model):
             backend_model.costs,
             backend_model.loc_techs_cost_investment_constraint,
             initialize=0.0
+            print('hi')
         )
 
         backend_model.cost_investment_constraint = po.Constraint(
