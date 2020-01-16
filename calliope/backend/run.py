@@ -154,13 +154,12 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
     solver_options = run_config.get('solver_options', None)
     save_logs = run_config.get('save_logs', None)
 
-    n_spores_std = 50
-    n_spores_excl_ith = 3
+    n_spores = 50
     slack = 0.2
     spores_dict = {}
 
     # Iterate over the number of SPORES requested by the user
-    for j in range(0,(n_spores_std+1))
+    for j in range(0,(n_spores+1))
         
         # First iteration, cost-optimal solution
         if j == 0: 
@@ -209,6 +208,13 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
         
         elif j != 0:
 
+            # create cost class nos_score if not present
+            # modify obj function weights: cost:0, nos_score:1
+            # create group constraint cost_max if not present: set if equal to slack
+            # set loc::tech nos_score based on scoring function for solution j-1
+            # spores_dict[j] = model.backend.rerun()
+
+            ## for the second set, create also an excl_score and update score consequently
 
 
 def run_operate(model_data, timings, backend, build_only):
