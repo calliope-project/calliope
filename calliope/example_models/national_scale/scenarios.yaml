@@ -27,7 +27,10 @@ overrides:
         model.subset_time: null  # No time subsetting
         # Cluster timesteps using k-means
         model.time: {function: apply_clustering, function_options: {clustering_func: 'kmeans', how: 'closest', k: 10}}
-
+    
+    spores:
+        run.mode: spores
+    
     operate:
         run.mode: operate
         run.operation:
