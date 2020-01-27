@@ -13,11 +13,12 @@ from calliope import exceptions
 from calliope.backend import checks
 from calliope.backend.pyomo import model as run_pyomo
 from calliope.backend.pyomo import interface as pyomo_interface
+from calliope.backend.pyomo.interface import update_pyomo_param
 from calliope.backend.pyomo.interface import BackendInterfaceMethods
 update_param = BackendInterfaceMethods.update_param
 
 from calliope.core.attrdict import AttrDict
-# from calliope.core.model import get_formatted_array
+from calliope.core.util.dataset import split_loc_techs
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,8 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
     log_time(logger, timings, 'run_start',
              comment='Backend: starting model run in SPORES mode')
 
+    
+
     if not backend_rerun:
         backend_model = backend.generate_model(model_data)
 
@@ -155,23 +158,21 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
     solver = run_config['solver']
     solver_io = run_config.get('solver_io', None)
     solver_options = run_config.get('solver_options', None)
-    save_logs = run_config.get('save_logs', None)
-    # Create new cost class "spores_score"
-    run_config['objective_options']['cost_class']['spores_score'] = 0
-    # Create new group constraint for the "slack"
-    backend_model.__calliope_model_data['data']['group_cost_max'] = {
-        ('monetary', 'systemwide_max_slacked_cost'):float('inf')
-    }     
+    save_logs = run_config.get('save_logs', None) 
 
-    n_spores = 50
+    n_spores = 2
     slack = 0.2
     spores_dict = {}
     cap_loc_score_dict = {}
     incremental_score_dict = {}
 
     # Define default scoring function, based on integer scoring method
-    def cap_loc_score_default(results,techs=list(model_data.techs.values)):
-        cap_loc_score = model.get_formatted_array('energy_cap').loc[{'techs':techs}].to_pandas()
+    def cap_loc_score_default(results,techs=[]):
+        if len(techs) != 0:
+            pass
+        else:
+            techs = list(split_loc_techs(results['energy_cap'])['techs'].values)
+        cap_loc_score = split_loc_techs(results['energy_cap']).loc[{'techs':techs}].to_pandas()
         for t in techs:
             for l in cap_loc_score.index:
                 if cap_loc_score[t].loc[l] > 1e-3:
@@ -189,12 +190,12 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
         
         for k in loc_tech_score_dict:
             try:
-                backend_model.update_param('cost_energy_cap', {('spores_score',k) : loc_tech_score_dict[k]})
+                update_pyomo_param(backend_model,'cost_energy_cap', {('spores_score',k) : loc_tech_score_dict[k]})
             except:
                 continue
 
     # Iterate over the number of SPORES requested by the user
-    for j in range(0,(n_spores+1)):
+    for j in range(0,2):#(n_spores+1)):
         
         # First iteration, cost-optimal solution
         if j == 0: 
@@ -235,8 +236,15 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     slack_constraint = results.attrs['objective_function_value']*(1+slack)
                     # Storing results and scores in the specific dictionaries
                     spores_dict[j] = results
-                    cap_loc_score_dict[j] = cap_loc_score(results)
+                    cap_loc_score_dict[j] = cap_loc_score_default(results)
                     incremental_score_dict[j] = cap_loc_score_dict[j]
+                    # Set group constraint "cost_max" equal to slacked cost
+                    update_pyomo_param(backend_model,'group_cost_max', {('monetary','systemwide_max_slacked_cost') : slack_constraint})
+                    # Modify objective function weights: cost:0, spores_score:1
+                    update_pyomo_param(backend_model,'objective_cost_class', {'monetary' : 0})
+                    update_pyomo_param(backend_model,'objective_cost_class', {'spores_score' : 1})
+                    # Update "spores_score" based on previous iteration
+                    update_spores_score(backend_model, incremental_score_dict[j])
 
                 log_time(
                     logger, timings, 'run_solution_returned', time_since_run_start=True,
@@ -244,18 +252,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                 )
         
         elif j != 0:
-            
-            # Modify objective function weights: cost:0, spores_score:1
-            backend_model.update_param('objective_cost_class', {'monetary' : 0})
-            backend_model.update_param('objective_cost_class', {'spores_score' : 1})
-            # Set group constraint "cost_max" equal to slacked cost
-            backend_model.update_param('group_cost_max', {('monetary','systemwide_max_slacked_cost') : slack_constraint})
-            # Update "spores_score" based on previous iteration
-            update_spores_score(backend_model, incremental_score_dict[j-1])
-            
-            # Rerun backend model
-            backend_model = backend_rerun
-            
+                    
             if build_only:
                 results = xr.Dataset()
 
@@ -289,15 +286,17 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     results.attrs['objective_function_value'] = backend_model.obj()
                     # Storing results and scores in the specific dictionaries
                     spores_dict[j] = results
-                    cap_loc_score_dict[j] = cap_loc_score(results)
+                    cap_loc_score_dict[j] = cap_loc_score_default(results)
                     incremental_score_dict[j] = cap_loc_score_dict[j].add(incremental_score_dict[j-1])
+                    # Update "spores_score" based on previous iteration
+                    update_spores_score(backend_model, incremental_score_dict[j])
 
                 log_time(
                     logger, timings, 'run_solution_returned', time_since_run_start=True,
                     comment='Backend: generated solution array for the cost-optimal case'
                 )
     
-    return spores_dict[j], backend_model
+    return results, backend_model
 
 def run_operate(model_data, timings, backend, build_only):
     """
