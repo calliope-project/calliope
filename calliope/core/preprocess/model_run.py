@@ -582,8 +582,6 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run['sets'] = all_sets
-    if model_run['run']['mode'] == 'spores':
-        model_run['sets']['costs'].append('spores_score')
     model_run['constraint_sets'] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking

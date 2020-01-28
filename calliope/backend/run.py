@@ -162,7 +162,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
 
     n_spores = 2
     slack = 0.2
-    spores_dict = {}
+    spores_dict = AttrDict()
     cap_loc_score_dict = {}
     incremental_score_dict = {}
 
@@ -176,7 +176,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
         for t in techs:
             for l in cap_loc_score.index:
                 if cap_loc_score[t].loc[l] > 1e-3:
-                    cap_loc_score[t].loc[l] = 1
+                    cap_loc_score[t].loc[l] = 100
                 else:
                     cap_loc_score[t].loc[l] = 0
         return(cap_loc_score)
@@ -195,7 +195,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                 continue
 
     # Iterate over the number of SPORES requested by the user
-    for j in range(0,2):#(n_spores+1)):
+    for j in range(0,(n_spores+1)):
         
         # First iteration, cost-optimal solution
         if j == 0: 
@@ -296,6 +296,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     comment='Backend: generated solution array for the cost-optimal case'
                 )
     
+    results = spores_dict
     return results, backend_model
 
 def run_operate(model_data, timings, backend, build_only):

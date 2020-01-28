@@ -245,22 +245,43 @@ class Model(object):
         )
 
         # Add additional post-processed result variables to results
-        if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
-            results = postprocess.postprocess_model_results(
-                results, self._model_data, self._timings
-            )
+        if self.run_config['mode'] == 'spores':
+            self.results = AttrDict()
+            original_model_data = self._model_data.copy()
+            self._model_data = AttrDict()
+            # self._model_data[0] = original_model_data
+            for j in results.keys():
+                self._model_data[j] = original_model_data
+                if results[j].attrs.get('termination_condition', None) in ['optimal', 'feasible']:
+                    results[j] = postprocess.postprocess_model_results(
+                        results[j], original_model_data, self._timings
+                    )
 
-        for var in results.data_vars:
-            results[var].attrs['is_result'] = 1
+                for var in results[j].data_vars:
+                    results[j][var].attrs['is_result'] = 1
 
-        self._model_data.update(results)
-        self._model_data.attrs.update(results.attrs)
+                self._model_data[j].update(results[j])
+                self._model_data[j].attrs.update(results[j].attrs)
 
-        self.results = self._model_data.filter_by_attrs(is_result=1)
+                self.results[j] = self._model_data[j].filter_by_attrs(is_result=1)
+
+        else:
+            if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
+                results = postprocess.postprocess_model_results(
+                    results, self._model_data, self._timings
+                )
+
+            for var in results.data_vars:
+                results[var].attrs['is_result'] = 1
+
+            self._model_data.update(results)
+            self._model_data.attrs.update(results.attrs)
+
+            self.results = self._model_data.filter_by_attrs(is_result=1)
 
         self.backend = interface(self)
 
-    def get_formatted_array(self, var, index_format='index'):
+    def get_formatted_array(self, var, index_format='index', spore_number=0):
         """
         Return an xr.DataArray with locs, techs, and carriers as
         separate dimensions.
@@ -275,7 +296,13 @@ class Model(object):
             has the benefit of having a smaller memory footprint, but you cannot
             undertake dimension specific operations (e.g. formatted_array.sum('locs'))
         """
-        if var not in self._model_data.data_vars:
+        # Check if single model_data or several SPORES
+        if spore_number == 0:
+            model_data = self._model_data
+        else:
+            model_data = self._model_data[spore_number]
+
+        if var not in model_data.data_vars:
             raise KeyError("Variable {} not in Model data".format(var))
 
         if index_format not in ['index', 'multiindex']:
@@ -285,7 +312,7 @@ class Model(object):
         elif index_format == 'multiindex':
             return_as = 'MultiIndex DataArray'
 
-        return split_loc_techs(self._model_data[var], return_as=return_as)
+        return split_loc_techs(model_data[var], return_as=return_as)
 
     def to_netcdf(self, path):
         """
