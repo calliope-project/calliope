@@ -247,7 +247,9 @@ class Model(object):
         # Add additional post-processed result variables to results
         if self.run_config['mode'] == 'spores':
             self.results = AttrDict()
-            original_model_data = self._model_data.copy()
+
+            original_model_data = self._model_data.copy(deep=True)
+
             self._model_data = AttrDict()
             # self._model_data[0] = original_model_data
             for j in results.keys():
