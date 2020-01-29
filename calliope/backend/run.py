@@ -160,9 +160,9 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
     solver_options = run_config.get('solver_options', None)
     save_logs = run_config.get('save_logs', None) 
 
-    n_spores = 2
+    n_spores = 1
     slack = 0.2
-    spores_dict = AttrDict()
+    spores_list = [] #AttrDict()
     cap_loc_score_dict = {}
     incremental_score_dict = {}
 
@@ -202,7 +202,6 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
 
             if build_only:
                 results = xr.Dataset()
-
             else:
                 log_time(
                     logger, timings, 'run_solver_start',
@@ -235,7 +234,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     # for subsequent SPORES generation
                     slack_constraint = results.attrs['objective_function_value']*(1+slack)
                     # Storing results and scores in the specific dictionaries
-                    spores_dict[j] = results
+                    spores_list.append(results)
                     cap_loc_score_dict[j] = cap_loc_score_default(results)
                     incremental_score_dict[j] = cap_loc_score_dict[j]
                     # Set group constraint "cost_max" equal to slacked cost
@@ -266,7 +265,6 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     backend_model, solver=solver,
                     solver_io=solver_io, solver_options=solver_options, save_logs=save_logs
                 )
-
                 log_time(
                     logger, timings, 'run_solver_exit', time_since_run_start=True,
                     comment='Backend: solver finished running'
@@ -285,7 +283,7 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                 if results.attrs['termination_condition'] in ['optimal', 'feasible']:
                     results.attrs['objective_function_value'] = backend_model.obj()
                     # Storing results and scores in the specific dictionaries
-                    spores_dict[j] = results
+                    spores_list.append(results)
                     cap_loc_score_dict[j] = cap_loc_score_default(results)
                     incremental_score_dict[j] = cap_loc_score_dict[j].add(incremental_score_dict[j-1])
                     # Update "spores_score" based on previous iteration
@@ -296,7 +294,9 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     comment='Backend: generated solution array for the cost-optimal case'
                 )
     
-    results = spores_dict
+    # for sp in spores_list:
+    #     spores_list[sp] = spores_list[sp].expand_dims('spores')
+    results = xr.concat(spores_list, dim='spores')
     return results, backend_model
 
 def run_operate(model_data, timings, backend, build_only):
