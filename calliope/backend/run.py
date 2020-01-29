@@ -294,8 +294,6 @@ def run_spores(model_data, timings, backend, build_only, backend_rerun=False):
                     comment='Backend: generated solution array for the cost-optimal case'
                 )
     
-    # for sp in spores_list:
-    #     spores_list[sp] = spores_list[sp].expand_dims('spores')
     results = xr.concat(spores_list, dim='spores')
     return results, backend_model
 
