@@ -142,32 +142,32 @@ techs:
             charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
             energy_cap_per_storage_cap_min: false # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_max: false # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
-            energy_cap_per_storage_cap_equals: false # name: Tie energy capacity to storage capacity ¦ unit: fraction ¦
+            energy_cap_per_storage_cap_equals: false # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
             energy_cap_equals: false  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
             energy_cap_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
             energy_cap_max: .inf  # name: Maximum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
             energy_cap_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
             energy_cap_min: 0  # name: Minimum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a minimum/maximum.
-            energy_cap_min_use: false  # name: Minimum carrier production ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum carrer production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
+            energy_cap_min_use: false  # name: Minimum carrier production ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum carrier production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
             energy_cap_per_unit: false  # name: Energy capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
             energy_cap_scale: 1.0  # name: Energy capacity scale ¦ unit: float ¦ Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
             energy_con: false  # name: Energy consumption ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
             energy_eff: 1.0  # name: Energy efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``resource``/``storage``/``carrier_in`` (tech dependent) to ``carrier_out``.
-            energy_eff_per_distance: 1.0 # name: Energy efficiency per distance ¦ unit: distance :sup:`-1` ¦ Set as value between 1 (no loss) and 0 (all energy lost).
+            energy_eff_per_distance: 1.0 # name: Energy efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all energy lost).
             energy_prod: false  # name: Energy production ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
             energy_ramping: false  # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum carrier production to a fraction of maximum capacity, which increases by that fraction at each timestep.
             export_cap: .inf  # name: Export capacity ¦ unit: kW ¦ Maximum allowed export of produced energy carrier for a technology.
             export_carrier: null  # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
-            force_asynchronous_prod_con: false  # if True, carrier_prod and carrier_con cannot both occur in the same timestep
+            force_asynchronous_prod_con: false  # name: Force asynchronous production consumption ¦ unit: boolean ¦ If True, carrier_prod and carrier_con cannot both occur in the same timestep
             force_resource: false  # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
-            lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
-            one_way: false  # Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`
+            lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years. 
+            one_way: false  # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`
             parasitic_eff: 1.0  # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
             resource: 0  # name: Available resource ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``resource_unit``
             resource_area_equals: false  # name: Specific installed resource area ¦ unit: m\ :sup:`2` ¦
             resource_area_max: .inf  # name: Maximum usable resource area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
             resource_area_min: 0  # name: Minimum usable resource area ¦ unit: m\ :sup:`2` ¦
-            resource_area_per_energy_cap: false  # name: Resource area per energy capacity ¦ unit: boolean ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
+            resource_area_per_energy_cap: false  # name: Resource area per energy capacity ¦ unit: m\ :sup: `2`/kW ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
             resource_cap_equals: false  # name: Specific installed resource consumption capacity ¦ unit: kW ¦ overrides ``_max`` and ``_min`` constraints.
             resource_cap_equals_energy_cap: false  # name: Resource capacity equals energy cpacity ¦ unit: boolean ¦ If true, ``resource_cap`` is forced to equal ``energy_cap``
             resource_cap_max: .inf  # name: Maximum installed resource consumption capacity ¦ unit: kW ¦
@@ -182,7 +182,7 @@ techs:
             storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
             storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
             storage_initial: 0  # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
-            storage_loss: 0  # name: Storage loss rate ¦ unit: hour :sup:`-1` ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
+            storage_loss: 0  # name: Storage loss rate ¦ unit: fraction/hour ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
             units_equals: false  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
             units_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
             units_max: false  # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
