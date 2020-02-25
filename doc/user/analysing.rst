@@ -48,8 +48,8 @@ In Python, we get this function by calling :python:`model.plot.timeseries()`. It
     # Only consumed resource
     model.plot.timeseries(array='resource_con')
 
-    # Only consumed resource and `power` carrier flow
-    model.plot.timeseries(array=['power', `resource_con`])
+    # Only consumed resource and 'power' carrier flow
+    model.plot.timeseries(array=['power', 'resource_con'])
 
 The data used to build the plots can also be subset and ordered by using the ``subset`` argument. This uses `xarray's 'loc' indexing functionality <http://xarray.pydata.org/en/stable/indexing.html>`_ to access subsets of data:
 

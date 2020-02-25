@@ -10,19 +10,19 @@ pool:
 strategy:
   maxParallel: 8
   matrix:
-    linux-py3.6:
-      IMAGE_NAME: ubuntu-latest
-      PYTHON_VERSION: 3.6
     linux-py3.7:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.7
+    linux-py3.8:
+      IMAGE_NAME: ubuntu-latest
+      PYTHON_VERSION: 3.8
       CODECOV: True  # Only run on one build
-    macos-py3.7:
+    macos-py3.8:
       IMAGE_NAME: macOS-latest
-      PYTHON_VERSION: 3.7
-    windows-py3.7:
+      PYTHON_VERSION: 3.8
+    windows-py3.8:
       IMAGE_NAME: windows-latest
-      PYTHON_VERSION: 3.7
+      PYTHON_VERSION: 3.8
 
 steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -53,7 +53,7 @@ steps:
       python utils/conda_create.py requirements/base.yml requirements/unix.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       source activate calliope
       pip install --no-cache-dir --verbose -e .
-      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
+      py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
     displayName: Set up environment and run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
@@ -65,7 +65,7 @@ steps:
       python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
-      py.test --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
+      py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
     displayName: Set up environment and run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 

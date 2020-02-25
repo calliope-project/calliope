@@ -130,13 +130,9 @@ class TestNationalScaleExampleModelOperate:
                 scenario='operate')
             model.run()
 
-        expected_warnings = [
-            'Energy capacity constraint removed from region1::demand_power as force_resource is applied',
-            'Energy capacity constraint removed from region2::demand_power as force_resource is applied',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs'
-        ]
+        expected_warning = 'Resource capacity constraint defined and set to infinity for all supply_plus techs'
 
-        assert check_error_or_warning(excinfo, expected_warnings)
+        assert check_error_or_warning(excinfo, expected_warning)
         assert all(model.results.timesteps == pd.date_range('2005-01', '2005-01-03 23:00:00', freq='H'))
 
     def test_nationalscale_example_results_cbc(self):
@@ -210,48 +206,48 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
     def example_tester_closest(self, solver='cbc', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='closest')
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(51711873.203096)
+        assert float(model.results.cost.sum()) == approx(49670627.15297682)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.111456, abs=0.000001)
+        ) == approx(0.137105, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.074809, abs=0.000001)
+        ) == approx(0.064501, abs=0.000001)
 
     def example_tester_mean(self, solver='cbc', solver_io=None):
         model = self.model_runner(solver=solver, solver_io=solver_io, how='mean')
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(45110415.5627)
+        assert float(model.results.cost.sum()) == approx(22172253.328)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.126099, abs=0.000001)
+        ) == approx(0.127783, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers='power')].to_pandas().T['battery']
-        ) == approx(0.047596, abs=0.000001)
+        ) == approx(0.044458, abs=0.000001)
 
     def example_tester_storage_inter_cluster(self):
         model = self.model_runner(storage_inter_cluster=True)
 
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(33353390.222036)
+        assert float(model.results.cost.sum()) == approx(21825515.304)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.115866, abs=0.000001)
+        ) == approx(0.100760, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.074167, abs=0.000001)
+        ) == approx(0.091036, abs=0.000001)
 
     def test_nationalscale_clustered_example_closest_results_cbc(self):
         self.example_tester_closest()
@@ -278,17 +274,17 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
     def test_storage_inter_cluster_cyclic(self):
         model = self.model_runner(storage_inter_cluster=True, cyclic=True)
         # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(18838244.087694)
+        assert float(model.results.cost.sum()) == approx(18904055.722)
 
         # Full 1-hourly model run: 0.296973
         assert float(
             model.results.systemwide_levelised_cost.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.133111, abs=0.000001)
+        ) == approx(0.122564, abs=0.000001)
 
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[{'carriers': 'power', 'techs': 'battery'}].item()
-        ) == approx(0.071411, abs=0.000001)
+        ) == approx(0.075145, abs=0.000001)
 
     def test_storage_inter_cluster_no_storage(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
@@ -386,7 +382,8 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         expected_warnings = [
             'Energy capacity constraint removed',
-            'Resource capacity constraint defined and set to infinity for all supply_plus techs'
+            'Resource capacity constraint defined and set to infinity for all supply_plus techs',
+            'Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run'
         ]
 
         assert check_error_or_warning(excinfo, expected_warnings)

@@ -16,13 +16,14 @@
 
 ## Contents
 
-* [About](#about)
-* [Quick start](#quick-start)
-* [Documentation](#documentation)
-* [Contributing](#contributing)
-* [What's new](#whats-new)
-* [Citing Calliope](#citing-calliope)
-* [License](#license)
+- [Contents](#contents)
+- [About](#about)
+- [Quick start](#quick-start)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [What's new](#whats-new)
+- [Citing Calliope](#citing-calliope)
+- [License](#license)
 
 ---
 
@@ -36,7 +37,7 @@ Calliope comes with several built-in analysis and visualisation tools. Having so
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `conda` package manager by running a single command: `conda create -c conda-forge -n calliope python=3.6 calliope`.
+Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `conda` package manager by running a single command: `conda create -c conda-forge -n calliope calliope`.
 
 See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 

@@ -3,14 +3,20 @@
 Release History
 ===============
 
-0.6.5 (dev)
------------
+0.6.5 (2020-01-14)
+------------------
 
-|new| New model-wide constraints `supply_min` and `supply_max` which restrict the absolute energy produced by a subgroup of technologies and locations.
+|new| New group constraints `energy_cap_equals`, `resource_area_equals`, and  `energy_cap_share_equals` to add the equality constraint to existing `min/max` group constraints.
+
+|new| New group constraints `carrier_prod_min`, `carrier_prod_max`, and  `carrier_prod_equals` which restrict the absolute energy produced by a subgroup of technologies and locations.
 
 |new| Introduced a `storage_discharge_depth` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology.
 
-|new| New model-wide constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
+|new| New group constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
+
+|changed| |backwards-incompatible| Group constraints with the prefix `supply_share` are renamed to use the prefix `carrier_prod_share`. This ensures consistent naming for all group constraints.
+
+|changed| Allowed 'energy_cap_min' for transmission technologies.
 
 |changed| Allowed 'energy_cap_min' for transmission technologies.
 
@@ -20,7 +26,7 @@ Release History
 
 |changed| Allowed `om_con` cost for demand technologies. This is conceived to allow better representing generic international exports as demand sinks with a given revenue (e.g. the average electricity price on a given bidding zone), not restricted to any particular type of technology.
 
-|changed| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
+|changed| |backwards-incompatible| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
 
 |changed| Carrier ratios can be loaded from file, to allow timeseries carrier ratios to be defined, e.g. ``carrier_ratios.carrier_out_2.heat: file=ratios.csv``.
 
@@ -28,9 +34,11 @@ Release History
 
 |changed| All model defaults have been moved to `defaults.yaml`, removing the need for `model.yaml`. A default location, link and group constraint have been added to `defaults.yaml` to validate input model keys.
 
-|changed| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled interactively by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
+|changed| |backwards-incompatible| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled interactively by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
 
 |changed| All group constraint values are parameters so they can be updated in the backend model
+
+|fixed| Operate mode checks cleaned up to warn less frequently and to not be so aggressive at editing a users model to fit the operate mode requirements.
 
 |fixed| Documentation distinctly renders inline Python, YAML, and shell code snippets.
 
@@ -41,6 +49,8 @@ Release History
 |fixed| Fix an issue preventing the deprecated `charge_rate` constraint from working in 0.6.4.
 
 |fixed| Fix an issue that prevented 0.6.4 from loading NetCDF models saved with older versions of Calliope. It is still recommended to only load models with the same version of Calliope that they were saved with, as not all functionality will work when mixing versions.
+
+|fixed| |backwards-incompatible| Updated to require pandas 0.25, xarray 0.14, and scikit-learn 0.22, and verified Python 3.8 compatibility. Because of a bugfix in scikit-learn 0.22, models using k-means clustering with a specified random seed may return different clusters from Calliope 0.6.5 on.
 
 0.6.4 (2019-05-27)
 ------------------

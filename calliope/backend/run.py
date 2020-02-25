@@ -17,6 +17,7 @@ from calliope.backend.pyomo.interface import update_pyomo_param
 from calliope.backend.pyomo.interface import BackendInterfaceMethods
 update_param = BackendInterfaceMethods.update_param
 
+from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import split_loc_techs
 
@@ -306,19 +307,27 @@ def run_operate(model_data, timings, backend, build_only):
     log_time(logger, timings, 'run_start',
              comment='Backend: starting model run in operational mode')
 
-    defaults = AttrDict.from_yaml_string(model_data.attrs['defaults'])
-    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
+    defaults = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['defaults'], name='defaults', observer=model_data
+    )
+    run_config = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs['run_config'], name='run_config', observer=model_data
+    )
 
-    operate_params = ['purchased'] + [
-        i.replace('_max', '') for i in defaults if i[-4:] == '_max'
-    ]
+    # New param defaults = old maximum param defaults (e.g. energy_cap gets default from energy_cap_max)
+    operate_params = {
+        k.replace('_max', ''): v for k, v in defaults.items() if k.endswith('_max')
+    }
+    operate_params['purchased'] = 0  # no _max to work from here, so we hardcode a default
+
+    defaults.update(operate_params)
 
     # Capacity results (from plan mode) can be used as the input to operate mode
     if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
             run_config.get('operation.use_cap_results', False)):
         # Anything with is_result = 1 will be ignored in the Pyomo model
         for varname, varvals in model_data.data_vars.items():
-            if varname in operate_params:
+            if varname in operate_params.keys():
                 varvals.attrs['is_result'] = 1
                 varvals.attrs['operate_param'] = 1
 
@@ -336,32 +345,6 @@ def run_operate(model_data, timings, backend, build_only):
             cap.attrs['is_result'] = 1
             cap.attrs['operate_param'] = 1
         model_data.update(caps)
-
-    # Storage initial is carried over between iterations, so must be defined along with storage
-    if ('loc_techs_store' in model_data.dims.keys() and
-        'storage_initial' not in model_data.data_vars.keys()):
-        model_data['storage_initial'] = (
-            xr.DataArray([0.0 for loc_tech in model_data.loc_techs_store.values],
-                         dims='loc_techs_store')
-        )
-        model_data['storage_initial'].attrs['is_result'] = 0.0
-        exceptions.warn(
-            'Initial stored energy not defined, set to zero for all '
-            'loc::techs in loc_techs_store, for use in iterative optimisation'
-        )
-    # Operated units is carried over between iterations, so must be defined in a milp model
-    if ('loc_techs_milp' in model_data.dims.keys() and
-        'operated_units' not in model_data.data_vars.keys()):
-        model_data['operated_units'] = (
-            xr.DataArray([0 for loc_tech in model_data.loc_techs_milp.values],
-                         dims='loc_techs_milp')
-        )
-        model_data['operated_units'].attrs['is_result'] = 1
-        model_data['operated_units'].attrs['operate_param'] = 1
-        exceptions.warn(
-            'daily operated units not defined, set to zero for all '
-            'loc::techs in loc_techs_milp, for use in iterative optimisation'
-        )
 
     comments, warnings, errors = checks.check_operate_params(model_data)
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)

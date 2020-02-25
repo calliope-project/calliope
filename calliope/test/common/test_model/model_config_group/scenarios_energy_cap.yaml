@@ -9,6 +9,10 @@ overrides:
         group_constraints.example_energy_cap_constraint:
             energy_cap_max: 14
 
+    energy_cap_equals:
+        group_constraints.example_energy_cap_constraint:
+            energy_cap_equals: 10
+
     energy_cap_max_high:
         group_constraints.example_energy_cap_constraint:
             energy_cap_max: 26
@@ -45,6 +49,7 @@ overrides:
 scenarios:
     energy_cap_max_supply: [energy_cap_max, energy_cap_cheap_supply]
     energy_cap_min_supply:  [energy_cap_min, energy_cap_expensive_supply]
+    energy_cap_equals_supply:  [energy_cap_equals, energy_cap_expensive_supply]
     energy_cap_min_max_supply: [energy_cap_max_cheap_supply, energy_cap_min, energy_cap_expensive_supply]
     energy_cap_max_supply_loc_1: [energy_cap_max_loc_1, energy_cap_max_cheap_supply]
     energy_cap_min_supply_loc_0: [energy_cap_min, energy_cap_loc_0, energy_cap_expensive_supply]
