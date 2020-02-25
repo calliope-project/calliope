@@ -245,43 +245,19 @@ class Model(object):
             self._model_data, self._timings, **kwargs
         )
 
-        # Add additional post-processed result variables to results
-        if self.run_config['mode'] == 'spores':
-            new_model_data_list = []
-            new_results_list = []
-            for j in results['spores'].values.tolist():
-                new_model_data_list.append(self._model_data.copy(deep=True))
-                results_single = results.loc[{'spores':j}]
-                if results_single.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
-                    results_single = postprocess.postprocess_model_results(
-                        results_single, new_model_data_list[j], self._timings
-                    )
-
-                for var in results_single.data_vars:
-                    results_single[var].attrs['is_result'] = 1
-                
-                new_model_data_list[j].update(results_single)
-                new_model_data_list[j].attrs.update(results_single.attrs)
-
-                results_single = new_model_data_list[j].filter_by_attrs(is_result=1)
-                new_results_list.append(results_single)
-
-            self.results = xr.concat(new_results_list, dim='spores')
-            self._model_data = xr.concat(new_model_data_list, dim='spores')
-
-        else:
+        if self.run_config['mode'] != 'spores':
             if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
                 results = postprocess.postprocess_model_results(
                     results, self._model_data, self._timings
                 )
 
-            for var in results.data_vars:
-                results[var].attrs['is_result'] = 1
+        for var in results.data_vars:
+            results[var].attrs['is_result'] = 1
 
-            self._model_data.update(results)
-            self._model_data.attrs.update(results.attrs)
+        self._model_data.update(results)
+        self._model_data.attrs.update(results.attrs)
 
-            self.results = self._model_data.filter_by_attrs(is_result=1)
+        self.results = self._model_data.filter_by_attrs(is_result=1)
 
         self.backend = interface(self)
 
