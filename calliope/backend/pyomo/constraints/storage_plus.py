@@ -160,7 +160,6 @@ def storage_plus_time_constraint_rule(backend_model, loc_tech, timestep):
         model_data_dict['lookup_loc_techs_storage_plus']['in', loc_tech]
     )[0] # change this so it looks for primary carrier instead - should amount to the same thing
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier_in, timestep]
-    
     try: # loc_tech in backend_model.loc_techs_storage_time_per_timestep:
         try:
             contributing_times = split_comma_list(
@@ -183,15 +182,10 @@ def storage_plus_time_constraint_rule(backend_model, loc_tech, timestep):
         except:
             storage_cap = backend_model.storage_cap[loc_tech]
         return storage_cap
-
     surplus_energy_previous = sum(
-        -backend_model.carrier_con[loc_tech_carrier_in, pd.Timestamp(contributing_time)] -
+        backend_model.storage[loc_tech, pd.Timestamp(contributing_time)] -
         get_param(backend_model, sdd_string, (loc_tech, pd.Timestamp(contributing_time))) * 
-        storage_cap_finder(loc_tech, contributing_time) + sum(
-            backend_model.carrier_prod[loc_tech_carrier, pd.Timestamp(contributing_time)]
-            for loc_tech_carrier in loc_tech_carriers_out
-            if loc_tech_carrier != loc_tech_carrier_in
-        )
+        storage_cap_finder(loc_tech, contributing_time) 
         for contributing_time in contributing_times
     )
 
