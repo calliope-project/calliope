@@ -206,6 +206,13 @@ overrides:
 
         links.0,1.exists: true
 
+    storage_plus_EVs:
+        locations:
+            0:
+                techs:
+                    test_storage_plus_EV_A:
+                    test_storage_plus_EV_B:
+
     simple_storage:
         locations:
             0:

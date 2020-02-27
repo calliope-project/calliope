@@ -183,7 +183,7 @@ def storage_plus_time_constraint_rule(backend_model, loc_tech, timestep):
             storage_cap = backend_model.storage_cap[loc_tech]
         return storage_cap
     surplus_energy_previous = sum(
-        backend_model.storage[loc_tech, pd.Timestamp(contributing_time)] -
+        backend_model.storage[loc_tech, pd.Timestamp(contributing_time)] - # previous timesteps storage level
         get_param(backend_model, sdd_string, (loc_tech, pd.Timestamp(contributing_time))) * 
         storage_cap_finder(loc_tech, contributing_time) 
         for contributing_time in contributing_times
