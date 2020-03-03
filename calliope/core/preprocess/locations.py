@@ -394,10 +394,10 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
 def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config, warnings, errors, run_mode, parent):
     cost_classes = list(tech_config.get('costs', {}).keys())
     # Adds spores_score details if "spores" run mode is selected
-    if run_mode == 'spores' and parent != 'demand': # not in str(tech_id): # not working: the idea is to find a way to skip demand techs, by checking the parent tech in tech_config, if possible
-        cost_classes.append('spores_score')
-        tech_config.set_key('costs.spores_score.interest_rate', 1)
-        tech_config.set_key('costs.spores_score.energy_cap', 0)
+    # if run_mode == 'spores' and parent != 'demand': # not in str(tech_id): # not working: the idea is to find a way to skip demand techs, by checking the parent tech in tech_config, if possible
+    #     cost_classes.append('spores_score')
+    #     tech_config.set_key('costs.spores_score.interest_rate', 1)
+    #     tech_config.set_key('costs.spores_score.energy_cap', 0)
 
     for cost in cost_classes:
 
@@ -428,19 +428,19 @@ def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config
                 for i in tech_config.costs[cost].keys()):
             # MUST define lifetime and interest_rate for these technologies
             if plant_life == 0 or interest is None:
-                if run_mode == 'spores':
-                    plant_life = 1
-                    warnings.append(
-                    'The constraints.lifetime of technology {} is not specified,'
-                    'and will be set to 1. Set interest rate to 0 if you do not want '
-                    'it to have an effect'.format(tech_id)
-                    )
-                else:
-                    errors.append(
-                        'Must specify constraints.lifetime and costs.{0}.interest_rate '
-                        'when specifying fixed `{0}` costs for `{1}`. Set lifetime to 1 '
-                        'and interest rate to 0 if you do not want them to have an effect'.format(cost, tech_id)
-                    )
+                # if run_mode == 'spores':
+                #     plant_life = 1
+                #     warnings.append(
+                #     'The constraints.lifetime of technology {} is not specified,'
+                #     'and will be set to 1. Set interest rate to 0 if you do not want '
+                #     'it to have an effect'.format(tech_id)
+                #     )
+                # else:
+                errors.append(
+                    'Must specify constraints.lifetime and costs.{0}.interest_rate '
+                    'when specifying fixed `{0}` costs for `{1}`. Set lifetime to 1 '
+                    'and interest rate to 0 if you do not want them to have an effect'.format(cost, tech_id)
+                )
                 continue
             # interest rate = 0 -> simple depreciation
             if interest == 0:

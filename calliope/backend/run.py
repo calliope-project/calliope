@@ -144,9 +144,10 @@ def run_spores(model_data, timings, interface, backend, build_only):
         initial_yaml_string=model_data.attrs['run_config'], name='run_config', observer=model_data
     )
 
-    n_spores = 1  # TODO: turn into configurable in run_config
-    slack = 0.2  # TODO: turn into configurable in run_config
-    spores_score = 'spores_score'  # TODO: turn into configurable in run_config
+    n_spores = run_config['spores_options']['spores_number']
+    slack = run_config['spores_options']['slack']  
+    spores_score = run_config['spores_options']['score_cost_class']
+    subset_techs = run_config['spores_options']['spores_techs']
     spores_list = []
     cap_loc_score_dict = {}
     incremental_score_dict = {}
@@ -192,7 +193,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
                 # TODO handle having a different chosen cost class to act as slack (e.g. CO2)
                 interface.update_pyomo_param(
                     backend_model, 'group_cost_max',
-                    {('monetary', 'systemwide_max_slacked_cost'): slack_constraint}
+                    {('monetary', run_config['spores_options']['cost_group']): slack_constraint}
                 )
                 # Modify objective function weights: cost:0, spores_score:1
                 # TODO handle having a different chosen cost class to act as slack (e.g. CO2)
