@@ -147,7 +147,6 @@ def run_spores(model_data, timings, interface, backend, build_only):
     n_spores = run_config['spores_options']['spores_number']
     slack = run_config['spores_options']['slack']  
     spores_score = run_config['spores_options']['score_cost_class']
-    subset_techs = run_config['spores_options']['spores_techs']
     spores_list = []
     cap_loc_score_dict = {}
     incremental_score_dict = {}
@@ -190,13 +189,11 @@ def run_spores(model_data, timings, interface, backend, build_only):
                 cap_loc_score_dict[j] = _cap_loc_score_default(results)
                 incremental_score_dict[j] = cap_loc_score_dict[j]
                 # Set group constraint "cost_max" equal to slacked cost
-                # TODO handle having a different chosen cost class to act as slack (e.g. CO2)
                 interface.update_pyomo_param(
                     backend_model, 'group_cost_max',
-                    {('monetary', run_config['spores_options']['cost_group']): slack_constraint}
+                    {(run_config['spores_options']['slack_cost_class'], run_config['spores_options']['slack_cost_group']): slack_constraint}
                 )
                 # Modify objective function weights: cost:0, spores_score:1
-                # TODO handle having a different chosen cost class to act as slack (e.g. CO2)
                 # TODO handle a user having multiple cost classes already defined + a different objective weighting (e.g. 0.1*CO2 + 1*monetary)
                 interface.update_pyomo_param(
                     backend_model, 'objective_cost_class',
