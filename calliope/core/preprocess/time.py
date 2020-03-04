@@ -269,8 +269,8 @@ def add_zero_carrier_ratio_sets(model_data):
 
 def add_storage_time_lookup(dataset, model_data):
     """
-    Storage plus technologies can have a minimum storage time associated with them. 
-    Here, the link between timesteps and the previous timesteps which contribute to 
+    Storage plus technologies can have a minimum storage time associated with them.
+    Here, the link between timesteps and the previous timesteps which contribute to
     them is created as a comma delimited string.
     """
     # need to apadt this so it can handle more than just one loc_tech
@@ -303,7 +303,7 @@ def add_storage_time_lookup(dataset, model_data):
                         continue
                 if type(store_time_contribs.iloc[out_time_index][column]) != str: #change in_times to the column the loop is on
                     temp_str = str(store_time_contribs.iloc[row]['timesteps'])
-                else: 
+                else:
                     temp_str = str(store_time_contribs.iloc[out_time_index][column]) + ',' + str(store_time_contribs.iloc[row]['timesteps'])
                 store_time_contribs.loc[out_time_index,column] = temp_str
 

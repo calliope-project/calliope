@@ -7,7 +7,7 @@ from calliope.test.common.util import check_variable_exists
 class TestBuildStoragePlusConstraints:
     # storage_plus.py
     def test_loc_techs_storage_plus_max_constraint(self):
-        
+
         """
         sets.loc_techs_storage_plus_cap_per_time,
         """
@@ -20,7 +20,7 @@ class TestBuildStoragePlusConstraints:
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_max_constraint')
 
         m = build_model(
-            {'techs.test_storage_plus.constraints': {'storage_cap_max': 20, 
+            {'techs.test_storage_plus.constraints': {'storage_cap_max': 20,
             'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'}},
             'simple_storage_plus,two_hours,investment_costs'
         )
@@ -84,14 +84,14 @@ class TestBuildStoragePlusConstraints:
 
     def test_loc_techs_loc_techs_storage_plus_storage_time_constraint(self):
         """
-        sets.loc_techs_storage_plus_storage_time, 
+        sets.loc_techs_storage_plus_storage_time,
         """
-        
+
         m = build_model({},'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
-        
+
         m = build_model({}, 'simple_storage_plus,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
@@ -109,7 +109,7 @@ class TestBuildStoragePlusConstraints:
 
         m = build_model(
             {'techs.test_storage_plus.constraints':
-                {'storage_time_per_timestep':'file=storage_plus_storage_time.csv'}}, 
+                {'storage_time_per_timestep':'file=storage_plus_storage_time.csv'}},
                 'simple_storage_plus,two_hours,investment_costs'
             )
         m.run(build_only=True)
@@ -138,17 +138,40 @@ class TestBuildStoragePlusConstraints:
 class TestStoragePlusConstraintResults:
 
     def test_storage_plus_energy_balance(self):
-        m = build_model(
-            {'techs.test_storage_plus':{'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'}}, 'simple_storage_plus,two_hours,investment_costs')
-        )
+        m = build_model({'techs.test_storage_plus_EV_B.constraints':
+            {'storage_cap_equals':1800},
+            {'storage_discharge_depth_per_timestep':'file=journey_lengths_test.csv'}
+        }, 'storage_plus_EVs,two_hours,investment_costs')
         m.run()
+        # for a random timestep or for every timestep?
+        assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
+        assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
+        assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
 
-        assert #energy balance is obeyed
+        m = build_model({'techs.test_storage_plus_EV_B.constraints':
+            {'storage_cap_equals_per_timestep':'file=storage_cap_per_time_B.csv'},
+            {'storage_discharge_depth_per_timestep':'file=journey_lengths_test.csv'}
+        }, 'storage_plus_EVs,two_hours,investment_costs')
+        m.run()
+        # for a random timestep or for every timestep?
+        assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
+        assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
+        assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
+
+        m = build_model({'techs.test_storage_plus_EV_B.constraints':
+            {'storage_cap_equals':1800},
+            {'storage_discharge_depth':0.05}
+        }, 'storage_plus_EVs,two_hours,investment_costs')
+        m.run()
+        # for a random timestep or for every timestep?
+        assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
+        assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
+        assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
 
 #     def test_shared_storage_link(self):
 
 #         return
-    
+
 #     def test_storage_time(self):
 
 #         return

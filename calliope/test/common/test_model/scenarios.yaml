@@ -175,7 +175,7 @@ overrides:
                     test_demand_heat:
 
         links.0,1.exists: false
-    
+
     simple_storage_plus:
         locations:
             0:
@@ -201,7 +201,7 @@ overrides:
                     test_demand_elec:
                     test_demand_heat:
             1:
-                techs: 
+                techs:
                     test_storage:
 
         links.0,1.exists: true
@@ -212,6 +212,8 @@ overrides:
                 techs:
                     test_storage_plus_EV_A:
                     test_storage_plus_EV_B:
+                    test_demand_transport:
+                    test_supply_elec:
 
     simple_storage:
         locations:

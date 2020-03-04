@@ -87,7 +87,7 @@ def generate_constraint_sets(model_run):
 
     # storage_plus.py
     constraint_sets['loc_techs_storage_plus_max_constraint'] = sets.loc_techs_storage_plus_cap_per_time
-    constraint_sets['loc_techs_storage_plus_discharge_depth_constraint'] = [ 
+    constraint_sets['loc_techs_storage_plus_discharge_depth_constraint'] = [
         i for i in sets.loc_techs_storage_plus
         if any([
             constraint_exists(model_run, i, 'constraints.storage_discharge_depth'),

@@ -307,7 +307,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k for k in sets.loc_techs_supply_plus
         if any('storage_' in i
                for i in loc_techs_config[k].constraints.keys_nested())
-    ) | sets.loc_techs_storage | sets.loc_techs_storage_plus 
+    ) | sets.loc_techs_storage | sets.loc_techs_storage_plus
 
     sets.loc_techs_storage_plus_cap_per_time = set(
         k for k in sets.loc_techs_storage_plus
