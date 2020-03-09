@@ -11,3 +11,4 @@ profile_*
 *.profile
 _test
 .vscode
+*.DS_Store
