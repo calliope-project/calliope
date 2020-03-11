@@ -1,0 +1,129 @@
+##
+# TECHNOLOGY DEFINITIONS
+##
+
+# Note: '-start' and '-end' is used in tutorial documentation only
+
+techs:
+
+    ##
+    # Supply
+    ##
+
+    # ccgt-start
+    ccgt:
+        essentials:
+            name: 'Combined cycle gas turbine'
+            color: '#E37A72'
+            parent: supply
+            carrier_out: power
+        constraints:
+            resource: inf
+            energy_eff: 0.5
+            energy_cap_max: 40000  # kW
+            energy_cap_max_systemwide: 100000  # kW
+            energy_ramping: 0.8
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                energy_cap: 750  # USD per kW
+                om_con: 0.02  # USD per kWh
+    # ccgt-end
+
+    # csp-start
+    csp:
+        essentials:
+            name: 'Concentrating solar power'
+            color: '#F9CF22'
+            parent: supply_plus
+            carrier_out: power
+        constraints:
+            storage_cap_max: 614033
+            energy_cap_per_storage_cap_max: 1
+            storage_loss: 0.002
+            resource: file=csp_resource.csv
+            resource_unit: energy_per_area
+            energy_eff: 0.4
+            parasitic_eff: 0.9
+            resource_area_max: inf
+            energy_cap_max: 10000
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                storage_cap: 50
+                resource_area: 200
+                resource_cap: 200
+                energy_cap: 1000
+                om_prod: 0.002
+    # csp-end
+
+    ##
+    # Storage
+    ##
+    # battery-start
+    battery:
+        essentials:
+            name: 'Battery storage'
+            color: '#3B61E3'
+            parent: storage
+            carrier: power
+        constraints:
+            energy_cap_max: 1000  # kW
+            storage_cap_max: inf
+            energy_cap_per_storage_cap_max: 4
+            energy_eff: 0.95  # 0.95 * 0.95 = 0.9025 round trip efficiency
+            storage_loss: 0  # No loss over time assumed
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                storage_cap: 200  # USD per kWh storage capacity
+    # battery-end
+
+    ##
+    # Demand
+    ##
+    # demand-start
+    demand_power:
+        essentials:
+            name: 'Power demand'
+            color: '#072486'
+            parent: demand
+            carrier: power
+    # demand-end
+
+    ##
+    # Transmission
+    ##
+
+    # transmission-start
+    ac_transmission:
+        essentials:
+            name: 'AC power transmission'
+            color: '#8465A9'
+            parent: transmission
+            carrier: power
+        constraints:
+            energy_eff: 0.85
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.10
+                energy_cap: 200
+                om_prod: 0.002
+
+    free_transmission:
+        essentials:
+            name: 'Local power transmission'
+            color: '#6783E3'
+            parent: transmission
+            carrier: power
+        constraints:
+            energy_cap_max: inf
+            energy_eff: 1.0
+        costs:
+            monetary:
+                om_prod: 0
+    # transmission-end

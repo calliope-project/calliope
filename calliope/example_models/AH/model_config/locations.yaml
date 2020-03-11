@@ -1,0 +1,55 @@
+##
+# LOCATIONS
+##
+
+locations:
+    # region-1-start
+    region1:
+        coordinates: {lat: 40, lon: -2}
+        techs:
+            demand_power:
+                constraints:
+                    resource: file=demand-1.csv:demand
+            ccgt:
+                constraints:
+                    energy_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
+    # region-1-end
+    # other-locs-start
+    region2:
+        coordinates: {lat: 40, lon: -8}
+        techs:
+            demand_power:
+                constraints:
+                    resource: file=demand-2.csv:demand
+            battery:
+
+    region1-1.coordinates: {lat: 41, lon: -2}
+    region1-2.coordinates: {lat: 39, lon: -1}
+    region1-3.coordinates: {lat: 39, lon: -2}
+
+    region1-1, region1-2, region1-3:
+        techs:
+            csp:
+    # other-locs-end
+
+##
+# TRANSMISSION CAPACITIES
+##
+
+links:
+    # links-start
+    region1,region2:
+        techs:
+            ac_transmission:
+                constraints:
+                    energy_cap_max: 10000
+    region1,region1-1:
+        techs:
+            free_transmission:
+    region1,region1-2:
+        techs:
+            free_transmission:
+    region1,region1-3:
+        techs:
+            free_transmission:
+    # links-end

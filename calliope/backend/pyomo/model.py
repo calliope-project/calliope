@@ -63,7 +63,7 @@ def generate_model(model_data):
             if v.attrs['is_result'] == 0 or v.attrs.get('operate_param', 0) == 1
         },
         'sets': list(model_data.coords),
-        'attrs': {k: v for k, v in model_data.attrs.items() if k is not 'defaults'}
+        'attrs': {k: v for k, v in model_data.attrs.items() if k != 'defaults'}
     }
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
