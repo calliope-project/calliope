@@ -79,7 +79,7 @@ from itertools import product
 import numpy as np
 
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import \
+from calliope.preprocess.util import \
     get_all_carriers, split_loc_techs_transmission, \
     concat_iterable, flatten_list
 

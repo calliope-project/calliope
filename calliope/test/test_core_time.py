@@ -4,7 +4,7 @@ import pytest  # pylint: disable=unused-import
 
 import calliope
 from calliope import exceptions
-from calliope.core.time import funcs, masks
+from calliope.time import funcs, masks
 from calliope.test.common.util import (
     build_test_model,
     check_error_or_warning,

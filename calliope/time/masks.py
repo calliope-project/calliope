@@ -11,7 +11,7 @@ Functions to pick timesteps from data given certain criteria.
 
 import pandas as pd
 
-from calliope.core.time import funcs
+from calliope.time import funcs
 from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
 
@@ -113,7 +113,7 @@ def extreme(data, tech, var='resource', how='max',
         extreme day(s) are found.
     normalize : bool, optional
         If True (default), data is normalized
-        using :func:`~calliope.core.time.funcs.normalized_copy`.
+        using :func:`~calliope.time.funcs.normalized_copy`.
     kwargs : dict, optional
         Dimensions of the selected var over which to index. Any remaining
         dimensions will be flattened by mean
@@ -162,7 +162,7 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
         extreme day(s) are found.
     normalize : bool, optional
         If True (default), data is normalized
-        using :func:`~calliope.core.time.funcs.normalized_copy`.
+        using :func:`~calliope.time.funcs.normalized_copy`.
     kwargs : dict, optional
         Dimensions of the selected var over which to index. Any remaining
         dimensions will be flattened by mean

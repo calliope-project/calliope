@@ -115,6 +115,7 @@ class TestUtil:
 
 
 class TestModel:
+    @pytest.mark.skip('Buggy')
     @pytest.mark.serial  # Cannot run in parallel with other tests
     def test_load_constraints_no_order(self):
         temp_file = os.path.join(
