@@ -142,11 +142,19 @@ def constraints_to_dataset(model_run):
     relevant_constraints = set(i.split('.constraints.')[1]
                                for i in model_run.locations.as_dict_flat().keys()
                                if '.constraints.' in i and
-                               '.carrier_ratios.'not in i)
+                               '.carrier_ratios.' not in i)
     for constraint in relevant_constraints:
+        
         data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
         for loc_tech in model_run.sets[_get_set(constraint)]:
             loc, tech = loc_tech.split('::', 1)
+
+            ####
+            if (constraint, loc, tech) == ('resource', 'region1-1', 'csp'):
+                import pdb
+                pdb.set_trace()
+            ####
+            
             # for transmission technologies, we also need to go into link nesting
             if ':' in tech:  # i.e. transmission technologies
                 tech, link = tech.split(':')
@@ -183,6 +191,10 @@ def constraints_to_dataset(model_run):
             ]
             for carrier in model_run.sets['carriers']
         ]
+
+    ####
+    pdb.set_trace()
+    ####
 
     # Add to data_dict and set dims correctly
     for k in group_share_data:

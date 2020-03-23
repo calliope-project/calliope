@@ -581,14 +581,15 @@ def _assert_either_file_or_dataframes(constraint_filenames, cluster_filenames,
             'but config files specify file={} to be loaded from CSV. Either '
             'load all timeseries from `timeseries_dataframes` and df=..., or '
             'set `timeseries_dataframes=None` and load load all from CSV '
-            'files using filex=... .'
+            'files using file=... .'
             .format(set(timeseries_dataframes.keys()),
                     constraint_filenames | cluster_filenames)
         )
     if timeseries_dataframes is None and len(constraint_dfnames | cluster_dfnames) > 0:
         raise exceptions.ModelError(
             'Error in loading timeseries. Model config specifies df={} but '
-            'no timeseries passed as arguments.'.format(constraint_dfnames | cluster_dfnames)
+            'no timeseries passed as arguments in calliope.Model(...).'
+            .format(constraint_dfnames | cluster_dfnames)
         )
     if len(constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames) == 0:
         raise exceptions.ModelError(
