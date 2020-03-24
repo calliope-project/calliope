@@ -47,7 +47,7 @@ def process_locations(model_config, modelrun_techs):
     warnings = []
     errors = []
     locations_comments = AttrDict()
-    
+
     ##
     # Expand compressed `loc1,loc2,loc3,loc4: ...` definitions
     ##
@@ -147,7 +147,6 @@ def process_locations(model_config, modelrun_techs):
                     ('file=' in tech_settings.get_key(i)
                      or 'df=' in tech_settings.get_key(i)))
             ]
-            
             for config_key in file_or_df_configs:
                 config_value = tech_settings.get_key(config_key, '')
                 if ':' not in config_value:
