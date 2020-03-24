@@ -66,7 +66,7 @@ class Model(object):
             a model previously saved to a NetCDF file.
 
         """
-        
+
         self._timings = {}
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
