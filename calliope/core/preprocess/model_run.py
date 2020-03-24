@@ -457,8 +457,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     constraint_dfnames = get_names('df', location_config)
     cluster_dfnames = get_names('df', model_config)
 
-    #### TODO: ADD TEST FOR ASSERTION BELOW
-
     # Timeseries can be entered either in timeseries_dataframes and called
     # via df=..., or loaded from csv files via file=..., but not both.
     _assert_either_file_or_dataframes(constraint_filenames, cluster_filenames,

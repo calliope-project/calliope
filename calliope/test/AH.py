@@ -34,7 +34,6 @@ class TestAH_template:
 
 class TestAH:
     def dev_test(self):
-        import pdb
 
         model_dir = '../example_models/national_scale/'
         timeseries_dir = os.path.join(model_dir, 'timeseries_data')
@@ -72,18 +71,29 @@ class TestAH:
             )
         }
 
-        import sys
-        if sys.argv[1] == 'csv':
-            calliope.Model(os.path.join(model_dir, 'model.yaml'),
-                           override_dict=override_dict_csv,
-                           timeseries_dataframes=None)
-        elif sys.argv[1] == 'df':
-            calliope.Model(os.path.join(model_dir, 'model.yaml'),
-                           override_dict=override_dict_df,
-                           timeseries_dataframes=timeseries_dataframes)
-        else:
-            raise NotImplementedError()
+        # import sys
+        # if sys.argv[1] == 'csv':
+        #     override_dict = override_dict_csv
+        #     timeseries_dataframes = None
+        # elif sys.argv[1] == 'df':
+        #     override_dict = override_dict_df
+        #     timeseries_dataframes = timeseries_dataframes
+        # else:
+        #     raise NotImplementedError
+
+        override_dict = override_dict_csv
+        timeseries_dataframes = override_dict
+
+        with pytest.raises(exceptions.ModelError) as error:
+            model = calliope.Model(os.path.join(model_dir, 'model.yaml'),
+                                   override_dict=override_dict,
+                                   timeseries_dataframes=timeseries_dataframes)
+
+        ####
+        import pdb
         pdb.set_trace()
+        ####
+        
 
 
 
