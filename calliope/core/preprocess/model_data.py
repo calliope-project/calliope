@@ -144,11 +144,9 @@ def constraints_to_dataset(model_run):
                                if '.constraints.' in i and
                                '.carrier_ratios.' not in i)
     for constraint in relevant_constraints:
-        
         data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
         for loc_tech in model_run.sets[_get_set(constraint)]:
             loc, tech = loc_tech.split('::', 1)
-            
             # for transmission technologies, we also need to go into link nesting
             if ':' in tech:  # i.e. transmission technologies
                 tech, link = tech.split(':')
