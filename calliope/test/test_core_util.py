@@ -210,7 +210,7 @@ class TestGenerateRuns:
         )
         assert len(runs) == 3
         assert runs[0].endswith(
-            '--scenario time_resampling --save_netcdf out_1_time_resampling.nc --save_plots plots_1_time_resampling.html'
+            '--scenario time_resampling --save_netcdf out_1_time_resampling.nc'
         )
 
     @python36_or_higher
@@ -221,7 +221,7 @@ class TestGenerateRuns:
         )
         assert len(runs) == 2
         assert runs[0].endswith(
-            '--scenario cold_fusion_with_production_share --save_netcdf out_1_cold_fusion_with_production_share.nc --save_plots plots_1_cold_fusion_with_production_share.html'
+            '--scenario cold_fusion_with_production_share --save_netcdf out_1_cold_fusion_with_production_share.nc'
         )
 
     @python36_or_higher
@@ -232,7 +232,7 @@ class TestGenerateRuns:
         )
         assert len(runs) == 4
         assert runs[0].endswith(
-            '--scenario milp --save_netcdf out_1_milp.nc --save_plots plots_1_milp.html'
+            '--scenario milp --save_netcdf out_1_milp.nc'
         )
 
 

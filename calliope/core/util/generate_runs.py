@@ -56,8 +56,7 @@ def generate_runs(
     for i, run in enumerate(runs):
         cmd = (
             'calliope run {model} --scenario {scenario} '
-            '--save_netcdf out_{i}_{scenario}.nc '
-            '--save_plots plots_{i}_{scenario}.html'
+            '--save_netcdf out_{i}_{scenario}.nc'
         ).format(
             i=i_string.format(i + 1),
             model=model_file,
