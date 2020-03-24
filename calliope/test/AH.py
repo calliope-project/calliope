@@ -14,85 +14,73 @@ from calliope.test.common.util import \
     constraint_sets, defaults, check_error_or_warning
 
 
-class TestAH_template:
-    def test_invalid_scenarios_str(self):
-        """
-        Test that invalid scenario definition raises appropriate error
-        """
-        override = AttrDict.from_yaml_string(
-            """
-            scenarios:
-                scenario_1: 'foo1,foo2'
-            """
-        )
-        with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override, scenario='scenario_1')
+class TestTimeSeriesFromDataFrames:
+    def __init__(self):
+        self.model_dir = '../example_models/national_scale/'
+        self.timeseries_dir = os.path.join(self.model_dir, 'timeseries_data')
+    
+    def build_national_scale_example_model(self, override_dict=None,
+                                           timeseries_dataframes=None):
+        model = calliope.Model(os.path.join(self.model_dir, 'model.yaml'),
+                               override_dict=override_dict,
+                               timeseries_dataframes=timeseries_dataframes)
+        return model
 
-        assert check_error_or_warning(error, 'Scenario definition must '
-                                      'be a list of override names.')
-
-
-class TestAH:
-    def dev_test(self):
-
-        model_dir = '../example_models/national_scale/'
-        timeseries_dir = os.path.join(model_dir, 'timeseries_data')
-
-        csp_resource = pd.read_csv(os.path.join(timeseries_dir,
+    def get_timeseries_dataframes(self):
+        csp_resource = pd.read_csv(os.path.join(self.timeseries_dir,
                                                 'csp_resource.csv'),
                                    index_col=0)
-        demand_1 = pd.read_csv(os.path.join(timeseries_dir, 'demand-1.csv'),
+        demand_1 = pd.read_csv(os.path.join(self.timeseries_dir, 'demand-1.csv'),
                                index_col=0)
-        demand_2 = pd.read_csv(os.path.join(timeseries_dir, 'demand-2.csv'),
+        demand_2 = pd.read_csv(os.path.join(self.timeseries_dir, 'demand-2.csv'),
                                index_col=0)
         timeseries_dataframes = {'csp_resource': csp_resource,
                                  'demand_1': demand_1,
                                  'demand_2': demand_2}
+        return timeseries_dataframes
 
-        override_dict_csv = {
-            'techs.csp.constraints.resource': (
-                'file=csp_resource.csv'
-            ),
-            'locations.region1.techs.demand_power.constraints.resource': (
-                'file=demand-1.csv:demand'
-            ),
-            'locations.region2.techs.demand_power.constraints.resource': (
-                'file=demand-2.csv:demand'
-            )
-        }
+    def test_warning_timeseries_path_dataframes():
+        """
+        Calliope should give a warning when all timeseries are loaded via
+        dataframes but a timeseries path is still specified.
+        """
 
-        override_dict_df = {
+        #### TODO: Make test
+        pass
+
+    def test_dataframes_passed(self):
+        """
+        If model config specifies dataframes to be loaded in (via df=...),
+        these time series must be passed as arguments in calliope.Model(...).
+        """
+        
+        override_dict = {
             'techs.csp.constraints.resource': 'df=csp_resource',
-            'locations.region1.techs.demand_power.constraints.resource': (
-                'df=demand_1:demand'
-            ),
-            'locations.region2.techs.demand_power.constraints.resource': (
-                'df=demand_2:demand'
-            )
+            'locations.region1.techs.demand_power.constraints.resource': 'df=demand_1:demand',
+            'locations.region2.techs.demand_power.constraints.resource': 'df=demand_2:demand'
         }
-
-        # import sys
-        # if sys.argv[1] == 'csv':
-        #     override_dict = override_dict_csv
-        #     timeseries_dataframes = None
-        # elif sys.argv[1] == 'df':
-        #     override_dict = override_dict_df
-        #     timeseries_dataframes = timeseries_dataframes
-        # else:
-        #     raise NotImplementedError
-
-        override_dict = override_dict_csv
-        timeseries_dataframes = override_dict
-
         with pytest.raises(exceptions.ModelError) as error:
-            model = calliope.Model(os.path.join(model_dir, 'model.yaml'),
-                                   override_dict=override_dict,
-                                   timeseries_dataframes=timeseries_dataframes)
+            model = self.build_national_scale_example_model(override_dict=override_dict)
+        assert check_error_or_warning(error, 'no timeseries passed '
+                                      'as arguments in calliope.Model(...).')
 
-        ####
-        import pdb
-        pdb.set_trace()
-        ####
+    def test_no_dataframes_if_read_csv(self):
+        """
+        If model config specifies dataframes to be read from csv (via file=...),
+        no time series should be passed as arguments in calliope.Model(...).
+        """
+        
+        timeseries_dataframes = self.get_timeseries_dataframes()
+        with pytest.raises(exceptions.ModelError) as error:
+            model = self.build_national_scale_example_model(
+                timeseries_dataframes=timeseries_dataframes
+            )
+            
+        assert check_error_or_warning(
+            error, 'Either load all timeseries from `timeseries_dataframes` and df=..., '
+            'or set `timeseries_dataframes=None` and load load all from CSV files'
+        )
+        
         
 
 
