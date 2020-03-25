@@ -17,28 +17,27 @@ from calliope import exceptions
 
 
 def _get_array(data, var, tech, **kwargs):
-    subset = {'techs': tech}
+    subset = {"techs": tech}
     if kwargs is not None:
         subset.update({k: v for k, v in kwargs.items()})
 
     unusable_dims = (
-        set(subset.keys())
-        .difference(["techs", "locs"])
-        .difference(data[var].dims)
+        set(subset.keys()).difference(["techs", "locs"]).difference(data[var].dims)
     )
     if unusable_dims:
         raise exceptions.ModelError(
-            'Attempting to mask time based on  technology {}, '
-            'but dimension(s) {} do not exist for parameter {}'.format(
-                tech, unusable_dims, var.name)
+            "Attempting to mask time based on  technology {}, "
+            "but dimension(s) {} do not exist for parameter {}".format(
+                tech, unusable_dims, var.name
+            )
         )
 
     arr = split_loc_techs(data[var].copy()).loc[subset]
-    arr = arr.mean(dim=[i for i in arr.dims if i is not 'timesteps']).to_pandas()
+    arr = arr.mean(dim=[i for i in arr.dims if i != "timesteps"]).to_pandas()
     return arr
 
 
-def zero(data, tech, var='resource', **kwargs):
+def zero(data, tech, var="resource", **kwargs):
     """
     Returns timesteps where ``var`` for the technology ``tech`` is zero.
 
@@ -55,14 +54,14 @@ def _concat_indices(indices):
     return pd.concat([i.to_series() for i in indices]).sort_index().index
 
 
-def _get_minmax_timestamps(series, length, n, how='max', padding=None):
+def _get_minmax_timestamps(series, length, n, how="max", padding=None):
     # Get the max/min timestamps
     group = series.groupby(pd.Grouper(freq=length)).mean()
     timesteps = []
     for _ in range(n):
-        if how == 'max':
+        if how == "max":
             ts = group.idxmax()
-        elif how == 'min':
+        elif how == "min":
             ts = group.idxmin()
         timesteps.append(ts)
         group = group.drop(ts)
@@ -82,9 +81,18 @@ def _get_minmax_timestamps(series, length, n, how='max', padding=None):
     return ts_index
 
 
-def extreme(data, tech, var='resource', how='max',
-            length='1D', n=1, groupby_length=None,
-            padding=None, normalize=True, **kwargs):
+def extreme(
+    data,
+    tech,
+    var="resource",
+    how="max",
+    length="1D",
+    n=1,
+    groupby_length=None,
+    padding=None,
+    normalize=True,
+    **kwargs,
+):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
     ``tech`` across the given list of ``locations`` is either minimal
@@ -129,9 +137,19 @@ def extreme(data, tech, var='resource', how='max',
     return _extreme_with_padding(arr, how, length, n, groupby_length, padding)
 
 
-def extreme_diff(data, tech0, tech1, var='resource', how='max',
-                 length='1D', n=1, groupby_length=None,
-                 padding=None, normalize=True, **kwargs):
+def extreme_diff(
+    data,
+    tech0,
+    tech1,
+    var="resource",
+    how="max",
+    length="1D",
+    n=1,
+    groupby_length=None,
+    padding=None,
+    normalize=True,
+    **kwargs,
+):
     """
     Returns timesteps for period of ``length`` where the diffence in extreme
     value for ``var`` between technologies ``tech0`` and ``tech1`` is either a
@@ -181,9 +199,7 @@ def extreme_diff(data, tech0, tech1, var='resource', how='max',
     return _extreme_with_padding(arr, how, length, n, groupby_length, padding)
 
 
-def _extreme(arr, how='max',
-             length='1D', n=1, groupby_length=None,
-             padding=None):
+def _extreme(arr, how="max", length="1D", n=1, groupby_length=None, padding=None):
 
     if groupby_length:
         groupby = pd.Grouper(freq=groupby_length)
@@ -200,10 +216,10 @@ def _extreme(arr, how='max',
 
 
 def _extreme_with_padding(arr, how, length, n, groupby_length, padding):
-    if padding == 'calendar_week':
-        if n != 1 or length != '1D':
+    if padding == "calendar_week":
+        if n != 1 or length != "1D":
             raise ValueError(
-                'calendar_week padding only supports n=1 and length=1D for now.'
+                "calendar_week padding only supports n=1 and length=1D for now."
             )
         result = _extreme(arr, how, length, n, groupby_length, padding=None)
         # get week padding for each day in result
@@ -225,8 +241,8 @@ def _calendar_week_padding(day, arr):
     days = len(day.day.unique())
     if not days == 1:
         raise ValueError(
-            'Only a single day at a time may be used for calendar_week padding, '
-            'but {} days were passed.'.format(days)
+            "Only a single day at a time may be used for calendar_week padding, "
+            "but {} days were passed.".format(days)
         )
 
     # Using day of week, figure out how many days before and after to get
@@ -235,10 +251,10 @@ def _calendar_week_padding(day, arr):
     days_after = 6 - days_before
 
     # Turn it into a week
-    start_time = day[0] - pd.Timedelta('{}D'.format(days_before))
-    end_time = day[-1] + pd.Timedelta('{}D'.format(days_after))
-    before = arr[start_time:day[0]].index[:-1]
-    after = arr[day[-1]:end_time].index[1:]
+    start_time = day[0] - pd.Timedelta("{}D".format(days_before))
+    end_time = day[-1] + pd.Timedelta("{}D".format(days_after))
+    before = arr[start_time : day[0]].index[:-1]
+    after = arr[day[-1] : end_time].index[1:]
     result_week = before.append(day).append(after)
 
     return result_week

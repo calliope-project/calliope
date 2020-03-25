@@ -1,4 +1,3 @@
-
 """
 Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
@@ -25,8 +24,7 @@ class ObservedDict(dict):
 
         for k, v in initial_dict.items():
             if isinstance(v, dict):
-                super().__setitem__(
-                    k, ObservedDict(v, None, on_changed=self.notify))
+                super().__setitem__(k, ObservedDict(v, None, on_changed=self.notify))
         self.notify()
 
     def __setitem__(self, key, value):
@@ -75,19 +73,30 @@ class UpdateObserverDict(ObservedDict):
     dicitonary.
     """
 
-    def __init__(self, name, observer, initial_dict=None, initial_yaml_string=None, *args, **kwargs):
+    def __init__(
+        self,
+        name,
+        observer,
+        initial_dict=None,
+        initial_yaml_string=None,
+        *args,
+        **kwargs,
+    ):
         self.observer = observer
         self.name = name
 
         check_input_args = [i is None for i in [initial_dict, initial_yaml_string]]
         if all(check_input_args) or not any(check_input_args):
-            raise ValueError('must supply one, and only one, of initial_dict or initial_yaml_string')
+            raise ValueError(
+                "must supply one, and only one, of initial_dict or initial_yaml_string"
+            )
 
         super().__init__(initial_dict, initial_yaml_string, *args, **kwargs)
 
     def notify(self, updated=None):
         temp_dict = {
-            k: v for k, v in self.items()
+            k: v
+            for k, v in self.items()
             if (not isinstance(v, dict) and v is not None)
             or (isinstance(v, dict) and len(v.keys()) > 0)
         }
