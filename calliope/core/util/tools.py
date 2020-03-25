@@ -12,7 +12,6 @@ import os
 import sys
 
 
-
 def get_from_dict(data_dict, map_list):
     return functools.reduce(operator.getitem, map_list, data_dict)
 
@@ -22,6 +21,7 @@ def apply_to_dict(data_dict, map_list, func, args):
 
 
 memoize = functools.lru_cache(maxsize=2048)
+
 
 class memoize_instancemethod(object):
     """
@@ -40,6 +40,7 @@ class memoize_instancemethod(object):
     static method.
 
     """
+
     def __init__(self, func):
         self.func = func
 
@@ -81,10 +82,10 @@ def load_function(source):
         'module.submodule.subsubmodule.function_name'
 
     """
-    module_string, function_string = source.rsplit('.', 1)
+    module_string, function_string = source.rsplit(".", 1)
     modules = sys.modules.keys()
     # Check if module already loaded, if so, don't re-import it
-    if (module_string in modules):
+    if module_string in modules:
         module = sys.modules[module_string]
     # Else load the module
     else:
@@ -99,6 +100,6 @@ def plugin_load(name, builtin_module):
         # ValueError raised if we got a string without '.',
         # which implies a builtin function,
         # so we attempt to load from the given module
-        func_string = builtin_module + '.' + name
+        func_string = builtin_module + "." + name
         func = load_function(func_string)
     return func

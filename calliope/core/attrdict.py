@@ -37,22 +37,19 @@ def _yaml_load(src):
         try:
             src_name = src.name
         except AttributeError:
-            src_name = '<yaml stringio>'
+            src_name = "<yaml stringio>"
         # Force-load file streams as that allows the parser to print
         # much more context when it encounters an error
         src = src.read()
     else:
-        src_name = '<yaml string>'
+        src_name = "<yaml string>"
     try:
         result = ruamel_yaml.safe_load(src)
         if not isinstance(result, dict):
-            raise ValueError('Could not parse {} as YAML'.format(src_name))
+            raise ValueError("Could not parse {} as YAML".format(src_name))
         return result
     except ruamel_yaml.YAMLError:
-        logger.error(
-            'Parser error when reading YAML '
-            'from {}.'.format(src_name)
-        )
+        logger.error("Parser error when reading YAML " "from {}.".format(src_name))
         raise
 
 
@@ -67,6 +64,7 @@ class AttrDict(dict):
     and to deal with nested keys.
 
     """
+
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
 
@@ -77,7 +75,7 @@ class AttrDict(dict):
             if isinstance(source_dict, dict):
                 self.init_from_dict(source_dict)
             else:
-                raise ValueError('Must pass a dict to AttrDict')
+                raise ValueError("Must pass a dict to AttrDict")
 
     def copy(self):
         """Override copy method so that it returns an AttrDict"""
@@ -112,17 +110,24 @@ class AttrDict(dict):
 
     @classmethod
     def _resolve_imports(cls, loaded, resolve_imports, base_path=None):
-        if isinstance(resolve_imports, bool) and resolve_imports is True and 'import' in loaded:
+        if (
+            isinstance(resolve_imports, bool)
+            and resolve_imports is True
+            and "import" in loaded
+        ):
             loaded_dict = loaded
-        elif isinstance(resolve_imports, str) and resolve_imports + '.import' in loaded.keys_nested():
+        elif (
+            isinstance(resolve_imports, str)
+            and resolve_imports + ".import" in loaded.keys_nested()
+        ):
             loaded_dict = loaded.get_key(resolve_imports)
         else:  # Return right away if no importing to be done
             return loaded
 
         # If we end up here, we have something to import
-        imports = loaded_dict.get_key('import')
+        imports = loaded_dict.get_key("import")
         if not isinstance(imports, list):
-            raise ValueError('`import` must be a list.')
+            raise ValueError("`import` must be a list.")
 
         for k in imports:
             if base_path:
@@ -134,7 +139,7 @@ class AttrDict(dict):
             imported.union(loaded_dict)
             loaded_dict = imported
         # 'import' key itself is no longer needed
-        loaded_dict.del_key('import')
+        loaded_dict.del_key("import")
 
         if isinstance(resolve_imports, str):
             loaded.set_key(resolve_imports, loaded_dict)
@@ -166,7 +171,7 @@ class AttrDict(dict):
 
         """
         if isinstance(f, str) or isinstance(f, Path):
-            with open(f, 'r', encoding='utf-8',) as src:
+            with open(f, "r", encoding="utf-8",) as src:
                 loaded = cls(_yaml_load(src))
         else:
             loaded = cls(_yaml_load(f))
@@ -196,8 +201,8 @@ class AttrDict(dict):
         """
         if isinstance(value, dict) and not isinstance(value, AttrDict):
             value = AttrDict(value)
-        if '.' in key:
-            key, remainder = key.split('.', 1)
+        if "." in key:
+            key, remainder = key.split(".", 1)
             try:
                 self[key].set_key(remainder, value)
             except KeyError:
@@ -210,7 +215,7 @@ class AttrDict(dict):
                 # Else there is probably something there, and we don't just
                 # want to overwrite so stop and warn the user
                 else:
-                    raise KeyError('Cannot set nested key on non-dict key.')
+                    raise KeyError("Cannot set nested key on non-dict key.")
         else:
             self[key] = value
 
@@ -223,9 +228,9 @@ class AttrDict(dict):
         returned if the key does not exist.
 
         """
-        if '.' in key:
+        if "." in key:
             # Nested key of form "foo.bar"
-            key, remainder = key.split('.', 1)
+            key, remainder = key.split(".", 1)
             if default != _MISSING:
                 try:
                     value = self[key].get_key(remainder, default)
@@ -247,8 +252,8 @@ class AttrDict(dict):
 
     def del_key(self, key):
         """Delete the given key. Properly deals with nested keys."""
-        if '.' in key:
-            key, remainder = key.split('.', 1)
+        if "." in key:
+            key, remainder = key.split(".", 1)
             try:
                 del self[key][remainder]
             except KeyError:
@@ -278,10 +283,7 @@ class AttrDict(dict):
             if isinstance(v, AttrDict):
                 d[k] = v.as_dict()
             elif isinstance(v, list):
-                d[k] = [
-                    i if not isinstance(i, AttrDict)
-                    else i.as_dict()
-                    for i in v]
+                d[k] = [i if not isinstance(i, AttrDict) else i.as_dict() for i in v]
             else:
                 d[k] = v
         return d
@@ -320,14 +322,14 @@ class AttrDict(dict):
         result = result.as_dict()
 
         if path is not None:
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 yaml_.dump(result, f)
         else:
             stream = io.StringIO()
             yaml_.dump(result, stream)
             return stream.getvalue()
 
-    def keys_nested(self, subkeys_as='list'):
+    def keys_nested(self, subkeys_as="list"):
         """
         Returns all keys in the AttrDict, sorted, including the keys of
         nested subdicts (which may be either regular dicts or AttrDicts).
@@ -344,23 +346,21 @@ class AttrDict(dict):
             # Check if dict instance (which AttrDict is too),
             # and for non-emptyness of the dict
             if isinstance(v, dict) and v:
-                if subkeys_as == 'list':
-                    keys.extend([
-                        k + '.' + kk
-                        for kk in v.keys_nested()
-                    ])
-                elif subkeys_as == 'dict':
-                    keys.append({k: v.keys_nested(
-                        subkeys_as=subkeys_as)
-                    })
+                if subkeys_as == "list":
+                    keys.extend([k + "." + kk for kk in v.keys_nested()])
+                elif subkeys_as == "dict":
+                    keys.append({k: v.keys_nested(subkeys_as=subkeys_as)})
             else:
                 keys.append(k)
         return keys
 
     def union(
-            self, other,
-            allow_override=False, allow_replacement=False,
-            allow_subdict_override_with_none=False):
+        self,
+        other,
+        allow_override=False,
+        allow_replacement=False,
+        allow_subdict_override_with_none=False,
+    ):
         """
         Merges the AttrDict in-place with the passed ``other``
         AttrDict. Keys in ``other`` take precedence, and nested keys
@@ -381,23 +381,24 @@ class AttrDict(dict):
         self_keys = self.keys_nested()
         other_keys = other.keys_nested()
         if allow_replacement:
-            WIPE_KEY = '_REPLACE_'
-            override_keys = [k for k in other_keys
-                             if WIPE_KEY not in k]
-            wipe_keys = [k.split('.' + WIPE_KEY)[0]
-                         for k in other_keys
-                         if WIPE_KEY in k]
+            WIPE_KEY = "_REPLACE_"
+            override_keys = [k for k in other_keys if WIPE_KEY not in k]
+            wipe_keys = [
+                k.split("." + WIPE_KEY)[0] for k in other_keys if WIPE_KEY in k
+            ]
         else:
             override_keys = other_keys
             wipe_keys = []
         for k in override_keys:
             if not allow_override and k in self_keys:
-                raise KeyError('Key defined twice: {}'.format(k))
+                raise KeyError("Key defined twice: {}".format(k))
             else:
                 other_value = other.get_key(k)
                 # If other value is None, and would overwrite an entire subdict,
                 # we skip it
-                if not (other_value is None and isinstance(self.get_key(k, None), AttrDict)):
+                if not (
+                    other_value is None and isinstance(self.get_key(k, None), AttrDict)
+                ):
                     self.set_key(k, other_value)
         for k in wipe_keys:
-            self.set_key(k, other.get_key(k + '.' + WIPE_KEY))
+            self.set_key(k, other.get_key(k + "." + WIPE_KEY))
