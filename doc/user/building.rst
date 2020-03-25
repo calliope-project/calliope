@@ -164,9 +164,9 @@ Time series data
 For parameters that vary in time, time series data can be added to a model in two ways:
 
 * by reading in CSV files
-* by passing `pandas` dataframes as arguments in `calliope.Model` when called from a python session.
+* by passing ``pandas`` dataframes as arguments in ``calliope.Model`` when called from a python session.
 
-Reading in timeseries from CSV files is possible when a model is run from both the command-line tool as well running interactively with python. However, passing dataframes as arguments in `calliope.Model` is possible only when running from a python session. See (see :doc:`running`) for details on the differences in these methods of running a model.
+Reading in timeseries from CSV files is possible when a model is run from both the command-line tool as well running interactively with python. However, passing dataframes as arguments in ``calliope.Model`` is possible only when running from a python session. See (see :doc:`running`) for details on the differences in these methods of running a model.
 
 Reading in CSV files
 --------------------
@@ -202,6 +202,21 @@ For example, the first few lines of a CSV file giving a resource potential for t
     2005-01-01 04:00:00,11,110
     2005-01-01 05:00:00,45,300
     2005-01-01 06:00:00,90,458
+
+Reading in timeseries from ``pandas`` dataframes
+------------------------------------------------
+When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`resource: df=tskey` where ``tskey`` is the timeseries key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
+
+.. code-block:: text
+
+                          location1  location2
+    2005-01-01 00:00:00           0          0
+    2005-01-01 01:00:00           0         11
+    2005-01-01 02:00:00           0         18
+    2005-01-01 03:00:00           0         49
+    2005-01-01 04:00:00          11        110
+    2005-01-01 05:00:00          45        300
+    2005-01-01 06:00:00          90        458
 
 .. Note::
 
