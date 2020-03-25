@@ -26,13 +26,17 @@ First, clone the repository
 
     $ git clone https://github.com/calliope-project/calliope
 
-Using conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``
+Using our conda util function, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``
 
 
   .. code-block:: fishshell
 
-    $ conda env create -f calliope/requirements/base.yml -n calliope_dev
+    $ python calliope/utils/conda_create.py calliope/requirements/base.yml calliope/requirements/dev_tools.yml --env_name calliope_dev --python_version=3.8 --run
     $ conda activate calliope_dev
+
+.. Note::
+    * You will need ``ruamel_yaml`` in your base environment to run this script.
+    * If you are running on a Unix system, then you can include ``calliope/requirements/unix.yml`` to the list of requirements files to also install the CBC solver.
 
 Then install Calliope itself with pip
 
@@ -40,7 +44,13 @@ Then install Calliope itself with pip
 
     $ pip install -e calliope
 
-Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. To install solvers other than GLPK, see our `solver installation instructions <install_solvers>`.
+Finally, all updates to the code need to be formatted using `black <https://github.com/psf/black/>`_ on each commit. If you don't have a process for doing this already, you can also install our configured `pre-commit <https://pre-commit.com/>`_ hook which will automatically run black on each commit
+
+  .. code-block:: fishshell
+
+    $ pre-commit install
+
+.. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. To install solvers other than GLPK, see our :ref:`solver installation instructions <install_solvers>`.
 
 ---------------------------
 Creating modular extensions

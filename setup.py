@@ -5,47 +5,46 @@ from setuptools import setup, find_packages
 
 
 # Sets the __version__ variable
-exec(open('calliope/_version.py').read())
+exec(open("calliope/_version.py").read())
 
-with open('README.md') as f:
+with open("README.md") as f:
     long_description = f.read()
 
 
 def get_subdirs(path, glob_string):
     return [
-        i.relative_to(str(path) + '/')
-        for i in path.glob(glob_string) if i.is_dir()
+        i.relative_to(str(path) + "/") for i in path.glob(glob_string) if i.is_dir()
     ]
 
 
 def find_calliope_package_data():
     """Returns a list of found directories with package data files"""
-    path = Path('./calliope')
-    package_data = ['config/*.yaml', 'config/*.html', 'test/common/*.yaml']
-    for subdir_level in ['*', '*/*', '*/*/*']:
-        for example_dir in get_subdirs(path, 'example_models/' + subdir_level):
-            package_data.append(str(example_dir) + '/*.csv')
-            package_data.append(str(example_dir) + '/*.yaml')
-            package_data.append(str(example_dir) + '/*.rst')
-    for test_case_dir in get_subdirs(path, 'test/common/*'):
-        package_data.append(str(test_case_dir) + '/*.csv')
+    path = Path("./calliope")
+    package_data = ["config/*.yaml", "config/*.html", "test/common/*.yaml"]
+    for subdir_level in ["*", "*/*", "*/*/*"]:
+        for example_dir in get_subdirs(path, "example_models/" + subdir_level):
+            package_data.append(str(example_dir) + "/*.csv")
+            package_data.append(str(example_dir) + "/*.yaml")
+            package_data.append(str(example_dir) + "/*.rst")
+    for test_case_dir in get_subdirs(path, "test/common/*"):
+        package_data.append(str(test_case_dir) + "/*.csv")
     print(package_data)
     return package_data
 
 
 setup(
-    name='calliope',
+    name="calliope",
     version=__version__,
-    author='Calliope contributors listed in AUTHORS',
-    author_email='stefan@pfenninger.org',
-    description='A multi-scale energy systems modelling framework',
+    author="Calliope contributors listed in AUTHORS",
+    author_email="stefan@pfenninger.org",
+    description="A multi-scale energy systems modelling framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    license='Apache 2.0',
-    url='https://www.callio.pe/',
-    download_url='https://github.com/calliope-project/calliope/releases',
+    license="Apache 2.0",
+    url="https://www.callio.pe/",
+    download_url="https://github.com/calliope-project/calliope/releases",
     packages=find_packages(),
-    package_data={'calliope': find_calliope_package_data()},
+    package_data={"calliope": find_calliope_package_data()},
     install_requires=[
         "bottleneck >= 1.2",
         "click >= 7, < 8",
@@ -63,17 +62,13 @@ setup(
         "scikit-learn >= 0.22",
         "xarray >= 0.14, < 0.15",
     ],
-    entry_points={
-        'console_scripts': [
-            'calliope = calliope.cli:cli'
-        ]
-    },
+    entry_points={"console_scripts": ["calliope = calliope.cli:cli"]},
     classifiers=[
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3 :: Only'
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
     ],
-    keywords=['energy systems', 'optimisation', 'mathematical programming']
+    keywords=["energy systems", "optimisation", "mathematical programming"],
 )

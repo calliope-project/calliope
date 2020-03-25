@@ -4,9 +4,9 @@ channels:
     - conda-forge
 
 dependencies:
-    - flake8
     - line_profiler
     - memory_profiler
+    - pre-commit
     - pylint
     - snakeviz
     - twine

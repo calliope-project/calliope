@@ -22,142 +22,195 @@ ORDER = 20  # order in which to invoke constraints relative to other constraint 
 
 
 def return_noconstraint(*args):
-    logger.debug('group constraint returned NoConstraint: {}'.format(','.join(args)))
+    logger.debug("group constraint returned NoConstraint: {}".format(",".join(args)))
     return po.Constraint.NoConstraint
 
 
 def load_constraints(backend_model):
-    model_data_dict = backend_model.__calliope_model_data['data']
+    model_data_dict = backend_model.__calliope_model_data["data"]
 
-    for sense in ['min', 'max', 'equals']:
-        if 'group_energy_cap_share_{}'.format(sense) in model_data_dict:
+    for sense in ["min", "max", "equals"]:
+        if "group_energy_cap_share_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_energy_cap_share_{}_constraint'.format(sense),
+                backend_model,
+                "group_energy_cap_share_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_energy_cap_share_{}'.format(sense)),
-                    [sense], rule=energy_cap_share_constraint_rule
-                )
+                    getattr(
+                        backend_model, "group_names_energy_cap_share_{}".format(sense)
+                    ),
+                    [sense],
+                    rule=energy_cap_share_constraint_rule,
+                ),
             )
 
-        if 'group_energy_cap_{}'.format(sense) in model_data_dict:
+        if "group_energy_cap_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_energy_cap_{}_constraint'.format(sense),
+                backend_model,
+                "group_energy_cap_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_energy_cap_{}'.format(sense)),
-                    [sense], rule=energy_cap_constraint_rule
-                )
+                    getattr(backend_model, "group_names_energy_cap_{}".format(sense)),
+                    [sense],
+                    rule=energy_cap_constraint_rule,
+                ),
             )
 
-        if 'group_resource_area_{}'.format(sense) in model_data_dict:
+        if "group_resource_area_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_resource_area_{}_constraint'.format(sense),
+                backend_model,
+                "group_resource_area_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_resource_area_{}'.format(sense)),
-                    [sense], rule=resource_area_constraint_rule
-                )
+                    getattr(
+                        backend_model, "group_names_resource_area_{}".format(sense)
+                    ),
+                    [sense],
+                    rule=resource_area_constraint_rule,
+                ),
             )
 
-        if 'group_carrier_prod_{}'.format(sense) in model_data_dict:
+        if "group_carrier_prod_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_carrier_prod_{}_constraint'.format(sense),
+                backend_model,
+                "group_carrier_prod_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_carrier_prod_{}'.format(sense)),
-                    backend_model.carriers, [sense], rule=carrier_prod_constraint_rule
-                )
+                    getattr(backend_model, "group_names_carrier_prod_{}".format(sense)),
+                    backend_model.carriers,
+                    [sense],
+                    rule=carrier_prod_constraint_rule,
+                ),
             )
 
-        if 'group_demand_share_{}'.format(sense) in model_data_dict:
+        if "group_demand_share_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_demand_share_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_demand_share_{}'.format(sense)),
-                              backend_model.carriers, [sense], rule=demand_share_constraint_rule)
-            )
-
-        if 'group_demand_share_per_timestep_{}'.format(sense) in model_data_dict:
-            setattr(
-                backend_model, 'group_demand_share_per_timestep_{}_constraint'.format(sense),
+                backend_model,
+                "group_demand_share_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_demand_share_per_timestep_{}'.format(sense)),
-                    backend_model.carriers, backend_model.timesteps,
-                    [sense], rule=demand_share_per_timestep_constraint_rule
-                )
+                    getattr(backend_model, "group_names_demand_share_{}".format(sense)),
+                    backend_model.carriers,
+                    [sense],
+                    rule=demand_share_constraint_rule,
+                ),
             )
 
-        if 'group_carrier_prod_share_{}'.format(sense) in model_data_dict:
+        if "group_demand_share_per_timestep_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_carrier_prod_share_{}_constraint'.format(sense),
+                backend_model,
+                "group_demand_share_per_timestep_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_carrier_prod_share_{}'.format(sense)),
-                    backend_model.carriers, [sense], rule=carrier_prod_share_constraint_rule
-                )
+                    getattr(
+                        backend_model,
+                        "group_names_demand_share_per_timestep_{}".format(sense),
+                    ),
+                    backend_model.carriers,
+                    backend_model.timesteps,
+                    [sense],
+                    rule=demand_share_per_timestep_constraint_rule,
+                ),
             )
 
-        if 'group_carrier_prod_share_per_timestep_{}'.format(sense) in model_data_dict:
+        if "group_carrier_prod_share_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_carrier_prod_share_per_timestep_{}_constraint'.format(sense),
+                backend_model,
+                "group_carrier_prod_share_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_carrier_prod_share_per_timestep_{}'.format(sense)),
-                    backend_model.carriers, backend_model.timesteps,
-                    [sense], rule=carrier_prod_share_per_timestep_constraint_rule
-                )
+                    getattr(
+                        backend_model, "group_names_carrier_prod_share_{}".format(sense)
+                    ),
+                    backend_model.carriers,
+                    [sense],
+                    rule=carrier_prod_share_constraint_rule,
+                ),
             )
 
-        if 'group_net_import_share_{}'.format(sense) in model_data_dict:
+        if "group_carrier_prod_share_per_timestep_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_net_import_share_{}_constraint'.format(sense),
+                backend_model,
+                "group_carrier_prod_share_per_timestep_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_net_import_share_{}'.format(sense)),
-                    backend_model.carriers, [sense], rule=net_import_share_constraint_rule
-                )
+                    getattr(
+                        backend_model,
+                        "group_names_carrier_prod_share_per_timestep_{}".format(sense),
+                    ),
+                    backend_model.carriers,
+                    backend_model.timesteps,
+                    [sense],
+                    rule=carrier_prod_share_per_timestep_constraint_rule,
+                ),
             )
 
-        if 'group_cost_{}'.format(sense) in model_data_dict:
+        if "group_net_import_share_{}".format(sense) in model_data_dict:
             setattr(
-                backend_model, 'group_cost_{}_constraint'.format(sense),
+                backend_model,
+                "group_net_import_share_{}_constraint".format(sense),
                 po.Constraint(
-                    getattr(backend_model, 'group_names_cost_{}'.format(sense)),
-                    backend_model.costs, [sense], rule=cost_cap_constraint_rule
-                )
-            )
-        if 'group_cost_var_{}'.format(sense) in model_data_dict:
-            setattr(
-                backend_model, 'group_cost_var_{}_constraint'.format(sense),
-                po.Constraint(getattr(backend_model, 'group_names_cost_var_{}'.format(sense)),
-                              backend_model.costs, [sense], rule=cost_var_cap_constraint_rule)
-            )
-        if 'group_cost_investment_{}'.format(sense) in model_data_dict:
-            setattr(
-                backend_model, 'group_cost_investment_{}_constraint'.format(sense),
-                po.Constraint(
-                    getattr(backend_model, 'group_names_cost_investment_{}'.format(sense)),
-                    backend_model.costs, [sense], rule=cost_investment_cap_constraint_rule
-                )
+                    getattr(
+                        backend_model, "group_names_net_import_share_{}".format(sense)
+                    ),
+                    backend_model.carriers,
+                    [sense],
+                    rule=net_import_share_constraint_rule,
+                ),
             )
 
-    if 'group_demand_share_per_timestep_decision' in model_data_dict:
+        if "group_cost_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_cost_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(backend_model, "group_names_cost_{}".format(sense)),
+                    backend_model.costs,
+                    [sense],
+                    rule=cost_cap_constraint_rule,
+                ),
+            )
+        if "group_cost_var_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_cost_var_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(backend_model, "group_names_cost_var_{}".format(sense)),
+                    backend_model.costs,
+                    [sense],
+                    rule=cost_var_cap_constraint_rule,
+                ),
+            )
+        if "group_cost_investment_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_cost_investment_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(
+                        backend_model, "group_names_cost_investment_{}".format(sense)
+                    ),
+                    backend_model.costs,
+                    [sense],
+                    rule=cost_investment_cap_constraint_rule,
+                ),
+            )
+
+    if "group_demand_share_per_timestep_decision" in model_data_dict:
         backend_model.group_demand_share_per_timestep_decision_main_constraint = po.Constraint(
             backend_model.group_names_demand_share_per_timestep_decision,
             backend_model.carriers,
             backend_model.techs,
             backend_model.timesteps,
-            rule=demand_share_per_timestep_decision_main_constraint_rule
+            rule=demand_share_per_timestep_decision_main_constraint_rule,
         )
         backend_model.group_demand_share_per_timestep_decision_sum_constraint = po.Constraint(
             backend_model.group_names_demand_share_per_timestep_decision,
             backend_model.carriers,
-            rule=demand_share_per_timestep_decision_sum_constraint_rule
+            rule=demand_share_per_timestep_decision_sum_constraint_rule,
         )
 
 
 def equalizer(lhs, rhs, sign):
-    if sign == 'max':
+    if sign == "max":
         return lhs <= rhs
-    elif sign == 'min':
+    elif sign == "min":
         return lhs >= rhs
-    elif sign == 'equals':
+    elif sign == "equals":
         return lhs == rhs
     else:
-        raise ValueError('Invalid sign: {}'.format(sign))
+        raise ValueError("Invalid sign: {}".format(sign))
 
 
 def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name, carrier):
@@ -168,17 +221,18 @@ def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name, ca
         lhs are the supply technologies, rhs are the demand technologies
     """
     lhs_loc_techs = getattr(
-        backend_model,
-        'group_constraint_loc_techs_{}'.format(group_name)
+        backend_model, "group_constraint_loc_techs_{}".format(group_name)
     )
-    lhs_locs = set(loc_tech.split('::')[0] for loc_tech in lhs_loc_techs)
+    lhs_locs = set(loc_tech.split("::")[0] for loc_tech in lhs_loc_techs)
     lhs_loc_tech_carriers = [
-        i for i in backend_model.loc_tech_carriers_prod
-        if i.rsplit('::', 1)[0] in lhs_loc_techs and i.split('::')[-1] == carrier
+        i
+        for i in backend_model.loc_tech_carriers_prod
+        if i.rsplit("::", 1)[0] in lhs_loc_techs and i.split("::")[-1] == carrier
     ]
     rhs_loc_tech_carriers = [
-        i for i in backend_model.loc_tech_carriers_demand
-        if i.split('::')[0] in lhs_locs and i.split('::')[-1] == carrier
+        i
+        for i in backend_model.loc_tech_carriers_demand
+        if i.split("::")[0] in lhs_locs and i.split("::")[-1] == carrier
     ]
     return (lhs_loc_tech_carriers, rhs_loc_tech_carriers)
 
@@ -198,12 +252,17 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             carrier_{con}(loc::tech::carrier, timestep)
 
     """
-    share = get_param(backend_model, 'group_demand_share_{}'.format(what), (carrier, group_name))
+    share = get_param(
+        backend_model, "group_demand_share_{}".format(what), (carrier, group_name)
+    )
 
     if share is None:
-        return return_noconstraint('demand_share', group_name)
+        return return_noconstraint("demand_share", group_name)
     else:
-        lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+        (
+            lhs_loc_tech_carriers,
+            rhs_loc_tech_carriers,
+        ) = get_demand_share_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name, carrier
         )
 
@@ -213,16 +272,22 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
             for timestep in backend_model.timesteps
         )
 
-        rhs = share * -1 * sum(
-            backend_model.carrier_con[loc_tech_carrier, timestep]
-            for loc_tech_carrier in rhs_loc_tech_carriers
-            for timestep in backend_model.timesteps
+        rhs = (
+            share
+            * -1
+            * sum(
+                backend_model.carrier_con[loc_tech_carrier, timestep]
+                for loc_tech_carrier in rhs_loc_tech_carriers
+                for timestep in backend_model.timesteps
+            )
         )
 
         return equalizer(lhs, rhs, what)
 
 
-def demand_share_per_timestep_constraint_rule(backend_model, group_name, carrier, timestep, what):
+def demand_share_per_timestep_constraint_rule(
+    backend_model, group_name, carrier, timestep, what
+):
     """
     Enforces shares of demand of a carrier to be met by the given groups
     of technologies at the given locations, in each timestep.
@@ -237,12 +302,19 @@ def demand_share_per_timestep_constraint_rule(backend_model, group_name, carrier
             carrier_{con}(loc::tech::carrier, timestep) for timestep \\in timesteps
 
     """
-    share = get_param(backend_model, 'group_demand_share_per_timestep_{}'.format(what), (carrier, group_name))
+    share = get_param(
+        backend_model,
+        "group_demand_share_per_timestep_{}".format(what),
+        (carrier, group_name),
+    )
 
     if share is None:
-        return return_noconstraint('demand_share_per_timestep', group_name)
+        return return_noconstraint("demand_share_per_timestep", group_name)
     else:
-        lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+        (
+            lhs_loc_tech_carriers,
+            rhs_loc_tech_carriers,
+        ) = get_demand_share_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name, carrier
         )
 
@@ -251,15 +323,21 @@ def demand_share_per_timestep_constraint_rule(backend_model, group_name, carrier
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        rhs = share * -1 * sum(
-            backend_model.carrier_con[loc_tech_carrier, timestep]
-            for loc_tech_carrier in rhs_loc_tech_carriers
+        rhs = (
+            share
+            * -1
+            * sum(
+                backend_model.carrier_con[loc_tech_carrier, timestep]
+                for loc_tech_carrier in rhs_loc_tech_carriers
+            )
         )
 
         return equalizer(lhs, rhs, what)
 
 
-def demand_share_per_timestep_decision_main_constraint_rule(backend_model, group_name, carrier, tech, timestep):
+def demand_share_per_timestep_decision_main_constraint_rule(
+    backend_model, group_name, carrier, tech, timestep
+):
     """
     Allows the model to decide on how a fraction demand for a carrier is met
     by the given groups, which will all have the same share in each timestep.
@@ -285,39 +363,58 @@ def demand_share_per_timestep_decision_main_constraint_rule(backend_model, group
             \\forall tech \\in techs
 
     """
-    share_of_carrier_demand = get_param(backend_model, 'group_demand_share_per_timestep_decision', (carrier, group_name))
+    share_of_carrier_demand = get_param(
+        backend_model, "group_demand_share_per_timestep_decision", (carrier, group_name)
+    )
 
     if share_of_carrier_demand is None:
-        return return_noconstraint('demand_share_per_timestep_decision_main', group_name)
+        return return_noconstraint(
+            "demand_share_per_timestep_decision_main", group_name
+        )
     else:
         # lhs are the supply technologies, rhs are the demand technologies
-        lhs_loc_tech_carriers, rhs_loc_tech_carriers = get_demand_share_lhs_and_rhs_loc_tech_carriers(
+        (
+            lhs_loc_tech_carriers,
+            rhs_loc_tech_carriers,
+        ) = get_demand_share_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name, carrier
         )
         # Filter the supply loc_tech_carriers by the current tech
-        lhs_loc_tech_carriers = [i for i in lhs_loc_tech_carriers if '::{}::'.format(tech) in i]
+        lhs_loc_tech_carriers = [
+            i for i in lhs_loc_tech_carriers if "::{}::".format(tech) in i
+        ]
 
         # Only techs that are in the given group are considered
         if len(lhs_loc_tech_carriers) == 0:
-            return return_noconstraint('demand_share_per_timestep_decision_main', group_name)
+            return return_noconstraint(
+                "demand_share_per_timestep_decision_main", group_name
+            )
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech_carrier, timestep]
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        rhs = -1 * sum(
-            backend_model.required_resource[rhs_loc_tech_carrier.rsplit('::', 1)[0], timestep]
-            for rhs_loc_tech_carrier in rhs_loc_tech_carriers
-        ) * sum(
-            backend_model.demand_share_per_timestep_decision[lhs_loc_tech_carrier]
-            for lhs_loc_tech_carrier in lhs_loc_tech_carriers
+        rhs = (
+            -1
+            * sum(
+                backend_model.required_resource[
+                    rhs_loc_tech_carrier.rsplit("::", 1)[0], timestep
+                ]
+                for rhs_loc_tech_carrier in rhs_loc_tech_carriers
+            )
+            * sum(
+                backend_model.demand_share_per_timestep_decision[lhs_loc_tech_carrier]
+                for lhs_loc_tech_carrier in lhs_loc_tech_carriers
+            )
         )
 
-        return equalizer(lhs, rhs, 'equals')
+        return equalizer(lhs, rhs, "equals")
 
 
-def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_name, carrier):
+def demand_share_per_timestep_decision_sum_constraint_rule(
+    backend_model, group_name, carrier
+):
     """
     Allows the model to decide on how a fraction of demand for a carrier is met
     by the given groups, which will all have the same share in each timestep.
@@ -337,11 +434,13 @@ def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_
 
 
     """
-    share_of_carrier_demand = get_param(backend_model, 'group_demand_share_per_timestep_decision', (carrier, group_name))
+    share_of_carrier_demand = get_param(
+        backend_model, "group_demand_share_per_timestep_decision", (carrier, group_name)
+    )
 
     # If inf was given that means that we don't limit the total share
     if share_of_carrier_demand is None or np.isinf(share_of_carrier_demand):
-        return return_noconstraint('demand_share_per_timestep_decision_sum', group_name)
+        return return_noconstraint("demand_share_per_timestep_decision_sum", group_name)
     else:
         lhs_loc_tech_carriers, _ = get_demand_share_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name, carrier
@@ -355,13 +454,13 @@ def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_
 
 def get_carrier_prod_share_lhs_and_rhs_loc_techs(backend_model, group_name):
     lhs_loc_techs = getattr(
-        backend_model,
-        'group_constraint_loc_techs_{}'.format(group_name)
+        backend_model, "group_constraint_loc_techs_{}".format(group_name)
     )
-    lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+    lhs_locs = [loc_tech.split("::")[0] for loc_tech in lhs_loc_techs]
     rhs_loc_techs = [
-        i for i in backend_model.loc_techs_supply_conversion_all
-        if i.split('::')[0] in lhs_locs
+        i
+        for i in backend_model.loc_techs_supply_conversion_all
+        if i.split("::")[0] in lhs_locs
     ]
     return (lhs_loc_techs, rhs_loc_techs)
 
@@ -381,23 +480,26 @@ def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier,
             carrier_{prod}(loc::tech::carrier, timestep)
 
     """
-    share = get_param(backend_model, 'group_carrier_prod_share_{}'.format(what), (carrier, constraint_group))
+    share = get_param(
+        backend_model,
+        "group_carrier_prod_share_{}".format(what),
+        (carrier, constraint_group),
+    )
 
     if share is None:
-        return return_noconstraint('supply_share', constraint_group)
+        return return_noconstraint("supply_share", constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
-            backend_model,
-            constraint_group
+            backend_model, constraint_group
         )
 
         lhs = sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
             for loc_tech in lhs_loc_techs
             for timestep in backend_model.timesteps
         )
         rhs = share * sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
             for loc_tech in rhs_loc_techs
             for timestep in backend_model.timesteps
         )
@@ -405,7 +507,9 @@ def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier,
         return equalizer(lhs, rhs, what)
 
 
-def carrier_prod_share_per_timestep_constraint_rule(backend_model, constraint_group, carrier, timestep, what):
+def carrier_prod_share_per_timestep_constraint_rule(
+    backend_model, constraint_group, carrier, timestep, what
+):
     """
     Enforces shares of carrier_prod for groups of technologies and locations,
     in each timestep. The share is relative to ``supply`` and ``supply_plus``
@@ -420,22 +524,25 @@ def carrier_prod_share_per_timestep_constraint_rule(backend_model, constraint_gr
             carrier_{prod}(loc::tech::carrier, timestep) for timestep \\in timesteps
 
     """
-    share = get_param(backend_model, 'group_carrier_prod_share_per_timestep_{}'.format(what), (carrier, constraint_group))
+    share = get_param(
+        backend_model,
+        "group_carrier_prod_share_per_timestep_{}".format(what),
+        (carrier, constraint_group),
+    )
 
     if share is None:
-        return return_noconstraint('carrier_prod_share_per_timestep', constraint_group)
+        return return_noconstraint("carrier_prod_share_per_timestep", constraint_group)
     else:
         lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
-            backend_model,
-            constraint_group
+            backend_model, constraint_group
         )
 
         lhs = sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
             for loc_tech in lhs_loc_techs
         )
         rhs = share * sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
             for loc_tech in rhs_loc_techs
         )
 
@@ -458,29 +565,37 @@ def net_import_share_constraint_rule(backend_model, constraint_group, carrier, w
             carrier_{con}(loc::tech::carrier, timestep)
 
     """
-    share = get_param(backend_model, 'group_net_import_share_{}'.format(what), (carrier, constraint_group))
+    share = get_param(
+        backend_model,
+        "group_net_import_share_{}".format(what),
+        (carrier, constraint_group),
+    )
 
     if share.value is None:
-        return return_noconstraint('net_import_share', constraint_group)
+        return return_noconstraint("net_import_share", constraint_group)
     else:
         trans_loc_tech = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
+            backend_model, "group_constraint_loc_techs_{}".format(constraint_group)
         )
-        locs = set(loc_tech.split('::')[0] for loc_tech in trans_loc_tech)
-        trans_loc_tech = filter(lambda loc_tec: loc_tec.split(":")[-1] not in locs, trans_loc_tech)
+        locs = set(loc_tech.split("::")[0] for loc_tech in trans_loc_tech)
+        trans_loc_tech = filter(
+            lambda loc_tec: loc_tec.split(":")[-1] not in locs, trans_loc_tech
+        )
         demand_loc_tech = [
-            i for i in backend_model.loc_tech_carriers_demand
-            if i.split('::')[0] in locs
+            i
+            for i in backend_model.loc_tech_carriers_demand
+            if i.split("::")[0] in locs
         ]
 
         lhs = sum(
-            (backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
-             + backend_model.carrier_con[loc_tech + '::' + carrier, timestep])
+            (
+                backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
+                + backend_model.carrier_con[loc_tech + "::" + carrier, timestep]
+            )
             for loc_tech in trans_loc_tech
             for timestep in backend_model.timesteps
         )
-        rhs = - share * sum(
+        rhs = -share * sum(
             backend_model.carrier_con[loc_tech, timestep]
             for loc_tech in demand_loc_tech
             for timestep in backend_model.timesteps
@@ -500,22 +615,23 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, carrier, what)
             \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq supply_max
 
     """
-    limit = get_param(backend_model, 'group_carrier_prod_{}'.format(what), (carrier, constraint_group))
+    limit = get_param(
+        backend_model, "group_carrier_prod_{}".format(what), (carrier, constraint_group)
+    )
 
     if limit is None:
-        return return_noconstraint('carrier_prod', constraint_group)
+        return return_noconstraint("carrier_prod", constraint_group)
     else:
         # We won't actually use the rhs techs
         lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
-            backend_model,
-            constraint_group
+            backend_model, constraint_group
         )
 
         lhs = sum(
-            backend_model.carrier_prod[loc_tech + '::' + carrier, timestep]
+            backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
             for loc_tech in lhs_loc_techs
             for timestep in backend_model.timesteps
-            if loc_tech + '::' + carrier in backend_model.loc_tech_carriers_prod
+            if loc_tech + "::" + carrier in backend_model.loc_tech_carriers_prod
         )
 
         return equalizer(lhs, limit, what)
@@ -533,28 +649,26 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\leq
             share \\times \\sum_{loc::tech \\in loc\\_tech\\_supply\\_all \\in given\\_locations} energy_{cap}(loc::tech)
     """
-    share = get_param(backend_model, 'group_energy_cap_share_{}'.format(what), (constraint_group))
+    share = get_param(
+        backend_model, "group_energy_cap_share_{}".format(what), (constraint_group)
+    )
 
     if share is None:
-        return return_noconstraint('energy_cap_share', constraint_group)
+        return return_noconstraint("energy_cap_share", constraint_group)
     else:
         lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
+            backend_model, "group_constraint_loc_techs_{}".format(constraint_group)
         )
-        lhs_locs = [loc_tech.split('::')[0] for loc_tech in lhs_loc_techs]
+        lhs_locs = [loc_tech.split("::")[0] for loc_tech in lhs_loc_techs]
         rhs_loc_techs = [
-            i for i in backend_model.loc_techs_supply_conversion_all
-            if i.split('::')[0] in lhs_locs
+            i
+            for i in backend_model.loc_techs_supply_conversion_all
+            if i.split("::")[0] in lhs_locs
         ]
 
-        lhs = sum(
-            backend_model.energy_cap[loc_tech]
-            for loc_tech in lhs_loc_techs
-        )
+        lhs = sum(backend_model.energy_cap[loc_tech] for loc_tech in lhs_loc_techs)
         rhs = share * sum(
-            backend_model.energy_cap[loc_tech]
-            for loc_tech in rhs_loc_techs
+            backend_model.energy_cap[loc_tech] for loc_tech in rhs_loc_techs
         )
 
         return equalizer(lhs, rhs, what)
@@ -574,20 +688,21 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
             \\sum_{loc::tech \\in given\\_group} energy_{cap}(loc::tech) \\geq energy\\_cap\\_min
 
     """
-    threshold = get_param(backend_model, 'group_energy_cap_{}'.format(what), (constraint_group))
+    threshold = get_param(
+        backend_model, "group_energy_cap_{}".format(what), (constraint_group)
+    )
 
     if threshold is None:
-        return return_noconstraint('energy_cap', constraint_group)
+        return return_noconstraint("energy_cap", constraint_group)
     else:
         lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
+            backend_model, "group_constraint_loc_techs_{}".format(constraint_group)
         )
 
         # Transmission techs only contribute half their capacity in each direction
         lhs = []
         for loc_tech in lhs_loc_techs:
-            if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+            if loc_tech_is_in(backend_model, loc_tech, "loc_techs_transmission"):
                 weight = 0.5
             else:
                 weight = 1
@@ -618,15 +733,20 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
             \\end{cases}
 
     """
-    cost_cap = get_param(backend_model, 'group_cost_{}'.format(what), (cost, group_name))
+    cost_cap = get_param(
+        backend_model, "group_cost_{}".format(what), (cost, group_name)
+    )
 
     if cost_cap is None:
-        return return_noconstraint('cost_cap', group_name)
+        return return_noconstraint("cost_cap", group_name)
     else:
-        loc_techs = [i for i in getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(group_name)
-        ) if i in backend_model.loc_techs_cost]
+        loc_techs = [
+            i
+            for i in getattr(
+                backend_model, "group_constraint_loc_techs_{}".format(group_name)
+            )
+            if i in backend_model.loc_techs_cost
+        ]
 
         sum_cost = sum(backend_model.cost[cost, loc_tech] for loc_tech in loc_techs)
 
@@ -652,17 +772,24 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
             \\end{cases}
 
     """
-    cost_cap = get_param(backend_model, 'group_cost_investment_{}'.format(what), (cost, group_name))
+    cost_cap = get_param(
+        backend_model, "group_cost_investment_{}".format(what), (cost, group_name)
+    )
 
     if cost_cap is None:
-        return return_noconstraint('cost_investment_cap', group_name)
+        return return_noconstraint("cost_investment_cap", group_name)
     else:
-        loc_techs = [i for i in getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(group_name)
-        ) if i in backend_model.loc_techs_investment_cost]
+        loc_techs = [
+            i
+            for i in getattr(
+                backend_model, "group_constraint_loc_techs_{}".format(group_name)
+            )
+            if i in backend_model.loc_techs_investment_cost
+        ]
 
-        sum_cost = sum(backend_model.cost_investment[cost, loc_tech] for loc_tech in loc_techs)
+        sum_cost = sum(
+            backend_model.cost_investment[cost, loc_tech] for loc_tech in loc_techs
+        )
 
         return equalizer(sum_cost, cost_cap, what)
 
@@ -686,19 +813,25 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
             \\end{cases}
 
     """
-    cost_cap = get_param(backend_model, 'group_cost_var_{}'.format(what), (cost, group_name))
+    cost_cap = get_param(
+        backend_model, "group_cost_var_{}".format(what), (cost, group_name)
+    )
 
     if cost_cap is None:
-        return return_noconstraint('cost_var_cap', group_name)
+        return return_noconstraint("cost_var_cap", group_name)
     else:
-        loc_techs = [i for i in getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(group_name)
-        ) if i in backend_model.loc_techs_om_cost]
+        loc_techs = [
+            i
+            for i in getattr(
+                backend_model, "group_constraint_loc_techs_{}".format(group_name)
+            )
+            if i in backend_model.loc_techs_om_cost
+        ]
 
         sum_cost = sum(
             backend_model.cost_var[cost, loc_tech, timestep]
-            for loc_tech in loc_techs for timestep in backend_model.timesteps
+            for loc_tech in loc_techs
+            for timestep in backend_model.timesteps
         )
 
         return equalizer(sum_cost, cost_cap, what)
@@ -718,20 +851,18 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
             \\boldsymbol{resource_{area}}(loc::tech) \\geq group\\_resource\\_area\\_min
 
     """
-    threshold = get_param(backend_model, 'group_resource_area_{}'.format(what), (constraint_group))
+    threshold = get_param(
+        backend_model, "group_resource_area_{}".format(what), (constraint_group)
+    )
 
     if threshold is None:
-        return return_noconstraint('resource_area', constraint_group)
+        return return_noconstraint("resource_area", constraint_group)
     else:
         lhs_loc_techs = getattr(
-            backend_model,
-            'group_constraint_loc_techs_{}'.format(constraint_group)
+            backend_model, "group_constraint_loc_techs_{}".format(constraint_group)
         )
 
-        lhs = sum(
-            backend_model.resource_area[loc_tech]
-            for loc_tech in lhs_loc_techs
-        )
+        lhs = sum(backend_model.resource_area[loc_tech] for loc_tech in lhs_loc_techs)
         rhs = threshold
 
         return equalizer(lhs, rhs, what)
