@@ -205,14 +205,13 @@ For example, the first few lines of a CSV file giving a resource potential for t
 
 Reading in timeseries from ``pandas`` dataframes
 ------------------------------------------------
-When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`resource: df=tskey` where ``tskey`` is the timeseries key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
+When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`resource: df=tskey` where ``tskey`` is the key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
 
-.. code-block:: text
+.. code-block:: python
 
-    >> pv_resource
-
-    >>
-                             location1  location2
+    pv_resource
+    
+       t                     location1  location2
        2005-01-01 00:00:00           0          0
        2005-01-01 01:00:00           0         11
        2005-01-01 02:00:00           0         18
@@ -221,11 +220,31 @@ When running models from python scripts or shells, it is also possible to pass t
        2005-01-01 05:00:00          45        300
        2005-01-01 06:00:00          90        458
 
+To pass this timeseries into the Model, create a dictionary, called ``timeseries_dataframes`` here, containing all relevant timeseries identified by their ``tskey``. In this case, this has only one key, called ``pv_resource``:
+
+.. code-block:: python
+
+    timeseries_dataframes = {'pv_resource': pv_resource}
+
+the keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``.
+
+The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
+
+.. code-block:: python
+
+    model = calliope.Model('model.yaml', timeseries_dataframes=timeseries_dataframes)
+
+Just like when using CSV files (see above), Calliope looks for a column in the dataframe with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: df=tskey:column`.
+
+The time series index must be ISO 8601 compatible time stamps and can be a standard ``pandas`` DateTimeIndex (see discussion above).
+
+
 .. Note::
 
    * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
-   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
-   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file, i.e. :yaml:`resource: file = filename.csv` is not valid.
+   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
+   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`resource: file = filename.csv` is not valid.
+   * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
