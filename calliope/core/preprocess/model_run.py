@@ -432,14 +432,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     def _parser(x, dtformat):
         return pd.to_datetime(x, format=dtformat, exact=False)
 
-    #### TODO: ADD WARNING HERE
-    # if 'timeseries_data_path' in config_model.model and timeseries_dataframes is not None:
-    #     raise exceptions.ModelWarning(
-    #         'Warning: model specifies `timeseries_data_path` but it is not used '
-    #         'since dataframes have been passed explicitly when calling model.'
-    #     )
-    ####
-
     dtformat = config_model.model['timeseries_dateformat']
 
     # Generate set of all files and dataframes we want to load
@@ -462,6 +454,11 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     _assert_either_file_or_dataframes(constraint_filenames, cluster_filenames,
                                       constraint_dfnames, cluster_dfnames,
                                       timeseries_dataframes)
+
+    # Check if timeseries_dataframes is in the correct format (dict of
+    # pandas DataFrames)
+    if timeseries_dataframes is not None:
+        check_timeseries_dataframes(timeseries_dataframes)
 
     datetime_min = []
     datetime_max = []
@@ -563,7 +560,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
         if not first_index.equals(idx):
             raise exceptions.ModelError(
                 'Time series indices do not match '
-                'between {} and {}'.format(first_tskey, file)
+                'between {} and {}'.format(first_tskey, tskey)
             )
 
     return timeseries_data, first_index
@@ -593,6 +590,19 @@ def _assert_either_file_or_dataframes(constraint_filenames, cluster_filenames,
         raise exceptions.ModelError(
             'There is no timeseries in the model. At least one timeseries is '
             'necessary to run the model.'
+        )
+
+
+def check_timeseries_dataframes(timeseries_dataframes):
+    """
+    Timeseries dataframes should be dict of pandas DataFrames.
+    """
+    if (not isinstance(timeseries_dataframes, dict)
+        or not all([isinstance(timeseries_dataframes[i], pd.DataFrame)
+                    for i in timeseries_dataframes])):
+        raise exceptions.ModelError(
+            'Error in loading timeseries data from dataframes. '
+            '`timeseries_dataframes` must be dict of pandas DataFrames.'
         )
 
 
