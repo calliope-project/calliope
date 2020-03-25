@@ -220,13 +220,13 @@ When running models from python scripts or shells, it is also possible to pass t
     2005-01-01 05:00:00          45        300
     2005-01-01 06:00:00          90        458
 
-To pass this timeseries into the Model, create a dictionary, called ``timeseries_dataframes`` here, containing all relevant timeseries identified by their ``tskey``. In this case, this has only one key, called ``pv_resource``:
+To pass this timeseries into the model, create a dictionary, called ``timeseries_dataframes`` here, containing all relevant timeseries identified by their ``tskey``. In this case, this has only one key, called ``pv_resource``:
 
 .. code-block:: python
 
     timeseries_dataframes = {'pv_resource': pv_resource}
 
-the keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``.
+The keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``.
 
 The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
 
@@ -245,6 +245,7 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
    * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
    * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`resource: file = filename.csv` is not valid.
    * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
+   * Either pass all timeseries from CSV or pass them all from dataframes. It is not possible to mix ``file=...`` and ``df=...`` in model definition files.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
