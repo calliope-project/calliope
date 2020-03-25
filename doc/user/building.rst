@@ -211,14 +211,14 @@ When running models from python scripts or shells, it is also possible to pass t
 
     pv_resource
     
-       t                     location1  location2
-       2005-01-01 00:00:00           0          0
-       2005-01-01 01:00:00           0         11
-       2005-01-01 02:00:00           0         18
-       2005-01-01 03:00:00           0         49
-       2005-01-01 04:00:00          11        110
-       2005-01-01 05:00:00          45        300
-       2005-01-01 06:00:00          90        458
+    t                     location1  location2
+    2005-01-01 00:00:00           0          0
+    2005-01-01 01:00:00           0         11
+    2005-01-01 02:00:00           0         18
+    2005-01-01 03:00:00           0         49
+    2005-01-01 04:00:00          11        110
+    2005-01-01 05:00:00          45        300
+    2005-01-01 06:00:00          90        458
 
 To pass this timeseries into the Model, create a dictionary, called ``timeseries_dataframes`` here, containing all relevant timeseries identified by their ``tskey``. In this case, this has only one key, called ``pv_resource``:
 
