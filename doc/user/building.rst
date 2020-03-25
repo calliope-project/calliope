@@ -161,7 +161,16 @@ This will create an ``unmet_demand`` decision variable in the optimisation, whic
 Time series data
 ----------------
 
-For parameters that vary in time, time series data can be read from CSV files, by specifying :yaml:`resource: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
+For parameters that vary in time, time series data can be added to a model in two ways:
+
+* by reading in CSV files
+* by passing `pandas` dataframes as arguments in `calliope.Model` when called from a python session.
+
+Reading in timeseries from CSV files is possible when a model is run from both the command-line tool as well running interactively with python. However, passing dataframes as arguments in `calliope.Model` is possible only when running from a python session. See (see :doc:`running`) for details on the differences in these methods of running a model.
+
+Reading in CSV files
+--------------------
+To read in CSV files, specify :yaml:`resource: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
 By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: file=filename.csv:column`
 
