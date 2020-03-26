@@ -164,9 +164,9 @@ Time series data
 For parameters that vary in time, time series data can be added to a model in two ways:
 
 * by reading in CSV files
-* by passing ``pandas`` dataframes as arguments in ``calliope.Model`` when called from a python session.
+* by passing ``pandas`` dataframes as arguments in ``calliope.Model`` called from a python session.
 
-Reading in timeseries from CSV files is possible when a model is run from both the command-line tool as well running interactively with python. However, passing dataframes as arguments in ``calliope.Model`` is possible only when running from a python session. See (see :doc:`running`) for details on the differences in these methods of running a model.
+Reading in CSV files is possible from both the command-line tool as well running interactively with python (see :doc:`running` for details). However, passing dataframes as arguments in ``calliope.Model`` is possible only when running from a python session.
 
 Reading in CSV files
 --------------------
@@ -190,7 +190,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
 
 By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <http://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
-For example, the first few lines of a CSV file giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
+For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
 .. code-block:: text
 
@@ -226,9 +226,15 @@ To pass this timeseries into the model, create a dictionary, called ``timeseries
 
     timeseries_dataframes = {'pv_resource': pv_resource}
 
-The keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``.
+The keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``. All relevant timeseries must be put in this dictionary. For example, if a model contains three timeseries referred to in the configuration YAML files, called ``demand_1``, ``demand_2`` and ``pv_resource``, the ``timeseries_dataframes`` dictionary may look like
 
-The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
+.. code-block:: python
+
+    timeseries_dataframes = {'demand_1': demand_1,
+                             'demand_2': demand_2,
+                             'pv_resource': pv_resource}
+
+where `demand_1`, `demand_2` and `pv_resource` are dataframes of the relevant timeseries. The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
 
 .. code-block:: python
 
@@ -245,7 +251,7 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
    * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
    * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`resource: file = filename.csv` is not valid.
    * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
-   * Either pass all timeseries from CSV or pass them all from dataframes. It is not possible to mix ``file=...`` and ``df=...`` in model definition files.
+   * Either pass all timeseries from CSV or pass them all from dataframes. It is not possible to mix ``file=...`` and ``df=...`` in model definition files. When readingin from CSVs via ``file=...``, set ``timeseries_dataframes=None`` in ``calliope.Model``. When running from command line, this is done automatically.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
