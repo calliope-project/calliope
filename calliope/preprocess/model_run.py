@@ -495,7 +495,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             raise exceptions.ModelError(
                 'Error in loading data from {}. Ensure all entries are '
                 'numeric. Full error: {}'.format(tskey, e)
-            )                
+            )
         # Now parse the dates, checking for errors specific to this
         try:
             df.index = _parser(df.index, dtformat)

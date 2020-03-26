@@ -1,4 +1,5 @@
 import pytest
+from pytest import approx
 import os
 
 import pandas as pd
@@ -396,9 +397,9 @@ class TestModelRun:
             'techs.test_demand_elec.constraints.resource': 'df=demand_elec'
         }
         with pytest.raises(exceptions.ModelError) as error:
-            model = build_model(model_file='model_minimal.yaml',
-                                override_dict=override,
-                                timeseries_dataframes=None)
+            build_model(model_file='model_minimal.yaml',
+                        override_dict=override,
+                        timeseries_dataframes=None)
         assert check_error_or_warning(error, 'no timeseries passed '
                                       'as arguments in calliope.Model(...).')
 
@@ -415,9 +416,9 @@ class TestModelRun:
             )
         }
         with pytest.raises(exceptions.ModelError) as error:
-            model = build_model(model_file='model_minimal.yaml',
-                                override_dict=None,
-                                timeseries_dataframes=timeseries_dataframes)
+            build_model(model_file='model_minimal.yaml',
+                        override_dict=None,
+                        timeseries_dataframes=timeseries_dataframes)
         assert check_error_or_warning(
             error, 'Either load all timeseries from `timeseries_dataframes` and df=..., '
             'or set `timeseries_dataframes=None` and load load all from CSV files'
@@ -431,14 +432,14 @@ class TestModelRun:
             'techs.test_demand_elec.constraints.resource': 'df=demand_elec'
         }
 
-        ts_df_nodict = pd.DataFrame(np.arange(10)) # Not a dict
+        ts_df_nodict = pd.DataFrame(np.arange(10))  # Not a dict
         ts_df_numpy_arrays = {'demand_elec': np.arange(10)}  # No pd DataFrames
 
         for timeseries_dataframes in [ts_df_nodict, ts_df_numpy_arrays]:
             with pytest.raises(exceptions.ModelError) as error:
-                model = build_model(model_file='model_minimal.yaml',
-                                    override_dict=override,
-                                    timeseries_dataframes=timeseries_dataframes)
+                build_model(model_file='model_minimal.yaml',
+                            override_dict=override,
+                            timeseries_dataframes=timeseries_dataframes)
             assert check_error_or_warning(
                 error, '`timeseries_dataframes` must be dict of pandas DataFrames.'
             )

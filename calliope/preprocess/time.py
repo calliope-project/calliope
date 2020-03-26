@@ -143,7 +143,7 @@ def add_time_dimension(data, model_run):
         # 6) Get all timeseries data from dataframes stored in model_run
         timeseries_data = []
         key_errors = []
-        for loc_tech, (tskey, column) in tskeys.iteritems():
+        for loc_tech, (tskey, column) in tskeys.items():
             try:
                 timeseries_data.append(model_run.timeseries_data[tskey].loc[:, column].values)
             except KeyError:
