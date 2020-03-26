@@ -10,6 +10,8 @@ Release History
 
 |changed| Internal code reorganisation.
 
+|new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
+
 0.6.5 (2020-01-14)
 ------------------
 
