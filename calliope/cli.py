@@ -224,7 +224,6 @@ def _run_setup_model(
 @click.option('--override_dict')
 @click.option('--save_netcdf')
 @click.option('--save_csv')
-@click.option('--save_plots')
 @click.option('--save_logs')
 @click.option(
     '--save_lp', help='Build and save model to the given LP file. '
@@ -236,7 +235,7 @@ def _run_setup_model(
 @_profile_filename
 @_fail_when_infeasible
 def run(model_file, scenario, model_format, override_dict,
-        save_netcdf, save_csv, save_plots, save_logs, save_lp,
+        save_netcdf, save_csv, save_logs, save_lp,
         debug, quiet, pdb, profile, profile_filename, fail_when_infeasible):
     """
     Execute the given model. Tries to guess from the file extension whether
@@ -260,7 +259,7 @@ def run(model_file, scenario, model_format, override_dict,
         # Only save LP file
         if save_lp:  # Only save LP file without solving model
             click.secho('Saving model to LP file...')
-            if save_csv is not None or save_netcdf is not None or save_plots is not None:
+            if save_csv is not None or save_netcdf is not None:
                 click.secho(
                     'WARNING: Model will not be solved - ignoring other save options!',
                     fg='red', bold=True)
@@ -290,15 +289,6 @@ def run(model_file, scenario, model_format, override_dict,
             if save_netcdf:
                 click.secho('Saving NetCDF results to file: {}'.format(save_netcdf))
                 model.to_netcdf(save_netcdf)
-            if save_plots:
-                if termination == 'optimal':
-                    click.secho('Saving HTML file with plots to: {}'.format(save_plots))
-                    model.plot.summary(to_file=save_plots)
-                else:
-                    click.secho(
-                        'Model termination condition non-optimal. Not saving plots',
-                        fg='red', bold=True
-                    )
 
             print_end_time(start_time)
             if fail_when_infeasible and termination != 'optimal':

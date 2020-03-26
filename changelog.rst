@@ -3,6 +3,13 @@
 Release History
 ===============
 
+0.6.6 (dev)
+-----------
+
+|changed| |backwards-incompatible| Plotting is no longer part of Calliope itself, but in a separate module, calliope_plot. FIXME: documentation needs to be updated.
+
+|changed| Internal code reorganisation.
+
 0.6.5 (2020-01-14)
 ------------------
 

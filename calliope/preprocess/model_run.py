@@ -21,7 +21,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.core.preprocess import locations, sets, checks, constraint_sets, util
+from calliope.preprocess import locations, sets, checks, constraint_sets, util
 
 logger = logging.getLogger(__name__)
 

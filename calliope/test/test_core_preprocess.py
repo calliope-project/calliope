@@ -7,7 +7,7 @@ import numpy as np
 import calliope
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess import time
+from calliope.preprocess import time
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import \
@@ -256,8 +256,8 @@ class TestModelRun:
         On exploding locations (from ``'1--3'`` or ``'1,2,3'`` to
         ``['1', '2', '3']``), raise error on the resulting list being empty
         """
-        list1 = calliope.core.preprocess.locations.explode_locations('1--3')
-        list2 = calliope.core.preprocess.locations.explode_locations('1,2,3')
+        list1 = calliope.preprocess.locations.explode_locations('1--3')
+        list2 = calliope.preprocess.locations.explode_locations('1,2,3')
 
         assert list1 == list2 == ['1', '2', '3']
 
@@ -1478,10 +1478,10 @@ class TestUtil:
         concatenator = [':', '::']
 
         with pytest.raises(AssertionError):
-            calliope.core.preprocess.util.concat_iterable(iterables, concatenator)
-            calliope.core.preprocess.util.concat_iterable(iterables_swapped, concatenator)
+            calliope.preprocess.util.concat_iterable(iterables, concatenator)
+            calliope.preprocess.util.concat_iterable(iterables_swapped, concatenator)
 
-        concatenated = calliope.core.preprocess.util.concat_iterable(iterables_correct, concatenator)
+        concatenated = calliope.preprocess.util.concat_iterable(iterables_correct, concatenator)
         assert concatenated == ['1:2::3', '4:5::6']
 
     def test_concat_iterable_check_concatenators(self):
@@ -1495,19 +1495,19 @@ class TestUtil:
         concat_three = [':', ':', ':']
 
         with pytest.raises(AssertionError):
-            calliope.core.preprocess.util.concat_iterable(iterables, concat_one)
-            calliope.core.preprocess.util.concat_iterable(iterables, concat_three)
+            calliope.preprocess.util.concat_iterable(iterables, concat_one)
+            calliope.preprocess.util.concat_iterable(iterables, concat_three)
 
-        concatenated1 = calliope.core.preprocess.util.concat_iterable(iterables, concat_two_diff)
+        concatenated1 = calliope.preprocess.util.concat_iterable(iterables, concat_two_diff)
         assert concatenated1 == ['1:2::3', '4:5::6']
 
-        concatenated2 = calliope.core.preprocess.util.concat_iterable(iterables, concat_two_same)
+        concatenated2 = calliope.preprocess.util.concat_iterable(iterables, concat_two_same)
         assert concatenated2 == ['1:2:3', '4:5:6']
 
     def test_vincenty(self):
         # London to Paris: about 344 km
         coords = [(51.507222, -0.1275), (48.8567, 2.3508)]
-        distance = calliope.core.preprocess.util.vincenty(coords[0], coords[1])
+        distance = calliope.preprocess.util.vincenty(coords[0], coords[1])
         assert distance == pytest.approx(343834)  # in meters
 
 

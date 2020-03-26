@@ -12,7 +12,7 @@ from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
-from calliope.analysis.postprocess import postprocess_model_results
+from calliope.postprocess.results import postprocess_model_results
 
 logger = logging.getLogger(__name__)
 

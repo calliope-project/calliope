@@ -20,7 +20,7 @@ from inspect import signature
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import get_all_carriers
+from calliope.preprocess.util import get_all_carriers
 from calliope.core.util.tools import load_function
 
 logger = logging.getLogger(__name__)

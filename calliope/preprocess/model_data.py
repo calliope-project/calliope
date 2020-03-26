@@ -19,10 +19,10 @@ import pandas as pd
 
 from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
-from calliope.core.preprocess import checks
-from calliope.core.preprocess.util import split_loc_techs_transmission, concat_iterable
-from calliope.core.preprocess.time import add_time_dimension
-from calliope.core.preprocess.lookup import add_lookup_arrays
+from calliope.preprocess import checks
+from calliope.preprocess.util import split_loc_techs_transmission, concat_iterable
+from calliope.preprocess.time import add_time_dimension
+from calliope.preprocess.lookup import add_lookup_arrays
 
 
 def build_model_data(model_run, debug=False):
@@ -35,7 +35,7 @@ def build_model_data(model_run, debug=False):
     ----------
     model_run : AttrDict
         preprocessed model_run dictionary, as produced by
-        Calliope.core.preprocess_model
+        Calliope.preprocess.preprocess_model
     debug : bool, default = False
         Used to debug steps within build_model_data, particularly before/after
         time dimension addition. If True, more information is returned
