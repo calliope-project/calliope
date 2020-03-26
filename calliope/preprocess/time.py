@@ -15,7 +15,7 @@ import pandas as pd
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
-from calliope.core.preprocess import checks
+from calliope.preprocess import checks
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 
 
@@ -44,11 +44,11 @@ def apply_time_clustering(model_data, model_run):
     ----------
     model_data : xarray Dataset
         Preprocessed Calliope model_data, as produced using
-        `calliope.core.preprocess_data.build_model_data`
+        `calliope.preprocess.build_model_data`
         and found in model._model_data_original
     model_run : bool
         preprocessed model_run dictionary, as produced by
-        Calliope.core.preprocess_model
+        Calliope.preprocess_model
 
     Returns
     -------
@@ -70,7 +70,7 @@ def apply_time_clustering(model_data, model_run):
         # time.masks is a list of {'function': .., 'options': ..} dicts
         for entry in time_config.masks:
             entry = AttrDict(entry)
-            mask_func = plugin_load(entry.function, builtin_module='calliope.core.time.masks')
+            mask_func = plugin_load(entry.function, builtin_module='calliope.time.masks')
             mask_kwargs = entry.get_key('options', default=AttrDict()).as_dict()
             masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
         data.attrs['masks'] = masks
@@ -87,7 +87,7 @@ def apply_time_clustering(model_data, model_run):
     ##
     if 'function' in time_config:
         func = plugin_load(
-            time_config.function, builtin_module='calliope.core.time.funcs'
+            time_config.function, builtin_module='calliope.time.funcs'
         )
         func_kwargs = time_config.get('function_options', AttrDict()).as_dict()
         if 'file=' in func_kwargs.get('clustering_func', ''):

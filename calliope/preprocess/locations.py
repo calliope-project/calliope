@@ -13,8 +13,8 @@ import math
 
 from calliope.exceptions import ModelError, warn
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import vincenty
-from calliope.core.preprocess.checks import DEFAULTS, POSSIBLE_COSTS
+from calliope.preprocess.util import vincenty
+from calliope.preprocess.checks import DEFAULTS, POSSIBLE_COSTS
 
 
 def process_locations(model_config, modelrun_techs):
