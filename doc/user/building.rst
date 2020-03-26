@@ -234,7 +234,7 @@ The keys in this dictionary must match the ``tskey`` specified in the YAML files
                              'demand_2': demand_2,
                              'pv_resource': pv_resource}
 
-where `demand_1`, `demand_2` and `pv_resource` are dataframes of the relevant timeseries. The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
+where ``demand_1``, ``demand_2`` and ``pv_resource`` are dataframes of the relevant timeseries. The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
 
 .. code-block:: python
 
