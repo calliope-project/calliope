@@ -142,7 +142,7 @@ def constraints_to_dataset(model_run):
     relevant_constraints = set(i.split('.constraints.')[1]
                                for i in model_run.locations.as_dict_flat().keys()
                                if '.constraints.' in i and
-                               '.carrier_ratios.'not in i)
+                               '.carrier_ratios.' not in i)
     for constraint in relevant_constraints:
         data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
         for loc_tech in model_run.sets[_get_set(constraint)]:

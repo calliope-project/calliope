@@ -387,6 +387,62 @@ class TestModelRun:
         m = build_model(override_dict=override, scenario='simple_supply,one_day')
         assert '2' in m._model_run.locations['0'].links.keys()
 
+    def test_dataframes_passed(self):
+        """
+        If model config specifies dataframes to be loaded in (via df=...),
+        these time series must be passed as arguments in calliope.Model(...).
+        """
+        override = {
+            'techs.test_demand_elec.constraints.resource': 'df=demand_elec'
+        }
+        with pytest.raises(exceptions.ModelError) as error:
+            model = build_model(model_file='model_minimal.yaml',
+                                override_dict=override,
+                                timeseries_dataframes=None)
+        assert check_error_or_warning(error, 'no timeseries passed '
+                                      'as arguments in calliope.Model(...).')
+
+    def test_no_dataframes_if_read_csv(self):
+        """
+        If model config specifies dataframes to be read from csv (via file=...),
+        no time series should be passed as arguments in calliope.Model(...).
+        """
+        timeseries_dataframes = {
+            'demand_elec': pd.read_csv(
+                os.path.join(os.path.dirname(calliope.test.common.util.__file__),
+                             'test_model/timeseries_data/demand_elec.csv'),
+                index_col=0
+            )
+        }
+        with pytest.raises(exceptions.ModelError) as error:
+            model = build_model(model_file='model_minimal.yaml',
+                                override_dict=None,
+                                timeseries_dataframes=timeseries_dataframes)
+        assert check_error_or_warning(
+            error, 'Either load all timeseries from `timeseries_dataframes` and df=..., '
+            'or set `timeseries_dataframes=None` and load load all from CSV files'
+        )
+
+    def test_invalid_dataframes_passed(self):
+        """
+        `timeseries_dataframes` should be dict of pandas DataFrames.
+        """
+        override = {
+            'techs.test_demand_elec.constraints.resource': 'df=demand_elec'
+        }
+
+        ts_df_nodict = pd.DataFrame(np.arange(10)) # Not a dict
+        ts_df_numpy_arrays = {'demand_elec': np.arange(10)}  # No pd DataFrames
+
+        for timeseries_dataframes in [ts_df_nodict, ts_df_numpy_arrays]:
+            with pytest.raises(exceptions.ModelError) as error:
+                model = build_model(model_file='model_minimal.yaml',
+                                    override_dict=override,
+                                    timeseries_dataframes=timeseries_dataframes)
+            assert check_error_or_warning(
+                error, '`timeseries_dataframes` must be dict of pandas DataFrames.'
+            )
+
 
 class TestChecks:
 
@@ -1513,13 +1569,45 @@ class TestUtil:
 
 class TestTime:
     @pytest.fixture
-    def model(self):
+    def model_national(self, load_timeseries_from_dataframes):
+        """
+        Return national scale example model. If load_timeseries_from_dataframes
+        is True, timeseries are read into dataframes and model is called using them.
+        If not, the timeseries are read in from CSV.
+        """
+        if load_timeseries_from_dataframes:
+            # Create dictionary with dataframes
+            timeseries_data_path = os.path.join(calliope.examples._PATHS['national_scale'],
+                                                'timeseries_data/')
+            timeseries_dataframes = {}
+            timeseries_dataframes['csp_resource'] = (
+                pd.read_csv(os.path.join(timeseries_data_path, 'csp_resource.csv'), index_col=0)
+            )
+            timeseries_dataframes['demand_1'] = (
+                pd.read_csv(os.path.join(timeseries_data_path, 'demand-1.csv'), index_col=0)
+            )
+            timeseries_dataframes['demand_2'] = (
+                pd.read_csv(os.path.join(timeseries_data_path, 'demand-2.csv'), index_col=0)
+            )
+            # Create override dict telling calliope to load timeseries from df
+            override_dict = {
+                'techs.csp.constraints.resource': 'df=csp_resource',
+                'locations.region1.techs.demand_power.constraints.resource': 'df=demand_1:demand',
+                'locations.region2.techs.demand_power.constraints.resource': 'df=demand_2:demand'
+            }
+            return calliope.examples.national_scale(timeseries_dataframes=timeseries_dataframes,
+                                                    override_dict=override_dict)
+        else:
+            return calliope.examples.national_scale()
+
+    @pytest.fixture
+    def model_urban(self):
         return calliope.examples.urban_scale(
             override_dict={'model.subset_time': ['2005-01-01', '2005-01-10']}
         )
 
-    def test_add_max_demand_timesteps(self, model):
-        data = model._model_data_original.copy()
+    def test_add_max_demand_timesteps(self, model_urban):
+        data = model_urban._model_data_original.copy()
         data = time.add_max_demand_timesteps(data)
 
         assert (
@@ -1530,4 +1618,35 @@ class TestTime:
         assert (
             data['max_demand_timesteps'].loc[dict(carriers='electricity')].values ==
             np.datetime64('2005-01-10T09:00:00')
+        )
+
+    @pytest.mark.parametrize('load_timeseries_from_dataframes', [False, True])
+    def test_timeseries_from_csv(self, model_national):
+        """
+        Timeseries data should be successfully loaded into national_scale example
+        model. This test checks whether this happens with timeseries loaded both
+        from CSV (`load_timeseries_from_dataframes`=False, called via file=...) and
+        from dataframes (`load_timeseries_from_dataframes`=True, called via df=...).
+        """
+
+        model = model_national
+        assert (
+            model.inputs.resource.loc['region1::demand_power'].values[0] ==
+            approx(-25284.48)
+        )
+        assert (
+            model.inputs.resource.loc['region2::demand_power'].values[0] ==
+            approx(-2254.098)
+        )
+        assert (
+            model.inputs.resource.loc['region1-1::csp'].values[8] ==
+            approx(0.263805)
+        )
+        assert (
+            model.inputs.resource.loc['region1-2::csp'].values[8] ==
+            approx(0.096755)
+        )
+        assert (
+            model.inputs.resource.loc['region1-3::csp'].values[8] ==
+            approx(0.0)
         )

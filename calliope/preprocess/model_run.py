@@ -33,7 +33,8 @@ _DEFAULT_PALETTE = [
 ]
 
 
-def model_run_from_yaml(model_file, scenario=None, override_dict=None):
+def model_run_from_yaml(model_file, timeseries_dataframes=None,
+                        scenario=None, override_dict=None):
     """
     Generate processed ModelRun configuration from a
     YAML model configuration file.
@@ -42,9 +43,13 @@ def model_run_from_yaml(model_file, scenario=None, override_dict=None):
     ----------
     model_file : str
         Path to YAML file with model configuration.
+    timeseries_dataframes : dict, optional
+        Dictionary of timeseries dataframes. The keys are strings
+        corresponding to the dataframe names given in the yaml files and
+        the values are dataframes with time series data.
     scenario : str, optional
         Name of scenario to apply. Can either be a named scenario, or a
-        comman-separated list of individual overrides to be combined
+        comma-separated list of individual overrides to be combined
         ad-hoc, e.g. 'my_scenario_name' or 'override1,override2'.
     override_dict : dict or AttrDict, optional
 
@@ -57,11 +62,12 @@ def model_run_from_yaml(model_file, scenario=None, override_dict=None):
     )
 
     return generate_model_run(
-        config_with_overrides, debug_comments, overrides, scenario
+        config_with_overrides, timeseries_dataframes, debug_comments, overrides, scenario
     )
 
 
-def model_run_from_dict(config_dict, scenario=None, override_dict=None):
+def model_run_from_dict(config_dict, timeseries_dataframes=None,
+                        scenario=None, override_dict=None):
     """
     Generate processed ModelRun configuration from a
     model configuration dictionary.
@@ -69,9 +75,13 @@ def model_run_from_dict(config_dict, scenario=None, override_dict=None):
     Parameters
     ----------
     config_dict : dict or AttrDict
+    timeseries_dataframes : dict, optional
+        Dictionary of timeseries dataframes. The keys are strings
+        corresponding to the dataframe names given in the yaml files and
+        the values are dataframes with time series data.
     scenario : str, optional
         Name of scenario to apply. Can either be a named scenario, or a
-        comman-separated list of individual overrides to be combined
+        comma-separated list of individual overrides to be combined
         ad-hoc, e.g. 'my_scenario_name' or 'override1,override2'.
     override_dict : dict or AttrDict, optional
 
@@ -87,7 +97,8 @@ def model_run_from_dict(config_dict, scenario=None, override_dict=None):
     )
 
     return generate_model_run(
-        config_with_overrides, debug_comments, overrides, scenario)
+        config_with_overrides, timeseries_dataframes, debug_comments, overrides, scenario
+    )
 
 
 def combine_overrides(config_model, overrides):
@@ -131,9 +142,10 @@ def apply_overrides(config, scenario=None, override_dict=None):
     ))
 
     # Interpret timeseries_data_path as relative
-    config.model.timeseries_data_path = relative_path(
-        config.config_path, config.model.timeseries_data_path
-    )
+    if 'timeseries_data_path' in config.model:
+        config.model.timeseries_data_path = relative_path(
+            config.config_path, config.model.timeseries_data_path
+        )
 
     # FutureWarning: check if config includes an explicit objective cost class.
     # Added in 0.6.4-dev, to be removed in v0.7.0-dev.
@@ -410,7 +422,7 @@ def process_tech_groups(config_model, techs):
     return tech_groups
 
 
-def process_timeseries_data(config_model, model_run):
+def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     if config_model.model.timeseries_data is None:
         timeseries_data = AttrDict()
@@ -420,48 +432,82 @@ def process_timeseries_data(config_model, model_run):
     def _parser(x, dtformat):
         return pd.to_datetime(x, format=dtformat, exact=False)
 
-    if 'timeseries_data_path' in config_model.model:
-        dtformat = config_model.model['timeseries_dateformat']
+    dtformat = config_model.model['timeseries_dateformat']
 
-        # Generate the set of all files we want to read from file
-        location_config = model_run.locations.as_dict_flat()
-        model_config = config_model.model.as_dict_flat()
+    # Generate set of all files and dataframes we want to load
+    location_config = model_run.locations.as_dict_flat()
+    model_config = config_model.model.as_dict_flat()
 
-        get_filenames = lambda config: set([
-            v.split('=')[1].rsplit(':', 1)[0]
-            for v in config.values() if 'file=' in str(v)
-        ])
-        constraint_filenames = get_filenames(location_config)
-        cluster_filenames = get_filenames(model_config)
+    # Find names of csv files (file=) or dataframes (df=) called in config
+    get_names = lambda datatype, config: set([
+        v.split('=')[1].rsplit(':', 1)[0]
+        for v in config.values() if str(datatype)+'=' in str(v)
+    ])
 
-        _assert_timeseries_available(constraint_filenames | cluster_filenames)
+    constraint_filenames = get_names('file', location_config)
+    cluster_filenames = get_names('file', model_config)
+    constraint_dfnames = get_names('df', location_config)
+    cluster_dfnames = get_names('df', model_config)
 
-        datetime_min = []
-        datetime_max = []
+    # Timeseries can be entered either in timeseries_dataframes and called
+    # via df=..., or loaded from csv files via file=..., but not both.
+    _assert_either_file_or_dataframes(constraint_filenames, cluster_filenames,
+                                      constraint_dfnames, cluster_dfnames,
+                                      timeseries_dataframes)
 
-        for file in constraint_filenames | cluster_filenames:
-            file_path = os.path.join(config_model.model.timeseries_data_path, file)
-            # load the data, without parsing the dates, to catch errors in the data
+    # Check if timeseries_dataframes is in the correct format (dict of
+    # pandas DataFrames)
+    if timeseries_dataframes is not None:
+        check_timeseries_dataframes(timeseries_dataframes)
+
+    datetime_min = []
+    datetime_max = []
+
+    # Load each timeseries into timeseries data. tskey is either a filename
+    # (called by file=...) or a key in timeseries_dataframes (called by df=...) 
+    for tskey in (constraint_filenames | cluster_filenames
+                  | constraint_dfnames | cluster_dfnames):  # Filenames or dict keys
+        # If tskey is a CSV path, load the CSV
+        if tskey in constraint_filenames | cluster_filenames:
+            file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
+            # load data, without parsing the dates, to catch errors in the data
             df = pd.read_csv(file_path, index_col=0)
+        # If tskey in a key in timeseries_dataframes, load df
+        elif tskey in constraint_dfnames | cluster_dfnames:
             try:
-                df.apply(pd.to_numeric)
-            except ValueError as e:
+                df = timeseries_dataframes[tskey]
+            except KeyError:
                 raise exceptions.ModelError(
-                    'Error in loading data from {}. Ensure all entries are '
-                    'numeric. Full error: {}'.format(file, e)
+                    'Error in loading data from dataframe. '
+                    'Model attempted to load dataframe with key {}, '
+                    'but time series passed as arguments are {}'
+                    .format(tskey, set(timeseries_dataframes.keys()))
                 )
-            # Now parse the dates, checking for errors specific to this
-            try:
-                df.index = _parser(df.index, dtformat)
-            except ValueError as e:
+            if not isinstance(df, pd.DataFrame):
                 raise exceptions.ModelError(
-                    'Error in parsing dates in timeseries data from {}, '
-                    'using datetime format `{}`: {}'.format(file, dtformat, e)
+                    'Error in loading data. Object passed in time series '
+                    'dictionary under key {} is a {}, not a DataFrame.'
+                    .format(tskey, type(df))
                 )
-            timeseries_data[file] = df
+        try:
+            df.apply(pd.to_numeric)
+        except ValueError as e:
+            raise exceptions.ModelError(
+                'Error in loading data from {}. Ensure all entries are '
+                'numeric. Full error: {}'.format(tskey, e)
+            )                
+        # Now parse the dates, checking for errors specific to this
+        try:
+            df.index = _parser(df.index, dtformat)
+        except ValueError as e:
+            raise exceptions.ModelError(
+                'Error in parsing dates in timeseries data from {}, '
+                'using datetime format `{}`: {}'.format(tskey, dtformat, e)
+            )
+        timeseries_data[tskey] = df
 
-            datetime_min.append(df.index[0].date())
-            datetime_max.append(df.index[-1].date())
+        datetime_min.append(df.index[0].date())
+        datetime_max.append(df.index[-1].date())
 
     # Apply time subsetting, if supplied in model_run
     subset_time_config = config_model.model.subset_time
@@ -506,29 +552,62 @@ def process_timeseries_data(config_model, model_run):
 
     # Ensure all timeseries have the same index
     indices = [
-        (file, df.index) for file, df in timeseries_data.items()
-        if file not in cluster_filenames
+        (tskey, df.index) for tskey, df in timeseries_data.items()
+        if tskey not in cluster_filenames | cluster_dfnames
     ]
-    first_file, first_index = indices[0]
-    for file, idx in indices[1:]:
+    first_tskey, first_index = indices[0]
+    for tskey, idx in indices[1:]:
         if not first_index.equals(idx):
             raise exceptions.ModelError(
                 'Time series indices do not match '
-                'between {} and {}'.format(first_file, file)
+                'between {} and {}'.format(first_tskey, tskey)
             )
 
     return timeseries_data, first_index
 
 
-def _assert_timeseries_available(filenames):
-    if len(filenames) == 0:
+def _assert_either_file_or_dataframes(constraint_filenames, cluster_filenames,
+                                      constraint_dfnames, cluster_dfnames,
+                                      timeseries_dataframes):
+    if timeseries_dataframes is not None and len(constraint_filenames | cluster_filenames) > 0:
+        raise exceptions.ModelError(
+            'Error in loading timeseries. calliope.Model is called with '
+            'argument `timeseries_dataframes` containing dataframes {} '
+            'but config files specify file={} to be loaded from CSV. Either '
+            'load all timeseries from `timeseries_dataframes` and df=..., or '
+            'set `timeseries_dataframes=None` and load load all from CSV '
+            'files using file=... .'
+            .format(set(timeseries_dataframes.keys()),
+                    constraint_filenames | cluster_filenames)
+        )
+    if timeseries_dataframes is None and len(constraint_dfnames | cluster_dfnames) > 0:
+        raise exceptions.ModelError(
+            'Error in loading timeseries. Model config specifies df={} but '
+            'no timeseries passed as arguments in calliope.Model(...).'
+            .format(constraint_dfnames | cluster_dfnames)
+        )
+    if len(constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames) == 0:
         raise exceptions.ModelError(
             'There is no timeseries in the model. At least one timeseries is '
             'necessary to run the model.'
         )
 
 
-def generate_model_run(config, debug_comments, applied_overrides, scenario):
+def check_timeseries_dataframes(timeseries_dataframes):
+    """
+    Timeseries dataframes should be dict of pandas DataFrames.
+    """
+    if (not isinstance(timeseries_dataframes, dict)
+        or not all([isinstance(timeseries_dataframes[i], pd.DataFrame)
+                    for i in timeseries_dataframes])):
+        raise exceptions.ModelError(
+            'Error in loading timeseries data from dataframes. '
+            '`timeseries_dataframes` must be dict of pandas DataFrames.'
+        )
+
+
+def generate_model_run(config, timeseries_dataframes,
+                       debug_comments, applied_overrides, scenario):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
@@ -536,8 +615,9 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     Parameters
     ----------
     config : AttrDict
+    timeseries_dataframes : dict
     debug_comments : AttrDict
-
+    scenario : str
     """
     model_run = AttrDict()
     model_run['scenario'] = scenario
@@ -566,7 +646,7 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
     model_run['timeseries_data'], model_run['timesteps'] = (
-        process_timeseries_data(config, model_run)
+        process_timeseries_data(config, model_run, timeseries_dataframes)
     )
 
     # 6) Grab additional relevant bits from run and model config
