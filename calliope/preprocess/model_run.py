@@ -464,7 +464,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     datetime_max = []
 
     # Load each timeseries into timeseries data. tskey is either a filename
-    # (called by file=...) or a key in timeseries_dataframes (called by df=...) 
+    # (called by file=...) or a key in timeseries_dataframes (called by df=...)
     for tskey in (constraint_filenames | cluster_filenames
                   | constraint_dfnames | cluster_dfnames):  # Filenames or dict keys
         # If tskey is a CSV path, load the CSV
