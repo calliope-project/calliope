@@ -96,7 +96,7 @@ def apply_time_clustering(model_data, model_run):
         data = func(data=data, timesteps=timesteps, **func_kwargs)
 
     return data
-
+# need to trace down where dimensions are added and override
 
 def add_time_dimension(data, model_run):
     """
@@ -122,6 +122,8 @@ def add_time_dimension(data, model_run):
 
     # Search through every constraint/cost for use of '='
     for variable in data.data_vars:
+        if variable == 'storage_per_time':
+            continue
         # 1) If '=' in variable, it will give the variable a string data type
         if data[variable].dtype.kind != 'U':
             continue
@@ -131,7 +133,6 @@ def add_time_dimension(data, model_run):
 
         # 3) get a Series of all the uses of 'file=' for this variable
         filenames = data_series[data_series.str.contains('file=')]
-
         # 4) If no use of 'file=' then we can be on our way
         if filenames.empty:
             continue
@@ -144,7 +145,9 @@ def add_time_dimension(data, model_run):
         # 6) Get all timeseries data from dataframes stored in model_run
         timeseries_data = []
         key_errors = []
+
         for loc_tech, (filename, column) in filenames.iteritems():
+            print(loc_tech, (filename, column))
             try:
                 timeseries_data.append(model_run.timeseries_data[filename].loc[:, column].values)
             except KeyError:
@@ -270,45 +273,11 @@ def add_zero_carrier_ratio_sets(model_data):
 def add_storage_time_lookup(dataset, model_data):
     """
     Storage plus technologies can have a minimum storage time associated with them.
-    Here, the link between timesteps and the previous timesteps which contribute to
-    them is created as a comma delimited string.
+    Here, each timestep is linked with future timesteps through a probabilistic
+    time delay dataset.
     """
-    # need to apadt this so it can handle more than just one loc_tech
-    run_config = model_data['run']
-
-    timesteps = model_data.sets['timesteps']
-    loc_techs_storage_time_per_timestep = model_data.sets['loc_techs_storage_time_per_timestep']
-    store_time_contribs = dataset['storage_time_per_timestep'].to_dataframe().reset_index()
-    store_time_contribs = store_time_contribs.pivot(index='timesteps', columns='loc_techs_storage_time_per_timestep', values='storage_time_per_timestep').reset_index()
-
-    max_index_length = max(store_time_contribs.index.to_list())
-    time_length = len(timesteps)
-    max_index = min(max_index_length, time_length)
-    # for each column (loctech) make a temp column - read data, do analysis, overwrite the loctech column with the string values
-    store_time_contribs['temp_df'] = math.nan
-
-    for column in store_time_contribs:
-        if column == 'timesteps' or column == 'temp_df':
-            continue
-        else:
-            store_time_contribs['temp_df'] = store_time_contribs[column]
-            store_time_contribs[column] = math.nan
-            for row in store_time_contribs.index.to_list():
-                out_time_index = int(row + int(store_time_contribs.iloc[row]['temp_df']))
-                if out_time_index > max_index:
-                    if run_config['cyclic_storage']:
-                        multiplier = int(out_time_index/max_index_length)
-                        out_time_index = out_time_index - max_index * multiplier # works unless out_time_index is more than twice max_index
-                    else:
-                        continue
-                if type(store_time_contribs.iloc[out_time_index][column]) != str: #change in_times to the column the loop is on
-                    temp_str = str(store_time_contribs.iloc[row]['timesteps'])
-                else:
-                    temp_str = str(store_time_contribs.iloc[out_time_index][column]) + ',' + str(store_time_contribs.iloc[row]['timesteps'])
-                store_time_contribs.loc[out_time_index,column] = temp_str
-
-    store_time_contribs = store_time_contribs.drop(columns=['temp_df']).set_index('timesteps')
-
+    # storage time input doenst need to be processed into sets, just a lookup
+    # print(model_data)
     dataset['lookup_storage_time'] = xr.DataArray(
         data=store_time_contribs.to_numpy(),
         dims=['timesteps', 'loc_techs_storage_time_per_timestep']#,
@@ -316,6 +285,27 @@ def add_storage_time_lookup(dataset, model_data):
     )
 
     return dataset
+
+
+def calculate_storage_plus_parameters(model_data, model_run):
+    # calculate parked storage (storage_cap_equals[A])
+    # calculate driving storage -> maybe in constraint?
+    # calculate demand (frontloaded) - input for now
+    # calculate 'spare storage' in the timestep it leaves -> maybe in constraint?
+    #
+    storage_time_errors = []
+    try:
+        assert 1 == 1  # assert that timestep makes sense mathematically
+    except:
+        storage_time_errors.append(
+            'Inputs for storage_plus dynamics not self consistent at timestep {}'
+            .format(timestep)
+        )
+    if storage_time_errors:
+        exceptions.print_warnings_and_raise_errors(errors=storage_time_errors)
+
+    return model_data
+
 
 def final_timedimension_processing(model_data):
 

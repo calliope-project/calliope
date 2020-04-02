@@ -12,7 +12,7 @@ run:
     backend: pyomo  # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
     bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
     cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
-    ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
+    ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If false and a mismatch occurs, the optimisation will fail due to infeasibility
     mode: plan  # Which mode to run the model in: 'plan' or 'operation'
     objective_options: {'cost_class': {'monetary': 1}, 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
     objective:  minmax_cost_optimization # Name of internal objective function to use, currently only min/max cost-based optimisation is available
@@ -37,7 +37,7 @@ model:
     timeseries_data_path: null  # Path to time series data
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
-    file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios', 'storage_cap_equals_per_timestep', 'storage_time_per_timestep', 'storage_discharge_depth_per_timestep', 'shared_storage_prod']  # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
+    file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios', 'storage_cap_equals_per_timestep', 'storage_time', 'storage_time_per_timestep', 'storage_discharge_depth_per_timestep', 'shared_storage_prod']  # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
 
 ##
 # Base technology groups
@@ -88,7 +88,7 @@ tech_groups:
             storage_cap_max: inf
     storage_plus:
         required_constraints: []
-        allowed_constraints: ['carrier_ratios','charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_equals_per_timestep', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time', 'storage_time_per_timestep','storage_discharge_depth', 'storage_discharge_depth_per_timestep','units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min', 'shared_storage_tech', 'shared_storage_prod']
+        allowed_constraints: ['carrier_ratios','charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_max', 'energy_cap_per_storage_cap_equals', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_equals_per_timestep', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time', 'storage_time_per_timestep','storage_discharge_depth', 'storage_discharge_depth_per_timestep','units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min', 'shared_storage_tech', 'shared_storage_prod', 'shared_demand_tech', 'demand_per_storage']
         allowed_group_constraints: [cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_min, energy_cap_max]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'storage_cap']
         essentials:
@@ -169,6 +169,7 @@ techs:
             energy_ramping: false  # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum carrier production to a fraction of maximum capacity, which increases by that fraction at each timestep.
             export_cap: .inf  # name: Export capacity ¦ unit: kW ¦ Maximum allowed export of produced energy carrier for a technology.
             export_carrier: null  # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
+            demand_per_storage: false #### this is new
             force_asynchronous_prod_con: false  # if True, carrier_prod and carrier_con cannot both occur in the same timestep
             force_resource: false  # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
             lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
@@ -187,18 +188,20 @@ techs:
             resource_min_use: false # name: Minimum resource consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum resource consumption for production technologies
             resource_scale: 1.0  # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all values in timeseries) by this value
             resource_unit: energy  # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
+            shared_demand_tech: false ### this is new
             shared_storage_tech: false
+            shared_storage_prod: false # need to think about if this is the right default
             storage_cap_equals: false  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
-            storage_cap_equals_per_timestep: False
+            storage_cap_equals_per_timestep: false
             storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
             storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
             storage_cap_per_unit: false # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
             storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
-            storage_discharge_depth_per_timestep: False
+            storage_discharge_depth_per_timestep: false
             storage_initial: 0  # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
             storage_loss: 0  # name: Storage loss rate ¦ unit: hour :sup:`-1` ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
-            storage_time: 0
-            storage_time_per_timestep: 0
+            storage_time: false # need to think about if this is the right default or should be 0
+            storage_time_per_timestep: false
             units_equals: false  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
             units_equals_systemwide: false   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
             units_max: false  # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.

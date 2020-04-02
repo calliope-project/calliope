@@ -15,13 +15,19 @@ class TestBuildStoragePlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_max_constraint')
 
-        m = build_model({'techs.test_storage_plus.constraints': {'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'}}, 'simple_storage_plus,two_hours,investment_costs')
+        m = build_model(
+            {'techs.test_storage_plus.constraints': {
+                'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'
+            }},
+            'simple_storage_plus,two_hours,investment_costs'
+        )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_max_constraint')
 
         m = build_model(
-            {'techs.test_storage_plus.constraints': {'storage_cap_max': 20,
-            'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'}},
+            {'techs.test_storage_plus.constraints': {
+                'storage_cap_max': 20, 'storage_cap_equals_per_timestep': 'file=storage_plus_cap_equals_per_time.csv'
+            }},
             'simple_storage_plus,two_hours,investment_costs'
         )
         m.run(build_only=True)
@@ -49,16 +55,19 @@ class TestBuildStoragePlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_discharge_depth_constraint')
 
-        m = build_model({'techs.test_storage_plus.constraints':
-            {'storage_discharge_depth_per_timestep': 'file=storage_plus_discharge_depth.csv'}},
-             'simple_storage_plus,two_hours,investment_costs')
+        m = build_model(
+            {'techs.test_storage_plus.constraints': {
+                'storage_discharge_depth_per_timestep': 'file=storage_plus_discharge_depth.csv'
+            }},
+            'simple_storage_plus,two_hours,investment_costs'
+        )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_discharge_depth_constraint')
 
-
-        m = build_model({'techs.test_storage_plus.constraints':
-            {'storage_discharge_depth': 0.1}},
-             'simple_storage_plus,two_hours,investment_costs')
+        m = build_model(
+            {'techs.test_storage_plus.constraints': {'storage_discharge_depth': 0.1}},
+            'simple_storage_plus,two_hours,investment_costs'
+        )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_discharge_depth_constraint')
 
@@ -81,7 +90,6 @@ class TestBuildStoragePlusConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_balance_constraint')
 
-
     def test_loc_techs_loc_techs_storage_plus_storage_time_constraint(self):
         """
         sets.loc_techs_storage_plus_storage_time,
@@ -90,7 +98,6 @@ class TestBuildStoragePlusConstraints:
         m = build_model({},'simple_supply,two_hours,investment_costs')
         m.run(build_only=True)
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
-
 
         m = build_model({}, 'simple_storage_plus,two_hours,investment_costs')
         m.run(build_only=True)
@@ -108,9 +115,10 @@ class TestBuildStoragePlusConstraints:
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
 
         m = build_model(
-            {'techs.test_storage_plus.constraints':
-                {'storage_time_per_timestep':'file=storage_plus_storage_time.csv'}},
-                'simple_storage_plus,two_hours,investment_costs'
+            {'techs.test_storage_plus.constraints': {
+                'storage_time_per_timestep':'file=storage_plus_storage_time.csv'
+            }},
+            'simple_storage_plus,two_hours,investment_costs'
             )
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_storage_time_constraint')
@@ -125,8 +133,9 @@ class TestBuildStoragePlusConstraints:
         assert not hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
 
         m = build_model(
-            {'techs.test_storage_plus.constraints':
-            {'shared_storage_tech':'1::test_storage'}},
+            {'techs.test_storage_plus.constraints':{
+                'shared_storage_tech':'1::test_storage'
+            }},
             'storage_plus_shared_storage,two_hours,investment_costs')
         m.run(build_only=True)
         assert hasattr(m._backend_model, 'loc_techs_storage_plus_shared_storage_constraint')
@@ -137,36 +146,36 @@ class TestBuildStoragePlusConstraints:
 
 class TestStoragePlusConstraintResults:
 
-    def test_storage_plus_energy_balance(self):
-        m = build_model({'techs.test_storage_plus_EV_B.constraints':
-            {'storage_cap_equals':1800},
-            {'storage_discharge_depth_per_timestep':'file=journey_lengths_test.csv'}
-        }, 'storage_plus_EVs,two_hours,investment_costs')
-        m.run()
-        # for a random timestep or for every timestep?
-        assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
-        assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
-        assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
+    # def test_storage_plus_energy_balance(self):
+    #     m = build_model({'techs.test_storage_plus_EV_B.constraints':
+    #         {'storage_cap_equals':1800},
+    #         {'storage_discharge_depth_per_timestep':'file=journey_lengths_test.csv'}
+    #     }, 'storage_plus_EVs,two_hours,investment_costs')
+    #     m.run()
+    #     # for a random timestep or for every timestep?
+    #     assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
+    #     assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
+    #     assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
 
-        m = build_model({'techs.test_storage_plus_EV_B.constraints':
-            {'storage_cap_equals_per_timestep':'file=storage_cap_per_time_B.csv'},
-            {'storage_discharge_depth_per_timestep':'file=journey_lengths_test.csv'}
-        }, 'storage_plus_EVs,two_hours,investment_costs')
-        m.run()
-        # for a random timestep or for every timestep?
-        assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
-        assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
-        assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
+    #     m = build_model({'techs.test_storage_plus_EV_B.constraints':
+    #         {'storage_cap_equals_per_timestep':'file=storage_cap_per_time_B.csv'},
+    #         {'storage_discharge_depth_per_timestep':'file=journey_lengths_test.csv'}
+    #     }, 'storage_plus_EVs,two_hours,investment_costs')
+    #     m.run()
+    #     # for a random timestep or for every timestep?
+    #     assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
+    #     assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
+    #     assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
 
-        m = build_model({'techs.test_storage_plus_EV_B.constraints':
-            {'storage_cap_equals':1800},
-            {'storage_discharge_depth':0.05}
-        }, 'storage_plus_EVs,two_hours,investment_costs')
-        m.run()
-        # for a random timestep or for every timestep?
-        assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
-        assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
-        assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
+    #     m = build_model({'techs.test_storage_plus_EV_B.constraints':
+    #         {'storage_cap_equals':1800},
+    #         {'storage_discharge_depth':0.05}
+    #     }, 'storage_plus_EVs,two_hours,investment_costs')
+    #     m.run()
+    #     # for a random timestep or for every timestep?
+    #     assert grid_prod(elec) - parked_con(elec) + parked_prod(elec) == demand_transport(elec)
+    #     assert storage(t-1) + elec_con(t) - elec_prod(t) + virtual_elec_con(t) - virtual_elec_prod(t) - storage(t) == 0
+    #     assert storage(t-1) + virtual_elec_con(t) - virtual_elec_prod(t) + - transport_con(t) - storage(t) == 0
 
 #     def test_shared_storage_link(self):
 

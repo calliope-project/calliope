@@ -21,8 +21,9 @@ from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.core.preprocess import checks
 from calliope.core.preprocess.util import split_loc_techs_transmission, concat_iterable
-from calliope.core.preprocess.time import add_time_dimension, add_storage_time_lookup
+from calliope.core.preprocess.time import add_time_dimension, add_storage_time_lookup, calculate_storage_plus_parameters
 from calliope.core.preprocess.lookup import add_lookup_arrays
+
 
 
 def build_model_data(model_run, debug=False):
@@ -78,6 +79,7 @@ def build_model_data(model_run, debug=False):
 
     if model_run.sets['loc_techs_storage_time_per_timestep']:
         data = add_storage_time_lookup(data, model_run)
+        data = calculate_storage_plus_parameters(data, model_run)
 
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset
@@ -125,16 +127,16 @@ def constraints_to_dataset(model_run):
         """
         if '_area' in constraint:
             return 'loc_techs_area'
-        elif any(i in constraint for i in ['resource_cap',  'parasitic', 'resource_min_use']):
+        elif any(i in constraint for i in ['resource_cap', 'parasitic', 'resource_min_use']):
             return 'loc_techs_supply_plus'
-        elif 'resource' in constraint: # i.e. everything with 'resource' in the name that isn't resource_cap
+        elif 'resource' in constraint:  # i.e. everything with 'resource' in the name that isn't resource_cap
             return 'loc_techs_finite_resource'
         elif 'storage_cap_equals_per_timestep' in constraint:
             return 'loc_techs_storage_plus_cap_per_time'
         elif 'storage_time_per_timestep' in constraint:
-            return 'loc_techs_storage_time_per_timestep'
-        elif 'storage_time' in constraint:
-            return 'loc_techs_storage_plus_storage_time'
+            return 'storage_plus_duration_timesteps'
+        # elif 'storage_time' in constraint:
+        #     return 'storage_plus_duration_timesteps'  # potentially will be diff
         elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:
@@ -146,6 +148,12 @@ def constraints_to_dataset(model_run):
         else:
             return 'loc_techs'
 
+    # problem is here - can't use the set the table is actually indexed over
+    # because its not a loc_tech. But if the set has loc_techs it can't do the
+    # add_time_dimension part unless i add some kind of override in time so it
+    # knows which column headings to look for instead.
+
+
     # find all constraints which are actually defined in the yaml file
     relevant_constraints = set(i.split('.constraints.')[1]
                                for i in model_run.locations.as_dict_flat().keys()
@@ -154,17 +162,24 @@ def constraints_to_dataset(model_run):
     for constraint in relevant_constraints:
         data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
         for loc_tech in model_run.sets[_get_set(constraint)]:
-            loc, tech = loc_tech.split('::', 1)
-            # for transmission technologies, we also need to go into link nesting
-            if ':' in tech:  # i.e. transmission technologies
-                tech, link = tech.split(':')
-                loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
-            else:  # all other technologies
-                loc_tech_dict = model_run.locations[loc].techs[tech]
-            constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
-            # inf is assumed to be string on import, so we need to np.inf it
-            if constraint_value == 'inf':
-                constraint_value = np.inf
+            if '::' in loc_tech:
+                loc, tech = loc_tech.split('::', 1)
+                # for transmission technologies, we also need to go into link nesting
+                if ':' in tech:  # i.e. transmission technologies
+                    tech, link = tech.split(':')
+                    loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
+                else:  # all other technologies
+                    loc_tech_dict = model_run.locations[loc].techs[tech]
+                constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
+                print(loc_tech_dict)
+                # inf is assumed to be string on import, so we need to np.inf it
+                if constraint_value == 'inf':
+                    constraint_value = np.inf
+            else:
+                loc_tech_dict = model_run
+                constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
+                if constraint_value == 'inf':
+                    constraint_value = np.inf
             # add the value for the particular location & technology combination to the list
             data_dict[constraint]['data'].append(constraint_value)
         # once we've looped through all technology & location combinations, add the array to the dataset
@@ -266,7 +281,8 @@ def carrier_specific_to_dataset(model_run):
     """
     Extract carrier information from the processed dictionary (model.model_run)
     and return an xarray Dataset with DataArray variables describing carrier_in,
-    carrier_out, and carrier_ratio (for conversion plus and storage plus technologies) information.
+    carrier_out, and carrier_ratio (for conversion plus and storage plus
+    technologies) information.
 
     Parameters
     ----------
@@ -279,7 +295,10 @@ def carrier_specific_to_dataset(model_run):
 
     """
     carrier_tiers = model_run.sets['carrier_tiers']
-    loc_tech_dict = {k: [] for k in model_run.sets['loc_techs_conversion_plus'] or model_run.sets['loc_techs_storage_plus']}    # loc_tech_dict[k] = [] for k in model_run.sets['loc_techs_conversion_plus']
+    loc_tech_dict = {
+        k: [] for k in model_run.sets['loc_techs_conversion_plus']
+        or model_run.sets['loc_techs_storage_plus']
+    }
     data_dict = dict()
     # Set information per carrier tier ('out', 'out_2', 'in', etc.)
     # for conversion-plus technologies

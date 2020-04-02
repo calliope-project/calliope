@@ -64,7 +64,7 @@ techs:
             storage_cap_max: 35
             energy_cap_per_storage_cap_max: 0.5
             storage_loss: 0.01
-                
+
     test_storage:
         essentials:
             name: Storage tech
@@ -77,14 +77,14 @@ techs:
             energy_eff: 0.9
             storage_loss: 0.01
 
-    test_storage_plus_EV_A: 
+    test_storage_plus_EV_A:
         essentials:
             name: Parked battery storage
             parent: storage_plus
             carrier_in: [elec, virtual_elec]
             carrier_out: [elec, virtual_elec]
         constraints:
-            storage_cap_equals_per_timestep: file=battery_cap_A_test.csv:0
+            storage_cap_equals_per_timestep: file=battery_cap_A_test.csv ###
             shared_storage_tech: '0::test_storage_plus_EV_B'
 
     test_storage_plus_EV_B:
@@ -94,10 +94,10 @@ techs:
             carrier_in: virtual_elec
             carrier_out: [virtual_elec, transport]
         constraints:
-            storage_cap_equals: 1800 
-            storage_time_per_timestep: file=journey_lengths_test.csv:0
-            storage_discharge_depth_per_timestep: file=discharge_depth_B_test.csv:0
-  
+            #storage_cap_equals: 1800
+            storage_time_per_timestep: file=journey_lengths_test.csv ####
+            #storage_discharge_depth_per_timestep: file=discharge_depth_B_test.csv ###
+
     test_storage_plus:
         essentials:
             name: Storage plus tech
@@ -155,7 +155,7 @@ techs:
             carrier: transport
             parent: demand
         constraints:
-            resource: file=demand_transport.csv
+            resource: file=demand_transport.csv ####
 
     test_transmission_elec:
         essentials:
