@@ -245,11 +245,10 @@ class Model(object):
             self._model_data, self._timings, **kwargs
         )
 
-        if self.run_config['mode'] != 'spores':
-            if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
-                results = postprocess.postprocess_model_results(
-                    results, self._model_data, self._timings
-                )
+        if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
+            results = postprocess.postprocess_model_results(
+                results, self._model_data, self._timings
+            )
 
         for var in results.data_vars:
             results[var].attrs['is_result'] = 1

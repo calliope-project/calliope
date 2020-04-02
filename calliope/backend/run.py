@@ -152,15 +152,15 @@ def run_spores(model_data, timings, interface, backend, build_only):
     )
 
     n_spores = run_config['spores_options']['spores_number']
-    slack = run_config['spores_options']['slack']  
+    slack = run_config['spores_options']['slack']
     spores_score = run_config['spores_options']['score_cost_class']
-    spores_list = []
-    cap_loc_score_dict = {}
-    incremental_score_dict = {}
+    slack_group = run_config['spores_options']['slack_cost_group']
 
     # Define default scoring function, based on integer scoring method
     # TODO: make the function to run optional
-    def _cap_loc_score_default(results, subset={}):
+    def _cap_loc_score_default(results, subset=None):
+        if subset is None:
+            subset = {}
         cap_loc_score = split_loc_techs(results['energy_cap']).loc[subset]
         cap_loc_score = cap_loc_score.where(cap_loc_score > 1e-3, other=0)
         cap_loc_score = cap_loc_score.where(cap_loc_score == 0, other=100)
@@ -171,88 +171,77 @@ def run_spores(model_data, timings, interface, backend, build_only):
     def _update_spores_score(backend_model, cap_loc_score):
         loc_tech_score_dict = {
             (spores_score, '{}::{}'.format(i, j)): k
-            for (i, j), k in cap_loc_score.stack().iteritems()
+            for (i, j), k in cap_loc_score.stack().items()
             if '{}::{}'.format(i, j) in model_data.loc_techs_investment_cost
         }
 
         interface.update_pyomo_param(backend_model, 'cost_energy_cap', loc_tech_score_dict)
 
-    # Iterate over the number of SPORES requested by the user
+    def _warn_on_infeasibility():
+        return exceptions.warn(
+            'Infeasible SPORE detected. Please check your model configuration. '
+            'No more SPORES will be generated.'
+        )
+
+    # Run once for the 'cost-optimal' solution
+    results, backend_model = run_plan(model_data, timings, backend, build_only)
     if build_only:
-        results = xr.Dataset()
+        return results, backend_model  # We have what we need, so break out of the loop
+
+    if results.attrs['termination_condition'] in ['optimal', 'feasible']:
+        results.attrs['objective_function_value'] = backend_model.obj()
+        # Storing results and scores in the specific dictionaries
+        spores_list = [results]
+        cum_scores = _cap_loc_score_default(results)
+        # Set group constraint "cost_max" equal to slacked cost
+        slack_costs = model_data.group_cost_max.loc[{'group_names_cost_max': slack_group}].dropna('costs')
+        interface.update_pyomo_param(
+            backend_model, 'group_cost_max',
+            {(_cost_class, slack_group):
+             results.cost.loc[{'costs': _cost_class}].sum() * (1 + slack)
+             for _cost_class in slack_costs.costs.values}
+        )
+        # Modify objective function weights: spores_score -> 1, all others -> 0
+        interface.update_pyomo_param(
+            backend_model, 'objective_cost_class',
+            {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}}
+        )
+        # Update "spores_score" based on previous iteration
+        _update_spores_score(backend_model, cum_scores)
     else:
-        for j in range(0, (n_spores + 1)):
+        _warn_on_infeasibility()
+        return results, backend_model
 
-            # First iteration, cost-optimal solution
-            if j == 0:
-                results, backend_model = run_plan(model_data, timings, backend, build_only)
+    log_time(
+        logger, timings, 'run_solution_returned', time_since_run_start=True,
+        comment='Backend: generated solution array for the cost-optimal case'
+    )
 
-                if results.attrs['termination_condition'] in ['optimal', 'feasible']:
-                    results.attrs['objective_function_value'] = backend_model.obj()
-                    # Converting the cost-optimal objective function value to a slack constraint
-                    # for subsequent SPORES generation
-                    slack_constraint = backend_model.obj() * (1 + slack)
-                    # Storing results and scores in the specific dictionaries
-                    spores_list.append(results)
-                    cap_loc_score_dict[j] = _cap_loc_score_default(results)
-                    incremental_score_dict[j] = cap_loc_score_dict[j]
-                    # Set group constraint "cost_max" equal to slacked cost
-                    interface.update_pyomo_param(
-                        backend_model, 'group_cost_max',
-                        {(run_config['spores_options']['slack_cost_class'], run_config['spores_options']['slack_cost_group']): slack_constraint}
-                    )
-                    # Modify objective function weights: monetary:0, spores_score:1
-                    # TODO handle a user having multiple cost classes already defined + a different objective weighting (e.g. 0.1*CO2 + 1*monetary)
-                    interface.update_pyomo_param(
-                        backend_model, 'objective_cost_class',
-                        {'monetary': 0, spores_score: 1}
-                    )
-                    # Update "spores_score" based on previous iteration
-                    _update_spores_score(backend_model, incremental_score_dict[j])
-                elif results.attrs['termination_condition'] not in ['optimal', 'feasible']:
-                    exceptions.warn(
-                        'Infeasible model detected. Please check your model configuration. '
-                        'The generation of SPORES is not possible'
-                    )
-                    break
-                log_time(
-                    logger, timings, 'run_solution_returned', time_since_run_start=True,
-                    comment='Backend: generated solution array for the cost-optimal case'
-                )
+    # Iterate over the number of SPORES requested by the user
+    for j in range(0, n_spores):
+        results, backend_model = run_plan(
+            model_data, timings, backend, build_only, backend_rerun=backend_model
+        )
 
-            else:
-                results, backend_model = run_plan(
-                    model_data, timings, backend, build_only, backend_rerun=backend_model
-                )
-
-                if results.attrs['termination_condition'] in ['optimal', 'feasible']:
-                    results.attrs['objective_function_value'] = backend_model.obj()
-                    # Storing results and scores in the specific dictionaries
-                    spores_list.append(results)
-                    cap_loc_score_dict[j] = _cap_loc_score_default(results)
-                    incremental_score_dict[j] = cap_loc_score_dict[j].add(incremental_score_dict[j-1])
-                    # Update "spores_score" based on previous iteration
-                    _update_spores_score(backend_model, incremental_score_dict[j])
-                elif results.attrs['termination_condition'] not in ['optimal', 'feasible']:
-                    exceptions.warn(
-                        'Infeasible SPORE detected. Please check your model configuration. '
-                        'The generation of SPORES is stopped at this stage'
-                    )
-                    break
-                log_time(
-                    logger, timings, 'run_solution_returned', time_since_run_start=True,
-                    comment='Backend: generated solution array for the cost-optimal case'
-                )
-            # TODO: make this function work with the spores dimension,
-            # so that postprocessing can take place in core/model.py, as with run_plan and run_operate
-            results = postprocess_model_results(
-                results, model_data.reindex(results.coords), timings
-            )
-
-        if len(spores_list) != 0:
-            results = xr.concat(spores_list, dim='spores')
+        if results.attrs['termination_condition'] in ['optimal', 'feasible']:
+            results.attrs['objective_function_value'] = backend_model.obj()
+            # Storing results and scores in the specific dictionaries
+            spores_list.append(results)
+            cum_scores += _cap_loc_score_default(results)
+            # Update "spores_score" based on previous iteration
+            _update_spores_score(backend_model, cum_scores)
         else:
-            results = xr.Dataset()
+            _warn_on_infeasibility()
+            break
+        log_time(
+            logger, timings, 'run_solution_returned', time_since_run_start=True,
+            comment='Backend: generated solution array for the cost-optimal case'
+        )
+        # TODO: make this function work with the spores dimension,
+        # so that postprocessing can take place in core/model.py, as with run_plan and run_operate
+
+    results = xr.concat(spores_list, dim='spores')
+
     return results, backend_model
 
 

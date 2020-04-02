@@ -17,6 +17,7 @@ import numpy as np
 from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
+from calliope.core.preprocess.util import concat_iterable
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ def postprocess_model_results(results, model_data, timings):
 
     run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
     results['capacity_factor'] = capacity_factor(results, model_data)
-    results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
+    results['systemwide_capacity_factor'] = capacity_factor(results, model_data, systemwide=True)
     results['systemwide_levelised_cost'] = systemwide_levelised_cost(results, model_data)
     results['total_levelised_cost'] = systemwide_levelised_cost(results, model_data, total=True)
     results = clean_results(results, run_config.get('zero_threshold', 0), timings)
@@ -70,38 +71,13 @@ def postprocess_model_results(results, model_data, timings):
     return results
 
 
-def capacity_factor(results, model_data):
+def capacity_factor(results, model_data, systemwide=False):
     """
-    Returns a DataArray with capacity factor for the given results,
-    indexed by loc_tech_carriers_prod and timesteps.
+    Returns a DataArray with capacity factor for the given results.
+    The results are either indexed by loc_tech_carriers_prod and timesteps,
+    or by techs and carriers if systemwide results are being calculated.
 
-    """
-    # In operate mode, energy_cap is an input parameter
-    if 'energy_cap' not in results.keys():
-        energy_cap = model_data.energy_cap
-    else:
-        energy_cap = results.energy_cap
-
-    capacities = xr.DataArray(
-        [
-            energy_cap.loc[dict(loc_techs=i.rsplit('::', 1)[0])].values
-            for i in results['loc_tech_carriers_prod'].values
-        ],
-        dims=['loc_tech_carriers_prod'],
-        coords={'loc_tech_carriers_prod': results['loc_tech_carriers_prod']}
-    )
-
-    capacity_factors = (results['carrier_prod'] / capacities).fillna(0)
-
-    return capacity_factors
-
-
-def systemwide_capacity_factor(results, model_data):
-    """
-    Returns a DataArray with systemwide capacity factors over the entire
-    model duration, for the given results, indexed by techs and carriers.
-
-    The weight of timesteps is considered when computing capacity factors,
+    The weight of timesteps is considered when computing systemwide capacity factors,
     such that higher-weighted timesteps have a stronger influence
     on the resulting system-wide time-averaged capacity factor.
 
@@ -112,14 +88,27 @@ def systemwide_capacity_factor(results, model_data):
     else:
         energy_cap = results.energy_cap
 
-    prod_sum = (
+    _prod = split_loc_techs(results['carrier_prod'])
+    _cap = split_loc_techs(energy_cap)
+    if systemwide:
         # Aggregated/clustered days are represented `timestep_weights` times
-        split_loc_techs(results['carrier_prod']) * model_data.timestep_weights
-    ).sum(dim='timesteps').sum(dim='locs')
-    cap_sum = split_loc_techs(energy_cap).sum(dim='locs')
-    time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
+        prod_sum = (_prod * model_data.timestep_weights).sum(['timesteps', 'locs'])
+        cap_sum = _cap.sum(dim='locs')
+        time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
+        capacity_factors = prod_sum / (cap_sum * time_sum)
 
-    capacity_factors = prod_sum / (cap_sum * time_sum)
+    else:
+        extra_dims = {i: model_data[i].to_index() for i in _prod.dims if i not in _cap.dims}
+        capacity_factors = (
+            (_prod / _cap.expand_dims(extra_dims)).fillna(0)
+            .stack({'loc_tech_carriers_prod': ['locs', 'techs', 'carriers']})
+        )
+        new_idx = concat_iterable(capacity_factors.loc_tech_carriers_prod.values, ['::', '::'])
+        capacity_factors = (
+            capacity_factors
+            .assign_coords({'loc_tech_carriers_prod': new_idx})
+            .reindex({'loc_tech_carriers_prod': results.loc_tech_carriers_prod})
+        )
 
     return capacity_factors
 
