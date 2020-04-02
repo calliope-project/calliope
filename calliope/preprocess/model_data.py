@@ -163,7 +163,7 @@ def constraints_to_dataset(model_run):
 
     group_share_data = {}
     group_constraints = ['energy_cap_min', 'energy_cap_max', 'energy_cap_equals']
-    group_constraints_carrier = ['carrier_prod_min', 'carrier_prod_max', 'carrier_prod_equals']
+    group_constraints_carrier = ['carrier_prod_min', 'carrier_prod_max', 'carrier_prod_equals', 'carrier_con_min', 'carrier_con_max', 'carrier_con_equals']
 
     for constraint in [  # Only process constraints that are defined
             c for c in group_constraints

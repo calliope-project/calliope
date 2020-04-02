@@ -714,7 +714,7 @@ class TestCostCapGroupConstraint:
 class TestSupplyShareGroupConstraints:
 
     def test_no_carrier_prod_share_constraint(self):
-        model = build_model(model_file='supply_share.yaml')
+        model = build_model(model_file='carrier_prod_share.yaml')
         model.run()
         expensive_generation = (model.get_formatted_array("carrier_prod")
                                      .loc[{'techs': "expensive_elec_supply"}].sum()).item()
@@ -722,7 +722,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_systemwide_carrier_prod_share_max_constraint(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_max_systemwide'
         )
         model.run()
@@ -738,7 +738,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_systemwide_carrier_prod_share_min_constraint(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_min_systemwide'
         )
         model.run()
@@ -754,7 +754,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_location_specific_carrier_prod_share_max_constraint(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_max_location_0'
         )
         model.run()
@@ -768,7 +768,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_location_specific_carrier_prod_share_min_constraint(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_min_location_0'
         )
         model.run()
@@ -782,7 +782,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_carrier_prod_share_with_transmission(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_min_systemwide,transmission_link'
         )
         model.run()
@@ -801,7 +801,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_carrier_prod_share_with_storage(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_min_systemwide,storage_tech'
         )
         model.run()
@@ -820,7 +820,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_carrier_prod_share_per_timestep_max(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_per_timestep_max'
         )
         model.run()
@@ -831,7 +831,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_carrier_prod_share_per_timestep_min(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_per_timestep_min'
         )
         model.run()
@@ -842,7 +842,7 @@ class TestSupplyShareGroupConstraints:
 
     def test_carrier_prod_share_per_timestep_equals(self):
         model = build_model(
-            model_file='supply_share.yaml',
+            model_file='carrier_prod_share.yaml',
             scenario='carrier_prod_share_per_timestep_equals'
         )
         model.run()
@@ -1336,3 +1336,87 @@ class TestCarrierProdGroupConstraints:
         model.run()
 
         assert model._model_data.attrs['termination_condition'] != 'optimal'
+
+
+class TestCarrierConGroupConstraints:
+
+    def test_no_carrier_con_constraint(self, model_file):
+        model = build_model(model_file=model_file)
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        dem = con.loc[{'techs': "electricity_demand"}].sum().item()
+        assert dem == -90
+
+    def test_carrier_con_max_demand_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_max_demand'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        dem = con.loc[{'techs': "electricity_demand"}].sum().item()
+        assert round(dem, 5) >= -80
+
+    def test_carrier_con_min_demand_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_min_demand'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        dem = con.loc[{'techs': "electricity_demand"}].sum().item()
+        assert round(dem, 5) <= -40
+
+    def test_carrier_con_equals_demand_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_equals_demand'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        dem = con.loc[{'techs': "electricity_demand"}].sum().item()
+        assert dem == approx(-60)
+
+    def test_carrier_con_max_demand_loc_1_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_max_demand_loc_1'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        dem1 = con.loc[{'techs': "electricity_demand", 'locs': '1'}].sum().item()
+        dem0 = con.loc[{'techs': "electricity_demand", 'locs': '0'}].sum().item()
+        assert round(dem1, 5) >= -80
+        assert dem0 == 0
+
+    def test_carrier_con_max_multi_demand_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_max_multi_demand'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        dem_heat = con.loc[{'techs': "heat_demand"}].sum().item()
+        dem_cool = con.loc[{'techs': "cool_demand"}].sum().item()
+        assert round(dem_heat, 5) >= -10
+        assert round(dem_cool, 5) >= -5
+
+    def test_carrier_con_min_conversion_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_min_conversion'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        conversion_con = con.loc[{'techs': "elec_to_heat"}].sum().item()
+        assert round(conversion_con, 5) <= -1
+
+    def test_carrier_con_min_conversion_plus_constraint(self, model_file):
+        model = build_model(
+            model_file=model_file,
+            scenario='carrier_con_min_conversion_plus'
+        )
+        model.run()
+        con = model.get_formatted_array("carrier_con")
+        conversion_con = con.loc[{'techs': "elec_to_heat_cool_unlinked"}].sum().item()
+        assert round(conversion_con, 5) <= 1
