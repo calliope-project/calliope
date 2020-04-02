@@ -17,9 +17,9 @@ import numpy as np
 import ruamel.yaml as ruamel_yaml
 import xarray as xr
 
-from calliope.analysis import plotting, postprocess
+from calliope.postprocess import results as postprocess_results
 from calliope.core import io
-from calliope.core.preprocess import \
+from calliope.preprocess import \
     model_run_from_yaml, \
     model_run_from_dict, \
     build_model_data, \
@@ -87,8 +87,6 @@ class Model(object):
                 'Input configuration must either be a string or a dictionary.'
             )
         self._check_future_deprecation_warnings()
-
-        self.plot = plotting.ModelPlotMethods(self)
 
     def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run
@@ -246,7 +244,7 @@ class Model(object):
         )
 
         if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
-            results = postprocess.postprocess_model_results(
+            results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
 

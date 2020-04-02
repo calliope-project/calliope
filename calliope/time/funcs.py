@@ -17,8 +17,8 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
-from calliope.core.time import clustering
-from calliope.core.preprocess.lookup import lookup_clusters
+from calliope.time import clustering
+from calliope.preprocess.lookup import lookup_clusters
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ def apply_clustering(data, timesteps, clustering_func, how, normalize=True,
         How to map clusters to data. 'mean' or 'closest'.
     normalize : bool, optional
         If True (default), data is normalized before clustering is applied,
-        using :func:`~calliope.core.time.funcs.normalized_copy`.
+        using :func:`~calliope.time.funcs.normalized_copy`.
     scale_clusters : str or None, default = 'mean'
         Scale the results of clustering such that the clusters match the metric
         given by scale_clusters. For example, 'mean' scales along each loc_tech

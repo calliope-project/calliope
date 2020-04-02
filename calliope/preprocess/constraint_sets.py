@@ -14,8 +14,8 @@ from itertools import product
 
 import numpy as np
 
-from calliope.core.preprocess.util import constraint_exists, concat_iterable
-from calliope.core.preprocess import checks
+from calliope.preprocess.util import constraint_exists, concat_iterable
+from calliope.preprocess import checks
 
 def generate_constraint_sets(model_run):
     """
