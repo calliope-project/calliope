@@ -323,33 +323,25 @@ def generate_loc_tech_sets(model_run, simple_sets):
         if loc_techs_config[k].constraints.get('storage_discharge_depth_per_timestep')
     )
 
-    sets.loc_techs_storage_time_per_timestep = set(
-        k for k in sets.loc_techs_storage_plus
-        if loc_techs_config[k].constraints.get('storage_time_per_timestep')
-    )
+    # sets.loc_techs_storage_time_per_timestep = set(
+    #     k for k in sets.loc_techs_storage_plus
+    #     if loc_techs_config[k].constraints.get('storage_time_per_timestep')
+    # )
     sets.loc_techs_storage_plus_storage_time = set(
         k for k in sets.loc_techs_storage_plus
         if any('storage_time' in i
                for i in loc_techs_config[k].constraints.keys_nested())
     )
 
-    # make the storage_plus_duration_timesteps set only if
-    # storage_time_per_timestep constraint is active. Use column headings to
-    # make set.
-
-    # not actually a loc tech set - an imposter in this function
-    # currently just works for storage_time_per_timestep ones
-    # reads all files of storage time per timestep and adds col headings to make set
-
-    if bool(sets.loc_techs_storage_plus_storage_time):
-        sets.storage_plus_duration_timesteps = set()
-        for k in sets.loc_techs_storage_plus_storage_time:
-            filename = str(loc_techs_config[k].constraints.get('storage_time_per_timestep'))
-            filename = filename.split('=')[1].rsplit(':', 1)[0]
-            df = model_run['timeseries_data'][filename]
-            temp_list = list(df.columns.values)
-            for col in temp_list:
-                sets.storage_plus_duration_timesteps.add(col)
+    # if bool(sets.loc_techs_storage_plus_storage_time):
+    #     sets.storage_plus_duration_timesteps = set()
+    #     for k in sets.loc_techs_storage_plus_storage_time:
+    #         filename = str(loc_techs_config[k].constraints.get('storage_time_per_timestep'))
+    #         filename = filename.split('=')[1].rsplit(':', 1)[0]
+    #         df = model_run['timeseries_data'][filename]
+    #         temp_list = list(df.columns.values)
+    #         for col in temp_list:
+    #             sets.storage_plus_duration_timesteps.add(col)
 
     sets.loc_techs_storage_plus_shared_storage = set(
         k for k in sets.loc_techs_storage_plus

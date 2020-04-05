@@ -77,7 +77,7 @@ def build_model_data(model_run, debug=False):
 
     data = add_time_dimension(data, model_run)
 
-    if model_run.sets['loc_techs_storage_time_per_timestep']:
+    if model_run.sets['loc_techs_storage_plus_storage_time']:
         data = add_storage_time_lookup(data, model_run)
         data = calculate_storage_plus_parameters(data, model_run)
 
@@ -133,10 +133,8 @@ def constraints_to_dataset(model_run):
             return 'loc_techs_finite_resource'
         elif 'storage_cap_equals_per_timestep' in constraint:
             return 'loc_techs_storage_plus_cap_per_time'
-        elif 'storage_time_per_timestep' in constraint:
-            return 'storage_plus_duration_timesteps'
-        # elif 'storage_time' in constraint:
-        #     return 'storage_plus_duration_timesteps'  # potentially will be diff
+        elif 'storage_time' in constraint:
+            return 'loc_techs_storage_plus_storage_time'
         elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:
@@ -147,12 +145,6 @@ def constraints_to_dataset(model_run):
             return 'loc_techs_export'
         else:
             return 'loc_techs'
-
-    # problem is here - can't use the set the table is actually indexed over
-    # because its not a loc_tech. But if the set has loc_techs it can't do the
-    # add_time_dimension part unless i add some kind of override in time so it
-    # knows which column headings to look for instead.
-
 
     # find all constraints which are actually defined in the yaml file
     relevant_constraints = set(i.split('.constraints.')[1]
@@ -171,7 +163,7 @@ def constraints_to_dataset(model_run):
                 else:  # all other technologies
                     loc_tech_dict = model_run.locations[loc].techs[tech]
                 constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
-                print(loc_tech_dict)
+                # print(loc_tech_dict)
                 # inf is assumed to be string on import, so we need to np.inf it
                 if constraint_value == 'inf':
                     constraint_value = np.inf

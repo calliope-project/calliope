@@ -443,13 +443,15 @@ def process_timeseries_data(config_model, model_run):
             file_path = os.path.join(config_model.model.timeseries_data_path, file)
             # load the data, without parsing the dates, to catch errors in the data
             df = pd.read_csv(file_path, index_col=0)
-            try:
-                df.apply(pd.to_numeric)
-            except ValueError as e:
-                raise exceptions.ModelError(
-                    'Error in loading data from {}. Ensure all entries are '
-                    'numeric. Full error: {}'.format(file, e)
-                )
+            ### commenting this out because new input = string
+            ### will need a smarter check elsewhere
+            # try:
+            #     df.apply(pd.to_numeric)
+            # except ValueError as e:
+            #     raise exceptions.ModelError(
+            #         'Error in loading data from {}. Ensure all entries are '
+            #         'numeric. Full error: {}'.format(file, e)
+            #     )
             # Now parse the dates, checking for errors specific to this
             try:
                 df.index = _parser(df.index, dtformat)

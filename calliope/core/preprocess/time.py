@@ -147,17 +147,20 @@ def add_time_dimension(data, model_run):
         key_errors = []
 
         for loc_tech, (filename, column) in filenames.iteritems():
-            print(loc_tech, (filename, column))
+            # print(loc_tech, (filename, column))
             try:
                 timeseries_data.append(model_run.timeseries_data[filename].loc[:, column].values)
             except KeyError:
-                key_errors.append(
+                if variable == 'storage_time_per_timestep':
+                    timeseries_data.append(model_run.timeseries_data[filename])
+                else:
+                    key_errors.append(
                     'column `{}` not found in file `{}`, but was requested by '
                     'loc::tech `{}`.'.format(column, filename, loc_tech)
                 )
         if key_errors:
             exceptions.print_warnings_and_raise_errors(errors=key_errors)
-
+        print()
         timeseries_data_series = pd.DataFrame(index=filenames.index,
                                               columns=data.timesteps.values,
                                               data=timeseries_data).stack()
@@ -270,41 +273,50 @@ def add_zero_carrier_ratio_sets(model_data):
         ]
     )
 
-def add_storage_time_lookup(dataset, model_data):
+
+def add_storage_time_lookup(data, model_data):
     """
     Storage plus technologies can have a minimum storage time associated with them.
     Here, each timestep is linked with future timesteps through a probabilistic
-    time delay dataset.
+    time delay dataset. Currently this comes in comma delimited and indexed by
+    loc, however might try and change this in the future if we can think of a better
+    way to represent all three dimensions at the same time.
     """
-    # storage time input doenst need to be processed into sets, just a lookup
-    # print(model_data)
-    dataset['lookup_storage_time'] = xr.DataArray(
-        data=store_time_contribs.to_numpy(),
-        dims=['timesteps', 'loc_techs_storage_time_per_timestep']#,
-        # coords={'loc_techs_storage_time_per_timestep': loc_techs_storage_time_per_timestep, 'timesteps': timesteps}
+    # to_do: delete any columns of entirely zeros
+    # to_do: test if this works with single string input (no time dependence)
+    try:
+        raw_array = data['storage_time_per_timestep'].to_pandas().transpose()
+    except(KeyError):
+        raw_array = data['storage_time'].to_pandas().transpose()
+    for loc_tech in model_data.sets['loc_techs_storage_plus_storage_time']:
+        exploded_array = raw_array[loc_tech].str.split(",", expand=True)
+        model_data.sets['duration_timesteps'] = set(exploded_array.columns)
+        lookup_table_name = "lookup_storage_time__{}".format(loc_tech)
+    data[lookup_table_name] = xr.DataArray(
+        data=exploded_array.to_numpy(),
+        dims=['timesteps', 'duration_timesteps']
     )
+    return data
 
-    return dataset
 
-
-def calculate_storage_plus_parameters(model_data, model_run):
+def calculate_storage_plus_parameters(data, model_run):
     # calculate parked storage (storage_cap_equals[A])
     # calculate driving storage -> maybe in constraint?
     # calculate demand (frontloaded) - input for now
     # calculate 'spare storage' in the timestep it leaves -> maybe in constraint?
     #
     storage_time_errors = []
-    try:
-        assert 1 == 1  # assert that timestep makes sense mathematically
-    except:
-        storage_time_errors.append(
-            'Inputs for storage_plus dynamics not self consistent at timestep {}'
-            .format(timestep)
-        )
+    # try:
+    #     assert 1 == 1  # assert that timestep makes sense mathematically
+    # except:
+    #     storage_time_errors.append(
+    #         'Inputs for storage_plus dynamics not self consistent at timestep {}'
+    #         .format(timestep)
+    #     )
     if storage_time_errors:
         exceptions.print_warnings_and_raise_errors(errors=storage_time_errors)
 
-    return model_data
+    return model_run
 
 
 def final_timedimension_processing(model_data):
