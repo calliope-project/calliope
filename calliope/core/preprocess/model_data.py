@@ -131,10 +131,10 @@ def constraints_to_dataset(model_run):
             return 'loc_techs_supply_plus'
         elif 'resource' in constraint:  # i.e. everything with 'resource' in the name that isn't resource_cap
             return 'loc_techs_finite_resource'
-        elif 'storage_cap_equals_per_timestep' in constraint:
-            return 'loc_techs_storage_plus_cap_per_time'
-        elif 'storage_time' in constraint:
+        elif 'storage_time' in constraint: # you can't have one and not the other - maybe merge
             return 'loc_techs_storage_plus_storage_time'
+        elif 'shared_storage' in constraint:
+            return 'loc_techs_storage_plus'
         elif 'storage' in constraint or 'charge_rate' in constraint or 'energy_cap_per_storage_cap' in constraint:
             return 'loc_techs_store'
         elif 'purchase' in constraint:
@@ -163,7 +163,6 @@ def constraints_to_dataset(model_run):
                 else:  # all other technologies
                     loc_tech_dict = model_run.locations[loc].techs[tech]
                 constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
-                # print(loc_tech_dict)
                 # inf is assumed to be string on import, so we need to np.inf it
                 if constraint_value == 'inf':
                     constraint_value = np.inf

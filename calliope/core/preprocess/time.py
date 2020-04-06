@@ -147,7 +147,6 @@ def add_time_dimension(data, model_run):
         key_errors = []
 
         for loc_tech, (filename, column) in filenames.iteritems():
-            # print(loc_tech, (filename, column))
             try:
                 timeseries_data.append(model_run.timeseries_data[filename].loc[:, column].values)
             except KeyError:
@@ -160,7 +159,6 @@ def add_time_dimension(data, model_run):
                 )
         if key_errors:
             exceptions.print_warnings_and_raise_errors(errors=key_errors)
-        print()
         timeseries_data_series = pd.DataFrame(index=filenames.index,
                                               columns=data.timesteps.values,
                                               data=timeseries_data).stack()
@@ -274,7 +272,7 @@ def add_zero_carrier_ratio_sets(model_data):
     )
 
 
-def add_storage_time_lookup(data, model_data):
+def add_storage_time_lookup(data, model_run):
     """
     Storage plus technologies can have a minimum storage time associated with them.
     Here, each timestep is linked with future timesteps through a probabilistic
@@ -284,39 +282,68 @@ def add_storage_time_lookup(data, model_data):
     """
     # to_do: delete any columns of entirely zeros
     # to_do: test if this works with single string input (no time dependence)
+    # to_do: maybe delete the variable from model_data?
     try:
         raw_array = data['storage_time_per_timestep'].to_pandas().transpose()
     except(KeyError):
         raw_array = data['storage_time'].to_pandas().transpose()
-    for loc_tech in model_data.sets['loc_techs_storage_plus_storage_time']:
+    for loc_tech in model_run.sets['loc_techs_storage_plus_storage_time']:
         exploded_array = raw_array[loc_tech].str.split(",", expand=True)
-        model_data.sets['duration_timesteps'] = set(exploded_array.columns)
+        model_run.sets['duration_timesteps'] = set(exploded_array.columns)
         lookup_table_name = "lookup_storage_time__{}".format(loc_tech)
-    data[lookup_table_name] = xr.DataArray(
-        data=exploded_array.to_numpy(),
-        dims=['timesteps', 'duration_timesteps']
-    )
+        data[lookup_table_name] = xr.DataArray(
+            data=exploded_array.to_numpy(),
+            dims=['timesteps', 'duration_timesteps']
+        )
     return data
+
+### there is actually no reason for these two functions to be separate
+### but they will remain so until i have finished them individually
 
 
 def calculate_storage_plus_parameters(data, model_run):
-    # calculate parked storage (storage_cap_equals[A])
-    # calculate driving storage -> maybe in constraint?
-    # calculate demand (frontloaded) - input for now
-    # calculate 'spare storage' in the timestep it leaves -> maybe in constraint?
-    #
+    # calculate driving storage as a lookup table
+    # calculate demand (frontloaded) - this is an input for now
     storage_time_errors = []
-    # try:
-    #     assert 1 == 1  # assert that timestep makes sense mathematically
-    # except:
-    #     storage_time_errors.append(
-    #         'Inputs for storage_plus dynamics not self consistent at timestep {}'
-    #         .format(timestep)
-    #     )
-    if storage_time_errors:
-        exceptions.print_warnings_and_raise_errors(errors=storage_time_errors)
+    missing_data_errors = []
+    # setup new dataframe: storage_away - indexed over loc_techs_storage_plus
+    for loc_tech in model_run.sets['loc_techs_storage_plus_storage_time']:
+        try:
+            shared_storage_prod = data['shared_storage_prod'].loc[loc_tech].to_pandas()
+        except(KeyError):
+            missing_data_errors.append(
+                '"shared_storage_prod" input missing for storage_plus loc_tech: {}'
+                .format(loc_tech)
+            )
+        if missing_data_errors:
+            exceptions.print_warnings_and_raise_errors(errors=missing_data_errors)
 
-    return model_run
+        lookup_table_name = "lookup_storage_time__{}".format(loc_tech)
+        storage_time = data[lookup_table_name].to_pandas()
+
+        # storage_leaving = storage_time.multiply(shared_storage_prod)
+
+        # storage_leaving[ts, i] = shared_storage_prod[ts] * storage_time[ts, i]
+        # new column : storage_away
+        # storage_away[ts] = storage_away[ts-1]
+        #                          + sum_i(storage_leaving[ts,i])
+        #                           - sum_i(storage_leaving[ts-i,i])
+
+        try:
+            # assert max storage_away <= 1
+            # assert min storage_away >= 0
+            assert 1 == 1
+        except(AssertionError):
+            storage_time_errors.append(
+                'Inputs for shared_storage_prod and storage_time are not consistent - please amend!'
+            )
+        if storage_time_errors:
+            exceptions.print_warnings_and_raise_errors(errors=storage_time_errors)
+
+        # add storage away column to storage_away dataframe with loc_tech as header
+        # data[storage_away] as dataarray
+
+    return data
 
 
 def final_timedimension_processing(model_data):
