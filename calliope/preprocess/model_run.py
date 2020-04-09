@@ -573,9 +573,6 @@ def generate_model_run(config, debug_comments, applied_overrides, scenario):
     model_run['run'] = config['run']
     model_run['model'] = config['model']
     model_run['group_constraints'] = config.get('group_constraints', {})
-    # if model_run['run']['mode'] == 'spores':
-    #     model_run['group_constraints']['systemwide_max_slacked_cost'] = {'cost_max': {'monetary': float('inf')}}
-    #     model_run['run']['objective_options']['cost_class']['spores_score'] = 0
 
     # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)

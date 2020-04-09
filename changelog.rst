@@ -6,6 +6,8 @@ Release History
 0.6.6 (dev)
 -----------
 
+|new| `spores` run mode now available, to find Spatially-explicit Practically Optimal REsultS (SPORES)
+
 |changed| |backwards-incompatible| Plotting is no longer part of Calliope itself, but in a separate module, calliope_plot. FIXME: documentation needs to be updated.
 
 |changed| Internal code reorganisation.
@@ -22,8 +24,6 @@ Release History
 |new| New group constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
 
 |changed| |backwards-incompatible| Group constraints with the prefix `supply_share` are renamed to use the prefix `carrier_prod_share`. This ensures consistent naming for all group constraints.
-
-|changed| Allowed 'energy_cap_min' for transmission technologies.
 
 |changed| Allowed 'energy_cap_min' for transmission technologies.
 

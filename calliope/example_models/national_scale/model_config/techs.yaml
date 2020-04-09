@@ -29,7 +29,6 @@ techs:
                 interest_rate: 0.10
                 energy_cap: 750  # USD per kW
                 om_con: 0.02  # USD per kWh
-
     # ccgt-end
 
     # csp-start

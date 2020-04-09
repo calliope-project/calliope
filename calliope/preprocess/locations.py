@@ -41,7 +41,6 @@ def process_locations(model_config, modelrun_techs):
     tech_groups_in = model_config.tech_groups
     locations_in = model_config.locations
     links_in = model_config.get('links', AttrDict())
-    run_mode = model_config['run']['mode']
 
     allowed_from_file = DEFAULTS.model.file_allowed
 
@@ -152,9 +151,8 @@ def process_locations(model_config, modelrun_techs):
                     config_value = '{}:{}'.format(config_value, loc_name)
                     tech_settings.set_key(config_key, config_value)
 
-            parent = modelrun_techs[tech_name].inheritance[-1]
-            tech_settings = check_costs_and_compute_depreciation_rates(tech_name, loc_name, tech_settings, warnings, errors, run_mode, parent)
-            
+            tech_settings = check_costs_and_compute_depreciation_rates(tech_name, loc_name, tech_settings, warnings, errors)
+
             # Now merge the tech settings into the location-specific
             # tech dict -- but if a tech specifies ``exists: false``,
             # we kill it at this location
@@ -213,9 +211,8 @@ def process_locations(model_config, modelrun_techs):
 
                 tech_settings = cleanup_undesired_keys(tech_settings)
 
-                parent = modelrun_techs[tech_name].inheritance[-1]
                 tech_settings = process_per_distance_constraints(tech_name, tech_settings, locations, locations_comments, loc_from, loc_to)
-                tech_settings = check_costs_and_compute_depreciation_rates(tech_name, link, tech_settings, warnings, errors, run_mode, parent)
+                tech_settings = check_costs_and_compute_depreciation_rates(tech_name, link, tech_settings, warnings, errors)
                 processed_transmission_techs[tech_name] = tech_settings
             else:
                 tech_settings = processed_transmission_techs[tech_name]
@@ -391,13 +388,8 @@ def process_per_distance_constraints(tech_name, tech_settings, locations, locati
     return tech_settings
 
 
-def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config, warnings, errors, run_mode, parent):
+def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config, warnings, errors):
     cost_classes = list(tech_config.get('costs', {}).keys())
-    # Adds spores_score details if "spores" run mode is selected
-    # if run_mode == 'spores' and parent != 'demand': # not in str(tech_id): # not working: the idea is to find a way to skip demand techs, by checking the parent tech in tech_config, if possible
-    #     cost_classes.append('spores_score')
-    #     tech_config.set_key('costs.spores_score.interest_rate', 1)
-    #     tech_config.set_key('costs.spores_score.energy_cap', 0)
 
     for cost in cost_classes:
 
@@ -428,14 +420,6 @@ def check_costs_and_compute_depreciation_rates(tech_id, loc_or_link, tech_config
                 for i in tech_config.costs[cost].keys()):
             # MUST define lifetime and interest_rate for these technologies
             if plant_life == 0 or interest is None:
-                # if run_mode == 'spores':
-                #     plant_life = 1
-                #     warnings.append(
-                #     'The constraints.lifetime of technology {} is not specified,'
-                #     'and will be set to 1. Set interest rate to 0 if you do not want '
-                #     'it to have an effect'.format(tech_id)
-                #     )
-                # else:
                 errors.append(
                     'Must specify constraints.lifetime and costs.{0}.interest_rate '
                     'when specifying fixed `{0}` costs for `{1}`. Set lifetime to 1 '

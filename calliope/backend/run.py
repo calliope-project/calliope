@@ -13,7 +13,6 @@ from calliope import exceptions
 from calliope.backend import checks
 from calliope.backend.pyomo import model as run_pyomo
 from calliope.backend.pyomo import interface as pyomo_interface
-from calliope.analysis.postprocess import postprocess_model_results
 
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope.core.attrdict import AttrDict
@@ -218,7 +217,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
     )
 
     # Iterate over the number of SPORES requested by the user
-    for j in range(0, n_spores):
+    for _spore in range(0, n_spores):
         results, backend_model = run_plan(
             model_data, timings, backend, build_only, backend_rerun=backend_model
         )
