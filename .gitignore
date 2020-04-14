@@ -1,13 +1,16 @@
+# OS
+.DS_Store
+
+# Tooling
+.cache
 .coverage
+.mypy_cache/
+.pytest_cache/
+.vscode
+*.egg-info/
 *.pyc
-calliope.egg-info/
+
+# Project
+dist/
 doc/_build/
 doc/_static/notebooks/*.html
-dist/
-.cache
-.pytest_cache/
-mprofile_*
-profile_*
-*.profile
-_test
-.vscode
