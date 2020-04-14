@@ -20,37 +20,32 @@ As when installing a stable version, using ``conda`` is recommended.
 
 To actively contribute to Calliope development, or simply track the latest development version, you'll instead want to clone our GitHub repository. This will provide you with the master branch in a known location on your local device.
 
-First, clone the repository
+First, clone the repository:
 
   .. code-block:: fishshell
 
-    $ git clone https://github.com/calliope-project/calliope
+   $ git clone https://github.com/calliope-project/calliope
 
-Using our conda util function, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``
-
-
-  .. code-block:: fishshell
-
-    $ python calliope/utils/conda_create.py calliope/requirements/base.yml calliope/requirements/dev_tools.yml --env_name calliope_dev --python_version=3.8 --run
-    $ conda activate calliope_dev
-
-.. Note::
-    * You will need ``ruamel_yaml`` in your base environment to run this script.
-    * If you are running on a Unix system, then you can include ``calliope/requirements/unix.yml`` to the list of requirements files to also install the CBC solver.
-
-Then install Calliope itself with pip
+Then install all development requirements for Calliope into a new environment, calling it e.g. ``calliope_dev``:
 
   .. code-block:: fishshell
 
-    $ pip install -e calliope
+   $ conda env create -f requirements.yml -n calliope_dev
+   $ conda activate calliope_dev
 
-Finally, all updates to the code need to be formatted using `black <https://github.com/psf/black/>`_ on each commit. If you don't have a process for doing this already, you can also install our configured `pre-commit <https://pre-commit.com/>`_ hook which will automatically run black on each commit
+Finally install Calliope itself as an editable installation with pip:
 
   .. code-block:: fishshell
 
-    $ pre-commit install
+   $ pip install -e calliope
 
-.. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. To install solvers other than GLPK, see our :ref:`solver installation instructions <install_solvers>`.
+.. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. If you are running on a Unix system, then you can run ``conda install coincbc`` to also install the CBC solver. To install solvers other than CBC, and for Windows systems, see our :ref:`solver installation instructions <install_solvers>`.
+
+We use the code formatter `black <https://github.com/psf/black/>`_ and before you contribute any code, you should ensure that you have run it through black. If you don't have a process for doing this already, you can install our configured `pre-commit <https://pre-commit.com/>`_ hook which will automatically run black on each commit:
+
+  .. code-block:: fishshell
+
+   $ pre-commit install
 
 ---------------------------
 Creating modular extensions
