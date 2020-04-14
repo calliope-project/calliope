@@ -1,2 +1,2 @@
 conda:
-    file: requirements/docs.yml
+    file: requirements_docs.yml
