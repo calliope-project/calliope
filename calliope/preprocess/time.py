@@ -130,7 +130,9 @@ def add_time_dimension(data, model_run):
         data_series = data[variable].to_series()
 
         # 3) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
-        tskeys = data_series[data_series.str.contains("file=") | data_series.str.contains("df=")]
+        tskeys = data_series[
+            data_series.str.contains("file=") | data_series.str.contains("df=")
+        ]
 
         # 4) If no use of 'file=' or 'df=' then we can be on our way
         if tskeys.empty:
@@ -146,7 +148,9 @@ def add_time_dimension(data, model_run):
         key_errors = []
         for loc_tech, (tskey, column) in tskeys.items():
             try:
-                timeseries_data.append(model_run.timeseries_data[tskey].loc[:, column].values)
+                timeseries_data.append(
+                    model_run.timeseries_data[tskey].loc[:, column].values
+                )
             except KeyError:
                 key_errors.append(
                     "column `{}` not found in dataframe `{}`, but was requested by "
@@ -155,9 +159,9 @@ def add_time_dimension(data, model_run):
         if key_errors:
             exceptions.print_warnings_and_raise_errors(errors=key_errors)
 
-        timeseries_data_series = pd.DataFrame(index=tskeys.index,
-                                              columns=data.timesteps.values,
-                                              data=timeseries_data).stack()
+        timeseries_data_series = pd.DataFrame(
+            index=tskeys.index, columns=data.timesteps.values, data=timeseries_data
+        ).stack()
         timeseries_data_series.index.rename("timesteps", -1, inplace=True)
 
         # 7) Add time dimension to the relevent DataArray and update the '='
