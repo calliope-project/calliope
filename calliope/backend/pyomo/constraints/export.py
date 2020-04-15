@@ -11,41 +11,46 @@ Energy export constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import \
-    get_param, \
-    get_loc_tech_carriers, \
-    get_loc_tech, \
-    loc_tech_is_in
+from calliope.backend.pyomo.util import (
+    get_param,
+    get_loc_tech_carriers,
+    get_loc_tech,
+    loc_tech_is_in,
+)
 
 ORDER = 30  # order in which to invoke constraints relative to other constraint files
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data['sets']
+    sets = backend_model.__calliope_model_data["sets"]
 
-    if 'loc_carriers_update_system_balance_constraint' in sets:
+    if "loc_carriers_update_system_balance_constraint" in sets:
         for loc_carrier, timestep in (
             backend_model.loc_carriers_update_system_balance_constraint
-            * backend_model.timesteps):
+            * backend_model.timesteps
+        ):
             update_system_balance_constraint(backend_model, loc_carrier, timestep)
 
-    if 'loc_tech_carriers_export_balance_constraint' in sets:
+    if "loc_tech_carriers_export_balance_constraint" in sets:
         backend_model.export_balance_constraint = po.Constraint(
             backend_model.loc_tech_carriers_export_balance_constraint,
             backend_model.timesteps,
-            rule=export_balance_constraint_rule
+            rule=export_balance_constraint_rule,
         )
 
-    if 'loc_techs_update_costs_var_constraint' in sets:
-        for cost, loc_tech, timestep in (backend_model.costs
-                * backend_model.loc_techs_update_costs_var_constraint
-                * backend_model.timesteps):
+    if "loc_techs_update_costs_var_constraint" in sets:
+        for cost, loc_tech, timestep in (
+            backend_model.costs
+            * backend_model.loc_techs_update_costs_var_constraint
+            * backend_model.timesteps
+        ):
             update_costs_var_constraint(backend_model, cost, loc_tech, timestep)
 
-    if 'loc_tech_carriers_export_max_constraint' in sets:
+    if "loc_tech_carriers_export_max_constraint" in sets:
         backend_model.export_max_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_export_max_constraint, backend_model.timesteps,
-            rule=export_max_constraint_rule
+            backend_model.loc_tech_carriers_export_max_constraint,
+            backend_model.timesteps,
+            rule=export_max_constraint_rule,
         )
 
 
@@ -58,8 +63,10 @@ def update_system_balance_constraint(backend_model, loc_carrier, timestep):
     prod, con, export = get_loc_tech_carriers(backend_model, loc_carrier)
 
     backend_model.system_balance[loc_carrier, timestep].expr += -1 * (
-        sum(backend_model.carrier_export[loc_tech_carrier, timestep]
-            for loc_tech_carrier in export)
+        sum(
+            backend_model.carrier_export[loc_tech_carrier, timestep]
+            for loc_tech_carrier in export
+        )
     )
 
     return None
@@ -81,8 +88,10 @@ def export_balance_constraint_rule(backend_model, loc_tech_carrier, timestep):
             \\forall timestep \\in timesteps
     """
 
-    return (backend_model.carrier_prod[loc_tech_carrier, timestep] >=
-            backend_model.carrier_export[loc_tech_carrier, timestep])
+    return (
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        >= backend_model.carrier_export[loc_tech_carrier, timestep]
+    )
 
 
 def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
@@ -101,13 +110,13 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
             \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
+    model_data_dict = backend_model.__calliope_model_data["data"]
 
-    loc_tech_carrier = model_data_dict['lookup_loc_techs_export'][(loc_tech)]
+    loc_tech_carrier = model_data_dict["lookup_loc_techs_export"][(loc_tech)]
     weight = backend_model.timestep_weights[timestep]
 
     cost_export = (
-        get_param(backend_model, 'cost_export', (cost, loc_tech, timestep))
+        get_param(backend_model, "cost_export", (cost, loc_tech, timestep))
         * backend_model.carrier_export[loc_tech_carrier, timestep]
         * weight
     )
@@ -143,11 +152,13 @@ def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
 
     loc_tech = get_loc_tech(loc_tech_carrier)
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp'):
+    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_milp"):
         operating_units = backend_model.operating_units[loc_tech, timestep]
     else:
         operating_units = 1
 
-    export_cap = get_param(backend_model, 'export_cap', loc_tech)
-    return (backend_model.carrier_export[loc_tech_carrier, timestep] <=
-            export_cap * operating_units)
+    export_cap = get_param(backend_model, "export_cap", loc_tech)
+    return (
+        backend_model.carrier_export[loc_tech_carrier, timestep]
+        <= export_cap * operating_units
+    )

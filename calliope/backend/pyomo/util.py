@@ -32,7 +32,9 @@ def get_param(backend_model, var, dims):
     try:
         return getattr(backend_model, var)[dims]
     except AttributeError:  # i.e. parameter doesn't exist at all
-        logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+        logger.debug(
+            "get_param: var {} and dims {} leading to default lookup".format(var, dims)
+        )
         return backend_model.__calliope_defaults[var]
     except KeyError:  # try removing timestep
         try:
@@ -41,7 +43,11 @@ def get_param(backend_model, var, dims):
             else:
                 return getattr(backend_model, var)[dims[0]]
         except KeyError:  # Static default value
-            logger.debug('get_param: var {} and dims {} leading to default lookup'.format(var, dims))
+            logger.debug(
+                "get_param: var {} and dims {} leading to default lookup".format(
+                    var, dims
+                )
+            )
             return backend_model.__calliope_defaults[var]
 
 
@@ -59,7 +65,7 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
     loc_tech_carriers which produce energy (loc_tech_carriers_prod), consume
     energy (loc_tech_carriers_con) and export energy (loc_tech_carriers_export)
     """
-    lookup = backend_model.__calliope_model_data['data']['lookup_loc_carriers']
+    lookup = backend_model.__calliope_model_data["data"]["lookup_loc_carriers"]
     loc_tech_carriers = split_comma_list(lookup[loc_carrier])
 
     loc_tech_carriers_prod = [
@@ -69,19 +75,14 @@ def get_loc_tech_carriers(backend_model, loc_carrier):
         i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_con
     ]
 
-    if hasattr(backend_model, 'loc_tech_carriers_export'):
+    if hasattr(backend_model, "loc_tech_carriers_export"):
         loc_tech_carriers_export = [
-            i for i in loc_tech_carriers
-            if i in backend_model.loc_tech_carriers_export
+            i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_export
         ]
     else:
         loc_tech_carriers_export = []
 
-    return (
-        loc_tech_carriers_prod,
-        loc_tech_carriers_con,
-        loc_tech_carriers_export
-    )
+    return (loc_tech_carriers_prod, loc_tech_carriers_con, loc_tech_carriers_export)
 
 
 @memoize
@@ -90,7 +91,7 @@ def get_loc_tech(loc_tech_carrier):
     Split the string of a loc_tech_carrier (e.g. `region1::ccgt::power`) to get
     just the loc_tech (e.g. `region1::ccgt`)
     """
-    return loc_tech_carrier.rsplit('::', 1)[0]
+    return loc_tech_carrier.rsplit("::", 1)[0]
 
 
 @memoize
@@ -102,8 +103,8 @@ def get_timestep_weight(backend_model):
     always be 1 per step, unless time clustering/masking/resampling has taken place.
     """
     model_data_dict = backend_model.__calliope_model_data
-    time_res = list(model_data_dict['data']['timestep_resolution'].values())
-    weights = list(model_data_dict['data']['timestep_weights'].values())
+    time_res = list(model_data_dict["data"]["timestep_resolution"].values())
+    weights = list(model_data_dict["data"]["timestep_weights"].values())
     return sum(np.multiply(time_res, weights)) / 8760
 
 
@@ -112,7 +113,7 @@ def split_comma_list(comma_list):
     """
     Take a comma deliminated string and split it into a list of strings
     """
-    return comma_list.split(',')
+    return comma_list.split(",")
 
 
 @memoize
@@ -121,10 +122,10 @@ def get_conversion_plus_io(backend_model, tier):
     from a carrier_tier, return the primary tier (of `in`, `out`) and
     corresponding decision variable (`carrier_con` and `carrier_prod`, respectively)
     """
-    if 'out' in tier:
-        return 'out', backend_model.carrier_prod
-    elif 'in' in tier:
-        return 'in', backend_model.carrier_con
+    if "out" in tier:
+        return "out", backend_model.carrier_prod
+    elif "in" in tier:
+        return "in", backend_model.carrier_con
 
 
 def get_var(backend_model, var, dims=None, sparse=False):
@@ -145,21 +146,23 @@ def get_var(backend_model, var, dims=None, sparse=False):
     try:
         var_container = getattr(backend_model, var)
     except AttributeError:
-        raise exceptions.BackendError('Variable {} inexistent.'.format(var))
+        raise exceptions.BackendError("Variable {} inexistent.".format(var))
 
     if not dims:
-        if var + '_index' == var_container.index_set().name:
+        if var + "_index" == var_container.index_set().name:
             dims = [i.name for i in var_container.index_set().set_tuple]
         else:
             dims = [var_container.index_set().name]
 
     if sparse:
-        result = pd.DataFrame.from_dict(var_container.extract_values_sparse(), orient='index')
+        result = pd.DataFrame.from_dict(
+            var_container.extract_values_sparse(), orient="index"
+        )
     else:
-        result = pd.DataFrame.from_dict(var_container.extract_values(), orient='index')
+        result = pd.DataFrame.from_dict(var_container.extract_values(), orient="index")
 
     if result.empty:
-        raise exceptions.BackendError('Variable {} has no data.'.format(var))
+        raise exceptions.BackendError("Variable {} has no data.".format(var))
 
     result = result[0]  # Get the only column in the dataframe
 
@@ -190,7 +193,9 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
     model_set : string
     """
 
-    if hasattr(backend_model, model_set) and loc_tech in getattr(backend_model, model_set):
+    if hasattr(backend_model, model_set) and loc_tech in getattr(
+        backend_model, model_set
+    ):
         return True
     else:
         return False

@@ -1,11 +1,13 @@
 [flake8]
-ignore =
+# Recommend matching the black line length (default 88),
+# rather than using the flake8 default of 79:
+max-line-length = 88
+extend-ignore =
+    # See https://github.com/PyCQA/pycodestyle/issues/373
+    E203,
+    # Ignore E231 until https://github.com/psf/black/issues/1288 is resolved
+    E231,
     # E501: line too long
     E501,
-    # D203: 1 blank line required before class docstring
-    D203,
-    # W503: line break before binary operator
-    # See https://www.python.org/dev/peps/pep-0008/#id20
-    W503
-exclude = .git,__pycache__,dist,doc,calliope/lib
+exclude = .git,__pycache__,dist,doc
 max-complexity = 10

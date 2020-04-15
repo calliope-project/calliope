@@ -38,15 +38,20 @@ def minmax_cost_optimization(backend_model):
     """
 
     def obj_rule(backend_model):
-        if backend_model.__calliope_run_config.get('ensure_feasibility', False):
-            unmet_demand = sum(
-                (backend_model.unmet_demand[loc_carrier, timestep] -
-                 backend_model.unused_supply[loc_carrier, timestep]) *
-                backend_model.timestep_weights[timestep]
-                for loc_carrier in backend_model.loc_carriers
-                for timestep in backend_model.timesteps
-            ) * backend_model.bigM
-            if backend_model.objective_sense == 'maximize':
+        if backend_model.__calliope_run_config.get("ensure_feasibility", False):
+            unmet_demand = (
+                sum(
+                    (
+                        backend_model.unmet_demand[loc_carrier, timestep]
+                        - backend_model.unused_supply[loc_carrier, timestep]
+                    )
+                    * backend_model.timestep_weights[timestep]
+                    for loc_carrier in backend_model.loc_carriers
+                    for timestep in backend_model.timesteps
+                )
+                * backend_model.bigM
+            )
+            if backend_model.objective_sense == "maximize":
                 unmet_demand *= -1
         else:
             unmet_demand = 0
@@ -56,11 +61,14 @@ def minmax_cost_optimization(backend_model):
                 backend_model.cost[k, loc_tech] * v
                 for loc_tech in backend_model.loc_techs_cost
                 for k, v in backend_model.objective_cost_class.items()
-            ) + unmet_demand
+            )
+            + unmet_demand
         )
 
-    backend_model.obj = po.Objective(sense=load_function('pyomo.core.' + backend_model.objective_sense),
-                                     rule=obj_rule)
+    backend_model.obj = po.Objective(
+        sense=load_function("pyomo.core." + backend_model.objective_sense),
+        rule=obj_rule,
+    )
     backend_model.obj.domain = po.Reals
 
 
@@ -75,6 +83,7 @@ def check_feasibility(backend_model):
             min: z = 1
 
     """
+
     def obj_rule(backend_model):
         return 1
 
