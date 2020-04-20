@@ -55,23 +55,23 @@ def update_pyomo_param(backend_model, param, update_dict):
     """
     if not hasattr(backend_model, param):
         raise exceptions.ModelError(
-            'Parameter `{}` not in the Pyomo Backend. Check that the string '
-            'matches the corresponding constraint/cost in the model.inputs '
-            'xarray Dataset'.format(param)
+            "Parameter `{}` not in the Pyomo Backend. Check that the string "
+            "matches the corresponding constraint/cost in the model.inputs "
+            "xarray Dataset".format(param)
         )
     elif not isinstance(getattr(backend_model, param), po.base.param.IndexedParam):
         raise exceptions.ModelError(
-            '`{}` not a Parameter in the Pyomo Backend. Sets and decision variables '
-            'cannot be updated by the user'.format(param)
+            "`{}` not a Parameter in the Pyomo Backend. Sets and decision variables "
+            "cannot be updated by the user".format(param)
         )
     elif not isinstance(update_dict, dict):
-        raise TypeError('`update_dict` must be a dictionary')
+        raise TypeError("`update_dict` must be a dictionary")
 
     else:
         print(
-            'Warning: we currently do not check that the updated value is the '
-            'correct data type for this Pyomo Parameter, this is your '
-            'responsibility to check!'
+            "Warning: we currently do not check that the updated value is the "
+            "correct data type for this Pyomo Parameter, this is your "
+            "responsibility to check!"
         )
         getattr(backend_model, param).store_values(update_dict)
 
@@ -91,18 +91,18 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
     """
     if not hasattr(backend_model, constraint):
         raise exceptions.ModelError(
-            'constraint/objective `{}` not in the Pyomo Backend.'.format(constraint)
+            "constraint/objective `{}` not in the Pyomo Backend.".format(constraint)
         )
     elif not isinstance(getattr(backend_model, constraint), po.base.Constraint):
         raise exceptions.ModelError(
-            '`{}` not a constraint in the Pyomo Backend.'.format(constraint)
+            "`{}` not a constraint in the Pyomo Backend.".format(constraint)
         )
     elif active is True:
         getattr(backend_model, constraint).activate()
     elif active is False:
         getattr(backend_model, constraint).deactivate()
     else:
-        raise ValueError('Argument `active` must be True or False')
+        raise ValueError("Argument `active` must be True or False")
 
 
 def rerun_pyomo_model(model_data, backend_model):
@@ -116,35 +116,36 @@ def rerun_pyomo_model(model_data, backend_model):
     new_model : calliope.Model
         New calliope model, including both inputs and results, but no backend interface.
     """
-    backend_model.__calliope_run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
+    backend_model.__calliope_run_config = AttrDict.from_yaml_string(
+        model_data.attrs["run_config"]
+    )
 
-    if backend_model.__calliope_run_config['mode'] != 'plan':
+    if backend_model.__calliope_run_config["mode"] != "plan":
         raise exceptions.ModelError(
-            'Cannot rerun the backend in {} run mode. Only `plan` mode is '
-            'possible.'.format(backend_model.__calliope_run_config['mode'])
+            "Cannot rerun the backend in {} run mode. Only `plan` mode is "
+            "possible.".format(backend_model.__calliope_run_config["mode"])
         )
 
     timings = {}
-    log_time(logger, timings, 'model_creation')
+    log_time(logger, timings, "model_creation")
 
     results, backend_model = backend_run.run_plan(
-        model_data, timings, run_pyomo,
-        build_only=False, backend_rerun=backend_model
+        model_data, timings, run_pyomo, build_only=False, backend_rerun=backend_model
     )
 
     inputs = access_pyomo_model_inputs(backend_model)
 
     # Add additional post-processed result variables to results
-    if results.attrs.get('termination_condition', None) in ['optimal', 'feasible']:
+    if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
         results = postprocess_model_results(
             results, model_data.reindex(results.coords), timings
         )
 
     for key, var in results.data_vars.items():
-        var.attrs['is_result'] = 1
+        var.attrs["is_result"] = 1
 
     for key, var in inputs.data_vars.items():
-        var.attrs['is_result'] = 0
+        var.attrs["is_result"] = 0
 
     new_model_data = xr.merge((results, inputs))
     new_model_data.attrs.update(model_data.attrs)
@@ -161,8 +162,8 @@ def rerun_pyomo_model(model_data, backend_model):
     new_model_data = new_model_data.reindex(model_data.coords)
 
     exceptions.warn(
-        'The results of rerunning the backend model are only available within '
-        'the Calliope model returned by this function call.'
+        "The results of rerunning the backend model are only available within "
+        "the Calliope model returned by this function call."
     )
 
     new_calliope_model = calliope.Model(config=None, model_data=new_model_data)
@@ -172,7 +173,6 @@ def rerun_pyomo_model(model_data, backend_model):
 
 
 class BackendInterfaceMethods:
-
     def __init__(self, model):
         self._backend = model._backend_model
         self._model_data = model._model_data

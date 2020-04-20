@@ -36,32 +36,35 @@ def run(model_data, timings, build_only=False):
 
     """
 
-    BACKEND = {
-        'pyomo': run_pyomo
-    }
+    BACKEND = {"pyomo": run_pyomo}
 
-    INTERFACE = {
-        'pyomo': pyomo_interface
-    }
+    INTERFACE = {"pyomo": pyomo_interface}
 
-    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
+    run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
 
-    if run_config['mode'] == 'plan':
+    if run_config["mode"] == "plan":
         results, backend = run_plan(
-            model_data, timings,
-            backend=BACKEND[run_config.backend], build_only=build_only
+            model_data,
+            timings,
+            backend=BACKEND[run_config.backend],
+            build_only=build_only,
         )
 
-    elif run_config['mode'] == 'operate':
+    elif run_config["mode"] == "operate":
         results, backend = run_operate(
-            model_data, timings,
-            backend=BACKEND[run_config.backend], build_only=build_only
+            model_data,
+            timings,
+            backend=BACKEND[run_config.backend],
+            build_only=build_only,
         )
 
-    elif run_config['mode'] == 'spores':
+    elif run_config["mode"] == "spores":
         results, backend = run_spores(
-            model_data, timings, interface=INTERFACE[run_config.backend],
-            backend=BACKEND[run_config.backend], build_only=build_only
+            model_data,
+            timings,
+            interface=INTERFACE[run_config.backend],
+            backend=BACKEND[run_config.backend],
+            build_only=build_only,
         )
 
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
@@ -69,60 +72,73 @@ def run(model_data, timings, build_only=False):
 
 def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
-    log_time(logger, timings, 'run_start', comment='Backend: starting model run')
+    log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
     if not backend_rerun:
         backend_model = backend.generate_model(model_data)
 
         log_time(
-            logger, timings, 'run_backend_model_generated', time_since_run_start=True,
-            comment='Backend: model generated'
+            logger,
+            timings,
+            "run_backend_model_generated",
+            time_since_run_start=True,
+            comment="Backend: model generated",
         )
 
     else:
         backend_model = backend_rerun
 
     run_config = backend_model.__calliope_run_config
-    solver = run_config['solver']
-    solver_io = run_config.get('solver_io', None)
-    solver_options = run_config.get('solver_options', None)
-    save_logs = run_config.get('save_logs', None)
+    solver = run_config["solver"]
+    solver_io = run_config.get("solver_io", None)
+    solver_options = run_config.get("solver_options", None)
+    save_logs = run_config.get("save_logs", None)
 
     if build_only:
         results = xr.Dataset()
 
     else:
         log_time(
-            logger, timings, 'run_solver_start',
-            comment='Backend: sending model to solver'
+            logger,
+            timings,
+            "run_solver_start",
+            comment="Backend: sending model to solver",
         )
 
         results = backend.solve_model(
-            backend_model, solver=solver,
-            solver_io=solver_io, solver_options=solver_options, save_logs=save_logs
+            backend_model,
+            solver=solver,
+            solver_io=solver_io,
+            solver_options=solver_options,
+            save_logs=save_logs,
         )
 
         log_time(
-            logger, timings, 'run_solver_exit', time_since_run_start=True,
-            comment='Backend: solver finished running'
+            logger,
+            timings,
+            "run_solver_exit",
+            time_since_run_start=True,
+            comment="Backend: solver finished running",
         )
 
         termination = backend.load_results(backend_model, results)
 
         log_time(
-            logger, timings, 'run_results_loaded',
-            comment='Backend: loaded results'
+            logger, timings, "run_results_loaded", comment="Backend: loaded results"
         )
 
         results = backend.get_result_array(backend_model, model_data)
-        results.attrs['termination_condition'] = termination
+        results.attrs["termination_condition"] = termination
 
-        if results.attrs['termination_condition'] in ['optimal', 'feasible']:
-            results.attrs['objective_function_value'] = backend_model.obj()
+        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+            results.attrs["objective_function_value"] = backend_model.obj()
 
         log_time(
-            logger, timings, 'run_solution_returned', time_since_run_start=True,
-            comment='Backend: generated solution array'
+            logger,
+            timings,
+            "run_solution_returned",
+            time_since_run_start=True,
+            comment="Backend: generated solution array",
         )
 
     return results, backend_model
@@ -136,50 +152,61 @@ def run_spores(model_data, timings, interface, backend, build_only):
     RESults (SPORES).
 
     """
-    log_time(logger, timings, 'run_start',
-             comment='Backend: starting model run in SPORES mode')
+    log_time(
+        logger,
+        timings,
+        "run_start",
+        comment="Backend: starting model run in SPORES mode",
+    )
 
     run_config = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs['run_config'], name='run_config', observer=model_data
+        initial_yaml_string=model_data.attrs["run_config"],
+        name="run_config",
+        observer=model_data,
     )
 
     backend_model = backend.generate_model(model_data)
 
     log_time(
-        logger, timings, 'run_backend_model_generated', time_since_run_start=True,
-        comment='Backend: model generated'
+        logger,
+        timings,
+        "run_backend_model_generated",
+        time_since_run_start=True,
+        comment="Backend: model generated",
     )
 
-    n_spores = run_config['spores_options']['spores_number']
-    slack = run_config['spores_options']['slack']
-    spores_score = run_config['spores_options']['score_cost_class']
-    slack_group = run_config['spores_options']['slack_cost_group']
+    n_spores = run_config["spores_options"]["spores_number"]
+    slack = run_config["spores_options"]["slack"]
+    spores_score = run_config["spores_options"]["score_cost_class"]
+    slack_group = run_config["spores_options"]["slack_cost_group"]
 
     # Define default scoring function, based on integer scoring method
     # TODO: make the function to run optional
     def _cap_loc_score_default(results, subset=None):
         if subset is None:
             subset = {}
-        cap_loc_score = split_loc_techs(results['energy_cap']).loc[subset]
+        cap_loc_score = split_loc_techs(results["energy_cap"]).loc[subset]
         cap_loc_score = cap_loc_score.where(cap_loc_score > 1e-3, other=0)
         cap_loc_score = cap_loc_score.where(cap_loc_score == 0, other=100)
 
-        return(cap_loc_score.to_pandas())
+        return cap_loc_score.to_pandas()
 
     # Define function to update "spores_score" after each iteration of the method
     def _update_spores_score(backend_model, cap_loc_score):
         loc_tech_score_dict = {
-            (spores_score, '{}::{}'.format(i, j)): k
+            (spores_score, "{}::{}".format(i, j)): k
             for (i, j), k in cap_loc_score.stack().items()
-            if '{}::{}'.format(i, j) in model_data.loc_techs_investment_cost
+            if "{}::{}".format(i, j) in model_data.loc_techs_investment_cost
         }
 
-        interface.update_pyomo_param(backend_model, 'cost_energy_cap', loc_tech_score_dict)
+        interface.update_pyomo_param(
+            backend_model, "cost_energy_cap", loc_tech_score_dict
+        )
 
     def _warn_on_infeasibility():
         return exceptions.warn(
-            'Infeasible SPORE detected. Please check your model configuration. '
-            'No more SPORES will be generated.'
+            "Infeasible SPORE detected. Please check your model configuration. "
+            "No more SPORES will be generated."
         )
 
     # Run once for the 'cost-optimal' solution
@@ -187,23 +214,31 @@ def run_spores(model_data, timings, interface, backend, build_only):
     if build_only:
         return results, backend_model  # We have what we need, so break out of the loop
 
-    if results.attrs['termination_condition'] in ['optimal', 'feasible']:
-        results.attrs['objective_function_value'] = backend_model.obj()
+    if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+        results.attrs["objective_function_value"] = backend_model.obj()
         # Storing results and scores in the specific dictionaries
         spores_list = [results]
         cum_scores = _cap_loc_score_default(results)
         # Set group constraint "cost_max" equal to slacked cost
-        slack_costs = model_data.group_cost_max.loc[{'group_names_cost_max': slack_group}].dropna('costs')
+        slack_costs = model_data.group_cost_max.loc[
+            {"group_names_cost_max": slack_group}
+        ].dropna("costs")
         interface.update_pyomo_param(
-            backend_model, 'group_cost_max',
-            {(_cost_class, slack_group):
-             results.cost.loc[{'costs': _cost_class}].sum() * (1 + slack)
-             for _cost_class in slack_costs.costs.values}
+            backend_model,
+            "group_cost_max",
+            {
+                (_cost_class, slack_group): results.cost.loc[
+                    {"costs": _cost_class}
+                ].sum()
+                * (1 + slack)
+                for _cost_class in slack_costs.costs.values
+            },
         )
         # Modify objective function weights: spores_score -> 1, all others -> 0
         interface.update_pyomo_param(
-            backend_model, 'objective_cost_class',
-            {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}}
+            backend_model,
+            "objective_cost_class",
+            {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}},
         )
         # Update "spores_score" based on previous iteration
         _update_spores_score(backend_model, cum_scores)
@@ -212,8 +247,11 @@ def run_spores(model_data, timings, interface, backend, build_only):
         return results, backend_model
 
     log_time(
-        logger, timings, 'run_solution_returned', time_since_run_start=True,
-        comment='Backend: generated solution array for the cost-optimal case'
+        logger,
+        timings,
+        "run_solution_returned",
+        time_since_run_start=True,
+        comment="Backend: generated solution array for the cost-optimal case",
     )
 
     # Iterate over the number of SPORES requested by the user
@@ -222,8 +260,8 @@ def run_spores(model_data, timings, interface, backend, build_only):
             model_data, timings, backend, build_only, backend_rerun=backend_model
         )
 
-        if results.attrs['termination_condition'] in ['optimal', 'feasible']:
-            results.attrs['objective_function_value'] = backend_model.obj()
+        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+            results.attrs["objective_function_value"] = backend_model.obj()
             # Storing results and scores in the specific dictionaries
             spores_list.append(results)
             cum_scores += _cap_loc_score_default(results)
@@ -233,13 +271,16 @@ def run_spores(model_data, timings, interface, backend, build_only):
             _warn_on_infeasibility()
             break
         log_time(
-            logger, timings, 'run_solution_returned', time_since_run_start=True,
-            comment='Backend: generated solution array for the cost-optimal case'
+            logger,
+            timings,
+            "run_solution_returned",
+            time_since_run_start=True,
+            comment="Backend: generated solution array for the cost-optimal case",
         )
         # TODO: make this function work with the spores dimension,
         # so that postprocessing can take place in core/model.py, as with run_plan and run_operate
 
-    results = xr.concat(spores_list, dim='spores')
+    results = xr.concat(spores_list, dim="spores")
 
     return results, backend_model
 
@@ -250,62 +291,79 @@ def run_operate(model_data, timings, backend, build_only):
     iteratively run within Pyomo.
 
     """
-    log_time(logger, timings, 'run_start',
-             comment='Backend: starting model run in operational mode')
+    log_time(
+        logger,
+        timings,
+        "run_start",
+        comment="Backend: starting model run in operational mode",
+    )
 
     defaults = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs['defaults'], name='defaults', observer=model_data
+        initial_yaml_string=model_data.attrs["defaults"],
+        name="defaults",
+        observer=model_data,
     )
     run_config = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs['run_config'], name='run_config', observer=model_data
+        initial_yaml_string=model_data.attrs["run_config"],
+        name="run_config",
+        observer=model_data,
     )
 
     # New param defaults = old maximum param defaults (e.g. energy_cap gets default from energy_cap_max)
     operate_params = {
-        k.replace('_max', ''): v for k, v in defaults.items() if k.endswith('_max')
+        k.replace("_max", ""): v for k, v in defaults.items() if k.endswith("_max")
     }
-    operate_params['purchased'] = 0  # no _max to work from here, so we hardcode a default
+    operate_params[
+        "purchased"
+    ] = 0  # no _max to work from here, so we hardcode a default
 
     defaults.update(operate_params)
 
     # Capacity results (from plan mode) can be used as the input to operate mode
-    if (any(model_data.filter_by_attrs(is_result=1).data_vars) and
-            run_config.get('operation.use_cap_results', False)):
+    if any(model_data.filter_by_attrs(is_result=1).data_vars) and run_config.get(
+        "operation.use_cap_results", False
+    ):
         # Anything with is_result = 1 will be ignored in the Pyomo model
         for varname, varvals in model_data.data_vars.items():
             if varname in operate_params.keys():
-                varvals.attrs['is_result'] = 1
-                varvals.attrs['operate_param'] = 1
+                varvals.attrs["is_result"] = 1
+                varvals.attrs["operate_param"] = 1
 
     else:
-        cap_max = xr.merge([
-            v.rename(k.replace('_max', ''))
-            for k, v in model_data.data_vars.items() if '_max' in k
-        ])
-        cap_equals = xr.merge([
-            v.rename(k.replace('_equals', ''))
-            for k, v in model_data.data_vars.items() if '_equals' in k
-        ])
+        cap_max = xr.merge(
+            [
+                v.rename(k.replace("_max", ""))
+                for k, v in model_data.data_vars.items()
+                if "_max" in k
+            ]
+        )
+        cap_equals = xr.merge(
+            [
+                v.rename(k.replace("_equals", ""))
+                for k, v in model_data.data_vars.items()
+                if "_equals" in k
+            ]
+        )
         caps = cap_max.update(cap_equals)
         for cap in caps.data_vars.values():
-            cap.attrs['is_result'] = 1
-            cap.attrs['operate_param'] = 1
+            cap.attrs["is_result"] = 1
+            cap.attrs["operate_param"] = 1
         model_data.update(caps)
 
     comments, warnings, errors = checks.check_operate_params(model_data)
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # Initialize our variables
-    solver = run_config['solver']
-    solver_io = run_config.get('solver_io', None)
-    solver_options = run_config.get('solver_options', None)
-    save_logs = run_config.get('save_logs', None)
-    window = run_config['operation']['window']
-    horizon = run_config['operation']['horizon']
+    solver = run_config["solver"]
+    solver_io = run_config.get("solver_io", None)
+    solver_options = run_config.get("solver_options", None)
+    save_logs = run_config.get("save_logs", None)
+    window = run_config["operation"]["window"]
+    horizon = run_config["operation"]["horizon"]
     window_to_horizon = horizon - window
 
     # get the cumulative sum of timestep resolution, to find where we hit our window and horizon
-    timestep_cumsum = model_data.timestep_resolution.cumsum('timesteps').to_pandas()
+    timestep_cumsum = model_data.timestep_resolution.cumsum("timesteps").to_pandas()
     # get the timesteps at which we start and end our windows
     window_ends = timestep_cumsum.where(
         (timestep_cumsum % window == 0) | (timestep_cumsum == timestep_cumsum[-1])
@@ -315,18 +373,21 @@ def run_operate(model_data, timings, backend, build_only):
     ).dropna()
 
     window_ends = window_ends.dropna()
-    horizon_ends = timestep_cumsum[timestep_cumsum.isin(window_ends.values + window_to_horizon)]
+    horizon_ends = timestep_cumsum[
+        timestep_cumsum.isin(window_ends.values + window_to_horizon)
+    ]
 
     if not any(window_starts):
         raise exceptions.ModelError(
-            'Not enough timesteps or incorrect timestep resolution to run in '
-            'operational mode with an optimisation window of {}'.format(window)
+            "Not enough timesteps or incorrect timestep resolution to run in "
+            "operational mode with an optimisation window of {}".format(window)
         )
 
     # We will only update timseries parameters
     timeseries_data_vars = [
-        k for k, v in model_data.data_vars.items() if 'timesteps' in v.dims
-        and v.attrs['is_result'] == 0
+        k
+        for k, v in model_data.data_vars.items()
+        if "timesteps" in v.dims and v.attrs["is_result"] == 0
     ]
 
     # Loop through each window, solve over the horizon length, and add result to
@@ -352,8 +413,10 @@ def run_operate(model_data, timings, backend, build_only):
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
-                logger, timings, 'model_gen_1',
-                comment='Backend: generating initial model'
+                logger,
+                timings,
+                "model_gen_1",
+                comment="Backend: generating initial model",
             )
 
             backend_model = backend.generate_model(window_model_data)
@@ -367,12 +430,15 @@ def run_operate(model_data, timings, backend, build_only):
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
-                logger, timings, 'model_gen_{}'.format(i + 1),
+                logger,
+                timings,
+                "model_gen_{}".format(i + 1),
                 comment=(
-                    'Backend: iteration {}: generating new model for '
-                    'end of timeseries, with horizon = {} timesteps'
-                    .format(i + 1, window_ends[i] - window_starts[i])
-                )
+                    "Backend: iteration {}: generating new model for "
+                    "end of timeseries, with horizon = {} timesteps".format(
+                        i + 1, window_ends[i] - window_starts[i]
+                    )
+                ),
             )
 
             backend_model = backend.generate_model(window_model_data)
@@ -385,16 +451,24 @@ def run_operate(model_data, timings, backend, build_only):
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
 
             log_time(
-                logger, timings, 'model_gen_{}'.format(i + 1),
-                comment='Backend: iteration {}: updating model parameters'.format(i + 1)
+                logger,
+                timings,
+                "model_gen_{}".format(i + 1),
+                comment="Backend: iteration {}: updating model parameters".format(
+                    i + 1
+                ),
             )
             # Pyomo model sees the same timestamps each time, we just change the
             # values associated with those timestamps
             for var in timeseries_data_vars:
                 # New values
-                var_series = window_model_data[var].to_series().dropna().replace('inf', np.inf)
+                var_series = (
+                    window_model_data[var].to_series().dropna().replace("inf", np.inf)
+                )
                 # Same timestamps
-                var_series.index = backend_model.__calliope_model_data['data'][var].keys()
+                var_series.index = backend_model.__calliope_model_data["data"][
+                    var
+                ].keys()
                 var_dict = var_series.to_dict()
                 # Update pyomo Param with new dictionary
 
@@ -402,19 +476,29 @@ def run_operate(model_data, timings, backend, build_only):
 
         if not build_only:
             log_time(
-                logger, timings, 'model_run_{}'.format(i + 1), time_since_run_start=True,
-                comment='Backend: iteration {}: sending model to solver'.format(i + 1)
+                logger,
+                timings,
+                "model_run_{}".format(i + 1),
+                time_since_run_start=True,
+                comment="Backend: iteration {}: sending model to solver".format(i + 1),
             )
             # After iteration 1, warmstart = True, which should speed up the process
             # Note: Warmstart isn't possible with GLPK (dealt with later on)
             _results = backend.solve_model(
-                backend_model, solver=solver, solver_io=solver_io,
-                solver_options=solver_options, save_logs=save_logs, warmstart=warmstart,
+                backend_model,
+                solver=solver,
+                solver_io=solver_io,
+                solver_options=solver_options,
+                save_logs=save_logs,
+                warmstart=warmstart,
             )
 
             log_time(
-                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_run_start=True,
-                comment='Backend: iteration {}: solver finished running'.format(i + 1)
+                logger,
+                timings,
+                "run_solver_exit_{}".format(i + 1),
+                time_since_run_start=True,
+                comment="Backend: iteration {}: solver finished running".format(i + 1),
             )
             # xarray dataset is built for each iteration
             _termination = backend.load_results(backend_model, _results)
@@ -424,7 +508,7 @@ def run_operate(model_data, timings, backend, build_only):
 
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
-            _results['timesteps'] = window_model_data.timesteps.copy()
+            _results["timesteps"] = window_model_data.timesteps.copy()
 
             # We always save the window data. Until the last window(s) this will crop
             # the window_to_horizon timesteps. In the last window(s), optimistion will
@@ -433,24 +517,33 @@ def run_operate(model_data, timings, backend, build_only):
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
-            if 'loc_techs_store' in model_data.dims.keys():
-                storage_initial = _results.storage.loc[{'timesteps': window_ends.index[i]}].drop('timesteps')
-                model_data['storage_initial'].loc[storage_initial.coords] = storage_initial.values
+            if "loc_techs_store" in model_data.dims.keys():
+                storage_initial = _results.storage.loc[
+                    {"timesteps": window_ends.index[i]}
+                ].drop("timesteps")
+                model_data["storage_initial"].loc[
+                    storage_initial.coords
+                ] = storage_initial.values
                 backend_model.storage_initial.store_values(
                     storage_initial.to_series().dropna().to_dict()
                 )
 
             # Set up total operated units for the next iteration
-            if 'loc_techs_milp' in model_data.dims.keys():
-                operated_units = _results.operating_units.sum('timesteps').astype(np.int)
-                model_data['operated_units'].loc[{}] += operated_units.values
+            if "loc_techs_milp" in model_data.dims.keys():
+                operated_units = _results.operating_units.sum("timesteps").astype(
+                    np.int
+                )
+                model_data["operated_units"].loc[{}] += operated_units.values
                 backend_model.operated_units.store_values(
                     operated_units.to_series().dropna().to_dict()
                 )
 
             log_time(
-                logger, timings, 'run_solver_exit_{}'.format(i + 1), time_since_run_start=True,
-                comment='Backend: iteration {}: generated solution array'.format(i + 1)
+                logger,
+                timings,
+                "run_solver_exit_{}".format(i + 1),
+                time_since_run_start=True,
+                comment="Backend: iteration {}: generated solution array".format(i + 1),
             )
 
     if build_only:
@@ -458,17 +551,20 @@ def run_operate(model_data, timings, backend, build_only):
     else:
         # Concatenate results over the timestep dimension to get a single
         # xarray Dataset of interest
-        results = xr.concat(result_array, dim='timesteps')
-        if all(i == 'optimal' for i in terminations):
-            results.attrs['termination_condition'] = 'optimal'
-        elif all(i in ['optimal', 'feasible'] for i in terminations):
-            results.attrs['termination_condition'] = 'feasible'
+        results = xr.concat(result_array, dim="timesteps")
+        if all(i == "optimal" for i in terminations):
+            results.attrs["termination_condition"] = "optimal"
+        elif all(i in ["optimal", "feasible"] for i in terminations):
+            results.attrs["termination_condition"] = "feasible"
         else:
-            results.attrs['termination_condition'] = ','.join(terminations)
+            results.attrs["termination_condition"] = ",".join(terminations)
 
         log_time(
-            logger, timings, 'run_solution_returned', time_since_run_start=True,
-            comment='Backend: generated full solution array'
+            logger,
+            timings,
+            "run_solution_returned",
+            time_since_run_start=True,
+            comment="Backend: generated full solution array",
         )
 
     return results, backend_model
