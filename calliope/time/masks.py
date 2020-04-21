@@ -33,7 +33,7 @@ def _get_array(data, var, tech, **kwargs):
         )
 
     arr = split_loc_techs(data[var].copy()).loc[subset]
-    arr = arr.mean(dim=[i for i in arr.dims if i is not "timesteps"]).to_pandas()
+    arr = arr.mean(dim=[i for i in arr.dims if i != "timesteps"]).to_pandas()
     return arr
 
 
@@ -91,7 +91,7 @@ def extreme(
     groupby_length=None,
     padding=None,
     normalize=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
@@ -148,7 +148,7 @@ def extreme_diff(
     groupby_length=None,
     padding=None,
     normalize=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Returns timesteps for period of ``length`` where the diffence in extreme

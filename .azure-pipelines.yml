@@ -50,8 +50,9 @@ steps:
     displayName: Configure and update conda
 
   - bash: |
-      python utils/conda_create.py requirements/base.yml requirements/unix.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      python utils/conda_create.py requirements.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       source activate calliope
+      conda install -y -c conda-forge coincbc
       pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
     displayName: Set up environment and run tests (UNIX)
@@ -62,7 +63,7 @@ steps:
       set PATH=cbc/bin;%PATH%
       call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
       call activate base
-      python utils/conda_create.py requirements/base.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      python utils/conda_create.py requirements.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning

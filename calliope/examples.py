@@ -35,7 +35,7 @@ def time_clustering(*args, **kwargs):
         os.path.join(_PATHS["national_scale"], "model.yaml"),
         scenario="time_clustering",
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -45,7 +45,7 @@ def time_resampling(*args, **kwargs):
         os.path.join(_PATHS["national_scale"], "model.yaml"),
         scenario="time_resampling",
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -60,7 +60,7 @@ def milp(*args, **kwargs):
         os.path.join(_PATHS["urban_scale"], "model.yaml"),
         scenario="milp",
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -70,7 +70,7 @@ def operate(*args, **kwargs):
         os.path.join(_PATHS["urban_scale"], "model.yaml"),
         scenario="operate",
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -80,5 +80,5 @@ def time_masking(*args, **kwargs):
         os.path.join(_PATHS["urban_scale"], "model.yaml"),
         scenario="time_masking",
         *args,
-        **kwargs
+        **kwargs,
     )

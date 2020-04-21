@@ -1,9 +1,0 @@
-name: calliope
-
-channels:
-    - conda-forge
-
-dependencies:
-    - coincbc  # COIN-OR CBC LP and MILP solver for testing
-    - coverage >= 4.4
-    - codecov

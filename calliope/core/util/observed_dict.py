@@ -80,7 +80,7 @@ class UpdateObserverDict(ObservedDict):
         initial_dict=None,
         initial_yaml_string=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         self.observer = observer
         self.name = name

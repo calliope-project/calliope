@@ -82,7 +82,7 @@ def generate_model(model_data):
                     *[getattr(backend_model, i) for i in model_data_dict["dims"][k]],
                     initialize=v,
                     mutable=True,
-                    default=backend_model.__calliope_defaults[k]
+                    default=backend_model.__calliope_defaults[k],
                 ),
             )
         # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
@@ -107,7 +107,7 @@ def generate_model(model_data):
                 po.Param(
                     *[getattr(backend_model, i) for i in model_data_dict["dims"][k]],
                     initialize=v,
-                    mutable=True
+                    mutable=True,
                 ),
             )
 
@@ -192,7 +192,7 @@ def solve_model(
     solver_io=None,
     solver_options=None,
     save_logs=False,
-    **solve_kwargs
+    **solve_kwargs,
 ):
     """
     Solve a Pyomo model using the chosen solver and all necessary solver options

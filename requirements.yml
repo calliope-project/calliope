@@ -6,10 +6,12 @@ channels:
 dependencies:
     - bottleneck
     - click
+    - coverage >= 4.4
+    - codecov
     - glpk=4.61
     - hdf5
-    - ipython
     - ipdb
+    - ipython
     - jinja2
     - libnetcdf
     - natsort
@@ -18,10 +20,11 @@ dependencies:
     - numpy
     - pandas=0.25
     - plotly<4.0
+    - pre-commit
     - pyomo=5.6
-    - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
     - pytest-cov
     - pytest-xdist  # pytest distributed testing plugin
+    - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
     - ruamel.yaml=0.16
     - scikit-learn
     - xarray=0.14

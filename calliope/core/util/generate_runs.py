@@ -126,7 +126,7 @@ def generate_bsub_script(
     cluster_mem,
     cluster_time,
     cluster_threads=1,
-    **kwargs
+    **kwargs,
 ):
 
     # We also need to generate the bash script to run on the cluster
@@ -162,7 +162,7 @@ def generate_sbatch_script(
     cluster_mem,
     cluster_time,
     cluster_threads=1,
-    **kwargs
+    **kwargs,
 ):
     """
     SBATCH (SLURM) script generator.

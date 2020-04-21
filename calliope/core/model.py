@@ -259,6 +259,7 @@ class Model(object):
             self._model_data, self._timings, **kwargs
         )
 
+        # Add additional post-processed result variables to results
         if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings

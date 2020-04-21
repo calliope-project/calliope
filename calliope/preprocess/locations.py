@@ -411,7 +411,6 @@ def check_costs_and_compute_depreciation_rates(
     tech_id, loc_or_link, tech_config, warnings, errors
 ):
     cost_classes = list(tech_config.get("costs", {}).keys())
-
     for cost in cost_classes:
 
         # Warning if a cost is defined without a cost class, which is probably a mistake
