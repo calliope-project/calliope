@@ -472,9 +472,13 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     # Find names of csv files (file=) or dataframes (df=) called in config
     def get_names(datatype, config):
-        return set([v.split("=")[1].rsplit(":", 1)[0]
-                    for v in config.values()
-                    if str(datatype) + "=" in str(v)])
+        return set(
+            [
+                v.split("=")[1].rsplit(":", 1)[0]
+                for v in config.values()
+                if str(datatype) + "=" in str(v)
+            ]
+        )
 
     constraint_filenames = get_names("file", location_config)
     cluster_filenames = get_names("file", model_config)
