@@ -42,29 +42,35 @@ def postprocess_model_results(results, model_data, timings):
         all instances of unreasonably low numbers (set by zero_threshold)
 
     """
+    log_time(logger, timings, "post_process_start", comment="Postprocessing: started")
+
+    run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
+    results["capacity_factor"] = capacity_factor(results, model_data)
+    results["systemwide_capacity_factor"] = systemwide_capacity_factor(
+        results, model_data
+    )
+    results["systemwide_levelised_cost"] = systemwide_levelised_cost(
+        results, model_data
+    )
+    results["total_levelised_cost"] = systemwide_levelised_cost(
+        results, model_data, total=True
+    )
+    results = clean_results(results, run_config.get("zero_threshold", 0), timings)
+
     log_time(
-        logger, timings, 'post_process_start',
-        comment='Postprocessing: started'
+        logger,
+        timings,
+        "post_process_end",
+        time_since_run_start=True,
+        comment="Postprocessing: ended",
     )
 
-    run_config = AttrDict.from_yaml_string(model_data.attrs['run_config'])
-    results['capacity_factor'] = capacity_factor(results, model_data)
-    results['systemwide_capacity_factor'] = systemwide_capacity_factor(results, model_data)
-    results['systemwide_levelised_cost'] = systemwide_levelised_cost(results, model_data)
-    results['total_levelised_cost'] = systemwide_levelised_cost(results, model_data, total=True)
-    results = clean_results(results, run_config.get('zero_threshold', 0), timings)
-
-    log_time(
-        logger, timings, 'post_process_end', time_since_run_start=True,
-        comment='Postprocessing: ended'
-    )
-
-    if 'run_solution_returned' in timings.keys():
-        results.attrs['solution_time'] = (
-            timings['run_solution_returned'] - timings['run_start']
+    if "run_solution_returned" in timings.keys():
+        results.attrs["solution_time"] = (
+            timings["run_solution_returned"] - timings["run_start"]
         ).total_seconds()
-        results.attrs['time_finished'] = (
-            timings['run_solution_returned'].strftime('%Y-%m-%d %H:%M:%S')
+        results.attrs["time_finished"] = timings["run_solution_returned"].strftime(
+            "%Y-%m-%d %H:%M:%S"
         )
 
     return results
@@ -77,21 +83,21 @@ def capacity_factor(results, model_data):
 
     """
     # In operate mode, energy_cap is an input parameter
-    if 'energy_cap' not in results.keys():
+    if "energy_cap" not in results.keys():
         energy_cap = model_data.energy_cap
     else:
         energy_cap = results.energy_cap
 
     capacities = xr.DataArray(
         [
-            energy_cap.loc[dict(loc_techs=i.rsplit('::', 1)[0])].values
-            for i in results['loc_tech_carriers_prod'].values
+            energy_cap.loc[dict(loc_techs=i.rsplit("::", 1)[0])].values
+            for i in results["loc_tech_carriers_prod"].values
         ],
-        dims=['loc_tech_carriers_prod'],
-        coords={'loc_tech_carriers_prod': results['loc_tech_carriers_prod']}
+        dims=["loc_tech_carriers_prod"],
+        coords={"loc_tech_carriers_prod": results["loc_tech_carriers_prod"]},
     )
 
-    capacity_factors = (results['carrier_prod'] / capacities).fillna(0)
+    capacity_factors = (results["carrier_prod"] / capacities).fillna(0)
 
     return capacity_factors
 
@@ -107,16 +113,21 @@ def systemwide_capacity_factor(results, model_data):
 
     """
     # In operate mode, energy_cap is an input parameter
-    if 'energy_cap' not in results.keys():
+    if "energy_cap" not in results.keys():
         energy_cap = model_data.energy_cap
     else:
         energy_cap = results.energy_cap
 
     prod_sum = (
-        # Aggregated/clustered days are represented `timestep_weights` times
-        split_loc_techs(results['carrier_prod']) * model_data.timestep_weights
-    ).sum(dim='timesteps').sum(dim='locs')
-    cap_sum = split_loc_techs(energy_cap).sum(dim='locs')
+        (
+            # Aggregated/clustered days are represented `timestep_weights` times
+            split_loc_techs(results["carrier_prod"])
+            * model_data.timestep_weights
+        )
+        .sum(dim="timesteps")
+        .sum(dim="locs")
+    )
+    cap_sum = split_loc_techs(energy_cap).sum(dim="locs")
     time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
 
     capacity_factors = prod_sum / (cap_sum * time_sum)
@@ -151,26 +162,30 @@ def systemwide_levelised_cost(results, model_data, total=False):
         returns overall system-wide levelised cost.
 
     """
-    cost = results['cost']
+    cost = results["cost"]
     # Here we scale production by timestep weight
-    carrier_prod = results['carrier_prod'] * model_data.timestep_weights
+    carrier_prod = results["carrier_prod"] * model_data.timestep_weights
 
     if total:
-        cost = split_loc_techs(cost).sum(dim=['locs', 'techs'])
+        cost = split_loc_techs(cost).sum(dim=["locs", "techs"])
         supply_only_carrier_prod = carrier_prod.sel(
-            loc_tech_carriers_prod=list(model_data.loc_tech_carriers_supply_conversion_all.values)
+            loc_tech_carriers_prod=list(
+                model_data.loc_tech_carriers_supply_conversion_all.values
+            )
         )
-        carrier_prod = split_loc_techs(supply_only_carrier_prod).sum(dim=['timesteps', 'locs', 'techs'])
+        carrier_prod = split_loc_techs(supply_only_carrier_prod).sum(
+            dim=["timesteps", "locs", "techs"]
+        )
     else:
-        cost = split_loc_techs(cost).sum(dim=['locs'])
-        carrier_prod = split_loc_techs(carrier_prod).sum(['timesteps', 'locs'])
+        cost = split_loc_techs(cost).sum(dim=["locs"])
+        carrier_prod = split_loc_techs(carrier_prod).sum(["timesteps", "locs"])
 
     levelised_cost = []
 
-    for carrier in carrier_prod['carriers'].values:
+    for carrier in carrier_prod["carriers"].values:
         levelised_cost.append(cost / carrier_prod.loc[dict(carriers=carrier)])
 
-    return xr.concat(levelised_cost, dim='carriers')
+    return xr.concat(levelised_cost, dim="carriers")
 
 
 def clean_results(results, zero_threshold, timings):
@@ -187,35 +202,38 @@ def clean_results(results, zero_threshold, timings):
         # threshold, note the data variable name and set those values to zero
         if v.where(abs(v) < zero_threshold, drop=True).sum():
             threshold_applied.append(k)
-            with np.errstate(invalid='ignore'):
+            with np.errstate(invalid="ignore"):
                 v.values[abs(v.values) < zero_threshold] = 0
             v.loc[{}] = v.values
 
     if threshold_applied:
-        comment = 'All values < {} set to 0 in {}'.format(zero_threshold, ', '.join(threshold_applied))
+        comment = "All values < {} set to 0 in {}".format(
+            zero_threshold, ", ".join(threshold_applied)
+        )
     else:
-        comment = 'zero threshold of {} not required'.format(zero_threshold)
+        comment = "zero threshold of {} not required".format(zero_threshold)
 
-    log_time(
-        logger, timings, 'threshold_applied',
-        comment='Postprocessing: ' + comment
-    )
+    log_time(logger, timings, "threshold_applied", comment="Postprocessing: " + comment)
 
     # Combine unused_supply and unmet_demand into one variable
-    if ('unmet_demand' in results.data_vars.keys() or
-            'unused_supply' in results.data_vars.keys()):
-        results['unmet_demand'] = (
-            results.get('unmet_demand', 0) + results.get('unused_supply', 0)
+    if (
+        "unmet_demand" in results.data_vars.keys()
+        or "unused_supply" in results.data_vars.keys()
+    ):
+        results["unmet_demand"] = results.get("unmet_demand", 0) + results.get(
+            "unused_supply", 0
         )
 
-        results = results.drop_vars('unused_supply')
+        results = results.drop_vars("unused_supply")
 
         if not results.unmet_demand.sum():
 
             log_time(
-                logger, timings, 'delete_unmet_demand',
-                comment='Postprocessing: Model was feasible, deleting unmet_demand variable'
+                logger,
+                timings,
+                "delete_unmet_demand",
+                comment="Postprocessing: Model was feasible, deleting unmet_demand variable",
             )
-            results = results.drop_vars('unmet_demand')
+            results = results.drop_vars("unmet_demand")
 
     return results

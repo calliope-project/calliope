@@ -8,28 +8,33 @@ import calliope
 from calliope import AttrDict
 
 
-constraint_sets = AttrDict.from_yaml(os.path.join(os.path.dirname(__file__), 'constraint_sets.yaml'))
+constraint_sets = AttrDict.from_yaml(
+    os.path.join(os.path.dirname(__file__), "constraint_sets.yaml")
+)
 
-defaults = AttrDict.from_yaml(os.path.join(os.path.dirname(calliope.__file__), 'config', 'defaults.yaml'))
-
-
-python36_or_higher = pytest.mark.skipif(
-    sys.version_info < (3, 6),
-    reason="Requires ordered dicts from Python >= 3.6"
+defaults = AttrDict.from_yaml(
+    os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
 )
 
 
-def build_test_model(override_dict=None, scenario=None, model_file='model.yaml'):
+python36_or_higher = pytest.mark.skipif(
+    sys.version_info < (3, 6), reason="Requires ordered dicts from Python >= 3.6"
+)
+
+
+def build_test_model(override_dict=None, scenario=None, model_file="model.yaml"):
     return calliope.Model(
-        os.path.join(os.path.dirname(__file__), 'test_model', model_file),
+        os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,
-        scenario=scenario
+        scenario=scenario,
     )
 
 
 def check_error_or_warning(error_warning, test_string_or_strings):
-    if hasattr(error_warning, 'list'):
-        output = ','.join(str(error_warning.list[i]) for i in range(len(error_warning.list)))
+    if hasattr(error_warning, "list"):
+        output = ",".join(
+            str(error_warning.list[i]) for i in range(len(error_warning.list))
+        )
     else:
         output = str(error_warning.value)
 
@@ -74,12 +79,13 @@ def get_indexed_constraint_body(backend_model, constraint, input_index):
 
     """
     constraint_index = [
-        v for v in getattr(backend_model, constraint).values()
+        v
+        for v in getattr(backend_model, constraint).values()
         if v.index() == input_index
     ]
     if len(constraint_index) == 0:
         raise KeyError(
-            'Unable to find index {} in constraint {}'.format(input_index, constraint)
+            "Unable to find index {} in constraint {}".format(input_index, constraint)
         )
     else:
         return constraint_index[0].body

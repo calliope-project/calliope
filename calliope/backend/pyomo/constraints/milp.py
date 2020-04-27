@@ -12,12 +12,13 @@ Constraints for binary and integer decision variables
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import \
-    get_param, \
-    get_timestep_weight, \
-    get_loc_tech, \
-    split_comma_list, \
-    loc_tech_is_in
+from calliope.backend.pyomo.util import (
+    get_param,
+    get_timestep_weight,
+    get_loc_tech,
+    split_comma_list,
+    loc_tech_is_in,
+)
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
 
@@ -25,123 +26,135 @@ ORDER = 30  # order in which to invoke constraints relative to other constraint 
 
 
 def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data['sets']
+    sets = backend_model.__calliope_model_data["sets"]
     run_config = backend_model.__calliope_run_config
 
-    if 'loc_techs_unit_commitment_milp_constraint' in sets:
+    if "loc_techs_unit_commitment_milp_constraint" in sets:
         backend_model.unit_commitment_milp_constraint = po.Constraint(
-            backend_model.loc_techs_unit_commitment_milp_constraint, backend_model.timesteps,
-            rule=unit_commitment_milp_constraint_rule
+            backend_model.loc_techs_unit_commitment_milp_constraint,
+            backend_model.timesteps,
+            rule=unit_commitment_milp_constraint_rule,
         )
 
-    if 'loc_techs_unit_capacity_milp_constraint' in sets:
+    if "loc_techs_unit_capacity_milp_constraint" in sets:
         backend_model.unit_capacity_milp_constraint = po.Constraint(
             backend_model.loc_techs_unit_capacity_milp_constraint,
-            rule=unit_capacity_milp_constraint_rule
+            rule=unit_capacity_milp_constraint_rule,
         )
 
-    if 'loc_tech_carriers_carrier_production_max_milp_constraint' in sets:
+    if "loc_tech_carriers_carrier_production_max_milp_constraint" in sets:
         backend_model.carrier_production_max_milp_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_production_max_milp_constraint,
             backend_model.timesteps,
-            rule=carrier_production_max_milp_constraint_rule
+            rule=carrier_production_max_milp_constraint_rule,
         )
 
-    if 'loc_techs_carrier_production_max_conversion_plus_milp_constraint' in sets:
+    if "loc_techs_carrier_production_max_conversion_plus_milp_constraint" in sets:
         backend_model.carrier_production_max_conversion_plus_milp_constraint = po.Constraint(
             backend_model.loc_techs_carrier_production_max_conversion_plus_milp_constraint,
             backend_model.timesteps,
-            rule=carrier_production_max_conversion_plus_milp_constraint_rule
+            rule=carrier_production_max_conversion_plus_milp_constraint_rule,
         )
 
-    if 'loc_tech_carriers_carrier_consumption_max_milp_constraint' in sets:
+    if "loc_tech_carriers_carrier_consumption_max_milp_constraint" in sets:
         backend_model.carrier_consumption_max_milp_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_consumption_max_milp_constraint,
             backend_model.timesteps,
-            rule=carrier_consumption_max_milp_constraint_rule
+            rule=carrier_consumption_max_milp_constraint_rule,
         )
 
-    if 'loc_tech_carriers_carrier_production_min_milp_constraint' in sets:
+    if "loc_tech_carriers_carrier_production_min_milp_constraint" in sets:
         backend_model.carrier_production_min_milp_constraint = po.Constraint(
             backend_model.loc_tech_carriers_carrier_production_min_milp_constraint,
             backend_model.timesteps,
-            rule=carrier_production_min_milp_constraint_rule
+            rule=carrier_production_min_milp_constraint_rule,
         )
 
-    if 'loc_techs_carrier_production_min_conversion_plus_milp_constraint' in sets:
+    if "loc_techs_carrier_production_min_conversion_plus_milp_constraint" in sets:
         backend_model.carrier_production_min_conversion_plus_milp_constraint = po.Constraint(
             backend_model.loc_techs_carrier_production_min_conversion_plus_milp_constraint,
             backend_model.timesteps,
-            rule=carrier_production_min_conversion_plus_milp_constraint_rule
+            rule=carrier_production_min_conversion_plus_milp_constraint_rule,
         )
 
-    if 'loc_techs_storage_capacity_units_milp_constraint' in sets:
+    if "loc_techs_storage_capacity_units_milp_constraint" in sets:
         backend_model.storage_capacity_units_milp_constraint = po.Constraint(
             backend_model.loc_techs_storage_capacity_units_milp_constraint,
-            rule=storage_capacity_units_milp_constraint_rule
+            rule=storage_capacity_units_milp_constraint_rule,
         )
 
-    if 'loc_techs_energy_capacity_units_milp_constraint' in sets:
+    if "loc_techs_energy_capacity_units_milp_constraint" in sets:
         backend_model.energy_capacity_units_milp_constraint = po.Constraint(
             backend_model.loc_techs_energy_capacity_units_milp_constraint,
-            rule=energy_capacity_units_milp_constraint_rule
+            rule=energy_capacity_units_milp_constraint_rule,
         )
 
-    if 'loc_techs_update_costs_investment_units_milp_constraint' in sets and run_config['mode'] != 'operate':
+    if (
+        "loc_techs_update_costs_investment_units_milp_constraint" in sets
+        and run_config["mode"] != "operate"
+    ):
         for loc_tech, cost in (
             backend_model.loc_techs_update_costs_investment_units_milp_constraint
-            * backend_model.costs):
+            * backend_model.costs
+        ):
 
-            update_costs_investment_units_milp_constraint(backend_model, cost, loc_tech,)
+            update_costs_investment_units_milp_constraint(
+                backend_model, cost, loc_tech,
+            )
 
-    if 'loc_techs_update_costs_investment_purchase_milp_constraint' in sets and run_config['mode'] != 'operate':
+    if (
+        "loc_techs_update_costs_investment_purchase_milp_constraint" in sets
+        and run_config["mode"] != "operate"
+    ):
         for loc_tech, cost in (
             backend_model.loc_techs_update_costs_investment_purchase_milp_constraint
-            * backend_model.costs):
+            * backend_model.costs
+        ):
 
-            update_costs_investment_purchase_milp_constraint(backend_model, cost, loc_tech,)
+            update_costs_investment_purchase_milp_constraint(
+                backend_model, cost, loc_tech,
+            )
 
-    if 'loc_techs_energy_capacity_max_purchase_milp_constraint' in sets:
+    if "loc_techs_energy_capacity_max_purchase_milp_constraint" in sets:
         backend_model.energy_capacity_max_purchase_milp_constraint = po.Constraint(
             backend_model.loc_techs_energy_capacity_max_purchase_milp_constraint,
-            rule=energy_capacity_max_purchase_milp_constraint_rule
+            rule=energy_capacity_max_purchase_milp_constraint_rule,
         )
-    if 'loc_techs_energy_capacity_min_purchase_milp_constraint' in sets:
+    if "loc_techs_energy_capacity_min_purchase_milp_constraint" in sets:
         backend_model.energy_capacity_min_purchase_milp_constraint = po.Constraint(
             backend_model.loc_techs_energy_capacity_min_purchase_milp_constraint,
-            rule=energy_capacity_min_purchase_milp_constraint_rule
+            rule=energy_capacity_min_purchase_milp_constraint_rule,
         )
 
-    if 'loc_techs_storage_capacity_max_purchase_milp_constraint' in sets:
+    if "loc_techs_storage_capacity_max_purchase_milp_constraint" in sets:
         backend_model.storage_capacity_max_purchase_milp_constraint = po.Constraint(
             backend_model.loc_techs_storage_capacity_max_purchase_milp_constraint,
-            rule=storage_capacity_max_purchase_milp_constraint_rule
+            rule=storage_capacity_max_purchase_milp_constraint_rule,
         )
 
-    if 'loc_techs_storage_capacity_min_purchase_milp_constraint' in sets:
+    if "loc_techs_storage_capacity_min_purchase_milp_constraint" in sets:
         backend_model.storage_capacity_min_purchase_milp_constraint = po.Constraint(
             backend_model.loc_techs_storage_capacity_min_purchase_milp_constraint,
-            rule=storage_capacity_min_purchase_milp_constraint_rule
+            rule=storage_capacity_min_purchase_milp_constraint_rule,
         )
 
-    if 'techs_unit_capacity_systemwide_milp_constraint' in sets:
+    if "techs_unit_capacity_systemwide_milp_constraint" in sets:
         backend_model.unit_capacity_systemwide_milp_constraint = po.Constraint(
             backend_model.techs_unit_capacity_systemwide_milp_constraint,
-            rule=unit_capacity_systemwide_milp_constraint_rule
+            rule=unit_capacity_systemwide_milp_constraint_rule,
         )
 
-    if 'loc_techs_asynchronous_prod_con_milp_constraint' in sets:
+    if "loc_techs_asynchronous_prod_con_milp_constraint" in sets:
         backend_model.asynchronous_con_milp_constraint = po.Constraint(
             backend_model.loc_techs_asynchronous_prod_con_milp_constraint,
             backend_model.timesteps,
-            rule=asynchronous_con_milp_constraint_rule
+            rule=asynchronous_con_milp_constraint_rule,
         )
         backend_model.asynchronous_prod_milp_constraint = po.Constraint(
             backend_model.loc_techs_asynchronous_prod_con_milp_constraint,
             backend_model.timesteps,
-            rule=asynchronous_prod_milp_constraint_rule
+            rule=asynchronous_prod_milp_constraint_rule,
         )
-
 
 
 def unit_commitment_milp_constraint_rule(backend_model, loc_tech, timestep):
@@ -162,8 +175,10 @@ def unit_commitment_milp_constraint_rule(backend_model, loc_tech, timestep):
 
     """
 
-    return (backend_model.operating_units[loc_tech, timestep]
-            <= backend_model.units[loc_tech])
+    return (
+        backend_model.operating_units[loc_tech, timestep]
+        <= backend_model.units[loc_tech]
+    )
 
 
 def unit_capacity_milp_constraint_rule(backend_model, loc_tech):
@@ -192,10 +207,12 @@ def unit_capacity_milp_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{milp}
 
     """
-    return get_capacity_constraint(backend_model, 'units', loc_tech)
+    return get_capacity_constraint(backend_model, "units", loc_tech)
 
 
-def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_max_milp_constraint_rule(
+    backend_model, loc_tech_carrier, timestep
+):
     """
     Set maximum carrier production of MILP techs that aren't conversion plus
 
@@ -215,16 +232,20 @@ def carrier_production_max_milp_constraint_rule(backend_model, loc_tech_carrier,
 
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    parasitic_eff = get_param(backend_model, 'parasitic_eff', (loc_tech, timestep))
-    energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
+    parasitic_eff = get_param(backend_model, "parasitic_eff", (loc_tech, timestep))
+    energy_cap = get_param(backend_model, "energy_cap_per_unit", loc_tech)
 
     return carrier_prod <= (
-        backend_model.operating_units[loc_tech, timestep] *
-        timestep_resolution * energy_cap * parasitic_eff
+        backend_model.operating_units[loc_tech, timestep]
+        * timestep_resolution
+        * energy_cap
+        * parasitic_eff
     )
 
 
-def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, loc_tech, timestep):
+def carrier_production_max_conversion_plus_milp_constraint_rule(
+    backend_model, loc_tech, timestep
+):
     """
     Set maximum carrier production of conversion_plus MILP techs
 
@@ -240,23 +261,28 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(backend_model, l
             \\quad \\forall loc::tech \\in loc::techs_{milp, conversion^{+}}, \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
+    model_data_dict = backend_model.__calliope_model_data["data"]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
-    loc_tech_carriers_out = (
-        split_comma_list(model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech])
+    energy_cap = get_param(backend_model, "energy_cap_per_unit", loc_tech)
+    loc_tech_carriers_out = split_comma_list(
+        model_data_dict["lookup_loc_techs_conversion_plus"]["out", loc_tech]
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
-                       for loc_tech_carrier in loc_tech_carriers_out)
+    carrier_prod = sum(
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        for loc_tech_carrier in loc_tech_carriers_out
+    )
 
     return carrier_prod <= (
-        backend_model.operating_units[loc_tech, timestep] *
-        timestep_resolution * energy_cap
+        backend_model.operating_units[loc_tech, timestep]
+        * timestep_resolution
+        * energy_cap
     )
 
 
-def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_min_milp_constraint_rule(
+    backend_model, loc_tech_carrier, timestep
+):
     """
     Set minimum carrier production of MILP techs that aren't conversion plus
 
@@ -273,16 +299,20 @@ def carrier_production_min_milp_constraint_rule(backend_model, loc_tech_carrier,
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
-    energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
+    min_use = get_param(backend_model, "energy_cap_min_use", (loc_tech, timestep))
+    energy_cap = get_param(backend_model, "energy_cap_per_unit", loc_tech)
 
     return carrier_prod >= (
-        backend_model.operating_units[loc_tech, timestep] *
-        timestep_resolution * energy_cap * min_use
+        backend_model.operating_units[loc_tech, timestep]
+        * timestep_resolution
+        * energy_cap
+        * min_use
     )
 
 
-def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, loc_tech, timestep):
+def carrier_production_min_conversion_plus_milp_constraint_rule(
+    backend_model, loc_tech, timestep
+):
     """
     Set minimum carrier production of conversion_plus MILP techs
 
@@ -298,24 +328,30 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(backend_model, l
             \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data['data']
+    model_data_dict = backend_model.__calliope_model_data["data"]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
-    min_use = get_param(backend_model, 'energy_cap_min_use', (loc_tech, timestep))
-    loc_tech_carriers_out = (
-        split_comma_list(model_data_dict['lookup_loc_techs_conversion_plus']['out', loc_tech])
+    energy_cap = get_param(backend_model, "energy_cap_per_unit", loc_tech)
+    min_use = get_param(backend_model, "energy_cap_min_use", (loc_tech, timestep))
+    loc_tech_carriers_out = split_comma_list(
+        model_data_dict["lookup_loc_techs_conversion_plus"]["out", loc_tech]
     )
 
-    carrier_prod = sum(backend_model.carrier_prod[loc_tech_carrier, timestep]
-                       for loc_tech_carrier in loc_tech_carriers_out)
+    carrier_prod = sum(
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        for loc_tech_carrier in loc_tech_carriers_out
+    )
 
     return carrier_prod >= (
-        backend_model.operating_units[loc_tech, timestep] *
-        timestep_resolution * energy_cap * min_use
+        backend_model.operating_units[loc_tech, timestep]
+        * timestep_resolution
+        * energy_cap
+        * min_use
     )
 
 
-def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_consumption_max_milp_constraint_rule(
+    backend_model, loc_tech_carrier, timestep
+):
     """
     Set maximum carrier consumption of demand, storage, and transmission MILP techs
 
@@ -333,11 +369,13 @@ def carrier_consumption_max_milp_constraint_rule(backend_model, loc_tech_carrier
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    energy_cap = get_param(backend_model, 'energy_cap_per_unit', loc_tech)
+    energy_cap = get_param(backend_model, "energy_cap_per_unit", loc_tech)
 
-    return carrier_con >= (-1 *
-        backend_model.operating_units[loc_tech, timestep] *
-        timestep_resolution * energy_cap
+    return carrier_con >= (
+        -1
+        * backend_model.operating_units[loc_tech, timestep]
+        * timestep_resolution
+        * energy_cap
     )
 
 
@@ -355,8 +393,8 @@ def energy_capacity_units_milp_constraint_rule(backend_model, loc_tech):
 
     """
     return backend_model.energy_cap[loc_tech] == (
-        backend_model.units[loc_tech] *
-        get_param(backend_model, 'energy_cap_per_unit', loc_tech)
+        backend_model.units[loc_tech]
+        * get_param(backend_model, "energy_cap_per_unit", loc_tech)
     )
 
 
@@ -374,8 +412,8 @@ def storage_capacity_units_milp_constraint_rule(backend_model, loc_tech):
 
     """
     return backend_model.storage_cap[loc_tech] == (
-        backend_model.units[loc_tech] *
-        get_param(backend_model, 'storage_cap_per_unit', loc_tech)
+        backend_model.units[loc_tech]
+        * get_param(backend_model, "storage_cap_per_unit", loc_tech)
     )
 
 
@@ -401,9 +439,9 @@ def energy_capacity_max_purchase_milp_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{purchase}
 
     """
-    energy_cap_max = get_param(backend_model, 'energy_cap_max', loc_tech)
-    energy_cap_equals = get_param(backend_model, 'energy_cap_equals', loc_tech)
-    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
+    energy_cap_max = get_param(backend_model, "energy_cap_max", loc_tech)
+    energy_cap_equals = get_param(backend_model, "energy_cap_equals", loc_tech)
+    energy_cap_scale = get_param(backend_model, "energy_cap_scale", loc_tech)
 
     if po.value(energy_cap_equals):
         return backend_model.energy_cap[loc_tech] == (
@@ -431,9 +469,9 @@ def energy_capacity_min_purchase_milp_constraint_rule(backend_model, loc_tech):
             \\geq energy_{cap, min}(loc::tech) \\times \\boldsymbol{purchased}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs
     """
-    energy_cap_min = get_param(backend_model, 'energy_cap_min', loc_tech)
+    energy_cap_min = get_param(backend_model, "energy_cap_min", loc_tech)
 
-    energy_cap_scale = get_param(backend_model, 'energy_cap_scale', loc_tech)
+    energy_cap_scale = get_param(backend_model, "energy_cap_scale", loc_tech)
     return backend_model.energy_cap[loc_tech] >= (
         energy_cap_min * energy_cap_scale * backend_model.purchased[loc_tech]
     )
@@ -460,8 +498,8 @@ def storage_capacity_max_purchase_milp_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{purchase, store}
 
     """
-    storage_cap_max = get_param(backend_model, 'storage_cap_max', loc_tech)
-    storage_cap_equals = get_param(backend_model, 'storage_cap_equals', loc_tech)
+    storage_cap_max = get_param(backend_model, "storage_cap_max", loc_tech)
+    storage_cap_equals = get_param(backend_model, "storage_cap_equals", loc_tech)
 
     if po.value(storage_cap_equals):
         return backend_model.storage_cap[loc_tech] == (
@@ -492,7 +530,7 @@ def storage_capacity_min_purchase_milp_constraint_rule(backend_model, loc_tech):
             \\geq storage_{cap, min}(loc::tech) \\times \\boldsymbol{purchased}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{purchase, store}
     """
-    storage_cap_min = get_param(backend_model, 'storage_cap_min', loc_tech)
+    storage_cap_min = get_param(backend_model, "storage_cap_min", loc_tech)
 
     if po.value(storage_cap_min):
         return backend_model.storage_cap[loc_tech] >= (
@@ -517,14 +555,16 @@ def update_costs_investment_units_milp_constraint(backend_model, cost, loc_tech)
     """
     model_data_dict = backend_model.__calliope_model_data
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
+    depreciation_rate = model_data_dict["data"]["cost_depreciation_rate"][
+        (cost, loc_tech)
+    ]
 
-    cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
+    cost_purchase = get_param(backend_model, "cost_purchase", (cost, loc_tech))
     cost_of_purchase = (
         backend_model.units[loc_tech] * cost_purchase * ts_weight * depreciation_rate
     )
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_transmission"):
         cost_of_purchase = cost_of_purchase / 2
 
     backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
@@ -547,14 +587,19 @@ def update_costs_investment_purchase_milp_constraint(backend_model, cost, loc_te
     """
     model_data_dict = backend_model.__calliope_model_data
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict['data']['cost_depreciation_rate'][(cost, loc_tech)]
+    depreciation_rate = model_data_dict["data"]["cost_depreciation_rate"][
+        (cost, loc_tech)
+    ]
 
-    cost_purchase = get_param(backend_model, 'cost_purchase', (cost, loc_tech))
+    cost_purchase = get_param(backend_model, "cost_purchase", (cost, loc_tech))
     cost_of_purchase = (
-        backend_model.purchased[loc_tech] * cost_purchase * ts_weight * depreciation_rate
+        backend_model.purchased[loc_tech]
+        * cost_purchase
+        * ts_weight
+        * depreciation_rate
     )
 
-    if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_transmission'):
+    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_transmission"):
         cost_of_purchase = cost_of_purchase / 2
 
     backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
@@ -585,36 +630,36 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
 
     """
 
-    if tech in getattr(backend_model, 'techs_transmission_names', []):
+    if tech in getattr(backend_model, "techs_transmission_names", []):
         all_loc_techs = [
-            i for i in backend_model.loc_techs_transmission
-            if i.split('::')[1].split(':')[0] == tech
+            i
+            for i in backend_model.loc_techs_transmission
+            if i.split("::")[1].split(":")[0] == tech
         ]
         multiplier = 2  # there are always two technologies associated with one link
     else:
-        all_loc_techs = [
-            i for i in backend_model.loc_techs
-            if i.split('::')[1] == tech
-        ]
+        all_loc_techs = [i for i in backend_model.loc_techs if i.split("::")[1] == tech]
         multiplier = 1
 
-    max_systemwide = get_param(backend_model, 'units_max_systemwide', tech)
-    equals_systemwide = get_param(backend_model, 'units_equals_systemwide', tech)
+    max_systemwide = get_param(backend_model, "units_max_systemwide", tech)
+    equals_systemwide = get_param(backend_model, "units_equals_systemwide", tech)
 
     if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
         return po.Constraint.NoConstraint
     elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
         raise ValueError(
-            'Cannot use inf for energy_cap_equals_systemwide for tech `{}`'.format(tech)
+            "Cannot use inf for energy_cap_equals_systemwide for tech `{}`".format(tech)
         )
 
     sum_expr_units = sum(
-        backend_model.units[loc_tech] for loc_tech in all_loc_techs
-        if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_milp')
+        backend_model.units[loc_tech]
+        for loc_tech in all_loc_techs
+        if loc_tech_is_in(backend_model, loc_tech, "loc_techs_milp")
     )
     sum_expr_purchase = sum(
-        backend_model.purchased[loc_tech] for loc_tech in all_loc_techs
-        if loc_tech_is_in(backend_model, loc_tech, 'loc_techs_purchase')
+        backend_model.purchased[loc_tech]
+        for loc_tech in all_loc_techs
+        if loc_tech_is_in(backend_model, loc_tech, "loc_techs_purchase")
     )
 
     if equals_systemwide:
@@ -638,11 +683,11 @@ def asynchronous_con_milp_constraint_rule(backend_model, loc_tech, timestep):
 
     """
     model_dict = backend_model.__calliope_model_data
-    loc_tech_carrier = model_dict['data']['lookup_loc_techs'][loc_tech]
+    loc_tech_carrier = model_dict["data"]["lookup_loc_techs"][loc_tech]
 
     return (
-        -1 * backend_model.carrier_con[loc_tech_carrier, timestep] <=
-        (1 - backend_model.prod_con_switch[loc_tech, timestep]) * backend_model.bigM
+        -1 * backend_model.carrier_con[loc_tech_carrier, timestep]
+        <= (1 - backend_model.prod_con_switch[loc_tech, timestep]) * backend_model.bigM
     )
 
 
@@ -661,9 +706,9 @@ def asynchronous_prod_milp_constraint_rule(backend_model, loc_tech, timestep):
 
     """
     model_dict = backend_model.__calliope_model_data
-    loc_tech_carrier = model_dict['data']['lookup_loc_techs'][loc_tech]
+    loc_tech_carrier = model_dict["data"]["lookup_loc_techs"][loc_tech]
 
     return (
-        backend_model.carrier_prod[loc_tech_carrier, timestep] <=
-        backend_model.prod_con_switch[loc_tech, timestep] * backend_model.bigM
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        <= backend_model.prod_con_switch[loc_tech, timestep] * backend_model.bigM
     )

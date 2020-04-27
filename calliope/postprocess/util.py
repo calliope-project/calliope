@@ -59,7 +59,9 @@ def subset_sum_squeeze(data, subset={}, sum_dims=None, squeeze=False):
 
     if squeeze:  # finally, squeeze out single length dimensions
         if len(data.techs) == 1:
-            dims_to_squeeze = [i for i in data.dims if len(data[i]) == 1 and i != 'techs']
+            dims_to_squeeze = [
+                i for i in data.dims if len(data[i]) == 1 and i != "techs"
+            ]
             data = data.squeeze(dims_to_squeeze)
         else:
             data = data.squeeze()
