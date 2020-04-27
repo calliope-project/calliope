@@ -267,7 +267,7 @@ class TestAttrDict:
 
     def test_union_empty_dicts(self, attr_dict):
         d = attr_dict
-        d_new = AttrDict({"1": {"foo": {}}, "baz": {"bar": {}},})
+        d_new = AttrDict({"1": {"foo": {}}, "baz": {"bar": {}}})
         d.union(d_new)
         assert len(d.baz.bar.keys()) == 0
 

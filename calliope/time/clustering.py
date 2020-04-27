@@ -353,7 +353,7 @@ def get_clusters(
     timesteps=None,
     k=None,
     variables=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Run a clustering algorithm on the timeseries data supplied. All timeseries

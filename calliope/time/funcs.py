@@ -130,7 +130,7 @@ def apply_clustering(
     scale_clusters="mean",
     storage_inter_cluster=True,
     model_run=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Apply the given clustering function to the given data.
@@ -230,7 +230,7 @@ def apply_clustering(
             data_normalized,
             clustering_func,
             timesteps_per_day=timesteps_per_day,
-            **kwargs
+            **kwargs,
         )
         clusters = result[0]  # Ignore other stuff returned
 

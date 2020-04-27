@@ -34,7 +34,7 @@ To contribute changes:
 1. Fork the project on GitHub
 2. Create a feature branch to work on in your fork (``git checkout -b new-fix-or-feature``)
 3. Add your name to the ``AUTHORS`` file
-4. Commit your changes to the feature branch
+4. Commit your changes to the feature branch after running black to format your code (formatting is automatic if the ``pre-commit`` hooks have been installed; see [below](#codeconvention) for more info)
 5. Push the branch to GitHub (``git push origin new-fix-or-feature``)
 6. On GitHub, create a new [pull request](https://github.com/calliope-project/calliope/pull/new/master) from the feature branch
 
@@ -67,15 +67,13 @@ All tests are in the ``calliope/test`` directory and use [pytest](https://docs.p
 
 Our test coverage is not perfect and an easy way to contribute code is to work on better tests.
 
-## Coding conventions
+## <a name="codeconvention"></a>Coding conventions
 
 Start reading our code and you'll get the hang of it.
 
 We mostly follow the official [Style Guide for Python Code (PEP8)](https://www.python.org/dev/peps/pep-0008/).
 
-We prefer line lengths below 80 characters, but do not enforce this militantly. Readability of code is more important than strict adherence to this line length.
-
-This is open source software. Consider the people who will read your code, and make it look nice for them. It's sort of like driving a car: Perhaps you love doing donuts when you're alone, but with passengers the goal is to make the ride as smooth as possible.
+We have chosen to use the uncompromising code formatter, [`black`](https://github.com/psf/black/).  If run from the root directory of this repo, `pyproject.toml` should ensure the line lengths are restricted to 88.  The philosophy behind using black is to have uniform style throughout the project dictated by code.  Since `black` is designed to minimise diffs, and make patches more human readable, this also makes code reviews more efficient.  To make this a smooth experience, you should add a black formatting script to your git pre-commit hooks before creating a PR.  We provide a quick and easy way to set this up as part of the [development guide in our documentation](http://calliope.readthedocs.io/en/latest/user/develop.html#installing-a-development-version).
 
 ## Attribution
 

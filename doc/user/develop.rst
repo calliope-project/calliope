@@ -20,27 +20,32 @@ As when installing a stable version, using ``conda`` is recommended.
 
 To actively contribute to Calliope development, or simply track the latest development version, you'll instead want to clone our GitHub repository. This will provide you with the master branch in a known location on your local device.
 
-First, clone the repository
+First, clone the repository:
 
   .. code-block:: fishshell
 
-    $ git clone https://github.com/calliope-project/calliope
+   $ git clone https://github.com/calliope-project/calliope
 
-Using conda, install all requirements, including the free and open source GLPK solver, into a new environment, e.g. ``calliope_dev``
-
-
-  .. code-block:: fishshell
-
-    $ conda env create -f calliope/requirements/base.yml -n calliope_dev
-    $ conda activate calliope_dev
-
-Then install Calliope itself with pip
+Then install all development requirements for Calliope into a new environment, calling it e.g. ``calliope_dev``:
 
   .. code-block:: fishshell
 
-    $ pip install -e calliope
+   $ conda env create -f requirements.yml -n calliope_dev
+   $ conda activate calliope_dev
 
-Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. To install solvers other than GLPK, see our `solver installation instructions <install_solvers>`.
+Finally install Calliope itself as an editable installation with pip:
+
+  .. code-block:: fishshell
+
+   $ pip install -e calliope
+
+.. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. If you are running on a Unix system, then you can run ``conda install coincbc`` to also install the CBC solver. To install solvers other than CBC, and for Windows systems, see our :ref:`solver installation instructions <install_solvers>`.
+
+We use the code formatter `black <https://github.com/psf/black/>`_ and before you contribute any code, you should ensure that you have run it through black. If you don't have a process for doing this already, you can install our configured `pre-commit <https://pre-commit.com/>`_ hook which will automatically run black on each commit:
+
+  .. code-block:: fishshell
+
+   $ pre-commit install
 
 ---------------------------
 Creating modular extensions
