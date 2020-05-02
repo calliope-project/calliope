@@ -319,15 +319,33 @@ def calculate_storage_plus_parameters(data, model_run):
             exceptions.print_warnings_and_raise_errors(errors=missing_data_errors)
 
         lookup_table_name = "lookup_storage_time__{}".format(loc_tech)
-        storage_time = data[lookup_table_name].to_pandas()
+        storage_time = data[lookup_table_name].to_pandas().astype(float)
+        # print(storage_time.index)
+        shared_storage_prod = shared_storage_prod.to_frame().astype(float)
+        storage_leaving = storage_time.merge(shared_storage_prod, left_index=True, right_index=True)
+        storage_leaving = storage_leaving.fillna(0)
 
-        # storage_leaving = storage_time.multiply(shared_storage_prod)
+        storage_leaving[0] = storage_leaving['0_x'] * storage_leaving['0_y']
+        storage_leaving[1] = storage_leaving[1] * storage_leaving['0_y']
+        storage_leaving[2] = storage_leaving[2] * storage_leaving['0_y']
+        storage_leaving[3] = storage_leaving[3] * storage_leaving['0_y']
+        storage_leaving[4] = storage_leaving[4] * storage_leaving['0_y']
+        storage_leaving[5] = storage_leaving[5] * storage_leaving['0_y']
+        storage_leaving[6] = storage_leaving[6] * storage_leaving['0_y']
+        storage_leaving[7] = storage_leaving[7] * storage_leaving['0_y']
+        storage_leaving[8] = storage_leaving[8] * storage_leaving['0_y']
+        storage_leaving[9] = storage_leaving[9] * storage_leaving['0_y']
 
-        # storage_leaving[ts, i] = shared_storage_prod[ts] * storage_time[ts, i]
+        storage_leaving = storage_leaving.drop(columns=['0_x','0_y'])
+        print(storage_leaving)
+
+        storage_leaving['storage_away'] =
+
+
         # new column : storage_away
-        # storage_away[ts] = storage_away[ts-1]
-        #                          + sum_i(storage_leaving[ts,i])
-        #                           - sum_i(storage_leaving[ts-i,i])
+        # storage_away[t] = storage_away[t-1]
+        #                          + sum_i(storage_leaving[t,i])
+        #                           - sum_i(storage_leaving[t-i,i])
 
         try:
             # assert max storage_away <= 1
