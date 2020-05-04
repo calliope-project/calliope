@@ -322,44 +322,50 @@ def calculate_storage_plus_parameters(data, model_run):
         storage_time = data[lookup_table_name].to_pandas().astype(float)
         # print(storage_time.index)
         shared_storage_prod = shared_storage_prod.to_frame().astype(float)
-        storage_leaving = storage_time.merge(shared_storage_prod, left_index=True, right_index=True)
-        storage_leaving = storage_leaving.fillna(0)
+        storage_time = storage_time.merge(shared_storage_prod, left_index=True, right_index=True)
+        storage_time = storage_time.fillna(0)
 
-        storage_leaving[0] = storage_leaving['0_x'] * storage_leaving['0_y']
-        storage_leaving[1] = storage_leaving[1] * storage_leaving['0_y']
-        storage_leaving[2] = storage_leaving[2] * storage_leaving['0_y']
-        storage_leaving[3] = storage_leaving[3] * storage_leaving['0_y']
-        storage_leaving[4] = storage_leaving[4] * storage_leaving['0_y']
-        storage_leaving[5] = storage_leaving[5] * storage_leaving['0_y']
-        storage_leaving[6] = storage_leaving[6] * storage_leaving['0_y']
-        storage_leaving[7] = storage_leaving[7] * storage_leaving['0_y']
-        storage_leaving[8] = storage_leaving[8] * storage_leaving['0_y']
-        storage_leaving[9] = storage_leaving[9] * storage_leaving['0_y']
+        # fix me; hardcoding = bad
+        # will improve this next block after proof of concept
 
-        storage_leaving = storage_leaving.drop(columns=['0_x','0_y'])
-        print(storage_leaving)
+        storage_time[0] = storage_time['0_x'] * storage_time['0_y']
+        storage_time[1] = storage_time[1] * storage_time['0_y']
+        storage_time[2] = storage_time[2] * storage_time['0_y']
+        storage_time[3] = storage_time[3] * storage_time['0_y']
+        storage_time[4] = storage_time[4] * storage_time['0_y']
+        storage_time[5] = storage_time[5] * storage_time['0_y']
+        storage_time[6] = storage_time[6] * storage_time['0_y']
+        storage_time[7] = storage_time[7] * storage_time['0_y']
+        storage_time[8] = storage_time[8] * storage_time['0_y']
+        storage_time[9] = storage_time[9] * storage_time['0_y']
 
-        storage_leaving['storage_away'] =
+        # try .mul with axis=0
 
+        storage_time = storage_time.drop(columns=['0_x', '0_y'])
+        storage_leaving = storage_time.copy()
+        storage_leaving = storage_leaving.sum(axis=1)
 
-        # new column : storage_away
-        # storage_away[t] = storage_away[t-1]
-        #                          + sum_i(storage_leaving[t,i])
-        #                           - sum_i(storage_leaving[t-i,i])
+        storage_arriving = storage_time.copy()
+        for column in storage_arriving.columns:
+            storage_arriving[column] = storage_arriving[column].shift(column)
+        storage_arriving = storage_arriving.sum(axis=1)
 
+        storage_away = storage_arriving.copy()
+        # storage_away[t] = storage_away[t-1] + storage_leaving[t] - storage_arriving[t]
         try:
-            # assert max storage_away <= 1
-            # assert min storage_away >= 0
+            assert storage_away.max() <= 1
+            assert storage_away.min() >= 0
             assert 1 == 1
         except(AssertionError):
             storage_time_errors.append(
-                'Inputs for shared_storage_prod and storage_time are not consistent - please amend!'
+                'Inputs for shared_storage_prod and storage_time are not consistent - please revisit.'
             )
         if storage_time_errors:
             exceptions.print_warnings_and_raise_errors(errors=storage_time_errors)
 
         # add storage away column to storage_away dataframe with loc_tech as header
         # data[storage_away] as dataarray
+        data.append(storage_away)
 
     return data
 
