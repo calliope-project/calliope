@@ -339,7 +339,7 @@ def calculate_storage_plus_parameters(data, model_run):
         storage_time[8] = storage_time[8] * storage_time['0_y']
         storage_time[9] = storage_time[9] * storage_time['0_y']
 
-        # try .mul with axis=0
+        # try .mul with axis=0 instead
 
         storage_time = storage_time.drop(columns=['0_x', '0_y'])
         storage_leaving = storage_time.copy()
@@ -349,9 +349,10 @@ def calculate_storage_plus_parameters(data, model_run):
         for column in storage_arriving.columns:
             storage_arriving[column] = storage_arriving[column].shift(column)
         storage_arriving = storage_arriving.sum(axis=1)
+        net_storage_leaving = storage_arriving.copy()
+        net_storage_leaving = storage_leaving.subtract(storage_arriving, fill_value=0)
+        storage_away = net_storage_leaving.cumsum()
 
-        storage_away = storage_arriving.copy()
-        # storage_away[t] = storage_away[t-1] + storage_leaving[t] - storage_arriving[t]
         try:
             assert storage_away.max() <= 1
             assert storage_away.min() >= 0
@@ -363,9 +364,11 @@ def calculate_storage_plus_parameters(data, model_run):
         if storage_time_errors:
             exceptions.print_warnings_and_raise_errors(errors=storage_time_errors)
 
+        # storage_away is the proportion of storage that is away
+        # multiply this by the total capacity in the system to get second batteries storage_cap_equals_per_time
         # add storage away column to storage_away dataframe with loc_tech as header
         # data[storage_away] as dataarray
-        data.append(storage_away)
+        # data[storage_away]
 
     return data
 
