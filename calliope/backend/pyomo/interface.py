@@ -266,9 +266,7 @@ def get_all_pyomo_model_attrs(backend_model):
     }
     # Indices
     objects["Set"] = [
-        i.name
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.Set)
+        i.name for i in backend_model.component_objects() if isinstance(i, po.base.Set)
     ]
 
     return objects
