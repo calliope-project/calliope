@@ -268,7 +268,7 @@ def get_all_pyomo_model_attrs(backend_model):
     objects["Set"] = [
         i.name
         for i in backend_model.component_objects()
-        if isinstance(i, getattr(po.base, "Set"))
+        if isinstance(i, po.base.Set)
     ]
 
     return objects
