@@ -103,8 +103,13 @@ class TestGetDomain:
 class TestCheckValue:
     def test_check_values(self):
         pyomo_model = po.ConcreteModel()
-        pyomo_model.new_set = po.Set(initialize=['a', 'b'])
-        pyomo_model.new_param = po.Param(pyomo_model.new_set, initialize={'a': 1}, mutable=True, within=po.NonNegativeReals)
+        pyomo_model.new_set = po.Set(initialize=["a", "b"])
+        pyomo_model.new_param = po.Param(
+            pyomo_model.new_set,
+            initialize={"a": 1},
+            mutable=True,
+            within=po.NonNegativeReals,
+        )
 
-        assert check_value(pyomo_model.new_param['a']) is False
-        assert check_value(pyomo_model.new_param['b']) is True
+        assert check_value(pyomo_model.new_param["a"]) is False
+        assert check_value(pyomo_model.new_param["b"]) is True
