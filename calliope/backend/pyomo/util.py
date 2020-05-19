@@ -5,6 +5,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import logging
+import re
 
 import numpy as np
 import pandas as pd
@@ -205,12 +206,12 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
-        if "cost" in var.name or var.name in ["resource", "loc_coordinates"]:
+        if re.match("resource|loc_coordinates|cost*", var.name):
             return ""
         else:
             return "NonNegative"
 
-    if var.dtype == bool:
+    if var.dtype.kind == "b":
         return "Boolean"
     elif is_numeric_dtype(var.dtype):
         return check_sign(var) + "Reals"
