@@ -68,11 +68,6 @@ def update_pyomo_param(backend_model, param, update_dict):
         raise TypeError("`update_dict` must be a dictionary")
 
     else:
-        print(
-            "Warning: we currently do not check that the updated value is the "
-            "correct data type for this Pyomo Parameter, this is your "
-            "responsibility to check!"
-        )
         getattr(backend_model, param).store_values(update_dict)
 
 

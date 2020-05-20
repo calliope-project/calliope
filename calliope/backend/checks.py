@@ -61,6 +61,11 @@ def check_operate_params(model_data):
             return False
 
     def _set_inf_and_warn(loc_tech, var, warnings, warning_text):
+        # inf will only work on float dtypes
+        # astype doesn't retain attributes: https://github.com/pydata/xarray/issues/2049
+        _attrs = model_data[var].attrs
+        model_data[var] = model_data[var].astype(float)
+        model_data[var].attrs = _attrs
         if np.isinf(model_data[var].loc[loc_tech].item()):
             return (np.inf, warnings)
         elif model_data[var].loc[loc_tech].isnull().item():
