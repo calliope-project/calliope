@@ -5,10 +5,13 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 """
 
 import logging
+import re
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import xarray as xr
+import pyomo.core as po
 
 from calliope.core.util.tools import memoize
 from calliope import exceptions
@@ -199,3 +202,22 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
         return True
     else:
         return False
+
+
+def get_domain(var: xr.DataArray) -> str:
+    def check_sign(var):
+        if re.match("resource|loc_coordinates|cost*", var.name):
+            return ""
+        else:
+            return "NonNegative"
+
+    if var.dtype.kind == "b":
+        return "Boolean"
+    elif is_numeric_dtype(var.dtype):
+        return check_sign(var) + "Reals"
+    else:
+        return "Any"
+
+
+def check_value(val: po.base.param._ParamData) -> bool:
+    return val._value == po.base.param._NotValid or po.value(val) is None

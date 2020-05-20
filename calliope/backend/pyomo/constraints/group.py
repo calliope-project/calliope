@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import loc_tech_is_in, get_param
+from calliope.backend.pyomo.util import loc_tech_is_in, get_param, check_value
 
 logger = logging.getLogger(__name__)
 
@@ -269,7 +269,7 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
         backend_model, "group_demand_share_{}".format(what), (carrier, group_name)
     )
 
-    if pd.isnull(share.value):
+    if check_value(share):
         return return_noconstraint("demand_share", group_name)
     else:
         (
@@ -321,7 +321,7 @@ def demand_share_per_timestep_constraint_rule(
         (carrier, group_name),
     )
 
-    if pd.isnull(share.value):
+    if check_value(share):
         return return_noconstraint("demand_share_per_timestep", group_name)
     else:
         (
@@ -380,7 +380,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
         backend_model, "group_demand_share_per_timestep_decision", (carrier, group_name)
     )
 
-    if pd.isnull(share_of_carrier_demand.value):
+    if check_value(share_of_carrier_demand):
         return return_noconstraint(
             "demand_share_per_timestep_decision_main", group_name
         )
@@ -452,7 +452,7 @@ def demand_share_per_timestep_decision_sum_constraint_rule(
     )
 
     # If inf was given that means that we don't limit the total share
-    if share_of_carrier_demand is None or np.isinf(share_of_carrier_demand):
+    if check_value(share_of_carrier_demand) or np.isinf(share_of_carrier_demand):
         return return_noconstraint("demand_share_per_timestep_decision_sum", group_name)
     else:
         lhs_loc_tech_carriers, _ = get_demand_share_lhs_and_rhs_loc_tech_carriers(
@@ -503,7 +503,7 @@ def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier,
         (carrier, constraint_group),
     )
 
-    if pd.isnull(share.value):
+    if check_value(share):
         return return_noconstraint("carrier_prod_share", constraint_group)
     else:
         lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
@@ -548,7 +548,7 @@ def carrier_prod_share_per_timestep_constraint_rule(
         (carrier, constraint_group),
     )
 
-    if pd.isnull(share.value):
+    if check_value(share):
         return return_noconstraint("carrier_prod_share_per_timestep", constraint_group)
     else:
         lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
@@ -590,7 +590,7 @@ def net_import_share_constraint_rule(backend_model, constraint_group, carrier, w
         (carrier, constraint_group),
     )
 
-    if pd.isnull(share.value):
+    if check_value(share):
         return return_noconstraint("net_import_share", constraint_group)
     else:
         trans_loc_tech = getattr(
@@ -637,8 +637,7 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, carrier, what)
     limit = get_param(
         backend_model, "group_carrier_prod_{}".format(what), (carrier, constraint_group)
     )
-
-    if pd.isnull(limit.value):
+    if check_value(limit):
         return return_noconstraint("carrier_prod", constraint_group)
     else:
         lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
@@ -700,7 +699,7 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
         backend_model, "group_energy_cap_share_{}".format(what), (constraint_group)
     )
 
-    if pd.isnull(share.value):
+    if check_value(share):
         return return_noconstraint("energy_cap_share", constraint_group)
     else:
         lhs_loc_techs = getattr(
@@ -739,7 +738,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
         backend_model, "group_energy_cap_{}".format(what), (constraint_group)
     )
 
-    if pd.isnull(threshold.value):
+    if check_value(threshold):
         return return_noconstraint("energy_cap", constraint_group)
     else:
         lhs_loc_techs = getattr(
@@ -784,7 +783,7 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
         backend_model, "group_cost_{}".format(what), (cost, group_name)
     )
 
-    if pd.isnull(cost_cap.value):
+    if check_value(cost_cap):
         return return_noconstraint("cost_cap", group_name)
     else:
         loc_techs = [
@@ -823,7 +822,7 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
         backend_model, "group_cost_investment_{}".format(what), (cost, group_name)
     )
 
-    if pd.isnull(cost_cap.value):
+    if check_value(cost_cap):
         return return_noconstraint("cost_investment_cap", group_name)
     else:
         loc_techs = [
@@ -863,8 +862,8 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
     cost_cap = get_param(
         backend_model, "group_cost_var_{}".format(what), (cost, group_name)
     )
-
-    if pd.isnull(cost_cap.value):
+    
+    if check_value(cost_cap):
         return return_noconstraint("cost_var_cap", group_name)
     else:
         loc_techs = [
@@ -901,8 +900,8 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
     threshold = get_param(
         backend_model, "group_resource_area_{}".format(what), (constraint_group)
     )
-
-    if pd.isnull(threshold.value):
+    
+    if check_value(threshold):
         return return_noconstraint("resource_area", constraint_group)
     else:
         lhs_loc_techs = getattr(
