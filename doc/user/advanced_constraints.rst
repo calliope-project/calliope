@@ -537,25 +537,24 @@ It is possible to pass custom constraints to the Pyomo backend, using the :ref:`
 
 .. code-block:: python
 
-    constraint_name = 'carrier_consumption_max_constraint'
-    constraint_sets = ['loc_tech_carriers_carrier_consumption_max_constraint', 'timesteps']
+    model = calliope.Model(...)
+    model.run()  # or `model.run(build_only=True)` if you don't want the model to be optimised before adding the new constraint
 
-    # Constraint rule arguments must be '(backend_model, *dims)' where len(dims) == len(constraint_sets)
-    def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
-        loc_tech = calliope.backend.pyomo.util.get_loc_tech(loc_tech_carrier)
-        carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
-        timestep_resolution = backend_model.timestep_resolution[timestep]
+    constraint_name = 'max_capacity_90_constraint'
+    constraint_sets = ['loc_techs_supply']
 
-        return carrier_con >= (
-            -1 * backend_model.energy_cap[loc_tech] * timestep_resolution
+    def max_capacity_90_constraint_rule(backend_model, loc_tech):
+
+        return backend_model.energy_cap[loc_tech] <= (
+            backend_model.energy_cap_max[loc_tech] * 0.9
         )
 
     # Add the constraint
-    model.backend.add_constraint(constraint_name, constraint_sets, carrier_consumption_max_constraint_rule)
+    model.backend.add_constraint(constraint_name, constraint_sets, max_capacity_90_constraint_rule)
 
-    # Rerun the model with new constraint. Note:
-    new_model = model.backend.rerun()
+    # Rerun the model with new constraint.
+    new_model = model.backend.rerun()  # `new_model` is a calliope model *without* a backend, it is only useful for saving the results to file
 
 .. note::
     * We like the convention that constraint names end with 'constraint' and constraint rules have the same text, with an appended '_rule', but you are not required to follow this convention to have a working constraint.
-    * :python:`model.run(force_rerun=True)` will *not* implement the new constraint, :python:`model.backend.rerun()` is required.
+    * :python:`model.run(force_rerun=True)` will *not* implement the new constraint, :python:`model.backend.rerun()` is required. If you run :python:`model.run(force_rerun=True)`, the backend model will be rebuilt, killing any changes you've made.

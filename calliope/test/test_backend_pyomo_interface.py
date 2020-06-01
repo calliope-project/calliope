@@ -304,7 +304,10 @@ class TestAddConstraint:
         )
 
     def test_added_constraint(self, model):
-        """Constraint sets must be backend model sets"""
+        """
+        Test the successful addition of a constraint which only allows carrier
+        consumption at a maximum rate of half the energy capacity.
+        """
 
         def new_constraint_rule(backend_model, loc_tech_carrier, timestep):
             loc_tech = calliope.backend.pyomo.util.get_loc_tech(loc_tech_carrier)
@@ -315,10 +318,7 @@ class TestAddConstraint:
             )
 
         constraint_name = "new_constraint"
-        constraint_sets = [
-            "loc_tech_carriers_carrier_consumption_max_constraint",
-            "timesteps",
-        ]
+        constraint_sets = ["loc_tech_carriers_con", "timesteps"]
         model.backend.add_constraint(
             constraint_name, constraint_sets, new_constraint_rule
         )
