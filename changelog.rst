@@ -8,6 +8,8 @@ Release History
 
 |new| Pyomo backend interfaces added to get names of all model objects (`get_all_model_attrs`) and to attach custom constraints to the backend model (`add_constraint`).
 
+|changed| Parameters are assigned a domain in Pyomo based on their dtype in `model_data`
+
 |changed| |backwards-incompatible| Plotting is no longer part of Calliope itself, but in a separate module, calliope_plot. FIXME: documentation needs to be updated.
 
 |changed| Internal code reorganisation.
