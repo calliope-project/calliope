@@ -17,7 +17,7 @@ import numpy as np
 from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
-from calliope.core.preprocess.util import concat_iterable
+from calliope.preprocess.util import concat_iterable
 
 logger = logging.getLogger(__name__)
 

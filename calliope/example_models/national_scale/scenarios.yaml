@@ -35,7 +35,7 @@ overrides:
             slack_cost_group: 'systemwide_cost_max'
             slack: 0.1
             spores_number: 3
-        run.objective_options.cost_class: {'monetary': 1, 'spores_score': 0, co2: 0}
+        run.objective_options.cost_class: {'monetary': 1, 'spores_score': 0}
         group_constraints:
             systemwide_cost_max.cost_max.monetary: .inf
 
