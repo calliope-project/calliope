@@ -449,7 +449,8 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
     # B) Case where storage is allowed
     else:
         resource = backend_model.resource_con[loc_tech, timestep] * resource_eff
-        current_timestep = backend_model.timesteps.order_dict[timestep]
+        # Pyomo returns the order 1-indexed, but we want 0-indexing
+        current_timestep = backend_model.timesteps.ord(timestep) - 1
         if current_timestep == 0 and not run_config["cyclic_storage"]:
             storage_previous_step = (
                 get_param(backend_model, "storage_initial", loc_tech)
@@ -516,7 +517,8 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
 
     carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep] * energy_eff
 
-    current_timestep = backend_model.timesteps.order_dict[timestep]
+    # Pyomo returns the order 1-indexed, but we want 0-indexing
+    current_timestep = backend_model.timesteps.ord(timestep) - 1
     if current_timestep == 0 and not run_config["cyclic_storage"]:
         storage_previous_step = (
             get_param(backend_model, "storage_initial", loc_tech)
@@ -570,7 +572,8 @@ def balance_storage_inter_cluster_rule(backend_model, loc_tech, datestep):
     cluster in the clustered timeseries corresponding to the previous day
     """
     run_config = backend_model.__calliope_run_config
-    current_datestep = backend_model.datesteps.order_dict[datestep]
+    # Pyomo returns the order 1-indexed, but we want 0-indexing
+    current_datestep = backend_model.datesteps.ord(datestep) - 1
 
     if current_datestep == 0 and not run_config["cyclic_storage"]:
         storage_previous_step = get_param(backend_model, "storage_initial", loc_tech)
