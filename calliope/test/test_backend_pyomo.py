@@ -1,6 +1,7 @@
 import pytest  # pylint: disable=unused-import
 import numpy as np
 import pyomo.core as po
+import pandas as pd
 import os
 import collections
 import logging
@@ -71,6 +72,15 @@ class TestModel:
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run(build_only=True)
         assert getattr(m._backend_model, var).domain.name == domain
+
+    def test_first_timestep(self):
+        """
+        Pyomo likes to 1-index its Sets, which we now expect.
+        This test will fail if they ever decide to move to the more pythonic zero-indexing.
+        """
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        timestep_0 = pd.Timestamp("2005-01-01 00:00:00")
+        assert m._backend_model.timesteps.ord(timestep_0) == 1
 
 
 class TestChecks:
