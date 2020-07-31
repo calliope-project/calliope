@@ -68,11 +68,6 @@ def update_pyomo_param(backend_model, param, update_dict):
         raise TypeError("`update_dict` must be a dictionary")
 
     else:
-        print(
-            "Warning: we currently do not check that the updated value is the "
-            "correct data type for this Pyomo Parameter, this is your "
-            "responsibility to check!"
-        )
         getattr(backend_model, param).store_values(update_dict)
 
 
@@ -171,6 +166,110 @@ def rerun_pyomo_model(model_data, backend_model):
     return new_calliope_model
 
 
+def add_pyomo_constraint(
+    backend_model, constraint_name, constraint_sets, constraint_rule
+):
+    """
+    Functionality to add a constraint to the Pyomo backend, by pointing it to
+    a function which implements the mathematics
+
+    Parameters
+    ----------
+    constraint_name : str
+        Name for the pyomo.Constraint object
+    constraint_sets : list of str
+        Sets over which to implement the constraint.
+        The list of sets in the Pyomo model corresponds to model dimensions and
+        can be found in full by calling the backend interface method `get_all_model_attrs`
+    constraint_rule : function with args (backend_model, *args)
+        Function corresponding to the format expected by Pyomo,
+        i.e. arguments include the Pyomo backend model (`backend_model`)
+        and pointers to each set in `constraint_sets`.
+        Set arguments need to be in the same order as in constraint_sets.
+        The convention we follow is to name the index without the trailing `s`
+        E.g. if 'timesteps' is in constraint_sets, then 'timestep' should be one of the function arguments;
+        long `loc_techs` set names are abbreviated to `loc_tech`.
+        To see what parameters and variables you have to work with,
+        call the backend interface method `get_all_model_attrs`
+
+    Examples
+    --------
+    To limit supply technologies' capacity to 90% of their maximum possible capacity,
+    you would do the following:
+
+    constraint_name = 'max_capacity_90_constraint'
+    constraint_sets = ['loc_techs_supply']
+
+    def max_capacity_90_constraint_rule(backend_model, loc_tech):
+
+        return backend_model.energy_cap[loc_tech] <= (
+            backend_model.energy_cap_max[loc_tech] * 0.9
+        )
+
+    # Add the constraint
+    model.backend.add_constraint(constraint_name, constraint_sets, max_capacity_90_constraint_rule)
+
+    # Rerun the model with new constraint.
+    # Note: model.run(force_rerun=True) will *not* work, since the backend model will be rebuilt, killing any changes you've made.
+    new_model = model.backend.rerun()
+
+    Note that we like the convention that constraint names end with 'constraint' and
+    constraint rules have the same text, with an appended '_rule',
+    but you are not required to follow this convention to have a working constraint.
+    """
+
+    assert (
+        constraint_rule.__code__.co_varnames[0] == "backend_model"
+    ), "First argument of constraint function must be 'backend_model'."
+    assert constraint_rule.__code__.co_argcount - 1 == len(
+        constraint_sets
+    ), "Number of constraint arguments must equal number of constraint sets + 1."
+
+    try:
+        sets = [getattr(backend_model, i) for i in constraint_sets]
+    except AttributeError as e:
+        e.args = (e.args[0].replace("'ConcreteModel'", "Pyomo backend model"),)
+        raise
+
+    setattr(
+        backend_model,
+        constraint_name,
+        po.Constraint(*sets, **{"rule": constraint_rule}),
+    )
+
+    return backend_model
+
+
+def get_all_pyomo_model_attrs(backend_model):
+    """
+    Get the name of all sets, parameters, and variables in the generated Pyomo model.
+
+    Returns
+    -------
+    Dictionary differentiating between variables ('Var'), parameters ('Param'), and sets ('Set').
+    variables and parameters are given as a dictionaries of lists, where keys are the item names and
+    values are a list of dimensions over which they are indexed. These dimensions correspond to the
+    sets.
+    """
+    # Indexed objected
+    objects = {
+        objname: {
+            i.name: [j.name for j in i.index_set().set_tuple]
+            if i.name + "_index" == i.index_set().name
+            else [i.index_set().name]
+            for i in backend_model.component_objects()
+            if isinstance(i, getattr(po.base, objname))
+        }
+        for objname in ["Var", "Param"]
+    }
+    # Indices
+    objects["Set"] = [
+        i.name for i in backend_model.component_objects() if isinstance(i, po.base.Set)
+    ]
+
+    return objects
+
+
 class BackendInterfaceMethods:
     def __init__(self, model):
         self._backend = model._backend_model
@@ -195,3 +294,13 @@ class BackendInterfaceMethods:
         return rerun_pyomo_model(self._model_data, self._backend, *args, **kwargs)
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
+
+    def add_constraint(self, *args, **kwargs):
+        self._backend = add_pyomo_constraint(self._backend, *args, **kwargs)
+
+    add_constraint.__doc__ = add_pyomo_constraint.__doc__
+
+    def get_all_model_attrs(self, *args, **kwargs):
+        return get_all_pyomo_model_attrs(self._backend, *args, **kwargs)
+
+    get_all_model_attrs.__doc__ = get_all_pyomo_model_attrs.__doc__

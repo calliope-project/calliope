@@ -24,80 +24,6 @@ def check_standard_warning(info, warning):
         )
 
 
-class TestUtil:
-    def test_get_param_with_timestep_existing(self):
-        """
-        """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
-        param = get_param(
-            m._backend_model,
-            "resource",
-            ("1::test_demand_elec", m._backend_model.timesteps[1]),
-        )
-        assert po.value(param) == -5  # see demand_elec.csv
-
-    def test_get_param_no_timestep_existing(self):
-        """
-        """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
-        param = get_param(
-            m._backend_model,
-            "energy_eff",
-            ("1::test_supply_elec", m._backend_model.timesteps[1]),
-        )
-        assert po.value(param) == 0.9  # see test model.yaml
-
-    def test_get_param_no_timestep_possible(self):
-        """
-        """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
-        param = get_param(m._backend_model, "energy_cap_max", ("1::test_supply_elec"))
-        assert po.value(param) == 10  # see test model.yaml
-
-        param = get_param(
-            m._backend_model, "cost_energy_cap", ("monetary", "0::test_supply_elec")
-        )
-        assert po.value(param) == 10
-
-    def test_get_param_from_default(self):
-        """
-        """
-        m = build_model({}, "simple_supply_and_supply_plus,two_hours,investment_costs")
-        m.run()
-
-        param = get_param(
-            m._backend_model,
-            "parasitic_eff",
-            ("1::test_supply_plus", m._backend_model.timesteps[1]),
-        )
-        assert po.value(param) == 1  # see defaults.yaml
-
-        param = get_param(m._backend_model, "resource_cap_min", ("0::test_supply_plus"))
-        assert po.value(param) == 0  # see defaults.yaml
-
-        param = get_param(
-            m._backend_model, "cost_resource_cap", ("monetary", "1::test_supply_plus")
-        )
-        assert po.value(param) == 0  # see defaults.yaml
-
-    def test_get_param_no_default_defined(self):
-        """
-        If a default is not defined, raise KeyError
-        """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
-        with pytest.raises(KeyError):
-            get_param(
-                m._backend_model,
-                "random_param",
-                ("1::test_demand_elec", m._backend_model.timesteps[1]),
-            )
-            get_param(m._backend_model, "random_param", ("1::test_supply_elec"))
-
-
 class TestModel:
     @pytest.mark.skip("Buggy")
     @pytest.mark.serial  # Cannot run in parallel with other tests
@@ -130,6 +56,21 @@ class TestModel:
             "module 'calliope.backend.pyomo.constraints.temp_constraint_file_for_testing' "
             "has no attribute 'ORDER'",
         )
+
+    @pytest.mark.parametrize(
+        "var, domain",
+        (
+            ("energy_cap_max", "NonNegativeReals"),
+            ("resource", "Reals"),
+            ("cost_energy_cap", "Reals"),
+            ("force_resource", "Boolean"),
+            ("names", "Any"),
+        ),
+    )
+    def test_domains(self, var, domain):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m.run(build_only=True)
+        assert getattr(m._backend_model, var).domain.name == domain
 
 
 class TestChecks:
