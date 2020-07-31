@@ -216,3 +216,118 @@ class TestBackendRerun:
         assert check_error_or_warning(
             excinfo, "Cannot rerun the backend in operate run mode"
         )
+
+
+class TestGetAllModelAttrs:
+    def test_get_all_attrs(self, model):
+        """Model attributes consist of variables, parameters, and sets"""
+        attrs = model.backend.get_all_model_attrs()
+
+        assert attrs.keys() == set(["Set", "Param", "Var"])
+        assert isinstance(attrs["Var"], dict)
+        assert isinstance(attrs["Param"], dict)
+        assert isinstance(attrs["Set"], list)
+
+    def test_check_attrs(self, model):
+        """Test one of each object type, just to make sure they are correctly assigned"""
+        attrs = model.backend.get_all_model_attrs()
+
+        assert "energy_cap" in attrs["Var"].keys()
+        assert "resource" in attrs["Param"].keys()
+        assert "carriers" in attrs["Set"]
+
+
+class TestAddConstraint:
+    def test_no_backend(self, model):
+        """Must include 'backend_model' as first function argument """
+
+        def energy_cap_time_varying_rule(backend, loc_tech, timestep):
+
+            return (
+                backend.energy_cap[loc_tech]
+                <= backend.energy_cap[loc_tech] * backend.resource[loc_tech, timestep]
+            )
+
+        constraint_name = "energy_cap_time_varying"
+        constraint_sets = ["loc_techs_finite_resource", "timesteps"]
+        with pytest.raises(AssertionError) as excinfo:
+            model.backend.add_constraint(
+                constraint_name, constraint_sets, energy_cap_time_varying_rule
+            )
+        assert check_error_or_warning(
+            excinfo, "First argument of constraint function must be 'backend_model'."
+        )
+
+    def test_arg_mismatch(self, model):
+        """length of function arguments = length of sets + 1"""
+
+        def energy_cap_time_varying_rule(backend_model, loc_tech, timestep, extra_arg):
+
+            return (
+                backend_model.energy_cap[loc_tech]
+                <= backend_model.energy_cap[loc_tech]
+                * backend_model.resource[loc_tech, timestep]
+                + extra_arg
+            )
+
+        constraint_name = "energy_cap_time_varying"
+        constraint_sets = ["loc_techs_finite_resource", "timesteps"]
+        with pytest.raises(AssertionError) as excinfo:
+            model.backend.add_constraint(
+                constraint_name, constraint_sets, energy_cap_time_varying_rule
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "Number of constraint arguments must equal number of constraint sets + 1.",
+        )
+
+    def test_sets(self, model):
+        """Constraint sets must be backend model sets"""
+
+        def energy_cap_time_varying_rule(backend_model, loc_tech, not_a_set):
+
+            return (
+                backend_model.energy_cap[loc_tech]
+                <= backend_model.energy_cap[loc_tech]
+                * backend_model.resource[loc_tech, not_a_set]
+            )
+
+        constraint_name = "energy_cap_time_varying"
+        constraint_sets = ["loc_techs_finite_resource", "not_a_set"]
+        with pytest.raises(AttributeError) as excinfo:
+            model.backend.add_constraint(
+                constraint_name, constraint_sets, energy_cap_time_varying_rule
+            )
+
+        assert check_error_or_warning(
+            excinfo, "Pyomo backend model object has no attribute 'not_a_set'"
+        )
+
+    def test_added_constraint(self, model):
+        """
+        Test the successful addition of a constraint which only allows carrier
+        consumption at a maximum rate of half the energy capacity.
+        """
+
+        def new_constraint_rule(backend_model, loc_tech_carrier, timestep):
+            loc_tech = calliope.backend.pyomo.util.get_loc_tech(loc_tech_carrier)
+            carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
+            timestep_resolution = backend_model.timestep_resolution[timestep]
+            return carrier_con * 2 >= (
+                -1 * backend_model.energy_cap[loc_tech] * timestep_resolution
+            )
+
+        constraint_name = "new_constraint"
+        constraint_sets = ["loc_tech_carriers_con", "timesteps"]
+        model.backend.add_constraint(
+            constraint_name, constraint_sets, new_constraint_rule
+        )
+
+        assert hasattr(model._backend_model, "new_constraint")
+
+        new_model = model.backend.rerun()
+
+        assert (
+            new_model.results.energy_cap.loc["1::test_demand_elec"]
+            == model.results.energy_cap.loc["1::test_demand_elec"] * 2
+        )
