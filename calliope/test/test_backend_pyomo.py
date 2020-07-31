@@ -79,6 +79,7 @@ class TestModel:
         This test will fail if they ever decide to move to the more pythonic zero-indexing.
         """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m.run(build_only=True)
         timestep_0 = pd.Timestamp("2005-01-01 00:00:00")
         assert m._backend_model.timesteps.ord(timestep_0) == 1
 
