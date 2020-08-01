@@ -453,32 +453,6 @@ class TestModelRun:
             error, "no timeseries passed " "as arguments in calliope.Model(...)."
         )
 
-    def test_no_dataframes_if_read_csv(self):
-        """
-        If model config specifies dataframes to be read from csv (via file=...),
-        no time series should be passed as arguments in calliope.Model(...).
-        """
-        timeseries_dataframes = {
-            "demand_elec": pd.read_csv(
-                os.path.join(
-                    os.path.dirname(calliope.test.common.util.__file__),
-                    "test_model/timeseries_data/demand_elec.csv",
-                ),
-                index_col=0,
-            )
-        }
-        with pytest.raises(exceptions.ModelError) as error:
-            build_model(
-                model_file="model_minimal.yaml",
-                override_dict=None,
-                timeseries_dataframes=timeseries_dataframes,
-            )
-        assert check_error_or_warning(
-            error,
-            "Either load all timeseries from `timeseries_dataframes` and df=..., "
-            "or set `timeseries_dataframes=None` and load load all from CSV files",
-        )
-
     def test_invalid_dataframes_passed(self):
         """
         `timeseries_dataframes` should be dict of pandas DataFrames.

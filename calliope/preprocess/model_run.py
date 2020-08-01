@@ -454,6 +454,60 @@ def process_tech_groups(config_model, techs):
     return tech_groups
 
 
+def load_timeseries_from_file(config_model, tskey):
+    file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
+    # load data, without parsing the dates, to catch errors in the data
+    df = pd.read_csv(file_path, index_col=0)
+    return df
+
+
+def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
+
+    # If `df=` is called, timeseries_dataframes must be entered
+    if timeseries_dataframes is None:
+        raise exceptions.ModelError(
+            "Error in loading timeseries. Model config specifies df={} but "
+            "no timeseries passed as arguments in calliope.Model(...).".format(
+                tskey
+            )
+        )
+    
+    try:
+        df = timeseries_dataframes[tskey]
+    except KeyError:
+        raise exceptions.ModelError(
+            "Error in loading data from dataframe. "
+            "Model attempted to load dataframe with key {}, "
+            "but time series passed as arguments are {}".format(
+                tskey, set(timeseries_dataframes.keys())
+            )
+        )
+    if not isinstance(df, pd.DataFrame):
+        raise exceptions.ModelError(
+            "Error in loading data. Object passed in time series "
+            "dictionary under key {} is a {}, not a DataFrame.".format(
+                tskey, type(df)
+            )
+        )
+    return df
+
+
+def check_timeseries_dataframes(timeseries_dataframes):
+    """
+    Timeseries dataframes should be dict of pandas DataFrames.
+    """
+    if not isinstance(timeseries_dataframes, dict) or not all(
+        [
+            isinstance(timeseries_dataframes[i], pd.DataFrame)
+            for i in timeseries_dataframes
+        ]
+    ):
+        raise exceptions.ModelError(
+            "Error in loading timeseries data from dataframes. "
+            "`timeseries_dataframes` must be dict of pandas DataFrames."
+        )
+
+
 def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     if config_model.model.timeseries_data is None:
@@ -493,35 +547,32 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     datetime_min = []
     datetime_max = []
 
+    # Check there is at least one timeseries present
+    if (
+        len(
+            constraint_filenames
+            | cluster_filenames
+            | constraint_dfnames
+            | cluster_dfnames
+        )
+        == 0
+    ):
+        raise exceptions.ModelError(
+            "There is no timeseries in the model. At least one timeseries is "
+            "necessary to run the model."
+        )
+
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
     for tskey in (
         constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
     ):  # Filenames or dict keys
-        # If tskey is a CSV path, load the CSV
+        # If tskey is a CSV path, load the CSV, else load the dataframe
         if tskey in constraint_filenames | cluster_filenames:
-            file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
-            # load data, without parsing the dates, to catch errors in the data
-            df = pd.read_csv(file_path, index_col=0)
-        # If tskey in a key in timeseries_dataframes, load df
+            df = load_timeseries_from_file(config_model, tskey)
         elif tskey in constraint_dfnames | cluster_dfnames:
-            try:
-                df = timeseries_dataframes[tskey]
-            except KeyError:
-                raise exceptions.ModelError(
-                    "Error in loading data from dataframe. "
-                    "Model attempted to load dataframe with key {}, "
-                    "but time series passed as arguments are {}".format(
-                        tskey, set(timeseries_dataframes.keys())
-                    )
-                )
-            if not isinstance(df, pd.DataFrame):
-                raise exceptions.ModelError(
-                    "Error in loading data. Object passed in time series "
-                    "dictionary under key {} is a {}, not a DataFrame.".format(
-                        tskey, type(df)
-                    )
-                )
+            df = load_timeseries_from_dataframe(timeseries_dataframes, tskey)
+
         try:
             df.apply(pd.to_numeric)
         except ValueError as e:
@@ -602,22 +653,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             )
 
     return timeseries_data, first_index
-
-
-def check_timeseries_dataframes(timeseries_dataframes):
-    """
-    Timeseries dataframes should be dict of pandas DataFrames.
-    """
-    if not isinstance(timeseries_dataframes, dict) or not all(
-        [
-            isinstance(timeseries_dataframes[i], pd.DataFrame)
-            for i in timeseries_dataframes
-        ]
-    ):
-        raise exceptions.ModelError(
-            "Error in loading timeseries data from dataframes. "
-            "`timeseries_dataframes` must be dict of pandas DataFrames."
-        )
 
 
 def generate_model_run(
