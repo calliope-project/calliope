@@ -27,14 +27,15 @@ class TestAH:
                                index_col=0)
         demand_2 = pd.read_csv(os.path.join(timeseries_dir, 'demand-2.csv'),
                                index_col=0)
+        
         timeseries_dataframes = {'csp_resource': csp_resource,
                                  'demand_1': demand_1,
                                  'demand_2': demand_2}
+        timeseries_dataframes_mixed = {'demand_1': demand_1,
+                                       'demand_2': demand_2}
 
         override_dict_csv = {
-            'techs.csp.constraints.resource': (
-                'file=csp_resource.csv'
-            ),
+            'techs.csp.constraints.resource': 'file=csp_resource.csv',
             'locations.region1.techs.demand_power.constraints.resource': (
                 'file=demand-1.csv:demand'
             ),
@@ -53,6 +54,16 @@ class TestAH:
             )
         }
 
+        override_dict_mixed = {
+            'techs.csp.constraints.resource': 'file=csp_resource.csv',
+            'locations.region1.techs.demand_power.constraints.resource': (
+                'df=demand_1:demand'
+            ),
+            'locations.region2.techs.demand_power.constraints.resource': (
+                'df=demand_2:demand'
+            )
+        }
+
         # import sys
         # if sys.argv[1] == 'csv':
         #     override_dict = override_dict_csv
@@ -63,7 +74,17 @@ class TestAH:
         # else:
         #     raise NotImplementedError
 
-        override_dict = override_dict_csv
+        mode = 'csv'
+
+        if mode == 'csv':
+            override_dict = override_dict_csv
+            timeseries_dataframes_arg = None
+        if mode == 'df':
+            override_dict = override_dict_df
+            timeseries_dataframes_arg = timeseries_dataframes
+        if mode == 'mixed':
+            override_dict = override_dict_mixed
+            timeseries_dataframes_arg = timeseries_dataframes_mixed
 
         # with pytest.raises(exceptions.ModelError) as error:
         #     model = calliope.Model(
@@ -73,7 +94,7 @@ class TestAH:
 
         model = calliope.Model(os.path.join(model_dir, 'model.yaml'),
                                override_dict=override_dict,
-                               timeseries_dataframes=None)
+                               timeseries_dataframes=timeseries_dataframes_arg)
 
 
 if __name__ == '__main__':

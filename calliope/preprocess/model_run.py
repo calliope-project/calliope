@@ -485,22 +485,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     constraint_dfnames = get_names("df", location_config)
     cluster_dfnames = get_names("df", model_config)
 
-    ####
-    import pdb
-    pdb.set_trace()
-    ####
-
-    # TO REMOVE
-    # # Timeseries can be entered either in timeseries_dataframes and called
-    # # via df=..., or loaded from csv files via file=..., but not both.
-    # _assert_either_file_or_dataframes(
-    #     constraint_filenames,
-    #     cluster_filenames,
-    #     constraint_dfnames,
-    #     cluster_dfnames,
-    #     timeseries_dataframes,
-    # )
-
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
     if timeseries_dataframes is not None:
@@ -511,9 +495,8 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
-    for tskey in (
-        constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
-    ):  # Filenames or dict keys
+    for tskey in (constraint_filenames | cluster_filenames
+                  | constraint_dfnames | cluster_dfnames):    # Filenames or dict keys
         # If tskey is a CSV path, load the CSV
         if tskey in constraint_filenames | cluster_filenames:
             file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
@@ -618,50 +601,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             )
 
     return timeseries_data, first_index
-
-
-def _assert_either_file_or_dataframes(
-    constraint_filenames,
-    cluster_filenames,
-    constraint_dfnames,
-    cluster_dfnames,
-    timeseries_dataframes,
-):
-    if (
-        timeseries_dataframes is not None
-        and len(constraint_filenames | cluster_filenames) > 0
-    ):
-        raise exceptions.ModelError(
-            "Error in loading timeseries. calliope.Model is called with "
-            "argument `timeseries_dataframes` containing dataframes {} "
-            "but config files specify file={} to be loaded from CSV. Either "
-            "load all timeseries from `timeseries_dataframes` and df=..., or "
-            "set `timeseries_dataframes=None` and load load all from CSV "
-            "files using file=... .".format(
-                set(timeseries_dataframes.keys()),
-                constraint_filenames | cluster_filenames,
-            )
-        )
-    if timeseries_dataframes is None and len(constraint_dfnames | cluster_dfnames) > 0:
-        raise exceptions.ModelError(
-            "Error in loading timeseries. Model config specifies df={} but "
-            "no timeseries passed as arguments in calliope.Model(...).".format(
-                constraint_dfnames | cluster_dfnames
-            )
-        )
-    if (
-        len(
-            constraint_filenames
-            | cluster_filenames
-            | constraint_dfnames
-            | cluster_dfnames
-        )
-        == 0
-    ):
-        raise exceptions.ModelError(
-            "There is no timeseries in the model. At least one timeseries is "
-            "necessary to run the model."
-        )
 
 
 def check_timeseries_dataframes(timeseries_dataframes):
