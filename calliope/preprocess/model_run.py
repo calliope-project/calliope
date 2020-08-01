@@ -467,11 +467,9 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
     if timeseries_dataframes is None:
         raise exceptions.ModelError(
             "Error in loading timeseries. Model config specifies df={} but "
-            "no timeseries passed as arguments in calliope.Model(...).".format(
-                tskey
-            )
+            "no timeseries passed as arguments in calliope.Model(...).".format(tskey)
         )
-    
+
     try:
         df = timeseries_dataframes[tskey]
     except KeyError:
@@ -485,9 +483,7 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
     if not isinstance(df, pd.DataFrame):
         raise exceptions.ModelError(
             "Error in loading data. Object passed in time series "
-            "dictionary under key {} is a {}, not a DataFrame.".format(
-                tskey, type(df)
-            )
+            "dictionary under key {} is a {}, not a DataFrame.".format(tskey, type(df))
         )
     return df
 

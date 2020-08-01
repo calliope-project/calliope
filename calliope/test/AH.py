@@ -87,7 +87,7 @@ class TestAH:
         if mode == "mixed":
             override_dict = override_dict_mixed
             timeseries_dataframes_arg = timeseries_dataframes_mixed
-            
+
         # with pytest.raises(exceptions.ModelError) as error:
         #     model = calliope.Model(
         #         os.path.join(model_dir, 'model.yaml'),
