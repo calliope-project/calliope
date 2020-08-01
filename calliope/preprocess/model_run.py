@@ -485,15 +485,21 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     constraint_dfnames = get_names("df", location_config)
     cluster_dfnames = get_names("df", model_config)
 
-    # Timeseries can be entered either in timeseries_dataframes and called
-    # via df=..., or loaded from csv files via file=..., but not both.
-    _assert_either_file_or_dataframes(
-        constraint_filenames,
-        cluster_filenames,
-        constraint_dfnames,
-        cluster_dfnames,
-        timeseries_dataframes,
-    )
+    ####
+    import pdb
+    pdb.set_trace()
+    ####
+
+    # TO REMOVE
+    # # Timeseries can be entered either in timeseries_dataframes and called
+    # # via df=..., or loaded from csv files via file=..., but not both.
+    # _assert_either_file_or_dataframes(
+    #     constraint_filenames,
+    #     cluster_filenames,
+    #     constraint_dfnames,
+    #     cluster_dfnames,
+    #     timeseries_dataframes,
+    # )
 
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
@@ -674,9 +680,8 @@ def check_timeseries_dataframes(timeseries_dataframes):
         )
 
 
-def generate_model_run(
-    config, timeseries_dataframes, debug_comments, applied_overrides, scenario
-):
+def generate_model_run(config, timeseries_dataframes, debug_comments,
+                       applied_overrides, scenario):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
