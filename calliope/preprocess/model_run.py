@@ -495,8 +495,9 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
-    for tskey in (constraint_filenames | cluster_filenames
-                  | constraint_dfnames | cluster_dfnames):    # Filenames or dict keys
+    for tskey in (
+        constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
+    ):  # Filenames or dict keys
         # If tskey is a CSV path, load the CSV
         if tskey in constraint_filenames | cluster_filenames:
             file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
@@ -619,8 +620,9 @@ def check_timeseries_dataframes(timeseries_dataframes):
         )
 
 
-def generate_model_run(config, timeseries_dataframes, debug_comments,
-                       applied_overrides, scenario):
+def generate_model_run(
+    config, timeseries_dataframes, debug_comments, applied_overrides, scenario
+):
     """
     Returns a processed model_run configuration AttrDict and a debug
     YAML object with comments attached, ready to write to disk.
