@@ -482,7 +482,10 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
     if timeseries_dataframes is None:
         raise exceptions.ModelError(
             "Error in loading timeseries. Model config specifies df={} but "
-            "no timeseries passed as arguments in calliope.Model(...).".format(tskey)
+            "no timeseries passed as arguments in calliope.Model(...). "
+            "Note that, if running from a command line, it is not possible "
+            "to read dataframes via `df=...` and you should specify "
+            "`file=...` with a CSV file.".format(tskey)
         )
 
     try:
