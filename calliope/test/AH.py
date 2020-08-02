@@ -1,5 +1,6 @@
 import pytest
 import os
+import sys
 
 import pandas as pd
 import numpy as np
@@ -66,17 +67,7 @@ class TestAH:
             ),
         }
 
-        # import sys
-        # if sys.argv[1] == 'csv':
-        #     override_dict = override_dict_csv
-        #     timeseries_dataframes = None
-        # elif sys.argv[1] == 'df':
-        #     override_dict = override_dict_df
-        #     timeseries_dataframes = timeseries_dataframes
-        # else:
-        #     raise NotImplementedError
-
-        mode = "mixed"
+        mode = sys.argv[1]  # "csv", "df" or "mixed"
 
         if mode == "csv":
             override_dict = override_dict_csv
@@ -87,6 +78,8 @@ class TestAH:
         if mode == "mixed":
             override_dict = override_dict_mixed
             timeseries_dataframes_arg = timeseries_dataframes_mixed
+        else:
+            raise NotImplementedError()
 
         # with pytest.raises(exceptions.ModelError) as error:
         #     model = calliope.Model(

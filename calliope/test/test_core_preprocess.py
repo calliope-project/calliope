@@ -453,6 +453,24 @@ class TestModelRun:
             error, "no timeseries passed " "as arguments in calliope.Model(...)."
         )
 
+    def test_dataframe_keys(self):
+        """
+        Any timeseries specified via df=... must correspond to a key in
+        timeseries_dataframes. An error should be thrown.
+        """
+        override = {"techs.test_demand_elec.constraints.resource": "df=key_1"}
+        ts_df = {"key_2": pd.DataFrame(np.arange(10))}
+        
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(
+                model_file="model_minimal.yaml",
+                override_dict=override,
+                timeseries_dataframes=ts_df,
+            )
+        assert check_error_or_warning(
+            error, "Model attempted to load dataframe with key"
+        )
+
     def test_invalid_dataframes_passed(self):
         """
         `timeseries_dataframes` should be dict of pandas DataFrames.
