@@ -251,7 +251,8 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
    * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
    * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`resource: file = filename.csv` is not valid.
    * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
-   * Either pass all timeseries from CSV or pass them all from dataframes. It is not possible to mix ``file=...`` and ``df=...`` in model definition files. When readingin from CSVs via ``file=...``, set ``timeseries_dataframes=None`` in ``calliope.Model``. When running from command line, this is done automatically.
+   * It's possible to mix reading in from CSVs and dataframes, by setting some config values as ``file=...`` and some as ``df=...``.
+   * The default value of ``timeseries_dataframes`` is ``None``, so if you want to read all timeseries in from CSVs, you can omit this argument. When running from command line, this is done automatically.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)
