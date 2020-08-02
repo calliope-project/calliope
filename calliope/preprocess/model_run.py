@@ -456,7 +456,6 @@ def process_tech_groups(config_model, techs):
 
 def load_timeseries_from_file(config_model, tskey):
     file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
-    # load data, without parsing the dates, to catch errors in the data
     df = pd.read_csv(file_path, index_col=0)
     return df
 
@@ -475,7 +474,7 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
     except KeyError:
         raise exceptions.ModelError(
             "Error in loading data from dataframe. "
-            "Model attempted to load dataframe with key {}, "
+            "Model attempted to load dataframe with key `{}`, "
             "but time series passed as arguments are {}".format(
                 tskey, set(timeseries_dataframes.keys())
             )
@@ -564,6 +563,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
         constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
     ):  # Filenames or dict keys
         # If tskey is a CSV path, load the CSV, else load the dataframe
+        # Load data, without parsing the dates, to catch errors in the data
         if tskey in constraint_filenames | cluster_filenames:
             df = load_timeseries_from_file(config_model, tskey)
         elif tskey in constraint_dfnames | cluster_dfnames:
