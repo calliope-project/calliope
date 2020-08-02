@@ -460,6 +460,22 @@ def load_timeseries_from_file(config_model, tskey):
     return df
 
 
+def check_timeseries_dataframes(timeseries_dataframes):
+    """
+    Timeseries dataframes should be dict of pandas DataFrames.
+    """
+    if not isinstance(timeseries_dataframes, dict) or not all(
+        [
+            isinstance(timeseries_dataframes[i], pd.DataFrame)
+            for i in timeseries_dataframes
+        ]
+    ):
+        raise exceptions.ModelError(
+            "Error in loading timeseries data from dataframes. "
+            "`timeseries_dataframes` must be dict of pandas DataFrames."
+        )
+
+
 def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
 
     # If `df=` is called, timeseries_dataframes must be entered
@@ -485,22 +501,6 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
             "dictionary under key {} is a {}, not a DataFrame.".format(tskey, type(df))
         )
     return df
-
-
-def check_timeseries_dataframes(timeseries_dataframes):
-    """
-    Timeseries dataframes should be dict of pandas DataFrames.
-    """
-    if not isinstance(timeseries_dataframes, dict) or not all(
-        [
-            isinstance(timeseries_dataframes[i], pd.DataFrame)
-            for i in timeseries_dataframes
-        ]
-    ):
-        raise exceptions.ModelError(
-            "Error in loading timeseries data from dataframes. "
-            "`timeseries_dataframes` must be dict of pandas DataFrames."
-        )
 
 
 def process_timeseries_data(config_model, model_run, timeseries_dataframes):
@@ -563,7 +563,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
         constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
     ):  # Filenames or dict keys
         # If tskey is a CSV path, load the CSV, else load the dataframe
-        # Load data, without parsing the dates, to catch errors in the data
         if tskey in constraint_filenames | cluster_filenames:
             df = load_timeseries_from_file(config_model, tskey)
         elif tskey in constraint_dfnames | cluster_dfnames:
@@ -576,7 +575,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                 "Error in loading data from {}. Ensure all entries are "
                 "numeric. Full error: {}".format(tskey, e)
             )
-        # Now parse the dates, checking for errors specific to this
+        # Parse the dates, checking for errors specific to this
         try:
             df.index = _parser(df.index, dtformat)
         except ValueError as e:
