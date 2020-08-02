@@ -460,7 +460,7 @@ class TestModelRun:
         """
         override = {"techs.test_demand_elec.constraints.resource": "df=key_1"}
         ts_df = {"key_2": pd.DataFrame(np.arange(10))}
-        
+
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
                 model_file="model_minimal.yaml",
