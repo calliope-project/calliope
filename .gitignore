@@ -1,13 +1,31 @@
-.coverage
+# OS-specific
+.DS_Store
+
+# Editors
+*~
+\#*\#
+.vscode
+
+# Byte-compiled files
+__pycache__
 *.pyc
-calliope.egg-info/
+
+# Build output
+build
+*.egg-info
+
+# Reports
+.coverage
+.coverage.*
+.hypothesis/
+coverage.xml
+*.cover
+
+# Caches
+.*[cC]ache*
+
+# Project-specific
+dist/
 doc/_build/
 doc/_static/notebooks/*.html
-dist/
-.cache
-.pytest_cache/
-mprofile_*
-profile_*
-*.profile
-_test
-.vscode
+.ipynb_checkpoints

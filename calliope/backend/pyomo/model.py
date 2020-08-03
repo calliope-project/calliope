@@ -212,7 +212,7 @@ def solve_model(
 
 def load_results(backend_model, results):
     """Load results into model instance for access via model variables."""
-    not_optimal = results["Solver"][0]["Termination condition"].key != "optimal"
+    not_optimal = str(results["Solver"][0]["Termination condition"]) != "optimal"
     this_result = backend_model.solutions.load_from(results)
 
     if this_result is False or not_optimal:
@@ -230,7 +230,7 @@ def load_results(backend_model, results):
 
         exceptions.BackendWarning(message)
 
-    return results["Solver"][0]["Termination condition"].key
+    return str(results["Solver"][0]["Termination condition"])
 
 
 def get_result_array(backend_model, model_data):

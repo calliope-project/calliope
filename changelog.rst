@@ -14,6 +14,8 @@ Release History
 
 |changed| Internal code reorganisation.
 
+|changed| Updated to Pyomo 5.7.
+
 0.6.5 (2020-01-14)
 ------------------
 
