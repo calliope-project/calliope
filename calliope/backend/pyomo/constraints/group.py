@@ -12,7 +12,6 @@ Group constraints.
 import logging
 
 import numpy as np
-import pandas as pd
 import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import loc_tech_is_in, get_param, check_value
