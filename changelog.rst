@@ -6,6 +6,8 @@ Release History
 0.6.6 (dev)
 -----------
 
+|new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
+
 |new| Pyomo backend interfaces added to get names of all model objects (`get_all_model_attrs`) and to attach custom constraints to the backend model (`add_constraint`).
 
 |changed| Parameters are assigned a domain in Pyomo based on their dtype in `model_data`
@@ -14,7 +16,7 @@ Release History
 
 |changed| Internal code reorganisation.
 
-|new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
+|changed| Updated to Pyomo 5.7.
 
 0.6.5 (2020-01-14)
 ------------------

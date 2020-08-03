@@ -1,6 +1,5 @@
 # OS-specific
 .DS_Store
-*.DS_Store
 
 # Editors
 *~
@@ -29,12 +28,4 @@ coverage.xml
 dist/
 doc/_build/
 doc/_static/notebooks/*.html
-dist/
-.cache
-.pytest_cache/
-mprofile_*
-profile_*
-*.profile
-_test
-.vscode
 .ipynb_checkpoints
