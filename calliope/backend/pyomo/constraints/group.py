@@ -655,7 +655,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, carrier, what):
     """
     Enforces carrier_con for groups of technologies and locations,
     as a sum over the entire model period. limits are always negative, so min/max
-    is relative to zero (i.e. min = -1 means carrier_con must be -1 or les)
+    is relative to zero (i.e. min = -1 means carrier_con must be -1 or less)
 
     .. container:: scrolling-wrapper
 
@@ -668,7 +668,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, carrier, what):
         backend_model, "group_carrier_con_{}".format(what), (carrier, constraint_group)
     )
 
-    if pd.isnull(limit.value):
+    if check_value(limit):
         return return_noconstraint("carrier_con", constraint_group)
     else:
         lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
