@@ -70,6 +70,8 @@ MOCK_MODULES = [
     "pyutilib.services.TempfileManager",
     "yaml",
     "pandas",
+    "pandas.api",
+    "pandas.api.types",
     "click",
     "xarray",
     "dask",
