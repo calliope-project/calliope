@@ -272,7 +272,8 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
     """
 
     # No constraint for first timestep
-    if backend_model.timesteps.order_dict[timestep] == 0:
+    # Pyomo returns the order 1-indexed, but we want 0-indexing
+    if backend_model.timesteps.ord(timestep) - 1 == 0:
         return po.Constraint.NoConstraint
     else:
         previous_step = get_previous_timestep(backend_model.timesteps, timestep)

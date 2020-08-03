@@ -21,7 +21,7 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var
+from calliope.backend.pyomo.util import get_var, get_domain
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -62,6 +62,7 @@ def generate_model(model_data):
         "sets": list(model_data.coords),
         "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
     }
+
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
     # remainder of dims are in alphabetic order
@@ -74,42 +75,23 @@ def generate_model(model_data):
     )
 
     for k, v in model_data_dict["data"].items():
-        if k in backend_model.__calliope_defaults.keys():
-            setattr(
-                backend_model,
-                k,
-                po.Param(
-                    *[getattr(backend_model, i) for i in model_data_dict["dims"][k]],
-                    initialize=v,
-                    mutable=True,
-                    default=backend_model.__calliope_defaults[k],
-                ),
-            )
+        _kwargs = {
+            "initialize": v,
+            "mutable": True,
+            "within": getattr(po, get_domain(model_data[k])),
+        }
+        if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
+            _kwargs["default"] = backend_model.__calliope_defaults[k]
         # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
         # so add those in.
-        elif (
+        if (
             backend_model.__calliope_run_config["mode"] == "operate"
             and model_data[k].attrs.get("operate_param") == 1
         ):
-            setattr(
-                backend_model,
-                k,
-                po.Param(
-                    getattr(backend_model, model_data_dict["dims"][k][0]),
-                    initialize=v,
-                    mutable=True,
-                ),
-            )
-        else:  # no default value to look up
-            setattr(
-                backend_model,
-                k,
-                po.Param(
-                    *[getattr(backend_model, i) for i in model_data_dict["dims"][k]],
-                    initialize=v,
-                    mutable=True,
-                ),
-            )
+            dims = [getattr(backend_model, model_data_dict["dims"][k][0])]
+        else:
+            dims = [getattr(backend_model, i) for i in model_data_dict["dims"][k]]
+        setattr(backend_model, k, po.Param(*dims, **_kwargs))
 
     for option_name, option_val in backend_model.__calliope_run_config[
         "objective_options"
@@ -120,7 +102,10 @@ def generate_model(model_data):
             }
 
             backend_model.objective_cost_class = po.Param(
-                backend_model.costs, initialize=objective_cost_class, mutable=True
+                backend_model.costs,
+                initialize=objective_cost_class,
+                mutable=True,
+                within=po.Reals,
             )
         else:
             setattr(backend_model, "objective_" + option_name, option_val)
@@ -227,7 +212,7 @@ def solve_model(
 
 def load_results(backend_model, results):
     """Load results into model instance for access via model variables."""
-    not_optimal = results["Solver"][0]["Termination condition"].key != "optimal"
+    not_optimal = str(results["Solver"][0]["Termination condition"]) != "optimal"
     this_result = backend_model.solutions.load_from(results)
 
     if this_result is False or not_optimal:
@@ -245,7 +230,7 @@ def load_results(backend_model, results):
 
         exceptions.BackendWarning(message)
 
-    return results["Solver"][0]["Termination condition"].key
+    return str(results["Solver"][0]["Termination condition"])
 
 
 def get_result_array(backend_model, model_data):

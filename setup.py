@@ -3,12 +3,10 @@
 from pathlib import Path
 from setuptools import setup, find_packages
 
+exec(Path("calliope/_version.py").read_text())  # Sets the __version__ variable
 
-# Sets the __version__ variable
-exec(open("calliope/_version.py").read())
-
-with open("README.md") as f:
-    long_description = f.read()
+requirements = Path("requirements.txt").read_text().strip().split("\n")
+long_description = Path("README.md").read_text()
 
 
 def get_subdirs(path, glob_string):
@@ -45,23 +43,7 @@ setup(
     download_url="https://github.com/calliope-project/calliope/releases",
     packages=find_packages(),
     package_data={"calliope": find_calliope_package_data()},
-    install_requires=[
-        "bottleneck >= 1.2",
-        "click >= 7, < 8",
-        "ipython >= 7",
-        "ipdb >= 0.11",
-        "jinja2 >= 2.10",
-        "natsort >= 5",
-        "netcdf4 >= 1.2.2",
-        "numexpr >= 2.3.1",
-        "numpy >= 1.15",
-        "pandas >= 0.25, < 0.26",
-        "plotly >= 3.3, < 4.0",
-        "pyomo >= 5.6, < 5.7",
-        "ruamel.yaml >= 0.16",
-        "scikit-learn >= 0.22",
-        "xarray >= 0.14, < 0.15",
-    ],
+    install_requires=requirements,
     entry_points={"console_scripts": ["calliope = calliope.cli:cli"]},
     classifiers=[
         "Intended Audience :: Science/Research",
