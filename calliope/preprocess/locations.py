@@ -143,15 +143,18 @@ def process_locations(model_config, modelrun_techs):
             tech_settings = cleanup_undesired_keys(tech_settings)
 
             # Resolve columns in filename if necessary
-            file_configs = [
+            file_or_df_configs = [
                 i
                 for i in tech_settings.keys_nested()
                 if (
                     isinstance(tech_settings.get_key(i), str)
-                    and "file=" in tech_settings.get_key(i)
+                    and (
+                        "file=" in tech_settings.get_key(i)
+                        or "df=" in tech_settings.get_key(i)
+                    )
                 )
             ]
-            for config_key in file_configs:
+            for config_key in file_or_df_configs:
                 config_value = tech_settings.get_key(config_key, "")
                 if ":" not in config_value:
                     config_value = "{}:{}".format(config_value, loc_name)
