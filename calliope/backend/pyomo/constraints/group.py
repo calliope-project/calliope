@@ -862,7 +862,7 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
     cost_cap = get_param(
         backend_model, "group_cost_var_{}".format(what), (cost, group_name)
     )
-    
+
     if check_value(cost_cap):
         return return_noconstraint("cost_var_cap", group_name)
     else:
@@ -900,7 +900,7 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
     threshold = get_param(
         backend_model, "group_resource_area_{}".format(what), (constraint_group)
     )
-    
+
     if check_value(threshold):
         return return_noconstraint("resource_area", constraint_group)
     else:
