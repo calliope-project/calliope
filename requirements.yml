@@ -4,7 +4,6 @@ channels:
     - conda-forge
 
 dependencies:
-    - bottleneck
     - click
     - coverage >= 4.4
     - codecov
@@ -16,12 +15,10 @@ dependencies:
     - libnetcdf
     - natsort
     - netcdf4
-    - numexpr
     - numpy
     - pandas=0.25
-    - plotly<4.0
     - pre-commit
-    - pyomo=5.6
+    - pyomo=5.7
     - pytest-cov
     - pytest-xdist  # pytest distributed testing plugin
     - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
