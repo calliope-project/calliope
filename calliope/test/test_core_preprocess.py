@@ -560,7 +560,7 @@ class TestChecks:
         assert check_error_or_warning(
             excinfo, "Unrecognised setting in run configuration: subset_time"
         )
-    
+
     def test_warn_null_number_of_spores(self):
         """
         Check that spores number is greater than 0 if spores run mode is selected
@@ -571,8 +571,7 @@ class TestChecks:
             build_model(scenario="spores", override_dict=override)
 
         assert check_error_or_warning(
-            warn,
-            "spores run mode is selected, but a number of 0 spores is requested"
+            warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
     def test_non_string_score_cost_class(self):
@@ -585,10 +584,8 @@ class TestChecks:
             build_model(scenario="spores", override_dict=override)
 
         assert check_error_or_warning(
-            excinfo, 
-            "`run.spores_options.score_cost_class` must be a string"
+            excinfo, "`run.spores_options.score_cost_class` must be a string"
         )
-
 
     @pytest.mark.parametrize(
         "invalid_key", [("monetary"), ("emissions"), ("name"), ("anything_else_really")]
