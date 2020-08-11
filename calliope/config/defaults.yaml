@@ -20,7 +20,7 @@ run:
         window: null
         horizon: null
         use_cap_results: false
-    spores_options:
+    spores_options:  # settings for SPORES (spatially-explicit, practically optimal results) mode
         spores_number: 3  # The number of SPORES to generate
         slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
         score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
