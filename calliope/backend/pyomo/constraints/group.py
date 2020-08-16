@@ -54,6 +54,17 @@ def load_constraints(backend_model):
                 ),
             )
 
+        if "group_storage_cap_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_storage_cap_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(backend_model, "group_names_storage_cap_{}".format(sense)),
+                    [sense],
+                    rule=storage_cap_constraint_rule,
+                ),
+            )              
+            
         if "group_resource_area_{}".format(sense) in model_data_dict:
             setattr(
                 backend_model,
@@ -713,7 +724,45 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
 
         return equalizer(sum(lhs), rhs, what)
 
+def storage_cap_constraint_rule(backend_model, constraint_group, what):
+    """
+    Enforce upper and lower bounds for storage_cap of storage_cap
+    for groups of technologies and locations.
 
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech \\in given\\_group} storage_{cap}(loc::tech) \\leq storage\\_cap\\_max\\\\
+
+            \\sum_{loc::tech \\in given\\_group} storage_{cap}(loc::tech) \\geq storage\\_cap\\_min
+
+    """
+    threshold = get_param(
+        backend_model, "group_storage_cap_{}".format(what), (constraint_group)
+    )
+
+    if check_value(threshold):
+        return return_noconstraint("storage_cap", constraint_group)
+    else:
+        lhs_loc_techs = getattr(
+            backend_model, "group_constraint_loc_techs_{}".format(constraint_group)
+        )
+
+        # Transmission techs only contribute half their capacity in each direction
+        lhs = []
+        for loc_tech in lhs_loc_techs:
+            if loc_tech_is_in(backend_model, loc_tech, "loc_techs_transmission"):
+                weight = 0.5
+            else:
+                weight = 1
+
+            lhs.append(weight * backend_model.storage_cap[loc_tech])
+
+        rhs = threshold
+
+        return equalizer(sum(lhs), rhs, what)
+    
 def cost_cap_constraint_rule(backend_model, group_name, cost, what):
     """
     Limit cost for a specific cost class to a certain value,
