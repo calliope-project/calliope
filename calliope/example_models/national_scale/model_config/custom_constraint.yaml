@@ -1,0 +1,25 @@
+
+custom_constraints:
+    sets:
+        techs_csp:
+            elements:
+                - csp
+                - ac_transmission
+            within: techs
+        electricity:
+            elements:
+                - power
+            within: carriers
+    parameters:
+        carrier_prod_share: 0.25
+    constraints:
+        carrier_prod_share:
+            eq: energy_sum_csp == carrier_prod_share * total_energy_sum
+            foreach: [locs, electricity]
+            components:
+                energy_sum_wind:
+                    sum: carrier_prod
+                    over: [techs_csp, timesteps]
+                total_energy_sum:
+                    sum: carrier_prod
+                    over: [techs_supply, timesteps]

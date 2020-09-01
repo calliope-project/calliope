@@ -73,6 +73,9 @@ def generate_model(model_data):
     backend_model.__calliope_run_config = AttrDict.from_yaml_string(
         model_data.attrs["run_config"]
     )
+    backend_model.__calliope_custom_constraints = AttrDict.from_yaml_string(
+        model_data.attrs["custom_constraints"]
+    )
 
     for k, v in model_data_dict["data"].items():
         _kwargs = {

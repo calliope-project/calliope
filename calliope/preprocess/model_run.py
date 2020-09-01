@@ -704,6 +704,7 @@ def generate_model_run(
     model_run["run"] = config["run"]
     model_run["model"] = config["model"]
     model_run["group_constraints"] = config.get("group_constraints", {})
+    model_run["custom_constraints"] = config.get("custom_constraints", {})
 
     # 7) Initialize sets
     all_sets = sets.generate_simple_sets(model_run)

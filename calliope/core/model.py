@@ -142,6 +142,13 @@ class Model(object):
             observer=self._model_data,
         )
 
+        # Do the same for custom constraints, if defined
+        self.custom_constraints = UpdateObserverDict(
+            initial_dict=model_run.get("custom_constraints", {}),
+            name="custom_constraints",
+            observer=self._model_data,
+        )
+
     def _init_from_model_data(self, model_data):
         if "_model_run" in model_data.attrs:
             self._model_run = AttrDict.from_yaml_string(model_data.attrs["_model_run"])

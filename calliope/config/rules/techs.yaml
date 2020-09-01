@@ -1,0 +1,588 @@
+exists:
+  type: bool
+  default: True
+  doc: If True, the technology exists, if False, it does not. Allows overrides to remove technologies, for example, on a per-scenario basis.
+essentials:
+  parent:
+    type: str
+    doc: Parent tech_group. Must always be defined.
+  carrier:
+    validator: carrier_key_choice_validation
+    in:
+      type: Union[str, list]  # i.e. it can be a single string, or a list of strings. list is only available to conversion_plus technologies
+      default: OptionalMissingValue
+      doc: Primary carrier(s) to consume.
+      validator: allowed_in_validation
+      validator_params:
+        allowed_in: [conversion, demand, storage, transmission, conversion_plus]
+    in_2:
+      type: Union[str, list]  # i.e. it can be a single string, or a list of strings
+      default: OptionalMissingValue
+      doc: Secondary carrier(s) to consume. Conversion_plus technologies only.
+      validator_params:
+        allowed_in: [conversion_plus]
+    in_3:
+      type: Union[str, list]  # i.e. it can be a single string, or a list of strings
+      default: OptionalMissingValue
+      doc: Tertiary carrier(s) to consume. Conversion_plus technologies only.
+      validator_params:
+        allowed_in: [conversion_plus]
+    out:
+      type: Union[str, list]  # i.e. it can be a single string, or a list of strings. list is only available to conversion_plus technologies
+      default: OptionalMissingValue
+      doc: Primary carrier(s) to produce.
+      validator: allowed_in_validation
+      validator_params:
+        allowed_in: [conversion, supply, supply_plus, storage, transmission, conversion_plus]
+    out_2:
+      type: Union[str, list]  # i.e. it can be a single string, or a list of strings
+      default: OptionalMissingValue
+      doc: Secondary carrier(s) to produce. Conversion_plus technologies only.
+      validator: allowed_in_validation
+      validator_params:
+        allowed_in: [conversion_plus]
+    out_3:
+      type: Union[str, list]  # i.e. it can be a single string, or a list of strings
+      default: OptionalMissingValue
+      doc: Tertiary carrier(s) to produce. Conversion_plus technologies only.
+      validator: allowed_in_validation
+      validator_params:
+        allowed_in: [conversion_plus]
+    primary_in:
+      type: str
+      doc: Selects the primary input carrier to associate with costs & constraints (if multiple primary input carriers are assigned).
+      default: OptionalMissingValue
+      validator: [allowed_in_validation, carrier_validation]
+      validator_params:
+        allowed_in: [conversion_plus]
+        direction: 'in'
+    primary_out:
+      type: str
+      doc: Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned).
+      default: OptionalMissingValue
+      validator: [allowed_in_validation, carrier_validation]
+      validator_params:
+        allowed_in: [conversion_plus]
+        direction: 'out'
+    export:
+      type: str
+      doc: choice of carrier that can be exported, if choosing to allow the technology to export
+      default: OptionalMissingValue
+      validator: [allowed_in_validation, carrier_validation]
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+        direction: 'out'
+  color:
+    type: Color
+    doc: Color to use for plotting. If not defined, a random one will be chosen.
+    default: OptionalMissingValue
+  name:
+    type: str
+    doc: Name of technology. Used for plotting and analysis.
+  constraints:
+    carrier_ratios:
+      in:
+        type: CarrierClassDict # FIXME custom type to implement: Dict[str, Union[carrierfloat, FileWithSubset]]
+        opts: {ge: 0}
+        doc: Ratio of output of each carrier in `in` to the summed output of carriers in `in`
+        default: 1
+      in_2:
+        type: CarrierClassDict # FIXME custom type to implement: Dict[str, Union[carrierfloat, FileWithSubset]]
+        opts: {ge: 0}
+        doc: Ratio of output of each carrier in `in_2` to the summed output of carriers in `in`
+        default: 1
+      in_3:
+        type: CarrierClassDict # FIXME custom type to implement: Dict[str, Union[carrierfloat, FileWithSubset]]
+        opts: {ge: 0}
+        doc: Ratio of output of each carrier in `in_3` to the summed output of carriers in `in`
+        default: 1
+      out:
+        type: CarrierClassDict # FIXME custom type to implement: Dict[str, Union[carrierfloat, FileWithSubset]]
+        opts: {ge: 0}
+        doc: Ratio of output of each carrier in `out` to the summed output of carriers in `out`
+        default: 1
+      out_2:
+        type: CarrierClassDict # FIXME custom type to implement: Dict[str, Union[carrierfloat, FileWithSubset]]
+        opts: {ge: 0}
+        doc: Ratio of output of each carrier in `out_2` to the summed output of carriers in `out`
+        default: 1
+      out_3:
+        type: CarrierClassDict # FIXME custom type to implement: Dict[str, Union[carrierfloat, FileWithSubset]]
+        opts: {ge: 0}
+        doc: Ratio of output of each carrier in `out_3` to the summed output of carriers in `out`
+        default: 1
+      name: Carrier ratios
+      allowed_in: [conversion_plus]
+    coeff_of_performance:
+      type: confloat
+      opts: {ge: 0}
+      default: 1
+      doc: Coefficient of performance for energy conversion devices
+      name: Coefficient of performance
+      validator_params:
+        allowed_in: [conversion, conversion_plus]
+    distance:
+      type: unitfloat
+      name: Distance
+      opts: {unit: distance, ge: 0, lt: .inf}
+      doc: Distance covered by technology
+      validator_params:
+        allowed_in: [transmission]
+    energy_cap_per_storage_cap_min:
+      type: unitfloat
+      opts: {unit: per_time, ge: 0, lt: .inf}
+      default: OptionalMissingValue
+      name: Minimum energy capacity per storage capacity
+      doc: Ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    energy_cap_per_storage_cap_max:
+      type: unitfloat
+      opts: {unit: per_time, ge: 0, le: .inf}
+      default: OptionalMissingValue
+      name: Maximum energy capacity per storage capacity
+      doc: Ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    energy_cap_per_storage_cap_equals:
+      type: unitfloat
+      opts: {unit: per_time, ge: 0, lt: .inf}
+      default: OptionalMissingValue
+      name: Energy capacity per storage capacity
+      doc: A multiplier that ties energy capacity to storage capacity
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    energy_cap_equals:
+      type: unitfloat
+      opts: {unit: power, ge: 0, lt: .inf}
+      default: OptionalMissingValue
+      name: Specific installed energy capacity
+      doc: Fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_equals_systemwide:
+      type: unitfloat
+      opts: {unit: power, ge: 0, lt: .inf}
+      default: OptionalMissingValue
+      name: System-wide specific installed energy capacity
+      doc: Fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_max:
+      type: unitfloat
+      opts: {unit: power, ge: 0, le: .inf}
+      default: .inf
+      name: Maximum installed energy capacity
+      doc: Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_max_systemwide:
+      type: unitfloat
+      opts: {unit: power, ge: 0, le: .inf}
+      default: .inf
+      name: System-wide maximum installed energy capacity
+      doc: Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_min:
+      type: unitfloat
+      opts: {unit: power, ge: 0, lt: .inf}
+      default: 0
+      name: Minimum installed energy capacity
+      doc: Limits decision variables ``carrier_prod``/``carrier_con`` to a minimum/maximum.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_min_use:
+      type: confloat
+      default: 0
+      opts: {ge: 0, le: 1}
+      name: Minimum carrier production
+      doc: Set to a value between 0 and 1 to force minimum carrier production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_per_unit:
+      type: unitfloat
+      default: OptionalMissingValue
+      opts: {unit: power_per_unit, ge: 0, lt: .inf}
+      name: Energy capacity per purchased unit
+      doc: Set the capacity of each integer unit of a technology purchased.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_cap_scale:
+      type: confloat
+      opts: {ge: 0, lt: .inf}
+      default: 1.0
+      name: Energy capacity scale
+      doc: Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_con:
+      type: bool
+      default: False
+      name: Energy consumption
+      doc: Allow this technology to consume energy from the carrier.
+      validator_params:
+        allowed_in: [conversion, conversion_plus, storage, transmission, demand]
+    energy_eff:
+      type: Union[confloat, FileWithSubset]
+      opts: {ge: 0, le: 1}
+      default: 1.0
+      name: Energy efficiency
+      doc: Conversion efficiency (static, or from file as timeseries), from ``resource``/``storage``/``carrier_in`` (tech dependent) to ``carrier_out``.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_eff_per_distance:
+      type: Union[confloat, FileWithSubset]
+      opts: {unit: per_distance, ge: 0, le: 1}
+      default: 1.0
+      name: Energy efficiency per distance
+      doc: Set as value between 1 (no loss) and 0 (all energy lost).
+      validator_params:
+        allowed_in: [transmission]
+    energy_prod:
+      type: bool
+      default: False
+      name: Energy production
+      doc: Allow this technology to supply energy to the carrier.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    energy_ramping:
+      type: unitfloat
+      default: 1
+      opts: {unit: per_hour, ge: 0, le: 1}
+      name: Ramping rate
+      doc: Limit maximum carrier production to a fraction of maximum capacity, which increases by that fraction at each timestep.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage]
+    export_cap:
+      type: unitfloat
+      opts: {unit: power, ge: 0, le: .inf}
+      default: .inf
+      name: Export capacity
+      doc: Maximum allowed export of produced energy carrier for a technology.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage]
+    force_asynchronous_prod_con:
+      type: bool
+      default: False
+      name: Force asynchronous production consumption
+      doc: If True, carrier_prod and carrier_con cannot both occur in the same timestep
+      validator_params:
+        allowed_in: [transmission]
+    force_resource:
+      type: bool
+      default: False
+      name: Force resource
+      doc: Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption).
+      validator_params:
+        allowed_in: [supply, supply_plus, demand]
+    lifetime:
+      type: unitfloat
+      opts: {unit: years}
+      name: Technology lifetime
+      doc: Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    one_way:
+      type: bool
+      default: False
+      name: One way transmission
+      doc: Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`.
+      validator_params:
+        allowed_in: [transmission]
+    parasitic_eff:
+      type: Union[confloat, FileWithSubset]
+      opts: {ge: 0, le: 1}
+      default: 1.0
+      name: Plant parasitic efficiency
+      doc: Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption.
+      validator_params:
+        allowed_in: [supply_plus]
+    resource:  # FIXME this needs a better solution to assign a unit
+      type: Union[confloat, FileWithSubset]
+      default: 0
+      opts: {ge: 0, lt: .inf}
+      name: Available resource
+      doc: Maximum available resource (static, or from file as timeseries). Unit dictated by ``resource_unit``. Unit can be energy, energy per unit area, or energy per unit technology capacity.
+      validator_params:
+        allowed_in: [demand, supply, supply_plus]
+    resource_area_equals:
+      type: unitfloat
+      default: OptionalMissingValue
+      opts: {unit: area, ge: 0, lt: .inf}
+      name: Specific installed resource area.
+      doc: Enforces an exact amount of usable area for the technology, which may influence resource availability.
+      validator_params:
+        allowed_in: [demand, supply, supply_plus]
+    resource_area_max:
+      type: unitfloat
+      default: .inf
+      opts: {unit: area, ge: 0, le: .inf}
+      name: Maximum usable resource area
+      doc: Enforces a maximum usable area for the technology, which may influence resource availability.
+      validator_params:
+        allowed_in: [supply, supply_plus]
+    resource_area_min:
+      type: unitfloat
+      default: 0
+      opts: {unit: area, ge: 0, lt: .inf}
+      name: Minimum usable resource area
+      doc: Enforces a minimum usable area for the technology, which may influence resource availability.
+      validator_params:
+        allowed_in: [supply, supply_plus]
+    resource_area_per_energy_cap:
+      type: unitfloat
+      opts: {unit: area_per_power, ge: 0, lt: .inf}
+      default: OptionalMissingValue
+      name: Resource area per energy capacity
+      doc: If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``).
+      validator_params:
+        allowed_in: [supply, supply_plus]
+    resource_cap_equals:
+      type: unitfloat
+      default: OptionalMissingValue
+      opts: {unit: power, ge: 0, lt: .inf}
+      name: Specific installed resource consumption capacity
+      doc: Overrides ``_max`` and ``_min`` constraints.
+      validator_params:
+        allowed_in: [supply_plus]
+    resource_cap_equals_energy_cap:
+      type: bool
+      default: False
+      name: Resource capacity equals energy capacity
+      doc: If true, ``resource_cap`` is forced to equal ``energy_cap``.
+      validator_params:
+        allowed_in: [supply_plus]
+    resource_cap_max:
+      type: unitfloat
+      default: .inf
+      opts: {unit: power, ge: 0, le: .inf}
+      name: Maximum installed resource consumption capacity
+      validator_params:
+        allowed_in: [supply_plus]
+      doc: Maximum installed resource consumption capacity
+    resource_cap_min:
+      type: unitfloat
+      default: 0
+      opts: {unit: power, ge: 0, lt: .inf}
+      name: Minimum installed resource consumption capacity
+      validator_params:
+        allowed_in: [supply_plus]
+      doc: Minimum installed resource consumption capacity
+    resource_eff:
+      type: Union[confloat, FileWithSubset]
+      default: 1.0
+      opts: {ge: 0, le: 1}
+      name: Resource efficiency
+      doc: Efficiency (static, or from file as timeseries) in capturing resource before it reaches storage (if storage is present) or conversion to carrier.
+      validator_params:
+        allowed_in: [supply_plus]
+    resource_min_use:
+      type: confloat
+      default: 0
+      opts: {ge: 0, le: 1}
+      name: Minimum resource consumption
+      doc: Set to a value between 0 and 1 to force minimum resource consumption for production technologies.
+      validator_params:
+        allowed_in: [supply, supply_plus]
+    resource_scale:
+      type: confloat
+      default: 1.0
+      opts: {ge: 0, le: 1}
+      name: Resource scale
+      doc: Scale resource (either static value or all values in timeseries) by this value.
+      validator_params:
+        allowed_in: [demand, supply, supply_plus]
+    resource_unit:  # FIXME this needs a better solution
+      type: str
+      default: energy
+      name: Resource unit
+      doc: Sets the unit of ``resource`` to either ``energy`` (e.g. kWh), ``energy_per_area`` (e.g. kWh/m2), or ``energy_per_cap`` (e.g. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
+      validator_params:
+        allowed_in: [demand, supply, supply_plus]
+    storage_cap_equals:
+      type: unitfloat
+      opts: {unit: energy, ge: 0, lt: .inf}
+      default: OptionalMissingValue
+      name: Specific storage capacity
+      doc: If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    storage_cap_max:
+      type: unitfloat
+      default: .inf
+      opts: {unit: energy, ge: 0, le: .inf}
+      name: Maximum storage capacity
+      doc: If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    storage_cap_min:
+      type: unitfloat
+      default: 0
+      opts: {unit: energy, ge: 0, lt: .inf}
+      name: Minimum storage capacity
+      doc: Minimum capacity to store energy for a storage device
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    storage_cap_per_unit:
+      type: unitfloat
+      opts: {unit: energy_per_unit, ge: 0, lt: .inf}
+      name: Storage capacity per purchased unit
+      doc: Set the storage capacity of each integer unit of a technology purchased.
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    storage_discharge_depth:
+      type: confloat
+      default: 0
+      opts: {ge: 0, le: 1}
+      name: Storage depth of discharge
+      doc: Defines the minimum level of storage state of charge, as a fraction of total storage capacity.
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    storage_initial:
+      type: confloat
+      default: 0
+      opts: {ge: 0, le: 1}
+      name: Initial storage level
+      doc: Set stored energy in device at the first timestep, as a fraction of total storage capacity.
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    storage_loss:
+      type: Union[unitfloat, FileWithSubset]
+      default: 0
+      opts: {unit: per_time, ge: 0}
+      name: Storage loss rate
+      doc: Rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``.
+      validator_params:
+        allowed_in: [storage, supply_plus]
+    units_equals:
+      type: conint
+      default: OptionalMissingValue
+      opts: {ge: 0, lt: .inf}
+      name: Specific number of installed units
+      doc: Specific number of installed units. Turns the model from LP to MILP.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    units_equals_systemwide:
+      type: conint
+      default: OptionalMissingValue
+      opts: {ge: 0, lt: .inf}
+      name: System-wide specific number installed of units
+      doc: Turns the model from LP to MILP.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    units_max:
+      type: conint
+      default: .inf
+      opts: {ge: 0, le: .inf}
+      name: Maximum number of purchased units
+      doc: Turns the model from LP to MILP.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    units_max_systemwide:
+      type: conint
+      default: .inf
+      opts: {ge: 0, le: .inf}
+      name: System-wide maximum number installed of units
+      doc: Turns the model from LP to MILP.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+    units_min:
+      type: conint
+      default: 0
+      opts: {ge: 0, lt: .inf}
+      name: Minimum number installed of units
+      doc: Turns the model from LP to MILP.
+      validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+
+costs:
+  energy_cap:
+    type: CostClassDict  # FIXME custom type to implement: Dict[str, costfloat]
+    default: 0
+    name: Cost of energy capacity
+    opts: {unit: per_power}
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+  energy_cap_per_distance:
+    type: CostClassDict
+    default: 0
+    name: Cost of energy capacity, per unit distance
+    opts: {unit: per_power_and_distance}
+    doc: Applied to transmission links only.
+    validator_params:
+        allowed_in: [transmission]
+  export:
+    type: CostClassDict
+    default: 0
+    name: Carrier export cost
+    opts: {unit: per_energy}
+    doc: Usually used in the negative sense, as a subsidy.
+    validator: export_cost_validation
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage]
+  interest_rate:
+    type: CostClassDict
+    default: 0
+    name: nterest rate
+    doc: Used when computing levelized costs.
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+  om_annual:
+    type: CostClassDict
+    default: 0
+    name: Yearly O&M costs
+    opts: {unit: per_power}
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+  om_annual_investment_fraction:
+    type: CostClassDict
+    default: 0
+    name: Fractional yearly O&M costs (as fraction of total investment)
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+  om_con:
+    type: CostClassDict
+    default: 0
+    name: Carrier consumption cost
+    opts: {unit: per_energy}
+    doc: Applied to carrier consumption of a technology.
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, demand]
+  om_prod:
+    type: CostClassDict
+    default: 0
+    name: Carrier production cost
+    opts: {unit: per_energy}
+    doc: Applied to carrier production of a technology.
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+  purchase:
+    type: CostClassDict
+    default: 0
+    name: Purchase cost
+    opts: {unit: per_unit}
+    doc: Triggers a binary variable for that technology to say that it has been purchased or is applied to integer variable ``units``.
+    validator_params:
+        allowed_in: [supply, supply_plus, conversion, conversion_plus, storage, transmission]
+  resource_area:
+    type: CostClassDict
+    default: 0
+    name: Cost of resource area
+    opts: {unit: per_area}
+    validator_params:
+        allowed_in: [supply, supply_plus]
+  resource_cap:
+    type: CostClassDict
+    default: 0
+    name: Cost of resource consumption capacity
+    opts: {unit: per_power}
+    validator_params:
+        allowed_in: [supply_plus]
+  storage_cap:
+    type: CostClassDict
+    default: 0
+    name: Cost of storage capacity
+    opts: {unit: per_energy}
+    validator_params:
+        allowed_in: [supply_plus]

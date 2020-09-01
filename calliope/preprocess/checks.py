@@ -127,6 +127,7 @@ def check_initial(config_model):
             "scenarios",
             "config_path",
             "group_constraints",
+            "custom_constraints",
         ]:
             model_warnings.append(
                 "Unrecognised top-level configuration item: {}".format(k)
