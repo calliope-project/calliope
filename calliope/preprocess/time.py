@@ -115,7 +115,7 @@ def add_time_dimension(data, model_run):
     --------
     data : xarray Dataset
         A data structure with an additional time dimension to the input dataset,
-        with all relevant `file=` entries replaced with data from file.
+        with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
     data["timesteps"] = pd.to_datetime(data.timesteps)
@@ -129,36 +129,38 @@ def add_time_dimension(data, model_run):
         # 2) convert to a Pandas Series to do 'string contains' search
         data_series = data[variable].to_series()
 
-        # 3) get a Series of all the uses of 'file=' for this variable
-        filenames = data_series[data_series.str.contains("file=")]
+        # 3) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
+        tskeys = data_series[
+            data_series.str.contains("file=") | data_series.str.contains("df=")
+        ]
 
-        # 4) If no use of 'file=' then we can be on our way
-        if filenames.empty:
+        # 4) If no use of 'file=' or 'df=' then we can be on our way
+        if tskeys.empty:
             continue
 
         # 5) remove all before '=' and split filename and location column
-        filenames = filenames.str.split("=").str[1].str.rsplit(":", 1)
-        if isinstance(filenames.index, pd.MultiIndex):
-            filenames.index = filenames.index.remove_unused_levels()
+        tskeys = tskeys.str.split("=").str[1].str.rsplit(":", 1)
+        if isinstance(tskeys.index, pd.MultiIndex):
+            tskeys.index = tskeys.index.remove_unused_levels()
 
         # 6) Get all timeseries data from dataframes stored in model_run
         timeseries_data = []
         key_errors = []
-        for loc_tech, (filename, column) in filenames.iteritems():
+        for loc_tech, (tskey, column) in tskeys.items():
             try:
                 timeseries_data.append(
-                    model_run.timeseries_data[filename].loc[:, column].values
+                    model_run.timeseries_data[tskey].loc[:, column].values
                 )
             except KeyError:
                 key_errors.append(
-                    "column `{}` not found in file `{}`, but was requested by "
-                    "loc::tech `{}`.".format(column, filename, loc_tech)
+                    "column `{}` not found in dataframe `{}`, but was requested by "
+                    "loc::tech `{}`.".format(column, tskey, loc_tech)
                 )
         if key_errors:
             exceptions.print_warnings_and_raise_errors(errors=key_errors)
 
         timeseries_data_series = pd.DataFrame(
-            index=filenames.index, columns=data.timesteps.values, data=timeseries_data
+            index=tskeys.index, columns=data.timesteps.values, data=timeseries_data
         ).stack()
         timeseries_data_series.index.rename("timesteps", -1, inplace=True)
 

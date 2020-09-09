@@ -161,7 +161,16 @@ This will create an ``unmet_demand`` decision variable in the optimisation, whic
 Time series data
 ----------------
 
-For parameters that vary in time, time series data can be read from CSV files, by specifying :yaml:`resource: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
+For parameters that vary in time, time series data can be added to a model in two ways:
+
+* by reading in CSV files
+* by passing ``pandas`` dataframes as arguments in ``calliope.Model`` called from a python session.
+
+Reading in CSV files is possible from both the command-line tool as well running interactively with python (see :doc:`running` for details). However, passing dataframes as arguments in ``calliope.Model`` is possible only when running from a python session.
+
+Reading in CSV files
+--------------------
+To read in CSV files, specify :yaml:`resource: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
 By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: file=filename.csv:column`
 
@@ -181,7 +190,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
 
 By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <http://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
-For example, the first few lines of a CSV file giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
+For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
 .. code-block:: text
 
@@ -194,11 +203,56 @@ For example, the first few lines of a CSV file giving a resource potential for t
     2005-01-01 05:00:00,45,300
     2005-01-01 06:00:00,90,458
 
+Reading in timeseries from ``pandas`` dataframes
+------------------------------------------------
+When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`resource: df=tskey` where ``tskey`` is the key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
+
+.. code-block:: python
+
+    pv_resource
+    
+    t                     location1  location2
+    2005-01-01 00:00:00           0          0
+    2005-01-01 01:00:00           0         11
+    2005-01-01 02:00:00           0         18
+    2005-01-01 03:00:00           0         49
+    2005-01-01 04:00:00          11        110
+    2005-01-01 05:00:00          45        300
+    2005-01-01 06:00:00          90        458
+
+To pass this timeseries into the model, create a dictionary, called ``timeseries_dataframes`` here, containing all relevant timeseries identified by their ``tskey``. In this case, this has only one key, called ``pv_resource``:
+
+.. code-block:: python
+
+    timeseries_dataframes = {'pv_resource': pv_resource}
+
+The keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``. All relevant timeseries must be put in this dictionary. For example, if a model contains three timeseries referred to in the configuration YAML files, called ``demand_1``, ``demand_2`` and ``pv_resource``, the ``timeseries_dataframes`` dictionary may look like
+
+.. code-block:: python
+
+    timeseries_dataframes = {'demand_1': demand_1,
+                             'demand_2': demand_2,
+                             'pv_resource': pv_resource}
+
+where ``demand_1``, ``demand_2`` and ``pv_resource`` are dataframes of the relevant timeseries. The ``timeseries_dataframes`` can then be called in ``calliope.Model``:
+
+.. code-block:: python
+
+    model = calliope.Model('model.yaml', timeseries_dataframes=timeseries_dataframes)
+
+Just like when using CSV files (see above), Calliope looks for a column in the dataframe with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: df=tskey:column`.
+
+The time series index must be ISO 8601 compatible time stamps and can be a standard ``pandas`` DateTimeIndex (see discussion above).
+
+
 .. Note::
 
    * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
-   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
-   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file, i.e. :yaml:`resource: file = filename.csv` is not valid.
+   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
+   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`resource: file = filename.csv` is not valid.
+   * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
+   * It's possible to mix reading in from CSVs and dataframes, by setting some config values as ``file=...`` and some as ``df=...``.
+   * The default value of ``timeseries_dataframes`` is ``None``, so if you want to read all timeseries in from CSVs, you can omit this argument. When running from command line, this is done automatically.
 
 ----------------------------------------------
 Locations and links (``locations``, ``links``)

@@ -1053,7 +1053,7 @@ class TestLoadTimeseries:
         assert check_error_or_warning(
             excinfo,
             [
-                "column `2` not found in file `demand_elec.csv`, but was requested by loc::tech `2::test_demand_elec`.",
-                "column `3` not found in file `demand_elec.csv`, but was requested by loc::tech `3::test_demand_elec`.",
+                "column `2` not found in dataframe `demand_elec.csv`, but was requested by loc::tech `2::test_demand_elec`.",
+                "column `3` not found in dataframe `demand_elec.csv`, but was requested by loc::tech `3::test_demand_elec`.",
             ],
         )

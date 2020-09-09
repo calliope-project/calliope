@@ -528,3 +528,33 @@ This constraint can be applied to storage or transmission technologies. This exa
    :end-before: # heat_pipes-end
 
 In the above example, heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This might allow e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. Enabling the ``asynchronous_prod_con`` constraint ensures that this does not happen.
+
+-------------------------------
+User-defined custom constraints
+-------------------------------
+
+It is possible to pass custom constraints to the Pyomo backend, using the :ref:`backend interface <api_backend_interface>`. This requires an understanding of the structure of Pyomo constraints. As an example, the following code reproduces the constraint which limits the maximum carrier consumption to less than or equal to the technology capacity:
+
+.. code-block:: python
+
+    model = calliope.Model(...)
+    model.run()  # or `model.run(build_only=True)` if you don't want the model to be optimised before adding the new constraint
+
+    constraint_name = 'max_capacity_90_constraint'
+    constraint_sets = ['loc_techs_supply']
+
+    def max_capacity_90_constraint_rule(backend_model, loc_tech):
+
+        return backend_model.energy_cap[loc_tech] <= (
+            backend_model.energy_cap_max[loc_tech] * 0.9
+        )
+
+    # Add the constraint
+    model.backend.add_constraint(constraint_name, constraint_sets, max_capacity_90_constraint_rule)
+
+    # Rerun the model with new constraint.
+    new_model = model.backend.rerun()  # `new_model` is a calliope model *without* a backend, it is only useful for saving the results to file
+
+.. note::
+    * We like the convention that constraint names end with 'constraint' and constraint rules have the same text, with an appended '_rule', but you are not required to follow this convention to have a working constraint.
+    * :python:`model.run(force_rerun=True)` will *not* implement the new constraint, :python:`model.backend.rerun()` is required. If you run :python:`model.run(force_rerun=True)`, the backend model will be rebuilt, killing any changes you've made.
