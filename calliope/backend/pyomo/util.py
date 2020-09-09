@@ -219,5 +219,5 @@ def get_domain(var: xr.DataArray) -> str:
         return "Any"
 
 
-def check_value(val: po.base.param._ParamData) -> bool:
-    return val._value == po.base.param._NotValid or po.value(val) is None
+def is_valid(val: po.base.param._ParamData) -> bool:
+    return not (val._value == po.base.param._NotValid or po.value(val) is None)

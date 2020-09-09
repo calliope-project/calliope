@@ -11,7 +11,11 @@ import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import check_error_or_warning, check_variable_exists
+from calliope.test.common.util import (
+    check_error_or_warning,
+    check_variable_exists,
+    get_indexed_constraint_body,
+)
 
 
 def check_standard_warning(info, warning):
@@ -623,6 +627,31 @@ class TestCostConstraints:
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, "cost_var_constraint")
+
+    def test_one_way_om_cost(self):
+        """
+        With one_way transmission, it should still be possible to set an om_prod cost.
+        """
+        m = build_model(
+            {
+                "techs.test_transmission_elec.costs.monetary.om_prod": 1,
+                "links.0,1.techs.test_transmission_elec.constraints.one_way": True,
+            },
+            "simple_supply,two_hours",
+        )
+        m.run(build_only=True)
+        has_cost = get_indexed_constraint_body(
+            m._backend_model,
+            "cost_var_constraint",
+            ("monetary", "1::test_transmission_elec:0", m._backend_model.timesteps[1]),
+        ).to_string()
+        has_no_cost = get_indexed_constraint_body(
+            m._backend_model,
+            "cost_var_constraint",
+            ("monetary", "0::test_transmission_elec:1", m._backend_model.timesteps[1]),
+        ).to_string()
+        assert "cost_om_prod" in has_cost and "carrier_prod" in has_cost
+        assert "cost_om_prod" not in has_no_cost and "carrier_prod" not in has_no_cost
 
 
 class TestExportConstraints:
