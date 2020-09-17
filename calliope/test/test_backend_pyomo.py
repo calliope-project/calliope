@@ -651,12 +651,17 @@ class TestCostConstraints:
             "simple_supply,two_hours",
         )
         m.run(build_only=True)
-        arg1, arg2 = m._backend_model, "cost_var_constraint",
-        arg3 = ["monetary", "1::test_transmission_elec:0", m._backend_model.timesteps[1]]
-        has_cost = get_indexed_constraint_body(arg1, arg2, arg3).to_string()
-        
-        arg3[1] =  "0::test_transmission_elec:1"
-        has_no_cost = get_indexed_constraint_body(arg1, arg2, arg3).to_string()
+        arg1 = m._backend_model
+        arg2 = "cost_var_constraint"
+        arg3 = [
+            "monetary",
+            "1::test_transmission_elec:0",
+            m._backend_model.timesteps[1],
+        ]
+        has_cost = get_indexed_constraint_body(arg1, arg2, tuple(arg3)).to_string()
+
+        arg3[1] = "0::test_transmission_elec:1"
+        has_no_cost = get_indexed_constraint_body(arg1, arg2, tuple(arg3)).to_string()
         assert "cost_om_prod" in has_cost and "carrier_prod" in has_cost
         assert "cost_om_prod" not in has_no_cost and "carrier_prod" not in has_no_cost
 
