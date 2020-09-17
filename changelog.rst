@@ -6,7 +6,7 @@ Release History
 0.6.6 (dev)
 -----------
 
-|new| New group constraints `carrier_con_min`, `carrier_con_max`, `carrier_con_equals` which restrict the total consumed energy of a subgroup of conversion and/or demand technologies
+|new| New group constraints `carrier_con_min`, `carrier_con_max`, `carrier_con_equals` which restrict the total consumed energy of a subgroup of conversion and/or demand technologies.
 
 |new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
 
