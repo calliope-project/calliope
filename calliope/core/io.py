@@ -49,8 +49,9 @@ def save_netcdf(model_data, path, model=None):
     if model is not None and hasattr(model, "_model_run"):
         # Attach _model_run and _debug_data to _model_data
         model_run_to_save = model._model_run.copy()
-        if "timeseries_data" in model_run_to_save:
-            del model_run_to_save["timeseries_data"]  # Can't be serialised!
+        cannot_serialise = ["timeseries_data", "timesteps"]
+        for k in cannot_serialise:
+            model_run_to_save.pop(k, None)
         model_data_attrs["_model_run"] = model_run_to_save.to_yaml()
         model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 

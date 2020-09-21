@@ -6,10 +6,10 @@ model_data.py
 ~~~~~~~~~~~~~~~~~~
 
 Functionality to build the model-internal data array and process
-time-varying parameters.
+time-varying param_dict.
 
 """
-
+import ast
 import collections
 
 import ruamel.yaml
@@ -31,7 +31,7 @@ def build_model_data(model_run, debug=False):
     constraint generation. Timeseries data is also extracted from file at this
     point, and the time dimension added to the data
 
-    Parameters
+    Param_dict
     ----------
     model_run : AttrDict
         preprocessed model_run dictionary, as produced by
@@ -43,31 +43,29 @@ def build_model_data(model_run, debug=False):
     Returns
     -------
     data : xarray Dataset
-        Dataset with optimisation parameters as variables, optimisation sets as
+        Dataset with optimisation param_dict as variables, optimisation sets as
         coordinates, and other information in attributes.
     data_dict : dict, only returned if debug = True
-        dictionary of parameters, prior to time dimension addition. Used here to
+        dictionary of param_dict, prior to time dimension addition. Used here to
         populate the Dataset (using `from_dict()`)
     data_pre_time : xarray Dataset, only returned if debug = True
-        Dataset, prior to time dimension addition, with optimisation parameters
+        Dataset, prior to time dimension addition, with optimisation param_dict
         as variables, optimisation sets as coordinates, and other information
         in attributes.
     """
     # We build up a dictionary of the data, then convert it to an xarray Dataset
     # before applying time dimensions
-    data = xr.Dataset(coords=add_sets(model_run), attrs=add_attributes(model_run))
+    data = xr.Dataset(coords={'timesteps': model_run.timesteps}, attrs=add_attributes(model_run))
 
-    data_dict = dict()
-    data_dict.update(constraints_to_dataset(model_run))
-    data_dict.update(costs_to_dataset(model_run))
-    data_dict.update(location_specific_to_dataset(model_run))
-    data_dict.update(tech_specific_to_dataset(model_run))
-    data_dict.update(carrier_specific_to_dataset(model_run))
-    data_dict.update(group_constraints_to_dataset(model_run))
+    param_dict = AttrDict({})
+    get_node_params(param_dict, model_run)
+    get_tech_params(param_dict, model_run)
 
-    data = data.merge(xr.Dataset.from_dict(data_dict))
-
-    data = add_lookup_arrays(data, model_run)
+    for k, v in param_dict.items():
+        _df = pd.DataFrame.from_dict(v.as_dict())
+        _df.columns = _df.columns.map(ast.literal_eval).rename(ast.literal_eval(k))
+        _ds = xr.Dataset(_df.T).unstack()
+        data = data.merge(_ds)
 
     if debug:
         data_pre_time = data.copy(deep=True)
@@ -78,7 +76,7 @@ def build_model_data(model_run, debug=False):
     # these directly into the main xarray Dataset
 
     if debug:
-        return data, data_dict, data_pre_time
+        return data, param_dict, data_pre_time
     else:
         return data
 
@@ -88,420 +86,139 @@ def add_sets(model_run):
     for key, value in model_run.sets.items():
         if value:
             coords[key] = value
-    for key, value in model_run.constraint_sets.items():
-        if value:
-            coords[key] = value
     return coords
 
 
-def constraints_to_dataset(model_run):
-    """
-    Extract all constraints from the processed dictionary (model.model_run) and
-    return an xarray Dataset with all the constraints as DataArray variables and
-    model sets as Dataset dimensions.
-
-    Parameters
-    ----------
-    model_run : AttrDict
-        processed Calliope model_run dict
-
-    Returns
-    -------
-    data_dict : dict conforming to xarray conventions
-
-    """
-    data_dict = dict()
-
-    # FIXME: hardcoding == bad
-    def _get_set(constraint):
-        """
-        return the set of loc_techs over which the given constraint should be
-        built
-        """
-        if "_area" in constraint:
-            return "loc_techs_area"
-        elif any(
-            i in constraint for i in ["resource_cap", "parasitic", "resource_min_use"]
-        ):
-            return "loc_techs_supply_plus"
-        elif (
-            "resource" in constraint
-        ):  # i.e. everything with 'resource' in the name that isn't resource_cap
-            return "loc_techs_finite_resource"
-        elif (
-            "storage" in constraint
-            or "charge_rate" in constraint
-            or "energy_cap_per_storage_cap" in constraint
-        ):
-            return "loc_techs_store"
-        elif "purchase" in constraint:
-            return "loc_techs_purchase"
-        elif "units_" in constraint:
-            return "loc_techs_milp"
-        elif "export" in constraint:
-            return "loc_techs_export"
-        else:
-            return "loc_techs"
-
-    # find all constraints which are actually defined in the yaml file
-    relevant_constraints = set(
-        i.split(".constraints.")[1]
-        for i in model_run.locations.as_dict_flat().keys()
-        if ".constraints." in i and ".carrier_ratios." not in i
-    )
-    for constraint in relevant_constraints:
-        data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
-        for loc_tech in model_run.sets[_get_set(constraint)]:
-            loc, tech = loc_tech.split("::", 1)
-            # for transmission technologies, we also need to go into link nesting
-            if ":" in tech:  # i.e. transmission technologies
-                tech, link = tech.split(":")
-                loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
-            else:  # all other technologies
-                loc_tech_dict = model_run.locations[loc].techs[tech]
-            constraint_value = loc_tech_dict.constraints.get(constraint, np.nan)
-            # inf is assumed to be string on import, so we need to np.inf it
-            if constraint_value == "inf":
-                constraint_value = np.inf
-            # add the value for the particular location & technology combination to the list
-            data_dict[constraint]["data"].append(constraint_value)
-        # once we've looped through all technology & location combinations, add the array to the dataset
-
-    group_share_data = {}
-    group_constraints = ["energy_cap_min", "energy_cap_max", "energy_cap_equals"]
-    group_constraints_carrier = [
-        "carrier_prod_min",
-        "carrier_prod_max",
-        "carrier_prod_equals",
-    ]
-
-    for constraint in [  # Only process constraints that are defined
-        c
-        for c in group_constraints
-        if c
-        in "".join(model_run.model.get_key("group_share", AttrDict()).keys_nested())
-    ]:
-        group_share_data[constraint] = [
-            model_run.model.get_key(
-                "group_share.{}.{}".format(techlist, constraint), np.nan
-            )
-            for techlist in model_run.sets["techlists"]
-        ]
-
-    for constraint in [  # Only process constraints that are defined
-        c
-        for c in group_constraints_carrier
-        if c
-        in "".join(model_run.model.get_key("group_share", AttrDict()).keys_nested())
-    ]:
-        group_share_data[constraint] = [
-            [
-                model_run.model.get_key(
-                    "group_share.{}.{}.{}".format(techlist, constraint, carrier), np.nan
+def get_node_params(param_dict, model_run):
+    model_locations = model_run.locations.copy()
+    for node, node_info in model_locations.items():
+        techs = node_info.pop("techs", {})
+        for tech, tech_info in techs.items():
+            _get_tech_info(param_dict, node, tech, tech_info)
+        links = node_info.pop("links", {})
+        for link, link_info in links.items():
+            techs = link_info.pop("techs", {})
+            for tech, tech_info in techs.items():
+                link_tech = f"{tech}:{link}"
+                _get_tech_info(param_dict, node, link_tech, tech_info)
+                param_dict.set_key(
+                    _set_idx(
+                        param="link_remotes",
+                        keydict={"nodes": link, "techs": f"{tech}:{node}"},
+                    ),
+                    link_tech,
                 )
-                for techlist in model_run.sets["techlists"]
-            ]
-            for carrier in model_run.sets["carriers"]
-        ]
 
-    # Add to data_dict and set dims correctly
-    for k in group_share_data:
-        data_dict["group_share_" + k] = {
-            "data": group_share_data[k],
-            "dims": "techlists"
-            if k in group_constraints
-            else ("carriers", "techlists"),
-        }
-
-    return data_dict
-
-
-def costs_to_dataset(model_run):
-    """
-    Extract all costs from the processed dictionary (model.model_run) and
-    return an xarray Dataset with all the costs as DataArray variables. Variable
-    names will be prepended with `cost_` to differentiate from other constraints
-
-    Parameters
-    ----------
-    model_run : AttrDict
-        processed Calliope model_run dict
-
-    Returns
-    -------
-    data_dict : dict conforming to xarray conventions
-
-    """
-    data_dict = dict()
-
-    # FIXME: hardcoding == bad
-    def _get_set(cost):
-        """
-        return the set of loc_techs over which the given cost should be built
-        """
-        if any(i in cost for i in ["_cap", "depreciation_rate", "purchase", "area"]):
-            return "loc_techs_investment_cost"
-        elif any(i in cost for i in ["om_", "export"]):
-            return "loc_techs_om_cost"
-        else:
-            return "loc_techs"
-
-    # find all cost classes and associated costs which are actually defined in the model_run
-    costs = set(
-        i.split(".costs.")[1].split(".")[1]
-        for i in model_run.locations.as_dict_flat().keys()
-        if ".costs." in i
-    )
-    cost_classes = model_run.sets["costs"]
-
-    # loop over unique costs, cost classes and technology & location combinations
-    for cost in costs:
-        data_dict["cost_" + cost] = dict(dims=["costs", _get_set(cost)], data=[])
-        for cost_class in cost_classes:
-            cost_class_array = []
-            for loc_tech in model_run.sets[_get_set(cost)]:
-                loc, tech = loc_tech.split("::", 1)
-                # for transmission technologies, we also need to go into link nesting
-                if ":" in tech:  # i.e. transmission technologies
-                    tech, link = tech.split(":")
-                    loc_tech_dict = model_run.locations[loc].links[link].techs[tech]
-                else:  # all other technologies
-                    loc_tech_dict = model_run.locations[loc].techs[tech]
-                cost_dict = loc_tech_dict.get_key("costs." + cost_class, None)
-
-                # inf is assumed to be string on import, so need to np.inf it
-                cost_value = np.nan if not cost_dict else cost_dict.get(cost, np.nan)
-                # add the value for the particular location & technology combination to the correct cost class list
-                cost_class_array.append(cost_value)
-            data_dict["cost_" + cost]["data"].append(cost_class_array)
-
-    return data_dict
-
-
-def carrier_specific_to_dataset(model_run):
-    """
-    Extract carrier information from the processed dictionary (model.model_run)
-    and return an xarray Dataset with DataArray variables describing carrier_in,
-    carrier_out, and carrier_ratio (for conversion plus technologies) information.
-
-    Parameters
-    ----------
-    model_run : AttrDict
-        processed Calliope model_run dict
-
-    Returns
-    -------
-    data_dict : dict conforming to xarray conventions
-
-    """
-    carrier_tiers = model_run.sets["carrier_tiers"]
-    loc_tech_dict = {k: [] for k in model_run.sets["loc_techs_conversion_plus"]}
-    data_dict = dict()
-    # Set information per carrier tier ('out', 'out_2', 'in', etc.)
-    # for conversion-plus technologies
-    if model_run.sets["loc_techs_conversion_plus"]:
-        # carrier ratios are the floating point numbers used to compare one
-        # carrier_in/_out value with another carrier_in/_out value
-        data_dict["carrier_ratios"] = dict(
-            dims=["carrier_tiers", "loc_tech_carriers_conversion_plus"], data=[]
-        )
-        for carrier_tier in carrier_tiers:
-            data = []
-            for loc_tech_carrier in model_run.sets["loc_tech_carriers_conversion_plus"]:
-                loc, tech, carrier = loc_tech_carrier.split("::")
-                carrier_ratio = (
-                    model_run.locations[loc]
-                    .techs[tech]
-                    .constraints.get_key(
-                        "carrier_ratios.carrier_" + carrier_tier + "." + carrier, 1
+        for node_param, node_param_info in node_info.items():
+            if node_param == "coordinates":
+                for k, v in node_param_info.items():
+                    coord_key, coord = k, v
+                    param_dict.set_key(
+                        _set_idx(
+                            param="node_coordinates",
+                            keydict={"nodes": node, "coordinates": coord_key},
+                        ),
+                        coord,
                     )
+            else:
+                param_dict.set_key(
+                    _set_idx(param=node_param, keydict={"nodes": node}), node_param_info
                 )
-                data.append(carrier_ratio)
-                loc_tech_dict[loc + "::" + tech].append(carrier_ratio)
-            data_dict["carrier_ratios"]["data"].append(data)
-
-    # Additional system-wide constraints from model_run.model
-    if model_run.model.get("reserve_margin", {}) != {}:
-        data_dict["reserve_margin"] = {
-            "data": [
-                model_run.model.reserve_margin.get(c, np.nan)
-                for c in model_run.sets["carriers"]
-            ],
-            "dims": "carriers",
-        }
-
-    return data_dict
 
 
-def location_specific_to_dataset(model_run):
-    """
-    Extract location specific information from the processed dictionary
-    (model.model_run) and return an xarray Dataset with DataArray variables
-    describing distance, coordinate and available area information.
-
-    Parameters
-    ----------
-    model_run : AttrDict
-        processed Calliope model_run dict
-
-    Returns
-    -------
-    data_dict : dict conforming to xarray conventions
-
-    """
-    # for every transmission technology, we extract distance information, if it
-    # is available
-    data_dict = dict()
-
-    data_dict["distance"] = dict(
-        dims="loc_techs_transmission",
-        data=[
-            model_run.get_key(
-                "locations.{loc_from}.links.{loc_to}.techs.{tech}.distance".format(
-                    **split_loc_techs_transmission(loc_tech)
-                ),
-                np.nan,
-            )
-            for loc_tech in model_run.sets["loc_techs_transmission"]
-        ],
-    )
-    # If there is no distance information stored, distance array is deleted
-    if data_dict["distance"]["data"].count(np.nan) == len(
-        data_dict["distance"]["data"]
-    ):
-        del data_dict["distance"]
-
-    data_dict["lookup_remotes"] = dict(
-        dims="loc_techs_transmission",
-        data=concat_iterable(
-            [
-                (k["loc_to"], k["tech"], k["loc_from"])
-                for k in [
-                    split_loc_techs_transmission(loc_tech)
-                    for loc_tech in model_run.sets["loc_techs_transmission"]
-                ]
-            ],
-            ["::", ":"],
-        ),
-    )
-    # If there are no remote locations stored, lookup_remotes array is deleted
-    if data_dict["lookup_remotes"]["data"].count(np.nan) == len(
-        data_dict["lookup_remotes"]["data"]
-    ):
-        del data_dict["lookup_remotes"]
-
-    data_dict["available_area"] = dict(
-        dims="locs",
-        data=[
-            model_run.locations[loc].get("available_area", np.nan)
-            for loc in model_run.sets["locs"]
-        ],
-    )
-
-    # remove this dictionary element if nothing is defined in it
-    if set(data_dict["available_area"]["data"]) == {np.nan}:
-        del data_dict["available_area"]
-
-    # Coordinates are defined per location, but may not be defined at all for
-    # the model
-    if "coordinates" in model_run.sets:
-        data_dict["loc_coordinates"] = dict(dims=["locs", "coordinates"], data=[])
-        for loc in model_run.sets["locs"]:
-            data_dict["loc_coordinates"]["data"].append(
+def get_tech_params(param_dict, model_run):
+    model_techs = model_run.techs.copy()
+    for tech, tech_dict in model_techs.items():
+        if tech_dict.inheritance[-1] == "transmission":
+            techs = set(
                 [
-                    model_run.locations[loc].coordinates[coordinate]
-                    for coordinate in model_run.sets.coordinates
+                    "{}:{}".format(i.split(".")[4], i.split(".")[2])
+                    for i in model_run.locations.as_dict_flat().keys()
+                    if tech in i
                 ]
             )
+        else:
+            techs = [tech]
+        for tech_param, tech_param_info in tech_dict.as_dict_flat().items():
+            if tech_param.startswith("inheritance"):
+                _set_tech_info(
+                    param_dict, techs, "inheritance", ".".join(tech_param_info)
+                )
+            elif tech_param.startswith("essentials"):
+                if "carrier" in tech_param and tech_param_info != "resource":
+                    carrier_tier = tech_param.split(".")[-1].replace("carrier_", "")
+                    for _tech in techs:
+                        param_dict.set_key(
+                            _set_idx(
+                                param="carrier",
+                                keydict={
+                                    "techs": _tech,
+                                    "carriers": tech_param_info,
+                                    "carrier_tier": carrier_tier,
+                                },
+                            ),
+                            1,
+                        )
+                else:
+                    param_name = tech_param.split(".")[-1]
+                    _set_tech_info(param_dict, techs, param_name, tech_param_info)
 
-    return data_dict
 
 
-def tech_specific_to_dataset(model_run):
-    """
-    Extract technology (location inspecific) information from the processed
-    dictionary (model.model_run) and return an xarray Dataset with DataArray
-    variables describing color and inheritance chain information.
-
-    Parameters
-    ----------
-    model_run : AttrDict
-        processed Calliope model_run dict
-
-    Returns
-    -------
-    data_dict : dict conforming to xarray conventions
-
-    """
-    data_dict = collections.defaultdict(lambda: {"dims": ["techs"], "data": []})
-
-    systemwide_constraints = set(
-        [
-            k.split(".")[-1]
-            for k in model_run.techs.keys_nested()
-            if ".constraints." in k and k.endswith("_systemwide")
-        ]
+def _set_idx(param, keydict):
+    return "{}.{}.{}".format(
+        tuple(k for k in keydict.keys()), tuple(v for v in keydict.values()), param
     )
 
-    for tech in model_run.sets["techs"]:
-        if tech in model_run.sets["techs_transmission"]:
-            tech = tech.split(":")[0]
-        data_dict["colors"]["data"].append(
-            model_run.techs[tech].get_key("essentials.color")
-        )
-        data_dict["inheritance"]["data"].append(
-            ".".join(model_run.techs[tech].get_key("inheritance"))
-        )
-        data_dict["names"]["data"].append(
-            # Default to tech ID if no name is set
-            model_run.techs[tech].get_key("essentials.name", tech)
-        )
-        for k in systemwide_constraints:
-            data_dict[k]["data"].append(
-                model_run.techs[tech].constraints.get_key(k, np.nan)
+
+def _get_tech_info(param_dict, node, tech, tech_info):
+    constraints = tech_info.pop("constraints", {})
+    costs = tech_info.pop("costs", {})
+    for constraint, constraint_info in constraints.items():
+        if constraint == "carrier_ratios":
+            for k, v in constraint_info.as_dict_flat().items():
+                carrier_tier, carrier = k.split(".")
+                if carrier == "resource":
+                    print(tech)
+                param_dict.set_key(
+                    _set_idx(
+                        param=constraint,
+                        keydict={
+                            "nodes": node,
+                            "techs": tech,
+                            "carriers": carrier,
+                            "carrier_tier": carrier_tier.replace("carrier_", ""),
+                        },
+                    ),
+                    v,
+                )
+        else:
+            param_dict.set_key(
+                _set_idx(param=constraint, keydict={"nodes": node, "techs": tech}),
+                constraint_info,
+            )
+    for cost_class, cost_info in costs.items():
+        for cost_param, cost in cost_info.items():
+            param_dict.set_key(
+                _set_idx(
+                    param=f"cost_{cost_param}",
+                    keydict={"nodes": node, "techs": tech, "costs": cost_class},
+                ),
+                cost,
             )
 
-    return data_dict
+    for other_param, other_info in tech_info.items():
+        param_dict.set_key(
+            _set_idx(param=other_param, keydict={"nodes": node, "techs": tech}),
+            other_info,
+        )
 
 
-def group_constraints_to_dataset(model_run):
-    data_dict = {}
-
-    group_constraints = model_run["group_constraints"]
-
-    for constr_name in model_run.sets["group_constraints"]:
-        dims = ["group_names_" + constr_name]
-        constr = checks.DEFAULTS.group_constraints.default_group.get(constr_name, None)
-        if isinstance(constr, dict):
-            if "default_carrier" in constr.keys():
-                dims.append("carriers")
-                data = [
-                    [
-                        group_constraints[i][constr_name].get(carrier, np.nan)
-                        for carrier in model_run.sets["carriers"]
-                    ]
-                    for i in model_run.sets["group_names_" + constr_name]
-                ]
-            elif "default_cost" in constr.keys():
-                dims.append("costs")
-                data = [
-                    [
-                        group_constraints[i][constr_name].get(cost, np.nan)
-                        for cost in model_run.sets["costs"]
-                    ]
-                    for i in model_run.sets["group_names_" + constr_name]
-                ]
-        elif constr is not None:
-            data = [
-                group_constraints[i][constr_name]
-                for i in model_run.sets["group_names_" + constr_name]
-            ]
-        else:  # Do nothing if it is an unknown constraint
-            continue
-
-        data_dict["group_" + constr_name] = {"dims": dims, "data": data}
-
-    return data_dict
+def _set_tech_info(param_dict, techs, param_name, param_info):
+    for tech in techs:
+        param_dict.set_key(
+            _set_idx(param=param_name, keydict={"techs": tech}), param_info
+        )
 
 
 def add_attributes(model_run):
@@ -519,23 +236,6 @@ def add_attributes(model_run):
     default_tech_dict = checks.DEFAULTS.techs.default_tech.as_dict()
     default_location_dict = checks.DEFAULTS.locations.default_location.as_dict()
 
-    # Group constraint defaults are a little bit more involved
-    default_group_constraint_keys = [
-        i
-        for i in checks.DEFAULTS.group_constraints.default_group.keys()
-        if i not in ["locs", "techs", "exists"]
-    ]
-    default_group_constraint_dict = {}
-    for k in default_group_constraint_keys:
-        k_default = checks.DEFAULTS.group_constraints.default_group[k]
-        if isinstance(k_default, dict):
-            assert len(k_default.keys()) == 1
-            default_group_constraint_dict["group_" + k] = k_default[
-                list(k_default.keys())[0]
-            ]
-        else:
-            default_group_constraint_dict["group_" + k] = k_default
-
     attr_dict["defaults"] = ruamel.yaml.dump(
         {
             **default_tech_dict["constraints"],
@@ -544,7 +244,6 @@ def add_attributes(model_run):
                 for k, v in default_tech_dict["costs"]["default_cost"].items()
             },
             **default_location_dict,
-            **default_group_constraint_dict,
         }
     )
 

@@ -118,21 +118,24 @@ def add_time_dimension(data, model_run):
         with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
-    data["timesteps"] = pd.to_datetime(data.timesteps)
+    #data["timesteps"] = pd.to_datetime(data.timesteps)
 
     # Search through every constraint/cost for use of '='
     for variable in data.data_vars:
         # 1) If '=' in variable, it will give the variable a string data type
-        if data[variable].dtype.kind != "U":
+        if data[variable].dtype.kind not in ["U", "O"]:
             continue
 
         # 2) convert to a Pandas Series to do 'string contains' search
         data_series = data[variable].to_series()
 
         # 3) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
-        tskeys = data_series[
-            data_series.str.contains("file=") | data_series.str.contains("df=")
-        ]
+        try:
+            tskeys = data_series[
+                data_series.str.contains("file=") | data_series.str.contains("df=")
+            ]
+        except AttributeError:
+            continue
 
         # 4) If no use of 'file=' or 'df=' then we can be on our way
         if tskeys.empty:
@@ -295,13 +298,13 @@ def add_zero_carrier_ratio_sets(model_data):
 def final_timedimension_processing(model_data):
 
     # Final checking of the data
-    model_data, final_check_comments, warns, errors = checks.check_model_data(
-        model_data
-    )
-    exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
+    #model_data, final_check_comments, warns, errors = checks.check_model_data(
+    #    model_data
+    #)
+    #exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
-    model_data = add_max_demand_timesteps(model_data)
-    model_data = add_zero_carrier_ratio_sets(model_data)
+    #model_data = add_max_demand_timesteps(model_data)
+    #model_data = add_zero_carrier_ratio_sets(model_data)
 
     model_data = reorganise_xarray_dimensions(model_data)
 
