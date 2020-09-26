@@ -99,7 +99,7 @@ def load_constraints(backend_model):
         )
 
 
-def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_max_constraint_rule(backend_model, carrier, node, tech, timestep):
     """
     Set maximum carrier production. All technologies.
 
@@ -111,17 +111,17 @@ def carrier_production_max_constraint_rule(backend_model, loc_tech_carrier, time
             \\times timestep\\_resolution(timestep) \\times parasitic\\_eff(loc::tec)
 
     """
-    loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+
+    carrier_prod = backend_model.carrier_prod[carrier, node, tech, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    parasitic_eff = get_param(backend_model, "parasitic_eff", (loc_tech, timestep))
+    parasitic_eff = get_param(backend_model, "parasitic_eff", (node, tech, timestep))
 
     return carrier_prod <= (
-        backend_model.energy_cap[loc_tech] * timestep_resolution * parasitic_eff
+        backend_model.energy_cap[node, tech] * timestep_resolution * parasitic_eff
     )
 
 
-def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_min_constraint_rule(backend_model, carrier, node, tech, timestep):
     """
     Set minimum carrier production. All technologies except ``conversion_plus``.
 
@@ -133,17 +133,16 @@ def carrier_production_min_constraint_rule(backend_model, loc_tech_carrier, time
             \\times timestep\\_resolution(timestep) \\times energy_{cap,min\\_use}(loc::tec)
 
     """
-    loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+    carrier_prod = backend_model.carrier_prod[carrier, node, tech, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-    min_use = get_param(backend_model, "energy_cap_min_use", (loc_tech, timestep))
+    min_use = get_param(backend_model, "energy_cap_min_use", (node, tech, timestep))
 
     return carrier_prod >= (
-        backend_model.energy_cap[loc_tech] * timestep_resolution * min_use
+        backend_model.energy_cap[node, tech] * timestep_resolution * min_use
     )
 
 
-def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_consumption_max_constraint_rule(backend_model, carrier, node, tech, timestep):
     """
     Set maximum carrier consumption for demand, storage, and transmission techs.
 
@@ -156,16 +155,15 @@ def carrier_consumption_max_constraint_rule(backend_model, loc_tech_carrier, tim
             \\times timestep\\_resolution(timestep)
 
     """
-    loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
+    carrier_con = backend_model.carrier_con[carrier, node, tech, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
     return carrier_con >= (
-        -1 * backend_model.energy_cap[loc_tech] * timestep_resolution
+        -1 * backend_model.energy_cap[node, tech] * timestep_resolution
     )
 
 
-def resource_max_constraint_rule(backend_model, loc_tech, timestep):
+def resource_max_constraint_rule(backend_model, node, tech, timestep):
     """
     Set maximum resource consumed by supply_plus techs.
 
@@ -179,12 +177,12 @@ def resource_max_constraint_rule(backend_model, loc_tech, timestep):
     """
     timestep_resolution = backend_model.timestep_resolution[timestep]
 
-    return backend_model.resource_con[loc_tech, timestep] <= (
-        timestep_resolution * backend_model.resource_cap[loc_tech]
+    return backend_model.resource_con[node, tech, timestep] <= (
+        timestep_resolution * backend_model.resource_cap[node, tech]
     )
 
 
-def storage_max_constraint_rule(backend_model, loc_tech, timestep):
+def storage_max_constraint_rule(backend_model, node, tech, timestep):
     """
     Set maximum stored energy. Supply_plus & storage techs only.
 
@@ -197,11 +195,11 @@ def storage_max_constraint_rule(backend_model, loc_tech, timestep):
 
     """
     return (
-        backend_model.storage[loc_tech, timestep] <= backend_model.storage_cap[loc_tech]
+        backend_model.storage[node, tech, timestep] <= backend_model.storage_cap[node, tech]
     )
 
 
-def storage_discharge_depth_constraint_rule(backend_model, loc_tech, timestep):
+def storage_discharge_depth_constraint_rule(backend_model, node, tech, timestep):
     """
     Forces storage state of charge to be greater than the allowed depth of discharge.
 
@@ -214,15 +212,15 @@ def storage_discharge_depth_constraint_rule(backend_model, loc_tech, timestep):
 
     """
     storage_discharge_depth = get_param(
-        backend_model, "storage_discharge_depth", loc_tech
+        backend_model, "storage_discharge_depth", (node, tech)
     )
     return (
-        backend_model.storage[loc_tech, timestep]
-        >= storage_discharge_depth * backend_model.storage_cap[loc_tech]
+        backend_model.storage[node, tech, timestep]
+        >= storage_discharge_depth * backend_model.storage_cap[node, tech]
     )
 
 
-def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def ramping_up_constraint_rule(backend_model, carrier, node, tech, timestep):
     """
     Ramping up constraint.
 
@@ -233,10 +231,10 @@ def ramping_up_constraint_rule(backend_model, loc_tech_carrier, timestep):
             diff(loc::tech::carrier, timestep) \\leq max\\_ramping\\_rate(loc::tech::carrier, timestep)
 
     """
-    return ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0)
+    return ramping_constraint(backend_model, carrier, node, tech, timestep, direction=0)
 
 
-def ramping_down_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def ramping_down_constraint_rule(backend_model, carrier, node, tech, timestep):
     """
     Ramping down constraint.
 
@@ -247,10 +245,10 @@ def ramping_down_constraint_rule(backend_model, loc_tech_carrier, timestep):
             -1 \\times max\\_ramping\\_rate(loc::tech::carrier, timestep) \\leq diff(loc::tech::carrier, timestep)
 
     """
-    return ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=1)
+    return ramping_constraint(backend_model, carrier, node, tech, timestep, direction=1)
 
 
-def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
+def ramping_constraint(backend_model, carrier, node, tech, timestep, direction=0):
     """
     Ramping rate constraints.
 
@@ -279,20 +277,19 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
         previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         time_res = backend_model.timestep_resolution[timestep]
         time_res_prev = backend_model.timestep_resolution[previous_step]
-        loc_tech = loc_tech_carrier.rsplit("::", 1)[0]
         # Ramping rate (fraction of installed capacity per hour)
-        ramping_rate = get_param(backend_model, "energy_ramping", (loc_tech, timestep))
+        ramping_rate = get_param(backend_model, "energy_ramping", (node, tech, timestep))
 
         try:
-            prod_this = backend_model.carrier_prod[loc_tech_carrier, timestep]
-            prod_prev = backend_model.carrier_prod[loc_tech_carrier, previous_step]
+            prod_this = backend_model.carrier_prod[carrier, node, tech, timestep]
+            prod_prev = backend_model.carrier_prod[carrier, node, tech, previous_step]
         except KeyError:
             prod_this = 0
             prod_prev = 0
 
         try:
-            con_this = backend_model.carrier_con[loc_tech_carrier, timestep]
-            con_prev = backend_model.carrier_con[loc_tech_carrier, previous_step]
+            con_this = backend_model.carrier_con[carrier, node, tech, timestep]
+            con_prev = backend_model.carrier_con[carrier, node, tech, previous_step]
         except KeyError:
             con_this = 0
             con_prev = 0
@@ -301,7 +298,7 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
             prod_prev + con_prev
         ) / time_res_prev
 
-        max_ramping_rate = ramping_rate * backend_model.energy_cap[loc_tech]
+        max_ramping_rate = ramping_rate * backend_model.energy_cap[node, tech]
 
         if direction == 0:
             return diff <= max_ramping_rate
@@ -309,7 +306,7 @@ def ramping_constraint(backend_model, loc_tech_carrier, timestep, direction=0):
             return -1 * max_ramping_rate <= diff
 
 
-def storage_intra_max_rule(backend_model, loc_tech, timestep):
+def storage_intra_max_rule(backend_model, node, tech, timestep):
     """
     When clustering days, to reduce the timeseries length, set limits on
     intra-cluster auxiliary maximum storage decision variable.
@@ -328,12 +325,12 @@ def storage_intra_max_rule(backend_model, loc_tech, timestep):
     """
     cluster = backend_model.__calliope_model_data["data"]["timestep_cluster"][timestep]
     return (
-        backend_model.storage[loc_tech, timestep]
-        <= backend_model.storage_intra_cluster_max[loc_tech, cluster]
+        backend_model.storage[node, tech, timestep]
+        <= backend_model.storage_intra_cluster_max[node, tech, cluster]
     )
 
 
-def storage_intra_min_rule(backend_model, loc_tech, timestep):
+def storage_intra_min_rule(backend_model, node, tech, timestep):
     """
     When clustering days, to reduce the timeseries length, set limits on
     intra-cluster auxiliary minimum storage decision variable.
@@ -352,12 +349,12 @@ def storage_intra_min_rule(backend_model, loc_tech, timestep):
     """
     cluster = backend_model.__calliope_model_data["data"]["timestep_cluster"][timestep]
     return (
-        backend_model.storage[loc_tech, timestep]
-        >= backend_model.storage_intra_cluster_min[loc_tech, cluster]
+        backend_model.storage[node, tech, timestep]
+        >= backend_model.storage_intra_cluster_min[node, tech, cluster]
     )
 
 
-def storage_inter_max_rule(backend_model, loc_tech, datestep):
+def storage_inter_max_rule(backend_model, node, tech, datestep):
     """
     When clustering days, to reduce the timeseries length, set maximum limit on
     the intra-cluster and inter-date stored energy.
@@ -381,13 +378,13 @@ def storage_inter_max_rule(backend_model, loc_tech, datestep):
         datestep
     ]
     return (
-        backend_model.storage_inter_cluster[loc_tech, datestep]
-        + backend_model.storage_intra_cluster_max[loc_tech, cluster]
-        <= backend_model.storage_cap[loc_tech]
+        backend_model.storage_inter_cluster[node, tech, datestep]
+        + backend_model.storage_intra_cluster_max[node, tech, cluster]
+        <= backend_model.storage_cap[node, tech]
     )
 
 
-def storage_inter_min_rule(backend_model, loc_tech, datestep):
+def storage_inter_min_rule(backend_model, node, tech, datestep):
     """
     When clustering days, to reduce the timeseries length, set minimum limit on
     the intra-cluster and inter-date stored energy.
@@ -411,10 +408,10 @@ def storage_inter_min_rule(backend_model, loc_tech, datestep):
     cluster = backend_model.__calliope_model_data["data"]["lookup_datestep_cluster"][
         datestep
     ]
-    storage_loss = get_param(backend_model, "storage_loss", loc_tech)
+    storage_loss = get_param(backend_model, "storage_loss", (node, tech))
     return (
-        backend_model.storage_inter_cluster[loc_tech, datestep]
+        backend_model.storage_inter_cluster[node, tech, datestep]
         * ((1 - storage_loss) ** 24)
-        + backend_model.storage_intra_cluster_min[loc_tech, cluster]
+        + backend_model.storage_intra_cluster_min[node, tech, cluster]
         >= 0
     )

@@ -56,15 +56,17 @@ techs:
             name: 'Solar photovoltaic power'
             color: '#F9D956'
             parent: supply_power_plus
+        switches:
+            force_resource: true
+            resource_area_per_energy_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
+            resource_unit: energy_per_area
+            export: True
         constraints:
             export_carrier: electricity
             resource: file=pv_resource.csv:per_area  # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
-            resource_unit: energy_per_area
             parasitic_eff: 0.85 # inverter losses
             energy_cap_max: 250
             resource_area_max: 1500
-            force_resource: true
-            resource_area_per_energy_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
             lifetime: 25
         costs:
             monetary:
@@ -102,6 +104,8 @@ techs:
             carrier_in: gas
             carrier_out: electricity
             carrier_out_2: heat
+        switches:
+            export: True
         constraints:
             export_carrier: electricity
             energy_cap_max: 1500

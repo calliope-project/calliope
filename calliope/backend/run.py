@@ -20,7 +20,7 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def run(model_data, timings, build_only=False):
+def run(model_data, masks, timings, build_only=False):
     """
     Parameters
     ----------
@@ -44,6 +44,7 @@ def run(model_data, timings, build_only=False):
     if run_config["mode"] == "plan":
         results, backend = run_plan(
             model_data,
+            masks,
             timings,
             backend=BACKEND[run_config.backend],
             build_only=build_only,
@@ -60,12 +61,12 @@ def run(model_data, timings, build_only=False):
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
+def run_plan(model_data, masks, timings, backend, build_only, backend_rerun=False):
 
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
     if not backend_rerun:
-        backend_model = backend.generate_model(model_data)
+        backend_model = backend.generate_model(model_data, masks)
 
         log_time(
             logger,
@@ -117,7 +118,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
             logger, timings, "run_results_loaded", comment="Backend: loaded results"
         )
 
-        results = backend.get_result_array(backend_model, model_data)
+        results = backend.get_result_array(backend_model, model_data, masks)
         results.attrs["termination_condition"] = termination
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:

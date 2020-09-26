@@ -24,6 +24,8 @@ from calliope.preprocess import (
     build_model_data,
     apply_time_clustering,
     final_timedimension_processing,
+    create_mask_ds
+
 )
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
@@ -141,6 +143,8 @@ class Model(object):
             name="run_config",
             observer=self._model_data,
         )
+        # Add set masks
+        self._masks = create_mask_ds(self._model_data, self._model_run.mask_sets)
 
     def _init_from_model_data(self, model_data):
         if "_model_run" in model_data.attrs:
@@ -256,13 +260,13 @@ class Model(object):
             )
 
         results, self._backend_model, interface = run_backend(
-            self._model_data, self._timings, **kwargs
+            self._model_data, self._masks, self._timings, **kwargs
         )
 
         # Add additional post-processed result variables to results
         if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._timings
+                results, self._model_data, self._masks, self._timings
             )
 
         for var in results.data_vars:

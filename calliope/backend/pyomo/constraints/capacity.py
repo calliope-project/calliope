@@ -98,28 +98,26 @@ def load_constraints(backend_model):
 
 
 def get_capacity_constraint(
-    backend_model, parameter, loc_tech, _equals=None, _max=None, _min=None, scale=None
+    backend_model, parameter, node, tech, _equals=None, _max=None, _min=None, scale=None
 ):
 
     decision_variable = getattr(backend_model, parameter)
 
     if not _equals:
-        _equals = get_param(backend_model, parameter + "_equals", loc_tech)
+        _equals = get_param(backend_model, parameter + "_equals", (node, tech))
     if not _max:
-        _max = get_param(backend_model, parameter + "_max", loc_tech)
+        _max = get_param(backend_model, parameter + "_max", (node, tech))
     if not _min:
-        _min = get_param(backend_model, parameter + "_min", loc_tech)
+        _min = get_param(backend_model, parameter + "_min", (node, tech))
     if po.value(_equals) is not False and po.value(_equals) is not None:
         if np.isinf(po.value(_equals)):
             e = exceptions.ModelError
             raise e(
-                "Cannot use inf for {}_equals for loc:tech `{}`".format(
-                    parameter, loc_tech
-                )
+                f"Cannot use inf for {parameter}_equals for `{tech}` at `{node}`"
             )
         if scale:
             _equals *= scale
-        return decision_variable[loc_tech] == _equals
+        return decision_variable[node, tech] == _equals
     else:
         if po.value(_min) == 0 and np.isinf(po.value(_max)):
             return po.Constraint.NoConstraint
@@ -127,10 +125,10 @@ def get_capacity_constraint(
             if scale:
                 _max *= scale
                 _min *= scale
-            return (_min, decision_variable[loc_tech], _max)
+            return (_min, decision_variable[node, tech], _max)
 
 
-def storage_capacity_constraint_rule(backend_model, loc_tech):
+def storage_capacity_constraint_rule(backend_model, node, tech):
     """
     Set maximum storage capacity. Supply_plus & storage techs only
 
@@ -158,10 +156,10 @@ def storage_capacity_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
-    return get_capacity_constraint(backend_model, "storage_cap", loc_tech)
+    return get_capacity_constraint(backend_model, "storage_cap", node, tech)
 
 
-def energy_capacity_storage_constraint_rule_old(backend_model, loc_tech):
+def energy_capacity_storage_constraint_rule_old(backend_model, node, tech):
     """
     Set an additional energy capacity constraint on storage technologies,
     based on their use of `charge_rate`.
@@ -178,14 +176,14 @@ def energy_capacity_storage_constraint_rule_old(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{store}
 
     """
-    charge_rate = get_param(backend_model, "charge_rate", loc_tech)
+    charge_rate = get_param(backend_model, "charge_rate", (node, tech))
 
-    return backend_model.energy_cap[loc_tech] <= (
-        backend_model.storage_cap[loc_tech] * charge_rate
+    return backend_model.energy_cap[node, tech] <= (
+        backend_model.storage_cap[node, tech] * charge_rate
     )
 
 
-def energy_capacity_storage_min_constraint_rule(backend_model, loc_tech):
+def energy_capacity_storage_min_constraint_rule(backend_model, node, tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -198,13 +196,13 @@ def energy_capacity_storage_min_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{store}
 
     """
-    return backend_model.energy_cap[loc_tech] >= (
-        backend_model.storage_cap[loc_tech]
-        * get_param(backend_model, "energy_cap_per_storage_cap_min", loc_tech)
+    return backend_model.energy_cap[node, tech] >= (
+        backend_model.storage_cap[node, tech]
+        * get_param(backend_model, "energy_cap_per_storage_cap_min", (node, tech))
     )
 
 
-def energy_capacity_storage_max_constraint_rule(backend_model, loc_tech):
+def energy_capacity_storage_max_constraint_rule(backend_model, node, tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -217,13 +215,13 @@ def energy_capacity_storage_max_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{store}
 
     """
-    return backend_model.energy_cap[loc_tech] <= (
-        backend_model.storage_cap[loc_tech]
-        * get_param(backend_model, "energy_cap_per_storage_cap_max", loc_tech)
+    return backend_model.energy_cap[node, tech] <= (
+        backend_model.storage_cap[node, tech]
+        * get_param(backend_model, "energy_cap_per_storage_cap_max", (node, tech))
     )
 
 
-def energy_capacity_storage_equals_constraint_rule(backend_model, loc_tech):
+def energy_capacity_storage_equals_constraint_rule(backend_model, node, tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -236,13 +234,13 @@ def energy_capacity_storage_equals_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{store}
 
     """
-    return backend_model.energy_cap[loc_tech] == (
-        backend_model.storage_cap[loc_tech]
-        * get_param(backend_model, "energy_cap_per_storage_cap_equals", loc_tech)
+    return backend_model.energy_cap[node, tech] == (
+        backend_model.storage_cap[node, tech]
+        * get_param(backend_model, "energy_cap_per_storage_cap_equals", (node, tech))
     )
 
 
-def resource_capacity_constraint_rule(backend_model, loc_tech):
+def resource_capacity_constraint_rule(backend_model, node, tech):
     """
     Add upper and lower bounds for resource_cap.
 
@@ -270,10 +268,10 @@ def resource_capacity_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
     """
 
-    return get_capacity_constraint(backend_model, "resource_cap", loc_tech)
+    return get_capacity_constraint(backend_model, "resource_cap", node, tech)
 
 
-def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, loc_tech):
+def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, node, tech):
     """
     Add equality constraint for resource_cap to equal energy_cap, for any technologies
     which have defined resource_cap_equals_energy_cap.
@@ -286,10 +284,10 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, loc_
             \\quad \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
             \\text{ if } resource\\_cap\\_equals\\_energy\\_cap = \\text{True}
     """
-    return backend_model.resource_cap[loc_tech] == backend_model.energy_cap[loc_tech]
+    return backend_model.resource_cap[node, tech] == backend_model.energy_cap[node, tech]
 
 
-def resource_area_constraint_rule(backend_model, loc_tech):
+def resource_area_constraint_rule(backend_model, node, tech):
     """
     Set upper and lower bounds for resource_area.
 
@@ -316,20 +314,20 @@ def resource_area_constraint_rule(backend_model, loc_tech):
             \\boldsymbol{resource_{area}}(loc::tech) \\geq resource_{area, min}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs_{area}
     """
-    energy_cap_max = get_param(backend_model, "energy_cap_max", loc_tech)
+    energy_cap_max = get_param(backend_model, "energy_cap_max", (node, tech))
     area_per_energy_cap = get_param(
-        backend_model, "resource_area_per_energy_cap", loc_tech
+        backend_model, "resource_area_per_energy_cap", (node, tech)
     )
 
     if po.value(energy_cap_max) == 0 and not po.value(area_per_energy_cap):
         # If a technology has no energy_cap here, we force resource_area to zero,
         # so as not to accrue spurious costs
-        return backend_model.resource_area[loc_tech] == 0
+        return backend_model.resource_area[node, tech] == 0
     else:
-        return get_capacity_constraint(backend_model, "resource_area", loc_tech)
+        return get_capacity_constraint(backend_model, "resource_area", node, tech)
 
 
-def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
+def resource_area_per_energy_capacity_constraint_rule(backend_model, node, tech):
     """
     Add equality constraint for resource_area to equal a percentage of energy_cap,
     for any technologies which have defined resource_area_per_energy_cap
@@ -343,16 +341,16 @@ def resource_area_per_energy_capacity_constraint_rule(backend_model, loc_tech):
             \\quad \\forall loc::tech \\in locs::techs_{area} \\text{ if } area\\_per\\_energy\\_cap(loc::tech)
     """
     area_per_energy_cap = get_param(
-        backend_model, "resource_area_per_energy_cap", loc_tech
+        backend_model, "resource_area_per_energy_cap", (node, tech)
     )
 
     return (
-        backend_model.resource_area[loc_tech]
-        == backend_model.energy_cap[loc_tech] * area_per_energy_cap
+        backend_model.resource_area[node, tech]
+        == backend_model.energy_cap[node, tech] * area_per_energy_cap
     )
 
 
-def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
+def resource_area_capacity_per_loc_constraint_rule(backend_model, node):
     """
     Set upper bound on use of area for all locations which have `available_area`
     constraint set. Does not consider resource_area applied to demand technologies
@@ -364,18 +362,12 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, loc):
             \\sum_{tech} \\boldsymbol{resource_{area}}(loc::tech) \\leq available\\_area
             \\quad \\forall loc \\in locs \\text{ if } available\\_area(loc)
     """
-    model_data_dict = backend_model.__calliope_model_data["data"]
-    available_area = model_data_dict["available_area"][loc]
+    available_area = backend_model.available_area[node]
 
-    loc_techs = split_comma_list(model_data_dict["lookup_loc_techs_area"][loc])
-
-    return (
-        sum(backend_model.resource_area[loc_tech] for loc_tech in loc_techs)
-        <= available_area
-    )
+    return sum(backend_model.resource_area[node, :]) <= available_area
 
 
-def energy_capacity_constraint_rule(backend_model, loc_tech):
+def energy_capacity_constraint_rule(backend_model, node, tech):
     """
     Set upper and lower bounds for energy_cap.
 
@@ -403,8 +395,8 @@ def energy_capacity_constraint_rule(backend_model, loc_tech):
             \\geq energy_{cap, min}(loc::tech)
             \\quad \\forall loc::tech \\in loc::techs
     """
-    scale = get_param(backend_model, "energy_cap_scale", loc_tech)
-    return get_capacity_constraint(backend_model, "energy_cap", loc_tech, scale=scale)
+    scale = get_param(backend_model, "energy_cap_scale", (node, tech))
+    return get_capacity_constraint(backend_model, "energy_cap", node, tech, scale=scale)
 
 
 def energy_capacity_systemwide_constraint_rule(backend_model, tech):
@@ -429,30 +421,10 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
 
     """
 
-    if tech in getattr(backend_model, "techs_transmission_names", []):
-        all_loc_techs = [
-            i
-            for i in backend_model.loc_techs_transmission
-            if i.split("::")[1].split(":")[0] == tech
-        ]
-        multiplier = 2  # there are always two technologies associated with one link
-    else:
-        all_loc_techs = [i for i in backend_model.loc_techs if i.split("::")[1] == tech]
-        multiplier = 1
-
     max_systemwide = get_param(backend_model, "energy_cap_max_systemwide", tech)
     equals_systemwide = get_param(backend_model, "energy_cap_equals_systemwide", tech)
 
-    if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
-        return po.Constraint.NoConstraint
-    elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
-        raise exceptions.ModelError(
-            "Cannot use inf for energy_cap_equals_systemwide for tech `{}`".format(tech)
-        )
-
-    sum_expr = sum(backend_model.energy_cap[loc_tech] for loc_tech in all_loc_techs)
-
     if equals_systemwide:
-        return sum_expr == equals_systemwide * multiplier
+        return sum(backend_model.energy_cap[:, tech]) == equals_systemwide
     else:
-        return sum_expr <= max_systemwide * multiplier
+        return sum(backend_model.energy_cap[:, tech]) <= max_systemwide

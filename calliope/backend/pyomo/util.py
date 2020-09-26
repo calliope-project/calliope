@@ -204,7 +204,7 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
-        if re.match("resource|loc_coordinates|cost*", var.name):
+        if re.match("resource|node_coordinates|cost*", var.name):
             return ""
         else:
             return "NonNegative"
@@ -219,3 +219,17 @@ def get_domain(var: xr.DataArray) -> str:
 
 def check_value(val: po.base.param._ParamData) -> bool:
     return val._value == po.base.param._NotValid or po.value(val) is None
+
+
+def mask(mask):
+    return mask.where(mask).to_series().dropna().to_dict().keys()
+
+
+def within(backend_model, var: xr.DataArray):
+    within = None
+    for i in var.dims:
+        if within is None:
+            within = getattr(backend_model, i)
+        else:
+            within = within.cross(getattr(backend_model, i))
+    return within

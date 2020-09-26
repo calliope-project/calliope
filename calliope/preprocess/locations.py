@@ -244,15 +244,15 @@ def process_locations(model_config, modelrun_techs):
 
             # If this is a one-way link, we set the constraints for energy_prod
             # and energy_con accordingly on both parts of the link
-            if tech_settings.get_key("constraints.one_way", False):
+            if tech_settings.get_key("switches.one_way", False):
                 processed_links.set_key(
-                    "{}.links.{}.techs.{}.constraints.energy_prod".format(
+                    "{}.links.{}.techs.{}.switches.allowed_carrier_prod".format(
                         loc_from, loc_to, tech_name
                     ),
                     False,
                 )
                 processed_links.set_key(
-                    "{}.links.{}.techs.{}.constraints.energy_con".format(
+                    "{}.links.{}.techs.{}.switches.allowed_carrier_con".format(
                         loc_to, loc_from, tech_name
                     ),
                     False,
@@ -313,6 +313,7 @@ def cleanup_undesired_keys(tech_settings):
         "essentials",
         "allowed_constraints",
         "allowed_costs",
+        "allowed_switches",
         "required_constraints",
         "allowed_group_constraints",
     ]

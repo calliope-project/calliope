@@ -21,8 +21,9 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var, get_domain
+from calliope.backend.pyomo.util import get_var, get_domain, mask, within
 from calliope.backend.pyomo import constraints
+from calliope.backend.pyomo.expressions import create_expressions
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
 from calliope.core.util.dataset import reorganise_xarray_dimensions
@@ -32,7 +33,7 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def generate_model(model_data):
+def generate_model(model_data, masks):
     """
     Generate a Pyomo model.
 
@@ -46,11 +47,17 @@ def generate_model(model_data):
         if isinstance(set_data[0], np.datetime64):
             set_data = pd.to_datetime(set_data)
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
+    for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
+        setattr(backend_model, f'{k}_index', po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True))
+    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+        setattr(backend_model, f'{k}_constraint_index', po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True))
+    for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
+        setattr(backend_model, f'{k}_index', po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True))
 
     # "Parameters"
     model_data_dict = {
         "data": {
-            k: v.to_series().dropna().replace("inf", np.inf).to_dict()
+            k: v.to_series().dropna().replace("inf", np.nan).to_dict()
             for k, v in model_data.data_vars.items()
             if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
         },
@@ -91,6 +98,8 @@ def generate_model(model_data):
             dims = [getattr(backend_model, model_data_dict["dims"][k][0])]
         else:
             dims = [getattr(backend_model, i) for i in model_data_dict["dims"][k]]
+        if k == 'name':
+            continue
         setattr(backend_model, k, po.Param(*dims, **_kwargs))
 
     for option_name, option_val in backend_model.__calliope_run_config[
@@ -111,45 +120,19 @@ def generate_model(model_data):
             setattr(backend_model, "objective_" + option_name, option_val)
 
     # Variables
-    load_function("calliope.backend.pyomo.variables.initialize_decision_variables")(
-        backend_model
-    )
+
+    for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
+        setattr(backend_model, k, po.Var(getattr(backend_model, f'{k}_index'), domain=getattr(po, v.domain)))
+        if k == "unmet_demand":
+            backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
+
+    # Expressions
+    for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
+        setattr(backend_model, k, po.Expression(getattr(backend_model, f'{k}_index'), initialize=0.0))
 
     # Constraints
-    constraints_to_add = [
-        i.split(".py")[0]
-        for i in os.listdir(constraints.__path__[0])
-        if not i.startswith("_") and not i.startswith(".")
-    ]
-
-    # The list is sorted to ensure that some constraints are added after pyomo
-    # expressions have been created in other constraint files.
-    # Ordering is given by the number assigned to the variable ORDER within each
-    # file (higher number = added later).
-    try:
-        constraints_to_add.sort(
-            key=lambda x: load_function(
-                "calliope.backend.pyomo.constraints." + x + ".ORDER"
-            )
-        )
-    except AttributeError as e:
-        raise AttributeError(
-            "{}. This attribute must be set to an integer value based "
-            "on the order in which the constraints in the file {}.py should be "
-            "loaded relative to constraints in other constraint files. If order "
-            "does not matter, set ORDER to a value of 10.".format(
-                e.args[0], e.args[0].split(".")[-1].split("'")[0]
-            )
-        )
-
-    logger.info(
-        "constraints are loaded in the following order: {}".format(constraints_to_add)
-    )
-
-    for c in constraints_to_add:
-        load_function("calliope.backend.pyomo.constraints." + c + ".load_constraints")(
-            backend_model
-        )
+    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+        setattr(backend_model, f'{k}_constraint', po.Constraint(getattr(backend_model, f'{k}_constraint_index'), rule=getattr(constraints, f'{k}_constraint_rule')))
 
     # FIXME: Optional constraints
     # optional_constraints = model_data.attrs['constraints']
@@ -233,7 +216,7 @@ def load_results(backend_model, results):
     return str(results["Solver"][0]["Termination condition"])
 
 
-def get_result_array(backend_model, model_data):
+def get_result_array(backend_model, model_data, masks):
     """
     From a Pyomo model object, extract decision variable data and return it as
     an xarray Dataset. Any rogue input parameters that are constructed inside
@@ -241,7 +224,7 @@ def get_result_array(backend_model, model_data):
     added to calliope.Model()._model_data in-place.
     """
     all_variables = {
-        i.name: get_var(backend_model, i.name)
+        i.name: get_var(backend_model, i.name, dims=masks[i.name].dims)
         for i in backend_model.component_objects()
         if isinstance(i, po.base.Var)
     }

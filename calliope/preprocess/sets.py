@@ -158,7 +158,7 @@ def generate_simple_sets(model_run):
 
     # `timesteps` set is built from the results of timeseries_data processing
     sets.timesteps = list(model_run.timesteps.astype(str))
-    #model_run.del_key("timesteps")
+    # model_run.del_key("timesteps")
 
     # `techlists` are strings with comma-separated techs used for grouping in
     # some model-wide constraints
@@ -563,7 +563,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     sets.loc_tech_carriers_prod = set(
         "{}::{}".format(k, carrier)
         for k in sets.loc_techs
-        if loc_techs_all_config[k].constraints.get_key("energy_prod", False)
+        if loc_techs_all_config[k].switches.get_key("allowed_carrier_prod", False)
         for carrier in get_all_carriers(
             model_run.techs[k.split("::")[1].split(":")[0]].essentials, direction="out"
         )
@@ -573,7 +573,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
     sets.loc_tech_carriers_con = set(
         "{}::{}".format(k, carrier)
         for k in sets.loc_techs
-        if loc_techs_all_config[k].constraints.get_key("energy_con", False)
+        if loc_techs_all_config[k].switches.get_key("allowed_carrier_con", False)
         for carrier in get_all_carriers(
             model_run.techs[k.split("::")[1].split(":")[0]].essentials, direction="in"
         )

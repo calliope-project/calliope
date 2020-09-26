@@ -772,7 +772,11 @@ def check_model_data(model_data):
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
     if "force_resource" in model_data.data_vars:
-        conflict = model_data.force_resource.where(model_data.resource == np.inf).to_pandas().dropna()
+        conflict = (
+            model_data.force_resource.where(model_data.resource == np.inf)
+            .to_pandas()
+            .dropna()
+        )
         if not conflict.empty:
             errors.append(
                 "loc_tech(s) {} cannot have `force_resource` set as infinite "

@@ -55,7 +55,9 @@ def build_model_data(model_run, debug=False):
     """
     # We build up a dictionary of the data, then convert it to an xarray Dataset
     # before applying time dimensions
-    data = xr.Dataset(coords={'timesteps': model_run.timesteps}, attrs=add_attributes(model_run))
+    data = xr.Dataset(
+        coords={"timesteps": model_run.timesteps}, attrs=add_attributes(model_run)
+    )
 
     param_dict = AttrDict({})
     get_node_params(param_dict, model_run)
@@ -103,10 +105,17 @@ def get_node_params(param_dict, model_run):
                 _get_tech_info(param_dict, node, link_tech, tech_info)
                 param_dict.set_key(
                     _set_idx(
-                        param="link_remotes",
+                        param="link_remote_techs",
                         keydict={"nodes": link, "techs": f"{tech}:{node}"},
                     ),
                     link_tech,
+                )
+                param_dict.set_key(
+                    _set_idx(
+                        param="link_remote_nodes",
+                        keydict={"nodes": link, "techs": f"{tech}:{node}"},
+                    ),
+                    node,
                 )
 
         for node_param, node_param_info in node_info.items():
@@ -145,24 +154,41 @@ def get_tech_params(param_dict, model_run):
                     param_dict, techs, "inheritance", ".".join(tech_param_info)
                 )
             elif tech_param.startswith("essentials"):
-                if "carrier" in tech_param and tech_param_info != "resource":
-                    carrier_tier = tech_param.split(".")[-1].replace("carrier_", "")
-                    for _tech in techs:
-                        param_dict.set_key(
-                            _set_idx(
-                                param="carrier",
-                                keydict={
-                                    "techs": _tech,
-                                    "carriers": tech_param_info,
-                                    "carrier_tier": carrier_tier,
-                                },
-                            ),
-                            1,
-                        )
+                if "carrier" in tech_param:
+                    if "primary" in tech_param:
+                        for _tech in techs:
+                            param_dict.set_key(
+                                _set_idx(
+                                    param=tech_param.split(".")[-1],
+                                    keydict={
+                                        "techs": _tech,
+                                        "carriers": tech_param_info,
+                                    },
+                                ),
+                                1,
+                            )
+                    else:
+                        carrier_tier = tech_param.split(".")[-1].replace("carrier_", "")
+                        if tech_param_info == "resource" or carrier_tier == "carrier":
+                            continue
+                        for _tech in techs:
+                            if not isinstance(tech_param_info, list):
+                                tech_param_info = [tech_param_info]
+                            for _tech_param_info in tech_param_info:
+                                param_dict.set_key(
+                                    _set_idx(
+                                        param="carrier",
+                                        keydict={
+                                            "techs": _tech,
+                                            "carriers": _tech_param_info,
+                                            "carrier_tiers": carrier_tier,
+                                        },
+                                    ),
+                                    1,
+                                )
                 else:
                     param_name = tech_param.split(".")[-1]
                     _set_tech_info(param_dict, techs, param_name, tech_param_info)
-
 
 
 def _set_idx(param, keydict):
@@ -174,12 +200,13 @@ def _set_idx(param, keydict):
 def _get_tech_info(param_dict, node, tech, tech_info):
     constraints = tech_info.pop("constraints", {})
     costs = tech_info.pop("costs", {})
+    switches = tech_info.pop("switches", {})
     for constraint, constraint_info in constraints.items():
         if constraint == "carrier_ratios":
             for k, v in constraint_info.as_dict_flat().items():
                 carrier_tier, carrier = k.split(".")
                 if carrier == "resource":
-                    print(tech)
+                    continue
                 param_dict.set_key(
                     _set_idx(
                         param=constraint,
@@ -187,11 +214,23 @@ def _get_tech_info(param_dict, node, tech, tech_info):
                             "nodes": node,
                             "techs": tech,
                             "carriers": carrier,
-                            "carrier_tier": carrier_tier.replace("carrier_", ""),
+                            "carrier_tiers": carrier_tier.replace("carrier_", ""),
                         },
                     ),
                     v,
                 )
+        elif constraint == "export_carrier":
+            param_dict.set_key(
+                _set_idx(
+                    param=constraint,
+                    keydict={
+                        "nodes": node,
+                        "techs": tech,
+                        "carriers": constraint_info,
+                    },
+                ),
+                1,
+            )
         else:
             param_dict.set_key(
                 _set_idx(param=constraint, keydict={"nodes": node, "techs": tech}),
@@ -206,12 +245,20 @@ def _get_tech_info(param_dict, node, tech, tech_info):
                 ),
                 cost,
             )
+    for switch, switch_info in switches.items():
+        param_dict.set_key(
+            _set_idx(param=switch, keydict={"nodes": node, "techs": tech}),
+            switch_info,
+        )
 
     for other_param, other_info in tech_info.items():
         param_dict.set_key(
             _set_idx(param=other_param, keydict={"nodes": node, "techs": tech}),
             other_info,
         )
+    param_dict.set_key(
+        _set_idx(param="node_tech", keydict={"nodes": node, "techs": tech}), 1,
+    )
 
 
 def _set_tech_info(param_dict, techs, param_name, param_info):

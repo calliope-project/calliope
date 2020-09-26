@@ -36,7 +36,6 @@ def initialize_decision_variables(backend_model):
     """
     model_data_dict = backend_model.__calliope_model_data
     run_config = backend_model.__calliope_run_config
-
     ##
     # Variables which are always assigned
     ##

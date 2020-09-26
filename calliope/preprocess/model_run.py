@@ -69,6 +69,9 @@ def model_run_from_yaml(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
+    mask_sets = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
+    )
 
     return generate_model_run(
         config_with_overrides,
@@ -76,6 +79,7 @@ def model_run_from_yaml(
         debug_comments,
         overrides,
         scenario,
+        mask_sets
     )
 
 
@@ -109,6 +113,9 @@ def model_run_from_dict(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
+    mask_sets = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
+    )
 
     return generate_model_run(
         config_with_overrides,
@@ -116,6 +123,7 @@ def model_run_from_dict(
         debug_comments,
         overrides,
         scenario,
+        mask_sets,
     )
 
 
@@ -359,6 +367,7 @@ def process_techs(config_model):
             "allowed_constraints",
             "allowed_group_constraints",
             "allowed_costs",
+            "allowed_switches"
         ]
         for k in keys_to_add:
             tech_result[k] = config_model.tech_groups[tech_result.inheritance[-1]].get(
@@ -654,7 +663,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
 
 def generate_model_run(
-    config, timeseries_dataframes, debug_comments, applied_overrides, scenario
+    config, timeseries_dataframes, debug_comments, applied_overrides, scenario, mask_sets
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -710,6 +719,7 @@ def generate_model_run(
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
     model_run["sets"] = all_sets
+    model_run["mask_sets"] = mask_sets
     model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking

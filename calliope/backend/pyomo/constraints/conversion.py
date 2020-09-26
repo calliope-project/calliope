@@ -35,7 +35,7 @@ def load_constraints(backend_model):
         )
 
 
-def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
+def balance_conversion_constraint_rule(backend_model, node, tech, timestep):
     """
     Balance energy carrier consumption and production
 
@@ -50,24 +50,19 @@ def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
             \\quad \\forall loc::tech \\in locs::techs_{conversion},
             \\forall timestep \\in timesteps
     """
-    model_data_dict = backend_model.__calliope_model_data["data"]
 
-    loc_tech_carrier_out = model_data_dict["lookup_loc_techs_conversion"][
-        ("out", loc_tech)
-    ]
-    loc_tech_carrier_in = model_data_dict["lookup_loc_techs_conversion"][
-        ("in", loc_tech)
-    ]
+    carrier_out = backend_model.carrier["out", :, tech].index()[0][1]
+    carrier_in = backend_model.carrier["in", :, tech].index()[0][1]
 
-    energy_eff = get_param(backend_model, "energy_eff", (loc_tech, timestep))
+    energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
 
     return (
-        backend_model.carrier_prod[loc_tech_carrier_out, timestep]
-        == -1 * backend_model.carrier_con[loc_tech_carrier_in, timestep] * energy_eff
+        backend_model.carrier_prod[carrier_out, node, tech, timestep]
+        == -1 * backend_model.carrier_con[carrier_in, node, tech, timestep] * energy_eff
     )
 
 
-def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep):
+def cost_var_conversion_constraint_rule(backend_model, cost, node, tech, timestep):
     """
     Add time-varying conversion technology costs
 
@@ -83,24 +78,18 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
             \\times timestep_{weight}(timestep) \\times cost_{om, con}(loc::tech, cost, timestep)
             \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion}
     """
-    model_data_dict = backend_model.__calliope_model_data
     weight = backend_model.timestep_weights[timestep]
 
-    loc_tech_carrier_in = model_data_dict["data"]["lookup_loc_techs_conversion"][
-        ("in", loc_tech)
-    ]
+    carrier_out = backend_model.carrier["out", :, tech].index()[0][1]
+    carrier_in = backend_model.carrier["in", :, tech].index()[0][1]
 
-    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion"][
-        ("out", loc_tech)
-    ]
-
-    cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, loc_tech, timestep))
-    cost_om_con = get_param(backend_model, "cost_om_con", (cost, loc_tech, timestep))
+    cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
+    cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     if po.value(cost_om_prod):
         cost_prod = (
             cost_om_prod
             * weight
-            * backend_model.carrier_prod[loc_tech_carrier_out, timestep]
+            * backend_model.carrier_prod[carrier_out, node, tech, timestep]
         )
     else:
         cost_prod = 0
@@ -110,14 +99,14 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
             cost_om_con
             * weight
             * -1
-            * backend_model.carrier_con[loc_tech_carrier_in, timestep]
+            * backend_model.carrier_con[carrier_in, node, tech, timestep]
         )
     else:
         cost_con = 0
 
-    backend_model.cost_var_rhs[cost, loc_tech, timestep] = cost_prod + cost_con
+    backend_model.cost_var_rhs[cost, node, tech, timestep] = cost_prod + cost_con
 
     return (
-        backend_model.cost_var[cost, loc_tech, timestep]
-        == backend_model.cost_var_rhs[cost, loc_tech, timestep]
+        backend_model.cost_var[cost, node, tech, timestep]
+        == backend_model.cost_var_rhs[cost, node, tech, timestep]
     )

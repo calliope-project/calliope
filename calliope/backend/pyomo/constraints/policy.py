@@ -186,15 +186,12 @@ def reserve_margin_constraint_rule(backend_model, carrier):
     reserve_margin = model_data_dict["reserve_margin"][carrier]
     max_demand_timestep = model_data_dict["max_demand_timesteps"][carrier]
     max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
-
+    techs = [idx[-1] for idx in backend_model.carrier["out", carrier, :].index()]
     return sum(  # Sum all supply capacity for this carrier
-        backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
-        for loc_tech_carrier in backend_model.loc_tech_carriers_supply_conversion_all
-        if loc_tech_carrier.split("::")[-1] == carrier
+        backend_model.energy_cap[:, tech] for tech in techs
     ) >= sum(  # Sum all demand for this carrier and timestep
-        backend_model.carrier_con[loc_tech_carrier, max_demand_timestep]
-        for loc_tech_carrier in backend_model.loc_tech_carriers_demand
-        if loc_tech_carrier.split("::")[-1] == carrier
+        backend_model.carrier_con[carrier, :, tech, max_demand_timestep]
+        for tech in techs
     ) * -1 * (
         1 / max_demand_time_res
     ) * (

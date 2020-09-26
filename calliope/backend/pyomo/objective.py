@@ -39,17 +39,12 @@ def minmax_cost_optimization(backend_model):
 
     def obj_rule(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
-            unmet_demand = (
-                sum(
-                    (
-                        backend_model.unmet_demand[loc_carrier, timestep]
-                        - backend_model.unused_supply[loc_carrier, timestep]
-                    )
-                    * backend_model.timestep_weights[timestep]
-                    for loc_carrier in backend_model.loc_carriers
-                    for timestep in backend_model.timesteps
-                )
+            unmet_demand = sum(
+                sum(backend_model.unmet_demand[:, :, timestep])
+                - sum(backend_model.unused_supply[:, :, timestep])
+                * backend_model.timestep_weights[timestep]
                 * backend_model.bigM
+                for timestep in backend_model.timesteps
             )
             if backend_model.objective_sense == "maximize":
                 unmet_demand *= -1
@@ -58,8 +53,7 @@ def minmax_cost_optimization(backend_model):
 
         return (
             sum(
-                backend_model.cost[k, loc_tech] * v
-                for loc_tech in backend_model.loc_techs_cost
+                sum(backend_model.cost[k, :, :]) * v
                 for k, v in backend_model.objective_cost_class.items()
             )
             + unmet_demand
