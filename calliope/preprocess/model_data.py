@@ -92,17 +92,22 @@ def add_sets(model_run):
 
 
 def get_node_params(param_dict, model_run):
+    """
+    For all nodes, get tech and link data
+    """
     model_locations = model_run.locations.copy()
     for node, node_info in model_locations.items():
+        # Techs in node
         techs = node_info.pop("techs", {})
         for tech, tech_info in techs.items():
-            _get_tech_info(param_dict, node, tech, tech_info)
+            _set_tech_at_node_info(param_dict, node, tech, tech_info)
+        # Links in node
         links = node_info.pop("links", {})
         for link, link_info in links.items():
             techs = link_info.pop("techs", {})
             for tech, tech_info in techs.items():
                 link_tech = f"{tech}:{link}"
-                _get_tech_info(param_dict, node, link_tech, tech_info)
+                _set_tech_at_node_info(param_dict, node, link_tech, tech_info)
                 param_dict.set_key(
                     _set_idx(
                         param="link_remote_techs",
@@ -117,7 +122,7 @@ def get_node_params(param_dict, model_run):
                     ),
                     node,
                 )
-
+        # node info (e.g. coordinates)
         for node_param, node_param_info in node_info.items():
             if node_param == "coordinates":
                 for k, v in node_param_info.items():
@@ -136,8 +141,13 @@ def get_node_params(param_dict, model_run):
 
 
 def get_tech_params(param_dict, model_run):
+    """
+    For a given tech, get all 'essentials' information
+    """
     model_techs = model_run.techs.copy()
     for tech, tech_dict in model_techs.items():
+        # Transmission techs are referred to as "tech_name:node_name", meaning there are
+        # now several of them, which we'll need to iterate through
         if tech_dict.inheritance[-1] == "transmission":
             techs = set(
                 [
@@ -197,11 +207,15 @@ def _set_idx(param, keydict):
     )
 
 
-def _get_tech_info(param_dict, node, tech, tech_info):
+def _set_tech_at_node_info(param_dict, node, tech, tech_info):
+    """
+    Get all data from 'constraints', 'costs', and 'switches' for a tech at a node
+    """
     constraints = tech_info.pop("constraints", {})
     costs = tech_info.pop("costs", {})
     switches = tech_info.pop("switches", {})
     for constraint, constraint_info in constraints.items():
+        # carrier-based data is reformatted to be indexed by carrier
         if constraint == "carrier_ratios":
             for k, v in constraint_info.as_dict_flat().items():
                 carrier_tier, carrier = k.split(".")
@@ -256,6 +270,7 @@ def _get_tech_info(param_dict, node, tech, tech_info):
             _set_idx(param=other_param, keydict={"nodes": node, "techs": tech}),
             other_info,
         )
+    # Also set the parameter that the tech exists at this node
     param_dict.set_key(
         _set_idx(param="node_tech", keydict={"nodes": node, "techs": tech}), 1,
     )
