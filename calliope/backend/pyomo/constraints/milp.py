@@ -15,146 +15,10 @@ import numpy as np
 from calliope.backend.pyomo.util import (
     get_param,
     get_timestep_weight,
-    get_loc_tech,
-    split_comma_list,
     loc_tech_is_in,
 )
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
-
-ORDER = 30  # order in which to invoke constraints relative to other constraint files
-
-
-def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data["sets"]
-    run_config = backend_model.__calliope_run_config
-
-    if "loc_techs_unit_commitment_milp_constraint" in sets:
-        backend_model.unit_commitment_milp_constraint = po.Constraint(
-            backend_model.loc_techs_unit_commitment_milp_constraint,
-            backend_model.timesteps,
-            rule=unit_commitment_milp_constraint_rule,
-        )
-
-    if "loc_techs_unit_capacity_milp_constraint" in sets:
-        backend_model.unit_capacity_milp_constraint = po.Constraint(
-            backend_model.loc_techs_unit_capacity_milp_constraint,
-            rule=unit_capacity_milp_constraint_rule,
-        )
-
-    if "loc_tech_carriers_carrier_production_max_milp_constraint" in sets:
-        backend_model.carrier_production_max_milp_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_production_max_milp_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_max_milp_constraint_rule,
-        )
-
-    if "loc_techs_carrier_production_max_conversion_plus_milp_constraint" in sets:
-        backend_model.carrier_production_max_conversion_plus_milp_constraint = po.Constraint(
-            backend_model.loc_techs_carrier_production_max_conversion_plus_milp_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_max_conversion_plus_milp_constraint_rule,
-        )
-
-    if "loc_tech_carriers_carrier_consumption_max_milp_constraint" in sets:
-        backend_model.carrier_consumption_max_milp_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_consumption_max_milp_constraint,
-            backend_model.timesteps,
-            rule=carrier_consumption_max_milp_constraint_rule,
-        )
-
-    if "loc_tech_carriers_carrier_production_min_milp_constraint" in sets:
-        backend_model.carrier_production_min_milp_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_production_min_milp_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_min_milp_constraint_rule,
-        )
-
-    if "loc_techs_carrier_production_min_conversion_plus_milp_constraint" in sets:
-        backend_model.carrier_production_min_conversion_plus_milp_constraint = po.Constraint(
-            backend_model.loc_techs_carrier_production_min_conversion_plus_milp_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_min_conversion_plus_milp_constraint_rule,
-        )
-
-    if "loc_techs_storage_capacity_units_milp_constraint" in sets:
-        backend_model.storage_capacity_units_milp_constraint = po.Constraint(
-            backend_model.loc_techs_storage_capacity_units_milp_constraint,
-            rule=storage_capacity_units_milp_constraint_rule,
-        )
-
-    if "loc_techs_energy_capacity_units_milp_constraint" in sets:
-        backend_model.energy_capacity_units_milp_constraint = po.Constraint(
-            backend_model.loc_techs_energy_capacity_units_milp_constraint,
-            rule=energy_capacity_units_milp_constraint_rule,
-        )
-
-    if (
-        "loc_techs_update_costs_investment_units_milp_constraint" in sets
-        and run_config["mode"] != "operate"
-    ):
-        for loc_tech, cost in (
-            backend_model.loc_techs_update_costs_investment_units_milp_constraint
-            * backend_model.costs
-        ):
-
-            update_costs_investment_units_milp_constraint(
-                backend_model, cost, loc_tech,
-            )
-
-    if (
-        "loc_techs_update_costs_investment_purchase_milp_constraint" in sets
-        and run_config["mode"] != "operate"
-    ):
-        for loc_tech, cost in (
-            backend_model.loc_techs_update_costs_investment_purchase_milp_constraint
-            * backend_model.costs
-        ):
-
-            update_costs_investment_purchase_milp_constraint(
-                backend_model, cost, loc_tech,
-            )
-
-    if "loc_techs_energy_capacity_max_purchase_milp_constraint" in sets:
-        backend_model.energy_capacity_max_purchase_milp_constraint = po.Constraint(
-            backend_model.loc_techs_energy_capacity_max_purchase_milp_constraint,
-            rule=energy_capacity_max_purchase_milp_constraint_rule,
-        )
-    if "loc_techs_energy_capacity_min_purchase_milp_constraint" in sets:
-        backend_model.energy_capacity_min_purchase_milp_constraint = po.Constraint(
-            backend_model.loc_techs_energy_capacity_min_purchase_milp_constraint,
-            rule=energy_capacity_min_purchase_milp_constraint_rule,
-        )
-
-    if "loc_techs_storage_capacity_max_purchase_milp_constraint" in sets:
-        backend_model.storage_capacity_max_purchase_milp_constraint = po.Constraint(
-            backend_model.loc_techs_storage_capacity_max_purchase_milp_constraint,
-            rule=storage_capacity_max_purchase_milp_constraint_rule,
-        )
-
-    if "loc_techs_storage_capacity_min_purchase_milp_constraint" in sets:
-        backend_model.storage_capacity_min_purchase_milp_constraint = po.Constraint(
-            backend_model.loc_techs_storage_capacity_min_purchase_milp_constraint,
-            rule=storage_capacity_min_purchase_milp_constraint_rule,
-        )
-
-    if "techs_unit_capacity_systemwide_milp_constraint" in sets:
-        backend_model.unit_capacity_systemwide_milp_constraint = po.Constraint(
-            backend_model.techs_unit_capacity_systemwide_milp_constraint,
-            rule=unit_capacity_systemwide_milp_constraint_rule,
-        )
-
-    if "loc_techs_asynchronous_prod_con_milp_constraint" in sets:
-        backend_model.asynchronous_con_milp_constraint = po.Constraint(
-            backend_model.loc_techs_asynchronous_prod_con_milp_constraint,
-            backend_model.timesteps,
-            rule=asynchronous_con_milp_constraint_rule,
-        )
-        backend_model.asynchronous_prod_milp_constraint = po.Constraint(
-            backend_model.loc_techs_asynchronous_prod_con_milp_constraint,
-            backend_model.timesteps,
-            rule=asynchronous_prod_milp_constraint_rule,
-        )
 
 
 def unit_commitment_milp_constraint_rule(backend_model, node, tech, timestep):
@@ -260,7 +124,6 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(
             \\quad \\forall loc::tech \\in loc::techs_{milp, conversion^{+}}, \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data["data"]
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, "energy_cap_per_unit", (node, tech))
     carriers_out = backend_model.carrier["out", tech]
@@ -325,7 +188,6 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(
             \\forall timestep \\in timesteps
 
     """
-    model_data_dict = backend_model.__calliope_model_data["data"]
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, "energy_cap_per_unit", (node, tech))
     min_use = get_param(backend_model, "energy_cap_min_use", (node, tech, timestep))
@@ -535,67 +397,6 @@ def storage_capacity_min_purchase_milp_constraint_rule(backend_model, node, tech
         return po.Constraint.Skip
 
 
-def update_costs_investment_units_milp_constraint(backend_model, cost, node, tech):
-    """
-    Add MILP investment costs (cost * number of units purchased)
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{cost_{investment}}(cost, loc::tech) += \\boldsymbol{units}(loc::tech)
-            \\times cost_{purchase}(cost, loc::tech) * timestep_{weight} * depreciation
-            \\quad \\forall cost \\in costs, \\forall loc::tech \\in loc::techs_{cost_{investment}, milp}
-    """
-
-    ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = get_param(backend_model, "cost_depreciation_rate", (cost, node, tech))
-
-    cost_purchase = get_param(backend_model, "cost_purchase", (cost, node, tech))
-    cost_of_purchase = (
-        backend_model.units[node, tech] * cost_purchase * ts_weight * depreciation_rate
-    )
-
-    if loc_tech_is_in(backend_model, node, tech, "balance_transmission_constraint_index"):
-        cost_of_purchase = cost_of_purchase / 2
-
-    backend_model.cost_investment_rhs[cost, node, tech].expr += cost_of_purchase
-
-    return None
-
-
-def update_costs_investment_purchase_milp_constraint(backend_model, cost, node, tech):
-    """
-    Add binary investment costs (cost * binary_purchased_unit)
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{cost_{investment}}(cost, loc::tech) += \\boldsymbol{purchased}(loc::tech)
-            \\times cost_{purchase}(cost, loc::tech) * timestep_{weight} * depreciation
-            \\quad \\forall cost \\in costs, \\forall loc::tech \\in loc::techs_{cost_{investment}, purchase}
-
-    """
-    ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = get_param(backend_model, "cost_depreciation_rate", (cost, node, tech))
-
-    cost_purchase = get_param(backend_model, "cost_purchase", (cost, node, tech))
-    cost_of_purchase = (
-        backend_model.purchased[node, tech]
-        * cost_purchase
-        * ts_weight
-        * depreciation_rate
-    )
-
-    if loc_tech_is_in(backend_model, node, tech, "loc_techs_transmission"):
-        cost_of_purchase = cost_of_purchase / 2
-
-    backend_model.cost_investment_rhs[cost, node, tech].expr += cost_of_purchase
-
-    return None
-
-
 def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
     """
     Set constraints to limit the number of purchased units of a single technology
@@ -626,9 +427,9 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
     sum_expr_purchase = sum(backend_model.purchased[: tech])
 
     if equals_systemwide:
-        return sum_expr_units + sum_expr_purchase == equals_systemwide * multiplier
+        return sum_expr_units + sum_expr_purchase == equals_systemwide
     else:
-        return sum_expr_units + sum_expr_purchase <= max_systemwide * multiplier
+        return sum_expr_units + sum_expr_purchase <= max_systemwide
 
 
 def asynchronous_con_milp_constraint_rule(backend_model, node, tech, timestep):

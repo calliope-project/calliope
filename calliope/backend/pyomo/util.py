@@ -60,42 +60,6 @@ def get_previous_timestep(timesteps, timestep):
 
 
 @memoize
-def get_loc_tech_carriers(backend_model, loc_carrier):
-    """
-    For a given loc_carrier concatenation, get lists of the relevant
-    loc_tech_carriers which produce energy (loc_tech_carriers_prod), consume
-    energy (loc_tech_carriers_con) and export energy (loc_tech_carriers_export)
-    """
-    lookup = backend_model.__calliope_model_data["data"]["lookup_loc_carriers"]
-    loc_tech_carriers = split_comma_list(lookup[loc_carrier])
-
-    loc_tech_carriers_prod = [
-        i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_prod
-    ]
-    loc_tech_carriers_con = [
-        i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_con
-    ]
-
-    if hasattr(backend_model, "loc_tech_carriers_export"):
-        loc_tech_carriers_export = [
-            i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_export
-        ]
-    else:
-        loc_tech_carriers_export = []
-
-    return (loc_tech_carriers_prod, loc_tech_carriers_con, loc_tech_carriers_export)
-
-
-@memoize
-def get_loc_tech(loc_tech_carrier):
-    """
-    Split the string of a loc_tech_carrier (e.g. `region1::ccgt::power`) to get
-    just the loc_tech (e.g. `region1::ccgt`)
-    """
-    return loc_tech_carrier.rsplit("::", 1)[0]
-
-
-@memoize
 def get_timestep_weight(backend_model):
     """
     Get the total number of years this model considers, by summing all

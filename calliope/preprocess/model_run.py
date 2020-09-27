@@ -718,9 +718,9 @@ def generate_model_run(
     all_sets = sets.generate_simple_sets(model_run)
     all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
     all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
-    model_run["sets"] = all_sets
+    #model_run["sets"] = all_sets
     model_run["mask_sets"] = mask_sets
-    model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
+    #model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking
     final_check_comments, warning_messages, errors = checks.check_final(model_run)

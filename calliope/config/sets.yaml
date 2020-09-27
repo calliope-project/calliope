@@ -39,10 +39,14 @@ constraints:
     energy_capacity:
         foreach: [nodes, techs]
         mask: [param(energy_cap_min), or, param(energy_cap_max), or, param(energy_cap_equals)]
+        switches:
+            run: {mode: plan}
 
     energy_capacity_systemwide:
         foreach: [techs]
         mask: [param(energy_capacity_systemwide)]
+        switches:
+            run: {mode: plan}
 
     balance_conversion_plus_primary:
         foreach: [nodes, techs, timesteps]
@@ -157,18 +161,6 @@ constraints:
         switches:
             tech: {include_storage: True}
 
-    update_export_system_balance:
-        foreach: [carriers, nodes, timesteps]
-        mask: [param(export_carrier)]
-        switches:
-            tech: {export: True}
-
-    update_export_cost_var:
-        foreach: [costs, nodes, techs, timesteps]
-        mask: [param(cost_export), or, param(cost_om_con), or, param(cost_om_prod)]
-        switches:
-            tech: {export: True}
-
     export_balance:
         foreach: [nodes, techs, carriers, timesteps]
         mask: [param(export_carrier)]
@@ -191,6 +183,7 @@ constraints:
         mask: [param(units_max), or, param(units_min), or, param(units_min)]
         switches:
             tech: {cap_method: integer}
+            run: {mode: plan}
 
     carrier_production_max_milp:
         foreach: [nodes, techs, carriers, timesteps]
@@ -229,12 +222,14 @@ constraints:
         mask: [inheritance(storage), or, inheritance(supply_plus)]
         switches:
             tech: {cap_method: integer, include_storage: True}
+            run: {mode: plan}
 
     energy_capacity_units_milp:
         foreach: [nodes, techs]
         mask: [param(energy_cap_per_unit)]
         switches:
             tech: {cap_method: integer}
+            run: {mode: plan}
 
     energy_capacity_max_purchase_milp:
         foreach: [nodes, techs]
@@ -260,18 +255,6 @@ constraints:
         switches:
             tech: {cap_method: binary}
 
-    update_costs_investment_units_milp:
-        foreach: [nodes, techs, costs]
-        mask: [param(cost_energy_cap), or, param(cost_om_annual), or, param(cost_om_annual_investment_fraction), or, param(cost_purchase), or, param(cost_resource_area), or, param(cost_resource_cap), or, param(cost_storage_cap)]
-        switches:
-            tech: {cap_method: integer}
-
-    update_costs_investment_purchase_milp:
-        foreach: [nodes, techs, costs]
-        mask: [param(cost_purchase)]
-        switches:
-            tech: {cap_method: binary}
-
     unit_capacity_systemwide_milp:
         foreach: [techs]
         mask: [param(units_max_systemwide), or, param(units_equals_systemwide)]
@@ -289,6 +272,8 @@ constraints:
     symmetric_transmission:
         foreach: [nodes, techs]
         mask: [inheritance(transmission)]
+        switches:
+            run: {mode: plan}
 
     cost_var:
         foreach: [nodes, techs, costs, timesteps]
@@ -340,17 +325,25 @@ variables:
         switches:
             tech: {include_storage: True}
             run: {mode: plan}
+        domain: NonNegativeReals  # FIXME: when storage_inter_cluster is active, this should be 'Reals'
+
+    storage_inter_cluster:
+        foreach: [nodes, techs, datesteps]
+        switches:
+            tech: {include_storage: True}
         domain: NonNegativeReals
 
-    #storage_inter_cluster:
-    #    foreach: [nodes, techs, datesteps]
-    #    domain: NonNegativeReals
-    #storage_intra_cluster_max:
-    #    foreach: [nodes, techs, clusters]
-    #    domain: Reals
-    #storage_intra_cluster_min:
-    #    foreach: [nodes, techs, clusters]
-    #    domain: Reals
+    storage_intra_cluster_max:
+        foreach: [nodes, techs, clusters]
+        switches:
+            tech: {include_storage: True}
+        domain: Reals
+
+    storage_intra_cluster_min:
+        foreach: [nodes, techs, clusters]
+        switches:
+            tech: {include_storage: True}
+        domain: Reals
 
     storage:
         foreach: [nodes, techs, timesteps]
@@ -373,7 +366,7 @@ variables:
 
     carrier_export:
         foreach: [nodes, techs, carriers, timesteps]
-        masks: [param(cost_export)]
+        masks: [param(export_carrier)]
         switches:
             tech: {export: True}
         domain: NonNegativeReals

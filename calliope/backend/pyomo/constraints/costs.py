@@ -13,54 +13,6 @@ import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in
 
-ORDER = 10  # order in which to invoke constraints relative to other constraint files
-
-
-def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data["sets"]
-    run_config = backend_model.__calliope_run_config
-
-    if "loc_techs_cost_constraint" in sets:
-        backend_model.cost_constraint = po.Constraint(
-            backend_model.costs, backend_model.loc_techs_cost, rule=cost_constraint_rule
-        )
-
-    # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
-    if (
-        "loc_techs_cost_investment_constraint" in sets
-        and run_config["mode"] != "operate"
-    ):
-        # Right-hand side expression can be later updated by MILP investment costs
-        backend_model.cost_investment_rhs = po.Expression(
-            backend_model.costs,
-            backend_model.loc_techs_cost_investment_constraint,
-            initialize=0.0,
-        )
-
-        backend_model.cost_investment_constraint = po.Constraint(
-            backend_model.costs,
-            backend_model.loc_techs_cost_investment_constraint,
-            rule=cost_investment_constraint_rule,
-        )
-
-    if "loc_techs_om_cost" in sets:
-        # Right-hand side expression can be later updated by export costs/revenue
-        backend_model.cost_var_rhs = po.Expression(
-            backend_model.costs,
-            backend_model.loc_techs_om_cost,
-            backend_model.timesteps,
-            initialize=0.0,
-        )
-    if "loc_techs_cost_var_constraint" in sets:
-        # Constraint is built over a different loc_techs set to expression, as
-        # it is updated in conversion.py and conversion_plus.py constraints
-        backend_model.cost_var_constraint = po.Constraint(
-            backend_model.costs,
-            backend_model.loc_techs_cost_var_constraint,
-            backend_model.timesteps,
-            rule=cost_var_constraint_rule,
-        )
-
 
 def cost_constraint_rule(backend_model, cost, node, tech):
     """
@@ -152,15 +104,26 @@ def cost_investment_constraint_rule(backend_model, cost, node, tech):
     )
     cost_om_annual = get_param(backend_model, "cost_om_annual", (cost, node, tech))
 
+    if loc_tech_is_in(backend_model, (node, tech), "units_index"):
+        cost_of_purchase = (
+            get_param(backend_model, "cost_purchase", (cost, node, tech)) *
+            backend_model.units[node, tech]
+        )
+    if loc_tech_is_in(backend_model, (node, tech), "purchased_index"):
+        cost_of_purchase = (
+            get_param(backend_model, "cost_purchase", (cost, node, tech)) *
+            backend_model.purchased[node, tech]
+        )
+    else:
+        cost_of_purchase = 0
+
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict["data"]["cost_depreciation_rate"].get(
-        (cost, node, tech), 0
-    )
+    depreciation_rate = get_param(backend_model, "cost_depreciation_rate", (cost, node, tech))
 
     cost_cap = (
         depreciation_rate
         * ts_weight
-        * (cost_energy_cap + cost_storage_cap + cost_resource_cap + cost_resource_area)
+        * (cost_energy_cap + cost_storage_cap + cost_resource_cap + cost_resource_area + cost_of_purchase)
     )
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
@@ -204,44 +167,42 @@ def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
 
     """
 
-    cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     weight = backend_model.timestep_weights[timestep]
 
-    if po.value(cost_om_prod):
-        cost_prod = (
-            cost_om_prod
-            * weight
-            * sum(backend_model.carrier_prod[:, node, tech, timestep])
-        )
-    else:
-        cost_prod = 0
+    all_costs = 0
 
-    if loc_tech_is_in(backend_model, (node, tech), "resource_con_index") and cost_om_con:
-        cost_con = cost_om_con * weight * backend_model.resource_con[node, tech, timestep]
-    elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index
+    all_costs += (
+        get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
+        * weight
+        * sum(backend_model.carrier_prod[:, node, tech, timestep])
+    )
+
+    if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
+        all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
+    elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index for supply
         energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
         if (
             po.value(energy_eff) > 0
         ):  # in case energy_eff is zero, to avoid an infinite value
-            cost_con = (
+            all_costs += (
                 cost_om_con
-                * weight
                 * (sum(backend_model.carrier_prod[:, node, tech, timestep]) / energy_eff)
             )
-        else:
-            cost_con = 0
-    elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index
-        cost_con = (
+    elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index for demand
+        all_costs += (
             cost_om_con
-            * weight
             * (-1)
             * sum(backend_model.carrier_con[:, node, tech, timestep])
         )
-    else:
-        cost_con = 0
+    export_carrier = backend_model.export_carrier[:, node, tech].index()
+    if len(export_carrier) > 0:
+        all_costs += (
+            get_param(backend_model, "cost_export", (cost, node, tech, timestep))
+            * backend_model.carrier_export[export_carrier[0][0], node, tech, timestep]
+        )
 
-    backend_model.cost_var_rhs[cost, node, tech, timestep].expr = cost_prod + cost_con
+    backend_model.cost_var_rhs[cost, node, tech, timestep].expr = all_costs * weight
     return (
         backend_model.cost_var[cost, node, tech, timestep]
         == backend_model.cost_var_rhs[cost, node, tech, timestep]

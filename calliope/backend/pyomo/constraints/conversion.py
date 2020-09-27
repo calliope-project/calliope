@@ -13,27 +13,6 @@ import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_param
 
-ORDER = 20  # order in which to invoke constraints relative to other constraint files
-
-
-def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data["sets"]
-
-    if "loc_techs_balance_conversion_constraint" in sets:
-        backend_model.balance_conversion_constraint = po.Constraint(
-            backend_model.loc_techs_balance_conversion_constraint,
-            backend_model.timesteps,
-            rule=balance_conversion_constraint_rule,
-        )
-
-    if "loc_techs_cost_var_conversion_constraint" in sets:
-        backend_model.cost_var_conversion_constraint = po.Constraint(
-            backend_model.costs,
-            backend_model.loc_techs_cost_var_conversion_constraint,
-            backend_model.timesteps,
-            rule=cost_var_conversion_constraint_rule,
-        )
-
 
 def balance_conversion_constraint_rule(backend_model, node, tech, timestep):
     """

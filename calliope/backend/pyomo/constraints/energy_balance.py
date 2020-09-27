@@ -14,89 +14,8 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import (
     get_param,
     get_previous_timestep,
-    get_loc_tech_carriers,
     loc_tech_is_in,
 )
-
-ORDER = 10  # order in which to invoke constraints relative to other constraint files
-
-
-def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data["sets"]
-
-    if "node_carriers_system_balance_constraint" in sets:
-        backend_model.system_balance = po.Expression(
-            backend_model.node_carriers_system_balance_constraint,
-            backend_model.timesteps,
-            initialize=0.0,
-        )
-
-        backend_model.system_balance_constraint = po.Constraint(
-            backend_model.node_carriers_system_balance_constraint,
-            backend_model.timesteps,
-            rule=system_balance_constraint_rule,
-        )
-
-    if "loc_techs_balance_supply_constraint" in sets:
-        backend_model.balance_supply_constraint = po.Constraint(
-            backend_model.loc_techs_balance_supply_constraint,
-            backend_model.timesteps,
-            rule=balance_supply_constraint_rule,
-        )
-
-    if "loc_techs_balance_demand_constraint" in sets:
-        # Add a required_resource expression to share computed values between constraints
-        backend_model.required_resource = po.Expression(
-            backend_model.loc_techs_balance_demand_constraint,
-            backend_model.timesteps,
-            initialize=0.0,
-        )
-        backend_model.balance_demand_constraint = po.Constraint(
-            backend_model.loc_techs_balance_demand_constraint,
-            backend_model.timesteps,
-            rule=balance_demand_constraint_rule,
-        )
-
-    if "loc_techs_balance_transmission_constraint" in sets:
-        backend_model.balance_transmission_constraint = po.Constraint(
-            backend_model.loc_techs_balance_transmission_constraint,
-            backend_model.timesteps,
-            rule=balance_transmission_constraint_rule,
-        )
-
-    if "loc_techs_resource_availability_supply_plus_constraint" in sets:
-        backend_model.balance_supply_plus_constraint = po.Constraint(
-            backend_model.loc_techs_resource_availability_supply_plus_constraint,
-            backend_model.timesteps,
-            rule=balance_supply_plus_constraint_rule,
-        )
-
-    if "loc_techs_balance_supply_plus_constraint" in sets:
-        backend_model.resource_availability_supply_plus_constraint = po.Constraint(
-            backend_model.loc_techs_balance_supply_plus_constraint,
-            backend_model.timesteps,
-            rule=resource_availability_supply_plus_constraint_rule,
-        )
-
-    if "loc_techs_balance_storage_constraint" in sets:
-        backend_model.balance_storage_constraint = po.Constraint(
-            backend_model.loc_techs_balance_storage_constraint,
-            backend_model.timesteps,
-            rule=balance_storage_constraint_rule,
-        )
-
-    if "loc_techs_balance_storage_inter_cluster_constraint" in sets:
-        backend_model.balance_storage_inter_cluster_constraint = po.Constraint(
-            backend_model.loc_techs_balance_storage_inter_cluster_constraint,
-            backend_model.datesteps,
-            rule=balance_storage_inter_cluster_rule,
-        )
-
-    if "loc_techs_storage_initial_constraint" in sets:
-        backend_model.storage_initial_constraint = po.Constraint(
-            backend_model.loc_techs_storage_initial_constraint,
-            rule=storage_initial_rule,
-        )
 
 
 def system_balance_constraint_rule(backend_model, carrier, node, timestep):
@@ -114,22 +33,17 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
             \\quad \\forall loc::carrier \\in loc::carriers, \\forall timestep \\in timesteps
 
     """
-    if backend_model.__calliope_run_config.get("ensure_feasibility", False):
-        unmet_demand = backend_model.unmet_demand[carrier, node, timestep]
-        unused_supply = backend_model.unused_supply[carrier, node, timestep]
-    else:
-        unmet_demand = unused_supply = 0
-
-    backend_model.system_balance[carrier, node, timestep].expr = (
-        sum(
-            backend_model.carrier_prod[carrier, node, :, timestep]
-        )
-        + sum(
-            backend_model.carrier_con[carrier, node, :, timestep]
-        )
-        + unmet_demand
-        + unused_supply
+    system_balance = (
+        sum(backend_model.carrier_prod[carrier, node, :, timestep])
+        + sum(backend_model.carrier_con[carrier, node, :, timestep])
     )
+    if hasattr(backend_model, 'carrier_export'):
+        system_balance += sum(
+            backend_model.carrier_export[carrier, node, :, timestep]
+        )
+    if hasattr(backend_model, 'unmet_demand'):
+        system_balance += backend_model.unmet_demand[carrier, node, timestep]
+        system_balance += backend_model.unused_supply[carrier, node, timestep]
 
     return backend_model.system_balance[carrier, node, timestep] == 0
 

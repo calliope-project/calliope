@@ -20,6 +20,8 @@ def create_mask_ds(model_data, sets):
     for set_name, set_items in sets.items():
         for k, v in set_items.items():
             mask = _mask_foreach(model_data, v.foreach)
+            if mask is False:  # i.e. not all of 'foreach' are in model_data
+                continue
             _operator = "and_"
             if "mask" in v.keys():
                 mask = get_mask(model_data, v.mask, mask, _operator)
@@ -118,6 +120,8 @@ def _masking(curr_mask, new_mask, _operator):
 
 
 def _mask_foreach(model_data, foreach):
+    if not all(i in model_data.dims for i in foreach):
+        return False
     initial_mask = model_data.carrier.notnull() * model_data.node_tech.notnull()
     reduced_mask = (
         initial_mask.sum([i for i in initial_mask.dims if i not in foreach]) > 0

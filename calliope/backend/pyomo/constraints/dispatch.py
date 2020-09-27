@@ -12,91 +12,7 @@ of the technologies
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_loc_tech, get_previous_timestep
-
-ORDER = 10  # order in which to invoke constraints relative to other constraint files
-
-
-def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data["sets"]
-
-    if "loc_tech_carriers_carrier_production_max_constraint" in sets:
-        backend_model.carrier_production_max_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_production_max_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_max_constraint_rule,
-        )
-    if "loc_tech_carriers_carrier_production_min_constraint" in sets:
-        backend_model.carrier_production_min_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_production_min_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_min_constraint_rule,
-        )
-    if "loc_tech_carriers_carrier_consumption_max_constraint" in sets:
-        backend_model.carrier_consumption_max_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_consumption_max_constraint,
-            backend_model.timesteps,
-            rule=carrier_consumption_max_constraint_rule,
-        )
-
-    if "loc_techs_resource_max_constraint" in sets:
-        backend_model.resource_max_constraint = po.Constraint(
-            backend_model.loc_techs_resource_max_constraint,
-            backend_model.timesteps,
-            rule=resource_max_constraint_rule,
-        )
-
-    if "loc_techs_storage_max_constraint" in sets:
-        backend_model.storage_max_constraint = po.Constraint(
-            backend_model.loc_techs_storage_max_constraint,
-            backend_model.timesteps,
-            rule=storage_max_constraint_rule,
-        )
-
-    if "loc_techs_storage_discharge_depth" in sets:
-        backend_model.storage_discharge_depth_constraint = po.Constraint(
-            backend_model.loc_techs_storage_discharge_depth,
-            backend_model.timesteps,
-            rule=storage_discharge_depth_constraint_rule,
-        )
-
-    if "loc_tech_carriers_ramping_constraint" in sets:
-        backend_model.ramping_up_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_ramping_constraint,
-            backend_model.timesteps,
-            rule=ramping_up_constraint_rule,
-        )
-
-        backend_model.ramping_down_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_ramping_constraint,
-            backend_model.timesteps,
-            rule=ramping_down_constraint_rule,
-        )
-
-    if "loc_techs_storage_intra_max_constraint" in sets:
-        backend_model.storage_intra_max_constraint = po.Constraint(
-            backend_model.loc_techs_storage_intra_max_constraint,
-            backend_model.timesteps,
-            rule=storage_intra_max_rule,
-        )
-    if "loc_techs_storage_intra_min_constraint" in sets:
-        backend_model.storage_intra_min_constraint = po.Constraint(
-            backend_model.loc_techs_storage_intra_min_constraint,
-            backend_model.timesteps,
-            rule=storage_intra_min_rule,
-        )
-    if "loc_techs_storage_inter_max_constraint" in sets:
-        backend_model.storage_inter_max_constraint = po.Constraint(
-            backend_model.loc_techs_storage_inter_max_constraint,
-            backend_model.datesteps,
-            rule=storage_inter_max_rule,
-        )
-    if "loc_techs_storage_inter_min_constraint" in sets:
-        backend_model.storage_inter_min_constraint = po.Constraint(
-            backend_model.loc_techs_storage_inter_min_constraint,
-            backend_model.datesteps,
-            rule=storage_inter_min_rule,
-        )
+from calliope.backend.pyomo.util import get_param, get_previous_timestep
 
 
 def carrier_production_max_constraint_rule(backend_model, carrier, node, tech, timestep):
@@ -323,7 +239,7 @@ def storage_intra_max_rule(backend_model, node, tech, timestep):
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data["data"]["timestep_cluster"][timestep]
+    cluster = backend_model.timestep_cluster[timestep]
     return (
         backend_model.storage[node, tech, timestep]
         <= backend_model.storage_intra_cluster_max[node, tech, cluster]
@@ -347,7 +263,7 @@ def storage_intra_min_rule(backend_model, node, tech, timestep):
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data["data"]["timestep_cluster"][timestep]
+    cluster = backend_model.timestep_cluster[timestep]
     return (
         backend_model.storage[node, tech, timestep]
         >= backend_model.storage_intra_cluster_min[node, tech, cluster]
@@ -374,9 +290,7 @@ def storage_inter_max_rule(backend_model, node, tech, datestep):
     Where :math:`cluster(datestep)` is the cluster number in which the datestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data["data"]["lookup_datestep_cluster"][
-        datestep
-    ]
+    cluster = backend_model.lookup_datestep_cluster[datestep]
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]
         + backend_model.storage_intra_cluster_max[node, tech, cluster]
@@ -405,9 +319,7 @@ def storage_inter_min_rule(backend_model, node, tech, datestep):
     Where :math:`cluster(datestep)` is the cluster number in which the datestep
     is located.
     """
-    cluster = backend_model.__calliope_model_data["data"]["lookup_datestep_cluster"][
-        datestep
-    ]
+    cluster = backend_model.lookup_datestep_cluster[datestep]
     storage_loss = get_param(backend_model, "storage_loss", (node, tech))
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]

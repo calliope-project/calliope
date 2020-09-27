@@ -13,83 +13,8 @@ import pyomo.core as po  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import (
     get_param,
-    split_comma_list,
     get_conversion_plus_io,
 )
-
-ORDER = 20  # order in which to invoke constraints relative to other constraint files
-
-
-def load_constraints(backend_model):
-    sets = backend_model.__calliope_model_data["sets"]
-
-    if "loc_techs_balance_conversion_plus_primary_constraint" in sets:
-        backend_model.balance_conversion_plus_primary_constraint = po.Constraint(
-            backend_model.loc_techs_balance_conversion_plus_primary_constraint,
-            backend_model.timesteps,
-            rule=balance_conversion_plus_primary_constraint_rule,
-        )
-
-    if "loc_techs_carrier_production_max_conversion_plus_constraint" in sets:
-        backend_model.carrier_production_max_conversion_plus_constraint = po.Constraint(
-            backend_model.loc_techs_carrier_production_max_conversion_plus_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_max_conversion_plus_constraint_rule,
-        )
-
-    if "loc_techs_carrier_production_min_conversion_plus_constraint" in sets:
-        backend_model.carrier_production_min_conversion_plus_constraint = po.Constraint(
-            backend_model.loc_techs_carrier_production_min_conversion_plus_constraint,
-            backend_model.timesteps,
-            rule=carrier_production_min_conversion_plus_constraint_rule,
-        )
-
-    if "loc_techs_cost_var_conversion_plus_constraint" in sets:
-        backend_model.cost_var_conversion_plus_constraint = po.Constraint(
-            backend_model.costs,
-            backend_model.loc_techs_cost_var_conversion_plus_constraint,
-            backend_model.timesteps,
-            rule=cost_var_conversion_plus_constraint_rule,
-        )
-
-    if "loc_techs_balance_conversion_plus_in_2_constraint" in sets:
-        backend_model.balance_conversion_plus_in_2_constraint = po.Constraint(
-            ["in_2"],
-            backend_model.loc_techs_balance_conversion_plus_in_2_constraint,
-            backend_model.timesteps,
-            rule=balance_conversion_plus_tiers_constraint_rule,
-        )
-
-    if "loc_techs_balance_conversion_plus_in_3_constraint" in sets:
-        backend_model.balance_conversion_plus_in_3_constraint = po.Constraint(
-            ["in_3"],
-            backend_model.loc_techs_balance_conversion_plus_in_3_constraint,
-            backend_model.timesteps,
-            rule=balance_conversion_plus_tiers_constraint_rule,
-        )
-
-    if "loc_techs_balance_conversion_plus_out_2_constraint" in sets:
-        backend_model.balance_conversion_plus_out_2_constraint = po.Constraint(
-            ["out_2"],
-            backend_model.loc_techs_balance_conversion_plus_out_2_constraint,
-            backend_model.timesteps,
-            rule=balance_conversion_plus_tiers_constraint_rule,
-        )
-
-    if "loc_techs_balance_conversion_plus_out_3_constraint" in sets:
-        backend_model.balance_conversion_plus_out_3_constraint = po.Constraint(
-            ["out_3"],
-            backend_model.loc_techs_balance_conversion_plus_out_3_constraint,
-            backend_model.timesteps,
-            rule=balance_conversion_plus_tiers_constraint_rule,
-        )
-
-    if "loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint" in sets:
-        backend_model.conversion_plus_prod_con_to_zero_constraint = po.Constraint(
-            backend_model.loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint,
-            backend_model.timesteps,
-            rule=conversion_plus_prod_con_to_zero_constraint_rule,
-        )
 
 
 def balance_conversion_plus_primary_constraint_rule(backend_model, node, tech, timestep):
