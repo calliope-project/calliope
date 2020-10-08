@@ -8,7 +8,7 @@ model:
     name: National-scale example model
 
     # What version of Calliope this model is intended for
-    calliope_version: 0.6.5
+    calliope_version: 0.6.6
 
     # Time series data path - can either be a path relative to this file, or an absolute path
     timeseries_data_path: 'timeseries_data'

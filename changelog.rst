@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.6 (dev)
------------
+0.6.6 (2020-10-08)
+------------------
 
 |new| `spores` run mode now available, to find Spatially-explicit Practically Optimal REsultS (SPORES)
 
