@@ -210,7 +210,7 @@ When running models from python scripts or shells, it is also possible to pass t
 .. code-block:: python
 
     pv_resource
-    
+
     t                     location1  location2
     2005-01-01 00:00:00           0          0
     2005-01-01 01:00:00           0         11
@@ -309,7 +309,7 @@ The only required setting in the run configuration is the solver to use:
         solver: cbc
         mode: plan
 
-the most important parts of the ``run`` section are ``solver`` and  ``mode``. A model can run either in planning mode (``plan``) or operational mode (``operate``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
+the most important parts of the ``run`` section are ``solver`` and  ``mode``. A model can run in planning mode (``plan``), operational mode (``operate``), or SPORES mode (``spores``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm. In SPORES mode, the model is first run in planning mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location.
 
 Possible options for solver include ``glpk``, ``gurobi``, ``cplex``, and ``cbc``. The interface to these solvers is done through the Pyomo library. Any `solver compatible with Pyomo <https://software.sandia.gov/downloads/pub/pyomo/PyomoInstallGuide.html#Solvers>`_ should work with Calliope.
 
@@ -327,7 +327,7 @@ Further optional settings, including debug settings, can be specified in the run
 
 .. seealso::
 
-    :ref:`config_reference_run`, :doc:`troubleshooting`, :ref:`solver_options`, :ref:`documentation on operational mode <operational_mode>`.
+    :ref:`config_reference_run`, :doc:`troubleshooting`, :ref:`solver_options`, :ref:`documentation on operational mode <operational_mode>`, :ref:`documentation on SPORES mode <spores_mode>`.
 
 .. _building_overrides:
 
