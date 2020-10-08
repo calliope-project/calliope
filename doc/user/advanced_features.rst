@@ -164,6 +164,46 @@ Operational mode runs a model with a receding horizon control algorithm. This re
 
 ``horizon`` specifies how far into the future the control algorithm optimises in each iteration. ``window`` specifies how many of the hours within ``horizon`` are actually used. In the above example, decisions on how to operate for each 24-hour window are made by optimising over 48-hour horizons (i.e., the second half of each optimisation run is discarded). For this reason, ``horizon`` must always be larger than ``window``.
 
+.. _spores_mode:
+
+SPORES mode
+-----------
+SPORES refers to Spatially-explicit Practically Optimal REsultS. This run mode allows a user to generate any number of alternative results which are within a certain range of the optimal cost. It follows on from previous work in the field of `modelling to generate alternatives` (MGA), with a particular emphasis on alternatives that vary maximally in the spatial dimension. This run mode was developed for and implemented in a `study on the future Italian energy system <https://doi.org/10.1016/j.joule.2020.08.002>`_.
+As an example, if you wanted to generate 10 SPORES, all of which are within 10% of the optimal system cost, you would define the following in your `run` configuration:
+
+.. code-block:: yaml
+
+    run.mode: spores
+    run.spores_options:
+        spores_number: 10  # The number of SPORES to generate
+        slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
+        score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
+        slack_cost_group: systemwide_cost_max  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+
+You will also need to manually set up some other parts of your model to deal with SPORES:
+
+1. Set up a group constraint that can limit the total cost of your system to the SPORES cost (i.e. optimal + 10%). The initial value being infinite ensures it does not impinge on the initial cost-optimal run; the constraint will be adapted internally to set a new value which corresponds to the optimal cost plus the slack.
+
+.. code-block:: yaml
+
+    group_constraints:
+        systemwide_cost_max.cost_max.monetary: .inf
+
+2. Assign a `spores_score` cost to all technologies and locations that you want to limit within the scope of finding alternatives. The `spores_score` is the cost class against which the model optimises in the generation of SPORES: technologies at locations with higher scores will be penalised in the objective function, so are less likely to be chosen. In the National Scale example model, this looks like:
+
+.. code-block:: yaml
+
+    techs.ccgt.costs.spores_score.energy_cap: 0
+    techs.ccgt.costs.spores_score.interest_rate: 1
+    techs.csp.costs.spores_score.energy_cap: 0
+    techs.csp.costs.spores_score.interest_rate: 1
+    techs.battery.costs.spores_score.energy_cap: 0
+    techs.battery.costs.spores_score.interest_rate: 1
+    techs.ac_transmission.costs.spores_score.energy_cap: 0
+    techs.ac_transmission.costs.spores_score.interest_rate: 1
+
+.. note:: We use and recommend using 'spores_score' and 'systemwide_cost_max' to define the cost class and group constraint, respectively. However, these are user-defined, allowing you to choose terminology that best fits your use-case.
+
 .. _generating_scripts:
 
 Generating scripts to run a model many times
