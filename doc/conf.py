@@ -179,7 +179,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Calliope"
-copyright = "2013–2018 Calliope contributors listed in AUTHORS (Apache 2.0 licensed)"
+copyright = "Since 2013 Calliope contributors listed in AUTHORS (Apache 2.0 licensed)<br><a href='https://joss.theoj.org/papers/10.21105/joss.00825'>Academic reference</a>"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

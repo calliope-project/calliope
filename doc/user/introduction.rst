@@ -46,7 +46,15 @@ Calliope was designed with the following goals in mind:
 Acknowledgments
 ---------------
 
-Initial development was partially funded by the `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London and the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
+Development has been partially funded by several grants throughout throughout the years. We would particularly like to acknowledge the following:
+
+* The `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London.
+* the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
+* `Engineering and Physical Sciences Research Council <https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/L016095/1>`_, reference number: EP/L016095/1.
+* `The Swiss Competence Center for Energy Research − Supply of Electricity (SCCER SoE) <http://sccer-soe.ch/>`_, contract number 1155002546.
+* `Swiss Federal Office for Energy (SFOE) <https://www.bfe.admin.ch/bfe/en/home.html>`_, grant number SI/501768-01.
+* `European Research Council <http://erc.europa.eu>`_ TRIPOD grant, grant agreement number 715132.
+* `The SENTINEL project <https://sentinel.energy/>`_ of the European Union's Horizon 2020 research and innovation programme under grant agreement No 837089.
 
 .. _license:
 
@@ -58,7 +66,7 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
 
 ::
 
-   Copyright 2013-2019 Calliope contributors listed in AUTHORS
+   Copyright since 2013 Calliope contributors listed in AUTHORS
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -80,3 +88,9 @@ References
 .. [Heussen2010] Heussen, K. et al., 2010. Energy storage in power system operation: The power nodes modeling framework. In Innovative Smart Grid Technologies Conference Europe (ISGT Europe), 2010 IEEE PES. pp. 1–8. `DOI: 10.1109/ISGTEUROPE.2010.5638865 <https://doi.org/10.1109/ISGTEUROPE.2010.5638865>`_
 .. [Howells2011] Howells, M. et al., 2011. OSeMOSYS: The Open Source Energy Modeling System: An introduction to its ethos, structure and development. Energy Policy, 39(10), p.5850–5870. `DOI: 10.1016/j.enpol.2011.06.033 <https://doi.org/10.1016/j.enpol.2011.06.033>`_
 .. [Hunter2013] Hunter, K., Sreepathi, S. & DeCarolis, J.F., 2013. Modeling for insight using Tools for Energy Model Optimization and Analysis (Temoa). Energy Economics, 40, p.339–349. `DOI: 10.1016/j.eneco.2013.07.014 <https://doi.org/10.1016/j.eneco.2013.07.014>`_
+
+--------------------------------------
+Citing Calliope in academic literature
+--------------------------------------
+
+Calliope is `published in the Journal of Open Source Software <https://joss.theoj.org/papers/10.21105/joss.00825>`_. We encourage you to use this academic reference.
