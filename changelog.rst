@@ -14,8 +14,6 @@ Release History
 
 |changed| Parameters are assigned a domain in Pyomo based on their dtype in `model_data`
 
-|changed| |backwards-incompatible| Plotting is no longer part of Calliope itself, but in a separate module, calliope_plot. FIXME: documentation needs to be updated.
-
 |changed| Internal code reorganisation.
 
 |changed| Updated to Pyomo 5.7.
