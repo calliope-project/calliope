@@ -334,13 +334,6 @@ def check_initial(config_model):
             'use e.g. "{monetary: 1}", which gives the monetary cost class a weight '
             "of 1 in the objective, and ignores any other cost classes."
         )
-    elif len(_cost_class.keys()) == 0:
-        errors.append(
-            "No cost classes defined for use in the objective. "
-            'Expecting a dict of "{cost_class: weight}" for all cost classes '
-            "to be considered in the objective function."
-        )
-
     else:
         # This next check is only run if we have confirmed that cost_class is
         # a dict, as it errors otherwise
