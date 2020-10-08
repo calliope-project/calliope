@@ -313,7 +313,7 @@ def map_clusters_to_data(
             timestamps = timestamps.drop_duplicates()
             for cluster, date in timestamps.items():
                 clusterdays_timeseries.loc[clusterdays_timeseries == date] = cluster
-            clusters = clusterdays_timeseries.resample("1D").mean()
+            clusters = clusterdays_timeseries.astype(int).resample("1D").mean()
 
     _clusters = xr.DataArray(
         data=np.full(len(new_data.timesteps.values), np.nan),
