@@ -22,6 +22,8 @@ Release History
 
 |fixed| One-way transmission technologies can have `om` costs
 
+|fixed| Silent override of nested dicts when parsing YAML strings
+
 0.6.5 (2020-01-14)
 ------------------
 
