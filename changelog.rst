@@ -20,6 +20,8 @@ Release History
 
 |changed| Updated to Pyomo 5.7.
 
+|fixed| One-way transmission technologies can have `om` costs
+
 0.6.5 (2020-01-14)
 ------------------
 
