@@ -17,6 +17,7 @@ dependencies:
     - netcdf4
     - numpy
     - pandas=0.25
+    - plotly=3.10.0
     - pre-commit
     - pyomo=5.7
     - pytest-cov
