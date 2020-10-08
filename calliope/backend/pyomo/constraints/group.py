@@ -226,12 +226,10 @@ def equalizer(lhs, rhs, sign):
 
 
 def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name, carrier):
-    """
-    Returns
-    -------
-    (lhs_loc_tech_carriers, rhs_loc_tech_carriers):
-        lhs are the supply technologies, rhs are the demand technologies
-    """
+    # Returns
+    # -------
+    # (lhs_loc_tech_carriers, rhs_loc_tech_carriers):
+    # lhs are the supply technologies, rhs are the demand technologies
     lhs_loc_techs = getattr(
         backend_model, "group_constraint_loc_techs_{}".format(group_name)
     )
