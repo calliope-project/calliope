@@ -118,7 +118,7 @@ def add_time_dimension(data, model_run):
         with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
-    data["timesteps"] = pd.to_datetime(data.timesteps)
+    data["timesteps"] = pd.to_datetime(data.timesteps.data)
 
     # Search through every constraint/cost for use of '='
     for variable in data.data_vars:

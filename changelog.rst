@@ -18,7 +18,7 @@ Release History
 
 |changed| Internal code reorganisation.
 
-|changed| Updated to Pyomo 5.7.
+|changed| Updated to Pyomo 5.7, pandas 1.1, and xarray 0.16
 
 |fixed| One-way transmission technologies can have `om` costs
 
