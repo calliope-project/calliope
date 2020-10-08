@@ -307,13 +307,22 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
      - Share of demand met from transmission technologies into a set of locations, on average over the entire model. All transmission technologies of the chosen carrier are added automatically and technologies must thus not be defined explicitly. period.
    * - ``carrier_prod_min``
      - carriers
-     - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+     - Minimum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
    * - ``carrier_prod_max``
      - carriers
      - Maximum absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
    * - ``carrier_prod_equals``
      - carriers
      - Exact absolute sum of supplied energy (`carrier_prod`) over all timesteps for a set of technologies across a set of locations.
+   * - ``carrier_con_min``
+     - carriers
+     - Minimum sum of consumed energy (`carrier_con`) over all timesteps for a set of conversion/demand technologies across a set of locations. Values are negative and are relative to zero, i.e. a minimum value of -1 means that consumed energy must be < -1
+   * - ``carrier_con_max``
+     - carriers
+     - Maximum sum of consumed energy (`carrier_con`) over all timesteps for a set of conversion/demand technologies across a set of locations. Values are negative and are relative to zero, i.e. a maximum value of -1 means that consumed energy must be > -1
+   * - ``carrier_con_equals``
+     - carriers
+     - Exact sum of consumed energy (`carrier_con`) over all timesteps for a set of conversion/demand technologies across a set of locations. Values are negative.
    * - ``cost_max``
      - costs
      - Maximum total cost from a set of technologies across a set of locations.
