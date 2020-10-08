@@ -1453,16 +1453,6 @@ class TestChecks:
             exception, "`run.objective_options.cost_class` must be a dictionary."
         )
 
-    def test_fail_on_empty(self):
-        with pytest.raises(calliope.exceptions.ModelError) as exception:
-            build_model(
-                model_file="weighted_obj_func.yaml", scenario="empty_cost_class"
-            )
-
-        assert check_error_or_warning(
-            exception, "No cost classes defined for use in the objective."
-        )
-
     def test_warn_on_using_default(self):
         with pytest.warns(exceptions.ModelWarning) as warn:
             build_model(
