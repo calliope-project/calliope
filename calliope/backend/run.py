@@ -227,9 +227,9 @@ def run_spores(model_data, timings, interface, backend, build_only):
             backend_model,
             "group_cost_max",
             {
-                (_cost_class, slack_group): results.cost.loc[
-                    {"costs": _cost_class}
-                ].sum()
+                (_cost_class, slack_group): results.cost.loc[{"costs": _cost_class}]
+                .sum()
+                .item()
                 * (1 + slack)
                 for _cost_class in slack_costs.costs.values
             },

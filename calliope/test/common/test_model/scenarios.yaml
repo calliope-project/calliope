@@ -240,36 +240,9 @@ overrides:
         group_constraints:
             systemwide_cost_max.cost_max.monetary: .inf
 
-        locations:
-            0:
-                techs:
-                    test_supply_coal:
-                    test_supply_gas:
-                    test_supply_elec:
-                    test_demand_elec:
-
-            1:
-                techs:
-                    test_supply_coal:
-                    test_supply_gas:
-                    test_supply_elec:
-                    test_demand_elec:
-
-        techs.test_supply_gas.costs.spores_score.energy_cap: 0
-        techs.test_supply_gas.costs.spores_score.interest_rate: 0
-        techs.test_supply_gas.constraints.lifetime: 1
-        techs.test_supply_coal.costs.spores_score.energy_cap: 0
-        techs.test_supply_coal.costs.spores_score.interest_rate: 0
-        techs.test_supply_coal.constraints.lifetime: 1
         techs.test_supply_elec.costs.spores_score.energy_cap: 0
         techs.test_supply_elec.costs.spores_score.interest_rate: 0
         techs.test_supply_elec.constraints.lifetime: 1
-        techs.test_storage.costs.spores_score.energy_cap: 0
-        techs.test_storage.costs.spores_score.interest_rate: 0
-        techs.test_storage.constraints.lifetime: 1
-        techs.test_transmission_elec.costs.spores_score.energy_cap: 0
-        techs.test_transmission_elec.costs.spores_score.interest_rate: 0
-        techs.test_transmission_elec.constraints.lifetime: 1
 
     group_share_energy_cap_min:
         model.group_share.test_supply_elec,test_supply_gas.energy_cap_min: 0.5
