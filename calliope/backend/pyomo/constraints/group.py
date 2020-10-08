@@ -668,7 +668,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, carrier, what):
         backend_model, "group_carrier_con_{}".format(what), (carrier, constraint_group)
     )
 
-    if check_value(limit):
+    if invalid(limit):
         return return_noconstraint("carrier_con", constraint_group)
     else:
         lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
