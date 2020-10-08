@@ -391,57 +391,26 @@ def generate_constraint_sets(model_run):
     ] = sets.loc_techs_transmission
 
     # policy.py
-    constraint_sets["techlists_group_share_energy_cap_min_constraint"] = [
-        i
-        for i in sets.techlists
-        if "energy_cap_min"
-        in model_run.model.get_key("group_share.{}".format(i), {}).keys()
-    ]
-    constraint_sets["techlists_group_share_energy_cap_max_constraint"] = [
-        i
-        for i in sets.techlists
-        if "energy_cap_max"
-        in model_run.model.get_key("group_share.{}".format(i), {}).keys()
-    ]
-    constraint_sets["techlists_group_share_energy_cap_equals_constraint"] = [
-        i
-        for i in sets.techlists
-        if "energy_cap_equals"
-        in model_run.model.get_key("group_share.{}".format(i), {}).keys()
-    ]
-    constraint_sets["techlists_carrier_group_share_carrier_prod_min_constraint"] = [
-        i + "::" + carrier
-        for i in sets.techlists
-        if "carrier_prod_min"
-        in model_run.model.get_key("group_share.{}".format(i), {}).keys()
-        for carrier in sets.carriers
-        if carrier
-        in model_run.model.get_key(
-            "group_share.{}.carrier_prod_min".format(i), {}
-        ).keys()
-    ]
-    constraint_sets["techlists_carrier_group_share_carrier_prod_max_constraint"] = [
-        i + "::" + carrier
-        for i in sets.techlists
-        if "carrier_prod_max"
-        in model_run.model.get_key("group_share.{}".format(i), {}).keys()
-        for carrier in sets.carriers
-        if carrier
-        in model_run.model.get_key(
-            "group_share.{}.carrier_prod_max".format(i), {}
-        ).keys()
-    ]
-    constraint_sets["techlists_carrier_group_share_carrier_prod_equals_constraint"] = [
-        i + "::" + carrier
-        for i in sets.techlists
-        if "carrier_prod_equals"
-        in model_run.model.get_key("group_share.{}".format(i), {}).keys()
-        for carrier in sets.carriers
-        if carrier
-        in model_run.model.get_key(
-            "group_share.{}.carrier_prod_equals".format(i), {}
-        ).keys()
-    ]
+    for sense in ["min", "max", "equals"]:
+        constraint_sets[f"techlists_group_share_energy_cap_{sense}_constraint"] = [
+            i
+            for i in sets.techlists
+            if f"energy_cap_{sense}"
+            in model_run.model.get_key("group_share.{}".format(i), {}).keys()
+        ]
+        constraint_sets[
+            f"techlists_carrier_group_share_carrier_prod_{sense}_constraint"
+        ] = [
+            i + "::" + carrier
+            for i in sets.techlists
+            if f"carrier_prod_{sense}"
+            in model_run.model.get_key("group_share.{}".format(i), {}).keys()
+            for carrier in sets.carriers
+            if carrier
+            in model_run.model.get_key(
+                f"group_share.{i}.carrier_prod_{sense}", {}
+            ).keys()
+        ]
 
     # group.py
     group_constraints = {

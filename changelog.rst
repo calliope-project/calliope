@@ -8,6 +8,8 @@ Release History
 
 |new| `spores` run mode now available, to find Spatially-explicit Practically Optimal REsultS (SPORES)
 
+|new| New group constraints `carrier_con_min`, `carrier_con_max`, `carrier_con_equals` which restrict the total consumed energy of a subgroup of conversion and/or demand technologies.
+
 |new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
 
 |new| Pyomo backend interfaces added to get names of all model objects (`get_all_model_attrs`) and to attach custom constraints to the backend model (`add_constraint`).
@@ -19,6 +21,8 @@ Release History
 |changed| Internal code reorganisation.
 
 |changed| Updated to Pyomo 5.7.
+
+|fixed| One-way transmission technologies can have `om` costs
 
 0.6.5 (2020-01-14)
 ------------------

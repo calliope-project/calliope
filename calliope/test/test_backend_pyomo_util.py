@@ -3,7 +3,7 @@ import pytest  # pylint: disable=unused-import
 import pyomo.core as po
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.backend.pyomo.util import get_domain, get_param, check_value
+from calliope.backend.pyomo.util import get_domain, get_param, invalid
 
 
 @pytest.fixture(scope="class")
@@ -100,8 +100,8 @@ class TestGetDomain:
         assert get_domain(model._model_data[var]) == domain
 
 
-class TestCheckValue:
-    def test_check_values(self):
+class TestValueValidity:
+    def test_invalid(self):
         pyomo_model = po.ConcreteModel()
         pyomo_model.new_set = po.Set(initialize=["a", "b"])
         pyomo_model.new_param = po.Param(
@@ -111,5 +111,5 @@ class TestCheckValue:
             within=po.NonNegativeReals,
         )
 
-        assert check_value(pyomo_model.new_param["a"]) is False
-        assert check_value(pyomo_model.new_param["b"]) is True
+        assert invalid(pyomo_model.new_param["a"]) is False
+        assert invalid(pyomo_model.new_param["b"]) is True

@@ -14,7 +14,7 @@ import logging
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import loc_tech_is_in, get_param, check_value
+from calliope.backend.pyomo.util import loc_tech_is_in, get_param, invalid
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,18 @@ def load_constraints(backend_model):
                     backend_model.carriers,
                     [sense],
                     rule=carrier_prod_constraint_rule,
+                ),
+            )
+
+        if "group_carrier_con_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_carrier_con_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(backend_model, "group_names_carrier_con_{}".format(sense)),
+                    backend_model.carriers,
+                    [sense],
+                    rule=carrier_con_constraint_rule,
                 ),
             )
 
@@ -214,12 +226,10 @@ def equalizer(lhs, rhs, sign):
 
 
 def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name, carrier):
-    """
-    Returns
-    -------
-    (lhs_loc_tech_carriers, rhs_loc_tech_carriers):
-        lhs are the supply technologies, rhs are the demand technologies
-    """
+    # Returns
+    # -------
+    # (lhs_loc_tech_carriers, rhs_loc_tech_carriers):
+    # lhs are the supply technologies, rhs are the demand technologies
     lhs_loc_techs = getattr(
         backend_model, "group_constraint_loc_techs_{}".format(group_name)
     )
@@ -256,7 +266,7 @@ def demand_share_constraint_rule(backend_model, group_name, carrier, what):
         backend_model, "group_demand_share_{}".format(what), (carrier, group_name)
     )
 
-    if check_value(share):
+    if invalid(share):
         return return_noconstraint("demand_share", group_name)
     else:
         (
@@ -308,7 +318,7 @@ def demand_share_per_timestep_constraint_rule(
         (carrier, group_name),
     )
 
-    if check_value(share):
+    if invalid(share):
         return return_noconstraint("demand_share_per_timestep", group_name)
     else:
         (
@@ -367,7 +377,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
         backend_model, "group_demand_share_per_timestep_decision", (carrier, group_name)
     )
 
-    if check_value(share_of_carrier_demand):
+    if invalid(share_of_carrier_demand):
         return return_noconstraint(
             "demand_share_per_timestep_decision_main", group_name
         )
@@ -439,7 +449,7 @@ def demand_share_per_timestep_decision_sum_constraint_rule(
     )
 
     # If inf was given that means that we don't limit the total share
-    if check_value(share_of_carrier_demand) or np.isinf(share_of_carrier_demand):
+    if invalid(share_of_carrier_demand) or np.isinf(share_of_carrier_demand):
         return return_noconstraint("demand_share_per_timestep_decision_sum", group_name)
     else:
         lhs_loc_tech_carriers, _ = get_demand_share_lhs_and_rhs_loc_tech_carriers(
@@ -452,17 +462,21 @@ def demand_share_per_timestep_decision_sum_constraint_rule(
         )
 
 
-def get_carrier_prod_share_lhs_and_rhs_loc_techs(backend_model, group_name):
+def get_carrier_lhs_loc_techs(backend_model, group_name):
     lhs_loc_techs = getattr(
         backend_model, "group_constraint_loc_techs_{}".format(group_name)
     )
+    return lhs_loc_techs
+
+
+def get_carrier_prod_share_rhs_loc_techs(backend_model, lhs_loc_techs):
     lhs_locs = [loc_tech.split("::")[0] for loc_tech in lhs_loc_techs]
     rhs_loc_techs = [
         i
         for i in backend_model.loc_techs_supply_conversion_all
         if i.split("::")[0] in lhs_locs
     ]
-    return (lhs_loc_techs, rhs_loc_techs)
+    return rhs_loc_techs
 
 
 def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier, what):
@@ -486,11 +500,12 @@ def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier,
         (carrier, constraint_group),
     )
 
-    if check_value(share):
-        return return_noconstraint("supply_share", constraint_group)
+    if invalid(share):
+        return return_noconstraint("carrier_prod_share", constraint_group)
     else:
-        lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
-            backend_model, constraint_group
+        lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
+        rhs_loc_techs = get_carrier_prod_share_rhs_loc_techs(
+            backend_model, lhs_loc_techs
         )
 
         lhs = sum(
@@ -530,11 +545,12 @@ def carrier_prod_share_per_timestep_constraint_rule(
         (carrier, constraint_group),
     )
 
-    if check_value(share):
+    if invalid(share):
         return return_noconstraint("carrier_prod_share_per_timestep", constraint_group)
     else:
-        lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
-            backend_model, constraint_group
+        lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
+        rhs_loc_techs = get_carrier_prod_share_rhs_loc_techs(
+            backend_model, lhs_loc_techs
         )
 
         lhs = sum(
@@ -571,7 +587,7 @@ def net_import_share_constraint_rule(backend_model, constraint_group, carrier, w
         (carrier, constraint_group),
     )
 
-    if check_value(share):
+    if invalid(share):
         return return_noconstraint("net_import_share", constraint_group)
     else:
         trans_loc_tech = getattr(
@@ -612,20 +628,17 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, carrier, what)
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq supply_max
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
 
     """
     limit = get_param(
         backend_model, "group_carrier_prod_{}".format(what), (carrier, constraint_group)
     )
 
-    if check_value(limit):
+    if invalid(limit):
         return return_noconstraint("carrier_prod", constraint_group)
     else:
-        # We won't actually use the rhs techs
-        lhs_loc_techs, rhs_loc_techs = get_carrier_prod_share_lhs_and_rhs_loc_techs(
-            backend_model, constraint_group
-        )
+        lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech + "::" + carrier, timestep]
@@ -633,8 +646,39 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, carrier, what)
             for timestep in backend_model.timesteps
             if loc_tech + "::" + carrier in backend_model.loc_tech_carriers_prod
         )
-
         return equalizer(lhs, limit, what)
+
+
+def carrier_con_constraint_rule(backend_model, constraint_group, carrier, what):
+    """
+    Enforces carrier_con for groups of technologies and locations,
+    as a sum over the entire model period. limits are always negative, so min/max
+    is relative to zero (i.e. min = -1 means carrier_con must be -1 or less)
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+
+            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{con}(loc::tech::carrier, timestep) \\geq carrier_con_max
+
+    """
+    limit = get_param(
+        backend_model, "group_carrier_con_{}".format(what), (carrier, constraint_group)
+    )
+
+    if invalid(limit):
+        return return_noconstraint("carrier_con", constraint_group)
+    else:
+        lhs_loc_techs = get_carrier_lhs_loc_techs(backend_model, constraint_group)
+
+        lhs = sum(
+            backend_model.carrier_con[loc_tech + "::" + carrier, timestep]
+            for loc_tech in lhs_loc_techs
+            for timestep in backend_model.timesteps
+            if loc_tech + "::" + carrier in backend_model.loc_tech_carriers_con
+        )
+
+        return equalizer(limit, lhs, what)
 
 
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
@@ -653,7 +697,7 @@ def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
         backend_model, "group_energy_cap_share_{}".format(what), (constraint_group)
     )
 
-    if check_value(share):
+    if invalid(share):
         return return_noconstraint("energy_cap_share", constraint_group)
     else:
         lhs_loc_techs = getattr(
@@ -692,7 +736,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
         backend_model, "group_energy_cap_{}".format(what), (constraint_group)
     )
 
-    if check_value(threshold):
+    if invalid(threshold):
         return return_noconstraint("energy_cap", constraint_group)
     else:
         lhs_loc_techs = getattr(
@@ -737,7 +781,7 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
         backend_model, "group_cost_{}".format(what), (cost, group_name)
     )
 
-    if check_value(cost_cap):
+    if invalid(cost_cap):
         return return_noconstraint("cost_cap", group_name)
     else:
         loc_techs = [
@@ -776,7 +820,7 @@ def cost_investment_cap_constraint_rule(backend_model, group_name, cost, what):
         backend_model, "group_cost_investment_{}".format(what), (cost, group_name)
     )
 
-    if check_value(cost_cap):
+    if invalid(cost_cap):
         return return_noconstraint("cost_investment_cap", group_name)
     else:
         loc_techs = [
@@ -817,7 +861,7 @@ def cost_var_cap_constraint_rule(backend_model, group_name, cost, what):
         backend_model, "group_cost_var_{}".format(what), (cost, group_name)
     )
 
-    if check_value(cost_cap):
+    if invalid(cost_cap):
         return return_noconstraint("cost_var_cap", group_name)
     else:
         loc_techs = [
@@ -855,7 +899,7 @@ def resource_area_constraint_rule(backend_model, constraint_group, what):
         backend_model, "group_resource_area_{}".format(what), (constraint_group)
     )
 
-    if check_value(threshold):
+    if invalid(threshold):
         return return_noconstraint("resource_area", constraint_group)
     else:
         lhs_loc_techs = getattr(

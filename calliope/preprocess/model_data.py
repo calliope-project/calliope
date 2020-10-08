@@ -173,6 +173,9 @@ def constraints_to_dataset(model_run):
         "carrier_prod_min",
         "carrier_prod_max",
         "carrier_prod_equals",
+        "carrier_con_min",
+        "carrier_con_max",
+        "carrier_con_equals",
     ]
 
     for constraint in [  # Only process constraints that are defined

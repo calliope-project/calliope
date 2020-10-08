@@ -11,7 +11,12 @@ Cost constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in
+from calliope.backend.pyomo.util import (
+    get_param,
+    get_timestep_weight,
+    loc_tech_is_in,
+    invalid,
+)
 
 ORDER = 10  # order in which to invoke constraints relative to other constraint files
 
@@ -218,7 +223,9 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
 
     loc_tech_carrier = model_data_dict["data"]["lookup_loc_techs"][loc_tech]
 
-    if po.value(cost_om_prod):
+    if loc_tech_is_in(
+        backend_model, loc_tech_carrier, "loc_tech_carriers_prod"
+    ) and not invalid(cost_om_prod):
         cost_prod = (
             cost_om_prod
             * weight
@@ -227,29 +234,31 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
     else:
         cost_prod = 0
 
-    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_supply_plus") and cost_om_con:
-        cost_con = cost_om_con * weight * backend_model.resource_con[loc_tech, timestep]
-    elif loc_tech_is_in(backend_model, loc_tech, "loc_techs_supply") and cost_om_con:
-        energy_eff = get_param(backend_model, "energy_eff", (loc_tech, timestep))
-        if (
-            po.value(energy_eff) > 0
-        ):  # in case energy_eff is zero, to avoid an infinite value
+    cost_con = 0
+    if not invalid(cost_om_con):
+        if loc_tech_is_in(backend_model, loc_tech, "loc_techs_supply_plus"):
+            cost_con = (
+                cost_om_con * weight * backend_model.resource_con[loc_tech, timestep]
+            )
+        elif loc_tech_is_in(backend_model, loc_tech, "loc_techs_supply"):
+            energy_eff = get_param(backend_model, "energy_eff", (loc_tech, timestep))
+            # in case energy_eff is zero, to avoid an infinite value
+            if po.value(energy_eff) > 0:
+                cost_con = (
+                    cost_om_con
+                    * weight
+                    * (
+                        backend_model.carrier_prod[loc_tech_carrier, timestep]
+                        / energy_eff
+                    )
+                )
+        elif loc_tech_is_in(backend_model, loc_tech, "loc_techs_demand"):
             cost_con = (
                 cost_om_con
                 * weight
-                * (backend_model.carrier_prod[loc_tech_carrier, timestep] / energy_eff)
+                * (-1)
+                * backend_model.carrier_con[loc_tech_carrier, timestep]
             )
-        else:
-            cost_con = 0
-    elif loc_tech_is_in(backend_model, loc_tech, "loc_techs_demand") and cost_om_con:
-        cost_con = (
-            cost_om_con
-            * weight
-            * (-1)
-            * backend_model.carrier_con[loc_tech_carrier, timestep]
-        )
-    else:
-        cost_con = 0
 
     backend_model.cost_var_rhs[cost, loc_tech, timestep].expr = cost_prod + cost_con
     return (

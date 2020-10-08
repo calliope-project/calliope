@@ -1,0 +1,78 @@
+
+overrides:
+
+    carrier_con_min:
+        group_constraints.example_carrier_con_constraint:
+            carrier_con_min.electricity: -40
+
+    carrier_con_max:
+        group_constraints.example_carrier_con_constraint:
+            carrier_con_max.electricity: -80
+
+    carrier_con_equals:
+        group_constraints.example_carrier_con_constraint:
+            carrier_con_equals.electricity: -60
+
+    carrier_con_min_high:
+        group_constraints.example_carrier_con_constraint:
+            carrier_con_min.electricity: -1
+
+    carrier_con_loc_0:
+        group_constraints.example_carrier_con_constraint:
+            locs: ["0"]
+
+    carrier_con_loc_1:
+        group_constraints.example_carrier_con_constraint:
+            locs: ["1"]
+
+    carrier_con_demand:
+        techs.electricity_demand.constraints:
+            resource: -.inf
+            force_resource: false
+        group_constraints.example_carrier_con_constraint:
+            techs: [electricity_demand]
+
+    carrier_con_timeseries_supply:
+        techs.cheap_elec_supply.constraints.resource: file=supply_simple.csv
+
+    carrier_con_demand_revenue:
+        techs.electricity_demand.costs.monetary.om_con: -1
+
+    carrier_con_demand_revenue_loc_1:
+        locations.1.techs.electricity_demand.costs.monetary.om_con: -1
+
+    carrier_con_conversion:
+        group_constraints.example_carrier_con_constraint:
+            techs: [elec_to_heat]
+
+    carrier_con_conversion_plus:
+        group_constraints.example_carrier_con_constraint:
+            techs: [elec_to_heat_cool_unlinked]
+
+    carrier_con_multi_demand:
+        techs.heat_demand.constraints.force_resource: false
+        techs.heat_demand.costs.monetary.om_con: -1
+        techs.cool_demand.constraints.force_resource: false
+        techs.cool_demand.costs.monetary.om_con: -1
+        group_constraints.example_carrier_con_constraint:
+            carrier_con_max.heat: -10
+            carrier_con_max.cool: -5
+            techs: [heat_demand, cool_demand]
+
+scenarios:
+    carrier_con_max_demand: [carrier_con_timeseries_supply, carrier_con_max, carrier_con_demand, carrier_con_demand_revenue]
+    carrier_con_min_demand:  [carrier_con_timeseries_supply, carrier_con_min, carrier_con_demand]
+    carrier_con_equals_demand:  [carrier_con_timeseries_supply, carrier_con_equals, carrier_con_demand]
+    carrier_con_max_demand_loc_1: [carrier_con_timeseries_supply, carrier_con_max, carrier_con_demand, carrier_con_demand_revenue_loc_1]
+    carrier_con_max_multi_demand: [carrier_con_timeseries_supply,
+        add_heat_demand, add_cooling_demand, carrier_con_multi_demand,
+        add_normal_heat_supply, add_normal_cooling_supply
+    ]
+    carrier_con_min_conversion: [carrier_con_timeseries_supply,
+        carrier_con_min_high, carrier_con_conversion, add_heat_demand,
+        add_cheap_heat_supply, add_elec_to_heat_conversion
+    ]
+    carrier_con_min_conversion_plus: [carrier_con_timeseries_supply,
+        carrier_con_min_high, carrier_con_conversion_plus, add_heat_demand,
+        add_cooling_demand, add_cheap_heat_supply, add_cheap_cooling_supply, add_elec_to_heat_cooling_unlinked_conversion_plus
+    ]
