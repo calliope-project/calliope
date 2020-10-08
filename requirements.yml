@@ -16,7 +16,7 @@ dependencies:
     - natsort
     - netcdf4
     - numpy
-    - pandas=0.25
+    - pandas=1.1
     - pre-commit
     - pyomo=5.7
     - pytest-cov
@@ -24,4 +24,4 @@ dependencies:
     - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
     - ruamel.yaml=0.16
     - scikit-learn
-    - xarray=0.14
+    - xarray=0.16
