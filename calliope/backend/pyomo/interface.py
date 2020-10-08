@@ -144,6 +144,7 @@ def rerun_pyomo_model(model_data, backend_model):
 
     new_model_data = xr.merge((results, inputs))
     new_model_data.attrs.update(model_data.attrs)
+    new_model_data.attrs.update(results.attrs)
 
     # Only add coordinates from the original model_data that don't already exist
     new_coords = [

@@ -561,6 +561,47 @@ class TestChecks:
             excinfo, "Unrecognised setting in run configuration: subset_time"
         )
 
+    def test_warn_null_number_of_spores(self):
+        """
+        Check that spores number is greater than 0 if spores run mode is selected
+        """
+        override = {"run.spores_options.spores_number": 0}
+
+        with pytest.warns(exceptions.ModelWarning) as warn:
+            build_model(scenario="spores,simple_supply", override_dict=override)
+
+        assert check_error_or_warning(
+            warn, "spores run mode is selected, but a number of 0 spores is requested"
+        )
+
+    def test_non_string_score_cost_class(self):
+        """
+        Check that the score_cost_class for spores scoring is a string
+        """
+        override = {"run.spores_options.score_cost_class": 0}
+
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(scenario="spores,simple_supply", override_dict=override)
+
+        assert check_error_or_warning(
+            excinfo, "`run.spores_options.score_cost_class` must be a string"
+        )
+
+    def test_no_spore_group_constraint(self):
+        """
+        Ensure an error is raised if pointing to a non-existent group constraint
+        to limit costs
+        """
+        override = {"run.spores_options.slack_cost_group": "foo"}
+
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(scenario="spores,simple_supply", override_dict=override)
+
+        assert check_error_or_warning(
+            excinfo,
+            "`run.spores_options.slack_cost_group` must correspond to one of the group constraints defined in the model",
+        )
+
     @pytest.mark.parametrize(
         "invalid_key", [("monetary"), ("emissions"), ("name"), ("anything_else_really")]
     )

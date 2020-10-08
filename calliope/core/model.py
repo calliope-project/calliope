@@ -290,6 +290,7 @@ class Model(object):
             has the benefit of having a smaller memory footprint, but you cannot
             undertake dimension specific operations (e.g. formatted_array.sum('locs'))
         """
+
         if var not in self._model_data.data_vars:
             raise KeyError("Variable {} not in Model data".format(var))
 

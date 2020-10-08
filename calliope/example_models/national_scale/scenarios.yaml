@@ -28,6 +28,26 @@ overrides:
         # Cluster timesteps using k-means
         model.time: {function: apply_clustering, function_options: {clustering_func: 'kmeans', how: 'closest', k: 10}}
 
+    spores:
+        run.mode: spores
+        run.spores_options:
+            score_cost_class: 'spores_score'
+            slack_cost_group: 'systemwide_cost_max'
+            slack: 0.1
+            spores_number: 3
+        run.objective_options.cost_class: {'monetary': 1, 'spores_score': 0}
+        group_constraints:
+            systemwide_cost_max.cost_max.monetary: .inf
+
+        techs.ccgt.costs.spores_score.energy_cap: 0
+        techs.ccgt.costs.spores_score.interest_rate: 1
+        techs.csp.costs.spores_score.energy_cap: 0
+        techs.csp.costs.spores_score.interest_rate: 1
+        techs.battery.costs.spores_score.energy_cap: 0
+        techs.battery.costs.spores_score.interest_rate: 1
+        techs.ac_transmission.costs.spores_score.energy_cap: 0
+        techs.ac_transmission.costs.spores_score.interest_rate: 1
+
     operate:
         run.mode: operate
         run.operation:

@@ -13,13 +13,18 @@ run:
     bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
     cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
     ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
-    mode: plan  # Which mode to run the model in: 'plan' or 'operation'
+    mode: plan  # Which mode to run the model in: 'plan', 'operation' or 'spores'
     objective_options: {'cost_class': {'monetary': 1}, 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
     objective:  minmax_cost_optimization # Name of internal objective function to use, currently only min/max cost-based optimisation is available
     operation:  # Settings for operational mode
         window: null
         horizon: null
         use_cap_results: false
+    spores_options:  # settings for SPORES (spatially-explicit, practically optimal results) mode
+        spores_number: 3  # The number of SPORES to generate
+        slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
+        score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
+        slack_cost_group: null  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
     solver_io: null  # What method the Pyomo backend should use to communicate with the solver
     solver_options: null  # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent
