@@ -11,6 +11,7 @@ Functionality to plot model data.
 
 import os
 import re
+import warnings
 
 import plotly.offline as pltly
 import jinja2
@@ -90,6 +91,15 @@ def _plot(
         # kwargs are included as they get passed through from the
         # plotting accessor method, but are not actually used
         **kwargs):
+
+
+    # We will bee moving plotting out of Calliope core code (and a method of the model object)
+    # in 0.7.0; current implementation is now untested.
+    warnings.warn(
+        "Plotting will no longer be available as a method of the Calliope model object in"
+        "future versions of Calliope. In the meantime, as of v0.6.6, plotting is untested; this functionality should now be used with caution. We expect to reintroduce it as a seperate module in v0.7.0.",
+        FutureWarning
+    )
 
     plotly_kwargs = dict(
         show_link=False,
