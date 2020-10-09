@@ -151,7 +151,7 @@ def get_var(backend_model, var, dims=None, sparse=False):
 
     if not dims:
         if var + "_index" == var_container.index_set().name:
-            dims = [i.name for i in var_container.index_set().set_tuple]
+            dims = [i.name for i in var_container.index_set().subsets()]
         else:
             dims = [var_container.index_set().name]
 
