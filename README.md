@@ -79,7 +79,7 @@ Stefan Pfenninger and Bryn Pickering (2018). Calliope: a multi-scale energy syst
 
 ## License
 
-Copyright 2013-2019 Calliope contributors listed in AUTHORS
+Copyright since 2013 Calliope contributors listed in AUTHORS
 
 Licensed under the Apache License, Version 2.0 (the "License"); you
 may not use this file except in compliance with the License. You may
