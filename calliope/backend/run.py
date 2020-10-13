@@ -391,7 +391,7 @@ def run_operate(model_data, timings, backend, build_only):
     ]
 
     # Loop through each window, solve over the horizon length, and add result to
-    # result_array we only go as far as the end of the last horizon, which may
+    # result_array. We only go as far as the end of the last horizon, which may
     # clip the last bit of data
     result_array = []
     # track whether each iteration finds an optimal solution or not
@@ -405,7 +405,10 @@ def run_operate(model_data, timings, backend, build_only):
     for i in iterations:
         start_timestep = window_starts.index[i]
 
-        # Build full model in first instance
+        # Build full model in first instance. len(horizon_ends) > 0 solves
+        # a bug in which, if window_length < timeseries_length < horizon_length,
+        # this section generates an error
+        # if i == 0 and len(horizon_ends) > 0:
         if i == 0:
             warmstart = False
             end_timestep = horizon_ends.index[i]

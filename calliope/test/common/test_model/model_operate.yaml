@@ -13,7 +13,7 @@ run:
         cost_class:
             monetary: 1
     operation:
-        horizon: 144
+        horizon: 72
         window: 72
     cyclic_storage: False
 
