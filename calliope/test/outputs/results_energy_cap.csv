@@ -1,0 +1,3 @@
+locs,techs,energy_cap
+0,test_demand_elec,inf
+0,test_supply_elec,10.0

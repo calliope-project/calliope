@@ -1,0 +1,47 @@
+import:
+    - scenarios.yaml
+
+model:
+    name: Minimal test model
+    timeseries_data_path: 'timeseries_data'
+    subset_time: ['2005-01-01','2005-01-05']
+
+run:
+    mode: operate
+    solver: cbc
+    objective_options:
+        cost_class:
+            monetary: 1
+    operation:
+        horizon: 144
+        window: 72
+    cyclic_storage: False
+
+techs:
+    test_supply_elec:
+        essentials:
+            name: Supply tech
+            carrier: electricity
+            parent: supply
+        constraints:
+            energy_cap_max: 10
+            resource: .inf
+            lifetime: 25
+        costs:
+            monetary:
+                interest_rate: 0.1      
+                energy_cap: 20
+                om_con: 0.1
+    test_demand_elec:
+        essentials:
+            name: Demand elec tech
+            carrier: electricity
+            parent: demand
+        constraints:
+            resource: file=demand_elec.csv
+
+locations:
+    0:
+        techs:
+            test_supply_elec:
+            test_demand_elec:
