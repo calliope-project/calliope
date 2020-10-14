@@ -19,24 +19,29 @@ _MODEL_URBAN = os.path.join(
 
 
 def _dev_test():
-    horizon_window_list = [
-        (24, 24), (48, 24), (72, 24), (96, 24), (48, 48), (72, 48), (96, 48),
-        (72, 72), (96, 72), (96, 96),
+    window_horizon_list = [
+        (24, 24), (24, 48), (24, 72), (24, 96), (24, 120), (24, 144),
+        (48, 48), (48, 72), (48, 96), (48, 120), (48, 144),
+        (72, 72), (72, 96), (72, 120), (72, 144),
+        (96, 96), (96, 120), (96, 144),
+        (120, 120), (120, 144),
+        (144, 144), (144, 168)
     ]
+    # window_horizon_list = [(24, 72)]
 
-    results = pd.DataFrame(columns=['horizon', 'window', 'result'])
-    for i, (horizon, window) in enumerate(horizon_window_list):
+    results = pd.DataFrame(columns=['window', 'horizon', 'result'])
+    for i, (window, horizon) in enumerate(window_horizon_list):
         override_dict = {'run.operation.horizon': horizon,
                          'run.operation.window': window}
         try:
             model = build_test_model(model_file="model_operate.yaml",
                                      override_dict=override_dict)
             model.run()
-            results.loc[i] = [horizon, window, 'OK']
+            results.loc[i] = [window, horizon, 'OK']
         except IndexError:
-            results.loc[i] = [horizon, window, 'IndexError']
+            results.loc[i] = [window, horizon, 'IndexError']
         except ValueError:
-            results.loc[i] = [horizon, window, 'ValueError']
+            results.loc[i] = [window, horizon, 'ValueError']
 
     print(results)
 

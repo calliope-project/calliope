@@ -4,7 +4,7 @@ import:
 model:
     name: Minimal test model
     timeseries_data_path: 'timeseries_data'
-    subset_time: ['2005-01-01','2005-01-03']
+    subset_time: ['2005-01-01','2005-01-05']
 
 run:
     mode: operate

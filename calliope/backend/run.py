@@ -376,6 +376,9 @@ def run_operate(model_data, timings, backend, build_only):
     horizon_ends = timestep_cumsum[
         timestep_cumsum.isin(window_ends.values + window_to_horizon)
     ]
+    if len(horizon_ends) == 0:
+        # solves bug where horizon_ends is empy if num_ts < window < horizon
+        horizon_ends = timestep_cumsum[timestep_cumsum == window_ends.values[-1]]
 
     if not any(window_starts):
         raise exceptions.ModelError(
@@ -423,7 +426,8 @@ def run_operate(model_data, timings, backend, build_only):
 
         # Build the full model in the last instance(s),
         # where number of timesteps is less than the horizon length
-        elif i > len(horizon_ends) - 1:
+        # elif i > len(horizon_ends) - 1 or i == iterations[-1]:
+        elif i > len(horizon_ends):
             warmstart = False
             end_timestep = window_ends.index[i]
             timesteps = slice(start_timestep, end_timestep)
