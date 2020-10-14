@@ -21,9 +21,6 @@ from calliope.core.util.dataset import split_loc_techs
 logger = logging.getLogger(__name__)
 
 
-pass
-
-
 def run(model_data, timings, build_only=False):
     """
     Parameters
