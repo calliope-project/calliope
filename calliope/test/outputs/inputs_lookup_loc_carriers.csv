@@ -1,2 +1,0 @@
-carriers,locs,lookup_loc_carriers
-electricity,0,"0::test_supply_elec::electricity,0::test_demand_elec::electricity"
