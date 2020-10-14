@@ -1,3 +1,0 @@
-locs,techs,lookup_loc_techs
-0,test_demand_elec,0::test_demand_elec::electricity
-0,test_supply_elec,0::test_supply_elec::electricity
