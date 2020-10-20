@@ -322,6 +322,40 @@ def carrier_specific_to_dataset(model_run):
                 data.append(carrier_ratio)
                 loc_tech_dict[loc + "::" + tech].append(carrier_ratio)
             data_dict["carrier_ratios"]["data"].append(data)
+        if model_run.constraint_sets.get("loc_tech_carriers_carrier_production_max_time_varying_constraint", []) != []:
+            data_dict["energy_cap_max_time_varying"] = dict(
+                dims=["carrier_tiers", "loc_tech_carriers_conversion_plus"], data=[]
+            )
+            for carrier_tier in carrier_tiers:
+                data = []
+                for loc_tech_carrier in model_run.sets["loc_tech_carriers_conversion_plus"]:
+                    loc, tech, carrier = loc_tech_carrier.split("::")
+                    carrier_ratio = (
+                        model_run.locations[loc]
+                        .techs[tech]
+                        .constraints.get_key(
+                            "energy_cap_max_time_varying.carrier_" + carrier_tier + "." + carrier, np.nan
+                        )
+                    )
+                    data.append(carrier_ratio)
+                data_dict["energy_cap_max_time_varying"]["data"].append(data)
+        if model_run.constraint_sets.get("loc_techs_chp_extraction_p2h_constraint", []) != []:
+            data_dict["energy_cap_ratio"] = dict(
+                dims=["carrier_tiers", "loc_tech_carriers_conversion_plus"], data=[]
+            )
+            for carrier_tier in carrier_tiers:
+                data = []
+                for loc_tech_carrier in model_run.sets["loc_tech_carriers_conversion_plus"]:
+                    loc, tech, carrier = loc_tech_carrier.split("::")
+                    carrier_ratio = (
+                        model_run.locations[loc]
+                        .techs[tech]
+                        .constraints.get_key(
+                            "energy_cap_ratio.carrier_" + carrier_tier + "." + carrier, np.nan
+                        )
+                    )
+                    data.append(carrier_ratio)
+                data_dict["energy_cap_ratio"]["data"].append(data)
 
     # Additional system-wide constraints from model_run.model
     if model_run.model.get("reserve_margin", {}) != {}:

@@ -195,6 +195,9 @@ def generate_constraint_sets(model_run):
         for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
         and i.rsplit("::", 1)[0] not in sets.loc_techs_milp
+        and not constraint_exists(
+            model_run, i.rsplit("::", 1)[0], "constraints.energy_cap_max_time_varying"
+        )
     ]
     constraint_sets["loc_tech_carriers_carrier_production_min_constraint"] = [
         i
@@ -380,7 +383,7 @@ def generate_constraint_sets(model_run):
     ] = sets.loc_techs_in_3
     constraint_sets[
         "loc_techs_balance_conversion_plus_out_2_constraint"
-    ] = sets.loc_techs_out_2
+    ] = [i for i in sets.loc_techs_out_2 if not constraint_exists(model_run, i, "constraints.cv")]
     constraint_sets[
         "loc_techs_balance_conversion_plus_out_3_constraint"
     ] = sets.loc_techs_out_3
@@ -462,5 +465,19 @@ def generate_constraint_sets(model_run):
         constraint_sets[
             "group_constraint_loc_techs_{}".format(group_constraint_name)
         ] = loc_techs
+
+    # Euro-calliope constraints
+    constraint_sets['loc_tech_carriers_carrier_production_max_time_varying_constraint'] = [
+        i for i in sets.loc_tech_carriers_prod if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.energy_cap_max_time_varying")
+    ]
+    constraint_sets['loc_techs_chp_extraction_cb_constraint'] = [
+        i for i in sets.loc_techs_conversion_plus if constraint_exists(model_run, i, "constraints.cb") and not constraint_exists(model_run, i, "constraints.energy_cap_ratio")
+    ]
+    constraint_sets['loc_techs_chp_extraction_cv_constraint'] = [
+        i for i in sets.loc_techs_conversion_plus if constraint_exists(model_run, i, "constraints.cv")
+    ]
+    constraint_sets['loc_techs_chp_extraction_p2h_constraint'] = [
+        i for i in sets.loc_techs_conversion_plus if constraint_exists(model_run, i, "constraints.cb") and constraint_exists(model_run, i, "constraints.energy_cap_ratio")
+    ]
 
     return constraint_sets

@@ -61,7 +61,7 @@ tech_groups:
             energy_prod: true
     conversion_plus:
         required_constraints: []
-        allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min', 'cb', 'cv', 'energy_cap_ratio', 'energy_cap_max_time_varying']
         allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, carrier_prod_share_min, carrier_prod_share_max, carrier_prod_share_equals, carrier_prod_share_per_timestep_min, carrier_prod_share_per_timestep_max, carrier_prod_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_share_equals, energy_cap_min, energy_cap_max, energy_cap_equals, carrier_prod_min, carrier_prod_max, carrier_prod_equals, carrier_con_min, carrier_con_max, carrier_con_equals]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
         essentials:
@@ -145,6 +145,8 @@ techs:
         constraints:
             carrier_ratios: false  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
             charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
+            cb: null  # name: backpressure ratio (power to heat ratio) for CHP
+            cv: null  # name: power loss factor (reduction in power output for increase in heat output) for CHP
             energy_cap_per_storage_cap_min: false # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_max: false # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_equals: false # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
@@ -156,6 +158,7 @@ techs:
             energy_cap_min_use: false  # name: Minimum carrier production ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum carrier production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
             energy_cap_per_unit: false  # name: Energy capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
             energy_cap_scale: 1.0  # name: Energy capacity scale ¦ unit: float ¦ Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
+            energy_cap_ratio: null  # name: Energy capacity ratio ¦ unit: float ¦ dictionary of ratio between maximum capacity of carrier_out and carrier_out_2 in a conversion_plus technology
             energy_con: false  # name: Energy consumption ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
             energy_eff: 1.0  # name: Energy efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``resource``/``storage``/``carrier_in`` (tech dependent) to ``carrier_out``.
             energy_eff_per_distance: 1.0 # name: Energy efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all energy lost).

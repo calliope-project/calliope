@@ -86,3 +86,29 @@ overrides:
                 - {function: extreme_diff, options: {tech0: demand_heat, tech1: demand_electricity, how: max, n: 2}}
             function: resample
             function_options: {resolution: 6H}
+
+    eurocalliope:
+        model.name: "Euro-calliope constraints test"
+        model.subset_time: '2005-01'
+        techs:
+            chp.constraints:
+                cb: 0.45
+                cv: 0.14
+            boiler:
+                essentials.parent: conversion_plus
+                constraints.energy_cap_max_time_varying:
+                    carrier_out:
+                        heat: file=energy-cap-heat.csv
+    eurocalliope_2:
+        model.name: "Euro-calliope constraints test"
+        model.subset_time: '2005-01'
+        techs:
+            chp.constraints:
+                cb: 3
+                cv: 0.4
+                energy_cap_ratio.carrier_out_2.heat: 2.5
+            boiler:
+                essentials.parent: conversion_plus
+                constraints.energy_cap_max_time_varying:
+                    carrier_out:
+                        heat: file=energy-cap-heat.csv
