@@ -667,8 +667,8 @@ def generate_model_run(
     model_run["applied_overrides"] = ";".join(applied_overrides)
 
     # 1) Initial checks on model configuration
-    warning_messages, errors = checks.check_initial(config)
-    exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
+    #warning_messages, errors = checks.check_initial(config)
+    #exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 2) Fully populate techs
     # Raises ModelError if necessary
@@ -708,9 +708,9 @@ def generate_model_run(
     model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking
-    final_check_comments, warning_messages, errors = checks.check_final(model_run)
-    debug_comments.union(final_check_comments)
-    exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
+    #final_check_comments, warning_messages, errors = checks.check_final(model_run)
+    #debug_comments.union(final_check_comments)
+    #exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
     debug_data = AttrDict({"comments": debug_comments, "config_initial": config,})
