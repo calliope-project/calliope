@@ -282,9 +282,14 @@ class TestEnergyCapacityPerStorageCapacity:
     )
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
-        override_dict = {'model.subset_time': ['2005-01-01','2005-01-05'],
-                         'run.operation.horizon': horizon,
-                         'run.operation.window': window}
-        model = build_model(model_file=model_file, scenario="operate_mode_min",
-                            override_dict=override_dict)
+        override_dict = {
+            "model.subset_time": ["2005-01-01", "2005-01-05"],
+            "run.operation.horizon": horizon,
+            "run.operation.window": window,
+        }
+        model = build_model(
+            model_file=model_file,
+            scenario="operate_mode_min",
+            override_dict=override_dict,
+        )
         model.run()
