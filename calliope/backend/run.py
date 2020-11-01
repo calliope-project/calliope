@@ -523,7 +523,7 @@ def run_operate(model_data, timings, backend, build_only):
             if "loc_techs_store" in model_data.dims.keys():
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
-                ].drop("timesteps")
+                ].drop_vars("timesteps")
                 model_data["storage_initial"].loc[
                     storage_initial.coords
                 ] = storage_initial.values
