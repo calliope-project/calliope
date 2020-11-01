@@ -3,6 +3,12 @@
 Release History
 ===============
 
+0.6.7
+-----
+
+|changed| Fix a bug with `horizon` and `window` lengths in `operate` mode.
+
+
 0.6.6 (2020-10-08)
 ------------------
 
