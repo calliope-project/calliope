@@ -147,7 +147,8 @@ def constraints_to_dataset(model_run):
     relevant_constraints = set(
         i.split(".constraints.")[1]
         for i in model_run.locations.as_dict_flat().keys()
-        if ".constraints." in i and ".carrier_ratios." not in i
+        if ".constraints." in i
+        and any([i not in j for j in [".carrier_ratios.", ".energy_cap_ratio.", ".energy_cap_max_time_varying."]])
     )
     for constraint in relevant_constraints:
         data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
