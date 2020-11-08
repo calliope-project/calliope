@@ -21,7 +21,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.preprocess import locations, sets, checks, constraint_sets, util
+from calliope.preprocess import locations, checks, util
 
 logger = logging.getLogger(__name__)
 
@@ -714,10 +714,6 @@ def generate_model_run(
     model_run["model"] = config["model"]
     model_run["group_constraints"] = config.get("group_constraints", {})
 
-    # 7) Initialize sets
-    all_sets = sets.generate_simple_sets(model_run)
-    all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
-    all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
     #model_run["sets"] = all_sets
     model_run["mask_sets"] = mask_sets
     #model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)

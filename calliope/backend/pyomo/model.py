@@ -23,7 +23,6 @@ from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import get_var, get_domain, mask, within
 from calliope.backend.pyomo import constraints
-from calliope.backend.pyomo.expressions import create_expressions
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
 from calliope.core.util.dataset import reorganise_xarray_dimensions

@@ -20,9 +20,7 @@ import pandas as pd
 from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.preprocess import checks
-from calliope.preprocess.util import split_loc_techs_transmission, concat_iterable
 from calliope.preprocess.time import add_time_dimension
-from calliope.preprocess.lookup import add_lookup_arrays
 
 
 def build_model_data(model_run, debug=False):
@@ -31,7 +29,6 @@ def build_model_data(model_run, debug=False):
     constraint generation. Timeseries data is also extracted from file at this
     point, and the time dimension added to the data
 
-    Param_dict
     ----------
     model_run : AttrDict
         preprocessed model_run dictionary, as produced by
@@ -59,8 +56,12 @@ def build_model_data(model_run, debug=False):
         coords={"timesteps": model_run.timesteps}, attrs=add_attributes(model_run)
     )
 
+    # param_dict is going to be of the form (*dim_names): {(*dims): {**relevant_parms}}
+    # E.g. "('nodes', 'techs')": {"('N1', 'heat_pipes:X1')": {{'energy_cap_max': 1, 'energy_eff': 0.99, etc.}}
     param_dict = AttrDict({})
+    # Get parameters that are node-specific
     get_node_params(param_dict, model_run)
+    # Get parameters that are tech-specific, and node-invariant
     get_tech_params(param_dict, model_run)
 
     for k, v in param_dict.items():
@@ -83,40 +84,32 @@ def build_model_data(model_run, debug=False):
         return data
 
 
-def add_sets(model_run):
-    coords = dict()
-    for key, value in model_run.sets.items():
-        if value:
-            coords[key] = value
-    return coords
-
-
 def get_node_params(param_dict, model_run):
     """
     For all nodes, get tech and link data
     """
-    model_locations = model_run.locations.copy()
+    model_locations = model_run.locations.copy()  # TODO: "locations" -> "nodes" in YAMLs
     for node, node_info in model_locations.items():
-        # Techs in node
+        # Techs in node, pop them out
         techs = node_info.pop("techs", {})
         for tech, tech_info in techs.items():
-            _set_tech_at_node_info(param_dict, node, tech, tech_info)
+            set_tech_at_node_info(param_dict, node, tech, tech_info)
         # Links in node
         links = node_info.pop("links", {})
         for link, link_info in links.items():
             techs = link_info.pop("techs", {})
             for tech, tech_info in techs.items():
                 link_tech = f"{tech}:{link}"
-                _set_tech_at_node_info(param_dict, node, link_tech, tech_info)
+                set_tech_at_node_info(param_dict, node, link_tech, tech_info)
                 param_dict.set_key(
-                    _set_idx(
+                    set_idx(
                         param="link_remote_techs",
                         keydict={"nodes": link, "techs": f"{tech}:{node}"},
                     ),
                     link_tech,
                 )
                 param_dict.set_key(
-                    _set_idx(
+                    set_idx(
                         param="link_remote_nodes",
                         keydict={"nodes": link, "techs": f"{tech}:{node}"},
                     ),
@@ -128,7 +121,7 @@ def get_node_params(param_dict, model_run):
                 for k, v in node_param_info.items():
                     coord_key, coord = k, v
                     param_dict.set_key(
-                        _set_idx(
+                        set_idx(
                             param="node_coordinates",
                             keydict={"nodes": node, "coordinates": coord_key},
                         ),
@@ -136,7 +129,7 @@ def get_node_params(param_dict, model_run):
                     )
             else:
                 param_dict.set_key(
-                    _set_idx(param=node_param, keydict={"nodes": node}), node_param_info
+                    set_idx(param=node_param, keydict={"nodes": node}), node_param_info
                 )
 
 
@@ -160,7 +153,7 @@ def get_tech_params(param_dict, model_run):
             techs = [tech]
         for tech_param, tech_param_info in tech_dict.as_dict_flat().items():
             if tech_param.startswith("inheritance"):
-                _set_tech_info(
+                set_tech_info(
                     param_dict, techs, "inheritance", ".".join(tech_param_info)
                 )
             elif tech_param.startswith("essentials"):
@@ -168,7 +161,7 @@ def get_tech_params(param_dict, model_run):
                     if "primary" in tech_param:
                         for _tech in techs:
                             param_dict.set_key(
-                                _set_idx(
+                                set_idx(
                                     param=tech_param.split(".")[-1],
                                     keydict={
                                         "techs": _tech,
@@ -186,7 +179,7 @@ def get_tech_params(param_dict, model_run):
                                 tech_param_info = [tech_param_info]
                             for _tech_param_info in tech_param_info:
                                 param_dict.set_key(
-                                    _set_idx(
+                                    set_idx(
                                         param="carrier",
                                         keydict={
                                             "techs": _tech,
@@ -198,31 +191,61 @@ def get_tech_params(param_dict, model_run):
                                 )
                 else:
                     param_name = tech_param.split(".")[-1]
-                    _set_tech_info(param_dict, techs, param_name, tech_param_info)
+                    set_tech_info(param_dict, techs, param_name, tech_param_info)
 
 
-def _set_idx(param, keydict):
+def set_idx(param, keydict):
+    """
+    Set a key:value pair in the re-processed model data dictionary
+
+    Parameters
+    ----------
+    param : string
+        name of parameter being set
+    keydict : Dictionary
+        Dimensions being set for that parameter
+
+    Returns
+    -------
+    AttrDict key : string
+        e,g, "(tech, node).(pv, X1).energy_cap_max"
+
+    """
     return "{}.{}.{}".format(
         tuple(k for k in keydict.keys()), tuple(v for v in keydict.values()), param
     )
 
 
-def _set_tech_at_node_info(param_dict, node, tech, tech_info):
+def set_tech_at_node_info(param_dict, node, tech, tech_info):
     """
-    Get all data from 'constraints', 'costs', and 'switches' for a tech at a node
+    Get all data from 'constraints', 'costs', and 'switches' for a tech at a node.
+
+    Parameters
+    ----------
+    param_dict : Dictionary
+        Dictionary of re-processed model data
+    node : str
+        Name of node
+    tech : str
+        Name of tech
+    node : str
+        Name of node
+    tech_info : Dictionary
+        Dictionary of tech parameters at a particular node
     """
     constraints = tech_info.pop("constraints", {})
     costs = tech_info.pop("costs", {})
     switches = tech_info.pop("switches", {})
     for constraint, constraint_info in constraints.items():
         # carrier-based data is reformatted to be indexed by carrier
+        # FIXME: this should not be hardcoded...
         if constraint == "carrier_ratios":
             for k, v in constraint_info.as_dict_flat().items():
                 carrier_tier, carrier = k.split(".")
                 if carrier == "resource":
                     continue
                 param_dict.set_key(
-                    _set_idx(
+                    set_idx(
                         param=constraint,
                         keydict={
                             "nodes": node,
@@ -235,7 +258,7 @@ def _set_tech_at_node_info(param_dict, node, tech, tech_info):
                 )
         elif constraint == "export_carrier":
             param_dict.set_key(
-                _set_idx(
+                set_idx(
                     param=constraint,
                     keydict={
                         "nodes": node,
@@ -247,13 +270,13 @@ def _set_tech_at_node_info(param_dict, node, tech, tech_info):
             )
         else:
             param_dict.set_key(
-                _set_idx(param=constraint, keydict={"nodes": node, "techs": tech}),
+                set_idx(param=constraint, keydict={"nodes": node, "techs": tech}),
                 constraint_info,
             )
     for cost_class, cost_info in costs.items():
         for cost_param, cost in cost_info.items():
             param_dict.set_key(
-                _set_idx(
+                set_idx(
                     param=f"cost_{cost_param}",
                     keydict={"nodes": node, "techs": tech, "costs": cost_class},
                 ),
@@ -261,25 +284,41 @@ def _set_tech_at_node_info(param_dict, node, tech, tech_info):
             )
     for switch, switch_info in switches.items():
         param_dict.set_key(
-            _set_idx(param=switch, keydict={"nodes": node, "techs": tech}),
+            set_idx(param=switch, keydict={"nodes": node, "techs": tech}),
             switch_info,
         )
 
     for other_param, other_info in tech_info.items():
         param_dict.set_key(
-            _set_idx(param=other_param, keydict={"nodes": node, "techs": tech}),
+            set_idx(param=other_param, keydict={"nodes": node, "techs": tech}),
             other_info,
         )
     # Also set the parameter that the tech exists at this node
     param_dict.set_key(
-        _set_idx(param="node_tech", keydict={"nodes": node, "techs": tech}), 1,
+        set_idx(param="node_tech", keydict={"nodes": node, "techs": tech}), 1,
     )
 
 
-def _set_tech_info(param_dict, techs, param_name, param_info):
+def set_tech_info(param_dict, techs, param_name, param_info):
+    """
+    Set a key:value pair for a tech in the re-processed model data dictionary
+
+    Parameters
+    ----------
+    param_dict : Dictionary
+        Dictionary of re-processed model data
+    techs : list
+        tech names (mostly a single length list, except for transmission techs)
+    param_name : str
+        Name of parameter being set
+    node : str
+        Name of node
+    tech_info : Dictionary
+        Dictionary of tech parameters at a particular node
+    """
     for tech in techs:
         param_dict.set_key(
-            _set_idx(param=param_name, keydict={"techs": tech}), param_info
+            set_idx(param=param_name, keydict={"techs": tech}), param_info
         )
 
 
