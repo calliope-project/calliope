@@ -66,6 +66,7 @@ def build_model_data(model_run, debug=False):
 
     for k, v in param_dict.items():
         _df = pd.DataFrame.from_dict(v.as_dict())
+        # TODO: this is doing what exactly?
         _df.columns = _df.columns.map(ast.literal_eval).rename(ast.literal_eval(k))
         _ds = xr.Dataset(_df.T).unstack()
         data = data.merge(_ds)

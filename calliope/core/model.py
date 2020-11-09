@@ -24,7 +24,7 @@ from calliope.preprocess import (
     build_model_data,
     apply_time_clustering,
     final_timedimension_processing,
-    create_mask_ds
+    create_imask_ds
 
 )
 from calliope.core.attrdict import AttrDict
@@ -144,7 +144,7 @@ class Model(object):
             observer=self._model_data,
         )
         # Add set masks
-        self._masks = create_mask_ds(self._model_data, self._model_run.mask_sets)
+        self._masks = create_imask_ds(self._model_data, self._model_run.mask_sets)
 
     def _init_from_model_data(self, model_data):
         if "_model_run" in model_data.attrs:

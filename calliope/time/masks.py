@@ -12,7 +12,6 @@ Functions to pick timesteps from data given certain criteria.
 import pandas as pd
 
 from calliope.time import funcs
-from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
 
 
@@ -32,8 +31,7 @@ def _get_array(data, var, tech, **kwargs):
             )
         )
 
-    arr = split_loc_techs(data[var].copy()).loc[subset]
-    arr = arr.mean(dim=[i for i in arr.dims if i != "timesteps"]).to_pandas()
+    arr = data[var].copy().loc[subset].mean(dim=[i for i in arr.dims if i != "timesteps"]).to_pandas()
     return arr
 
 

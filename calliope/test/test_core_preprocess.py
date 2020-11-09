@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 import numpy as np
+import ruamel.yaml as ruamel_yaml
 
 import calliope
 import calliope.exceptions as exceptions
@@ -1823,3 +1824,28 @@ class TestTime:
         assert model.inputs.resource.loc["region1-1::csp"].values[8] == approx(0.263805)
         assert model.inputs.resource.loc["region1-2::csp"].values[8] == approx(0.096755)
         assert model.inputs.resource.loc["region1-3::csp"].values[8] == approx(0.0)
+
+
+class TestIMask:
+
+    def parse_yaml(self, yaml_string):
+        return ruamel_yaml.safe_load(yaml_string)
+
+
+    @pytest.fixture
+    def model_data(self):
+        # TODO create model_data
+        return None
+
+
+    @pytest.fixture
+    def foreach_imask(self):
+        return self.parse_yaml("""
+            constraints:
+                constraint_A:
+                    foreach: [nodes, techs]
+        """)
+
+    def test_foreach_constraint(self, model_data, foreach_imask):
+        # TODO implement
+        pass
