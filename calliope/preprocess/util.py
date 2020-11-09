@@ -37,27 +37,6 @@ def concat_iterable(iterable, concatenators):
     ]
 
 
-def constraint_exists(model_run, loc_tech, search_entry):
-    """
-    Check if a cost/constraint exists for a loc_tech.
-
-    E.g.:
-    ``
-    constraint_exists(model_run, 'X1::chp', 'constraints.energy_eff') will return True or False
-    ``
-    """
-    if loc_tech in model_run.sets.loc_techs_transmission:
-        loc_tech_dict = split_loc_techs_transmission(loc_tech)
-        search_string = "locations.{loc_from}.links.{loc_to}.techs.{tech}.{}".format(
-            search_entry, **loc_tech_dict
-        )
-    else:
-        search_string = "locations.{0}.techs.{1}.{2}".format(
-            *loc_tech.split("::"), search_entry
-        )
-    return model_run.get_key(search_string, None)
-
-
 def get_all_carriers(config, direction="both"):
     if direction == "both":
         carrier_list = ["in", "out", "in_2", "out_2", "in_3", "out_3"]

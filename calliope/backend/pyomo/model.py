@@ -56,7 +56,7 @@ def generate_model(model_data, masks):
     # "Parameters"
     model_data_dict = {
         "data": {
-            k: v.to_series().dropna().replace("inf", np.nan).to_dict()
+            k: v.to_series().replace("inf", np.nan).dropna().to_dict()
             for k, v in model_data.data_vars.items()
             if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
         },
@@ -68,7 +68,6 @@ def generate_model(model_data, masks):
         "sets": list(model_data.coords),
         "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
     }
-
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
     # remainder of dims are in alphabetic order
@@ -119,7 +118,6 @@ def generate_model(model_data, masks):
             setattr(backend_model, "objective_" + option_name, option_val)
 
     # Variables
-
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
         setattr(backend_model, k, po.Var(getattr(backend_model, f'{k}_index'), domain=getattr(po, v.domain)))
         if k == "unmet_demand":
@@ -131,6 +129,7 @@ def generate_model(model_data, masks):
 
     # Constraints
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+        print(k, len(getattr(backend_model, f'{k}_constraint_index')))
         setattr(backend_model, f'{k}_constraint', po.Constraint(getattr(backend_model, f'{k}_constraint_index'), rule=getattr(constraints, f'{k}_constraint_rule')))
 
     # FIXME: Optional constraints

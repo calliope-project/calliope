@@ -18,7 +18,6 @@ import xarray as xr
 from calliope import exceptions
 from calliope.core.util.dataset import get_loc_techs
 from calliope.time import clustering
-from calliope.preprocess.lookup import lookup_clusters
 
 logger = logging.getLogger(__name__)
 
@@ -373,3 +372,45 @@ def drop(data, timesteps):
     )
 
     return data
+
+
+def lookup_clusters(dataset):
+    """
+    For any given timestep in a time clustered model, get:
+    1. the first and last timestep of the cluster,
+    2. the last timestep of the cluster corresponding to a date in the original timeseries
+    """
+
+    data_dict_first = dict(dims=["timesteps"], data=[])
+    data_dict_last = dict(dims=["timesteps"], data=[])
+    for timestep in dataset.timesteps:
+        t = pd.to_datetime(timestep.item()).date().strftime("%Y-%m-%d")
+        timestep_first = dataset.timesteps.loc[t][0]
+        timestep_last = dataset.timesteps.loc[t][-1]
+        if timestep == timestep_first:
+            data_dict_first["data"].append(1)
+            data_dict_last["data"].append(timestep_last.values)
+        else:
+            data_dict_first["data"].append(0)
+            data_dict_last["data"].append(None)
+    dataset["lookup_cluster_first_timestep"] = xr.DataArray.from_dict(data_dict_first)
+    dataset["lookup_cluster_last_timestep"] = xr.DataArray.from_dict(data_dict_last)
+
+    if "datesteps" in dataset.dims:
+        last_timesteps = dict(dims=["datesteps"], data=[])
+        cluster_date = dataset.timestep_cluster.to_pandas().resample("1D").mean()
+        for datestep in dataset.datesteps.to_index():
+            cluster = dataset.lookup_datestep_cluster.loc[
+                datestep.strftime("%Y-%m-%d")
+            ].item()
+            last_timesteps["data"].append(
+                pd.datetime.combine(
+                    cluster_date[cluster_date == cluster].index[0].date(),
+                    dataset.timesteps.to_index().time[-1],
+                )
+            )
+        dataset["lookup_datestep_last_cluster_timestep"] = xr.DataArray.from_dict(
+            last_timesteps
+        )
+
+    return dataset

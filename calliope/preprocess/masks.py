@@ -13,6 +13,7 @@ constraints and decision variables, based on the model_data xarray.Dataset.
 import operator
 import functools
 import re
+import ast
 
 import xarray as xr
 import pandas as pd
@@ -28,7 +29,6 @@ def create_imask_ds(model_data, sets):
     """
 
     ds = xr.Dataset()
-    run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
 
     for set_group, sets in sets.items():
         for set_name, set_config in sets.items():
@@ -53,7 +53,7 @@ def create_imask_ds(model_data, sets):
                 # We have a problem if we have too few dimensions at this point...
                 if len(imask.dims) < len(set_config.foreach):
                     raise ValueError(f'Missing dimension(s) in imask for set {set_name}')
-                if k not in ds.data_vars.keys():
+                if set_group not in ds.data_vars.keys():
                     ds = ds.merge(imask.to_dataset(name=set_name))
                 else:  # if already in dataset, it should look exactly the same
                     assert (ds[set_name] == imask).all().item()
@@ -81,12 +81,11 @@ def inheritance(model_data, tech_group):
 
 
 def val_is(model_data, param, val):
-    print(param)
     if "run." in param:
         run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
-        imask = run_config[param.strip("run.")] == val
+        imask = run_config[param.strip("run.")] == ast.literal_eval(val)
     else:
-        imask = model_data[param] == val
+        imask = model_data[param] == ast.literal_eval(val)
 
     return imask
 
@@ -94,13 +93,13 @@ def val_is(model_data, param, val):
 def subset_imask(set_config, imask):
     # For some masks, we take a subset of a given dimension (e.g. only "out" in 'carrier_tier')
     for set_name, subset in set_config.get("subsets", {}).items():
-        # Keep the axis if it is expected for this constrain/variable
+        # Keep the axis if it is expected for this constraint/variable
         if set_name in set_config.foreach:
-            imask = imask.loc[{set_name: [i for i in subset if i in imask[set_name]]}]
+            imask.loc[{set_name: ~imask[set_name].isin(subset)}] = False
         # Otherwise squeeze out this dimension after slicing it
         else:
-            imask = imask.loc[{set_name: [i for i in subset if i in imask[set_name]]}].sum(set_name) > 0
-
+            imask = imask.loc[{set_name: ~imask[set_name].isin(subset)}].sum(set_name) > 0
+    return imask
 
 def imask_where(model_data, where_array, initial_imask=None, initial_operator=None):
     """
@@ -114,7 +113,7 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
     def _func(imask_string):
         return re.search(r"(\w+)\((\w+)\)", imask_string)
     def _val_is(imask_string):
-        return re.search(r"([\w\.]+)\=(\w+)", imask_string)
+        return re.search(r"([\w\.]+)\=([\'\w]+)", imask_string)
 
     for i in where_array:
         if isinstance(i, list):

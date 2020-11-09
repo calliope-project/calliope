@@ -33,19 +33,24 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
             \\quad \\forall loc::carrier \\in loc::carriers, \\forall timestep \\in timesteps
 
     """
-    system_balance = (
-        sum(backend_model.carrier_prod[carrier, node, :, timestep])
-        + sum(backend_model.carrier_con[carrier, node, :, timestep])
-    )
-    if hasattr(backend_model, 'carrier_export'):
-        system_balance += sum(
-            backend_model.carrier_export[carrier, node, :, timestep]
+    def _sum(var_name):
+        return po.quicksum(
+            getattr(backend_model, var_name)[carrier, node, tech, timestep]
+            for tech in backend_model.techs
+            if [carrier, node, tech, timestep]
+            in getattr(backend_model, f"{var_name}_index")
         )
-    if hasattr(backend_model, 'unmet_demand'):
-        system_balance += backend_model.unmet_demand[carrier, node, timestep]
-        system_balance += backend_model.unused_supply[carrier, node, timestep]
+    system_balance = [_sum("carrier_prod"), _sum("carrier_con")]
 
-    return backend_model.system_balance[carrier, node, timestep] == 0
+    if hasattr(backend_model, 'carrier_export'):
+        system_balance.append(_sum("carrier_export"))
+
+    if hasattr(backend_model, 'unmet_demand'):
+        system_balance.append(backend_model.unmet_demand[carrier, node, timestep])
+    if hasattr(backend_model, 'unused_supply'):
+        system_balance.append(backend_model.unused_supply[carrier, node, timestep])
+
+    return po.quicksum(system_balance) == 0
 
 
 def balance_supply_constraint_rule(backend_model, carrier, node, tech, timestep):

@@ -79,66 +79,6 @@ class TestDataset:
         loc_techs = dataset.get_loc_techs(loc_techs, tech="demand_power", loc="region1")
         assert loc_techs == ["region1::demand_power"]
 
-    def test_split_loc_tech_to_dataarray(self, example_dataarray):
-        formatted_array = dataset.split_loc_techs(example_dataarray)
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("costs", "locs", "techs", "timesteps")
-
-    def test_split_loc_tech_to_series(self, example_dataarray):
-        formatted_series = dataset.split_loc_techs(
-            example_dataarray, return_as="Series"
-        )
-        assert isinstance(formatted_series, pd.Series)
-        assert formatted_series.index.names == ["costs", "locs", "techs", "timesteps"]
-
-    def test_split_loc_tech_to_multiindex_dataarray(self, example_dataarray):
-        formatted_array = dataset.split_loc_techs(
-            example_dataarray, return_as="MultiIndex DataArray"
-        )
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("timesteps", "loc_techs_bar", "costs")
-        assert isinstance(formatted_array.loc_techs_bar.to_index(), pd.MultiIndex)
-
-    def test_split_loc_tech_too_many_loc_tech_dims(self, example_dataarray):
-        _array = example_dataarray.rename({"costs": "loc_techs_2"})
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            dataset.split_loc_techs(_array)
-        assert check_error_or_warning(
-            excinfo, "Cannot split loc_techs or loc_tech_carriers dimension"
-        )
-
-    def test_split_loc_tech_one_dim_to_dataarray(self, example_one_dim_dataarray):
-        formatted_array = dataset.split_loc_techs(example_one_dim_dataarray)
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("timesteps",)
-
-    def test_split_loc_tech_one_dim_to_series(self, example_one_dim_dataarray):
-        formatted_series = dataset.split_loc_techs(
-            example_one_dim_dataarray, return_as="Series"
-        )
-        assert isinstance(formatted_series, pd.Series)
-        assert formatted_series.index.names == ["timesteps"]
-
-    def test_split_loc_tech_one_dim_to_multiindex_dataarray(
-        self, example_one_dim_dataarray
-    ):
-        formatted_array = dataset.split_loc_techs(
-            example_one_dim_dataarray, return_as="MultiIndex DataArray"
-        )
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("timesteps",)
-
-    def test_split_loc_tech_unknown_output(
-        self, example_dataarray, example_one_dim_dataarray
-    ):
-        for array in [example_dataarray, example_one_dim_dataarray]:
-            with pytest.raises(ValueError) as excinfo:
-                dataset.split_loc_techs(array, return_as="foo")
-            assert check_error_or_warning(
-                excinfo,
-                "`return_as` must be `DataArray`, `Series`, or `MultiIndex DataArray`",
-            )
-
     def test_reorganise_dataset_dimensions(self, example_dataset):
         reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataset)
         dataset_dims = [i for i in reorganised_dataset.dims.keys()]

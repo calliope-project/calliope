@@ -1520,12 +1520,6 @@ class TestChecks:
 
 class TestDataset:
 
-    # FIXME: What are we testing here?
-    def test_inconsistent_timesteps(self):
-        """
-        Timesteps must be consistent?
-        """
-
     @pytest.mark.parametrize(
         "model,expected_constraint_set",
         [
@@ -1567,18 +1561,6 @@ class TestDataset:
         )
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="simple_storage,one_day")
-
-    # FIXME: What are the *required* arrays?
-    def test_missing_array(self):
-        """
-        Check that the dataset includes all arrays *required* for a model to function
-        """
-
-    # FIXME: What are the *required* attributes?
-    def test_missing_attrs(self):
-        """
-        Check that the dataset includes all attributes *required* for a model to function
-        """
 
     def test_force_infinite_resource(self):
         """

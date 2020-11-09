@@ -186,7 +186,8 @@ def check_value(val: po.base.param._ParamData) -> bool:
 
 
 def mask(mask):
-    return mask.where(mask).to_series().dropna().to_dict().keys()
+    mask_series = mask.to_series()
+    return mask_series[mask_series].index.values
 
 
 def within(backend_model, var: xr.DataArray):

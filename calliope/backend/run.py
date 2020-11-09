@@ -44,6 +44,7 @@ def run(model_data, masks, timings, build_only=False):
     if run_config["mode"] == "plan":
         results, backend = run_plan(
             model_data,
+            run_config,
             masks,
             timings,
             backend=BACKEND[run_config.backend],
@@ -61,7 +62,7 @@ def run(model_data, masks, timings, build_only=False):
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, masks, timings, backend, build_only, backend_rerun=False):
+def run_plan(model_data, run_config, masks, timings, backend, build_only, backend_rerun=False):
 
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
@@ -79,7 +80,6 @@ def run_plan(model_data, masks, timings, backend, build_only, backend_rerun=Fals
     else:
         backend_model = backend_rerun
 
-    run_config = backend_model.__calliope_run_config
     solver = run_config["solver"]
     solver_io = run_config.get("solver_io", None)
     solver_options = run_config.get("solver_options", None)

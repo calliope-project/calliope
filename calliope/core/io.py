@@ -15,7 +15,6 @@ import xarray as xr
 
 from calliope._version import __version__
 from calliope import exceptions
-from calliope.core.util.dataset import split_loc_techs
 
 
 def read_netcdf(path):
@@ -102,7 +101,7 @@ def save_csv(model_data, path, dropna=True):
     for var in data_vars:
         in_out = "results" if model_data[var].attrs["is_result"] else "inputs"
         out_path = os.path.join(path, "{}_{}.csv".format(in_out, var))
-        series = split_loc_techs(model_data[var], return_as="Series")
+        series = model_data[var].to_series()
         if dropna:
             series = series.dropna()
         series.to_csv(out_path, header=True)
