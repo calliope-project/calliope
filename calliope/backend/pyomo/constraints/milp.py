@@ -423,8 +423,15 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
     max_systemwide = get_param(backend_model, "units_max_systemwide", tech)
     equals_systemwide = get_param(backend_model, "units_equals_systemwide", tech)
 
-    sum_expr_units = sum(backend_model.units[:, tech])
-    sum_expr_purchase = sum(backend_model.purchased[: tech])
+    def _sum(var_name):
+        return po.quicksum(
+            getattr(backend_model, var_name)[node, tech]
+            for node in backend_model.nodes
+            if [node, tech]
+            in getattr(backend_model, f"{var_name}_index")
+        )
+    sum_expr_units = _sum("units")
+    sum_expr_purchase = _sum("purchased")
 
     if equals_systemwide:
         return sum_expr_units + sum_expr_purchase == equals_systemwide
@@ -446,8 +453,16 @@ def asynchronous_con_milp_constraint_rule(backend_model, node, tech, timestep):
             \\forall timestep \\in timesteps
 
     """
+
+    def _sum(var_name):
+        return po.quicksum(
+            getattr(backend_model, var_name)[carrier, node, tech, timestep]
+            for carrier in backend_model.carriers
+            if [carrier, node, tech, timestep]
+            in getattr(backend_model, f"{var_name}_index")
+        )
     return (
-        -1 * backend_model.carrier_con[:, node, tech, timestep]
+        -1 * _sum("carrier_con")
         <= (1 - backend_model.prod_con_switch[node, tech, timestep]) * backend_model.bigM
     )
 
@@ -467,7 +482,14 @@ def asynchronous_prod_milp_constraint_rule(backend_model, node, tech, timestep):
 
     """
 
+    def _sum(var_name):
+        return po.quicksum(
+            getattr(backend_model, var_name)[carrier, node, tech, timestep]
+            for carrier in backend_model.carriers
+            if [carrier, node, tech, timestep]
+            in getattr(backend_model, f"{var_name}_index")
+        )
     return (
-        backend_model.carrier_prod[:, node, tech, timestep]
+        _sum("carrier_prod")
         <= backend_model.prod_con_switch[node, tech, timestep] * backend_model.bigM
     )

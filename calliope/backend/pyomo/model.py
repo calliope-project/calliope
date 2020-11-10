@@ -31,7 +31,6 @@ from calliope.core.attrdict import AttrDict
 
 logger = logging.getLogger(__name__)
 
-
 def generate_model(model_data, masks):
     """
     Generate a Pyomo model.
@@ -129,7 +128,6 @@ def generate_model(model_data, masks):
 
     # Constraints
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
-        print(k, len(getattr(backend_model, f'{k}_constraint_index')))
         setattr(backend_model, f'{k}_constraint', po.Constraint(getattr(backend_model, f'{k}_constraint_index'), rule=getattr(constraints, f'{k}_constraint_rule')))
 
     # FIXME: Optional constraints

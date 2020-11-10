@@ -34,7 +34,10 @@ def cost_constraint_rule(backend_model, cost, node, tech):
         cost_investment = 0
 
     if loc_tech_is_in(backend_model, (node, tech), "cost_var_index"):
-        cost_var = sum(backend_model.cost_var[cost, :, node, tech])
+        cost_var = sum(
+            backend_model.cost_var[cost, node, tech, timestep]
+            for timestep in backend_model.timesteps
+        )
     else:
         cost_var = 0
 
@@ -190,19 +193,12 @@ def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
         all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
     elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index for supply
         energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
-        if (
-            po.value(energy_eff) > 0
-        ):  # in case energy_eff is zero, to avoid an infinite value
-            all_costs += (
-                cost_om_con
-                * (_sum("carrier_prod") / energy_eff)
-            )
+        # in case energy_eff is zero, to avoid an infinite value
+        if po.value(energy_eff) > 0:
+            all_costs +=  cost_om_con * (_sum("carrier_prod") / energy_eff)
+
     elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index for demand
-        all_costs += (
-            cost_om_con
-            * (-1)
-            * _sum("carrier_con")
-        )
+        all_costs += cost_om_con * (-1) * _sum("carrier_con")
     export_carrier = backend_model.export_carrier[:, node, tech].index()
     if len(export_carrier) > 0:
         all_costs += (

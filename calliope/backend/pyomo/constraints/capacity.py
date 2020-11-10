@@ -340,10 +340,15 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
 
     """
 
+
     max_systemwide = get_param(backend_model, "energy_cap_max_systemwide", tech)
     equals_systemwide = get_param(backend_model, "energy_cap_equals_systemwide", tech)
-
+    energy_cap = po.quicksum(
+        backend_model.energy_cap[node, tech]
+        for node in backend_model.nodes
+        if [node, tech] in backend_model.energy_cap_index
+    )
     if equals_systemwide:
-        return sum(backend_model.energy_cap[:, tech]) == equals_systemwide
+        return energy_cap == equals_systemwide
     else:
-        return sum(backend_model.energy_cap[:, tech]) <= max_systemwide
+        return energy_cap <= max_systemwide
