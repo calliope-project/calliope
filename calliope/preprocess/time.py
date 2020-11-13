@@ -127,7 +127,7 @@ def add_time_dimension(data, model_run):
             continue
 
         # 2) convert to a Pandas Series to do 'string contains' search
-        data_series = data[variable].to_series()
+        data_series = data[variable].to_series().dropna()
 
         # 3) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
         try:

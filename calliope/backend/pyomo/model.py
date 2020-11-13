@@ -82,7 +82,7 @@ def generate_model(model_data, masks):
         _kwargs = {
             "initialize": v,
             "mutable": True,
-            "within": getattr(po, get_domain(model_data[k])),
+            "within": po.Any #getattr(po, get_domain(model_data[k])),
         }
         if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
             _kwargs["default"] = backend_model.__calliope_defaults[k]

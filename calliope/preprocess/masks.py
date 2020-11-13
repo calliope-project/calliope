@@ -83,9 +83,11 @@ def inheritance(model_data, tech_group):
 def val_is(model_data, param, val):
     if "run." in param:
         run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
-        imask = run_config[param.strip("run.")] == ast.literal_eval(val)
-    else:
+        imask = run_config.get(param.strip("run."), None) == ast.literal_eval(val)
+    elif param in model_data.data_vars.keys():
         imask = model_data[param] == ast.literal_eval(val)
+    else:
+        return False
 
     return imask
 
