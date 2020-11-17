@@ -24,5 +24,6 @@ def symmetric_transmission_constraint_rule(backend_model, node, tech):
     remote_tech = backend_model.link_remote_techs[node, tech].value
     remote_node = backend_model.link_remote_nodes[node, tech].value
     return (
-        backend_model.energy_cap[node, tech] == backend_model.energy_cap[remote_node, remote_tech]
+        backend_model.energy_cap[node, tech]
+        == backend_model.energy_cap[remote_node, remote_tech]
     )

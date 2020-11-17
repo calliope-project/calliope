@@ -11,6 +11,7 @@ Checks for model consistency and possible errors during preprocessing.
 
 import os
 import logging
+import re
 
 import numpy as np
 import pandas as pd
@@ -495,7 +496,7 @@ def _check_tech_final(
                 )
 
     # Error if non-allowed `resource_unit` is defined
-    if tech_config.constraints.get("resource_unit", "energy") not in [
+    if tech_config.switches.get("resource_unit", "energy") not in [
         "energy",
         "energy_per_cap",
         "energy_per_area",
@@ -503,7 +504,7 @@ def _check_tech_final(
         errors.append(
             "`{}` is an unknown resource unit for `{}` at `{}`. "
             "Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed.".format(
-                tech_config.constraints.resource_unit, tech_id, loc_id
+                tech_config.switches.resource_unit, tech_id, loc_id
             )
         )
 
@@ -630,73 +631,44 @@ def check_model_data(model_data):
     comments = AttrDict()
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
-    if "force_resource" in model_data.data_vars:
-        conflict = (
-            model_data.force_resource.where(model_data.resource == np.inf)
-            .to_pandas()
-            .dropna()
+    if (
+        abs(model_data.get("force_resource", False) * model_data.resource) == np.inf
+    ).any():
+        errors.append(
+            "Cannot have `force_resource` = True if setting infinite resource values"
         )
-        if not conflict.empty:
-            errors.append(
-                "loc_tech(s) {} cannot have `force_resource` set as infinite "
-                "resource values are given".format(", ".join(conflict.index))
-            )
 
     # Ensure that if a tech has negative costs, there is a max cap defined
     # FIXME: doesn't consider capacity being set by a linked constraint e.g.
     # `resource_cap_per_energy_cap`.
-    relevant_caps = [
-        i
-        for i in ["energy_cap", "storage_cap", "resource_cap", "resource_area"]
-        if "cost_" + i in model_data.data_vars.keys()
-    ]
+    relevant_caps = set(
+        [re.search(r"cost_(\w+_cap)", i) for i in model_data.data_vars.keys()]
+    ).difference([None])
     for cap in relevant_caps:
-        relevant_loc_techs = (
-            model_data["cost_" + cap]
-            .where(model_data["cost_" + cap] < 0, drop=True)
-            .to_pandas()
-        )
-        cap_max = cap + "_max"
-        cap_equals = cap + "_equals"
-        for loc_tech in relevant_loc_techs.columns:
-            try:
-                cap_val = model_data[cap_max][loc_tech].item()
-            except KeyError:
-                try:
-                    cap_val = model_data[cap_equals][loc_tech].item()
-                except KeyError:
-                    cap_val = np.nan
-            if np.isinf(cap_val) or np.isnan(cap_val):
-                errors.append(
-                    "loc_tech {} cannot have a negative cost_{} as the "
-                    "corresponding capacity constraint is not set".format(loc_tech, cap)
-                )
-
-    for loc_tech in set(model_data.loc_techs_demand.values).intersection(
-        model_data.loc_techs_finite_resource.values
-    ):
-        if any(model_data.resource.loc[loc_tech].values > 0):
+        if (
+            (model_data[cap.group(0)] < 0)
+            & pd.isnull(model_data.get(f"{cap.group(1)}_max", np.nan))
+            & pd.isnull(model_data.get(f"{cap.group(1)}_equals", np.nan))
+        ).any():
             errors.append(
-                "Positive resource given for demand loc_tech {}. All demands "
-                "must have negative resource".format(loc_tech)
+                f"Cannot have a negative {cap.group(0)} as there is an unset "
+                "corresponding capacity constraint"
             )
 
-    # Delete all empty dimensions & the variables associated with them
-    for dim_name, dim_length in model_data.dims.items():
-        if dim_length == 0:
-            if dim_name in model_data.coords.keys():
-                del model_data[dim_name]
-            associated_vars = [
-                var
-                for var, data in model_data.data_vars.items()
-                if dim_name in data.dims
-            ]
-            model_data = model_data.drop(associated_vars)
-            model_warnings.append(
-                "dimension {} and associated variables {} were empty, so have "
-                "been deleted".format(dim_name, ", ".join(associated_vars))
-            )
-
+    if (model_data.inheritance.str.endswith("demand") * model_data.resource).max() > 0:
+        relevant_node_techs = (
+            (model_data.inheritance.str.endswith("demand") * model_data.resource)
+            .max("timesteps")
+            .where(lambda x: x > 0)
+            .to_series()
+            .dropna()
+        )
+        errors.append(
+            f"Positive resource given for demands {relevant_node_techs.index}. "
+            "All demands must have negative resource"
+        )
+    # TODO: fix operate mode by implementing windowsteps, etc., which should make this
+    # issue of resolution changes redundant
     # Check if we're allowed to use operate mode
     if "allow_operate_mode" not in model_data.attrs.keys():
         daily_timesteps = [
@@ -711,61 +683,5 @@ def check_model_data(model_data):
             )
         else:
             model_data.attrs["allow_operate_mode"] = 1
-
-    # Check for any milp constraints, and warn that the problem contains binary /
-    # integer decision variables
-    if any("_milp_constraint" in i for i in model_data.dims):
-        model_warnings.append(
-            "Integer and / or binary decision variables are included in this model. "
-            "This may adversely affect solution time, particularly if you are "
-            "using a non-commercial solver. To improve solution time, consider "
-            "changing MILP related solver options (e.g. `mipgap`) or removing "
-            "MILP constraints."
-        )
-
-    # Check for storage_initial being a fractional value
-
-    if hasattr(model_data, "loc_techs_store"):
-        for loc_tech in model_data.loc_techs_store.values:
-            if hasattr(model_data, "storage_initial"):
-                if (
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}].values
-                    > 1
-                ):
-                    errors.append(
-                        "storage_initial values larger than 1 are not allowed."
-                    )
-                if (
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}].values
-                    == 0
-                ):
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}] = 0.0
-
-    # Check for storage_initial being greater than or equal to the storage_discharge_depth
-
-    if hasattr(model_data, "loc_techs_store"):
-        for loc_tech in model_data.loc_techs_store.values:
-            if hasattr(model_data, "storage_initial") and hasattr(
-                model_data, "storage_discharge_depth"
-            ):
-                if (
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}].values
-                    < model_data.storage_discharge_depth.loc[
-                        {"loc_techs_store": loc_tech}
-                    ].values
-                ):
-                    errors.append(
-                        "storage_initial is smaller than storage_discharge_depth."
-                        " Please change the model configuration to ensure that"
-                        " storage initial is greater than or equal to storage_discharge_depth"
-                    )
-
-    # Check for storage_inter_cluster not being used together with storage_discharge_depth
-    if hasattr(model_data, "clusters") and hasattr(
-        model_data, "storage_discharge_depth"
-    ):
-        errors.append(
-            "storage_discharge_depth is currently not allowed when time clustering is active."
-        )
 
     return model_data, comments, model_warnings, errors

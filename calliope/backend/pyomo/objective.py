@@ -36,18 +36,21 @@ def minmax_cost_optimization(backend_model):
              \\sum_{loc::carrier,timestep} (unmet\\_demand(loc::carrier, timestep) \\times bigM)
 
     """
+
     def _sum(var_name, timestep):
         return po.quicksum(
             getattr(backend_model, var_name)[node, tech, timestep]
-            for node in backend_model.nodes for tech in backend_model.tech
-            if [node, tech, timestep]
-            in getattr(backend_model, f"{var_name}_index")
+            for node in backend_model.nodes
+            for tech in backend_model.tech
+            if [node, tech, timestep] in getattr(backend_model, f"{var_name}_index")
         )
 
     def obj_rule(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
             unmet_demand = po.quicksum(
-                po.quicksum(_sum("unmet_demand", timestep), _sum("unused_supply", timestep))
+                po.quicksum(
+                    _sum("unmet_demand", timestep), _sum("unused_supply", timestep)
+                )
                 * backend_model.timestep_weights[timestep]
                 * backend_model.bigM
                 for timestep in backend_model.timesteps
@@ -61,9 +64,11 @@ def minmax_cost_optimization(backend_model):
             po.quicksum(
                 po.quicksum(
                     backend_model.cost[k, node, tech]
-                    for node in backend_model.nodes for tech in backend_model.techs
+                    for node in backend_model.nodes
+                    for tech in backend_model.techs
                     if [k, node, tech] in backend_model.cost_index
-                ) * v
+                )
+                * v
                 for k, v in backend_model.objective_cost_class.items()
             )
             + unmet_demand

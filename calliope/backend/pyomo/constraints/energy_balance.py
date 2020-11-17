@@ -33,6 +33,7 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
             \\quad \\forall loc::carrier \\in loc::carriers, \\forall timestep \\in timesteps
 
     """
+
     def _sum(var_name):
         return po.quicksum(
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
@@ -40,14 +41,15 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
             if [carrier, node, tech, timestep]
             in getattr(backend_model, f"{var_name}_index")
         )
+
     system_balance = [_sum("carrier_prod"), _sum("carrier_con")]
 
-    if hasattr(backend_model, 'carrier_export'):
+    if hasattr(backend_model, "carrier_export"):
         system_balance.append(_sum("carrier_export"))
 
-    if hasattr(backend_model, 'unmet_demand'):
+    if hasattr(backend_model, "unmet_demand"):
         system_balance.append(backend_model.unmet_demand[carrier, node, timestep])
-    if hasattr(backend_model, 'unused_supply'):
+    if hasattr(backend_model, "unused_supply"):
         system_balance.append(backend_model.unused_supply[carrier, node, timestep])
 
     return po.quicksum(system_balance) == 0
@@ -446,7 +448,7 @@ def balance_storage_constraint_rule(backend_model, carrier, node, tech, timestep
     )
 
 
-def balance_storage_inter_cluster_rule(backend_model, node, tech, datestep):
+def balance_storage_inter_cluster_constraint_rule(backend_model, node, tech, datestep):
     """
     When clustering days, to reduce the timeseries length, balance the daily stored
     energy across all days of the original timeseries.
@@ -471,7 +473,9 @@ def balance_storage_inter_cluster_rule(backend_model, node, tech, datestep):
     current_datestep = backend_model.datesteps.ord(datestep) - 1
 
     if current_datestep == 0 and not run_config["cyclic_storage"]:
-        storage_previous_step = get_param(backend_model, "storage_initial", (node, tech))
+        storage_previous_step = get_param(
+            backend_model, "storage_initial", (node, tech)
+        )
         storage_intra = 0
     else:
         if current_datestep == 0 and run_config["cyclic_storage"]:
@@ -492,7 +496,7 @@ def balance_storage_inter_cluster_rule(backend_model, node, tech, datestep):
     )
 
 
-def storage_initial_rule(backend_model, node, tech):
+def storage_initial_constraint_rule(backend_model, node, tech):
     """
     If storage is cyclic, allow an initial storage to still be set. This is
     applied to the storage of the final timestep/datestep of the series as that,

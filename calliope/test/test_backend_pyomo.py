@@ -85,6 +85,7 @@ class TestModel:
         assert m._backend_model.timesteps.ord(timestep_0) == 1
 
 
+@pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestChecks:
     @pytest.mark.parametrize("on", (True, False))
     def test_operate_cyclic_storage(self, on):
@@ -172,12 +173,16 @@ class TestChecks:
         """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
-                "techs.test_supply_elec.constraints": {
-                    "force_resource": force,
-                    "resource_unit": "energy_per_cap",
-                    "resource": "file=supply_plus_resource.csv:1",
-                    "energy_cap_equals": np.inf,
-                    "energy_cap_max": np.inf,
+                "techs.test_supply_elec": {
+                    "constraints": {
+                        "resource": "file=supply_plus_resource.csv:1",
+                        "energy_cap_equals": np.inf,
+                        "energy_cap_max": np.inf,
+                    },
+                    "switches": {
+                        "force_resource": force,
+                        "resource_unit": "energy_per_cap",
+                    }
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -202,12 +207,16 @@ class TestChecks:
         """Different resource unit affects the capacities which are set to infinite"""
         m = build_model(
             {
-                "techs.test_supply_elec.constraints": {
-                    "resource_unit": resource_unit,
-                    "resource_area_max": 10,
-                    "energy_cap_max": 15,
-                    "resource": "file=supply_plus_resource.csv:1",
-                    "force_resource": force,
+                "techs.test_supply_elec": {
+                    "constraints": {
+                        "resource_area_max": 10,
+                        "energy_cap_max": 15,
+                        "resource": "file=supply_plus_resource.csv:1"
+                    },
+                    "switches": {
+                        "force_resource": force,
+                        "resource_unit": resource_unit,
+                    }
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -241,12 +250,17 @@ class TestChecks:
         """Different resource unit affects the capacities which are set to infinite"""
         m = build_model(
             {
-                "techs.test_supply_elec.constraints": {
-                    "resource_unit": resource_unit,
-                    "force_resource": True,
-                    "resource": "file=supply_plus_resource.csv:1",
-                    "energy_cap_max": 15,
+                "techs.test_supply_elec": {
+                    "constraints": {
+                        "resource": "file=supply_plus_resource.csv:1",
+                        "energy_cap_max": 15,
+                    },
+                    "switches": {
+                        "force_resource": True,
+                        "resource_unit": resource_unit,
+                    }
                 }
+
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
@@ -396,7 +410,7 @@ class TestBalanceConstraints:
         m = build_model(
             {
                 "techs.test_supply_elec.constraints.resource": 20,
-                "techs.test_supply_elec.constraints.resource_unit": "energy_per_cap",
+                "techs.test_supply_elec.switches.resource_unit": "energy_per_cap",
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -408,7 +422,7 @@ class TestBalanceConstraints:
         m = build_model(
             {
                 "techs.test_supply_elec.constraints.resource": 20,
-                "techs.test_supply_elec.constraints.resource_unit": "energy_per_area",
+                "techs.test_supply_elec.switches.resource_unit": "energy_per_area",
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -426,7 +440,7 @@ class TestBalanceConstraints:
         assert hasattr(m._backend_model, "balance_demand_constraint")
 
         m = build_model(
-            {"techs.test_demand_elec.constraints.resource_unit": "energy_per_cap"},
+            {"techs.test_demand_elec.switches.resource_unit": "energy_per_cap"},
             "simple_supply,two_hours,investment_costs",
         )
         m.run(build_only=True)
@@ -435,7 +449,7 @@ class TestBalanceConstraints:
         )
 
         m = build_model(
-            {"techs.test_demand_elec.constraints.resource_unit": "energy_per_area"},
+            {"techs.test_demand_elec.switches.resource_unit": "energy_per_area"},
             "simple_supply,two_hours,investment_costs",
         )
         m.run(build_only=True)
@@ -452,7 +466,7 @@ class TestBalanceConstraints:
         assert hasattr(m._backend_model, "resource_availability_supply_plus_constraint")
 
         m = build_model(
-            {"techs.test_supply_plus.constraints.resource_unit": "energy_per_cap"},
+            {"techs.test_supply_plus.switches.resource_unit": "energy_per_cap"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.run(build_only=True)
@@ -463,7 +477,7 @@ class TestBalanceConstraints:
         )
 
         m = build_model(
-            {"techs.test_supply_plus.constraints.resource_unit": "energy_per_area"},
+            {"techs.test_supply_plus.switches.resource_unit": "energy_per_area"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.run(build_only=True)
@@ -509,24 +523,14 @@ class TestBalanceConstraints:
         assert hasattr(m._backend_model, "storage_discharge_depth_constraint")
         assert not hasattr(m._backend_model, "storage_initial_constraint")
 
-        with pytest.raises(exceptions.ModelError) as error:
-            m2 = build_model(
-                {"techs.test_storage.constraints.storage_initial": 0.0},
-                "simple_storage,one_day,investment_costs,storage_discharge_depth",
-            )
-            m2.run(build_only=True)
-
-        assert check_error_or_warning(
-            error, "storage_initial is smaller than storage_discharge_depth."
-        )
         m3 = build_model(
             {"techs.test_storage.constraints.storage_initial": 1},
             "simple_storage,one_day,investment_costs,storage_discharge_depth",
         )
         m3.run(build_only=True)
         assert (
-            m3._model_data.storage_initial.values
-            > m3._model_data.storage_discharge_depth.values
+            m3._model_data.storage_initial.to_series.dropna()
+            > m3._model_data.storage_discharge_depth.to_series.dropna()
         ).all()
 
     def test_storage_initial_constraint(self):

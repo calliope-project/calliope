@@ -62,7 +62,9 @@ def run(model_data, masks, timings, build_only=False):
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, run_config, masks, timings, backend, build_only, backend_rerun=False):
+def run_plan(
+    model_data, run_config, masks, timings, backend, build_only, backend_rerun=False
+):
 
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 

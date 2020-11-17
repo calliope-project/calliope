@@ -129,8 +129,7 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(
     carriers_out = backend_model.carrier["out", tech]
 
     carrier_prod = sum(
-        backend_model.carrier_prod[idx[1], node, tech, timestep]
-        for idx in carriers_out
+        backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
     )
 
     return carrier_prod <= (
@@ -194,8 +193,7 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(
     carriers_out = backend_model.carrier["out", tech]
 
     carrier_prod = sum(
-        backend_model.carrier_prod[idx[1], node, tech, timestep]
-        for idx in carriers_out
+        backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
     )
 
     return carrier_prod >= (
@@ -427,9 +425,9 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
         return po.quicksum(
             getattr(backend_model, var_name)[node, tech]
             for node in backend_model.nodes
-            if [node, tech]
-            in getattr(backend_model, f"{var_name}_index")
+            if [node, tech] in getattr(backend_model, f"{var_name}_index")
         )
+
     sum_expr_units = _sum("units")
     sum_expr_purchase = _sum("purchased")
 
@@ -461,9 +459,11 @@ def asynchronous_con_milp_constraint_rule(backend_model, node, tech, timestep):
             if [carrier, node, tech, timestep]
             in getattr(backend_model, f"{var_name}_index")
         )
+
     return (
         -1 * _sum("carrier_con")
-        <= (1 - backend_model.prod_con_switch[node, tech, timestep]) * backend_model.bigM
+        <= (1 - backend_model.prod_con_switch[node, tech, timestep])
+        * backend_model.bigM
     )
 
 
@@ -489,6 +489,7 @@ def asynchronous_prod_milp_constraint_rule(backend_model, node, tech, timestep):
             if [carrier, node, tech, timestep]
             in getattr(backend_model, f"{var_name}_index")
         )
+
     return (
         _sum("carrier_prod")
         <= backend_model.prod_con_switch[node, tech, timestep] * backend_model.bigM

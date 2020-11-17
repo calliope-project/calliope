@@ -268,6 +268,7 @@ class TestEnergyCapacityPerStorageCapacity:
         assert energy_capacity == pytest.approx(180)
         assert storage_capacity == pytest.approx(180)
 
+    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_mode(self, model_file):
         model = build_model(model_file=model_file, scenario="operate_mode_min")
         with pytest.raises(calliope.exceptions.ModelError):

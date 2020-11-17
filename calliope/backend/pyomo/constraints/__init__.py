@@ -7,5 +7,6 @@ from calliope.backend.pyomo.constraints.energy_balance import *
 from calliope.backend.pyomo.constraints.milp import *
 from calliope.backend.pyomo.constraints.costs import *
 from calliope.backend.pyomo.constraints.network import *
-#from calliope.backend.pyomo.constraints.group import *
+
+# from calliope.backend.pyomo.constraints.group import *
 from calliope.backend.pyomo.constraints.conversion_plus import *

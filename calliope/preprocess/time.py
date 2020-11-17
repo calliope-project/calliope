@@ -196,9 +196,9 @@ def add_time_dimension(data, model_run):
             .item()
         ):
             # Turn to bool
-            timeseries_data_array = (
-                (timeseries_data_array == "True") | (timeseries_data_array == "1")
-            ).copy()
+            timeseries_data_array = (timeseries_data_array == "True") | (
+                timeseries_data_array == "1"
+            )
         else:
             try:
                 timeseries_data_array = timeseries_data_array.astype(
@@ -229,83 +229,32 @@ def add_time_dimension(data, model_run):
 
 
 def add_max_demand_timesteps(model_data):
-    max_demand_timesteps = []
-
-    # Get all loc_techs with a demand resource
-    loc_techs_with_demand_resource = list(
-        set(model_data.coords["loc_techs_finite_resource"].values).intersection(
-            model_data.coords["loc_techs_demand"].values
+    model_data["max_demand_timesteps"] = (
+        (
+            model_data.resource.where(model_data.resource < 0)
+            * model_data.carrier.loc[
+                {
+                    "carrier_tiers": model_data.carrier_tiers.isin(
+                        (["in", "in_2", "in_3"])
+                    )
+                }
+            ].sum("carrier_tiers")
         )
+        .sum(["nodes", "techs"])
+        .idxmin("timesteps")
     )
-
-    for carrier in list(model_data.carriers.data):
-        # Filter demand loc_techs for this carrier
-        loc_techs = [
-            i
-            for i in loc_techs_with_demand_resource
-            if "{}::{}".format(i, carrier)
-            in model_data.coords["loc_tech_carriers_con"].values
-        ]
-
-        carrier_demand = (
-            model_data.resource.loc[dict(loc_techs_finite_resource=loc_techs)]
-            .sum(dim="loc_techs_finite_resource")
-            .copy()
-        )
-
-        # Only keep negative (=demand) values
-        carrier_demand[carrier_demand.values > 0] = 0
-
-        max_demand_timesteps.append(carrier_demand.to_series().idxmin())
-
-    model_data["max_demand_timesteps"] = xr.DataArray(
-        max_demand_timesteps, dims=["carriers"]
-    )
-
     return model_data
-
-
-def add_zero_carrier_ratio_sets(model_data):
-    carrier_ratios = model_data.get("carrier_ratios", None)
-
-    if carrier_ratios is None:
-        return model_data
-
-    zero_dims = (
-        carrier_ratios.where(carrier_ratios == 0)
-        .dropna("loc_tech_carriers_conversion_plus", how="all")
-        .dropna("carrier_tiers", how="all")
-    )
-
-    if zero_dims.any().item() is False:
-        return model_data
-
-    zero_dims = zero_dims.stack(
-        loc_tech_carrier_tiers_conversion_plus_zero_ratio=[
-            "loc_tech_carriers_conversion_plus",
-            "carrier_tiers",
-        ]
-    ).dropna("loc_tech_carrier_tiers_conversion_plus_zero_ratio", how="all")
-
-    return model_data.assign_coords(
-        loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint=[
-            "::".join(i)
-            for i in zero_dims.loc_tech_carrier_tiers_conversion_plus_zero_ratio.values
-        ]
-    )
 
 
 def final_timedimension_processing(model_data):
 
     # Final checking of the data
-    # model_data, final_check_comments, warns, errors = checks.check_model_data(
-    #    model_data
-    # )
-    # exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
-
-    # model_data = add_max_demand_timesteps(model_data)
-    # model_data = add_zero_carrier_ratio_sets(model_data)
-
     model_data = reorganise_xarray_dimensions(model_data)
+    model_data, final_check_comments, warns, errors = checks.check_model_data(
+        model_data
+    )
+    exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
+
+    model_data = add_max_demand_timesteps(model_data)
 
     return model_data

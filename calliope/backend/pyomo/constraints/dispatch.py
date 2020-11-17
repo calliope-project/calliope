@@ -15,7 +15,9 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import get_param, get_previous_timestep
 
 
-def carrier_production_max_constraint_rule(backend_model, carrier, node, tech, timestep):
+def carrier_production_max_constraint_rule(
+    backend_model, carrier, node, tech, timestep
+):
     """
     Set maximum carrier production. All technologies.
 
@@ -37,7 +39,9 @@ def carrier_production_max_constraint_rule(backend_model, carrier, node, tech, t
     )
 
 
-def carrier_production_min_constraint_rule(backend_model, carrier, node, tech, timestep):
+def carrier_production_min_constraint_rule(
+    backend_model, carrier, node, tech, timestep
+):
     """
     Set minimum carrier production. All technologies except ``conversion_plus``.
 
@@ -58,7 +62,9 @@ def carrier_production_min_constraint_rule(backend_model, carrier, node, tech, t
     )
 
 
-def carrier_consumption_max_constraint_rule(backend_model, carrier, node, tech, timestep):
+def carrier_consumption_max_constraint_rule(
+    backend_model, carrier, node, tech, timestep
+):
     """
     Set maximum carrier consumption for demand, storage, and transmission techs.
 
@@ -111,7 +117,8 @@ def storage_max_constraint_rule(backend_model, node, tech, timestep):
 
     """
     return (
-        backend_model.storage[node, tech, timestep] <= backend_model.storage_cap[node, tech]
+        backend_model.storage[node, tech, timestep]
+        <= backend_model.storage_cap[node, tech]
     )
 
 
@@ -194,7 +201,9 @@ def ramping_constraint(backend_model, carrier, node, tech, timestep, direction=0
         time_res = backend_model.timestep_resolution[timestep]
         time_res_prev = backend_model.timestep_resolution[previous_step]
         # Ramping rate (fraction of installed capacity per hour)
-        ramping_rate = get_param(backend_model, "energy_ramping", (node, tech, timestep))
+        ramping_rate = get_param(
+            backend_model, "energy_ramping", (node, tech, timestep)
+        )
 
         try:
             prod_this = backend_model.carrier_prod[carrier, node, tech, timestep]

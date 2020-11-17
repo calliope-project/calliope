@@ -24,8 +24,7 @@ from calliope.preprocess import (
     build_model_data,
     apply_time_clustering,
     final_timedimension_processing,
-    create_imask_ds
-
+    create_imask_ds,
 )
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time

@@ -62,7 +62,9 @@ def cost_var_conversion_constraint_rule(backend_model, cost, node, tech, timeste
     carrier_out = backend_model.carrier["out", :, tech].index()[0][1]
     carrier_in = backend_model.carrier["in", :, tech].index()[0][1]
 
-    cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
+    cost_om_prod = get_param(
+        backend_model, "cost_om_prod", (cost, node, tech, timestep)
+    )
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     if po.value(cost_om_prod):
         cost_prod = (

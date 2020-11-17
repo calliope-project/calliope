@@ -25,6 +25,7 @@ class TestModelPreproccesing:
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
+    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_preprocess_operate(self):
         calliope.examples.operate()
 
@@ -134,7 +135,7 @@ class TestNationalScaleExampleModelInfeasibility:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
-
+@pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
@@ -349,10 +350,8 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, resource_unit, solver="cbc", solver_io=None):
         unit_override = {
-            "techs.pv.constraints": {
-                "resource": "file=pv_resource.csv:{}".format(resource_unit),
-                "resource_unit": "energy_{}".format(resource_unit),
-            },
+            "techs.pv.constraints.resource": "file=pv_resource.csv:{}".format(resource_unit),
+            "techs.pv.constraints.resource_unit": "energy_{}".format(resource_unit),
             "run.solver": solver,
         }
         override = {"model.subset_time": "2005-07-01", **unit_override}
@@ -435,6 +434,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert float(model.results.cost.sum()) == approx(540.780779)
 
+    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
         model = calliope.examples.operate(
             override_dict={"model.subset_time": ["2005-07-01", "2005-07-04"]}

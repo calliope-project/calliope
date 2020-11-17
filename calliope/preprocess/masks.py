@@ -49,17 +49,28 @@ def create_imask_ds(model_data, sets):
             if isinstance(imask, xr.DataArray) and imask.sum() != 0:
                 # Squeeze out any unwanted dimensions
                 if len(imask.dims) > len(set_config.foreach):
-                    imask = imask.sum([i for i in imask.dims if i not in set_config.foreach]) > 0
+                    imask = (
+                        imask.sum(
+                            [i for i in imask.dims if i not in set_config.foreach]
+                        )
+                        > 0
+                    )
                 # We have a problem if we have too few dimensions at this point...
                 if len(imask.dims) < len(set_config.foreach):
-                    raise ValueError(f'Missing dimension(s) in imask for set {set_name}')
+                    raise ValueError(
+                        f"Missing dimension(s) in imask for set {set_name}"
+                    )
                 if set_group not in ds.data_vars.keys():
                     ds = ds.merge(imask.to_dataset(name=set_name))
                 else:  # if already in dataset, it should look exactly the same
                     assert (ds[set_name] == imask).all().item()
-                ds[set_name].attrs[set_group] = 1  # give info on whether the mask is for a constraint, variable, etc.
-                if set_group == 'variables':
-                    ds[set_name].attrs['domain'] = set_config.get_key('domain', default='Reals')  # added info for variables
+                ds[set_name].attrs[
+                    set_group
+                ] = 1  # give info on whether the mask is for a constraint, variable, etc.
+                if set_group == "variables":
+                    ds[set_name].attrs["domain"] = set_config.get_key(
+                        "domain", default="Reals"
+                    )  # added info for variables
 
     return reorganise_xarray_dimensions(ds)
 
@@ -100,8 +111,11 @@ def subset_imask(set_config, imask):
             imask.loc[{set_name: ~imask[set_name].isin(subset)}] = False
         # Otherwise squeeze out this dimension after slicing it
         else:
-            imask = imask.loc[{set_name: ~imask[set_name].isin(subset)}].sum(set_name) > 0
+            imask = (
+                imask.loc[{set_name: ~imask[set_name].isin(subset)}].sum(set_name) > 0
+            )
     return imask
+
 
 def imask_where(model_data, where_array, initial_imask=None, initial_operator=None):
     """
@@ -112,8 +126,10 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
     """
     imasks = []
     operators = []
+
     def _func(imask_string):
         return re.search(r"(\w+)\((\w+)\)", imask_string)
+
     def _val_is(imask_string):
         return re.search(r"([\w\.]+)\=([\'\w]+)", imask_string)
 
@@ -146,7 +162,9 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
             imasks.append(imask)
     if len(imasks) - 1 != len(operators):
         # TODO: better error message
-        raise ValueError("Expression must be a list of statements separated by operators.")
+        raise ValueError(
+            "Expression must be a list of statements separated by operators."
+        )
     # Run through and combine all imasks using defined operators
     imask = imasks[0]
     for i in range(len(imasks) - 1):

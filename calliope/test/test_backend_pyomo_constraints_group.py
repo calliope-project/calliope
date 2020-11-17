@@ -35,6 +35,7 @@ def model_file():
 
 
 # Group constraints, i.e. those that can be defined on a system/subsystem scale
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 @pytest.mark.filterwarnings(
     "ignore:(?s).*All technologies were requested:calliope.exceptions.ModelWarning"
 )
@@ -729,6 +730,7 @@ class TestDemandShareGroupConstraints:
         )
 
 
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 @pytest.mark.filterwarnings(
     "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
 )
@@ -1289,6 +1291,7 @@ class TestSupplyShareGroupConstraints:
         assert ((expensive_elec_supply / supply).round(5) == 0.6).all()
 
 
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 class TestEnergyCapShareGroupConstraints:
     @pytest.fixture(scope="module")
     def model_file(self):
@@ -1483,6 +1486,7 @@ class TestEnergyCapShareGroupConstraints:
         assert model._model_data.attrs["termination_condition"] != "optimal"
 
 
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 class TestEnergyCapGroupConstraints:
     def test_no_energy_cap_constraint(self, model_file):
         model = build_model(model_file=model_file)
@@ -1615,6 +1619,7 @@ class TestEnergyCapGroupConstraints:
         assert model._model_data.attrs["termination_condition"] != "optimal"
 
 
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 class TestNetImportShareGroupConstraints:
     @pytest.fixture
     def results_for_scenario(self, model_file):
@@ -1717,6 +1722,7 @@ class TestNetImportShareGroupConstraints:
         assert net_imports <= 0
 
 
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 class TestCarrierProdGroupConstraints:
     def test_no_carrier_prod_constraint(self, model_file):
         model = build_model(model_file=model_file)

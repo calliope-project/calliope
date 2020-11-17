@@ -108,7 +108,9 @@ def systemwide_capacity_factor(results, model_data):
     else:
         energy_cap = results.energy_cap
 
-    prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(dim=["timesteps", "nodes"])
+    prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(
+        dim=["timesteps", "nodes"]
+    )
 
     cap_sum = energy_cap.sum(dim="nodes")
     time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()

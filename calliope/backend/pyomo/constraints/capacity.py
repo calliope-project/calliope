@@ -31,9 +31,7 @@ def get_capacity_constraint(
     if po.value(_equals) is not False and po.value(_equals) is not None:
         if np.isinf(po.value(_equals)):
             e = exceptions.ModelError
-            raise e(
-                f"Cannot use inf for {parameter}_equals for `{tech}` at `{node}`"
-            )
+            raise e(f"Cannot use inf for {parameter}_equals for `{tech}` at `{node}`")
         if scale:
             _equals *= scale
         return decision_variable[node, tech] == _equals
@@ -203,7 +201,9 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, node
             \\quad \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
             \\text{ if } resource\\_cap\\_equals\\_energy\\_cap = \\text{True}
     """
-    return backend_model.resource_cap[node, tech] == backend_model.energy_cap[node, tech]
+    return (
+        backend_model.resource_cap[node, tech] == backend_model.energy_cap[node, tech]
+    )
 
 
 def resource_area_constraint_rule(backend_model, node, tech):
@@ -339,7 +339,6 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
             \\forall tech \\in techs
 
     """
-
 
     max_systemwide = get_param(backend_model, "energy_cap_max_systemwide", tech)
     equals_systemwide = get_param(backend_model, "energy_cap_equals_systemwide", tech)

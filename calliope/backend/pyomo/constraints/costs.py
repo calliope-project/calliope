@@ -84,7 +84,9 @@ def cost_investment_constraint_rule(backend_model, cost, node, tech):
         Conditionally add investment costs, if the relevant set of technologies
         exists. Both inputs are strings.
         """
-        if loc_tech_is_in(backend_model, (node, tech), capacity_decision_variable + "_index"):
+        if loc_tech_is_in(
+            backend_model, (node, tech), capacity_decision_variable + "_index"
+        ):
             _cost = getattr(backend_model, capacity_decision_variable)[
                 node, tech
             ] * get_param(
@@ -109,24 +111,32 @@ def cost_investment_constraint_rule(backend_model, cost, node, tech):
 
     if loc_tech_is_in(backend_model, (node, tech), "units_index"):
         cost_of_purchase = (
-            get_param(backend_model, "cost_purchase", (cost, node, tech)) *
-            backend_model.units[node, tech]
+            get_param(backend_model, "cost_purchase", (cost, node, tech))
+            * backend_model.units[node, tech]
         )
     if loc_tech_is_in(backend_model, (node, tech), "purchased_index"):
         cost_of_purchase = (
-            get_param(backend_model, "cost_purchase", (cost, node, tech)) *
-            backend_model.purchased[node, tech]
+            get_param(backend_model, "cost_purchase", (cost, node, tech))
+            * backend_model.purchased[node, tech]
         )
     else:
         cost_of_purchase = 0
 
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = get_param(backend_model, "cost_depreciation_rate", (cost, node, tech))
+    depreciation_rate = get_param(
+        backend_model, "cost_depreciation_rate", (cost, node, tech)
+    )
 
     cost_cap = (
         depreciation_rate
         * ts_weight
-        * (cost_energy_cap + cost_storage_cap + cost_resource_cap + cost_resource_area + cost_of_purchase)
+        * (
+            cost_energy_cap
+            + cost_storage_cap
+            + cost_resource_cap
+            + cost_resource_area
+            + cost_of_purchase
+        )
     )
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
@@ -191,13 +201,17 @@ def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
 
     if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
         all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
-    elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index for supply
+    elif (
+        loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con
+    ):  # FIXME: get appropriate index for supply
         energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
         # in case energy_eff is zero, to avoid an infinite value
         if po.value(energy_eff) > 0:
-            all_costs +=  cost_om_con * (_sum("carrier_prod") / energy_eff)
+            all_costs += cost_om_con * (_sum("carrier_prod") / energy_eff)
 
-    elif loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con:  # FIXME: get appropriate index for demand
+    elif (
+        loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con
+    ):  # FIXME: get appropriate index for demand
         all_costs += cost_om_con * (-1) * _sum("carrier_con")
     export_carrier = backend_model.export_carrier[:, node, tech].index()
     if len(export_carrier) > 0:

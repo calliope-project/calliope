@@ -31,6 +31,7 @@ from calliope.core.attrdict import AttrDict
 
 logger = logging.getLogger(__name__)
 
+
 def generate_model(model_data, masks):
     """
     Generate a Pyomo model.
@@ -46,11 +47,23 @@ def generate_model(model_data, masks):
             set_data = pd.to_datetime(set_data)
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
-        setattr(backend_model, f'{k}_index', po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True))
+        setattr(
+            backend_model,
+            f"{k}_index",
+            po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
+        )
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
-        setattr(backend_model, f'{k}_constraint_index', po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True))
+        setattr(
+            backend_model,
+            f"{k}_constraint_index",
+            po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
+        )
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
-        setattr(backend_model, f'{k}_index', po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True))
+        setattr(
+            backend_model,
+            f"{k}_index",
+            po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
+        )
 
     # "Parameters"
     model_data_dict = {
@@ -82,7 +95,7 @@ def generate_model(model_data, masks):
         _kwargs = {
             "initialize": v,
             "mutable": True,
-            "within": po.Any #getattr(po, get_domain(model_data[k])),
+            "within": po.Any,  # getattr(po, get_domain(model_data[k])),
         }
         if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
             _kwargs["default"] = backend_model.__calliope_defaults[k]
@@ -95,7 +108,7 @@ def generate_model(model_data, masks):
             dims = [getattr(backend_model, model_data_dict["dims"][k][0])]
         else:
             dims = [getattr(backend_model, i) for i in model_data_dict["dims"][k]]
-        if k == 'name':
+        if k == "name":
             continue
         setattr(backend_model, k, po.Param(*dims, **_kwargs))
 
@@ -118,17 +131,32 @@ def generate_model(model_data, masks):
 
     # Variables
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
-        setattr(backend_model, k, po.Var(getattr(backend_model, f'{k}_index'), domain=getattr(po, v.domain)))
+        setattr(
+            backend_model,
+            k,
+            po.Var(getattr(backend_model, f"{k}_index"), domain=getattr(po, v.domain)),
+        )
         if k == "unmet_demand":
             backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
 
     # Expressions
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
-        setattr(backend_model, k, po.Expression(getattr(backend_model, f'{k}_index'), initialize=0.0))
+        setattr(
+            backend_model,
+            k,
+            po.Expression(getattr(backend_model, f"{k}_index"), initialize=0.0),
+        )
 
     # Constraints
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
-        setattr(backend_model, f'{k}_constraint', po.Constraint(getattr(backend_model, f'{k}_constraint_index'), rule=getattr(constraints, f'{k}_constraint_rule')))
+        setattr(
+            backend_model,
+            f"{k}_constraint",
+            po.Constraint(
+                getattr(backend_model, f"{k}_constraint_index"),
+                rule=getattr(constraints, f"{k}_constraint_rule"),
+            ),
+        )
 
     # FIXME: Optional constraints
     # optional_constraints = model_data.attrs['constraints']

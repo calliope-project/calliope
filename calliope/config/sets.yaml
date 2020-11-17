@@ -256,7 +256,7 @@ variables:
 
     resource_area:
         foreach: [nodes, techs]
-        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap], and, run.mode='plan']
+        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, run.mode='plan']
         domain: NonNegativeReals
 
     storage_cap:

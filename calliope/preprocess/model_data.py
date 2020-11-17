@@ -89,7 +89,9 @@ def get_node_params(param_dict, model_run):
     """
     For all nodes, get tech and link data
     """
-    model_locations = model_run.locations.copy()  # TODO: "locations" -> "nodes" in YAMLs
+    model_locations = (
+        model_run.locations.copy()
+    )  # TODO: "locations" -> "nodes" in YAMLs
     for node, node_info in model_locations.items():
         # Techs in node, pop them out
         techs = node_info.pop("techs", {})
@@ -285,8 +287,7 @@ def set_tech_at_node_info(param_dict, node, tech, tech_info):
             )
     for switch, switch_info in switches.items():
         param_dict.set_key(
-            set_idx(param=switch, keydict={"nodes": node, "techs": tech}),
-            switch_info,
+            set_idx(param=switch, keydict={"nodes": node, "techs": tech}), switch_info,
         )
 
     for other_param, other_info in tech_info.items():

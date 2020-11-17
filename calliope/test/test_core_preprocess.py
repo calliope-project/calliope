@@ -831,7 +831,7 @@ class TestChecks:
                         parent: demand
                         carrier: electricity
                         name: demand missing constraint
-                    constraints:
+                    switches:
                         resource_unit: power
             locations.1.techs.demand_missing_constraint:
             """
@@ -1316,7 +1316,7 @@ class TestChecks:
         """
 
         def _override(resource_unit):
-            return {"techs.test_supply_elec.constraints.resource_unit": resource_unit}
+            return {"techs.test_supply_elec.switches.resource_unit": resource_unit}
 
         with pytest.raises(exceptions.ModelError) as error:
             build_model(_override("power"), scenario="simple_supply")
@@ -1477,6 +1477,7 @@ class TestChecks:
             error, "storage_initial values larger than 1 are not allowed."
         )
 
+    @pytest.mark.xfail(reason='check is now taken care of in typedconfig')
     def test_storage_initial_smaller_than_discharge_depth(self):
         """
         Check that the storage_initial value is at least equalt to the storage_discharge_depth
@@ -1516,7 +1517,6 @@ class TestChecks:
             warn,
             "Cost classes `{'random_class'}` are defined in the objective options but not ",
         )
-
 
 
 class TestUtil:
@@ -1644,24 +1644,23 @@ class TestTime:
 
 
 class TestIMask:
-
     def parse_yaml(self, yaml_string):
         return ruamel_yaml.safe_load(yaml_string)
-
 
     @pytest.fixture
     def model_data(self):
         # TODO create model_data
         return None
 
-
     @pytest.fixture
     def foreach_imask(self):
-        return self.parse_yaml("""
+        return self.parse_yaml(
+            """
             constraints:
                 constraint_A:
                     foreach: [nodes, techs]
-        """)
+        """
+        )
 
     def test_foreach_constraint(self, model_data, foreach_imask):
         # TODO implement
