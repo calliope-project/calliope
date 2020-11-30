@@ -148,7 +148,7 @@ def constraints_to_dataset(model_run):
         i.split(".constraints.")[1]
         for i in model_run.locations.as_dict_flat().keys()
         if ".constraints." in i
-        and any([i not in j for j in [".carrier_ratios.", ".energy_cap_ratio.", ".energy_cap_max_time_varying."]])
+        and not any([j in i for j in [".carrier_ratios.", ".energy_cap_ratio.", ".energy_cap_max_time_varying."]])
     )
     for constraint in relevant_constraints:
         data_dict[constraint] = dict(dims=_get_set(constraint), data=[])
@@ -317,7 +317,7 @@ def carrier_specific_to_dataset(model_run):
                     model_run.locations[loc]
                     .techs[tech]
                     .constraints.get_key(
-                        "carrier_ratios.carrier_" + carrier_tier + "." + carrier, 1
+                        "carrier_ratios.carrier_" + carrier_tier + "." + carrier, np.nan
                     )
                 )
                 data.append(carrier_ratio)

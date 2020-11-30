@@ -365,6 +365,9 @@ def generate_constraint_sets(model_run):
     ] = sets.loc_techs_conversion_plus
     constraint_sets["loc_techs_carrier_production_max_conversion_plus_constraint"] = [
         i for i in sets.loc_techs_conversion_plus if i not in sets.loc_techs_milp
+        and not constraint_exists(
+            model_run, i, "constraints.energy_cap_max_time_varying"
+        )
     ]
     constraint_sets["loc_techs_carrier_production_min_conversion_plus_constraint"] = [
         i
