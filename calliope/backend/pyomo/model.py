@@ -48,20 +48,21 @@ def generate_model(model_data):
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
 
     # "Parameters"
-    model_data_dict = {
-        "data": {
-            k: v.to_series().dropna().replace("inf", np.inf).to_dict()
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "dims": {
-            k: v.dims
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "sets": list(model_data.coords),
-        "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
-    }
+    with pd.option_context('mode.use_inf_as_na', True):
+        model_data_dict = {
+            "data": {
+                k: v.to_series().replace("inf", np.inf).replace("-inf", -np.inf).dropna().to_dict()
+                for k, v in model_data.data_vars.items()
+                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
+            },
+            "dims": {
+                k: v.dims
+                for k, v in model_data.data_vars.items()
+                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
+            },
+            "sets": list(model_data.coords),
+            "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
+        }
 
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
