@@ -22,6 +22,7 @@ from calliope.core.util.dataset import reorganise_xarray_dimensions
 
 
 # [storage_cap_min, or, inheritance(storage), and, export=True, and, run.mode=plan]
+
 def create_imask_ds(model_data, sets):
     """
     Create boolean masks for constraints and decision variables
@@ -77,13 +78,13 @@ def create_imask_ds(model_data, sets):
 
 def param_exists(model_data, param):
     # mask by NaN and INF/-INF values = False, otherwise True
-    pd.options.mode.use_inf_as_na = True  # can only catch infs as nans using pandas
-    if isinstance(model_data.get(param), xr.DataArray):
-        _da = model_data.get(param)
-        return _da.where(pd.notnull(_da)).notnull()
-    else:
-        return False
-    pd.options.mode.use_inf_as_na = False
+    with pd.option_context("mode.use_inf_as_na", True):
+        pd.options.mode.use_inf_as_na = True  # can only catch infs as nans using pandas
+        if isinstance(model_data.get(param), xr.DataArray):
+            _da = model_data.get(param)
+            return _da.where(pd.notnull(_da)).notnull()
+        else:
+            return False
 
 
 def inheritance(model_data, tech_group):

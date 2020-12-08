@@ -53,7 +53,8 @@ def build_model_data(model_run, debug=False):
     # We build up a dictionary of the data, then convert it to an xarray Dataset
     # before applying time dimensions
     data = xr.Dataset(
-        coords={"timesteps": model_run.timesteps}, attrs=add_attributes(model_run)
+        coords={"timesteps": model_run.timeseries_data.index},
+        attrs=add_attributes(model_run),
     )
 
     # param_dict is going to be of the form (*dim_names): {(*dims): {**relevant_parms}}

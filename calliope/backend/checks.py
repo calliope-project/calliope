@@ -119,20 +119,27 @@ def check_operate_params(model_data):
         )
 
     if (
-        _is_missing("energy_cap") & (~_is_missing("energy_cap_min_use")
-        | (
-            ~_is_missing("force_resource")
-            & (model_data.resource_unit == "energy_per_cap")
-        ))
+        _is_missing("energy_cap")
+        & (
+            ~_is_missing("energy_cap_min_use")
+            | (
+                ~_is_missing("force_resource")
+                & (model_data.resource_unit == "energy_per_cap")
+            )
+        )
     ).any():
         errors.append(
             "Operate mode: User must define a finite energy_cap (via energy_cap_equals "
             "or energy_cap_max) if using force_resource or energy_cap_min_use"
         )
 
-    if (~_is_missing("resource") & (
-        _is_missing("resource_area") & (model_data.resource_unit == "energy_per_area")
-    )).any():
+    if (
+        ~_is_missing("resource")
+        & (
+            _is_missing("resource_area")
+            & (model_data.resource_unit == "energy_per_area")
+        )
+    ).any():
         errors.append(
             "Operate mode: User must define a finite resource_area "
             "(via resource_area_equals or resource_area_max) "
@@ -144,8 +151,10 @@ def check_operate_params(model_data):
         and (model_data.resource_unit == "energy_per_cap").any()
     ):
         model_data["resource_area"] = model_data.resource_area.where(
-            ~((model_data.force_resource == True)
-            & (model_data.resource_unit == "energy_per_cap"))
+            ~(
+                (model_data.force_resource == True)
+                & (model_data.resource_unit == "energy_per_cap")
+            )
         )
         warnings.append(
             "Resource area constraint removed from technologies with "
@@ -157,8 +166,10 @@ def check_operate_params(model_data):
         and (model_data.resource_unit == "energy_per_area").any()
     ):
         model_data["energy_cap"] = model_data.energy_cap.where(
-            ~((model_data.force_resource == True)
-            & (model_data.resource_unit == "energy_per_area"))
+            ~(
+                (model_data.force_resource == True)
+                & (model_data.resource_unit == "energy_per_area")
+            )
         )
         warnings.append(
             "Energy capacity constraint removed from technologies with "
@@ -168,8 +179,10 @@ def check_operate_params(model_data):
     if (model_data.resource_unit == "energy").any():
         if "energy_cap" in model_data.data_vars:
             model_data["energy_cap"] = model_data.energy_cap.where(
-                ~((model_data.force_resource == True)
-                & (model_data.resource_unit == "energy"))
+                ~(
+                    (model_data.force_resource == True)
+                    & (model_data.resource_unit == "energy")
+                )
             )
             warnings.append(
                 "Energy capacity constraint removed from technologies with "
@@ -178,8 +191,10 @@ def check_operate_params(model_data):
             )
         if "resource_area" in model_data.data_vars:
             model_data["resource_area"] = model_data.resource_area.where(
-                ~((model_data.force_resource == True)
-                & (model_data.resource_unit == "energy"))
+                ~(
+                    (model_data.force_resource == True)
+                    & (model_data.resource_unit == "energy")
+                )
             )
             warnings.append(
                 "Energy capacity constraint removed from technologies with "

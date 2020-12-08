@@ -88,6 +88,7 @@ def check_overrides(config_model, override):
     return model_warnings
 
 
+
 def check_initial(config_model):
     """
     Perform initial checks of model and run config dicts.
@@ -511,6 +512,7 @@ def _check_tech_final(
     return model_warnings, errors
 
 
+
 def check_final(model_run):
     """
     Perform final checks of the completely built model_run.
@@ -632,8 +634,13 @@ def check_model_data(model_data):
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
     if (
-        abs(model_data.get("force_resource", False) * model_data.resource) == np.inf
-    ).any():
+        (
+            model_data.get("force_resource", False)
+            * np.isinf(model_data.resource).max("timesteps")
+        )
+        .fillna(False)
+        .any()
+    ):
         errors.append(
             "Cannot have `force_resource` = True if setting infinite resource values"
         )

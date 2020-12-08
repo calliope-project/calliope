@@ -32,32 +32,38 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def generate_model(model_data, masks):
-    """
-    Generate a Pyomo model.
+def build_sets(model_data, backend_model, masks):
+        # Sets
+    _sets_coords(model_data, backend_model)
+    _sets_vars(backend_model, masks)
+    _sets_exprs(backend_model, masks)
+    _sets_constrs(backend_model, masks)
 
-    """
-    backend_model = po.ConcreteModel()
-
-    # Sets
+def _sets_coords(model_data, backend_model):
     for coord in list(model_data.coords):
         set_data = list(model_data.coords[coord].data)
         # Ensure that time steps are pandas.Timestamp objects
         if isinstance(set_data[0], np.datetime64):
             set_data = pd.to_datetime(set_data)
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
+
+def _sets_vars(backend_model, masks):
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
         setattr(
             backend_model,
             f"{k}_index",
             po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
         )
+
+def _sets_constrs(backend_model, masks):
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
         setattr(
             backend_model,
             f"{k}_constraint_index",
             po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
         )
+
+def _sets_exprs(backend_model, masks):
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
         setattr(
             backend_model,
@@ -65,21 +71,24 @@ def generate_model(model_data, masks):
             po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
         )
 
+
+def build_params(model_data, backend_model):
     # "Parameters"
-    model_data_dict = {
-        "data": {
-            k: v.to_series().replace("inf", np.nan).dropna().to_dict()
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "dims": {
-            k: v.dims
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "sets": list(model_data.coords),
-        "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
-    }
+    with pd.option_context("mode.use_inf_as_na", True):
+        model_data_dict = {
+            "data": {
+                k: v.to_series().dropna().to_dict()
+                for k, v in model_data.data_vars.items()
+                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
+            },
+            "dims": {
+                k: v.dims
+                for k, v in model_data.data_vars.items()
+                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
+            },
+            "sets": list(model_data.coords),
+            "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
+        }
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
     # remainder of dims are in alphabetic order
@@ -129,7 +138,7 @@ def generate_model(model_data, masks):
         else:
             setattr(backend_model, "objective_" + option_name, option_val)
 
-    # Variables
+def build_variables(backend_model, masks):
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
         setattr(
             backend_model,
@@ -139,15 +148,7 @@ def generate_model(model_data, masks):
         if k == "unmet_demand":
             backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
 
-    # Expressions
-    for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
-        setattr(
-            backend_model,
-            k,
-            po.Expression(getattr(backend_model, f"{k}_index"), initialize=0.0),
-        )
-
-    # Constraints
+def build_constraints(backend_model, masks):
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
         setattr(
             backend_model,
@@ -158,6 +159,35 @@ def generate_model(model_data, masks):
             ),
         )
 
+def build_expressions(backend_model, masks):
+    for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
+        setattr(
+            backend_model,
+            k,
+            po.Expression(getattr(backend_model, f"{k}_index"), initialize=0.0),
+        )
+
+def build_objective(backend_model):
+    objective_function = (
+        "calliope.backend.pyomo.objective."
+        + backend_model.__calliope_run_config["objective"]
+    )
+    load_function(objective_function)(backend_model)
+
+
+def generate_model(model_data, masks):
+    """
+    Generate a Pyomo model.
+
+    """
+    backend_model = po.ConcreteModel()
+
+    build_sets(model_data, backend_model, masks)
+    build_params(model_data, backend_model)
+    build_variables(backend_model, masks)
+    build_expressions(backend_model, masks)
+    build_constraints(backend_model, masks)
+    build_objective(backend_model)
     # FIXME: Optional constraints
     # optional_constraints = model_data.attrs['constraints']
     # if optional_constraints:
@@ -169,13 +199,9 @@ def generate_model(model_data, masks):
 
     # fetch objective function by name, pass through objective options
     # if they are present
-    objective_function = (
-        "calliope.backend.pyomo.objective."
-        + backend_model.__calliope_run_config["objective"]
-    )
-    load_function(objective_function)(backend_model)
 
     return backend_model
+
 
 
 def solve_model(

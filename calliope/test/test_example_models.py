@@ -135,6 +135,7 @@ class TestNationalScaleExampleModelInfeasibility:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
+
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
@@ -350,7 +351,9 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, resource_unit, solver="cbc", solver_io=None):
         unit_override = {
-            "techs.pv.constraints.resource": "file=pv_resource.csv:{}".format(resource_unit),
+            "techs.pv.constraints.resource": "file=pv_resource.csv:{}".format(
+                resource_unit
+            ),
             "techs.pv.constraints.resource_unit": "energy_{}".format(resource_unit),
             "run.solver": solver,
         }

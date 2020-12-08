@@ -9,8 +9,9 @@ Preprocessing of model and run configuration into a unified model_run
 AttrDict, and building of associated debug information.
 
 """
-
+# from memory_profiler import profile
 import os
+import re
 import logging
 import itertools
 import warnings
@@ -466,6 +467,9 @@ def process_tech_groups(config_model, techs):
 def load_timeseries_from_file(config_model, tskey):
     file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
     df = pd.read_csv(file_path, index_col=0)
+    df.columns = pd.MultiIndex.from_product(
+        [[tskey], df.columns], names=["source", "column"]
+    )
     return df
 
 
@@ -486,44 +490,26 @@ def check_timeseries_dataframes(timeseries_dataframes):
 
 
 def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
-
-    # If `df=` is called, timeseries_dataframes must be entered
-    if timeseries_dataframes is None:
-        raise exceptions.ModelError(
-            "Error in loading timeseries. Model config specifies df={} but "
-            "no timeseries passed as arguments in calliope.Model(...). "
-            "Note that, if running from a command line, it is not possible "
-            "to read dataframes via `df=...` and you should specify "
-            "`file=...` with a CSV file.".format(tskey)
-        )
-
     try:
         df = timeseries_dataframes[tskey]
-    except KeyError:
-        raise exceptions.ModelError(
+    except KeyError as e:
+        raise e(
             "Error in loading data from dataframe. "
             "Model attempted to load dataframe with key `{}`, "
-            "but time series passed as arguments are {}".format(
+            "but avaialable dataframes are {}".format(
                 tskey, set(timeseries_dataframes.keys())
             )
-        )
-    if not isinstance(df, pd.DataFrame):
-        raise exceptions.ModelError(
-            "Error in loading data. Object passed in time series "
-            "dictionary under key {} is a {}, not a DataFrame.".format(tskey, type(df))
         )
     return df
 
 
+def _parser(x, dtformat):
+    return pd.to_datetime(x, format=dtformat, exact=False)
+
+
 def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
-    if config_model.model.timeseries_data is None:
-        timeseries_data = AttrDict()
-    else:
-        timeseries_data = config_model.model.timeseries_data
-
-    def _parser(x, dtformat):
-        return pd.to_datetime(x, format=dtformat, exact=False)
+    timeseries_data = config_model.model.get("timeseries_data", None)
 
     dtformat = config_model.model["timeseries_dateformat"]
 
@@ -532,38 +518,28 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     model_config = config_model.model.as_dict_flat()
 
     # Find names of csv files (file=) or dataframes (df=) called in config
-    def get_names(datatype, config):
-        return set(
-            [
-                v.split("=")[1].rsplit(":", 1)[0]
-                for v in config.values()
-                if str(datatype) + "=" in str(v)
-            ]
-        )
+    def _get_names(config):
+        tsnames = []
+        tsvars = []
+        for k, v in config.items():
+            if "=" in str(v):
+                tsnames.append((v.split("=")[0], v.split("=")[1].rsplit(":", 1)[0]))
+                if ".costs." in k:
+                    tsvars.append(f"cost_{k.split('.')[-1]}")
+                else:
+                    tsvars.append(k.split(".")[-1])
+        return set(tsnames), set(tsvars)
 
-    constraint_filenames = get_names("file", location_config)
-    cluster_filenames = get_names("file", model_config)
-    constraint_dfnames = get_names("df", location_config)
-    cluster_dfnames = get_names("df", model_config)
+    constraint_tsnames, constraint_tsvars = _get_names(location_config)
+    cluster_tsnames, cluster_tsvars = _get_names(model_config)
 
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
     if timeseries_dataframes is not None:
         check_timeseries_dataframes(timeseries_dataframes)
 
-    datetime_min = []
-    datetime_max = []
-
     # Check there is at least one timeseries present
-    if (
-        len(
-            constraint_filenames
-            | cluster_filenames
-            | constraint_dfnames
-            | cluster_dfnames
-        )
-        == 0
-    ):
+    if len(constraint_tsnames) == 0:
         raise exceptions.ModelError(
             "There is no timeseries in the model. At least one timeseries is "
             "necessary to run the model."
@@ -571,21 +547,22 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
-    for tskey in (
-        constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
-    ):  # Filenames or dict keys
+    for tskey in constraint_tsnames | cluster_tsnames:
         # If tskey is a CSV path, load the CSV, else load the dataframe
-        if tskey in constraint_filenames | cluster_filenames:
-            df = load_timeseries_from_file(config_model, tskey)
-        elif tskey in constraint_dfnames | cluster_dfnames:
-            df = load_timeseries_from_dataframe(timeseries_dataframes, tskey)
+
+        if tskey[0] == "file":
+            df = load_timeseries_from_file(config_model, tskey[1])
+        elif tskey[0] == "df":
+            df = load_timeseries_from_dataframe(timeseries_dataframes, tskey[1])
+        else:
+            raise KeyError(f"Unrecognised timeseries data source {tskey[0]}")
 
         try:
             df.apply(pd.to_numeric)
         except ValueError as e:
             raise exceptions.ModelError(
                 "Error in loading data from {}. Ensure all entries are "
-                "numeric. Full error: {}".format(tskey, e)
+                "numeric. Full error: {}".format(tskey[1], e)
             )
         # Parse the dates, checking for errors specific to this
         try:
@@ -593,18 +570,17 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
         except ValueError as e:
             raise exceptions.ModelError(
                 "Error in parsing dates in timeseries data from {}, "
-                "using datetime format `{}`: {}".format(tskey, dtformat, e)
+                "using datetime format `{}`: {}".format(tskey[1], dtformat, e)
             )
-        timeseries_data[tskey] = df
-
-        datetime_min.append(df.index[0].date())
-        datetime_max.append(df.index[-1].date())
+        if timeseries_data is None:
+            timeseries_data = df
+        else:
+            timeseries_data = pd.concat([timeseries_data, df], axis=1)
 
     # Apply time subsetting, if supplied in model_run
-    subset_time_config = config_model.model.subset_time
+    subset_time_config = config_model.model.get("subset_time", None)
     if subset_time_config is not None:
         # Test parsing dates first, to make sure they fit our required subset format
-
         try:
             subset_time = _parser(subset_time_config, "%Y-%m-%d %H:%M:%S")
         except ValueError as e:
@@ -617,16 +593,16 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             time_slice = slice(subset_time_config[0], subset_time_config[1])
 
             # Don't allow slicing outside the range of input data
-            if subset_time[0].date() < max(datetime_min) or subset_time[1].date() > min(
-                datetime_max
+            if (
+                subset_time[0].date() < timeseries_data.index[0]
+                or subset_time[1].date() > timeseries_data.index[-1]
             ):
-
                 raise exceptions.ModelError(
                     "subset time range {} is outside the input data time range "
                     "[{}, {}]".format(
                         subset_time_config,
-                        max(datetime_min).strftime("%Y-%m-%d"),
-                        min(datetime_max).strftime("%Y-%m-%d"),
+                        timeseries_data.index[0].strftime("%Y-%m-%d"),
+                        timeseries_data.index[-1].strftime("%Y-%m-%d"),
                     )
                 )
         elif isinstance(subset_time_config, list):
@@ -634,32 +610,24 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                 "Invalid subset_time value: {}".format(subset_time_config)
             )
         else:
-            time_slice = str(subset_time_config)
+            time_slice = slice(subset_time_config, subset_time_config)
 
-        for k in timeseries_data.keys():
-            timeseries_data[k] = timeseries_data[k].loc[time_slice, :]
-            if timeseries_data[k].empty:
-                raise exceptions.ModelError(
-                    "The time slice {} creates an empty timeseries array for {}".format(
-                        time_slice, k
-                    )
-                )
-
-    # Ensure all timeseries have the same index
-    indices = [
-        (tskey, df.index)
-        for tskey, df in timeseries_data.items()
-        if tskey not in cluster_filenames | cluster_dfnames
-    ]
-    first_tskey, first_index = indices[0]
-    for tskey, idx in indices[1:]:
-        if not first_index.equals(idx):
+        timeseries_data = timeseries_data.loc[time_slice, :]
+        if timeseries_data.empty:
             raise exceptions.ModelError(
-                "Time series indices do not match "
-                "between {} and {}".format(first_tskey, tskey)
+                "The time slice {} creates an empty timeseries array.".format(
+                    time_slice
+                )
             )
 
-    return timeseries_data, first_index
+        if timeseries_data.isna().any().any():
+            raise exceptions.ModelError(
+                "Missing data for the timeseries array(s) {}.".format(
+                    timeseries_data.columns[timeseries_data.isna().any()].values
+                )
+            )
+
+    return timeseries_data.rename_axis(index="timesteps"), constraint_tsvars
 
 
 def generate_model_run(
@@ -710,9 +678,10 @@ def generate_model_run(
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
-    model_run["timeseries_data"], model_run["timesteps"] = process_timeseries_data(
-        config, model_run, timeseries_dataframes
-    )
+    (
+        model_run["timeseries_data"],
+        model_run["timeseries_vars"],
+    ) = process_timeseries_data(config, model_run, timeseries_dataframes)
 
     # 6) Grab additional relevant bits from run and model config
     model_run["run"] = config["run"]

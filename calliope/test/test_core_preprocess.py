@@ -1477,7 +1477,7 @@ class TestChecks:
             error, "storage_initial values larger than 1 are not allowed."
         )
 
-    @pytest.mark.xfail(reason='check is now taken care of in typedconfig')
+    @pytest.mark.xfail(reason="check is now taken care of in typedconfig")
     def test_storage_initial_smaller_than_discharge_depth(self):
         """
         Check that the storage_initial value is at least equalt to the storage_discharge_depth

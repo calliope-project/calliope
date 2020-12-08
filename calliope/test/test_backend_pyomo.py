@@ -182,7 +182,7 @@ class TestChecks:
                     "switches": {
                         "force_resource": force,
                         "resource_unit": "energy_per_cap",
-                    }
+                    },
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -211,12 +211,12 @@ class TestChecks:
                     "constraints": {
                         "resource_area_max": 10,
                         "energy_cap_max": 15,
-                        "resource": "file=supply_plus_resource.csv:1"
+                        "resource": "file=supply_plus_resource.csv:1",
                     },
                     "switches": {
                         "force_resource": force,
                         "resource_unit": resource_unit,
-                    }
+                    },
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -258,9 +258,8 @@ class TestChecks:
                     "switches": {
                         "force_resource": True,
                         "resource_unit": resource_unit,
-                    }
+                    },
                 }
-
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
         )

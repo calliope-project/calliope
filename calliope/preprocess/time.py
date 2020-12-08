@@ -98,6 +98,7 @@ def apply_time_clustering(model_data, model_run):
     return data
 
 
+
 def add_time_dimension(data, model_run):
     """
     Once all constraints and costs have been loaded into the model dataset, any
@@ -118,14 +119,9 @@ def add_time_dimension(data, model_run):
         with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
-    # data["timesteps"] = pd.to_datetime(data.timesteps)
 
     # Search through every constraint/cost for use of '='
-    for variable in data.data_vars:
-        # 1) If '=' in variable, it will give the variable a string data type
-        if data[variable].dtype.kind not in ["U", "O"]:
-            continue
-
+    for variable in model_run.timeseries_vars:
         # 2) convert to a Pandas Series to do 'string contains' search
         data_series = data[variable].to_series().dropna()
 
@@ -142,71 +138,37 @@ def add_time_dimension(data, model_run):
             continue
 
         # 5) remove all before '=' and split filename and location column
-        tskeys = tskeys.str.split("=").str[1].str.rsplit(":", 1)
-        if isinstance(tskeys.index, pd.MultiIndex):
-            tskeys.index = tskeys.index.remove_unused_levels()
+        tskeys = (
+            tskeys.str.split("=")
+            .str[1]
+            .str.rsplit(":", 1, expand=True)
+            .reset_index()
+            .rename(columns={0: "source", 1: "column"})
+            .set_index(["source", "column"])
+        )
 
         # 6) Get all timeseries data from dataframes stored in model_run
-        timeseries_data = []
-        key_errors = []
-        for loc_tech, (tskey, column) in tskeys.items():
-            try:
-                timeseries_data.append(
-                    model_run.timeseries_data[tskey].loc[:, column].values
-                )
-            except KeyError:
-                key_errors.append(
-                    "column `{}` not found in dataframe `{}`, but was requested by "
-                    "loc::tech `{}`.".format(column, tskey, loc_tech)
-                )
-        if key_errors:
-            exceptions.print_warnings_and_raise_errors(errors=key_errors)
+        timeseries_data = model_run.timeseries_data.loc[:, tskeys.index]
+        timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
 
-        timeseries_data_series = pd.DataFrame(
-            index=tskeys.index, columns=data.timesteps.values, data=timeseries_data
-        ).stack()
-        timeseries_data_series.index.rename("timesteps", -1, inplace=True)
+        # TODO: handle not having a valid file+column combination
+        # key_errors = []
+        # key_errors.append(
+        #    "column `{}` not found in dataframe `{}`, but was requested by "
+        #    "loc::tech `{}`.".format(column, tskey, loc_tech)
+        # )
+        # if key_errors:
+        #    exceptions.print_warnings_and_raise_errors(errors=key_errors)
 
         # 7) Add time dimension to the relevent DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated
         # at each timestep)
-        timeseries_data_array = xr.broadcast(data[variable], data.timesteps)[0].copy()
-        timeseries_data_array.loc[
-            xr.DataArray.from_series(timeseries_data_series).coords
-        ] = xr.DataArray.from_series(timeseries_data_series).values
 
-        # 8) assign correct dtype (might be string/object accidentally)
-        # string 'nan' to NaN:
-
-        array_to_check = timeseries_data_array.where(
-            timeseries_data_array != "nan", drop=True
+        data[variable] = (
+            xr.DataArray.from_series(timeseries_data.unstack())
+            .reindex(data[variable].coords)
+            .fillna(data[variable])
         )
-        timeseries_data_array = timeseries_data_array.where(
-            timeseries_data_array != "nan"
-        )
-
-        if (
-            (
-                (array_to_check == "True")
-                | (array_to_check == "1")
-                | (array_to_check == "False")
-                | (array_to_check == "0")
-            )
-            .all()
-            .item()
-        ):
-            # Turn to bool
-            timeseries_data_array = (timeseries_data_array == "True") | (
-                timeseries_data_array == "1"
-            )
-        else:
-            try:
-                timeseries_data_array = timeseries_data_array.astype(
-                    np.float, copy=False
-                )
-            except ValueError:
-                None
-        data[variable] = timeseries_data_array
 
     # Add timestep_resolution by looking at the time difference between timestep n
     # and timestep n + 1 for all timesteps
@@ -246,7 +208,33 @@ def add_max_demand_timesteps(model_data):
     return model_data
 
 
+def update_dtypes(model_data):
+    """
+    Update dtypes to not be 'Object', if possible.
+    Order of preference is: bool, int, float
+    """
+    for var_name, var in model_data.data_vars.items():
+        if var.dtype.kind == "O":
+            no_nans = var.where(var != "nan", drop=True)
+            model_data[var_name] = var.where(var != "nan")
+
+            if no_nans.isin(["True", 0, 1, "False", "0", "1"]).all():
+                # Turn to bool
+                model_data[var_name] = var.isin(["True", 1, "1"])
+            else:
+                try:
+                    model_data[var_name] = var.astype(np.int, copy=False)
+                except ValueError:
+                    try:
+                        model_data[var_name] = var.astype(np.float, copy=False)
+                    except ValueError:
+                        None
+    return model_data
+
+
+
 def final_timedimension_processing(model_data):
+    model_data = update_dtypes(model_data)
 
     # Final checking of the data
     model_data = reorganise_xarray_dimensions(model_data)
@@ -256,5 +244,4 @@ def final_timedimension_processing(model_data):
     exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
     model_data = add_max_demand_timesteps(model_data)
-
     return model_data

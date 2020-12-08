@@ -191,10 +191,10 @@ def mask(mask):
 
 
 def within(backend_model, var: xr.DataArray):
-    within = None
+    _within = None
     for i in var.dims:
-        if within is None:
-            within = getattr(backend_model, i)
+        if _within is None:
+            _within = getattr(backend_model, i)
         else:
-            within = within.cross(getattr(backend_model, i))
-    return within
+            _within = _within.cross(getattr(backend_model, i))
+    return _within
