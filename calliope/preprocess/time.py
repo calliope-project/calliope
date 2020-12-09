@@ -301,7 +301,7 @@ def final_timedimension_processing(model_data):
     #)
     #exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
-    #model_data = add_max_demand_timesteps(model_data)  # not needed in euro-calliope
+    model_data = add_max_demand_timesteps(model_data)  # not needed in euro-calliope
     model_data = add_zero_carrier_ratio_sets(model_data)
 
     model_data = reorganise_xarray_dimensions(model_data)

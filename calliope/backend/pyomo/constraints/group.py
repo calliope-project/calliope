@@ -449,7 +449,7 @@ def demand_share_per_timestep_decision_sum_constraint_rule(
     )
 
     # If inf was given that means that we don't limit the total share
-    if invalid(share_of_carrier_demand) or np.isinf(share_of_carrier_demand.value):
+    if invalid(share_of_carrier_demand) or np.isinf(po.value(share_of_carrier_demand)):
         return return_noconstraint("demand_share_per_timestep_decision_sum", group_name)
     else:
         lhs_loc_tech_carriers, _ = get_demand_share_lhs_and_rhs_loc_tech_carriers(
