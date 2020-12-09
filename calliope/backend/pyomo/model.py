@@ -48,10 +48,14 @@ def generate_model(model_data):
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
 
     # "Parameters"
-    with pd.option_context('mode.use_inf_as_na', True):
+    with pd.option_context("mode.use_inf_as_na", True):
         model_data_dict = {
             "data": {
-                k: v.to_series().replace("inf", np.inf).replace("-inf", -np.inf).dropna().to_dict()
+                k: v.to_series()
+                .replace("inf", np.inf)
+                .replace("-inf", -np.inf)
+                .dropna()
+                .to_dict()
                 for k, v in model_data.data_vars.items()
                 if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
             },

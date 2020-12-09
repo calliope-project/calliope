@@ -296,10 +296,10 @@ def final_timedimension_processing(model_data):
 
     # Final checking of the data
     # Too memory intensive
-    #model_data, final_check_comments, warns, errors = checks.check_model_data(
+    # model_data, final_check_comments, warns, errors = checks.check_model_data(
     #    model_data
-    #)
-    #exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
+    # )
+    # exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
     model_data = add_max_demand_timesteps(model_data)  # not needed in euro-calliope
     model_data = add_zero_carrier_ratio_sets(model_data)

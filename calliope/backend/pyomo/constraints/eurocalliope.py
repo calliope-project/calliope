@@ -46,21 +46,30 @@ def load_constraints(backend_model):
         )
 
 
-def carrier_production_max_time_varying_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def carrier_production_max_time_varying_constraint_rule(
+    backend_model, loc_tech_carrier, timestep
+):
     """
     Set maximum carrier production for technologies with time varying maximum capacity
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
     timestep_resolution = backend_model.timestep_resolution[timestep]
+
     def _get_cap(carrier_tier):
-        cap = get_param(backend_model, "energy_cap_max_time_varying", (carrier_tier, loc_tech_carrier, timestep))
+        cap = get_param(
+            backend_model,
+            "energy_cap_max_time_varying",
+            (carrier_tier, loc_tech_carrier, timestep),
+        )
         if invalid(cap):
             return 0
         else:
             return cap
 
-    energy_cap_timeseries = sum(_get_cap(i) for i in backend_model.carrier_tiers if "out" in i)
+    energy_cap_timeseries = sum(
+        _get_cap(i) for i in backend_model.carrier_tiers if "out" in i
+    )
 
     return carrier_prod <= (
         backend_model.energy_cap[loc_tech] * timestep_resolution * energy_cap_timeseries
@@ -72,13 +81,18 @@ def chp_extraction_cb_constraint_rule(backend_model, loc_tech, timestep):
     Set backpressure line for CHP plants with extraction/condensing turbine
     """
     model_data_dict = backend_model.__calliope_model_data
-    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][("out", loc_tech)]
-    loc_tech_carrier_out_2 = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][("out_2", loc_tech)]
+    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][
+        ("out", loc_tech)
+    ]
+    loc_tech_carrier_out_2 = model_data_dict["data"][
+        "lookup_loc_techs_conversion_plus"
+    ][("out_2", loc_tech)]
 
     power_to_heat_ratio = get_param(backend_model, "cb", (loc_tech))
 
     return backend_model.carrier_prod[loc_tech_carrier_out, timestep] >= (
-        backend_model.carrier_prod[loc_tech_carrier_out_2, timestep] * power_to_heat_ratio
+        backend_model.carrier_prod[loc_tech_carrier_out_2, timestep]
+        * power_to_heat_ratio
     )
 
 
@@ -87,13 +101,19 @@ def chp_extraction_cv_constraint_rule(backend_model, loc_tech, timestep):
     Set extraction line for CHP plants with extraction/condensing turbine
     """
     model_data_dict = backend_model.__calliope_model_data
-    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][("out", loc_tech)]
-    loc_tech_carrier_out_2 = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][("out_2", loc_tech)]
+    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][
+        ("out", loc_tech)
+    ]
+    loc_tech_carrier_out_2 = model_data_dict["data"][
+        "lookup_loc_techs_conversion_plus"
+    ][("out_2", loc_tech)]
 
     power_loss_factor = get_param(backend_model, "cv", (loc_tech))
 
     return backend_model.carrier_prod[loc_tech_carrier_out, timestep] <= (
-        backend_model.energy_cap[loc_tech] - backend_model.carrier_prod[loc_tech_carrier_out_2, timestep] * power_loss_factor
+        backend_model.energy_cap[loc_tech]
+        - backend_model.carrier_prod[loc_tech_carrier_out_2, timestep]
+        * power_loss_factor
     )
 
 
@@ -102,12 +122,22 @@ def chp_extraction_p2h_constraint_rule(backend_model, loc_tech, timestep):
     Set power-to-heat tail for CHPs that allow trading off power output for heat
     """
     model_data_dict = backend_model.__calliope_model_data
-    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][("out", loc_tech)]
-    loc_tech_carrier_out_2 = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][("out_2", loc_tech)]
+    loc_tech_carrier_out = model_data_dict["data"]["lookup_loc_techs_conversion_plus"][
+        ("out", loc_tech)
+    ]
+    loc_tech_carrier_out_2 = model_data_dict["data"][
+        "lookup_loc_techs_conversion_plus"
+    ][("out_2", loc_tech)]
 
     power_to_heat_ratio = get_param(backend_model, "cb", loc_tech)
-    energy_cap_ratio = get_param(backend_model, "energy_cap_ratio", ("out_2", loc_tech_carrier_out_2))
+    energy_cap_ratio = get_param(
+        backend_model, "energy_cap_ratio", ("out_2", loc_tech_carrier_out_2)
+    )
     slope = power_to_heat_ratio / (energy_cap_ratio - 1)
     return backend_model.carrier_prod[loc_tech_carrier_out, timestep] <= (
-        slope * (backend_model.energy_cap[loc_tech] * energy_cap_ratio - backend_model.carrier_prod[loc_tech_carrier_out_2, timestep])
+        slope
+        * (
+            backend_model.energy_cap[loc_tech] * energy_cap_ratio
+            - backend_model.carrier_prod[loc_tech_carrier_out_2, timestep]
+        )
     )

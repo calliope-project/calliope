@@ -364,7 +364,9 @@ def generate_constraint_sets(model_run):
         "loc_techs_balance_conversion_plus_primary_constraint"
     ] = sets.loc_techs_conversion_plus
     constraint_sets["loc_techs_carrier_production_max_conversion_plus_constraint"] = [
-        i for i in sets.loc_techs_conversion_plus if i not in sets.loc_techs_milp
+        i
+        for i in sets.loc_techs_conversion_plus
+        if i not in sets.loc_techs_milp
         and not constraint_exists(
             model_run, i, "constraints.energy_cap_max_time_varying"
         )
@@ -384,9 +386,11 @@ def generate_constraint_sets(model_run):
     constraint_sets[
         "loc_techs_balance_conversion_plus_in_3_constraint"
     ] = sets.loc_techs_in_3
-    constraint_sets[
-        "loc_techs_balance_conversion_plus_out_2_constraint"
-    ] = [i for i in sets.loc_techs_out_2 if not constraint_exists(model_run, i, "constraints.cv")]
+    constraint_sets["loc_techs_balance_conversion_plus_out_2_constraint"] = [
+        i
+        for i in sets.loc_techs_out_2
+        if not constraint_exists(model_run, i, "constraints.cv")
+    ]
     constraint_sets[
         "loc_techs_balance_conversion_plus_out_3_constraint"
     ] = sets.loc_techs_out_3
@@ -470,17 +474,31 @@ def generate_constraint_sets(model_run):
         ] = loc_techs
 
     # Euro-calliope constraints
-    constraint_sets['loc_tech_carriers_carrier_production_max_time_varying_constraint'] = [
-        i for i in sets.loc_tech_carriers_prod if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.energy_cap_max_time_varying")
+    constraint_sets[
+        "loc_tech_carriers_carrier_production_max_time_varying_constraint"
+    ] = [
+        i
+        for i in sets.loc_tech_carriers_prod
+        if constraint_exists(
+            model_run, i.rsplit("::", 1)[0], "constraints.energy_cap_max_time_varying"
+        )
     ]
-    constraint_sets['loc_techs_chp_extraction_cb_constraint'] = [
-        i for i in sets.loc_techs_conversion_plus if constraint_exists(model_run, i, "constraints.cb") and not constraint_exists(model_run, i, "constraints.energy_cap_ratio")
+    constraint_sets["loc_techs_chp_extraction_cb_constraint"] = [
+        i
+        for i in sets.loc_techs_conversion_plus
+        if constraint_exists(model_run, i, "constraints.cb")
+        and not constraint_exists(model_run, i, "constraints.energy_cap_ratio")
     ]
-    constraint_sets['loc_techs_chp_extraction_cv_constraint'] = [
-        i for i in sets.loc_techs_conversion_plus if constraint_exists(model_run, i, "constraints.cv")
+    constraint_sets["loc_techs_chp_extraction_cv_constraint"] = [
+        i
+        for i in sets.loc_techs_conversion_plus
+        if constraint_exists(model_run, i, "constraints.cv")
     ]
-    constraint_sets['loc_techs_chp_extraction_p2h_constraint'] = [
-        i for i in sets.loc_techs_conversion_plus if constraint_exists(model_run, i, "constraints.cb") and constraint_exists(model_run, i, "constraints.energy_cap_ratio")
+    constraint_sets["loc_techs_chp_extraction_p2h_constraint"] = [
+        i
+        for i in sets.loc_techs_conversion_plus
+        if constraint_exists(model_run, i, "constraints.cb")
+        and constraint_exists(model_run, i, "constraints.energy_cap_ratio")
     ]
 
     return constraint_sets
