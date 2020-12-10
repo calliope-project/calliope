@@ -11,7 +11,7 @@ Cost constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in
+from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in, invalid
 
 
 def cost_constraint_rule(backend_model, cost, node, tech):
@@ -145,13 +145,9 @@ def cost_investment_constraint_rule(backend_model, cost, node, tech):
     cost_fractional_om = cost_om_annual_investment_fraction * cost_cap
     cost_fixed_om = cost_om_annual * backend_model.energy_cap[node, tech] * ts_weight
 
-    backend_model.cost_investment_rhs[cost, node, tech].expr = (
-        cost_fractional_om + cost_fixed_om + cost_cap
-    )
-
     return (
         backend_model.cost_investment[cost, node, tech]
-        == backend_model.cost_investment_rhs[cost, node, tech]
+        == cost_fractional_om + cost_fixed_om + cost_cap
     )
 
 
@@ -179,39 +175,42 @@ def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
 
     """
 
-    cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     weight = backend_model.timestep_weights[timestep]
 
     all_costs = 0
 
-    def _sum(var_name):
+    def _sum(var_name, carriers=backend_model.carriers):
         return po.quicksum(
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
-            for carrier in backend_model.carriers
+            for carrier in carriers
             if [carrier, node, tech, timestep]
             in getattr(backend_model, f"{var_name}_index")
         )
+    cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
+    if backend_model.inheritance[tech].value.endswith('conversion_plus'):
+        carriers = [backend_model.primary_carrier_out[:, tech].index()[0][0]]
+        all_costs += cost_om_prod * _sum("carrier_prod", carriers=carriers)
+    else:
+        all_costs += (
+            cost_om_prod
+            * _sum("carrier_prod")
+        )
 
-    all_costs += (
-        get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
-        * weight
-        * _sum("carrier_prod")
-    )
+    cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
+    if cost_om_con:
+        if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
+            all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
+        elif backend_model.inheritance[tech].value.endswith('supply'):
+            energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
+            # in case energy_eff is zero, to avoid an infinite value
+            if po.value(energy_eff) > 0:
+                all_costs += cost_om_con * (_sum("carrier_prod") / energy_eff)
+        elif backend_model.inheritance[tech].value.endswith('conversion_plus'):
+            carriers = [backend_model.primary_carrier_in[:, tech].index()[0][0]]
+            all_costs += cost_om_con * (-1) * _sum("carrier_con", carriers=carriers)
+        else:
+            all_costs += cost_om_con * (-1) * _sum("carrier_con")
 
-    if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
-        all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
-    elif (
-        loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con
-    ):  # FIXME: get appropriate index for supply
-        energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
-        # in case energy_eff is zero, to avoid an infinite value
-        if po.value(energy_eff) > 0:
-            all_costs += cost_om_con * (_sum("carrier_prod") / energy_eff)
-
-    elif (
-        loc_tech_is_in(backend_model, (node, tech), "") and cost_om_con
-    ):  # FIXME: get appropriate index for demand
-        all_costs += cost_om_con * (-1) * _sum("carrier_con")
     export_carrier = backend_model.export_carrier[:, node, tech].index()
     if len(export_carrier) > 0:
         all_costs += (
@@ -219,8 +218,7 @@ def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
             * backend_model.carrier_export[export_carrier[0][0], node, tech, timestep]
         )
 
-    backend_model.cost_var_rhs[cost, node, tech, timestep].expr = all_costs * weight
     return (
         backend_model.cost_var[cost, node, tech, timestep]
-        == backend_model.cost_var_rhs[cost, node, tech, timestep]
+        == all_costs * weight
     )

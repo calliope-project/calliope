@@ -123,55 +123,6 @@ def carrier_production_min_conversion_plus_constraint_rule(
     )
 
 
-def cost_var_conversion_plus_constraint_rule(backend_model, cost, node, tech, timestep):
-    """
-    Add time-varying conversion_plus technology costs
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{cost_{var}}(loc::tech, cost, timestep) =
-            \\boldsymbol{carrier_{prod}}(loc::tech::carrier_{primary}, timestep)
-            \\times timestep_{weight}(timestep) \\times cost_{om, prod}(loc::tech, cost, timestep)
-            +
-            \\boldsymbol{carrier_{con}}(loc::tech::carrier_{primary}, timestep)
-            \\times timestep_{weight}(timestep) \\times cost_{om, con}(loc::tech, cost, timestep)
-            \\quad \\forall loc::tech \\in loc::techs_{cost_{var}, conversion^{+}}
-    """
-    weight = backend_model.timestep_weights[timestep]
-
-    carrier_con = backend_model.primary_carrier_in[:, tech].index()[0][0]
-    carrier_prod = backend_model.primary_carrier_out[:, tech].index()[0][0]
-
-    var_cost = 0
-
-    cost_om_prod = get_param(
-        backend_model, "cost_om_prod", (cost, node, tech, timestep)
-    )
-    if cost_om_prod:
-        var_cost += (
-            cost_om_prod
-            * weight
-            * backend_model.carrier_prod[carrier_prod, node, tech, timestep]
-        )
-
-    cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
-    if cost_om_con:
-        var_cost += (
-            cost_om_con
-            * weight
-            * -1
-            * backend_model.carrier_con[carrier_con, node, tech, timestep]
-        )
-
-    backend_model.cost_var_rhs[cost, node, tech, timestep] = var_cost
-    return (
-        backend_model.cost_var[cost, node, tech, timestep]
-        == backend_model.cost_var_rhs[cost, node, tech, timestep]
-    )
-
-
 def balance_conversion_plus_non_primary_constraint_rule(
     backend_model, tier, node, tech, timestep
 ):

@@ -56,10 +56,6 @@ constraints:
         foreach: [nodes, techs, timesteps]
         where: [energy_cap_min_use, and, inheritance(conversion_plus), and, cap_method='linear']
 
-    cost_var_conversion_plus:
-        foreach: [nodes, techs, costs, timesteps]
-        where: [[cost_export, or, cost_om_con, or, cost_om_prod], and, inheritance(conversion_plus)]
-
     balance_conversion_plus_non_primary:
         foreach: [nodes, techs, carrier_tiers, timesteps]
         where: [inheritance(conversion_plus)]
@@ -73,10 +69,6 @@ constraints:
     balance_conversion:
         foreach: [nodes, techs, timesteps]
         where: [inheritance(conversion)]
-
-    cost_var_conversion:
-        foreach: [nodes, techs, costs, timesteps]
-        where: [[cost_export, or, cost_om_con, or, cost_om_prod], and, inheritance(conversion)]
 
     carrier_production_max:
         foreach: [nodes, techs, carriers, timesteps]
@@ -344,17 +336,6 @@ variables:
         domain: NegativeReals
 
 expressions:
-    system_balance:
-        foreach: [nodes, carriers, timesteps]
-
     required_resource:
         foreach: [nodes, techs, timesteps]
         where: [inheritance(demand)]
-
-    cost_investment_rhs:
-        foreach: [nodes, techs, costs]
-        where: [[cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap], and, run.mode='plan']
-
-    cost_var_rhs:
-        foreach: [nodes, techs, costs, timesteps]
-        where: [cost_export, or, cost_om_con, or, cost_om_prod]
