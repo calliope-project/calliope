@@ -32,43 +32,12 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def build_sets(model_data, backend_model, masks):
-    # Sets
-    _sets_coords(model_data, backend_model)
-    _sets_vars(backend_model, masks)
-    _sets_exprs(backend_model, masks)
-    _sets_constrs(backend_model, masks)
-
-
-def _sets_coords(model_data, backend_model):
-    for coord in list(model_data.coords):
-        set_data = list(model_data.coords[coord].data)
-        # Ensure that time steps are pandas.Timestamp objects
-        if isinstance(set_data[0], np.datetime64):
-            set_data = pd.to_datetime(set_data)
-        setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
-
-
-def _sets_vars(backend_model, masks):
-    for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
-        setattr(
-            backend_model, f"{k}_index", po.Set(initialize=mask(v), ordered=True),
-        )
-
-
-def _sets_constrs(backend_model, masks):
-    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+def build_sets(model_data, backend_model):
+    for coord_name, coord_vals in model_data.coords.items():
         setattr(
             backend_model,
-            f"{k}_constraint_index",
-            po.Set(initialize=mask(v), ordered=True),
-        )
-
-
-def _sets_exprs(backend_model, masks):
-    for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
-        setattr(
-            backend_model, f"{k}_index", po.Set(initialize=mask(v), ordered=True),
+            coord_name,
+            po.Set(initialize=coord_vals.to_index(), ordered=True),
         )
 
 
@@ -88,7 +57,7 @@ def build_params(model_data, backend_model):
                 _kwargs = {
                     "initialize": v.to_series().dropna().to_dict(),
                     "mutable": True,
-                    "within": po.Any,  # getattr(po, get_domain(model_data[k])),
+                    "within": getattr(po, get_domain(v)),
                 }
             if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
                 _kwargs["default"] = backend_model.__calliope_defaults[k]
@@ -126,32 +95,25 @@ def build_params(model_data, backend_model):
 def build_variables(backend_model, masks):
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
         setattr(
-            backend_model,
-            k,
-            po.Var(getattr(backend_model, f"{k}_index"), domain=getattr(po, v.domain)),
+            backend_model, k, po.Var(mask(v), domain=getattr(po, v.domain)),
         )
         if k == "unmet_demand":
             backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
 
 
-def build_constraints(backend_model, masks):
-    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
-        setattr(
-            backend_model,
-            f"{k}_constraint",
-            po.Constraint(
-                getattr(backend_model, f"{k}_constraint_index"),
-                rule=getattr(constraints, f"{k}_constraint_rule"),
-            ),
-        )
+def build_constraints(backend_model, k, v):
+    print(k, v.nbytes)
+    setattr(
+        backend_model,
+        f"{k}_constraint",
+        po.Constraint(mask(v), rule=getattr(constraints, f"{k}_constraint_rule"),),
+    )
 
 
 def build_expressions(backend_model, masks):
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
         setattr(
-            backend_model,
-            k,
-            po.Expression(getattr(backend_model, f"{k}_index"), initialize=0.0),
+            backend_model, k, po.Expression(mask(v), initialize=0.0),
         )
 
 
@@ -170,11 +132,12 @@ def generate_model(model_data, masks):
     """
     backend_model = po.ConcreteModel()
 
-    build_sets(model_data, backend_model, masks)
+    build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
     build_variables(backend_model, masks)
     build_expressions(backend_model, masks)
-    build_constraints(backend_model, masks)
+    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+        build_constraints(backend_model, k, v)
     build_objective(backend_model)
     # FIXME: Optional constraints
     # optional_constraints = model_data.attrs['constraints']

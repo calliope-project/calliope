@@ -66,9 +66,8 @@ def create_imask_ds(model_data, sets):
                     ds = ds.merge(imask.to_dataset(name=set_name))
                 else:  # if already in dataset, it should look exactly the same
                     assert (ds[set_name] == imask).all().item()
-                ds[set_name].attrs[
-                    set_group
-                ] = 1  # give info on whether the mask is for a constraint, variable, etc.
+                # give info on whether the mask is for a constraint, variable, etc.
+                ds[set_name].attrs[set_group] = 1
                 if set_group == "variables":
                     ds[set_name].attrs["domain"] = set_config.get_key(
                         "domain", default="Reals"

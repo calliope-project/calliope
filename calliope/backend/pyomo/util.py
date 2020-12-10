@@ -185,8 +185,8 @@ def check_value(val: po.base.param._ParamData) -> bool:
 
 
 def mask(mask):
-    mask_series = mask.to_series()
-    return mask_series[mask_series].index.values
+    mask_stacked = mask.stack(dim_0=mask.dims)
+    return mask_stacked[mask_stacked].coords.to_index()
 
 
 def within(backend_model, var: xr.DataArray):
