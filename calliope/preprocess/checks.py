@@ -88,7 +88,6 @@ def check_overrides(config_model, override):
     return model_warnings
 
 
-
 def check_initial(config_model):
     """
     Perform initial checks of model and run config dicts.
@@ -510,7 +509,6 @@ def _check_tech_final(
         )
 
     return model_warnings, errors
-
 
 
 def check_final(model_run):

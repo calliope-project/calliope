@@ -363,9 +363,7 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
                 hasattr(backend_model, "clusters")
                 and backend_model.lookup_cluster_first_timestep[timestep]
             ):
-                previous_step = backend_model.lookup_cluster_last_timestep[
-                    timestep
-                ]
+                previous_step = backend_model.lookup_cluster_last_timestep[timestep]
             elif current_timestep == 0 and run_config["cyclic_storage"]:
                 previous_step = backend_model.timesteps[-1]
             else:
@@ -484,7 +482,9 @@ def balance_storage_inter_cluster_constraint_rule(backend_model, node, tech, dat
         storage_previous_step = (
             (1 - storage_loss) ** 24
         ) * backend_model.storage_inter_cluster[node, tech, previous_step]
-        final_timestep = backend_model.lookup_datestep_last_cluster_timestep[previous_step]
+        final_timestep = backend_model.lookup_datestep_last_cluster_timestep[
+            previous_step
+        ]
         storage_intra = backend_model.storage[node, tech, final_timestep]
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]

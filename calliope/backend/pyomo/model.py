@@ -33,11 +33,12 @@ logger = logging.getLogger(__name__)
 
 
 def build_sets(model_data, backend_model, masks):
-        # Sets
+    # Sets
     _sets_coords(model_data, backend_model)
     _sets_vars(backend_model, masks)
     _sets_exprs(backend_model, masks)
     _sets_constrs(backend_model, masks)
+
 
 def _sets_coords(model_data, backend_model):
     for coord in list(model_data.coords):
@@ -47,13 +48,13 @@ def _sets_coords(model_data, backend_model):
             set_data = pd.to_datetime(set_data)
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
 
+
 def _sets_vars(backend_model, masks):
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
         setattr(
-            backend_model,
-            f"{k}_index",
-            po.Set(initialize=mask(v), ordered=True),
+            backend_model, f"{k}_index", po.Set(initialize=mask(v), ordered=True),
         )
+
 
 def _sets_constrs(backend_model, masks):
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
@@ -63,12 +64,11 @@ def _sets_constrs(backend_model, masks):
             po.Set(initialize=mask(v), ordered=True),
         )
 
+
 def _sets_exprs(backend_model, masks):
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
         setattr(
-            backend_model,
-            f"{k}_index",
-            po.Set(initialize=mask(v), ordered=True),
+            backend_model, f"{k}_index", po.Set(initialize=mask(v), ordered=True),
         )
 
 
@@ -122,6 +122,7 @@ def build_params(model_data, backend_model):
         else:
             setattr(backend_model, "objective_" + option_name, option_val)
 
+
 def build_variables(backend_model, masks):
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
         setattr(
@@ -131,6 +132,7 @@ def build_variables(backend_model, masks):
         )
         if k == "unmet_demand":
             backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
+
 
 def build_constraints(backend_model, masks):
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
@@ -143,6 +145,7 @@ def build_constraints(backend_model, masks):
             ),
         )
 
+
 def build_expressions(backend_model, masks):
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
         setattr(
@@ -150,6 +153,7 @@ def build_expressions(backend_model, masks):
             k,
             po.Expression(getattr(backend_model, f"{k}_index"), initialize=0.0),
         )
+
 
 def build_objective(backend_model):
     objective_function = (
@@ -185,7 +189,6 @@ def generate_model(model_data, masks):
     # if they are present
 
     return backend_model
-
 
 
 def solve_model(

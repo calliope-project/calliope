@@ -98,7 +98,6 @@ def apply_time_clustering(model_data, model_run):
     return data
 
 
-
 def add_time_dimension(data, model_run):
     """
     Once all constraints and costs have been loaded into the model dataset, any
@@ -230,7 +229,6 @@ def update_dtypes(model_data):
                     except ValueError:
                         None
     return model_data
-
 
 
 def final_timedimension_processing(model_data):
