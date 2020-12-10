@@ -322,7 +322,6 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
 
     """
 
-    model_data_dict = backend_model.__calliope_model_data["data"]
     run_config = backend_model.__calliope_run_config
 
     resource_eff = get_param(backend_model, "resource_eff", (node, tech, timestep))
@@ -356,15 +355,15 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
             )
         elif (
             hasattr(backend_model, "storage_inter_cluster")
-            and model_data_dict["lookup_cluster_first_timestep"][timestep]
+            and backend_model.lookup_cluster_first_timestep[timestep]
         ):
             storage_previous_step = 0
         else:
             if (
                 hasattr(backend_model, "clusters")
-                and model_data_dict["lookup_cluster_first_timestep"][timestep]
+                and backend_model.lookup_cluster_first_timestep[timestep]
             ):
-                previous_step = model_data_dict["lookup_cluster_last_timestep"][
+                previous_step = backend_model.lookup_cluster_last_timestep[
                     timestep
                 ]
             elif current_timestep == 0 and run_config["cyclic_storage"]:
@@ -400,7 +399,6 @@ def balance_storage_constraint_rule(backend_model, carrier, node, tech, timestep
             - \\frac{\\boldsymbol{carrier_{prod}}(loc::tech::carrier, timestep)}{\\eta_{energy}(loc::tech, timestep)}
             \\quad \\forall loc::tech \\in loc::techs_{storage}, \\forall timestep \\in timesteps
     """
-    model_data_dict = backend_model.__calliope_model_data["data"]
     run_config = backend_model.__calliope_run_config
 
     energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
@@ -423,15 +421,15 @@ def balance_storage_constraint_rule(backend_model, carrier, node, tech, timestep
         )
     elif (
         hasattr(backend_model, "storage_inter_cluster")
-        and model_data_dict["lookup_cluster_first_timestep"][timestep]
+        and backend_model.lookup_cluster_first_timestep[timestep]
     ):
         storage_previous_step = 0
     else:
         if (
             hasattr(backend_model, "clusters")
-            and model_data_dict["lookup_cluster_first_timestep"][timestep]
+            and backend_model.lookup_cluster_first_timestep[timestep]
         ):
-            previous_step = model_data_dict["lookup_cluster_last_timestep"][timestep]
+            previous_step = backend_model.lookup_cluster_last_timestep[timestep]
         elif current_timestep == 0 and run_config["cyclic_storage"]:
             previous_step = backend_model.timesteps[-1]
         else:
@@ -486,9 +484,7 @@ def balance_storage_inter_cluster_constraint_rule(backend_model, node, tech, dat
         storage_previous_step = (
             (1 - storage_loss) ** 24
         ) * backend_model.storage_inter_cluster[node, tech, previous_step]
-        final_timestep = backend_model.__calliope_model_data["data"][
-            "lookup_datestep_last_cluster_timestep"
-        ][previous_step]
+        final_timestep = backend_model.lookup_datestep_last_cluster_timestep[previous_step]
         storage_intra = backend_model.storage[node, tech, final_timestep]
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]

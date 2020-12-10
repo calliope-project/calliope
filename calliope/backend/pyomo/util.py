@@ -67,9 +67,8 @@ def get_timestep_weight(backend_model):
     and divide it by number of hours in the year. Weight/resolution will almost
     always be 1 per step, unless time clustering/masking/resampling has taken place.
     """
-    model_data_dict = backend_model.__calliope_model_data
-    time_res = list(model_data_dict["data"]["timestep_resolution"].values())
-    weights = list(model_data_dict["data"]["timestep_weights"].values())
+    time_res = [po.value(i) for i in backend_model.timestep_resolution.values()]
+    weights = [po.value(i) for i in backend_model.timestep_weights.values()]
     return sum(np.multiply(time_res, weights)) / 8760
 
 

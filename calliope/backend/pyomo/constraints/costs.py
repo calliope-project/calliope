@@ -77,7 +77,6 @@ def cost_investment_constraint_rule(backend_model, cost, node, tech):
             ts\\_weight = \\sum_{timestep \\in timesteps} (time\\_res(timestep) \\times weight(timestep)) \\times \\frac{1}{8760}
 
     """
-    model_data_dict = backend_model.__calliope_model_data
 
     def _get_investment_cost(capacity_decision_variable):
         """

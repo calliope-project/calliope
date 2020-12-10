@@ -52,7 +52,7 @@ def _sets_vars(backend_model, masks):
         setattr(
             backend_model,
             f"{k}_index",
-            po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
+            po.Set(initialize=mask(v), ordered=True),
         )
 
 def _sets_constrs(backend_model, masks):
@@ -60,7 +60,7 @@ def _sets_constrs(backend_model, masks):
         setattr(
             backend_model,
             f"{k}_constraint_index",
-            po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
+            po.Set(initialize=mask(v), ordered=True),
         )
 
 def _sets_exprs(backend_model, masks):
@@ -68,31 +68,13 @@ def _sets_exprs(backend_model, masks):
         setattr(
             backend_model,
             f"{k}_index",
-            po.Set(within=within(backend_model, v), initialize=mask(v), ordered=True),
+            po.Set(initialize=mask(v), ordered=True),
         )
 
 
 def build_params(model_data, backend_model):
     # "Parameters"
-    with pd.option_context("mode.use_inf_as_na", True):
-        model_data_dict = {
-            "data": {
-                k: v.to_series().dropna().to_dict()
-                for k, v in model_data.data_vars.items()
-                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-            },
-            "dims": {
-                k: v.dims
-                for k, v in model_data.data_vars.items()
-                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-            },
-            "sets": list(model_data.coords),
-            "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
-        }
-    # Dims in the dict's keys are ordered as in model_data, which is enforced
-    # in model_data generation such that timesteps are always last and the
-    # remainder of dims are in alphabetic order
-    backend_model.__calliope_model_data = model_data_dict
+
     backend_model.__calliope_defaults = AttrDict.from_yaml_string(
         model_data.attrs["defaults"]
     )
@@ -100,26 +82,28 @@ def build_params(model_data, backend_model):
         model_data.attrs["run_config"]
     )
 
-    for k, v in model_data_dict["data"].items():
-        _kwargs = {
-            "initialize": v,
-            "mutable": True,
-            "within": po.Any,  # getattr(po, get_domain(model_data[k])),
-        }
-        if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
-            _kwargs["default"] = backend_model.__calliope_defaults[k]
-        # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
-        # so add those in.
-        if (
-            backend_model.__calliope_run_config["mode"] == "operate"
-            and model_data[k].attrs.get("operate_param") == 1
-        ):
-            dims = [getattr(backend_model, model_data_dict["dims"][k][0])]
-        else:
-            dims = [getattr(backend_model, i) for i in model_data_dict["dims"][k]]
-        if k == "name":
-            continue
-        setattr(backend_model, k, po.Param(*dims, **_kwargs))
+    for k, v in model_data.data_vars.items():
+        if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1:
+            with pd.option_context("mode.use_inf_as_na", True):
+                _kwargs = {
+                    "initialize": v.to_series().dropna().to_dict(),
+                    "mutable": True,
+                    "within": po.Any,  # getattr(po, get_domain(model_data[k])),
+                }
+            if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
+                _kwargs["default"] = backend_model.__calliope_defaults[k]
+            # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
+            # so add those in.
+            if (
+                backend_model.__calliope_run_config["mode"] == "operate"
+                and v.attrs.get("operate_param") == 1
+            ):
+                dims = [getattr(backend_model, v.dims[0])]
+            else:
+                dims = [getattr(backend_model, i) for i in v.dims]
+            if k == "name":
+                continue
+            setattr(backend_model, k, po.Param(*dims, **_kwargs))
 
     for option_name, option_val in backend_model.__calliope_run_config[
         "objective_options"
