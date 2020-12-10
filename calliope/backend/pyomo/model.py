@@ -102,7 +102,6 @@ def build_variables(backend_model, masks):
 
 
 def build_constraints(backend_model, k, v):
-    print(k, v.nbytes)
     setattr(
         backend_model,
         f"{k}_constraint",
