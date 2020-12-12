@@ -188,8 +188,11 @@ def invalid(val) -> bool:
 
 
 def mask(mask):
-    mask_stacked = mask.stack(dim_0=mask.dims)
-    return mask_stacked[mask_stacked].coords.to_index()
+    if len(mask.dims) == 1:
+        return mask[mask].coords.to_index()
+    else:
+        mask_stacked = mask.stack(dim_0=mask.dims)
+        return mask_stacked[mask_stacked].coords.to_index()
 
 
 def within(backend_model, var: xr.DataArray):

@@ -49,7 +49,7 @@ def minmax_cost_optimization(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
             unmet_demand = po.quicksum(
                 po.quicksum(
-                    _sum("unmet_demand", timestep), _sum("unused_supply", timestep)
+                    _sum("unmet_demand", timestep), -1 * _sum("unused_supply", timestep)
                 )
                 * backend_model.timestep_weights[timestep]
                 * backend_model.bigM

@@ -101,12 +101,13 @@ def build_variables(backend_model, masks):
             backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
 
 
-def build_constraints(backend_model, k, v):
-    setattr(
-        backend_model,
-        f"{k}_constraint",
-        po.Constraint(mask(v), rule=getattr(constraints, f"{k}_constraint_rule"),),
-    )
+def build_constraints(backend_model, masks):
+    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+        setattr(
+            backend_model,
+            f"{k}_constraint",
+            po.Constraint(mask(v), rule=getattr(constraints, f"{k}_constraint_rule"),),
+        )
 
 
 def build_expressions(backend_model, masks):
@@ -130,13 +131,15 @@ def generate_model(model_data, masks):
 
     """
     backend_model = po.ConcreteModel()
+    # remove pandas datetime from timesteps, to reduce memory usage on creating pyomo objects
+    model_data["timesteps"] = model_data.timesteps.astype(int)
+    masks["timesteps"] = masks.timesteps.astype(int)
 
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
     build_variables(backend_model, masks)
     build_expressions(backend_model, masks)
-    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
-        build_constraints(backend_model, k, v)
+    build_constraints(backend_model, masks)
     build_objective(backend_model)
     # FIXME: Optional constraints
     # optional_constraints = model_data.attrs['constraints']
@@ -244,5 +247,6 @@ def get_result_array(backend_model, model_data, masks):
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
+    results['timesteps'] = pd.to_datetime(results.timesteps)
 
     return results
