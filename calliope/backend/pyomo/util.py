@@ -92,7 +92,7 @@ def get_conversion_plus_io(backend_model, tier):
         return "in", backend_model.carrier_con
 
 
-def get_var(backend_model, var, dims=None, sparse=False):
+def get_var(backend_model, var, dims=None, sparse=False, expr=True):
     """
     Return output for variable `var` as a pandas.Series (1d),
     pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
@@ -118,12 +118,18 @@ def get_var(backend_model, var, dims=None, sparse=False):
         else:
             dims = [var_container.index_set().name]
 
-    if sparse:
+    if sparse and not expr:
         result = pd.DataFrame.from_dict(
             var_container.extract_values_sparse(), orient="index"
         )
     else:
-        result = pd.DataFrame.from_dict(var_container.extract_values(), orient="index")
+        if expr:
+            result = pd.DataFrame.from_dict(
+                {k: po.value(v) for k, v in var_container.extract_values().items()},
+                orient="index"
+            )
+        else:
+            result = pd.DataFrame.from_dict(var_container.extract_values(), orient="index")
 
     if result.empty:
         raise exceptions.BackendError("Variable {} has no data.".format(var))

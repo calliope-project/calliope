@@ -112,9 +112,14 @@ def build_constraints(backend_model, masks):
 
 def build_expressions(backend_model, masks):
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
-        setattr(
-            backend_model, k, po.Expression(mask(v), initialize=0.0),
-        )
+        if hasattr(constraints, f"{k}_expression_rule"):
+            setattr(
+                backend_model, k, po.Expression(mask(v), rule=getattr(constraints, f"{k}_expression_rule")),
+            )
+        else:
+            setattr(
+                backend_model, k, po.Expression(mask(v), initialize=0.0),
+            )
 
 
 def build_objective(backend_model):
@@ -230,6 +235,11 @@ def get_result_array(backend_model, model_data, masks):
         for i in backend_model.component_objects()
         if isinstance(i, po.base.Var)
     }
+    all_variables.update({
+        i.name: get_var(backend_model, i.name, dims=masks[i.name].dims, expr=True)
+        for i in backend_model.component_objects()
+        if isinstance(i, po.base.Expression)
+    })
 
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {

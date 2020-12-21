@@ -14,7 +14,7 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in, invalid
 
 
-def cost_constraint_rule(backend_model, cost, node, tech):
+def cost_expression_rule(backend_model, cost, node, tech):
     """
     Combine investment and time varying costs into one cost per technology.
 
@@ -27,24 +27,24 @@ def cost_constraint_rule(backend_model, cost, node, tech):
 
     """
 
-    # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
-    if loc_tech_is_in(backend_model, (node, tech), "cost_investment_index"):
+    if loc_tech_is_in(backend_model, (cost, node, tech), "cost_investment_index"):
         cost_investment = backend_model.cost_investment[cost, node, tech]
     else:
         cost_investment = 0
 
-    if loc_tech_is_in(backend_model, (node, tech), "cost_var_index"):
-        cost_var = sum(
+    if hasattr(backend_model, "cost_var_index"):
+        cost_var = po.quicksum(
             backend_model.cost_var[cost, node, tech, timestep]
             for timestep in backend_model.timesteps
+            if [cost, node, tech, timestep] in backend_model.cost_var_index
         )
     else:
         cost_var = 0
 
-    return backend_model.cost[cost, node, tech] == cost_investment + cost_var
+    return cost_investment + cost_var
 
 
-def cost_investment_constraint_rule(backend_model, cost, node, tech):
+def cost_investment_expression_rule(backend_model, cost, node, tech):
     """
     Calculate costs from capacity decision variables.
 
@@ -145,13 +145,10 @@ def cost_investment_constraint_rule(backend_model, cost, node, tech):
     cost_fractional_om = cost_om_annual_investment_fraction * cost_cap
     cost_fixed_om = cost_om_annual * backend_model.energy_cap[node, tech] * ts_weight
 
-    return (
-        backend_model.cost_investment[cost, node, tech]
-        == cost_fractional_om + cost_fixed_om + cost_cap
-    )
+    return cost_fractional_om + cost_fixed_om + cost_cap
 
 
-def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
+def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
     """
     Calculate costs from time-varying decision variables
 
@@ -218,7 +215,4 @@ def cost_var_constraint_rule(backend_model, cost, node, tech, timestep):
             * backend_model.carrier_export[export_carrier[0][0], node, tech, timestep]
         )
 
-    return (
-        backend_model.cost_var[cost, node, tech, timestep]
-        == all_costs * weight
-    )
+    return all_costs * weight
