@@ -74,6 +74,7 @@ def build_model_data(model_run, debug=False):
 
     data = add_time_dimension(data, model_run)
 
+    data = update_dtypes(data)
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset
 
@@ -613,3 +614,27 @@ def add_attributes(model_run):
     )
 
     return attr_dict
+
+
+def update_dtypes(model_data):
+    """
+    Update dtypes to not be 'Object', if possible.
+    Order of preference is: bool, int, float
+    """
+    for var_name, var in model_data.data_vars.items():
+        if var.dtype.kind in ["O", "U"]:
+            no_nans = var.where(var != "nan", drop=True)
+            model_data[var_name] = var.where(var != "nan")
+
+            if no_nans.isin(["True", 0, 1, "False", "0", "1"]).all():
+                # Turn to bool
+                model_data[var_name] = var.isin(["True", 1, "1"])
+            else:
+                try:
+                    model_data[var_name] = var.astype(np.int, copy=False)
+                except:
+                    try:
+                        model_data[var_name] = var.astype(np.float, copy=False)
+                    except:
+                        None
+    return model_data

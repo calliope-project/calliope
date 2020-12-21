@@ -25,46 +25,36 @@ def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data["sets"]
     run_config = backend_model.__calliope_run_config
 
-    if "loc_techs_cost_constraint" in sets:
-        backend_model.cost_constraint = po.Constraint(
-            backend_model.costs, backend_model.loc_techs_cost, rule=cost_constraint_rule
+    if "loc_techs_om_cost" in sets:
+        # Right-hand side expression can be later updated by export costs/revenue
+        backend_model.cost_var = po.Expression(
+            backend_model.costs,
+            backend_model.loc_techs_om_cost,
+            backend_model.timesteps,
+            initialize=0.0,
         )
-
     # FIXME: remove check for operate from constraint files, avoid investment costs more intelligently?
     if (
         "loc_techs_cost_investment_constraint" in sets
         and run_config["mode"] != "operate"
     ):
         # Right-hand side expression can be later updated by MILP investment costs
-        backend_model.cost_investment_rhs = po.Expression(
+        backend_model.cost_investment = po.Expression(
             backend_model.costs,
             backend_model.loc_techs_cost_investment_constraint,
             initialize=0.0,
         )
-
-        backend_model.cost_investment_constraint = po.Constraint(
+    if "loc_techs_cost_constraint" in sets:
+        # Right-hand side expression can be later updated by MILP investment costs
+        backend_model.cost = po.Expression(
             backend_model.costs,
-            backend_model.loc_techs_cost_investment_constraint,
-            rule=cost_investment_constraint_rule,
-        )
-
-    if "loc_techs_om_cost" in sets:
-        # Right-hand side expression can be later updated by export costs/revenue
-        backend_model.cost_var_rhs = po.Expression(
-            backend_model.costs,
-            backend_model.loc_techs_om_cost,
-            backend_model.timesteps,
+            backend_model.loc_techs_cost,
             initialize=0.0,
         )
-    if "loc_techs_cost_var_constraint" in sets:
-        # Constraint is built over a different loc_techs set to expression, as
-        # it is updated in conversion.py and conversion_plus.py constraints
-        backend_model.cost_var_constraint = po.Constraint(
-            backend_model.costs,
-            backend_model.loc_techs_cost_var_constraint,
-            backend_model.timesteps,
-            rule=cost_var_constraint_rule,
-        )
+        for cost in backend_model.costs:
+            for loc_tech in backend_model.loc_techs_cost:
+                cost_constraint_rule(backend_model, cost, loc_tech)
+
 
 
 def cost_constraint_rule(backend_model, cost, loc_tech):
@@ -86,10 +76,14 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
         loc_tech_is_in(backend_model, loc_tech, "loc_techs_investment_cost")
         and run_config["mode"] != "operate"
     ):
+        cost_investment_constraint_rule(backend_model, cost, loc_tech)
         cost_investment = backend_model.cost_investment[cost, loc_tech]
     else:
         cost_investment = 0
 
+    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_cost_var_cosntraint"):
+        for timestep in backend_model.timesteps:
+            cost_var_constraint_rule(backend_model, cost, loc_tech, timestep)
     if loc_tech_is_in(backend_model, loc_tech, "loc_techs_om_cost"):
         cost_var = sum(
             backend_model.cost_var[cost, loc_tech, timestep]
@@ -98,7 +92,7 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
     else:
         cost_var = 0
 
-    return backend_model.cost[cost, loc_tech] == cost_investment + cost_var
+    backend_model.cost[cost, loc_tech].expr = cost_investment + cost_var
 
 
 def cost_investment_constraint_rule(backend_model, cost, loc_tech):
@@ -182,13 +176,8 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_fractional_om = cost_om_annual_investment_fraction * cost_cap
     cost_fixed_om = cost_om_annual * backend_model.energy_cap[loc_tech] * ts_weight
 
-    backend_model.cost_investment_rhs[cost, loc_tech].expr = (
+    backend_model.cost_investment[cost, loc_tech].expr = (
         cost_fractional_om + cost_fixed_om + cost_cap
-    )
-
-    return (
-        backend_model.cost_investment[cost, loc_tech]
-        == backend_model.cost_investment_rhs[cost, loc_tech]
     )
 
 
@@ -260,8 +249,4 @@ def cost_var_constraint_rule(backend_model, cost, loc_tech, timestep):
                 * backend_model.carrier_con[loc_tech_carrier, timestep]
             )
 
-    backend_model.cost_var_rhs[cost, loc_tech, timestep].expr = cost_prod + cost_con
-    return (
-        backend_model.cost_var[cost, loc_tech, timestep]
-        == backend_model.cost_var_rhs[cost, loc_tech, timestep]
-    )
+    backend_model.cost_var[cost, loc_tech, timestep].expr = cost_prod + cost_con

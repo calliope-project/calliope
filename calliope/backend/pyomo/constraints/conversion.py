@@ -27,12 +27,10 @@ def load_constraints(backend_model):
         )
 
     if "loc_techs_cost_var_conversion_constraint" in sets:
-        backend_model.cost_var_conversion_constraint = po.Constraint(
-            backend_model.costs,
-            backend_model.loc_techs_cost_var_conversion_constraint,
-            backend_model.timesteps,
-            rule=cost_var_conversion_constraint_rule,
-        )
+        for cost in backend_model.costs:
+            for loc_tech in backend_model.loc_techs_cost_var_conversion_constraint:
+                for timestep in backend_model.timesteps:
+                    cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
 
 
 def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):
@@ -115,9 +113,4 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
     else:
         cost_con = 0
 
-    backend_model.cost_var_rhs[cost, loc_tech, timestep] = cost_prod + cost_con
-
-    return (
-        backend_model.cost_var[cost, loc_tech, timestep]
-        == backend_model.cost_var_rhs[cost, loc_tech, timestep]
-    )
+    backend_model.cost_var[cost, loc_tech, timestep] = cost_prod + cost_con

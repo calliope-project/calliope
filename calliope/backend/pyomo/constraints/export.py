@@ -121,7 +121,7 @@ def update_costs_var_constraint(backend_model, cost, loc_tech, timestep):
         * weight
     )
 
-    backend_model.cost_var_rhs[cost, loc_tech, timestep].expr += cost_export
+    backend_model.cost_var[cost, loc_tech, timestep].expr += cost_export
 
 
 def export_max_constraint_rule(backend_model, loc_tech_carrier, timestep):

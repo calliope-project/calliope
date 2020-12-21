@@ -567,7 +567,7 @@ def update_costs_investment_units_milp_constraint(backend_model, cost, loc_tech)
     if loc_tech_is_in(backend_model, loc_tech, "loc_techs_transmission"):
         cost_of_purchase = cost_of_purchase / 2
 
-    backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
+    backend_model.cost_investment[cost, loc_tech].expr += cost_of_purchase
 
     return None
 
@@ -602,7 +602,7 @@ def update_costs_investment_purchase_milp_constraint(backend_model, cost, loc_te
     if loc_tech_is_in(backend_model, loc_tech, "loc_techs_transmission"):
         cost_of_purchase = cost_of_purchase / 2
 
-    backend_model.cost_investment_rhs[cost, loc_tech].expr += cost_of_purchase
+    backend_model.cost_investment[cost, loc_tech].expr += cost_of_purchase
 
     return None
 

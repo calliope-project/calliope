@@ -182,8 +182,8 @@ def apply_overrides(config, scenario=None, override_dict=None):
         elif not isinstance(override_dict, AttrDict):
             override_dict = AttrDict(override_dict)
 
-        warning_messages = checks.check_overrides(config_model, override_dict)
-        exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
+        #warning_messages = checks.check_overrides(config_model, override_dict)
+        #exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
 
         # FutureWarning: If config does not include an explicit objective cost class, check override dict.
         # Added in 0.6.4-dev, to be removed in v0.7.0-dev.
@@ -224,8 +224,8 @@ def apply_overrides(config, scenario=None, override_dict=None):
             config_model, list(scenario_overrides)
         )
 
-        warning_messages = checks.check_overrides(config_model, overrides_from_scenario)
-        exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
+        #warning_messages = checks.check_overrides(config_model, overrides_from_scenario)
+        #exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
 
         # FutureWarning: If config nor override_dict include an explicit objective cost class, check scenario dict.
         # Added in 0.6.4-dev, to be removed in v0.7.0-dev

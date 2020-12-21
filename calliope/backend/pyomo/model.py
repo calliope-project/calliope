@@ -39,6 +39,7 @@ def generate_model(model_data):
     """
     backend_model = po.ConcreteModel()
 
+    logger.info("Loading sets")
     # Sets
     for coord in list(model_data.coords):
         set_data = list(model_data.coords[coord].data)
@@ -46,7 +47,7 @@ def generate_model(model_data):
         if isinstance(set_data[0], np.datetime64):
             set_data = pd.to_datetime(set_data)
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
-
+    logger.info("Loading parameters")
     # "Parameters"
     with pd.option_context("mode.use_inf_as_na", True):
         model_data_dict = {
@@ -250,7 +251,11 @@ def get_result_array(backend_model, model_data):
         for i in backend_model.component_objects()
         if isinstance(i, po.base.Var)
     }
-
+    all_variables.update({
+        i.name: get_var(backend_model, i.name, expr=True)
+        for i in backend_model.component_objects()
+        if isinstance(i, po.base.Expression)
+    })
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
         i.name: get_var(backend_model, i.name)
