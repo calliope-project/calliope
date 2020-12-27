@@ -92,7 +92,7 @@ def get_conversion_plus_io(backend_model, tier):
         return "in", backend_model.carrier_con
 
 
-def get_var(backend_model, var, dims=None, sparse=False, expr=True):
+def get_var(backend_model, var, dims=None, sparse=False, expr=False):
     """
     Return output for variable `var` as a pandas.Series (1d),
     pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
@@ -124,32 +124,17 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=True):
         )
     else:
         if expr:
-            result = pd.DataFrame.from_dict(
-                {k: po.value(v) for k, v in var_container.extract_values().items()},
-                orient="index"
+            result = pd.Series(var_container._data).apply(
+                lambda x: po.value(x) if not invalid(x) else np.nan
             )
         else:
-            result = pd.DataFrame.from_dict(var_container.extract_values(), orient="index")
-
+            result = pd.Series(var_container.extract_values())
     if result.empty:
         raise exceptions.BackendError("Variable {} has no data.".format(var))
 
-    result = result[0]  # Get the only column in the dataframe
+    result = result.rename_axis(index=dims)
 
-    if len(dims) > 1:
-        result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
-
-    if len(result.index.names) == 1:
-        result = result.sort_index()
-        result.index.name = dims[0]
-    elif len(result.index.names) == 2:
-        # if len(dims) is 2, we already have a well-formed DataFrame
-        result = result.unstack(level=0)
-        result = result.sort_index()
-    else:  # len(dims) >= 3
-        result = xr.DataArray.from_series(result)
-
-    return result
+    return xr.DataArray.from_series(result)
 
 
 @memoize

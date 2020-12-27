@@ -4,6 +4,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+from calliope.backend.pyomo.constraints.capacity import get_capacity_bounds
 import logging
 import os
 from contextlib import redirect_stdout, redirect_stderr
@@ -31,7 +32,7 @@ from calliope.core.attrdict import AttrDict
 
 logger = logging.getLogger(__name__)
 
-
+#@profile
 def build_sets(model_data, backend_model):
     for coord_name, coord_vals in model_data.coords.items():
         setattr(
@@ -40,7 +41,7 @@ def build_sets(model_data, backend_model):
             po.Set(initialize=coord_vals.to_index(), ordered=True),
         )
 
-
+#@profile
 def build_params(model_data, backend_model):
     # "Parameters"
 
@@ -91,16 +92,21 @@ def build_params(model_data, backend_model):
         else:
             setattr(backend_model, "objective_" + option_name, option_val)
 
-
+#@profile
 def build_variables(backend_model, masks):
     for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
+        if v.attrs.get('bounds', None) is not None:
+            kwargs = {'bounds': get_capacity_bounds(v.attrs['bounds'])}
+        else:
+            kwargs = {}
+
         setattr(
-            backend_model, k, po.Var(mask(v), domain=getattr(po, v.domain)),
+            backend_model, k, po.Var(mask(v), domain=getattr(po, v.domain), **kwargs),
         )
         if k == "unmet_demand":
             backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
 
-
+#@profile
 def build_constraints(backend_model, masks):
     for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
         setattr(
@@ -109,7 +115,7 @@ def build_constraints(backend_model, masks):
             po.Constraint(mask(v), rule=getattr(constraints, f"{k}_constraint_rule"),),
         )
 
-
+#@profile
 def build_expressions(backend_model, masks):
     for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
         if hasattr(constraints, f"{k}_expression_rule"):
@@ -121,7 +127,7 @@ def build_expressions(backend_model, masks):
                 backend_model, k, po.Expression(mask(v), initialize=0.0),
             )
 
-
+#@profile
 def build_objective(backend_model):
     objective_function = (
         "calliope.backend.pyomo.objective."
@@ -157,6 +163,9 @@ def generate_model(model_data, masks):
 
     # fetch objective function by name, pass through objective options
     # if they are present
+
+    model_data["timesteps"] = pd.to_datetime(model_data.timesteps, cache=False)
+    masks["timesteps"] = pd.to_datetime(masks.timesteps, cache=False)
 
     return backend_model
 
@@ -232,21 +241,19 @@ def get_result_array(backend_model, model_data, masks):
     """
     all_variables = {
         i.name: get_var(backend_model, i.name, dims=masks[i.name].dims)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.Var)
+        for i in backend_model.component_objects(ctype=po.Var)
     }
+    # Add in expressions, which are combinations of variables (e.g. costs)
     all_variables.update({
         i.name: get_var(backend_model, i.name, dims=masks[i.name].dims, expr=True)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.Expression)
+        for i in backend_model.component_objects(ctype=po.Expression)
     })
 
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
-        i.name: get_var(backend_model, i.name)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.param.IndexedParam)
-        and i.name not in model_data.data_vars.keys()
+        i.name: get_var(backend_model, i.name, expr=True)
+        for i in backend_model.component_objects(ctype=po.Param)
+        if i.name not in model_data.data_vars.keys()
         and "objective_" not in i.name
     }
 
@@ -257,6 +264,6 @@ def get_result_array(backend_model, model_data, masks):
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
-    results['timesteps'] = pd.to_datetime(results.timesteps)
+    results['timesteps'] = pd.to_datetime(results.timesteps, cache=False)
 
     return results
