@@ -258,7 +258,7 @@ def get_result_array(backend_model, model_data):
     })
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
-        i.name: get_var(backend_model, i.name)
+        i.name: get_var(backend_model, i.name, expr=True)
         for i in backend_model.component_objects()
         if isinstance(i, po.base.param.IndexedParam)
         and i.name not in model_data.data_vars.keys()
