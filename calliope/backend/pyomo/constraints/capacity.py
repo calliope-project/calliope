@@ -12,68 +12,35 @@ Capacity constraints for technologies (output, resource, area, and storage).
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import get_param
+from calliope.backend.pyomo.util import get_param, invalid
 from calliope import exceptions
 
 
-def get_capacity_constraint(
-    backend_model, parameter, node, tech, _equals=None, _max=None, _min=None, scale=None
-):
+def get_capacity_bounds(bounds):
+    def _get_bounds(backend_model, *idx):
+        def _get_bound(bound):
+            if bounds.get(bound) is not None:
+                return get_param(backend_model, bounds.get(bound), idx)
+            else:
+                return None
 
-    decision_variable = getattr(backend_model, parameter)
+        scale = _get_bound('scale')
+        _equals = _get_bound('equals')
+        _min = _get_bound('_min')
+        _max = _get_bound('max')
 
-    if not _equals:
-        _equals = get_param(backend_model, parameter + "_equals", (node, tech))
-    if not _max:
-        _max = get_param(backend_model, parameter + "_max", (node, tech))
-    if not _min:
-        _min = get_param(backend_model, parameter + "_min", (node, tech))
-    if po.value(_equals) is not False and po.value(_equals) is not None:
-        if np.isinf(po.value(_equals)):
-            e = exceptions.ModelError
-            raise e(f"Cannot use inf for {parameter}_equals for `{tech}` at `{node}`")
-        if scale:
-            _equals *= scale
-        return decision_variable[node, tech] == _equals
-    else:
-        if po.value(_min) == 0 and np.isinf(po.value(_max)):
-            return po.Constraint.NoConstraint
+        if not invalid(_equals):
+            if not invalid(scale):
+                _equals *= scale
+            return (_equals, _equals)
         else:
-            if scale:
-                _max *= scale
+            if not invalid(_min) and not invalid(scale):
                 _min *= scale
-            return (_min, decision_variable[node, tech], _max)
+            if not invalid(_max) and not invalid(scale):
+                _max *= scale
+            return (_min, _max)
 
-
-def storage_capacity_constraint_rule(backend_model, node, tech):
-    """
-    Set maximum storage capacity. Supply_plus & storage techs only
-
-    The first valid case is applied:
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{storage_{cap}}(loc::tech)
-            \\begin{cases}
-                = storage_{cap, equals}(loc::tech),& \\text{if } storage_{cap, equals}(loc::tech)\\\\
-                \\leq storage_{cap, max}(loc::tech),& \\text{if } storage_{cap, max}(loc::tech)\\\\
-                \\text{unconstrained},& \\text{otherwise}
-            \\end{cases}
-            \\forall loc::tech \\in loc::techs_{store}
-
-    and (if ``equals`` not enforced):
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{storage_{cap}}(loc::tech) \\geq storage_{cap, min}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{store}
-
-    """
-    return get_capacity_constraint(backend_model, "storage_cap", node, tech)
+    return _get_bounds
 
 
 def energy_capacity_storage_constraint_rule_old(backend_model, node, tech):
@@ -157,37 +124,6 @@ def energy_capacity_storage_equals_constraint_rule(backend_model, node, tech):
     )
 
 
-def resource_capacity_constraint_rule(backend_model, node, tech):
-    """
-    Add upper and lower bounds for resource_cap.
-
-    The first valid case is applied:
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{resource_{cap}}(loc::tech)
-            \\begin{cases}
-                = resource_{cap, equals}(loc::tech),& \\text{if } resource_{cap, equals}(loc::tech)\\\\
-                \\leq resource_{cap, max}(loc::tech),& \\text{if } resource_{cap, max}(loc::tech)\\\\
-                \\text{unconstrained},& \\text{otherwise}
-            \\end{cases}
-            \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
-
-    and (if ``equals`` not enforced):
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{resource_{cap}}(loc::tech) \\geq resource_{cap, min}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{finite\\_resource\\_supply\\_plus}
-    """
-
-    return get_capacity_constraint(backend_model, "resource_cap", node, tech)
-
-
 def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, node, tech):
     """
     Add equality constraint for resource_cap to equal energy_cap, for any technologies
@@ -205,46 +141,7 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, node
         backend_model.resource_cap[node, tech] == backend_model.energy_cap[node, tech]
     )
 
-
-def resource_area_constraint_rule(backend_model, node, tech):
-    """
-    Set upper and lower bounds for resource_area.
-
-    The first valid case is applied:
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{resource_{area}}(loc::tech)
-            \\begin{cases}
-                = resource_{area, equals}(loc::tech),& \\text{if } resource_{area, equals}(loc::tech)\\\\
-                \\leq resource_{area, max}(loc::tech),& \\text{if } resource_{area, max}(loc::tech)\\\\
-                \\text{unconstrained},& \\text{otherwise}
-            \\end{cases}
-            \\forall loc::tech \\in loc::techs_{area}
-
-    and (if ``equals`` not enforced):
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{resource_{area}}(loc::tech) \\geq resource_{area, min}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{area}
-    """
-    energy_cap_max = get_param(backend_model, "energy_cap_max", (node, tech))
-    area_per_energy_cap = get_param(
-        backend_model, "resource_area_per_energy_cap", (node, tech)
-    )
-
-    if po.value(energy_cap_max) == 0 and not po.value(area_per_energy_cap):
-        # If a technology has no energy_cap here, we force resource_area to zero,
-        # so as not to accrue spurious costs
-        return backend_model.resource_area[node, tech] == 0
-    else:
-        return get_capacity_constraint(backend_model, "resource_area", node, tech)
-
+# TODO: reintroduce a constraint to set resource_area to zero when energy_cap_max is zero
 
 def resource_area_per_energy_capacity_constraint_rule(backend_model, node, tech):
     """
@@ -284,38 +181,6 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, node):
     available_area = backend_model.available_area[node]
 
     return sum(backend_model.resource_area[node, :]) <= available_area
-
-
-def energy_capacity_constraint_rule(backend_model, node, tech):
-    """
-    Set upper and lower bounds for energy_cap.
-
-    The first valid case is applied:
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\frac{\\boldsymbol{energy_{cap}}(loc::tech)}{energy_{cap, scale}(loc::tech)}
-            \\begin{cases}
-                = energy_{cap, equals}(loc::tech),& \\text{if } energy_{cap, equals}(loc::tech)\\\\
-                \\leq energy_{cap, max}(loc::tech),& \\text{if } energy_{cap, max}(loc::tech)\\\\
-                \\text{unconstrained},& \\text{otherwise}
-            \\end{cases}
-            \\forall loc::tech \\in loc::techs
-
-    and (if ``equals`` not enforced):
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\frac{\\boldsymbol{energy_{cap}}(loc::tech)}{energy_{cap, scale}(loc::tech)}
-            \\geq energy_{cap, min}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs
-    """
-    scale = get_param(backend_model, "energy_cap_scale", (node, tech))
-    return get_capacity_constraint(backend_model, "energy_cap", node, tech, scale=scale)
 
 
 def energy_capacity_systemwide_constraint_rule(backend_model, tech):

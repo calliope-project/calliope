@@ -72,6 +72,9 @@ def create_imask_ds(model_data, sets):
                     ds[set_name].attrs["domain"] = set_config.get_key(
                         "domain", default="Reals"
                     )  # added info for variables
+                    ds[set_name].attrs["bounds"] = set_config.get_key(
+                        "bounds", default=None
+                    )  # added info for variables
 
     return reorganise_xarray_dimensions(ds)
 

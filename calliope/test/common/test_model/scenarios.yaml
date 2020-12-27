@@ -11,37 +11,37 @@ overrides:
 
     simple_supply:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_demand_elec:
 
-            1:
+            b:
                 techs:
                     test_supply_elec:
                     test_demand_elec:
 
     simple_supply_plus: # does not have a solution
         locations:
-            0:
+            a:
                 techs:
                     test_supply_plus:
                     test_demand_elec:
 
-            1:
+            b:
                 techs:
                     test_supply_plus:
                     test_demand_elec:
 
     simple_supply_and_supply_plus:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_plus:
                     test_demand_elec:
 
-            1:
+            b:
                 techs:
                     test_supply_elec:
                     test_supply_plus:
@@ -49,7 +49,7 @@ overrides:
 
     supply_and_supply_plus_milp:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_plus:
@@ -60,30 +60,30 @@ overrides:
                         costs.monetary: {purchase: 1, energy_cap: 0}
                     test_demand_elec:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     supply_purchase:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                         costs.monetary.purchase: 1
                         costs.monetary.energy_cap: 0
                     test_demand_elec:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     supply_milp:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                         constraints:
                             units_max: 1
                             energy_cap_per_unit: 15
                     test_demand_elec:
-            1.exists: false
-        links.0,1.exists: false
+            b.exists: false
+        links.a,b.exists: false
 
     supply_export:
         techs:
@@ -91,19 +91,19 @@ overrides:
                 constraints.export_carrier: electricity
                 costs.monetary.export: 0.01
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_demand_elec:
 
-            1:
+            b:
                 techs:
                     test_supply_elec:
                     test_demand_elec:
 
     simple_conversion:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
@@ -111,7 +111,7 @@ overrides:
                     test_demand_elec:
                     test_demand_heat:
 
-            1:
+            b:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
@@ -121,7 +121,7 @@ overrides:
 
     conversion_and_conversion_plus:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
@@ -131,11 +131,11 @@ overrides:
                     test_demand_elec:
                     test_demand_heat:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     conversion_plus_milp:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
@@ -146,11 +146,11 @@ overrides:
                     test_demand_elec:
                     test_demand_heat:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     conversion_plus_purchase:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
@@ -161,11 +161,11 @@ overrides:
                     test_demand_elec:
                     test_demand_heat:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     simple_conversion_plus:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_supply_gas:
@@ -174,17 +174,17 @@ overrides:
                     test_demand_elec:
                     test_demand_heat:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     simple_storage:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_storage:
                     test_demand_elec:
 
-            1:
+            b:
                 techs:
                     test_supply_elec:
                     test_storage:
@@ -198,7 +198,7 @@ overrides:
 
     storage_milp:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_storage:
@@ -208,18 +208,18 @@ overrides:
                             storage_cap_per_unit: 15
                     test_demand_elec:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     storage_purchase:
         locations:
-            0:
+            a:
                 techs:
                     test_supply_elec:
                     test_storage:
                         costs.monetary: {purchase: 1}
                     test_demand_elec:
 
-        links.0,1.exists: false
+        links.a,b.exists: false
 
     clustering:
         model.time:

@@ -7,44 +7,44 @@ overrides:
 
     no-net-imports:
         group_constraints.example_net_import_share_constraint:
-            locs: ["1"]
+            locs: ["b"]
             net_import_share_max:
                 electricity: 0
 
     no-net-imports-explicit-tech:
         group_constraints.example_net_import_share_constraint:
-            locs: ["1"]
+            locs: ["b"]
             techs: ["cheap_elec_transmission"]
             net_import_share_max:
                 electricity: 0
 
     some-imports-allowed:
         group_constraints.example_net_import_share_constraint:
-            locs: ["1"]
+            locs: ["b"]
             net_import_share_max:
                 electricity: 0.2
 
     some-imports-enforced:
         group_constraints.example_net_import_share_constraint:
-            locs: ["1"]
+            locs: ["b"]
             net_import_share_equals:
                 electricity: 0.2
 
     some-expensive-imports-enforced:
         group_constraints.example_net_import_share_constraint:
-            locs: ["0"]
+            locs: ["a"]
             net_import_share_min:
                 electricity: 0.2
 
     other-carrier:
         group_constraints.example_net_import_share_constraint:
-            locs: ["1"]
+            locs: ["b"]
             net_import_share_max:
                 wimbsi: 0
 
     ignores-imports-within-group:
         group_constraints.example_net_import_share_constraint:
-            locs: ["0", "1"]
+            locs: ["a", "b"]
             net_import_share_max:
                 electricity: 0
 

@@ -65,7 +65,7 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0,1:
+    a,b:
         techs: {cheap_polluting_supply, expensive_clean_supply, mean_supply, electricity_demand}
 
 overrides:
@@ -91,7 +91,7 @@ overrides:
                 monetary: 210
     cheap_cost_max_location_0:
         group_constraints.example_cheap_cost_max_location_0_constraint:
-            locs: ['0']
+            locs: ["a"]
             techs: ['cheap_polluting_supply']
             cost_max:
                 monetary: 10
@@ -112,7 +112,7 @@ overrides:
                 emissions: 300
     emissions_max_location_0:
         group_constraints.example_emissions_max_constraint:
-            locs: ['0']
+            locs: ['a']
             cost_max:
                 emissions: 200
 

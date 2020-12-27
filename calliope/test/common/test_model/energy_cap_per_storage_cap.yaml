@@ -41,7 +41,7 @@ techs:
             energy_cap_max: 0
 
 locations:
-    0:
+    a:
         techs:
             my_dummy_supply:
             my_storage:

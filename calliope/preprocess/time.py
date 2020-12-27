@@ -203,7 +203,7 @@ def add_max_demand_timesteps(model_data):
         )
         .sum(["nodes", "techs"])
         .idxmin("timesteps")
-    )
+    ).astype(int)
     return model_data
 
 

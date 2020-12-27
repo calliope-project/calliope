@@ -53,7 +53,7 @@ techs:
             resource: file=demand_simple.csv
 
 locations:
-    0,1:
+    a,b:
         techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
 overrides:
@@ -72,20 +72,20 @@ overrides:
                 electricity: 0.9
     demand_share_per_timestep_decision_per_location:
         group_constraints.demand_share_per_timestep_decision_loc0_constraint:
-            locs: ["0"]
+            locs: ["a"]
             demand_share_per_timestep_decision:
                 electricity: 1.0
         group_constraints.demand_share_per_timestep_decision_loc1_constraint:
-            locs: ["1"]
+            locs: ["b"]
             demand_share_per_timestep_decision:
                 electricity: 1.0
     demand_share_per_timestep_decision_per_location_inf:
         group_constraints.demand_share_per_timestep_decision_loc0_constraint:
-            locs: ["0"]
+            locs: ["a"]
             demand_share_per_timestep_decision:
                 electricity: .inf
         group_constraints.demand_share_per_timestep_decision_loc1_constraint:
-            locs: ["1"]
+            locs: ["b"]
             demand_share_per_timestep_decision:
                 electricity: .inf
     with_electricity_transmission:
@@ -104,10 +104,10 @@ overrides:
                         interest_rate: 0.1
                         energy_cap: 0
         links:
-            0,1.techs:
+            a,b.techs:
                 electricity_transmission:
         locations:
-            1.techs:
+            a.techs:
                 cheap_elec_supply.constraints.energy_cap_max: 0
                 normal_elec_supply.constraints.energy_cap_max: 0
     demand_share_per_timestep_decision_inf_with_heat:
@@ -151,7 +151,7 @@ overrides:
                 constraints:
                     resource: -2.5
         locations:
-            1.techs:
+            a.techs:
                 heating:
                 elec_to_heat:
                 heat_demand:

@@ -41,12 +41,12 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0:
+    a:
         techs:
             cheap_supply:
             expensive_supply:
             electricity_demand:
-    1:
+    b:
         techs:
             cheap_supply:
             expensive_supply:
@@ -63,11 +63,11 @@ overrides:
             energy_cap_min: 6
     energy_cap_max_location_0:
         group_constraints.example_energy_cap_max_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["cheap_supply"]
             energy_cap_max: 4
     energy_cap_min_location_0:
         group_constraints.example_energy_cap_min_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["expensive_supply"]
             energy_cap_min: 6

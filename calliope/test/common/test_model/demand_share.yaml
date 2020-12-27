@@ -64,7 +64,7 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0,1:
+    a,b:
         techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
 overrides:
@@ -85,19 +85,19 @@ overrides:
                 electricity: 0.6
     demand_share_max_location_0:
         group_constraints.example_demand_share_max_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["cheap_elec_supply"]
             demand_share_max:
                 electricity: 0.3
     demand_share_max_location_0_two_techs:
         group_constraints.example_demand_share_max_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["cheap_elec_supply", "normal_elec_supply"]
             demand_share_max:
                 electricity: 0.4
     demand_share_min_location_0:
         group_constraints.example_demand_share_min_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["expensive_elec_supply"]
             demand_share_min:
                 electricity: 0.6
@@ -126,7 +126,7 @@ overrides:
                 constraints:
                     resource: file=demand_heat.csv
         locations:
-            0,1:
+            a,b:
                 techs: {cheap_heat_supply, expensive_heat_supply, normal_heat_supply, heat_demand}
     heat_demand_share_max_systemwide:
         group_constraints.example_heat_demand_share_max_constraint:
@@ -152,14 +152,14 @@ overrides:
                     monetary:
                         om_prod: 0
         links:
-            0,1.techs:
+            a,b.techs:
                 free_transmission:
-        locations.1.techs.normal_elec_supply.exists: False
-        locations.1.techs.cheap_elec_supply.exists: False
-        locations.1.techs.expensive_elec_supply.exists: False
+        locations.a.techs.normal_elec_supply.exists: False
+        locations.a.techs.cheap_elec_supply.exists: False
+        locations.a.techs.expensive_elec_supply.exists: False
         group_constraints.transmission_not_counted:
             techs: ["cheap_elec_supply"]
-            locs: ["0"]
+            locs: ["a"]
             demand_share_max:
                 electricity: 0.4
     demand_share_per_timestep_max:

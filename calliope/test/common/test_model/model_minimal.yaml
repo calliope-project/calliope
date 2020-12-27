@@ -29,7 +29,7 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0:
+    a:
         techs:
             test_supply_elec:
             test_demand_elec:

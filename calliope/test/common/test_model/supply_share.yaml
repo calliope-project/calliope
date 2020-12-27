@@ -41,12 +41,12 @@ techs:
             resource: file=demand_elec.csv
 
 locations:
-    0:
+    a:
         techs:
             cheap_supply:
             expensive_supply:
             electricity_demand:
-    1:
+    b:
         techs:
             cheap_supply:
             expensive_supply:
@@ -70,13 +70,13 @@ overrides:
                 electricity: 0.6
     carrier_prod_share_max_location_0:
         group_constraints.example_carrier_prod_share_max_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["cheap_supply"]
             carrier_prod_share_max:
                 electricity: 0.4
     carrier_prod_share_min_location_0:
         group_constraints.example_carrier_prod_share_min_constraint:
-            locs: ["0"]
+            locs: ["a"]
             techs: ["expensive_supply"]
             carrier_prod_share_min:
                 electricity: 0.6
@@ -106,7 +106,7 @@ overrides:
             constraints:
                 energy_eff: 0.99
         techs.expensive_supply.costs.monetary.om_prod: file=cost.csv
-        links.0,1.techs: {electricity_transmission}
+        links.a,b.techs: {electricity_transmission}
     storage_tech:
         techs.storage_tech:
             essentials:
@@ -117,4 +117,4 @@ overrides:
                 storage_loss: 0.001
                 energy_eff: 0.99
         techs.expensive_supply.costs.monetary.om_prod: file=cost.csv
-        locations.0,1.techs: {storage_tech}
+        locations.a,b.techs: {storage_tech}

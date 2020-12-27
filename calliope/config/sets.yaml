@@ -1,9 +1,5 @@
 constraints:
 
-    storage_capacity:
-        foreach: [nodes, techs]
-        where: [storage_cap_min, or, storage_cap_max, or, storage_cap_equals]
-
     energy_capacity_storage_min:
         foreach: [nodes, techs]
         where: [energy_capacity_storage_min]
@@ -16,17 +12,9 @@ constraints:
         foreach: [nodes, techs]
         where: [energy_capacity_storage_equals]
 
-    resource_capacity:
-        foreach: [nodes, techs]
-        where: [resource_cap_min, or, resource_cap_max, or, resource_cap_equals]
-
     resource_capacity_equals_energy_capacity:
         foreach: [nodes, techs]
         where: [resource_cap_equals_energy_cap=True]
-
-    resource_area:
-        foreach: [nodes, techs]
-        where: [resource_area_min, or, resource_area_max, or, resource_area_equals]
 
     resource_area_per_energy_capacity:
         foreach: [nodes, techs]
@@ -35,10 +23,6 @@ constraints:
     resource_area_capacity_per_loc:
         foreach: [nodes]
         where: [available_area]
-
-    energy_capacity:
-        foreach: [nodes, techs]
-        where: [[energy_cap_min, or, energy_cap_max, or, energy_cap_equals], and, run.mode='plan']
 
     energy_capacity_systemwide:
         foreach: [techs]
@@ -145,10 +129,6 @@ constraints:
         foreach: [nodes, techs, timesteps]
         where: [cap_method='integer']
 
-    unit_capacity_milp:
-        foreach: [nodes, techs]
-        where: [[units_max, or, units_min, or, units_min], and, cap_method='integer', and, run.mode='plan']
-
     carrier_production_max_milp:
         foreach: [nodes, techs, carriers, timesteps]
         where: [not inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
@@ -217,6 +197,11 @@ variables:
         foreach: [nodes, techs]
         where: [run.mode='plan']
         domain: NonNegativeReals
+        bounds:
+            min: energy_cap_min
+            max: energy_cap_max
+            equals: energy_cap_equals
+            scale: energy_cap_scale
 
     carrier_prod:
         foreach: [nodes, techs, carriers, timesteps]
@@ -232,11 +217,19 @@ variables:
         foreach: [nodes, techs]
         where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, run.mode='plan']
         domain: NonNegativeReals
+        bounds:
+            min: resource_area_min
+            max: resource_area_max
+            equals: resource_area_equals
 
     storage_cap:
         foreach: [nodes, techs]
         where: [[inheritance(storage), or, inheritance(supply_plus)], and, run.mode='plan', and, include_storage=True]
         domain: NonNegativeReals  # FIXME: when storage_inter_cluster is active, this should be 'Reals'
+        bounds:
+            min: storage_cap_min
+            max: storage_cap_max
+            equals: storage_cap_equals
 
     storage_inter_cluster:
         foreach: [nodes, techs, datesteps]
@@ -267,6 +260,10 @@ variables:
         foreach: [nodes, techs]
         where: [inheritance(supply_plus), and, run.mode='plan']
         domain: NonNegativeReals
+        bounds:
+            min: resource_cap_min
+            max: resource_cap_max
+            equals: resource_cap_equals
 
     carrier_export:
         foreach: [nodes, techs, carriers, timesteps]
@@ -286,6 +283,10 @@ variables:
         foreach: [nodes, techs]
         where: [cap_method='integer', and, run.mode='plan']
         domain: NonNegativeIntegers
+        bounds:
+            min: units_min
+            max: units_max
+            equals: units_equals
 
     operating_units:
         foreach: [nodes, techs, timesteps]

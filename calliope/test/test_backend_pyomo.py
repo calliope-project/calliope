@@ -81,7 +81,7 @@ class TestModel:
         """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run(build_only=True)
-        timestep_0 = pd.Timestamp("2005-01-01 00:00:00")
+        timestep_0 = pd.to_datetime(["2005-01-01 00:00:00"]).astype(int)[0]
         assert m._backend_model.timesteps.ord(timestep_0) == 1
 
 
@@ -528,8 +528,8 @@ class TestBalanceConstraints:
         )
         m3.run(build_only=True)
         assert (
-            m3._model_data.storage_initial.to_series.dropna()
-            > m3._model_data.storage_discharge_depth.to_series.dropna()
+            m3._model_data.storage_initial.to_series().dropna()
+            > m3._model_data.storage_discharge_depth.to_series().dropna()
         ).all()
 
     def test_storage_initial_constraint(self):
@@ -985,7 +985,7 @@ class TestCapacityConstraints:
         )
 
         m = build_model(
-            {"locations.0.available_area": 1},
+            {"locations.a.available_area": 1},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.run(build_only=True)
@@ -995,7 +995,7 @@ class TestCapacityConstraints:
 
         m = build_model(
             {
-                "locations.0.available_area": 1,
+                "locations.a.available_area": 1,
                 "techs.test_supply_plus.constraints.resource_area_max": 10,
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
@@ -1036,7 +1036,7 @@ class TestCapacityConstraints:
     def test_loc_techs_energy_capacity_constraint_warning_on_infinite_equals(self):
         # Check that setting `_equals` to infinity is caught:
         override = {
-            "locations.0.techs.test_supply_elec.constraints.energy_cap_equals": np.inf
+            "locations.a.techs.test_supply_elec.constraints.energy_cap_equals": np.inf
         }
         with pytest.raises(exceptions.ModelError) as error:
             m = build_model(override, "simple_supply,two_hours,investment_costs")
@@ -1712,25 +1712,25 @@ class TestMILPConstraints:
         """
 
         override_max = {
-            "links.0,1.exists": True,
+            "links.a,b.exists": True,
             "techs.test_conversion_plus.constraints.units_max_systemwide": 2,
-            "locations.1.techs.test_conversion_plus.constraints": {
+            "locations.b.techs.test_conversion_plus.constraints": {
                 "units_max": 2,
                 "energy_cap_per_unit": 5,
             },
         }
         override_equals = {
-            "links.0,1.exists": True,
+            "links.a,b.exists": True,
             "techs.test_conversion_plus.constraints.units_equals_systemwide": 1,
-            "locations.1.techs.test_conversion_plus.costs.monetary.purchase": 1,
+            "locations.b.techs.test_conversion_plus.costs.monetary.purchase": 1,
         }
         override_equals_inf = {
-            "links.0,1.exists": True,
+            "links.a,b.exists": True,
             "techs.test_conversion_plus.constraints.units_equals_systemwide": np.inf,
-            "locations.1.techs.test_conversion_plus.costs.monetary.purchase": 1,
+            "locations.b.techs.test_conversion_plus.costs.monetary.purchase": 1,
         }
         override_transmission = {
-            "links.0,1.exists": True,
+            "links.a,b.exists": True,
             "techs.test_transmission_elec.constraints": {
                 "units_max_systemwide": 1,
                 "lifetime": 25,
@@ -1742,7 +1742,7 @@ class TestMILPConstraints:
         }
         override_no_transmission = {
             "techs.test_supply_elec.constraints.units_equals_systemwide": 1,
-            "locations.1.techs.test_supply_elec.costs.monetary.purchase": 1,
+            "locations.b.techs.test_supply_elec.costs.monetary.purchase": 1,
         }
 
         m = build_model(override_max, "conversion_plus_milp,two_hours,investment_costs")

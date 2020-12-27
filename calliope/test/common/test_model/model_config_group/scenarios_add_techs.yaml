@@ -135,7 +135,7 @@ overrides:
                     interest_rate: 0.1
                     om_prod: 0.001
                     energy_cap: 10
-        links.0,1.techs: {expensive_elec_transmission}
+        links.a,b.techs: {expensive_elec_transmission}
 
     add_elec_storage:
         techs.elec_storage:
@@ -171,4 +171,4 @@ overrides:
                     interest_rate: 0.1
                     om_prod: 0.001
                     energy_cap: 0.001
-        locations.0,1.techs: {elec_supply_plus}
+        locations.a,b.techs: {elec_supply_plus}

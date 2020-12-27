@@ -92,7 +92,7 @@ techs:
                 energy_cap: 5
 
 locations:
-    0,1.techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
+    a,b.techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
 links:
-    0,1.techs: {cheap_elec_transmission}
+    a,b.techs: {cheap_elec_transmission}

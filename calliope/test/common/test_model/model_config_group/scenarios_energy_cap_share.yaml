@@ -23,7 +23,7 @@ overrides:
 
     energy_cap_share_loc_0:
         group_constraints.example_energy_cap_share_constraint:
-            locs: ["0"]
+            locs: ["a"]
 
     energy_cap_share_max_cheap_supply:
         group_constraints.example_energy_cap_share_max_constraint:
@@ -32,7 +32,7 @@ overrides:
 
     energy_cap_share_max_loc_1:
         group_constraints.example_energy_cap_share_max_constraint:
-            locs: ["1"]
+            locs: ["b"]
 
     energy_cap_share_cheap_supply:
         group_constraints.example_energy_cap_share_constraint:

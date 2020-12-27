@@ -18,8 +18,6 @@ from calliope.backend.pyomo.util import (
     loc_tech_is_in,
 )
 
-from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
-
 
 def unit_commitment_milp_constraint_rule(backend_model, node, tech, timestep):
     """
@@ -43,35 +41,6 @@ def unit_commitment_milp_constraint_rule(backend_model, node, tech, timestep):
         backend_model.operating_units[node, tech, timestep]
         <= backend_model.units[node, tech]
     )
-
-
-def unit_capacity_milp_constraint_rule(backend_model, node, tech):
-    """
-    Add upper and lower bounds for purchased units of a technology
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{units}(loc::tech)
-            \\begin{cases}
-                = units_{equals}(loc::tech),& \\text{if } units_{equals}(loc::tech)\\\\
-                \\leq units_{max}(loc::tech),& \\text{if } units_{max}(loc::tech)\\\\
-                \\text{unconstrained},& \\text{otherwise}
-            \\end{cases}
-            \\quad \\forall loc::tech \\in loc::techs_{milp}
-
-    and (if ``equals`` not enforced):
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{units}(loc::tech) \\geq units_{min}(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{milp}
-
-    """
-    return get_capacity_constraint(backend_model, "units", node, tech)
 
 
 def carrier_production_max_milp_constraint_rule(
