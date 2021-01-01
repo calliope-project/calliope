@@ -549,6 +549,7 @@ class TestBalanceConstraints:
         assert hasattr(m2._backend_model, "balance_storage_constraint")
         assert hasattr(m2._backend_model, "storage_initial_constraint")
 
+    @pytest.mark.xfail(reason="no longer a constraint we're creating")
     def test_carriers_reserve_margin_constraint(self):
         """
         i for i in sets.carriers if i in model_run.model.get_key('reserve_margin', {}).keys()
@@ -569,7 +570,7 @@ class TestCostConstraints:
         """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_constraint")
+        assert hasattr(m._backend_model, "cost")
 
     def test_loc_techs_cost_investment_constraint(self):
         """
@@ -577,7 +578,7 @@ class TestCostConstraints:
         """
         m = build_model({}, "simple_conversion,two_hours,investment_costs")
         m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_investment_constraint")
+        assert hasattr(m._backend_model, "cost_investment")
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_techs_cost_investment_milp_constraint(self):
@@ -590,7 +591,7 @@ class TestCostConstraints:
         )
         m.run(build_only=True)
 
-        assert hasattr(m._backend_model, "cost_investment_constraint")
+        assert hasattr(m._backend_model, "cost_investment")
 
     def test_loc_techs_not_cost_var_constraint(self):
         """
@@ -599,23 +600,7 @@ class TestCostConstraints:
         """
         m = build_model({}, "simple_conversion,two_hours,investment_costs")
         m.run(build_only=True)
-        assert not hasattr(m._backend_model, "cost_var_constraint")
-
-    @pytest.mark.parametrize(
-        "tech,scenario,cost",
-        (
-            ("test_conversion", "simple_conversion", "om_con"),
-            ("test_conversion_plus", "simple_conversion_plus", "om_prod"),
-        ),
-    )
-    def test_loc_techs_cost_var_rhs(self, tech, scenario, cost):
-        m = build_model(
-            {"techs.{}.costs.monetary.{}".format(tech, cost): 1},
-            "{},two_hours".format(scenario),
-        )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_var_rhs")
-        assert not hasattr(m._backend_model, "cost_var_constraint")
+        assert not hasattr(m._backend_model, "cost_var")
 
     @pytest.mark.parametrize(
         "tech,scenario,cost",
@@ -625,6 +610,8 @@ class TestCostConstraints:
             ("test_supply_plus", "simple_supply_and_supply_plus", "om_con"),
             ("test_demand_elec", "simple_supply", "om_con"),
             ("test_transmission_elec", "simple_supply", "om_prod"),
+            ("test_conversion", "simple_conversion", "om_con"),
+            ("test_conversion_plus", "simple_conversion_plus", "om_prod")
         ),
     )
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
@@ -637,7 +624,7 @@ class TestCostConstraints:
             "{},two_hours".format(scenario),
         )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_var_constraint")
+        assert hasattr(m._backend_model, "cost_var")
 
 
 class TestExportConstraints:
@@ -681,8 +668,7 @@ class TestExportConstraints:
 
         m = build_model({}, "supply_export,two_hours,investment_costs")
         m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_var_rhs")
-        assert hasattr(m._backend_model, "cost_var_constraint")
+        assert hasattr(m._backend_model, "cost_var")
 
         m = build_model(
             {"techs.test_supply_elec.costs.monetary.om_prod": 0.1},

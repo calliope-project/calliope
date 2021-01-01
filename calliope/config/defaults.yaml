@@ -177,6 +177,7 @@ techs:
             one_way: false  # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`
             allowed_carrier_con: false  # name: Energy consumption ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
             allowed_carrier_prod: false  # name: Energy production ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
+            export: false
         constraints:
             carrier_ratios: false  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
             charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).

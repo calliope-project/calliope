@@ -207,8 +207,10 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
             all_costs += cost_om_con * (-1) * _sum("carrier_con", carriers=carriers)
         else:
             all_costs += cost_om_con * (-1) * _sum("carrier_con")
-
-    export_carrier = backend_model.export_carrier[:, node, tech].index()
+    if hasattr(backend_model, "export_carrier"):
+        export_carrier = backend_model.export_carrier[:, node, tech].index()
+    else:
+        export_carrier = []
     if len(export_carrier) > 0:
         all_costs += (
             get_param(backend_model, "cost_export", (cost, node, tech, timestep))
