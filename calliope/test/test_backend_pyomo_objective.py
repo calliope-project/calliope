@@ -15,13 +15,13 @@ class TestCostMinimisationObjective:
         )
         model.run()
 
-        assert model.results.energy_cap.to_pandas()["region1-2::csp"] == approx(10000.0)
+        assert model.results.energy_cap.to_pandas()[("region1-2", "csp")] == approx(10000.0)
         assert model.results.energy_cap.to_pandas()[
-            "region1::ac_transmission:region2"
+            ("region1", "ac_transmission:region2")
         ] == approx(10000.0)
 
         assert model.results.carrier_prod.sum("timesteps").to_pandas()[
-            "region1::ccgt::power"
+            ("region1", "ccgt", "power")
         ] == approx(66530.36492823533)
 
         assert float(model.results.cost.loc[{"costs": "emissions"}].sum()) == approx(
@@ -35,13 +35,13 @@ class TestCostMinimisationObjective:
         )
         model.run()
 
-        assert model.results.energy_cap.to_pandas()["region1-2::csp"] == approx(10000.0)
+        assert model.results.energy_cap.to_pandas()[("region1-2", "csp")] == approx(10000.0)
         assert model.results.energy_cap.to_pandas()[
-            "region1::ac_transmission:region2"
+            ("region1", "ac_transmission:region2")
         ] == approx(10000.0)
 
         assert model.results.carrier_prod.sum("timesteps").to_pandas()[
-            "region1::ccgt::power"
+            ("region1", "ccgt", "power")
         ] == approx(115569.4354)
 
         assert float(model.results.cost.sum()) > 6.6e7

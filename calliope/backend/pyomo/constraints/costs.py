@@ -113,7 +113,7 @@ def cost_investment_expression_rule(backend_model, cost, node, tech):
             get_param(backend_model, "cost_purchase", (cost, node, tech))
             * backend_model.units[node, tech]
         )
-    if loc_tech_is_in(backend_model, (node, tech), "purchased_index"):
+    elif loc_tech_is_in(backend_model, (node, tech), "purchased_index"):
         cost_of_purchase = (
             get_param(backend_model, "cost_purchase", (cost, node, tech))
             * backend_model.purchased[node, tech]

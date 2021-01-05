@@ -95,7 +95,7 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(
     """
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, "energy_cap_per_unit", (node, tech))
-    carriers_out = backend_model.carrier["out", tech]
+    carriers_out = backend_model.carrier["out", :, tech].index()
 
     carrier_prod = sum(
         backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
@@ -159,7 +159,7 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(
     timestep_resolution = backend_model.timestep_resolution[timestep]
     energy_cap = get_param(backend_model, "energy_cap_per_unit", (node, tech))
     min_use = get_param(backend_model, "energy_cap_min_use", (node, tech, timestep))
-    carriers_out = backend_model.carrier["out", tech]
+    carriers_out = backend_model.carrier["out", :, tech].index()
 
     carrier_prod = sum(
         backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
@@ -394,7 +394,8 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
         return po.quicksum(
             getattr(backend_model, var_name)[node, tech]
             for node in backend_model.nodes
-            if [node, tech] in getattr(backend_model, f"{var_name}_index")
+            if hasattr(backend_model, var_name)
+            and [node, tech] in getattr(backend_model, var_name)._index
         )
 
     sum_expr_units = _sum("units")

@@ -26,48 +26,29 @@ def get_capacity_bounds(bounds):
 
         scale = _get_bound('scale')
         _equals = _get_bound('equals')
-        _min = _get_bound('_min')
+        _min = _get_bound('min')
         _max = _get_bound('max')
 
         if not invalid(_equals):
             if not invalid(scale):
                 _equals *= scale
-            return (_equals, _equals)
+            bound_tuple = (_equals, _equals)
         else:
-            if not invalid(_min) and not invalid(scale):
-                _min *= scale
-            if not invalid(_max) and not invalid(scale):
-                _max *= scale
-            return (_min, _max)
+            if invalid(_min):
+                _min = None
+            if invalid(_max):
+                _max = None
+            bound_tuple = (_min, _max)
+
+        if not invalid(scale):
+            bound_tuple = tuple(i * scale for i in bound_tuple)
+
+        return bound_tuple
 
     return _get_bounds
 
 
-def energy_capacity_storage_constraint_rule_old(backend_model, node, tech):
-    """
-    Set an additional energy capacity constraint on storage technologies,
-    based on their use of `charge_rate`.
-
-    This is deprecated and will be removed in Calliope 0.7.0. Instead of
-    `charge_rate`, please use `energy_cap_per_storage_cap_max`.
-
-    .. container:: scrolling-wrapper
-
-        .. math::
-
-            \\boldsymbol{energy_{cap}}(loc::tech)
-            \\leq \\boldsymbol{storage_{cap}}(loc::tech) \\times charge\\_rate(loc::tech)
-            \\quad \\forall loc::tech \\in loc::techs_{store}
-
-    """
-    charge_rate = get_param(backend_model, "charge_rate", (node, tech))
-
-    return backend_model.energy_cap[node, tech] <= (
-        backend_model.storage_cap[node, tech] * charge_rate
-    )
-
-
-def energy_capacity_storage_min_constraint_rule(backend_model, node, tech):
+def energy_capacity_per_storage_capacity_min_constraint_rule(backend_model, node, tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -86,7 +67,7 @@ def energy_capacity_storage_min_constraint_rule(backend_model, node, tech):
     )
 
 
-def energy_capacity_storage_max_constraint_rule(backend_model, node, tech):
+def energy_capacity_per_storage_capacity_max_constraint_rule(backend_model, node, tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -105,7 +86,7 @@ def energy_capacity_storage_max_constraint_rule(backend_model, node, tech):
     )
 
 
-def energy_capacity_storage_equals_constraint_rule(backend_model, node, tech):
+def energy_capacity_per_storage_capacity_equals_constraint_rule(backend_model, node, tech):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -142,6 +123,15 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, node
     )
 
 # TODO: reintroduce a constraint to set resource_area to zero when energy_cap_max is zero
+
+def force_zero_resource_area_constraint_rule(backend_model, node, tech):
+    """
+    Set resource_area to zero if energy_cap_max is zero
+    (i.e. there can be no energy_cap, so similarly there can be no resource_area)
+
+    """
+
+    return backend_model.resource_area[node, tech] == 0
 
 def resource_area_per_energy_capacity_constraint_rule(backend_model, node, tech):
     """

@@ -16,7 +16,6 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.core.util.dataset import get_loc_techs
 from calliope.time import clustering
 
 logger = logging.getLogger(__name__)
@@ -55,23 +54,10 @@ def normalized_copy(data):
     ds = data.copy(deep=True)  # Work off a copy
 
     for var in ds.data_vars:
-        # Each DataArray is indexed over a different subset of loc_techs,
-        # so we find it in the list of dimensions
-        loc_tech_dim = [i for i in ds[var].dims if "loc_techs" in i][0]
-
-        # For each technology, get the loc_techs which are relevant
-        loc_tech_subsets = [
-            get_loc_techs(ds[loc_tech_dim].values, tech)
-            for tech in set(i.split("::")[1] for i in ds[loc_tech_dim].values)
-        ]
-        # remove empty lists within the _techs list
-        loc_tech_subsets = [i for i in loc_tech_subsets if i]
-
-        # For each technology, divide all values by the maximum absolute value
-        for loc_tech in loc_tech_subsets:
-            ds[var].loc[{loc_tech_dim: loc_tech}] = abs(
-                ds[var].loc[{loc_tech_dim: loc_tech}]
-                / abs(ds[var].loc[{loc_tech_dim: loc_tech}]).max()
+        for tech in ds.techs:
+            ds[var].loc[{'techs': tech}] = abs(
+                ds[var].loc[{'techs': tech}]
+                / abs(ds[var].loc[{'techs': tech}]).max()
             )
     return ds
 

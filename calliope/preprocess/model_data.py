@@ -196,6 +196,10 @@ def get_tech_params(param_dict, model_run):
                 else:
                     param_name = tech_param.split(".")[-1]
                     set_tech_info(param_dict, techs, param_name, tech_param_info)
+            elif tech_param.startswith("constraints") and "systemwide" in tech_param:
+                param_name = tech_param.split(".")[-1]
+                set_tech_info(param_dict, techs, param_name, tech_param_info)
+
 
 
 def set_idx(param, keydict):

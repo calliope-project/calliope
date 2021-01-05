@@ -46,18 +46,18 @@ class TestNationalScaleExampleModelSenseChecks:
         model = calliope.examples.national_scale(override_dict=override)
         model.run()
 
-        assert model.results.storage_cap.to_pandas()["region1-1::csp"] == approx(
+        assert model.results.storage_cap.to_series()[("region1-1", "csp")] == approx(
             45129.950
         )
-        assert model.results.storage_cap.to_pandas()["region2::battery"] == approx(
+        assert model.results.storage_cap.to_series()[("region2", "battery")] == approx(
             6675.173
         )
 
-        assert model.results.energy_cap.to_pandas()["region1-1::csp"] == approx(
+        assert model.results.energy_cap.to_series()[("region1-1", "csp")] == approx(
             4626.588
         )
-        assert model.results.energy_cap.to_pandas()["region2::battery"] == approx(1000)
-        assert model.results.energy_cap.to_pandas()["region1::ccgt"] == approx(30000)
+        assert model.results.energy_cap.to_series()[("region2", "battery")] == approx(1000)
+        assert model.results.energy_cap.to_series()[("region1", "ccgt")] == approx(30000)
 
         assert float(model.results.cost.sum()) == approx(38988.7442)
 
@@ -171,18 +171,18 @@ class TestNationalScaleResampledExampleModelSenseChecks:
         model = calliope.examples.time_resampling(override_dict=override)
         model.run()
 
-        assert model.results.storage_cap.to_pandas()["region1-1::csp"] == approx(
+        assert model.results.storage_cap.to_series()[("region1-1", "csp")] == approx(
             23563.444
         )
-        assert model.results.storage_cap.to_pandas()["region2::battery"] == approx(
+        assert model.results.storage_cap.to_series()[("region2", "battery")] == approx(
             6315.78947
         )
 
-        assert model.results.energy_cap.to_pandas()["region1-1::csp"] == approx(
+        assert model.results.energy_cap.to_series()[("region1-1", "csp")] == approx(
             1440.8377
         )
-        assert model.results.energy_cap.to_pandas()["region2::battery"] == approx(1000)
-        assert model.results.energy_cap.to_pandas()["region1::ccgt"] == approx(30000)
+        assert model.results.energy_cap.to_series()[("region2", "battery")] == approx(1000)
+        assert model.results.energy_cap.to_series()[("region1", "ccgt")] == approx(30000)
 
         assert float(model.results.cost.sum()) == approx(37344.221869)
 
@@ -270,7 +270,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers="power")]
-            .to_pandas()
+            .to_series()
             .T["battery"]
         ) == approx(0.044458, abs=0.000001)
 
@@ -365,7 +365,7 @@ class TestUrbanScaleExampleModelSenseChecks:
         model = calliope.examples.urban_scale(override_dict=override)
         model.run()
 
-        assert model.results.energy_cap.to_pandas()["X1::chp"] == approx(250.090112)
+        assert model.results.energy_cap.to_series()[("X1", "chp")] == approx(250.090112)
 
         # GLPK isn't able to get the same answer both times, so we have to account for that here
         if resource_unit == "per_cap" and solver == "glpk":
@@ -373,14 +373,14 @@ class TestUrbanScaleExampleModelSenseChecks:
         else:
             heat_pipe_approx = 182.19260
 
-        assert model.results.energy_cap.to_pandas()["X2::heat_pipes:N1"] == approx(
+        assert model.results.energy_cap.to_series()[("X2", "heat_pipes:N1")] == approx(
             heat_pipe_approx
         )
 
-        assert model.results.carrier_prod.sum("timesteps").to_pandas()[
-            "X3::boiler::heat"
+        assert model.results.carrier_prod.sum("timesteps").to_series()[
+            ("X3", "boiler", "heat")
         ] == approx(0.18720)
-        assert model.results.resource_area.to_pandas()["X2::pv"] == approx(830.064659)
+        assert model.results.resource_area.to_series()[("X2", "pv")] == approx(830.064659)
 
         assert float(model.results.carrier_export.sum()) == approx(122.7156)
 
@@ -420,18 +420,18 @@ class TestUrbanScaleExampleModelSenseChecks:
         )
         model.run()
 
-        assert model.results.energy_cap.to_pandas()["X1::chp"] == 300
-        assert model.results.energy_cap.to_pandas()["X2::heat_pipes:N1"] == approx(
+        assert model.results.energy_cap.to_series()[("X1", "chp")] == 300
+        assert model.results.energy_cap.to_series()[("X2", "heat_pipes:N1")] == approx(
             188.363137
         )
 
-        assert model.results.carrier_prod.sum("timesteps").to_pandas()[
-            "X1::supply_gas::gas"
+        assert model.results.carrier_prod.sum("timesteps").to_series()[
+            ("X1", "supply_gas", "gas")
         ] == approx(12363.173036)
         assert float(model.results.carrier_export.sum()) == approx(0)
 
-        assert model.results.purchased.to_pandas()["X2::boiler"] == 1
-        assert model.results.units.to_pandas()["X1::chp"] == 1
+        assert model.results.purchased.to_series()[("X2", "boiler")] == 1
+        assert model.results.units.to_series()[("X1", "chp")] == 1
 
         assert float(model.results.operating_units.sum()) == 24
 

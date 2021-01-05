@@ -53,6 +53,7 @@ overrides:
                 techs:
                     test_supply_elec:
                     test_supply_plus:
+                        switches.cap_method: integer
                         constraints:
                             units_max: 1
                             energy_cap_per_unit: 15
@@ -67,6 +68,7 @@ overrides:
             a:
                 techs:
                     test_supply_elec:
+                        switches.cap_method: binary
                         costs.monetary.purchase: 1
                         costs.monetary.energy_cap: 0
                     test_demand_elec:
@@ -78,6 +80,7 @@ overrides:
             a:
                 techs:
                     test_supply_elec:
+                        switches.cap_method: integer
                         constraints:
                             units_max: 1
                             energy_cap_per_unit: 15
@@ -88,6 +91,7 @@ overrides:
     supply_export:
         techs:
             test_supply_elec:
+                switches.export: true
                 constraints.export_carrier: electricity
                 costs.monetary.export: 0.01
         locations:
@@ -140,6 +144,7 @@ overrides:
                     test_supply_elec:
                     test_supply_gas:
                     test_conversion_plus:
+                        switches.cap_method: integer
                         constraints:
                             units_max: 2
                             energy_cap_per_unit: 15
@@ -155,6 +160,7 @@ overrides:
                     test_supply_elec:
                     test_supply_gas:
                     test_conversion_plus:
+                        switches.cap_method: binary
                         costs:
                             monetary:
                                 purchase: 1
@@ -202,6 +208,7 @@ overrides:
                 techs:
                     test_supply_elec:
                     test_storage:
+                        switches.cap_method: integer
                         constraints:
                             units_max: 2
                             energy_cap_per_unit: 10
@@ -216,6 +223,7 @@ overrides:
                 techs:
                     test_supply_elec:
                     test_storage:
+                        switches.cap_method: binary
                         costs.monetary: {purchase: 1}
                     test_demand_elec:
 

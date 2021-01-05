@@ -9,34 +9,6 @@ import numpy as np
 from calliope.core.attrdict import AttrDict
 
 
-def concat_iterable(iterable, concatenators):
-    """
-    Take an iterable containing iterables of strings,
-    return a list of strings concatenating inner iterables with '::'.
-
-    E.g.:
-    ``
-    result = concat_iterable([('x', 'y', 'z'), ('1', '2', '3')], [':', ':'])
-    result == ['x:y:z', '1:2:3']
-
-    result = concat_iterable([('x', 'y', 'z'), ('1', '2', '3')], ['::', ':'])
-    result == ['x::y:z', '1::2:3']
-    ``
-
-    """
-    if len(iterable) == 0:
-        return []
-    concats = concatenators + [""]
-    string_iter_len = len(iterable[0])
-    assert all(len(i) == string_iter_len for i in iterable)
-    assert string_iter_len == len(concats)
-
-    return [
-        "".join([string_iter[i] + concats[i] for i in range(string_iter_len)])
-        for string_iter in iterable
-    ]
-
-
 def get_all_carriers(config, direction="both"):
     if direction == "both":
         carrier_list = ["in", "out", "in_2", "out_2", "in_3", "out_3"]

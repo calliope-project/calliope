@@ -33,10 +33,10 @@ class TestUpdateParam:
         test that the function update_param works with a single dimension
         """
 
-        model.backend.update_param("energy_cap_max", {"1::test_supply_elec": 20})
+        model.backend.update_param("energy_cap_max", {("b", "test_supply_elec"): 20})
 
         assert (
-            model._backend_model.energy_cap_max.extract_values()["1::test_supply_elec"]
+            model._backend_model.energy_cap_max.extract_values()[("b", "test_supply_elec")]
             == 20
         )
 
@@ -46,15 +46,15 @@ class TestUpdateParam:
         """
 
         model.backend.update_param(
-            "energy_cap_max", {"1::test_supply_elec": 20, "0::test_supply_elec": 30}
+            "energy_cap_max", {("b", "test_supply_elec"): 20, ("a", "test_supply_elec"): 30}
         )
 
         assert (
-            model._backend_model.energy_cap_max.extract_values()["1::test_supply_elec"]
+            model._backend_model.energy_cap_max.extract_values()[("b", "test_supply_elec")]
             == 20
         )
         assert (
-            model._backend_model.energy_cap_max.extract_values()["0::test_supply_elec"]
+            model._backend_model.energy_cap_max.extract_values()[("a", "test_supply_elec")]
             == 30
         )
 
@@ -65,12 +65,12 @@ class TestUpdateParam:
 
         model.backend.update_param(
             "resource",
-            {("0::test_demand_elec", pd.Timestamp("2005-01-01 01:00:00")): -10},
+            {(("a", "test_demand_elec"), pd.Timestamp("2005-01-01 01:00:00")): -10},
         )
 
         assert (
             model._backend_model.resource.extract_values()[
-                ("0::test_demand_elec", pd.Timestamp("2005-01-01 01:00:00"))
+                (("a", "test_demand_elec"), pd.Timestamp("2005-01-01 01:00:00"))
             ]
             == -10
         )
@@ -81,7 +81,7 @@ class TestUpdateParam:
         """
 
         with pytest.raises(exceptions.ModelError) as excinfo:
-            model.backend.update_param("unknown_param", {("1::test_supply_elec"): 20})
+            model.backend.update_param("unknown_param", {("b", "test_supply_elec"): 20})
 
         assert check_error_or_warning(
             excinfo, "Parameter `unknown_param` not in the Pyomo Backend."
@@ -92,14 +92,14 @@ class TestUpdateParam:
         Raise error when trying to update a non-Param Pyomo object
         """
         with pytest.raises(exceptions.ModelError) as excinfo:
-            model.backend.update_param("energy_cap", {"1::test_supply_elec": 20})
+            model.backend.update_param("energy_cap", {("b", "test_supply_elec"): 20})
 
         assert check_error_or_warning(
             excinfo, "`energy_cap` not a Parameter in the Pyomo Backend."
         )
 
         with pytest.raises(exceptions.ModelError) as excinfo:
-            model.backend.update_param("loc_techs", {"1::test_supply_elec": 20})
+            model.backend.update_param("loc_techs", {("b", "test_supply_elec"): 20})
 
         assert check_error_or_warning(
             excinfo, "`loc_techs` not a Parameter in the Pyomo Backend."
@@ -111,11 +111,11 @@ class TestUpdateParam:
         """
 
         with pytest.raises(KeyError, match=r"Index 'region1-xc1::csp'"):
-            model.backend.update_param("energy_cap_max", {"2::test_supply_elec": 20})
+            model.backend.update_param("energy_cap_max", {("c", "test_supply_elec"): 20})
 
         with pytest.raises(KeyError, match=r"Index 'region1-xc1::csp'"):
             model.backend.update_param(
-                "energy_cap_max", {"1::test_supply_elec": 20, "2::test_supply_elec": 20}
+                "energy_cap_max", {("b", "test_supply_elec"): 20, ("c", "test_supply_elec"): 20}
             )
 
 
@@ -195,12 +195,12 @@ class TestBackendRerun:
         """
         test that the function rerun works
         """
-        model.backend.update_param("energy_cap_max", {"1::test_supply_elec": 20})
+        model.backend.update_param("energy_cap_max", {("b", "test_supply_elec"): 20})
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             new_model = model.backend.rerun()
 
         assert (
-            new_model.inputs.energy_cap_max.loc[{"loc_techs": "1::test_supply_elec"}]
+            new_model.inputs.energy_cap_max.loc[{"loc_techs": ("b", "test_supply_elec")}]
             == 20
         )
 
@@ -241,15 +241,15 @@ class TestAddConstraint:
     def test_no_backend(self, model):
         """Must include 'backend_model' as first function argument """
 
-        def energy_cap_time_varying_rule(backend, loc_tech, timestep):
+        def energy_cap_time_varying_rule(backend, node, tech, timestep):
 
             return (
-                backend.energy_cap[loc_tech]
-                <= backend.energy_cap[loc_tech] * backend.resource[loc_tech, timestep]
+                backend.energy_cap[node, tech]
+                <= backend.energy_cap[node, tech] * backend.resource[node, tech, timestep]
             )
 
         constraint_name = "energy_cap_time_varying"
-        constraint_sets = ["loc_techs_finite_resource", "timesteps"]
+        constraint_sets = ["nodes", "techs", "timesteps"]
         with pytest.raises(AssertionError) as excinfo:
             model.backend.add_constraint(
                 constraint_name, constraint_sets, energy_cap_time_varying_rule
@@ -261,17 +261,17 @@ class TestAddConstraint:
     def test_arg_mismatch(self, model):
         """length of function arguments = length of sets + 1"""
 
-        def energy_cap_time_varying_rule(backend_model, loc_tech, timestep, extra_arg):
+        def energy_cap_time_varying_rule(backend_model, node, tech, timestep, extra_arg):
 
             return (
-                backend_model.energy_cap[loc_tech]
-                <= backend_model.energy_cap[loc_tech]
-                * backend_model.resource[loc_tech, timestep]
+                backend_model.energy_cap[node, tech]
+                <= backend_model.energy_cap[node, tech]
+                * backend_model.resource[node, tech, timestep]
                 + extra_arg
             )
 
         constraint_name = "energy_cap_time_varying"
-        constraint_sets = ["loc_techs_finite_resource", "timesteps"]
+        constraint_sets = ["nodes", "techs", "timesteps"]
         with pytest.raises(AssertionError) as excinfo:
             model.backend.add_constraint(
                 constraint_name, constraint_sets, energy_cap_time_varying_rule
@@ -293,7 +293,7 @@ class TestAddConstraint:
             )
 
         constraint_name = "energy_cap_time_varying"
-        constraint_sets = ["loc_techs_finite_resource", "not_a_set"]
+        constraint_sets = ["nodes", "techs", "not_a_set"]
         with pytest.raises(AttributeError) as excinfo:
             model.backend.add_constraint(
                 constraint_name, constraint_sets, energy_cap_time_varying_rule
@@ -309,16 +309,15 @@ class TestAddConstraint:
         consumption at a maximum rate of half the energy capacity.
         """
 
-        def new_constraint_rule(backend_model, loc_tech_carrier, timestep):
-            loc_tech = calliope.backend.pyomo.util.get_loc_tech(loc_tech_carrier)
-            carrier_con = backend_model.carrier_con[loc_tech_carrier, timestep]
+        def new_constraint_rule(backend_model, node, tech, timestep):
+            carrier_con = backend_model.carrier_con[:, node, tech, timestep]
             timestep_resolution = backend_model.timestep_resolution[timestep]
             return carrier_con * 2 >= (
-                -1 * backend_model.energy_cap[loc_tech] * timestep_resolution
+                -1 * backend_model.energy_cap[node, tech] * timestep_resolution
             )
 
         constraint_name = "new_constraint"
-        constraint_sets = ["loc_tech_carriers_con", "timesteps"]
+        constraint_sets = ["nodes", "techs", "timesteps"]
         model.backend.add_constraint(
             constraint_name, constraint_sets, new_constraint_rule
         )
@@ -328,6 +327,6 @@ class TestAddConstraint:
         new_model = model.backend.rerun()
 
         assert (
-            new_model.results.energy_cap.loc["1::test_demand_elec"]
-            == model.results.energy_cap.loc["1::test_demand_elec"] * 2
+            new_model.results.energy_cap.loc[("b", "test_demand_elec")]
+            == model.results.energy_cap.loc[("b", "test_demand_elec")] * 2
         )

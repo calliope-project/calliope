@@ -63,7 +63,7 @@ def create_imask_ds(model_data, sets):
                         f"Missing dimension(s) in imask for set {set_name}"
                     )
                 if set_group not in ds.data_vars.keys():
-                    ds = ds.merge(imask.to_dataset(name=set_name))
+                    ds = ds.merge(imask.astype(bool).to_dataset(name=set_name))
                 else:  # if already in dataset, it should look exactly the same
                     assert (ds[set_name] == imask).all().item()
                 # give info on whether the mask is for a constraint, variable, etc.

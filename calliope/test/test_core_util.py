@@ -31,17 +31,6 @@ _MODEL_URBAN = os.path.join(
 
 
 class TestDataset:
-    @pytest.fixture()
-    def loc_techs(self):
-        loc_techs = [
-            "region1-3::csp",
-            "region1::demand_power",
-            "region1-1::csp",
-            "region1-2::csp",
-            "region2::demand_power",
-            "region1-1::demand_power",
-        ]
-        return loc_techs
 
     @pytest.fixture()
     def example_dataarray(self):
@@ -50,7 +39,8 @@ class TestDataset:
             dims=("timesteps", "loc_techs_bar", "costs"),
             coords={
                 "timesteps": ["foo", "bar"],
-                "loc_techs_bar": ["1::foo", "2::bar", "3::baz"],
+                "nodes": ["a", "b", "c"],
+                "techs": ["foo", "bar", "baz"],
                 "costs": ["foo"],
             },
         )
@@ -67,31 +57,19 @@ class TestDataset:
             {"foo": example_dataarray, "bar": example_dataarray.squeeze()}
         )
 
-    def test_get_loc_techs_tech(self, loc_techs):
-        loc_techs = dataset.get_loc_techs(loc_techs, tech="csp")
-        assert loc_techs == ["region1-3::csp", "region1-1::csp", "region1-2::csp"]
-
-    def test_get_loc_techs_loc(self, loc_techs):
-        loc_techs = dataset.get_loc_techs(loc_techs, loc="region1-1")
-        assert loc_techs == ["region1-1::csp", "region1-1::demand_power"]
-
-    def test_get_loc_techs_loc_and_tech(self, loc_techs):
-        loc_techs = dataset.get_loc_techs(loc_techs, tech="demand_power", loc="region1")
-        assert loc_techs == ["region1::demand_power"]
-
     def test_reorganise_dataset_dimensions(self, example_dataset):
         reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataset)
         dataset_dims = [i for i in reorganised_dataset.dims.keys()]
-        assert dataset_dims == ["costs", "loc_techs_bar", "timesteps"]
+        assert dataset_dims == ["costs", "nodes", "techs", "timesteps"]
 
     def test_reorganise_dataarray_dimensions(self, example_dataarray):
         reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataarray)
-        assert reorganised_dataset.dims == ("costs", "loc_techs_bar", "timesteps")
+        assert reorganised_dataset.dims == ("costs", "nodes", "techs", "timesteps")
 
     def test_fail_reorganise_dimensions(self):
         with pytest.raises(TypeError) as excinfo:
             dataset.reorganise_xarray_dimensions(
-                ["timesteps", "loc_techs_bar", "costs"]
+                ["timesteps", "nodes", "techs", "costs"]
             )
         assert check_error_or_warning(
             excinfo, "Must provide either xarray Dataset or DataArray to be reorganised"

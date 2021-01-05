@@ -1136,14 +1136,14 @@ class TestChecks:
         }
         m = calliope.examples.urban_scale(override_dict=override)
         removed_prod_links = [
-            "X1::heat_pipes:N1",
-            "N1::heat_pipes:X2",
-            "N1::heat_pipes:X3",
+            ("X1", "heat_pipes:N1"),
+            ("N1", "heat_pipes:X2"),
+            ("N1", "heat_pipes:X3"),
         ]
         removed_con_links = [
-            "N1::heat_pipes:X1",
-            "X2::heat_pipes:N1",
-            "X3::heat_pipes:N1",
+            ("N1", "heat_pipes:X1"),
+            ("X2", "heat_pipes:N1"),
+            ("X3", "heat_pipes:N1"),
         ]
 
         for link in removed_prod_links:
@@ -1520,48 +1520,6 @@ class TestChecks:
 
 
 class TestUtil:
-    def test_concat_iterable_ensures_same_length_iterables(self):
-        """
-        All iterables must have the same length
-        """
-        iterables = [("1", "2", "3"), ("4", "5")]
-        iterables_swapped = [("4", "5"), ("1", "2", "3")]
-        iterables_correct = [("1", "2", "3"), ("4", "5", "6")]
-        concatenator = [":", "::"]
-
-        with pytest.raises(AssertionError):
-            calliope.preprocess.util.concat_iterable(iterables, concatenator)
-            calliope.preprocess.util.concat_iterable(iterables_swapped, concatenator)
-
-        concatenated = calliope.preprocess.util.concat_iterable(
-            iterables_correct, concatenator
-        )
-        assert concatenated == ["1:2::3", "4:5::6"]
-
-    def test_concat_iterable_check_concatenators(self):
-        """
-        Contatenators should be one shorter than the length of each iterable
-        """
-        iterables = [("1", "2", "3"), ("4", "5", "6")]
-        concat_one = [":"]
-        concat_two_diff = [":", "::"]
-        concat_two_same = [":", ":"]
-        concat_three = [":", ":", ":"]
-
-        with pytest.raises(AssertionError):
-            calliope.preprocess.util.concat_iterable(iterables, concat_one)
-            calliope.preprocess.util.concat_iterable(iterables, concat_three)
-
-        concatenated1 = calliope.preprocess.util.concat_iterable(
-            iterables, concat_two_diff
-        )
-        assert concatenated1 == ["1:2::3", "4:5::6"]
-
-        concatenated2 = calliope.preprocess.util.concat_iterable(
-            iterables, concat_two_same
-        )
-        assert concatenated2 == ["1:2:3", "4:5:6"]
-
     def test_vincenty(self):
         # London to Paris: about 344 km
         coords = [(51.507222, -0.1275), (48.8567, 2.3508)]
@@ -1632,15 +1590,15 @@ class TestTime:
         """
 
         model = model_national
-        assert model.inputs.resource.loc["region1::demand_power"].values[0] == approx(
+        assert model.inputs.resource.loc[("region1", "demand_power")].values[0] == approx(
             -25284.48
         )
-        assert model.inputs.resource.loc["region2::demand_power"].values[0] == approx(
+        assert model.inputs.resource.loc[("region2", "demand_power")].values[0] == approx(
             -2254.098
         )
-        assert model.inputs.resource.loc["region1-1::csp"].values[8] == approx(0.263805)
-        assert model.inputs.resource.loc["region1-2::csp"].values[8] == approx(0.096755)
-        assert model.inputs.resource.loc["region1-3::csp"].values[8] == approx(0.0)
+        assert model.inputs.resource.loc[("region1-1", "csp")].values[8] == approx(0.263805)
+        assert model.inputs.resource.loc[("region1-2", "csp")].values[8] == approx(0.096755)
+        assert model.inputs.resource.loc[("region1-3", "csp")].values[8] == approx(0.0)
 
 
 class TestIMask:

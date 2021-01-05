@@ -38,30 +38,30 @@ class TestExistsFalse:
         )
 
     def test_location_exists_false(self):
-        overrides = {"locations.1.exists": False}
+        overrides = {"locations.b.exists": False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
 
         # Ensure what should be gone is gone
-        assert "1" not in model._model_data.coords["locs"].values
+        assert "b" not in model._model_data.coords["nodes"].values
 
         # Ensure warnings were raised
         assert check_error_or_warning(
             excinfo,
-            "Not building the link 0,1 because one or both of its locations have been removed from the model by setting ``exists: false``",
+            "Not building the link a,b because one or both of its locations have been removed from the model by setting ``exists: false``",
         )
 
     def test_location_tech_exists_false(self):
-        overrides = {"locations.1.techs.test_storage.exists": False}
+        overrides = {"locations.b.techs.test_storage.exists": False}
         model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
 
         # Ensure what should be gone is gone
-        assert "1::test_storage" not in model._model_data.coords["loc_techs"].values
+        assert "b", "test_storage" not in model._model_data.coords["loc_techs"].values
 
     def test_link_exists_false(self):
-        overrides = {"links.0,1.exists": False}
+        overrides = {"links.a,b.exists": False}
         model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
 
@@ -69,16 +69,16 @@ class TestExistsFalse:
         assert "loc_techs_transmission" not in model._model_data
 
     def test_link_tech_exists_false(self):
-        overrides = {"links.0,1.techs.test_transmission_elec.exists": False}
+        overrides = {"links.a,b.techs.test_transmission_elec.exists": False}
         model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
 
         # Ensure what should be gone is gone
         assert (
-            "0::test_transmission_elec:1"
+            "a", "test_transmission_elec:1"
             not in model._model_data.coords["loc_techs_transmission"].values
         )
         assert (
-            "0::test_transmission_heat:1"
+            "a", "test_transmission_heat:1"
             in model._model_data.coords["loc_techs_transmission"].values
         )

@@ -3,6 +3,7 @@ import sys
 
 import pytest
 from pyomo.core.expr.current import identify_variables
+import pyomo.core as po
 
 import calliope
 from calliope import AttrDict
@@ -63,8 +64,12 @@ def check_variable_exists(backend_model, constraint, variable):
     variable : str, string to search in the list of variables to check if existing
     """
     exists = []
+    if getattr(backend_model, constraint) in backend_model.component_objects(ctype=po.Constraint):
+        expression_accessor = "body"
+    elif getattr(backend_model, constraint) in backend_model.component_objects(ctype=po.Expression):
+        expression_accessor = "value"
     for v in getattr(backend_model, constraint).values():
-        variables = identify_variables(v.body)
+        variables = identify_variables(getattr(v, expression_accessor))
         exists.append(any(variable in j.getname() for j in list(variables)))
     return any(exists)
 

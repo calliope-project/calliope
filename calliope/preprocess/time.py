@@ -223,7 +223,7 @@ def update_dtypes(model_data):
             else:
                 try:
                     model_data[var_name] = var.astype(np.int, copy=False)
-                except ValueError:
+                except (ValueError, OverflowError):
                     try:
                         model_data[var_name] = var.astype(np.float, copy=False)
                     except ValueError:

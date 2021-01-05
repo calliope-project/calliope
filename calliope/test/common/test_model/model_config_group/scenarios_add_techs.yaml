@@ -160,6 +160,7 @@ overrides:
                 name: Electricity supply plus
                 carrier: electricity
                 parent: supply_plus
+            switches.include_storage: true
             constraints:
                 lifetime: 15
                 storage_loss: 0.001
