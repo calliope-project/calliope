@@ -81,7 +81,7 @@ def cost_constraint_rule(backend_model, cost, loc_tech):
     else:
         cost_investment = 0
 
-    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_cost_var_cosntraint"):
+    if loc_tech_is_in(backend_model, loc_tech, "loc_techs_cost_var_constraint"):
         for timestep in backend_model.timesteps:
             cost_var_constraint_rule(backend_model, cost, loc_tech, timestep)
     if loc_tech_is_in(backend_model, loc_tech, "loc_techs_om_cost"):
