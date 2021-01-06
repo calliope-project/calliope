@@ -231,7 +231,7 @@ def ramping_constraint(backend_model, carrier, node, tech, timestep, direction=0
             return -1 * max_ramping_rate <= diff
 
 
-def storage_intra_max_rule(backend_model, node, tech, timestep):
+def storage_intra_max_constraint_rule(backend_model, node, tech, timestep):
     """
     When clustering days, to reduce the timeseries length, set limits on
     intra-cluster auxiliary maximum storage decision variable.
@@ -248,14 +248,14 @@ def storage_intra_max_rule(backend_model, node, tech, timestep):
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
     is located.
     """
-    cluster = backend_model.timestep_cluster[timestep]
+    cluster = backend_model.timestep_cluster[timestep].value
     return (
         backend_model.storage[node, tech, timestep]
-        <= backend_model.storage_intra_cluster_max[node, tech, cluster]
+        <= backend_model.storage_intra_cluster_max[cluster, node, tech]
     )
 
 
-def storage_intra_min_rule(backend_model, node, tech, timestep):
+def storage_intra_min_constraint_rule(backend_model, node, tech, timestep):
     """
     When clustering days, to reduce the timeseries length, set limits on
     intra-cluster auxiliary minimum storage decision variable.
@@ -272,14 +272,14 @@ def storage_intra_min_rule(backend_model, node, tech, timestep):
     Where :math:`cluster(timestep)` is the cluster number in which the timestep
     is located.
     """
-    cluster = backend_model.timestep_cluster[timestep]
+    cluster = backend_model.timestep_cluster[timestep].value
     return (
         backend_model.storage[node, tech, timestep]
-        >= backend_model.storage_intra_cluster_min[node, tech, cluster]
+        >= backend_model.storage_intra_cluster_min[cluster, node, tech]
     )
 
 
-def storage_inter_max_rule(backend_model, node, tech, datestep):
+def storage_inter_max_constraint_rule(backend_model, node, tech, datestep):
     """
     When clustering days, to reduce the timeseries length, set maximum limit on
     the intra-cluster and inter-date stored energy.
@@ -299,15 +299,15 @@ def storage_inter_max_rule(backend_model, node, tech, datestep):
     Where :math:`cluster(datestep)` is the cluster number in which the datestep
     is located.
     """
-    cluster = backend_model.lookup_datestep_cluster[datestep]
+    cluster = backend_model.lookup_datestep_cluster[datestep].value
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]
-        + backend_model.storage_intra_cluster_max[node, tech, cluster]
+        + backend_model.storage_intra_cluster_max[cluster, node, tech]
         <= backend_model.storage_cap[node, tech]
     )
 
 
-def storage_inter_min_rule(backend_model, node, tech, datestep):
+def storage_inter_min_constraint_rule(backend_model, node, tech, datestep):
     """
     When clustering days, to reduce the timeseries length, set minimum limit on
     the intra-cluster and inter-date stored energy.
@@ -328,11 +328,11 @@ def storage_inter_min_rule(backend_model, node, tech, datestep):
     Where :math:`cluster(datestep)` is the cluster number in which the datestep
     is located.
     """
-    cluster = backend_model.lookup_datestep_cluster[datestep]
+    cluster = backend_model.lookup_datestep_cluster[datestep].value
     storage_loss = get_param(backend_model, "storage_loss", (node, tech))
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]
         * ((1 - storage_loss) ** 24)
-        + backend_model.storage_intra_cluster_min[node, tech, cluster]
+        + backend_model.storage_intra_cluster_min[cluster, node, tech]
         >= 0
     )

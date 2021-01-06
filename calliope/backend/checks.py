@@ -70,14 +70,6 @@ def check_operate_params(model_data):
 
         if ((~_is_missing("storage_cap")) & (~_is_missing("energy_cap"))).any():
             if (
-                (model_data.storage_cap * model_data.get("charge_rate", np.inf))
-                < model_data.energy_cap
-            ).any():
-                errors.append(
-                    "fixed storage capacity * charge_rate is not larger "
-                    "than fixed energy capacity for some storage technologies"
-                )
-            if (
                 (
                     model_data.storage_cap
                     * model_data.get("energy_cap_per_storage_cap_max", np.inf)

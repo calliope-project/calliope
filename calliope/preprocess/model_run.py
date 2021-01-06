@@ -620,7 +620,13 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                 )
             )
 
-        if timeseries_data.isna().any().any():
+        if timeseries_data[[i[1] for i in constraint_tsnames]].isna().any().any():
+            raise exceptions.ModelError(
+                "Missing data for the timeseries array(s) {}.".format(
+                    timeseries_data.columns[timeseries_data.isna().any()].values
+                )
+            )
+        if cluster_tsnames and timeseries_data[[i[1] for i in cluster_tsnames]].resample('1D').mean().isna().any().any():
             raise exceptions.ModelError(
                 "Missing data for the timeseries array(s) {}.".format(
                     timeseries_data.columns[timeseries_data.isna().any()].values

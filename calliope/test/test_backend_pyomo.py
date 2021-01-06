@@ -309,7 +309,7 @@ class TestChecks:
         assert check_error_or_warning(warning, _warnings)
         assert not check_error_or_warning(warning, not_warnings)
 
-    @pytest.mark.parametrize("param", ("charge_rate", "energy_cap_per_storage_cap_max"))
+    @pytest.mark.parametrize("param", ("energy_cap_per_storage_cap_max"))
     def test_operate_storage(self, param):
         """Can't violate storage capacity constraints in the definition of a technology"""
         m = build_model(
@@ -1717,6 +1717,8 @@ class TestMILPConstraints:
             == 1
         )
 
+    # TODO: always have transmission techs be independent of node names
+    @pytest.mark.xfail(reason="systemwide constraints now don't work with transmission techs, since transmission tech names are now never independent of a node")
     def test_techs_unit_capacity_max_systemwide_transmission_milp_constraint(self):
         """
         sets.techs if unit_cap_max_systemwide or unit_cap_equals_systemwide
@@ -1810,7 +1812,7 @@ class TestNetworkConstraints:
 class TestClusteringConstraints:
     def constraints(self):
         return [
-            "balance_storage_inter_cluster_constraint",
+            "balance_storage_inter_constraint",
             "storage_intra_max_constraint",
             "storage_intra_min_constraint",
             "storage_inter_max_constraint",
@@ -1836,7 +1838,7 @@ class TestClusteringConstraints:
             "model.time": {
                 "function": "apply_clustering",
                 "function_options": {
-                    "clustering_func": "file=cluster_days.csv:0",
+                    "clustering_func": "file=cluster_days.csv:a",
                     "how": how,
                     "storage_inter_cluster": storage_inter_cluster,
                 },

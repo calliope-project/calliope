@@ -10,6 +10,7 @@ Functions to process time series data.
 """
 
 import logging
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -54,11 +55,7 @@ def normalized_copy(data):
     ds = data.copy(deep=True)  # Work off a copy
 
     for var in ds.data_vars:
-        for tech in ds.techs:
-            ds[var].loc[{'techs': tech}] = abs(
-                ds[var].loc[{'techs': tech}]
-                / abs(ds[var].loc[{'techs': tech}]).max()
-            )
+        ds[var] = abs(ds[var] / abs(ds[var].groupby('techs').max(..., skipna=False)))
     return ds
 
 
@@ -194,7 +191,7 @@ def apply_clustering(
                 "time clustering column {} not found in {}.".format(column, file)
             )
         elif isinstance(df, pd.DataFrame):
-            clusters = df.loc[:, column].groupby(pd.Grouper(freq="1D")).unique()
+            clusters = df.loc[:, column].dropna().groupby(pd.Grouper(freq="1D")).unique()
 
         # Check there weren't instances of more than one cluster assigned to a day
         # or days with no information assigned
@@ -390,7 +387,7 @@ def lookup_clusters(dataset):
                 datestep.strftime("%Y-%m-%d")
             ].item()
             last_timesteps["data"].append(
-                pd.datetime.combine(
+                datetime.datetime.combine(
                     cluster_date[cluster_date == cluster].index[0].date(),
                     dataset.timesteps.to_index().time[-1],
                 )

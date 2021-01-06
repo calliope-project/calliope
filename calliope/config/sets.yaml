@@ -76,7 +76,7 @@ constraints:
 
     storage_max:
         foreach: [nodes, techs, timesteps]
-        where: [[inheritance(storage), or, inheritance(supply_plus)], and, include_storage=True]
+        where: [include_storage=True, and, not timestep_cluster]
 
     storage_discharge_depth:
         foreach: [nodes, techs, timesteps]
@@ -119,7 +119,7 @@ constraints:
 
     storage_initial:
         foreach: [nodes, techs]
-        where: [storage_initial, and, include_storage=True]
+        where: [storage_initial, and, include_storage=True, and, not timestep_cluster]
 
     export_balance:
         foreach: [nodes, techs, carriers, timesteps]
@@ -192,6 +192,26 @@ constraints:
     symmetric_transmission:
         foreach: [nodes, techs]
         where: [inheritance(transmission), and, run.mode='plan']
+
+    storage_intra_max:
+        foreach: [nodes, techs, timesteps]
+        where: [include_storage=True, and, timestep_cluster]
+
+    storage_intra_min:
+        foreach: [nodes, techs, timesteps]
+        where: [include_storage=True, and, timestep_cluster]
+
+    storage_inter_max:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True]
+
+    storage_inter_min:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True]
+
+    balance_storage_inter:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True]
 
 variables:
 

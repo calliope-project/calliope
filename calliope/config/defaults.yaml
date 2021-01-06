@@ -28,7 +28,6 @@ run:
 
 model:
     calliope_version: null  # Calliope framework version this model is intended for
-    group_share: {}  # Optional settings for the group_share constraint - deprecated and will be removed in v0.7.0
     name: null  # Model name
     random_seed: null  # Seed for random number generator used during clustering
     reserve_margin:  {} # Per-carrier system-wide reserve margins
@@ -86,7 +85,7 @@ tech_groups:
             allowed_carrier_prod: false
     storage:
         required_constraints: []
-        allowed_constraints: ['charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'storage_discharge_depth', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'storage_discharge_depth', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_group_constraints: [cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_share_equals, energy_cap_min, energy_cap_max, energy_cap_equals]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'storage_cap']
         allowed_switches: [cap_method, include_storage, export, allowed_carrier_con, allowed_carrier_prod]
@@ -116,7 +115,7 @@ tech_groups:
 
     supply_plus:
         required_constraints: []
-        allowed_constraints: ['charge_rate', 'energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'parasitic_eff', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_cap_equals', 'resource_cap_max', 'resource_cap_min', 'resource_eff', 'resource_min_use', 'resource_scale', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'parasitic_eff', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_cap_equals', 'resource_cap_max', 'resource_cap_min', 'resource_eff', 'resource_min_use', 'resource_scale', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, carrier_prod_share_min, carrier_prod_share_max, carrier_prod_share_equals, carrier_prod_share_per_timestep_min, carrier_prod_share_per_timestep_max, carrier_prod_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_share_equals, energy_cap_min, energy_cap_max, energy_cap_equals, resource_area_min, resource_area_max, resource_area_equals, carrier_prod_min, carrier_prod_max, carrier_prod_equals]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area', 'resource_cap', 'storage_cap']
         allowed_switches: [cap_method, include_storage, resource_unit, resource_cap_equals_energy_cap, force_resource, export, allowed_carrier_con, allowed_carrier_prod]
@@ -177,7 +176,6 @@ techs:
             export: false
         constraints:
             carrier_ratios: false  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
-            charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
             energy_cap_per_storage_cap_min: 0 # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_max: .inf # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_equals: null # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦

@@ -237,24 +237,6 @@ overrides:
                 how: 'mean'
                 storage_inter_cluster: True
 
-    group_share_energy_cap_min:
-        model.group_share.test_supply_elec,test_supply_gas.energy_cap_min: 0.5
-
-    group_share_energy_cap_max:
-        model.group_share.test_supply_elec,test_supply_gas.energy_cap_max: 0.5
-
-    group_share_energy_cap_equals:
-        model.group_share.test_supply_elec,test_supply_gas.energy_cap_equals: 0.5
-
-    group_share_carrier_prod_min:
-        model.group_share.test_supply_elec,test_conversion.carrier_prod_min.electricity: 0.5
-
-    group_share_carrier_prod_max:
-        model.group_share.test_supply_elec,test_conversion.carrier_prod_max.electricity: 0.5
-
-    group_share_carrier_prod_equals:
-        model.group_share.test_conversion.carrier_prod_equals.heat: 0.5
-
     one_day:
         model.subset_time: '2005-01-01'
 

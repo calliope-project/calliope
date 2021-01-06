@@ -362,7 +362,7 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
                 hasattr(backend_model, "clusters")
                 and backend_model.lookup_cluster_first_timestep[timestep]
             ):
-                previous_step = backend_model.lookup_cluster_last_timestep[timestep]
+                previous_step = backend_model.lookup_cluster_last_timestep[timestep].value
             elif current_timestep == 0 and run_config["cyclic_storage"]:
                 previous_step = backend_model.timesteps[-1]
             else:
@@ -426,7 +426,7 @@ def balance_storage_constraint_rule(backend_model, carrier, node, tech, timestep
             hasattr(backend_model, "clusters")
             and backend_model.lookup_cluster_first_timestep[timestep]
         ):
-            previous_step = backend_model.lookup_cluster_last_timestep[timestep]
+            previous_step = backend_model.lookup_cluster_last_timestep[timestep].value
         elif current_timestep == 0 and run_config["cyclic_storage"]:
             previous_step = backend_model.timesteps[-1]
         else:
@@ -443,7 +443,7 @@ def balance_storage_constraint_rule(backend_model, carrier, node, tech, timestep
     )
 
 
-def balance_storage_inter_cluster_constraint_rule(backend_model, node, tech, datestep):
+def balance_storage_inter_constraint_rule(backend_model, node, tech, datestep):
     """
     When clustering days, to reduce the timeseries length, balance the daily stored
     energy across all days of the original timeseries.
@@ -483,7 +483,7 @@ def balance_storage_inter_cluster_constraint_rule(backend_model, node, tech, dat
         ) * backend_model.storage_inter_cluster[node, tech, previous_step]
         final_timestep = backend_model.lookup_datestep_last_cluster_timestep[
             previous_step
-        ]
+        ].value
         storage_intra = backend_model.storage[node, tech, final_timestep]
     return (
         backend_model.storage_inter_cluster[node, tech, datestep]

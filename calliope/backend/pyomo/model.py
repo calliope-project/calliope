@@ -91,6 +91,11 @@ def build_params(model_data, backend_model):
             )
         else:
             setattr(backend_model, "objective_" + option_name, option_val)
+    backend_model.bigM = po.Param(
+        initialize=backend_model.__calliope_run_config.get("bigM", 1e10),
+        mutable=True,
+        within=po.NonNegativeReals,
+    )
 
 #@profile
 def build_variables(backend_model, masks):
@@ -103,8 +108,6 @@ def build_variables(backend_model, masks):
         setattr(
             backend_model, k, po.Var(mask(v), domain=getattr(po, v.domain), **kwargs),
         )
-        if k == "unmet_demand":
-            backend_model.bigM = backend_model.__calliope_run_config.get("bigM", 1e10)
 
 #@profile
 def build_constraints(backend_model, masks):
@@ -142,9 +145,14 @@ def generate_model(model_data, masks):
 
     """
     backend_model = po.ConcreteModel()
-    # remove pandas datetime from timesteps, to reduce memory usage on creating pyomo objects
-    model_data["timesteps"] = model_data.timesteps.astype(int)
-    masks["timesteps"] = masks.timesteps.astype(int)
+    # remove pandas datetime from xarrays, to reduce memory usage on creating pyomo objects
+    datetime_data = set()
+    for dataset in [model_data, masks]:
+        for attr in [dataset.coords, dataset.data_vars]:
+            for set_name, set_data in attr.items():
+                if set_data.dtype.kind == "M":
+                    dataset[set_name] = dataset[set_name].astype(int)
+                    datetime_data.add(set_name)
 
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
@@ -153,19 +161,13 @@ def generate_model(model_data, masks):
     build_constraints(backend_model, masks)
     build_objective(backend_model)
     # FIXME: Optional constraints
-    # optional_constraints = model_data.attrs['constraints']
-    # if optional_constraints:
-    #     for c in optional_constraints:
-    #         self.add_constraint(load_function(c))
-
-    # Objective function
     # FIXME re-enable loading custom objectives
 
-    # fetch objective function by name, pass through objective options
-    # if they are present
-
-    model_data["timesteps"] = pd.to_datetime(model_data.timesteps, cache=False)
-    masks["timesteps"] = pd.to_datetime(masks.timesteps, cache=False)
+    # set datetime data back to datetime dtype
+    for set_name in datetime_data:
+        for dataset in [model_data, masks]:
+            if set_name in dataset.coords.keys():
+                dataset[set_name] = pd.to_datetime(dataset[set_name], cache=False)
 
     return backend_model
 

@@ -38,7 +38,6 @@ def create_imask_ds(model_data, sets):
             imask = imask_foreach(model_data, set_config.foreach)
             if imask is False:  # i.e. not all of 'foreach' are in model_data
                 continue
-
             # Add "where" info as imasks
             where_array = set_config.get_key("where", default=[])
             if where_array:
@@ -149,7 +148,7 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
             _not = False
             if i.startswith("not "):
                 _not = True
-                i = i.strip("not ")
+                i = i.replace("not ", "")
             if _func(i) is not None:
                 func, val = _func(i).groups()
                 imask = globals()[func](model_data, val)
@@ -159,6 +158,7 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
             elif i in model_data.data_vars.keys():
                 imask = param_exists(model_data, i)
             else:
+
                 imask = False  # TODO: this should differntiate between a valid parameter not being in model_data and an e.g. incorrectly spelled parameter
             # Separately check whether the condition should be inverted
             if _not is True:

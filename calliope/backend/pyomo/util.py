@@ -158,7 +158,7 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
-        if re.match("resource|node_coordinates|cost*", var.name):
+        if re.match("resource|node_coordinates|cost*|lookup_cluster_last_timestep", var.name):
             return ""
         else:
             return "NonNegative"

@@ -343,22 +343,3 @@ class Model(object):
         warning should specify Calliope version in which it was added, and the
         version in which it should be updated/removed.
         """
-
-        # Warning that group_share constraints will removed in 0.7.0 #
-        # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-        if any("group_share_" in i for i in self._model_data.data_vars.keys()):
-            warnings.warn(
-                "`group_share` constraints will be removed in v0.7.0 -- "
-                "use the new model-wide constraints instead.",
-                FutureWarning,
-            )
-
-        # Warning that charge rate will be removed in 0.7.0
-        # Added in 0.6.4-dev, to be removed in 0.7.0-dev
-        # Rename charge rate to energy_cap_per_storage_cap_max
-        if self._model_data is not None and "charge_rate" in self._model_data:
-            warnings.warn(
-                "`charge_rate` is renamed to `energy_cap_per_storage_cap_max` "
-                "and will be removed in v0.7.0.",
-                FutureWarning,
-            )
