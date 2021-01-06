@@ -1550,29 +1550,29 @@ class TestChecks:
 
 class TestDataset:
 
-    # FIXME: What are we testing here?
-    def test_inconsistent_timesteps(self):
-        """
-        Timesteps must be consistent?
-        """
-
+    ## FIXME: What are we testing here?
+    #def test_inconsistent_timesteps(self):
+    #    """
+    #    Timesteps must be consistent?
+    #    """
+#
     @pytest.mark.parametrize(
-        "model,expected_constraint_set",
+        ("model", "_set"),
         [
-            (calliope.examples.national_scale(), constraint_sets["model_national"]),
-            (calliope.examples.urban_scale(), constraint_sets["model_urban"]),
-            (calliope.examples.milp(), constraint_sets["model_milp"]),
+            (calliope.examples.national_scale(), "model_national"),
+            (calliope.examples.urban_scale(), "model_urban"),
+            (calliope.examples.milp(), "model_milp"),
         ],
     )
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_unassigned_sets(self, model, expected_constraint_set):
+    #@pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+    def test_unassigned_sets(self, model, _set):
         """
         Check that all sets in which there are possible loc:techs are assigned
         and have been filled
         """
         for set_name, set_vals in model._model_data.coords.items():
             if "constraint" in set_name:
-                assert set(set_vals.values) == set(expected_constraint_set[set_name])
+                assert set(set_vals.values) == set(constraint_sets[_set][set_name])
 
     def test_negative_cost_unassigned_cap(self):
         """

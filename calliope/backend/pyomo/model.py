@@ -37,6 +37,13 @@ def generate_model(model_data):
     Generate a Pyomo model.
 
     """
+    datetime_data = set()
+    for attr in [model_data.coords, model_data.data_vars]:
+        for set_name, set_data in attr.items():
+            if set_data.dtype.kind == "M":
+                model_data[set_name] = model_data[set_name].astype(int)
+                datetime_data.add(set_name)
+
     backend_model = po.ConcreteModel()
 
     logger.info("Loading sets")
@@ -174,6 +181,11 @@ def generate_model(model_data):
     )
     load_function(objective_function)(backend_model)
 
+    for set_name in datetime_data:
+        if set_name in model_data.coords.keys():
+            model_data[set_name] = pd.to_datetime(model_data[set_name], cache=False)
+    backend_model.__calliope_datetime_data = datetime_data
+
     return backend_model
 
 
@@ -266,6 +278,10 @@ def get_result_array(backend_model, model_data):
     }
 
     results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
+
+    for set_name in backend_model.__calliope_datetime_data:
+        if set_name in results.data_vars.keys() or set_name in results.coords.keys():
+            results[set_name] = pd.to_datetime(results[set_name], cache=False)
 
     if all_params:
         additional_inputs = reorganise_xarray_dimensions(xr.Dataset(all_params))
