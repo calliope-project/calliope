@@ -526,6 +526,8 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                 tsnames.append((v.split("=")[0], v.split("=")[1].rsplit(":", 1)[0]))
                 if ".costs." in k:
                     tsvars.append(f"cost_{k.split('.')[-1]}")
+                elif ".carrier_ratios." in k:
+                    tsvars.append("carrier_ratios")
                 else:
                     tsvars.append(k.split(".")[-1])
         return set(tsnames), set(tsvars)

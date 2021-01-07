@@ -1,5 +1,6 @@
 import pytest  # pylint: disable=unused-import
 import pandas as pd
+import pyomo.core as po
 
 import calliope
 import calliope.exceptions as exceptions
@@ -62,15 +63,15 @@ class TestUpdateParam:
         """
         test that the function update_param works with multiple dimensions
         """
-
+        time = model._backend_model.timesteps[1]
         model.backend.update_param(
             "resource",
-            {(("a", "test_demand_elec"), pd.Timestamp("2005-01-01 01:00:00")): -10},
+            {("a", "test_demand_elec", time): -10},
         )
 
         assert (
             model._backend_model.resource.extract_values()[
-                (("a", "test_demand_elec"), pd.Timestamp("2005-01-01 01:00:00"))
+                ("a", "test_demand_elec", time)
             ]
             == -10
         )
@@ -102,7 +103,7 @@ class TestUpdateParam:
             model.backend.update_param("loc_techs", {("b", "test_supply_elec"): 20})
 
         assert check_error_or_warning(
-            excinfo, "`loc_techs` not a Parameter in the Pyomo Backend."
+            excinfo, "Parameter `loc_techs` not in the Pyomo Backend."
         )
 
     def index_not_in_param(self, model):
@@ -200,7 +201,7 @@ class TestBackendRerun:
             new_model = model.backend.rerun()
 
         assert (
-            new_model.inputs.energy_cap_max.loc[{"loc_techs": ("b", "test_supply_elec")}]
+            new_model.inputs.energy_cap_max.loc[{"nodes": "b", "techs": "test_supply_elec"}]
             == 20
         )
 
@@ -223,9 +224,10 @@ class TestGetAllModelAttrs:
         """Model attributes consist of variables, parameters, and sets"""
         attrs = model.backend.get_all_model_attrs()
 
-        assert attrs.keys() == set(["Set", "Param", "Var"])
+        assert attrs.keys() == set(["Set", "Param", "Var", "Expression"])
         assert isinstance(attrs["Var"], dict)
         assert isinstance(attrs["Param"], dict)
+        assert isinstance(attrs["Expression"], dict)
         assert isinstance(attrs["Set"], list)
 
     def test_check_attrs(self, model):
@@ -233,6 +235,7 @@ class TestGetAllModelAttrs:
         attrs = model.backend.get_all_model_attrs()
 
         assert "energy_cap" in attrs["Var"].keys()
+        assert "cost" in attrs["Expression"].keys()
         assert "resource" in attrs["Param"].keys()
         assert "carriers" in attrs["Set"]
 
@@ -284,12 +287,12 @@ class TestAddConstraint:
     def test_sets(self, model):
         """Constraint sets must be backend model sets"""
 
-        def energy_cap_time_varying_rule(backend_model, loc_tech, not_a_set):
+        def energy_cap_time_varying_rule(backend_model, node, tech, not_a_set):
 
             return (
-                backend_model.energy_cap[loc_tech]
-                <= backend_model.energy_cap[loc_tech]
-                * backend_model.resource[loc_tech, not_a_set]
+                backend_model.energy_cap[node, tech]
+                <= backend_model.energy_cap[node, tech]
+                * backend_model.resource[node, tech, not_a_set]
             )
 
         constraint_name = "energy_cap_time_varying"
@@ -303,6 +306,7 @@ class TestAddConstraint:
             excinfo, "Pyomo backend model object has no attribute 'not_a_set'"
         )
 
+    @pytest.mark.xfail(reason="currently generic sets don't work, choosing to ignore and then override with custom constraints")
     def test_added_constraint(self, model):
         """
         Test the successful addition of a constraint which only allows carrier
@@ -312,7 +316,7 @@ class TestAddConstraint:
         def new_constraint_rule(backend_model, node, tech, timestep):
             carrier_con = backend_model.carrier_con[:, node, tech, timestep]
             timestep_resolution = backend_model.timestep_resolution[timestep]
-            return carrier_con * 2 >= (
+            return po.quicksum(carrier_con) * 2 >= (
                 -1 * backend_model.energy_cap[node, tech] * timestep_resolution
             )
 

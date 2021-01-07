@@ -71,14 +71,19 @@ def build_params(model_data, backend_model):
                 dims = [getattr(backend_model, v.dims[0])]
             else:
                 dims = [getattr(backend_model, i) for i in v.dims]
-            if k == "name":
-                continue
+            if hasattr(backend_model, k):
+                logger.debug(
+                    f"The parameter {k} is already an attribute of the Pyomo model."
+                    "It will be preppended with `calliope_` for differentiatation."
+                )
+                k = f"calliope_{k}"
             setattr(backend_model, k, po.Param(*dims, **_kwargs))
 
     for option_name, option_val in backend_model.__calliope_run_config[
         "objective_options"
     ].items():
         if option_name == "cost_class":
+            # TODO: shouldn't require filtering out unused costs (this should be caught by typedconfig?)
             objective_cost_class = {
                 k: v for k, v in option_val.items() if k in backend_model.costs
             }
@@ -168,6 +173,7 @@ def generate_model(model_data, masks):
         for dataset in [model_data, masks]:
             if set_name in dataset.coords.keys():
                 dataset[set_name] = pd.to_datetime(dataset[set_name], cache=False)
+    backend_model.__calliope_datetime_data = datetime_data
 
     return backend_model
 

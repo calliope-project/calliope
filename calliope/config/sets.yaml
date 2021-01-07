@@ -52,7 +52,7 @@ constraints:
 
     conversion_plus_prod_con_to_zero:
         foreach: [nodes, techs, carriers, carrier_tiers, timesteps]
-        where: [carrier_ratios, and, inheritance(conversion_plus)]
+        where: [carrier_ratios=0, and, inheritance(conversion_plus)]
 
     balance_conversion:
         foreach: [nodes, techs, timesteps]
@@ -76,7 +76,7 @@ constraints:
 
     storage_max:
         foreach: [nodes, techs, timesteps]
-        where: [include_storage=True, and, not timestep_cluster]
+        where: [include_storage=True, and, not model.time.function_options.storage_inter_cluster=True]
 
     storage_discharge_depth:
         foreach: [nodes, techs, timesteps]
@@ -119,7 +119,7 @@ constraints:
 
     storage_initial:
         foreach: [nodes, techs]
-        where: [storage_initial, and, include_storage=True, and, not timestep_cluster]
+        where: [storage_initial, and, include_storage=True, and, not model.time.function_options.storage_inter_cluster=True]
 
     export_balance:
         foreach: [nodes, techs, carriers, timesteps]
@@ -195,23 +195,23 @@ constraints:
 
     storage_intra_max:
         foreach: [nodes, techs, timesteps]
-        where: [include_storage=True, and, timestep_cluster]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
 
     storage_intra_min:
         foreach: [nodes, techs, timesteps]
-        where: [include_storage=True, and, timestep_cluster]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
 
     storage_inter_max:
         foreach: [nodes, techs, datesteps]
-        where: [include_storage=True]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
 
     storage_inter_min:
         foreach: [nodes, techs, datesteps]
-        where: [include_storage=True]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
 
     balance_storage_inter:
         foreach: [nodes, techs, datesteps]
-        where: [include_storage=True]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
 
 variables:
 
@@ -255,17 +255,17 @@ variables:
 
     storage_inter_cluster:
         foreach: [nodes, techs, datesteps]
-        where: [include_storage=True]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
         domain: NonNegativeReals
 
     storage_intra_cluster_max:
         foreach: [nodes, techs, clusters]
-        where: [include_storage=True]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
         domain: Reals
 
     storage_intra_cluster_min:
         foreach: [nodes, techs, clusters]
-        where: [include_storage=True]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
         domain: Reals
 
     storage:

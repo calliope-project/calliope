@@ -119,9 +119,7 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
             dims = [var_container.index_set().name]
 
     if sparse and not expr:
-        result = pd.DataFrame.from_dict(
-            var_container.extract_values_sparse(), orient="index"
-        )
+        result = pd.Series(var_container.extract_values_sparse())
     else:
         if expr:
             result = pd.Series(var_container._data).apply(

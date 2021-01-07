@@ -95,9 +95,11 @@ def inheritance(model_data, tech_group):
 
 
 def val_is(model_data, param, val):
-    if "run." in param:
-        run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
-        imask = run_config.get(param.strip("run."), None) == ast.literal_eval(val)
+    if param.startswith(("model.", "run.")):
+        group = param.split('.')[0]
+        config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
+        # TODO: update to str.removeprefix() in Python 3.9+
+        imask = config.get_key(param[len(f"{group}."):], None) == ast.literal_eval(val)
     elif param in model_data.data_vars.keys():
         imask = model_data[param] == ast.literal_eval(val)
     else:
@@ -158,7 +160,6 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
             elif i in model_data.data_vars.keys():
                 imask = param_exists(model_data, i)
             else:
-
                 imask = False  # TODO: this should differntiate between a valid parameter not being in model_data and an e.g. incorrectly spelled parameter
             # Separately check whether the condition should be inverted
             if _not is True:

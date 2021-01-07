@@ -152,11 +152,13 @@ class TestChecks:
         """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
-                "techs.test_supply_elec.constraints": {
-                    "force_resource": force,
-                    "energy_cap_min_use": 0.1,
-                    "resource": "file=supply_plus_resource.csv:1",
-                    "energy_cap_equals": np.inf,
+                "techs.test_supply_elec":{
+                    "switches.force_resource": force,
+                    "constraints": {
+                        "energy_cap_min_use": 0.1,
+                        "resource": "file=supply_plus_resource.csv:1",
+                        "energy_cap_equals": np.inf,
+                    }
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -309,11 +311,11 @@ class TestChecks:
         assert check_error_or_warning(warning, _warnings)
         assert not check_error_or_warning(warning, not_warnings)
 
-    @pytest.mark.parametrize("param", ("energy_cap_per_storage_cap_max"))
     def test_operate_storage(self, param):
         """Can't violate storage capacity constraints in the definition of a technology"""
+        param = "energy_cap_per_storage_cap_max"
         m = build_model(
-            {"techs.test_supply_plus.constraints": {param: 0.1}},
+            {f"techs.test_supply_plus.constraints.{param}": 0.1},
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
 
