@@ -175,7 +175,6 @@ class Model(object):
             observer=self._model_data,
         )
 
-
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
             self.results = results

@@ -120,18 +120,25 @@ def subset_imask(set_name, set_config, imask):
         # Keep the axis if it is expected for this constraint/variable
         # Set those not in the set to False
         if not isinstance(subset, (list, set, tuple)):
-            raise TypeError(f"set `{set_name}` must subset over an iterable, instead got non-iterable `{subset}` for subset `{subset_name}`")
+            raise TypeError(
+                f"set `{set_name}` must subset over an iterable, instead got non-iterable `{subset}` for subset `{subset_name}`"
+            )
         if subset_name in set_config.foreach:
             imask.loc[{subset_name: ~imask[subset_name].isin(subset)}] = False
         # Otherwise squeeze out this dimension after slicing it
         else:
             imask = (
-                imask.loc[{subset_name: imask[subset_name].isin(subset)}].sum(subset_name) > 0
+                imask.loc[{subset_name: imask[subset_name].isin(subset)}].sum(
+                    subset_name
+                )
+                > 0
             )
     return imask
 
 
-def imask_where(model_data, set_name, where_array, initial_imask=None, initial_operator=None):
+def imask_where(
+    model_data, set_name, where_array, initial_imask=None, initial_operator=None
+):
     """
     Example mask: [cost_purchase, and, [param(energy_cap_max), or, not inheritance(supply_plus)]]
     i.e. a list of "param(...)", "inheritance(...)" and operators.
@@ -176,7 +183,7 @@ def imask_where(model_data, set_name, where_array, initial_imask=None, initial_o
             imasks.append(imask)
     if len(imasks) - 1 != len(operators):
         raise ValueError(
-           f"'where' array for set `{set_name}` must be a list of statements comma separated by {{and, or}} operators."
+            f"'where' array for set `{set_name}` must be a list of statements comma separated by {{and, or}} operators."
         )
     # Run through and combine all imasks using defined operators
     imask = imasks[0]

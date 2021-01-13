@@ -267,7 +267,7 @@ def get_all_pyomo_model_attrs(imasks, backend_model):
     # Indexed objected
     objects = {
         pyomo_obj: {
-            i.name: imasks.get(objname, {})[i.name]['foreach']
+            i.name: imasks.get(objname, {})[i.name]["foreach"]
             if i.name in imasks.get(objname, {})
             else [i.index_set().name]
             for i in backend_model.component_objects(ctype=getattr(po, pyomo_obj))

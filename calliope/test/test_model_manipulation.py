@@ -75,4 +75,4 @@ class TestExistsFalse:
         # Ensure what should be gone is gone
         "test_transmission_elec:b" not in model._model_data.techs
         "test_transmission_elec:a" not in model._model_data.techs
-        assert (model._model_data.node_tech.loc["a", "test_transmission_heat:b"] == 1)
+        assert model._model_data.node_tech.loc["a", "test_transmission_heat:b"] == 1

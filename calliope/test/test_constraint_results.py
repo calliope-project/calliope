@@ -108,7 +108,7 @@ class TestUrbanScaleMILP:
 
 
 class TestModelSettings:
-    @pytest.fixture(scope='module')
+    @pytest.fixture(scope="module")
     def override(self):
         def _override(feasibility, cap_val):
             override_dict = {
@@ -124,13 +124,17 @@ class TestModelSettings:
                     "energy_eff": 1,
                     "energy_cap_equals": 15,
                 },
-                "techs.test_supply_elec.switches.force_resource": True
+                "techs.test_supply_elec.switches.force_resource": True,
             }
 
             return override_dict
+
         return _override
 
-    @pytest.mark.parametrize(("feasibility", "resource"), ((True, 10), (True, 5), (True, 15), (False, 15), (False, 5)))
+    @pytest.mark.parametrize(
+        ("feasibility", "resource"),
+        ((True, 10), (True, 5), (True, 15), (False, 15), (False, 5)),
+    )
     def test_feasibility(self, override, feasibility, resource):
 
         model = build_model(
@@ -151,6 +155,7 @@ class TestModelSettings:
             assert not hasattr(model._backend_model, "unmet_demand")
             assert not hasattr(model._backend_model, "unused_supply")
             assert model._model_data.attrs["termination_condition"] != "optimal"
+
 
 class TestEnergyCapacityPerStorageCapacity:
     @pytest.fixture

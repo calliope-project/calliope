@@ -10,9 +10,14 @@ import calliope
 from calliope import AttrDict
 
 
-constraint_sets = {k: [ast.literal_eval(i) for i in v] for k, v in AttrDict.from_yaml(
-    os.path.join(os.path.dirname(__file__), "constraint_sets.yaml")
-).as_dict_flat().items()}
+constraint_sets = {
+    k: [ast.literal_eval(i) for i in v]
+    for k, v in AttrDict.from_yaml(
+        os.path.join(os.path.dirname(__file__), "constraint_sets.yaml")
+    )
+    .as_dict_flat()
+    .items()
+}
 
 defaults = AttrDict.from_yaml(
     os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")

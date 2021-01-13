@@ -661,12 +661,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
 
 def generate_model_run(
-    config,
-    timeseries_dataframes,
-    debug_comments,
-    applied_overrides,
-    scenario,
-    imasks,
+    config, timeseries_dataframes, debug_comments, applied_overrides, scenario, imasks,
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
