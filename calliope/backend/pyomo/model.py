@@ -56,7 +56,10 @@ def build_params(model_data, backend_model):
     )
 
     for k, v in model_data.data_vars.items():
-        if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1:
+        if v.attrs["is_result"] == 0 or (
+            v.attrs.get("operate_param", 0) == 1
+            and backend_model.__calliope_run_config["mode"] == "operate"
+        ):
             with pd.option_context("mode.use_inf_as_na", True):
                 _kwargs = {
                     "initialize": v.to_series().dropna().to_dict(),
@@ -65,19 +68,11 @@ def build_params(model_data, backend_model):
                 }
             if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
                 _kwargs["default"] = backend_model.__calliope_defaults[k]
-            # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
-            # so add those in.
-            if (
-                backend_model.__calliope_run_config["mode"] == "operate"
-                and v.attrs.get("operate_param") == 1
-            ):
-                dims = [getattr(backend_model, v.dims[0])]
-            else:
-                dims = [getattr(backend_model, i) for i in v.dims]
+            dims = [getattr(backend_model, i) for i in v.dims]
             if hasattr(backend_model, k):
                 logger.debug(
                     f"The parameter {k} is already an attribute of the Pyomo model."
-                    "It will be preppended with `calliope_` for differentiatation."
+                    "It will be prepended with `calliope_` for differentiatation."
                 )
                 k = f"calliope_{k}"
             setattr(backend_model, k, po.Param(*dims, **_kwargs))

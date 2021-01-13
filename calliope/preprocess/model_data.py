@@ -75,7 +75,7 @@ def build_model_data(model_run, debug=False):
         _ds = xr.Dataset(_df.T).unstack()
         data = data.merge(_ds)
 
-    for param, param_data in data.data_vars.items():
+    for param_data in data.data_vars.values():
         param_data.attrs["parameters"] = 1
 
     if debug:

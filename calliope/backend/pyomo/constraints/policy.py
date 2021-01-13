@@ -9,8 +9,6 @@ Policy constraints.
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
-
 from calliope.backend.pyomo.util import get_param
 
 
@@ -29,7 +27,6 @@ def reserve_margin_constraint_rule(backend_model, carrier):
             \\times (1 + reserve\\_margin)
 
     """
-    model_data_dict = backend_model.__calliope_model_data["data"]
 
     reserve_margin = get_param(backend_model, "reserve_margin", carrier)
     max_demand_timestep = backend_model.max_demand_timesteps[carrier]

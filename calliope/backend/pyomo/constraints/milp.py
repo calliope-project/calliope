@@ -10,13 +10,8 @@ Constraints for binary and integer decision variables
 """
 
 import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
 
-from calliope.backend.pyomo.util import (
-    get_param,
-    get_timestep_weight,
-    loc_tech_is_in,
-)
+from calliope.backend.pyomo.util import get_param
 
 
 def unit_commitment_milp_constraint_rule(backend_model, node, tech, timestep):

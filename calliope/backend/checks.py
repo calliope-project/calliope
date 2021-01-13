@@ -53,14 +53,14 @@ def check_operate_params(model_data):
             return model_data[var].isnull()
 
     # Storage initial is carried over between iterations, so must be defined along with storage
-    if (model_data.include_storage == True).any():
+    if (model_data.include_storage == 1).any():
         if "storage_initial" not in model_data.data_vars.keys():
             model_data["storage_initial"] = model_data.include_storage.astype(float)
         elif (
-            (model_data.include_storage == True) & _is_missing("storage_initial")
+            (model_data.include_storage == 1) & _is_missing("storage_initial")
         ).any():
             model_data.storage_initial = model_data.storage_initial.fillna(
-                (model_data.include_storage == True).astype(float)
+                (model_data.include_storage == 1).astype(float)
             )
         model_data["storage_initial"].attrs["is_result"] = 0.0
         warnings.append(
@@ -144,7 +144,7 @@ def check_operate_params(model_data):
     ):
         model_data["resource_area"] = model_data.resource_area.where(
             ~(
-                (model_data.force_resource == True)
+                (model_data.force_resource == 1)
                 & (model_data.resource_unit == "energy_per_cap")
             )
         )
@@ -159,7 +159,7 @@ def check_operate_params(model_data):
     ):
         model_data["energy_cap"] = model_data.energy_cap.where(
             ~(
-                (model_data.force_resource == True)
+                (model_data.force_resource == 1)
                 & (model_data.resource_unit == "energy_per_area")
             )
         )
@@ -172,7 +172,7 @@ def check_operate_params(model_data):
         if "energy_cap" in model_data.data_vars:
             model_data["energy_cap"] = model_data.energy_cap.where(
                 ~(
-                    (model_data.force_resource == True)
+                    (model_data.force_resource == 1)
                     & (model_data.resource_unit == "energy")
                 )
             )
@@ -184,7 +184,7 @@ def check_operate_params(model_data):
         if "resource_area" in model_data.data_vars:
             model_data["resource_area"] = model_data.resource_area.where(
                 ~(
-                    (model_data.force_resource == True)
+                    (model_data.force_resource == 1)
                     & (model_data.resource_unit == "energy")
                 )
             )
@@ -195,10 +195,10 @@ def check_operate_params(model_data):
             )
     if (
         "resource_cap" in model_data.data_vars
-        and (model_data.force_resource == True).any()
+        and (model_data.force_resource == 1).any()
     ):
         model_data["resource_cap"] = model_data.resource_cap.where(
-            model_data.force_resource == False
+            model_data.force_resource == 0
         )
         warnings.append(
             "Resource capacity constraint removed from technologies with "
