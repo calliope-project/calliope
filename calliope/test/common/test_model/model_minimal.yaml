@@ -9,6 +9,7 @@ model:
 run:
     mode: plan
     solver: cbc
+    objective_options.cost_class.monetary: 1
 
 techs:
     test_supply_elec:

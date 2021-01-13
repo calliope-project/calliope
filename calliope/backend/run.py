@@ -20,7 +20,7 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def run(model_data, masks, timings, build_only=False):
+def run(model_data, timings, build_only=False):
     """
     Parameters
     ----------
@@ -45,7 +45,6 @@ def run(model_data, masks, timings, build_only=False):
         results, backend = run_plan(
             model_data,
             run_config,
-            masks,
             timings,
             backend=BACKEND[run_config.backend],
             build_only=build_only,
@@ -62,14 +61,12 @@ def run(model_data, masks, timings, build_only=False):
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
-def run_plan(
-    model_data, run_config, masks, timings, backend, build_only, backend_rerun=False
-):
+def run_plan(model_data, run_config, timings, backend, build_only, backend_rerun=False):
 
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
     if not backend_rerun:
-        backend_model = backend.generate_model(model_data, masks)
+        backend_model = backend.generate_model(model_data)
 
         log_time(
             logger,
@@ -120,11 +117,12 @@ def run_plan(
             logger, timings, "run_results_loaded", comment="Backend: loaded results"
         )
 
-        results = backend.get_result_array(backend_model, model_data, masks)
-        results.attrs["termination_condition"] = termination
-
-        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+        if termination in ["optimal", "feasible"]:
+            results = backend.get_result_array(backend_model, model_data)
             results.attrs["objective_function_value"] = backend_model.obj()
+        else:
+            results = xr.Dataset()
+        results.attrs["termination_condition"] = termination
 
         log_time(
             logger,
@@ -356,8 +354,10 @@ def run_operate(model_data, timings, backend, build_only):
             _termination = backend.load_results(backend_model, _results)
             terminations.append(_termination)
 
-            _results = backend.get_result_array(backend_model, model_data)
-
+            if _termination in ["optimal", "feasible"]:
+                _results = backend.get_result_array(backend_model, model_data)
+            else:
+                _results = xr.Dataset()
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
             _results["timesteps"] = window_model_data.timesteps.copy()
@@ -369,7 +369,7 @@ def run_operate(model_data, timings, backend, build_only):
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
-            if "loc_techs_store" in model_data.dims.keys():
+            if (model_data.get("include_storage", False) == True).any():
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
                 ].drop("timesteps")
@@ -381,7 +381,7 @@ def run_operate(model_data, timings, backend, build_only):
                 )
 
             # Set up total operated units for the next iteration
-            if "loc_techs_milp" in model_data.dims.keys():
+            if (model_data.get("cap_method", False) == "integer").any():
                 operated_units = _results.operating_units.sum("timesteps").astype(
                     np.int
                 )

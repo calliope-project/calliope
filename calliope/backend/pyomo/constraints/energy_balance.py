@@ -44,7 +44,7 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
     system_balance = [_sum("carrier_prod"), _sum("carrier_con")]
 
     if hasattr(backend_model, "carrier_export"):
-        system_balance.append(_sum("carrier_export"))
+        system_balance.append(-1 * _sum("carrier_export"))
 
     if hasattr(backend_model, "unmet_demand"):
         system_balance.append(backend_model.unmet_demand[carrier, node, timestep])
@@ -120,7 +120,7 @@ def balance_supply_constraint_rule(backend_model, carrier, node, tech, timestep)
     else:
         available_resource = resource * resource_scale
 
-    if backend_model.force_resource[node, tech].value is True:
+    if backend_model.force_resource[node, tech].value == True:
         return carrier_prod == available_resource
     elif min_use:
         return min_use * available_resource <= carrier_prod <= available_resource
@@ -189,9 +189,9 @@ def balance_demand_constraint_rule(backend_model, carrier, node, tech, timestep)
 
     # We save the expression to the backend_model so it can be used elsewhere,
     # e.g. in the group constraints
-    backend_model.required_resource[node, tech, timestep] = required_resource
+    backend_model.required_resource[node, tech, timestep].expr = required_resource
 
-    if backend_model.force_resource[node, tech].value is True:
+    if backend_model.force_resource[node, tech].value == True:
         return carrier_con == backend_model.required_resource[node, tech, timestep]
     else:
         return carrier_con >= backend_model.required_resource[node, tech, timestep]
@@ -255,7 +255,7 @@ def resource_availability_supply_plus_constraint_rule(
     else:
         available_resource = resource * resource_scale
 
-    if backend_model.force_resource[node, tech].value is True:
+    if backend_model.force_resource[node, tech].value == True:
         return backend_model.resource_con[node, tech, timestep] == available_resource
     else:
         return backend_model.resource_con[node, tech, timestep] <= available_resource
@@ -362,7 +362,9 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
                 hasattr(backend_model, "clusters")
                 and backend_model.lookup_cluster_first_timestep[timestep]
             ):
-                previous_step = backend_model.lookup_cluster_last_timestep[timestep].value
+                previous_step = backend_model.lookup_cluster_last_timestep[
+                    timestep
+                ].value
             elif current_timestep == 0 and run_config["cyclic_storage"]:
                 previous_step = backend_model.timesteps[-1]
             else:

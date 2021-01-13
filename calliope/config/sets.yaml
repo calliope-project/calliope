@@ -38,16 +38,16 @@ constraints:
 
     carrier_production_max_conversion_plus:
         foreach: [nodes, techs, timesteps]
-        where: [inheritance(conversion_plus), and, cap_method='linear']
+        where: [inheritance(conversion_plus), and, not cap_method='integer']
 
     carrier_production_min_conversion_plus:
         foreach: [nodes, techs, timesteps]
-        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, cap_method='linear']
+        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, not cap_method='integer']
 
     balance_conversion_plus_non_primary:
         foreach: [nodes, techs, carrier_tiers, timesteps]
         where: [inheritance(conversion_plus)]
-        subsets:
+        subset:
             carrier_tiers: [in_2, out_2, in_3, out_3]
 
     conversion_plus_prod_con_to_zero:
@@ -60,15 +60,21 @@ constraints:
 
     carrier_production_max:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [not inheritance(conversion_plus), and, cap_method='linear', and, allowed_carrier_prod=True]
+        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
+        subset:
+            carrier_tiers: [out]
 
     carrier_production_min:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [energy_cap_min_use, and, not inheritance(conversion_plus), and, cap_method='linear', and, allowed_carrier_prod=True]
+        where: [carrier, and, energy_cap_min_use, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
+        subset:
+            carrier_tiers: [out]
 
     carrier_consumption_max:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [not inheritance(conversion_plus), and, [cap_method='linear', or, inheritance(demand)], and, allowed_carrier_con=True]
+        where: [carrier, and, [inheritance(transmission), or, inheritance(demand), or, inheritance(storage)], and, [not cap_method='integer', or, inheritance(demand)], and, allowed_carrier_con=True]
+        subset:
+            carrier_tiers: [in]
 
     resource_max:
         foreach: [nodes, techs, timesteps]
@@ -119,7 +125,7 @@ constraints:
 
     storage_initial:
         foreach: [nodes, techs]
-        where: [storage_initial, and, include_storage=True, and, not model.time.function_options.storage_inter_cluster=True]
+        where: [storage_initial, and, include_storage=True, and, not model.time.function_options.storage_inter_cluster=True, and, run.cyclic_storage=True]
 
     export_balance:
         foreach: [nodes, techs, carriers, timesteps]
@@ -227,13 +233,17 @@ variables:
 
     carrier_prod:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [allowed_carrier_prod=True]
+        where: [carrier, and, allowed_carrier_prod=True]
+        subset:
+            carrier_tiers: [out, out_2, out_3]
         domain: NonNegativeReals
 
     carrier_con:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [allowed_carrier_con=True]
+        where: [carrier, and, allowed_carrier_con=True]
         domain: NonPositiveReals
+        subset:
+            carrier_tiers: [in, in_2, in_3]
 
     resource_area:
         foreach: [nodes, techs]

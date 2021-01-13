@@ -1,12 +1,13 @@
 model:
     name: Test model for energy capacity per storage capacity
     timeseries_data_path: 'timeseries_data'
-    subset_time: '2005-01-01'
+    subset_time: ['2005-01-01', '2005-01-01']
 
 run:
     mode: plan
     solver: cbc
     cyclic_storage: False # necessary so demand can be fed from stored energy
+    ensure_feasibility: true
 
 techs:
     electricity_demand:
@@ -22,7 +23,6 @@ techs:
             carrier: electricity
             parent: storage
         constraints:
-            energy_cap_max: inf
             storage_initial: 1.0
             lifetime: 60
         costs:
@@ -30,22 +30,11 @@ techs:
                 energy_cap: 1500000
                 storage_cap: 300000
                 interest_rate: 0.1
-    my_dummy_supply:
-        # Unfortunately, the only supply tech in the region is broken.
-        # (Calliope expects at least one supply technology.)
-        essentials:
-            name: Broken Supply
-            carrier: electricity
-            parent: supply
-        constraints:
-            energy_cap_max: 0
 
 locations:
-    a:
-        techs:
-            my_dummy_supply:
-            my_storage:
-            electricity_demand:
+    a.techs:
+        my_storage:
+        electricity_demand:
 
 overrides:
     equals:

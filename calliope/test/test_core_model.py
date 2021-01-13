@@ -12,18 +12,10 @@ class TestModel:
     @pytest.fixture(scope="module")
     def national_scale_example(self):
         model = calliope.examples.national_scale(
-            override_dict={"model.subset_time": "2005-01-01"}
+            override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]}
         )
         model.run()
         return model
-
-    def test_save_commented_model_yaml(self, national_scale_example):
-        model = national_scale_example
-
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "model_debug.yaml")
-            model.save_commented_model_yaml(out_path)
-            assert os.path.isfile(out_path)
 
     def test_info(self, national_scale_example):
         model = national_scale_example
@@ -38,14 +30,3 @@ class TestModel:
         model = calliope.Model(model_location)
 
         model.info()
-
-    def test_get_formatted_array(self, national_scale_example):
-        array = national_scale_example.get_formatted_array("resource")
-
-        assert array.dims == ("locs", "techs", "timesteps")
-
-    def test_get_formatted_array_unknown_var(self, national_scale_example):
-        with pytest.raises(KeyError) as excinfo:
-            national_scale_example.get_formatted_array("foo")
-
-        assert check_error_or_warning(excinfo, "Variable foo not in Model data")

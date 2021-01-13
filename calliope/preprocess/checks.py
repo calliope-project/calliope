@@ -405,10 +405,10 @@ def _check_tech_final(
     # Error if required constraints are not defined
     for r in required:
         # If it's a string, it must be defined
-        single_ok = isinstance(r, str) and r in tech_config.constraints
+        single_ok = isinstance(r, str) and r in tech_config.get("constraints", {})
         # If it's a list of strings, one of them must be defined
         multiple_ok = isinstance(r, list) and any(
-            [i in tech_config.constraints for i in r]
+            [i in tech_config.get("constraints", {}) for i in r]
         )
         if not single_ok and not multiple_ok:
             errors.append(
@@ -422,7 +422,7 @@ def _check_tech_final(
     defined_carriers = get_all_carriers(model_run.techs[tech_id].essentials)
     carriers_in_ratios = [
         i.split(".")[-1]
-        for i in tech_config.constraints.get_key("carrier_ratios", AttrDict())
+        for i in tech_config.get_key("constraints.carrier_ratios", AttrDict())
         .as_dict_flat()
         .keys()
     ]
@@ -435,8 +435,8 @@ def _check_tech_final(
 
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (
-        any(["units_" in k for k in tech_config.constraints.keys()])
-        and "energy_cap_per_unit" not in tech_config.constraints.keys()
+        any(["units_" in k for k in tech_config.get("constraints", {}).keys()])
+        and "energy_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
             "`{}` at `{}` fails to define energy_cap_per_unit when specifying "
@@ -445,10 +445,10 @@ def _check_tech_final(
 
     # If a technology is defined by units & is a storage tech, it must define storage_cap_per_unit
     if (
-        any(["units_" in k for k in tech_config.constraints.keys()])
+        any(["units_" in k for k in tech_config.get("constraints", {}).keys()])
         and model_run.techs[tech_id].essentials.parent in ["storage", "supply_plus"]
-        and any(["storage" in k for k in tech_config.constraints.keys()])
-        and "storage_cap_per_unit" not in tech_config.constraints.keys()
+        and any(["storage" in k for k in tech_config.get("constraints", {}).keys()])
+        and "storage_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
             "`{}` at `{}` fails to define storage_cap_per_unit when specifying "
@@ -456,7 +456,7 @@ def _check_tech_final(
         )
 
     # Gather remaining unallowed constraints
-    remaining = set(tech_config.constraints) - set(allowed)
+    remaining = set(tech_config.get("constraints", {})) - set(allowed)
 
     # Error if something is defined that's not allowed, but is in defaults
     # Warn if something is defined that's not allowed, but is not in defaults
@@ -474,7 +474,7 @@ def _check_tech_final(
             )
 
     # Error if an `export` statement does not match the given carrier_outs
-    if "export_carrier" in tech_config.constraints:
+    if "export_carrier" in tech_config.get("constraints", {}):
         essentials = model_run.techs[tech_id].essentials
         export = tech_config.constraints.export_carrier
         if export and export not in [

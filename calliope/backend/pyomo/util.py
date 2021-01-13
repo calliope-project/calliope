@@ -156,7 +156,9 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
-        if re.match("resource|node_coordinates|cost*|lookup_cluster_last_timestep", var.name):
+        if re.match(
+            "resource|node_coordinates|cost*|lookup_cluster_last_timestep", var.name
+        ):
             return ""
         else:
             return "NonNegative"
@@ -176,14 +178,6 @@ def invalid(val) -> bool:
         return pd.isnull(val)
 
 
-def mask(mask):
-    if len(mask.dims) == 1:
-        return mask[mask].coords.to_index()
-    else:
-        mask_stacked = mask.stack(dim_0=mask.dims)
-        return mask_stacked[mask_stacked].coords.to_index()
-
-
 def within(backend_model, var: xr.DataArray):
     _within = None
     for i in var.dims:
@@ -192,3 +186,35 @@ def within(backend_model, var: xr.DataArray):
         else:
             _within = _within.cross(getattr(backend_model, i))
     return _within
+
+
+def convert_datetime(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset, astype: type
+) -> xr.Dataset:
+    """
+    Convert between datetime and integer xarray dataarrays, to reduce the memory
+    footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
+    when creating the pyomo model object.
+
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    astype : dtype to convert timeseries dataarrays to, e.g. int, str, or np.datetime64
+    """
+    if astype == np.datetime64:
+        for attr, set_name in backend_model.__calliope_datetime_data:
+            if attr == "coords" and set_name in model_data:
+                model_data.coords[set_name] = model_data[set_name].astype(astype)
+            elif set_name in model_data:
+                model_data[set_name] = model_data[set_name].astype(astype)
+    else:
+        datetime_data = set()
+        for attr in ["coords", "data_vars"]:
+            for set_name, set_data in getattr(model_data, attr).items():
+                if set_data.dtype.kind == "M":
+                    model_data[set_name] = model_data[set_name].astype(astype)
+                    datetime_data.add((attr, set_name))
+        backend_model.__calliope_datetime_data = datetime_data
+
+    return model_data

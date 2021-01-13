@@ -22,7 +22,8 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var, get_domain, mask, within
+from calliope.backend.pyomo.util import get_var, get_domain, convert_datetime
+from calliope.backend.imasks import build_imasks
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -32,7 +33,8 @@ from calliope.core.attrdict import AttrDict
 
 logger = logging.getLogger(__name__)
 
-#@profile
+
+# @profile
 def build_sets(model_data, backend_model):
     for coord_name, coord_vals in model_data.coords.items():
         setattr(
@@ -41,7 +43,8 @@ def build_sets(model_data, backend_model):
             po.Set(initialize=coord_vals.to_index(), ordered=True),
         )
 
-#@profile
+
+# @profile
 def build_params(model_data, backend_model):
     # "Parameters"
 
@@ -102,40 +105,50 @@ def build_params(model_data, backend_model):
         within=po.NonNegativeReals,
     )
 
-#@profile
-def build_variables(backend_model, masks):
-    for k, v in masks.filter_by_attrs(variables=1).data_vars.items():
-        if v.attrs.get('bounds', None) is not None:
-            kwargs = {'bounds': get_capacity_bounds(v.attrs['bounds'])}
+
+# @profile
+def build_variables(backend_model, variable_configs, imasks):
+    for var_name, imask in imasks.items():
+        config = variable_configs[var_name]
+        if "bounds" in config:
+            kwargs = {"bounds": get_capacity_bounds(config.bounds)}
         else:
             kwargs = {}
 
         setattr(
-            backend_model, k, po.Var(mask(v), domain=getattr(po, v.domain), **kwargs),
+            backend_model,
+            var_name,
+            po.Var(imask, domain=getattr(po, config.domain), **kwargs),
         )
 
-#@profile
-def build_constraints(backend_model, masks):
-    for k, v in masks.filter_by_attrs(constraints=1).data_vars.items():
+
+# @profile
+def build_constraints(backend_model, imasks):
+    for constraint_name, imask in imasks.items():
         setattr(
             backend_model,
-            f"{k}_constraint",
-            po.Constraint(mask(v), rule=getattr(constraints, f"{k}_constraint_rule"),),
+            f"{constraint_name}_constraint",
+            po.Constraint(
+                imask, rule=getattr(constraints, f"{constraint_name}_constraint_rule"),
+            ),
         )
 
-#@profile
-def build_expressions(backend_model, masks):
-    for k, v in masks.filter_by_attrs(expressions=1).data_vars.items():
-        if hasattr(constraints, f"{k}_expression_rule"):
-            setattr(
-                backend_model, k, po.Expression(mask(v), rule=getattr(constraints, f"{k}_expression_rule")),
-            )
-        else:
-            setattr(
-                backend_model, k, po.Expression(mask(v), initialize=0.0),
-            )
 
-#@profile
+# @profile
+def build_expressions(backend_model, imasks):
+    for expression_name, imask in imasks.items():
+        if hasattr(constraints, f"{expression_name}_expression_rule"):
+            kwargs = {
+                "rule": getattr(constraints, f"{expression_name}_expression_rule")
+            }
+        else:
+            kwargs = {"initialize": 0.0}
+        setattr(
+            backend_model, expression_name, po.Expression(imask, **kwargs),
+        )
+
+
+# @profile
 def build_objective(backend_model):
     objective_function = (
         "calliope.backend.pyomo.objective."
@@ -144,36 +157,28 @@ def build_objective(backend_model):
     load_function(objective_function)(backend_model)
 
 
-def generate_model(model_data, masks):
+def generate_model(model_data):
     """
     Generate a Pyomo model.
 
     """
     backend_model = po.ConcreteModel()
     # remove pandas datetime from xarrays, to reduce memory usage on creating pyomo objects
-    datetime_data = set()
-    for dataset in [model_data, masks]:
-        for attr in [dataset.coords, dataset.data_vars]:
-            for set_name, set_data in attr.items():
-                if set_data.dtype.kind == "M":
-                    dataset[set_name] = dataset[set_name].astype(int)
-                    datetime_data.add(set_name)
+    convert_datetime(backend_model, model_data, int)
 
+    imask_config = AttrDict.from_yaml_string(model_data.attrs["imasks"])
+    imasks = build_imasks(model_data, imask_config)
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
-    build_variables(backend_model, masks)
-    build_expressions(backend_model, masks)
-    build_constraints(backend_model, masks)
+    build_variables(backend_model, imask_config["variables"], imasks["variables"])
+    build_expressions(backend_model, imasks["expressions"])
+    build_constraints(backend_model, imasks["constraints"])
     build_objective(backend_model)
     # FIXME: Optional constraints
     # FIXME re-enable loading custom objectives
 
     # set datetime data back to datetime dtype
-    for set_name in datetime_data:
-        for dataset in [model_data, masks]:
-            if set_name in dataset.coords.keys():
-                dataset[set_name] = pd.to_datetime(dataset[set_name], cache=False)
-    backend_model.__calliope_datetime_data = datetime_data
+    convert_datetime(backend_model, model_data, np.datetime64)
 
     return backend_model
 
@@ -240,22 +245,38 @@ def load_results(backend_model, results):
     return str(results["Solver"][0]["Termination condition"])
 
 
-def get_result_array(backend_model, model_data, masks):
+def get_result_array(backend_model, model_data):
     """
     From a Pyomo model object, extract decision variable data and return it as
     an xarray Dataset. Any rogue input parameters that are constructed inside
     the backend (instead of being passed by calliope.Model().inputs) are also
     added to calliope.Model()._model_data in-place.
     """
+    imask_config = AttrDict.from_yaml_string(model_data.attrs["imasks"])
+
+    def _get_dim_order(foreach):
+        return tuple([i for i in model_data.dims.keys() if i in foreach])
+
     all_variables = {
-        i.name: get_var(backend_model, i.name, dims=masks[i.name].dims)
+        i.name: get_var(
+            backend_model,
+            i.name,
+            dims=_get_dim_order(imask_config.variables[i.name].foreach),
+        )
         for i in backend_model.component_objects(ctype=po.Var)
     }
     # Add in expressions, which are combinations of variables (e.g. costs)
-    all_variables.update({
-        i.name: get_var(backend_model, i.name, dims=masks[i.name].dims, expr=True)
-        for i in backend_model.component_objects(ctype=po.Expression)
-    })
+    all_variables.update(
+        {
+            i.name: get_var(
+                backend_model,
+                i.name,
+                dims=_get_dim_order(imask_config.expressions[i.name].foreach),
+                expr=True,
+            )
+            for i in backend_model.component_objects(ctype=po.Expression)
+        }
+    )
 
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
@@ -263,6 +284,7 @@ def get_result_array(backend_model, model_data, masks):
         for i in backend_model.component_objects(ctype=po.Param)
         if i.name not in model_data.data_vars.keys()
         and "objective_" not in i.name
+        and isinstance(i, po.base.param.IndexedParam)
     }
 
     results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
@@ -272,6 +294,6 @@ def get_result_array(backend_model, model_data, masks):
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
-    results['timesteps'] = pd.to_datetime(results.timesteps, cache=False)
+    results["timesteps"] = pd.to_datetime(results.timesteps, cache=False)
 
     return results

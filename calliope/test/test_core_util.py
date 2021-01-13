@@ -31,12 +31,14 @@ _MODEL_URBAN = os.path.join(
 
 
 class TestDataset:
-
     @pytest.fixture()
     def example_dataarray(self):
         return xr.DataArray(
-            [[[0], [1], [2]], [[3], [4], [5]]],
-            dims=("timesteps", "loc_techs_bar", "costs"),
+            [
+                [[[0], [1], [2]], [[3], [4], [5]], [[6], [7], [8]]],
+                [[[0], [1], [2]], [[3], [4], [5]], [[6], [7], [8]]],
+            ],
+            dims=("timesteps", "nodes", "techs", "costs"),
             coords={
                 "timesteps": ["foo", "bar"],
                 "nodes": ["a", "b", "c"],
@@ -188,7 +190,7 @@ class TestPandasExport:
         ),
     )
     def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
-        model.get_formatted_array(variable_name).to_dataframe()
+        model.inputs[variable_name].to_dataframe()
 
 
 class TestObservedDict:

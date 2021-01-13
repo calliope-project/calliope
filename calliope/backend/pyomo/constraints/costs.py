@@ -11,7 +11,12 @@ Cost constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in, invalid
+from calliope.backend.pyomo.util import (
+    get_param,
+    get_timestep_weight,
+    loc_tech_is_in,
+    invalid,
+)
 
 
 def cost_expression_rule(backend_model, cost, node, tech):
@@ -139,7 +144,7 @@ def cost_investment_expression_rule(backend_model, cost, node, tech):
     )
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
-    if loc_tech_is_in(backend_model, (node, tech), "loc_techs_transmission"):
+    if backend_model.inheritance[tech].value.endswith("transmission"):
         cost_cap = cost_cap / 2
 
     cost_fractional_om = cost_om_annual_investment_fraction * cost_cap
@@ -183,26 +188,26 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
             if [carrier, node, tech, timestep]
             in getattr(backend_model, f"{var_name}_index")
         )
-    cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, node, tech, timestep))
-    if backend_model.inheritance[tech].value.endswith('conversion_plus'):
+
+    cost_om_prod = get_param(
+        backend_model, "cost_om_prod", (cost, node, tech, timestep)
+    )
+    if backend_model.inheritance[tech].value.endswith("conversion_plus"):
         carriers = [backend_model.primary_carrier_out[:, tech].index()[0][0]]
         all_costs += cost_om_prod * _sum("carrier_prod", carriers=carriers)
     else:
-        all_costs += (
-            cost_om_prod
-            * _sum("carrier_prod")
-        )
+        all_costs += cost_om_prod * _sum("carrier_prod")
 
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     if cost_om_con:
         if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
             all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
-        elif backend_model.inheritance[tech].value.endswith('supply'):
+        elif backend_model.inheritance[tech].value.endswith("supply"):
             energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
             # in case energy_eff is zero, to avoid an infinite value
             if po.value(energy_eff) > 0:
                 all_costs += cost_om_con * (_sum("carrier_prod") / energy_eff)
-        elif backend_model.inheritance[tech].value.endswith('conversion_plus'):
+        elif backend_model.inheritance[tech].value.endswith("conversion_plus"):
             carriers = [backend_model.primary_carrier_in[:, tech].index()[0][0]]
             all_costs += cost_om_con * (-1) * _sum("carrier_con", carriers=carriers)
         else:

@@ -6,7 +6,6 @@ from calliope.preprocess.model_run import (
 )
 
 from calliope.preprocess.model_data import build_model_data
-from calliope.preprocess.masks import create_imask_ds
 
 from calliope.preprocess.time import (
     apply_time_clustering,

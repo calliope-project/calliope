@@ -24,10 +24,10 @@ def get_capacity_bounds(bounds):
             else:
                 return None
 
-        scale = _get_bound('scale')
-        _equals = _get_bound('equals')
-        _min = _get_bound('min')
-        _max = _get_bound('max')
+        scale = _get_bound("scale")
+        _equals = _get_bound("equals")
+        _min = _get_bound("min")
+        _max = _get_bound("max")
 
         if not invalid(_equals):
             if not invalid(scale):
@@ -86,7 +86,9 @@ def energy_capacity_per_storage_capacity_max_constraint_rule(backend_model, node
     )
 
 
-def energy_capacity_per_storage_capacity_equals_constraint_rule(backend_model, node, tech):
+def energy_capacity_per_storage_capacity_equals_constraint_rule(
+    backend_model, node, tech
+):
     """
     Limit energy capacities of storage technologies based on their storage capacities.
 
@@ -122,7 +124,9 @@ def resource_capacity_equals_energy_capacity_constraint_rule(backend_model, node
         backend_model.resource_cap[node, tech] == backend_model.energy_cap[node, tech]
     )
 
+
 # TODO: reintroduce a constraint to set resource_area to zero when energy_cap_max is zero
+
 
 def force_zero_resource_area_constraint_rule(backend_model, node, tech):
     """
@@ -132,6 +136,7 @@ def force_zero_resource_area_constraint_rule(backend_model, node, tech):
     """
 
     return backend_model.resource_area[node, tech] == 0
+
 
 def resource_area_per_energy_capacity_constraint_rule(backend_model, node, tech):
     """
@@ -202,7 +207,7 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
         for node in backend_model.nodes
         if [node, tech] in backend_model.energy_cap_index
     )
-    if equals_systemwide:
+    if not invalid(equals_systemwide):
         return energy_cap == equals_systemwide
     else:
         return energy_cap <= max_systemwide

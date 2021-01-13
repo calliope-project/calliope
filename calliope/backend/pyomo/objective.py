@@ -38,18 +38,22 @@ def minmax_cost_optimization(backend_model):
     """
 
     def _sum(var_name, timestep):
-        return po.quicksum(
-            getattr(backend_model, var_name)[node, tech, timestep]
-            for node in backend_model.nodes
-            for tech in backend_model.tech
-            if [node, tech, timestep] in getattr(backend_model, f"{var_name}_index")
+        summation = po.quicksum(
+            getattr(backend_model, var_name)[node, carrier, t]
+            for [node, carrier, t] in getattr(backend_model, var_name)._index
+            if t == timestep
         )
+        return summation
 
     def obj_rule(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
+
             unmet_demand = po.quicksum(
                 po.quicksum(
-                    _sum("unmet_demand", timestep), -1 * _sum("unused_supply", timestep)
+                    [
+                        _sum("unmet_demand", timestep),
+                        -1 * _sum("unused_supply", timestep),
+                    ]
                 )
                 * backend_model.timestep_weights[timestep]
                 * backend_model.bigM

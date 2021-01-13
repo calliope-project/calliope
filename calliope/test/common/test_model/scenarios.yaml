@@ -233,12 +233,12 @@ overrides:
         model.time:
             function: apply_clustering
             function_options:
-                clustering_func: file=cluster_days.csv:0
+                clustering_func: file=cluster_days.csv:a
                 how: 'mean'
                 storage_inter_cluster: True
 
     one_day:
-        model.subset_time: '2005-01-01'
+        model.subset_time: ['2005-01-01', '2005-01-01']
 
     two_hours:
         model.subset_time: ['2005-01-01 00:00:00', '2005-01-01 01:00:00']

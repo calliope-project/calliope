@@ -214,7 +214,9 @@ def get_closest_days_from_clusters(data, mean_data, clusters, daily_timesteps):
     for cluster in sorted(clusters.unique()):
 
         subset_t = [
-            t for t in mean_data.timesteps.values if t.startswith("{}-".format(cluster))
+            t
+            for t in mean_data.timesteps.values
+            if t.startswith("{}-".format(int(cluster)))
         ]
 
         target = reshape_for_clustering(mean_data.loc[dict(timesteps=subset_t)])
@@ -313,7 +315,7 @@ def map_clusters_to_data(
             timestamps = timestamps.drop_duplicates()
             for cluster, date in timestamps.items():
                 clusterdays_timeseries.loc[clusterdays_timeseries == date] = cluster
-            clusters = clusterdays_timeseries.resample("1D").mean()
+            clusters = clusterdays_timeseries.astype(int).resample("1D").mean()
 
     _clusters = xr.DataArray(
         data=np.full(len(new_data.timesteps.values), np.nan),
@@ -404,7 +406,7 @@ def get_clusters(
     X = reshape_for_clustering(data, tech, variables)
 
     if func == "kmeans":
-        if not k:
+        if k is None:
             k = hartigan_n_clusters(X)
             exceptions.warn(
                 "Used Hartigan's rule to determine that"
@@ -413,7 +415,7 @@ def get_clusters(
         clustered_data = sk_cluster.KMeans(k).fit(X)
 
     elif func == "hierarchical":
-        if not k:
+        if k is None:
             raise exceptions.ModelError(
                 "Cannot undertake hierarchical clustering without a predefined "
                 "number of clusters (k)"

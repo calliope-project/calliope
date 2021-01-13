@@ -1,7 +1,7 @@
 model:
     name: Energy capacity group constraint test model
     timeseries_data_path: 'timeseries_data'
-    subset_time: '2005-01-01'
+    subset_time: ['2005-01-01', '2005-01-01']
 
 run:
     mode: plan

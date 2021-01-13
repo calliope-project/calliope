@@ -34,7 +34,7 @@ class TestExistsFalse:
         # Ensure warnings were raised
         assert check_error_or_warning(
             excinfo,
-            "Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at location 0.",
+            "Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at location a.",
         )
 
     def test_location_exists_false(self):
@@ -66,19 +66,13 @@ class TestExistsFalse:
         model.run()
 
         # Ensure what should be gone is gone
-        assert "loc_techs_transmission" not in model._model_data
+        assert not model._model_data.inheritance.str.endswith("transmission").any()
 
     def test_link_tech_exists_false(self):
         overrides = {"links.a,b.techs.test_transmission_elec.exists": False}
         model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
-
         # Ensure what should be gone is gone
-        assert (
-            "a", "test_transmission_elec:1"
-            not in model._model_data.coords["loc_techs_transmission"].values
-        )
-        assert (
-            "a", "test_transmission_heat:1"
-            in model._model_data.coords["loc_techs_transmission"].values
-        )
+        "test_transmission_elec:b" not in model._model_data.techs
+        "test_transmission_elec:a" not in model._model_data.techs
+        assert (model._model_data.node_tech.loc["a", "test_transmission_heat:b"] == 1)

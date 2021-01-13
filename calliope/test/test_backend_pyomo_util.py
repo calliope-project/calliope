@@ -62,7 +62,9 @@ class TestGetParam:
         )
         assert po.value(param) == 1  # see defaults.yaml
 
-        param = get_param(m._backend_model, "resource_cap_min", ("a", "test_supply_plus"))
+        param = get_param(
+            m._backend_model, "resource_cap_min", ("a", "test_supply_plus")
+        )
         assert po.value(param) == 0  # see defaults.yaml
 
         param = get_param(
@@ -92,8 +94,8 @@ class TestGetDomain:
             ("energy_cap_max", "NonNegativeReals"),
             ("resource", "Reals"),
             ("cost_energy_cap", "Reals"),
-            ("force_resource", "Boolean"),
-            ("names", "Any"),
+            ("force_resource", "NonNegativeReals"),
+            ("name", "Any"),
         ),
     )
     def test_dtypes(self, model, var, domain):

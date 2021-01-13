@@ -328,7 +328,9 @@ def cleanup_undesired_keys(tech_settings):
     # changed in per-location settings later
     # FIXME: Raise warning that these constraints are deleted?
     system_wide_keys = [
-        k for k in tech_settings.constraints.keys() if k.endswith("_systemwide")
+        k
+        for k in tech_settings.get("constraints", {}).keys()
+        if k.endswith("_systemwide")
     ]
     for k in system_wide_keys:
         del tech_settings.constraints[k]

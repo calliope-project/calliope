@@ -18,19 +18,21 @@ class TestBuildConversionPlusConstraints:
 
     @pytest.mark.parametrize(
         ("override", "flow"),
-        ((None, None), (["electricity", "heat"], "out"), (["coal", "gas"], "in"))
+        ((None, None), (["electricity", "heat"], "out"), (["coal", "gas"], "in")),
     )
     def test_balance_conversion_plus_primary_constraint(self, override, flow):
         if override is not None:
             override_dict = {
                 "techs.test_conversion_plus.essentials": {
                     f"carrier_{flow}": override,
-                    f"primary_carrier_{flow}": "gas" if flow == "in" else "electricity"
+                    f"primary_carrier_{flow}": "gas" if flow == "in" else "electricity",
                 }
             }
         else:
             override_dict = {}
-        m = build_model(override_dict, "simple_conversion_plus,two_hours,investment_costs")
+        m = build_model(
+            override_dict, "simple_conversion_plus,two_hours,investment_costs"
+        )
         m.run(build_only=True)
         assert hasattr(m._backend_model, "balance_conversion_plus_primary_constraint")
 
@@ -110,9 +112,13 @@ class TestBuildConversionPlusConstraints:
         assert not check_variable_exists(
             m._backend_model, "cost_var", "carrier_prodcon".replace(flow, "")
         )
-        assert all("test_conversion_plus" in i for i in m._backend_model.cost_var._index)
+        assert all(
+            "test_conversion_plus" in i for i in m._backend_model.cost_var._index
+        )
 
-    @pytest.mark.filterwarnings("ignore:(?s).*`test_conversion_plus` gives a carrier ratio for `heat`:calliope.exceptions.ModelWarning")
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*`test_conversion_plus` gives a carrier ratio for `heat`:calliope.exceptions.ModelWarning"
+    )
     def test_no_balance_conversion_plus_non_primary_constraint(self):
         """
         sets.loc_techs_in_2,
@@ -122,11 +128,15 @@ class TestBuildConversionPlusConstraints:
             "simple_conversion_plus,two_hours,investment_costs",
         )
         m.run(build_only=True)
-        assert not hasattr(m._backend_model, "balance_conversion_plus_non_primary_constraint")
+        assert not hasattr(
+            m._backend_model, "balance_conversion_plus_non_primary_constraint"
+        )
 
     @pytest.mark.parametrize("tier", ("in_2", "in_3", "out_2", "out_3"))
     @pytest.mark.parametrize("carriers", ("coal", ["coal", "heat"]))
-    def test_loc_techs_balance_conversion_plus_non_primary_constraint(self, tier, carriers):
+    def test_loc_techs_balance_conversion_plus_non_primary_constraint(
+        self, tier, carriers
+    ):
         """
         sets.loc_techs_in_2,
         """
@@ -145,7 +155,9 @@ class TestBuildConversionPlusConstraints:
             "simple_conversion_plus,two_hours,investment_costs",
         )
         m.run(build_only=True)
-        assert hasattr(m._backend_model, "balance_conversion_plus_non_primary_constraint")
+        assert hasattr(
+            m._backend_model, "balance_conversion_plus_non_primary_constraint"
+        )
 
     def test_loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint(self):
         """
@@ -207,6 +219,7 @@ class TestBuildConversionPlusConstraints:
             "conversion_plus_prod_con_to_zero_constraint",
             "carrier_con",
         )
+
 
 class TestConversionPlusConstraintResults:
     def test_carrier_ratio_from_file(self):

@@ -41,8 +41,10 @@ def reserve_margin_constraint_rule(backend_model, carrier):
         if tech in techs
     ) >= sum(  # Sum all demand for this carrier and timestep
         backend_model.carrier_con[carrier, node, tech, max_demand_timestep]
-        for tech in techs for node in backend_model.nodes
-        if [carrier, node, tech, max_demand_timestep] in backend_model.carrier_con._index
+        for tech in techs
+        for node in backend_model.nodes
+        if [carrier, node, tech, max_demand_timestep]
+        in backend_model.carrier_con._index
     ) * -1 * (
         1 / max_demand_time_res
     ) * (

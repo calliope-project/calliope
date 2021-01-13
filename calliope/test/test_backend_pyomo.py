@@ -16,17 +16,6 @@ from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_error_or_warning, check_variable_exists
 
-
-def check_standard_warning(info, warning):
-
-    if warning == "transmission":
-        return check_error_or_warning(
-            info,
-            "dimension loc_techs_transmission and associated variables distance, "
-            "lookup_remotes were empty, so have been deleted",
-        )
-
-
 class TestModel:
     @pytest.mark.skip("Buggy")
     @pytest.mark.serial  # Cannot run in parallel with other tests
@@ -59,22 +48,6 @@ class TestModel:
             "module 'calliope.backend.pyomo.constraints.temp_constraint_file_for_testing' "
             "has no attribute 'ORDER'",
         )
-
-    @pytest.mark.xfail(reason="should work again once typedconfig is in place")
-    @pytest.mark.parametrize(
-        "var, domain",
-        (
-            ("energy_cap_max", "NonNegativeReals"),
-            ("resource", "Reals"),
-            ("cost_energy_cap", "Reals"),
-            ("force_resource", "Boolean"),
-            ("names", "Any"),
-        ),
-    )
-    def test_domains(self, var, domain):
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run(build_only=True)
-        assert getattr(m._backend_model, var).domain.name == domain
 
     def test_first_timestep(self):
         """
@@ -152,13 +125,13 @@ class TestChecks:
         """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
-                "techs.test_supply_elec":{
+                "techs.test_supply_elec": {
                     "switches.force_resource": force,
                     "constraints": {
                         "energy_cap_min_use": 0.1,
                         "resource": "file=supply_plus_resource.csv:1",
                         "energy_cap_equals": np.inf,
-                    }
+                    },
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -380,7 +353,9 @@ class TestChecks:
             m.run(build_only=True)
         if on is False:
             assert check_error_or_warning(warning, "Initial stored energy not defined")
-            assert m._model_data.storage_initial.loc["a", "test_supply_plus"].item() == 0
+            assert (
+                m._model_data.storage_initial.loc["a", "test_supply_plus"].item() == 0
+            )
         elif on is True:
             assert not check_error_or_warning(
                 warning, "Initial stored energy not defined"
@@ -615,7 +590,7 @@ class TestCostConstraints:
             ("test_demand_elec", "simple_supply", "om_con"),
             ("test_transmission_elec", "simple_supply", "om_prod"),
             ("test_conversion", "simple_conversion", "om_con"),
-            ("test_conversion_plus", "simple_conversion_plus", "om_prod")
+            ("test_conversion_plus", "simple_conversion_plus", "om_prod"),
         ),
     )
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
@@ -719,14 +694,8 @@ class TestCapacityConstraints:
             "simple_storage,two_hours,investment_costs",
         )
         m.run(build_only=True)
-        assert (
-            m._backend_model.storage_cap["a", "test_storage"].ub
-            == 20
-        )
-        assert (
-            m._backend_model.storage_cap["a", "test_storage"].lb
-            == 20
-        )
+        assert m._backend_model.storage_cap["a", "test_storage"].ub == 20
+        assert m._backend_model.storage_cap["a", "test_storage"].lb == 20
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_techs_storage_capacity_milp_constraint(self):
@@ -761,14 +730,13 @@ class TestCapacityConstraints:
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
         """
         m = build_model(
-            {
-                f"techs.{tech}.constraints.energy_cap_per_storage_cap_{override}": 0.5
-            },
+            {f"techs.{tech}.constraints.energy_cap_per_storage_cap_{override}": 0.5},
             f"{scenario},two_hours,investment_costs",
         )
         m.run(build_only=True)
         assert hasattr(
-            m._backend_model, "energy_capacity_per_storage_capacity_{}_constraint".format(override)
+            m._backend_model,
+            "energy_capacity_per_storage_capacity_{}_constraint".format(override),
         )
         if override == "equals":
             assert not any(
@@ -796,7 +764,8 @@ class TestCapacityConstraints:
         )
         m.run(build_only=True)
         assert hasattr(
-            m._backend_model, f"energy_capacity_per_storage_capacity_{override}_constraint"
+            m._backend_model,
+            f"energy_capacity_per_storage_capacity_{override}_constraint",
         )
         if override == "equals":
             assert not any(
@@ -1009,8 +978,7 @@ class TestCapacityConstraints:
         m2.run(build_only=True)
         assert (
             m2._backend_model.energy_cap[("a", "test_supply_elec")].ub
-            == m._backend_model.energy_cap[("a", "test_supply_elec")].ub
-            * 5
+            == m._backend_model.energy_cap[("a", "test_supply_elec")].ub * 5
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
@@ -1020,7 +988,6 @@ class TestCapacityConstraints:
         )  # demand still is in loc_techs
         m.run(build_only=True)
         assert all(i.ub is not None for i in m._backend_model.energy_cap.values())
-
 
     @pytest.mark.xfail(reason="This will be caught by typedconfig")
     def test_loc_techs_energy_capacity_constraint_warning_on_infinite_equals(self):
@@ -1043,11 +1010,12 @@ class TestCapacityConstraints:
         i for i in sets.techs
         if model_run.get_key('techs.{}.constraints.energy_cap_max_systemwide'.format(i), None)
         """
+
         def check_bounds(constraint):
             assert po.value(constraint.upper) == 20
-            if bound == 'equals':
+            if bound == "equals":
                 assert po.value(constraint.lower) == 20
-            if bound == 'max':
+            if bound == "max":
                 assert po.value(constraint.lower) is None
 
         m = build_model(
@@ -1060,7 +1028,9 @@ class TestCapacityConstraints:
             "test_supply_elec"
             in m._backend_model.energy_capacity_systemwide_constraint.keys()
         )
-        check_bounds(m._backend_model.energy_capacity_systemwide_constraint["test_supply_elec"])
+        check_bounds(
+            m._backend_model.energy_capacity_systemwide_constraint["test_supply_elec"]
+        )
 
         # Check that a model without transmission techs doesn't cause an error
         m = build_model(
@@ -1070,8 +1040,9 @@ class TestCapacityConstraints:
         )
         m.run(build_only=True)
         assert hasattr(m._backend_model, "energy_capacity_systemwide_constraint")
-        check_bounds(m._backend_model.energy_capacity_systemwide_constraint["test_supply_elec"])
-
+        check_bounds(
+            m._backend_model.energy_capacity_systemwide_constraint["test_supply_elec"]
+        )
 
     @pytest.mark.parametrize("bound", (("equals", "max")))
     def test_techs_energy_capacity_systemwide_no_constraint(self, bound):
@@ -1080,12 +1051,13 @@ class TestCapacityConstraints:
         assert not hasattr(m._backend_model, "energy_capacity_systemwide_constraint")
         # setting the constraint to infinity leads to no constraint being built
         m = build_model(
-            {f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": np.inf},
+            {
+                f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": np.inf
+            },
             "simple_supply,two_hours,investment_costs",
         )
         m.run(build_only=True)
         assert not hasattr(m._backend_model, "energy_capacity_systemwide_constraint")
-
 
 
 class TestDispatchConstraints:
@@ -1634,10 +1606,16 @@ class TestMILPConstraints:
 
     @pytest.mark.parametrize(
         ("scenario", "exists", "override_dict"),
-        (("simple_supply", ("not", "not"), {}),
-          ("supply_milp", ("not", "not"), {}),
-          ("supply_milp", ("not", "is"), {"techs.test_supply_elec.costs.monetary.purchase": 1}),
-          ("supply_purchase", ("is", "not"), {}))
+        (
+            ("simple_supply", ("not", "not"), {}),
+            ("supply_milp", ("not", "not"), {}),
+            (
+                "supply_milp",
+                ("not", "is"),
+                {"techs.test_supply_elec.costs.monetary.purchase": 1},
+            ),
+            ("supply_purchase", ("is", "not"), {}),
+        ),
     )
     def test_loc_techs_update_costs_investment_units_milp_constraint(
         self, scenario, exists, override_dict
@@ -1664,10 +1642,7 @@ class TestMILPConstraints:
                 m._backend_model, "cost_investment", "units"
             )
         else:
-            assert check_variable_exists(
-                m._backend_model, "cost_investment", "units"
-            )
-
+            assert check_variable_exists(m._backend_model, "cost_investment", "units")
 
     def test_techs_unit_capacity_max_systemwide_milp_constraint(self):
         """
@@ -1720,7 +1695,9 @@ class TestMILPConstraints:
         )
 
     # TODO: always have transmission techs be independent of node names
-    @pytest.mark.xfail(reason="systemwide constraints now don't work with transmission techs, since transmission tech names are now never independent of a node")
+    @pytest.mark.xfail(
+        reason="systemwide constraints now don't work with transmission techs, since transmission tech names are now never independent of a node"
+    )
     def test_techs_unit_capacity_max_systemwide_transmission_milp_constraint(self):
         """
         sets.techs if unit_cap_max_systemwide or unit_cap_equals_systemwide
@@ -1796,6 +1773,7 @@ class TestConversionConstraints:
         m.run(build_only=True)
         assert not hasattr(m._backend_model, "balance_conversion_constraint")
 
+
 class TestNetworkConstraints:
     # network.py
     def test_loc_techs_symmetric_transmission_constraint(self):
@@ -1809,6 +1787,7 @@ class TestNetworkConstraints:
         m = build_model({}, "simple_conversion_plus,two_hours,investment_costs")
         m.run(build_only=True)
         assert not hasattr(m._backend_model, "symmetric_transmission_constraint")
+
 
 # clustering constraints
 class TestClusteringConstraints:

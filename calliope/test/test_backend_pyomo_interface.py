@@ -37,7 +37,9 @@ class TestUpdateParam:
         model.backend.update_param("energy_cap_max", {("b", "test_supply_elec"): 20})
 
         assert (
-            model._backend_model.energy_cap_max.extract_values()[("b", "test_supply_elec")]
+            model._backend_model.energy_cap_max.extract_values()[
+                ("b", "test_supply_elec")
+            ]
             == 20
         )
 
@@ -47,15 +49,20 @@ class TestUpdateParam:
         """
 
         model.backend.update_param(
-            "energy_cap_max", {("b", "test_supply_elec"): 20, ("a", "test_supply_elec"): 30}
+            "energy_cap_max",
+            {("b", "test_supply_elec"): 20, ("a", "test_supply_elec"): 30},
         )
 
         assert (
-            model._backend_model.energy_cap_max.extract_values()[("b", "test_supply_elec")]
+            model._backend_model.energy_cap_max.extract_values()[
+                ("b", "test_supply_elec")
+            ]
             == 20
         )
         assert (
-            model._backend_model.energy_cap_max.extract_values()[("a", "test_supply_elec")]
+            model._backend_model.energy_cap_max.extract_values()[
+                ("a", "test_supply_elec")
+            ]
             == 30
         )
 
@@ -65,8 +72,7 @@ class TestUpdateParam:
         """
         time = model._backend_model.timesteps[1]
         model.backend.update_param(
-            "resource",
-            {("a", "test_demand_elec", time): -10},
+            "resource", {("a", "test_demand_elec", time): -10},
         )
 
         assert (
@@ -112,11 +118,14 @@ class TestUpdateParam:
         """
 
         with pytest.raises(KeyError, match=r"Index 'region1-xc1::csp'"):
-            model.backend.update_param("energy_cap_max", {("c", "test_supply_elec"): 20})
+            model.backend.update_param(
+                "energy_cap_max", {("c", "test_supply_elec"): 20}
+            )
 
         with pytest.raises(KeyError, match=r"Index 'region1-xc1::csp'"):
             model.backend.update_param(
-                "energy_cap_max", {("b", "test_supply_elec"): 20, ("c", "test_supply_elec"): 20}
+                "energy_cap_max",
+                {("b", "test_supply_elec"): 20, ("c", "test_supply_elec"): 20},
             )
 
 
@@ -201,7 +210,9 @@ class TestBackendRerun:
             new_model = model.backend.rerun()
 
         assert (
-            new_model.inputs.energy_cap_max.loc[{"nodes": "b", "techs": "test_supply_elec"}]
+            new_model.inputs.energy_cap_max.loc[
+                {"nodes": "b", "techs": "test_supply_elec"}
+            ]
             == 20
         )
 
@@ -248,7 +259,8 @@ class TestAddConstraint:
 
             return (
                 backend.energy_cap[node, tech]
-                <= backend.energy_cap[node, tech] * backend.resource[node, tech, timestep]
+                <= backend.energy_cap[node, tech]
+                * backend.resource[node, tech, timestep]
             )
 
         constraint_name = "energy_cap_time_varying"
@@ -264,7 +276,9 @@ class TestAddConstraint:
     def test_arg_mismatch(self, model):
         """length of function arguments = length of sets + 1"""
 
-        def energy_cap_time_varying_rule(backend_model, node, tech, timestep, extra_arg):
+        def energy_cap_time_varying_rule(
+            backend_model, node, tech, timestep, extra_arg
+        ):
 
             return (
                 backend_model.energy_cap[node, tech]
@@ -306,7 +320,9 @@ class TestAddConstraint:
             excinfo, "Pyomo backend model object has no attribute 'not_a_set'"
         )
 
-    @pytest.mark.xfail(reason="currently generic sets don't work, choosing to ignore and then override with custom constraints")
+    @pytest.mark.xfail(
+        reason="currently generic sets don't work, choosing to ignore and then override with custom constraints"
+    )
     def test_added_constraint(self, model):
         """
         Test the successful addition of a constraint which only allows carrier

@@ -118,7 +118,7 @@ def add_time_dimension(data, model_run):
         with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
-
+    key_errors = []
     # Search through every constraint/cost for use of '='
     for variable in model_run.timeseries_vars:
         # 2) convert to a Pandas Series to do 'string contains' search
@@ -147,17 +147,16 @@ def add_time_dimension(data, model_run):
         )
 
         # 6) Get all timeseries data from dataframes stored in model_run
-        timeseries_data = model_run.timeseries_data.loc[:, tskeys.index]
-        timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
+        try:
+            timeseries_data = model_run.timeseries_data.loc[:, tskeys.index]
+        except KeyError:
+            key_errors.append(
+                f"file:column combinations `{tskeys.index.values}` not found, but are"
+                f" requested by parameter `{variable}`."
+            )
+            continue
 
-        # TODO: handle not having a valid file+column combination
-        # key_errors = []
-        # key_errors.append(
-        #    "column `{}` not found in dataframe `{}`, but was requested by "
-        #    "loc::tech `{}`.".format(column, tskey, loc_tech)
-        # )
-        # if key_errors:
-        #    exceptions.print_warnings_and_raise_errors(errors=key_errors)
+        timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
 
         # 7) Add time dimension to the relevent DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated
@@ -168,19 +167,25 @@ def add_time_dimension(data, model_run):
             .reindex(data[variable].coords)
             .fillna(data[variable])
         )
+    if key_errors:
+        exceptions.print_warnings_and_raise_errors(errors=key_errors)
 
     # Add timestep_resolution by looking at the time difference between timestep n
     # and timestep n + 1 for all timesteps
-    time_delta = (data.timesteps.shift(timesteps=-1) - data.timesteps).to_series()
-
-    # Last timestep has no n + 1, so will be NaT (not a time),
-    # we duplicate the penultimate time_delta instead
-    time_delta[-1] = time_delta[-2]
-    time_delta.name = "timestep_resolution"
-    # Time resolution is saved in hours (i.e. seconds / 3600)
-    data["timestep_resolution"] = xr.DataArray.from_series(
-        time_delta.dt.total_seconds() / 3600
+    # Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
+    # Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
+    data["timestep_resolution"] = data.timesteps.diff(
+        "timesteps", label="lower"
+    ).reindex({"timesteps": data.timesteps}).ffill("timesteps").rename(
+        "timestep_resolution"
+    ) / pd.Timedelta(
+        "1 hour"
     )
+    if len(data.timesteps) == 1:
+        exceptions.warn(
+            "Only one timestep defined. Inferring timestep resolution to be 1 hour"
+        )
+        data["timestep_resolution"] = data["timestep_resolution"].fillna(1)
 
     data["timestep_weights"] = xr.DataArray(
         np.ones(len(data.timesteps)), dims=["timesteps"]
@@ -203,7 +208,7 @@ def add_max_demand_timesteps(model_data):
         )
         .sum(["nodes", "techs"])
         .idxmin("timesteps")
-    ).astype(int)
+    )
     return model_data
 
 
@@ -212,11 +217,11 @@ def update_dtypes(model_data):
     Update dtypes to not be 'Object', if possible.
     Order of preference is: bool, int, float
     """
+    # TODO: this should be redundant once typedconfig is in (params will have predefined dtypes)
     for var_name, var in model_data.data_vars.items():
         if var.dtype.kind == "O":
             no_nans = var.where(var != "nan", drop=True)
             model_data[var_name] = var.where(var != "nan")
-
             if no_nans.isin(["True", 0, 1, "False", "0", "1"]).all():
                 # Turn to bool
                 model_data[var_name] = var.isin(["True", 1, "1"])

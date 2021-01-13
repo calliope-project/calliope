@@ -40,7 +40,7 @@ def balance_conversion_plus_primary_constraint_rule(
     carriers_in = backend_model.carrier["in", :, tech].index()
 
     energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
-    # FIXME: default carrier_ratio should be 1, currently 0
+
     carrier_prod = []
     for idx in carriers_out:
         carrier = idx[1]
@@ -54,14 +54,14 @@ def balance_conversion_plus_primary_constraint_rule(
             )
 
     carrier_con = sum(
-        backend_model.carrier_con[carrier, node, tech, timestep]
+        backend_model.carrier_con[idx[1], node, tech, timestep]
         * get_param(
             backend_model, "carrier_ratios", ("in", idx[1], node, tech, timestep)
         )
         for idx in carriers_in
     )
 
-    return sum(carrier_prod) == -1 * carrier_con * energy_eff
+    return po.quicksum(carrier_prod) == -1 * carrier_con * energy_eff
 
 
 def carrier_production_max_conversion_plus_constraint_rule(

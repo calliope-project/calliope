@@ -2,10 +2,10 @@ import logging
 
 import xarray as xr
 import pyomo.core as po  # pylint: disable=import-error
-import pandas as pd
+import numpy as np
 
 import calliope
-from calliope.backend.pyomo.util import get_var
+from calliope.backend.pyomo.util import get_var, convert_datetime
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
 
@@ -31,9 +31,7 @@ def access_pyomo_model_inputs(backend_model):
         if i.is_indexed()
     }
     inputs = xr.Dataset(all_params)
-    for set_name in backend_model.__calliope_datetime_data:
-        if set_name in inputs.coords.keys() or set_name in inputs.data_vars.keys():
-            inputs[set_name] = pd.to_datetime(inputs[set_name], cache=False)
+    convert_datetime(backend_model, inputs, np.datetime64)
 
     return reorganise_xarray_dimensions(inputs)
 
@@ -105,7 +103,7 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
         raise ValueError("Argument `active` must be True or False")
 
 
-def rerun_pyomo_model(model_data, run_config, masks, backend_model):
+def rerun_pyomo_model(model_data, run_config, backend_model):
     """
     Rerun the Pyomo backend, perhaps after updating a parameter value,
     (de)activating a constraint/objective or updating run options in the model
@@ -128,7 +126,12 @@ def rerun_pyomo_model(model_data, run_config, masks, backend_model):
     log_time(logger, timings, "model_creation")
 
     results, backend_model = backend_run.run_plan(
-        model_data, run_config, masks, timings, run_pyomo, build_only=False, backend_rerun=backend_model
+        model_data,
+        run_config,
+        timings,
+        run_pyomo,
+        build_only=False,
+        backend_rerun=backend_model,
     )
 
     inputs = access_pyomo_model_inputs(backend_model)
@@ -136,7 +139,7 @@ def rerun_pyomo_model(model_data, run_config, masks, backend_model):
     # Add additional post-processed result variables to results
     if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
         results = postprocess_model_results(
-            results, model_data.reindex(results.coords), masks, timings
+            results, model_data.reindex(results.coords), timings
         )
 
     for key, var in results.data_vars.items():
@@ -243,7 +246,7 @@ def add_pyomo_constraint(
     return backend_model
 
 
-def get_all_pyomo_model_attrs(backend_model, masks):
+def get_all_pyomo_model_attrs(imasks, backend_model):
     """
     Get the name of all sets, parameters, and variables in the generated Pyomo model.
 
@@ -254,20 +257,25 @@ def get_all_pyomo_model_attrs(backend_model, masks):
     values are a list of dimensions over which they are indexed. These dimensions correspond to the
     sets.
     """
+
+    mapping_dict = {
+        "Var": "variables",
+        "Param": "parameters",
+        "Expression": "expressions",
+    }
+
     # Indexed objected
     objects = {
-        objname: {
-            i.name: masks[i.name].dims
-            if i.name in masks.data_vars.keys()
+        pyomo_obj: {
+            i.name: imasks.get(objname, {})[i.name]['foreach']
+            if i.name in imasks.get(objname, {})
             else [i.index_set().name]
-            for i in backend_model.component_objects(ctype=getattr(po, objname))
+            for i in backend_model.component_objects(ctype=getattr(po, pyomo_obj))
         }
-        for objname in ["Var", "Param", "Expression"]
+        for pyomo_obj, objname in mapping_dict.items()
     }
     # Indices
-    objects["Set"] = [
-        i.name for i in backend_model.component_objects() if isinstance(i, po.base.Set)
-    ]
+    objects["Set"] = [i.name for i in backend_model.component_objects(ctype=po.Set)]
 
     return objects
 
@@ -276,8 +284,8 @@ class BackendInterfaceMethods:
     def __init__(self, model):
         self._backend = model._backend_model
         self._model_data = model._model_data
-        self._masks = model._masks
         self.run_config = model.run_config
+        self.imasks = model.imasks
 
     def access_model_inputs(self):
         return access_pyomo_model_inputs(self._backend)
@@ -295,7 +303,9 @@ class BackendInterfaceMethods:
     activate_constraint.__doc__ = activate_pyomo_constraint.__doc__
 
     def rerun(self, *args, **kwargs):
-        return rerun_pyomo_model(self._model_data, self.run_config, self._masks, self._backend, *args, **kwargs)
+        return rerun_pyomo_model(
+            self._model_data, self.run_config, self._backend, *args, **kwargs,
+        )
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
 
@@ -305,6 +315,6 @@ class BackendInterfaceMethods:
     add_constraint.__doc__ = add_pyomo_constraint.__doc__
 
     def get_all_model_attrs(self, *args, **kwargs):
-        return get_all_pyomo_model_attrs(self._backend, self._masks, *args, **kwargs)
+        return get_all_pyomo_model_attrs(self.imasks, self._backend, *args, **kwargs)
 
     get_all_model_attrs.__doc__ = get_all_pyomo_model_attrs.__doc__

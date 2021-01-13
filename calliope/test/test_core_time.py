@@ -242,7 +242,7 @@ class TestClustering:
             "model.time": {
                 "function": "apply_clustering",
                 "function_options": {
-                    "clustering_func": "file=clusters.csv:0",
+                    "clustering_func": "file=clusters.csv:a",
                     "how": "mean",
                 },
             },
@@ -257,7 +257,7 @@ class TestClustering:
         override2 = {
             **override,
             **{
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:1"
+                "model.time.function_options.clustering_func": "file=cluster_days.csv:b"
             },
         }
 
@@ -270,7 +270,7 @@ class TestClustering:
         override3 = {
             **override,
             **{
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:1",
+                "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
                 "model.time.function_options.how": "closest",
             },
         }
@@ -286,7 +286,7 @@ class TestClustering:
             "model.time": {
                 "function": "apply_clustering",
                 "function_options": {
-                    "clustering_func": "file=clusters.csv:0",
+                    "clustering_func": "file=clusters.csv:a",
                     "how": "mean",
                 },
             },
@@ -330,14 +330,17 @@ class TestClustering:
             **override,
             **{
                 "model.subset_time": ["2005-01-01", "2005-01-06"],
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:1",
+                "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
             },
         }
 
         with pytest.raises(exceptions.ModelError) as error:
             build_test_model(override4, scenario="simple_supply")
 
-        assert check_error_or_warning(error, "Missing cluster days")
+        assert check_error_or_warning(
+            error,
+            "Missing data for the timeseries array(s) [('cluster_days.csv', 'a') ('cluster_days.csv', 'b')]",
+        )
 
 
 class TestMasks:
@@ -1011,7 +1014,7 @@ class TestFuncs:
     @pytest.fixture
     def model_national(self, scope="module"):
         return calliope.examples.national_scale(
-            override_dict={"model.subset_time": "2005-01"}
+            override_dict={"model.subset_time": ["2005-01", "2005-01"]}
         )
 
     def test_drop_invalid_timesteps(self, model_national):
@@ -1039,12 +1042,12 @@ class TestLoadTimeseries:
     def test_invalid_csv_columns(self):
         override = {
             "locations": {
-                "2.techs": {"test_supply_elec": None, "test_demand_elec": None},
-                "3.techs": {"test_supply_elec": None, "test_demand_elec": None},
+                "c.techs": {"test_supply_elec": None, "test_demand_elec": None},
+                "d.techs": {"test_supply_elec": None, "test_demand_elec": None},
             },
             "links": {
-                "0,1": {"exists": False},
-                "2,3.techs": {"test_transmission_elec": None},
+                "a,b": {"exists": False},
+                "c,d.techs": {"test_transmission_elec": None},
             },
         }
         with pytest.raises(exceptions.ModelError) as excinfo:
@@ -1053,7 +1056,6 @@ class TestLoadTimeseries:
         assert check_error_or_warning(
             excinfo,
             [
-                "column `2` not found in dataframe `demand_elec.csv`, but was requested by loc::tech `2::test_demand_elec`.",
-                "column `3` not found in dataframe `demand_elec.csv`, but was requested by loc::tech `3::test_demand_elec`.",
+                "file:column combinations `[('demand_elec.csv', 'c') ('demand_elec.csv', 'd')]` not found, but are requested by parameter `resource`."
             ],
         )

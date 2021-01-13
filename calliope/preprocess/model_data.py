@@ -20,7 +20,7 @@ import pandas as pd
 from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.preprocess import checks
-from calliope.preprocess.time import add_time_dimension
+from calliope.preprocess.time import add_time_dimension, update_dtypes
 
 
 def build_model_data(model_run, debug=False):
@@ -65,18 +65,33 @@ def build_model_data(model_run, debug=False):
     # Get parameters that are tech-specific, and node-invariant
     get_tech_params(param_dict, model_run)
 
-    for k, v in param_dict.items():
-        _df = pd.DataFrame.from_dict(v.as_dict())
-        # TODO: this is doing what exactly?
-        _df.columns = _df.columns.map(ast.literal_eval).rename(ast.literal_eval(k))
+    for set_names, data_over_sets in param_dict.items():
+        _df = pd.DataFrame.from_dict(data_over_sets.as_dict())
+        # Column values go from e.g. "('N1', 'heat_pipes:X1')" to ('N1', 'heat_pipes:X1')
+        # Column name goes from e.g. "('nodes', 'techs')" to ('nodes', 'techs')
+        _df.columns = _df.columns.map(ast.literal_eval).rename(
+            ast.literal_eval(set_names)
+        )
         _ds = xr.Dataset(_df.T).unstack()
         data = data.merge(_ds)
 
+    for param, param_data in data.data_vars.items():
+        param_data.attrs["parameters"] = 1
+
     if debug:
         data_pre_time = data.copy(deep=True)
+    # Remove techs not assigned to nodes, nodes with no associated techs, and carriers associated with removed techs
+    for dim in ["nodes", "techs"]:
+        data = data.dropna(dim, how="all", subset=["node_tech"])
+    for dim in ["carriers", "carrier_tiers"]:
+        data = data.dropna(dim, how="all")
+    data = data.drop_vars(
+        [var_name for var_name, var in data.data_vars.items() if var.isnull().all()]
+    )
 
     data = add_time_dimension(data, model_run)
 
+    data = update_dtypes(data)
     # Carrier information uses DataArray indexing in the function, so we merge
     # these directly into the main xarray Dataset
 
@@ -97,28 +112,30 @@ def get_node_params(param_dict, model_run):
         # Techs in node, pop them out
         techs = node_info.pop("techs", {})
         for tech, tech_info in techs.items():
-            set_tech_at_node_info(param_dict, node, tech, tech_info)
+            if tech_info is not None:
+                set_tech_at_node_info(param_dict, node, tech, tech_info)
         # Links in node
         links = node_info.pop("links", {})
         for link, link_info in links.items():
             techs = link_info.pop("techs", {})
             for tech, tech_info in techs.items():
                 link_tech = f"{tech}:{link}"
-                set_tech_at_node_info(param_dict, node, link_tech, tech_info)
-                param_dict.set_key(
-                    set_idx(
-                        param="link_remote_techs",
-                        keydict={"nodes": link, "techs": f"{tech}:{node}"},
-                    ),
-                    link_tech,
-                )
-                param_dict.set_key(
-                    set_idx(
-                        param="link_remote_nodes",
-                        keydict={"nodes": link, "techs": f"{tech}:{node}"},
-                    ),
-                    node,
-                )
+                if tech_info is not None:
+                    set_tech_at_node_info(param_dict, node, link_tech, tech_info)
+                    param_dict.set_key(
+                        set_idx(
+                            param="link_remote_techs",
+                            keydict={"nodes": link, "techs": f"{tech}:{node}"},
+                        ),
+                        link_tech,
+                    )
+                    param_dict.set_key(
+                        set_idx(
+                            param="link_remote_nodes",
+                            keydict={"nodes": link, "techs": f"{tech}:{node}"},
+                        ),
+                        node,
+                    )
         # node info (e.g. coordinates)
         for node_param, node_param_info in node_info.items():
             if node_param == "coordinates":
@@ -199,7 +216,6 @@ def get_tech_params(param_dict, model_run):
             elif tech_param.startswith("constraints") and "systemwide" in tech_param:
                 param_name = tech_param.split(".")[-1]
                 set_tech_info(param_dict, techs, param_name, tech_param_info)
-
 
 
 def set_idx(param, keydict):

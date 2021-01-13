@@ -175,7 +175,7 @@ techs:
             allowed_carrier_prod: false  # name: Energy production ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
             export: false
         constraints:
-            carrier_ratios: false  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
+            carrier_ratios: 1  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
             energy_cap_per_storage_cap_min: 0 # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_max: .inf # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_equals: null # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦

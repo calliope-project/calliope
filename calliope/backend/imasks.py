@@ -20,68 +20,66 @@ import pandas as pd
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 
-
 # [storage_cap_min, or, inheritance(storage), and, export=True, and, run.mode=plan]
 
 
-def create_imask_ds(model_data, sets):
+def build_imasks(model_data, imask_config):
+    """
+    Returns a dict of dicts containing valid indices.
+    """
+
+    imasks = {}
+    for imask_type in imask_config.keys():  # "variables", "expressions", "constraints"
+        imasks[imask_type] = {}
+        for set_name, set_config in imask_config[imask_type].items():
+            imask = create_imask(model_data, set_name, set_config)
+
+            if imask is not None:  # All-zero imasks are not even added to imasks
+                imasks[imask_type][set_name] = imask
+
+    return imasks
+
+
+def create_imask(model_data, set_name, set_config):
     """
     Create boolean masks for constraints and decision variables
     from data stored in config/sets.yaml
     """
 
-    ds = xr.Dataset()
+    # Start with a mask that is True where the tech exists at a node (across all timesteps and for a each carrier and cost, where appropriate)
+    imask = imask_foreach(model_data, set_config.foreach)
+    if imask is False:  # i.e. not all of 'foreach' are in model_data
+        return None
+    # Add "where" info as imasks
+    where_array = set_config.get_key("where", default=[])
+    if where_array:
+        imask = imask_where(model_data, set_name, where_array, imask, "and_")
 
-    for set_group, sets in sets.items():
-        for set_name, set_config in sets.items():
-            # Start with a mask that is True where the tech exists at a node (across all timesteps and for a each carrier and cost, where appropriate)
-            imask = imask_foreach(model_data, set_config.foreach)
-            if imask is False:  # i.e. not all of 'foreach' are in model_data
-                continue
-            # Add "where" info as imasks
-            where_array = set_config.get_key("where", default=[])
-            if where_array:
-                imask = imask_where(model_data, where_array, imask, "and_")
+    # Add imask based on subsets
+    imask = subset_imask(set_name, set_config, imask)
 
-            # Add imask based on subsets
-            imask = subset_imask(set_config, imask)
+    # Only build and return imask if there are some non-zero elements
+    if isinstance(imask, xr.DataArray) and imask.sum() != 0:
+        # Squeeze out any unwanted dimensions
+        if len(imask.dims) > len(set_config.foreach):
+            imask = (
+                imask.sum([i for i in imask.dims if i not in set_config.foreach]) > 0
+            )
+        # We have a problem if we have too few dimensions at this point...
+        if len(imask.dims) < len(set_config.foreach):
+            raise ValueError(f"Missing dimension(s) in imask for set {set_name}")
 
-            # Add to dataset if not already there
-            if isinstance(imask, xr.DataArray) and imask.sum() != 0:
-                # Squeeze out any unwanted dimensions
-                if len(imask.dims) > len(set_config.foreach):
-                    imask = (
-                        imask.sum(
-                            [i for i in imask.dims if i not in set_config.foreach]
-                        )
-                        > 0
-                    )
-                # We have a problem if we have too few dimensions at this point...
-                if len(imask.dims) < len(set_config.foreach):
-                    raise ValueError(
-                        f"Missing dimension(s) in imask for set {set_name}"
-                    )
-                if set_group not in ds.data_vars.keys():
-                    ds = ds.merge(imask.astype(bool).to_dataset(name=set_name))
-                else:  # if already in dataset, it should look exactly the same
-                    assert (ds[set_name] == imask).all().item()
-                # give info on whether the mask is for a constraint, variable, etc.
-                ds[set_name].attrs[set_group] = 1
-                if set_group == "variables":
-                    ds[set_name].attrs["domain"] = set_config.get_key(
-                        "domain", default="Reals"
-                    )  # added info for variables
-                    ds[set_name].attrs["bounds"] = set_config.get_key(
-                        "bounds", default=None
-                    )  # added info for variables
+        imask = reorganise_xarray_dimensions(imask).astype(bool)
 
-    return reorganise_xarray_dimensions(ds)
+        return get_valid_index(imask)
+
+    else:
+        return None
 
 
 def param_exists(model_data, param):
     # mask by NaN and INF/-INF values = False, otherwise True
     with pd.option_context("mode.use_inf_as_na", True):
-        pd.options.mode.use_inf_as_na = True  # can only catch infs as nans using pandas
         if isinstance(model_data.get(param), xr.DataArray):
             _da = model_data.get(param)
             return _da.where(pd.notnull(_da)).notnull()
@@ -96,10 +94,10 @@ def inheritance(model_data, tech_group):
 
 def val_is(model_data, param, val):
     if param.startswith(("model.", "run.")):
-        group = param.split('.')[0]
+        group = param.split(".")[0]
         config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
         # TODO: update to str.removeprefix() in Python 3.9+
-        imask = config.get_key(param[len(f"{group}."):], None) == ast.literal_eval(val)
+        imask = config.get_key(param[len(f"{group}.") :], None) == ast.literal_eval(val)
     elif param in model_data.data_vars.keys():
         imask = model_data[param] == ast.literal_eval(val)
     else:
@@ -108,21 +106,32 @@ def val_is(model_data, param, val):
     return imask
 
 
-def subset_imask(set_config, imask):
+def get_valid_index(imask):
+    if len(imask.dims) == 1:
+        return imask[imask].coords.to_index()
+    else:
+        mask_stacked = imask.stack(dim_0=imask.dims)
+        return mask_stacked[mask_stacked].coords.to_index()
+
+
+def subset_imask(set_name, set_config, imask):
     # For some masks, we take a subset of a given dimension (e.g. only "out" in 'carrier_tier')
-    for set_name, subset in set_config.get("subsets", {}).items():
+    for subset_name, subset in set_config.get("subset", {}).items():
         # Keep the axis if it is expected for this constraint/variable
-        if set_name in set_config.foreach:
-            imask.loc[{set_name: ~imask[set_name].isin(subset)}] = False
+        # Set those not in the set to False
+        if not isinstance(subset, (list, set, tuple)):
+            raise TypeError(f"set `{set_name}` must subset over an iterable, instead got non-iterable `{subset}` for subset `{subset_name}`")
+        if subset_name in set_config.foreach:
+            imask.loc[{subset_name: ~imask[subset_name].isin(subset)}] = False
         # Otherwise squeeze out this dimension after slicing it
         else:
             imask = (
-                imask.loc[{set_name: ~imask[set_name].isin(subset)}].sum(set_name) > 0
+                imask.loc[{subset_name: imask[subset_name].isin(subset)}].sum(subset_name) > 0
             )
     return imask
 
 
-def imask_where(model_data, where_array, initial_imask=None, initial_operator=None):
+def imask_where(model_data, set_name, where_array, initial_imask=None, initial_operator=None):
     """
     Example mask: [cost_purchase, and, [param(energy_cap_max), or, not inheritance(supply_plus)]]
     i.e. a list of "param(...)", "inheritance(...)" and operators.
@@ -136,11 +145,11 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
         return re.search(r"(\w+)\((\w+)\)", imask_string)
 
     def _val_is(imask_string):
-        return re.search(r"([\w\.]+)\=([\'\w]+)", imask_string)
+        return re.search(r"([\w\.]+)\=([\'\w\.\:\,]+)", imask_string)
 
     for i in where_array:
         if isinstance(i, list):
-            imasks.append(imask_where(model_data, i))
+            imasks.append(imask_where(model_data, set_name, i))
         elif i in ["or", "and"]:
             operators.append(i)
         else:
@@ -166,9 +175,8 @@ def imask_where(model_data, where_array, initial_imask=None, initial_operator=No
                 imask = ~imask
             imasks.append(imask)
     if len(imasks) - 1 != len(operators):
-        # TODO: better error message
         raise ValueError(
-            "Expression must be a list of statements separated by operators."
+           f"'where' array for set `{set_name}` must be a list of statements comma separated by {{and, or}} operators."
         )
     # Run through and combine all imasks using defined operators
     imask = imasks[0]

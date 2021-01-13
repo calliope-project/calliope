@@ -24,7 +24,6 @@ from calliope.preprocess import (
     build_model_data,
     apply_time_clustering,
     final_timedimension_processing,
-    create_imask_ds,
 )
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
@@ -141,8 +140,11 @@ class Model(object):
             name="run_config",
             observer=self._model_data,
         )
-        # Add set masks
-        self._masks = create_imask_ds(self._model_data, self._model_run.mask_sets)
+        self.imasks = UpdateObserverDict(
+            initial_dict=model_run.get("imasks"),
+            name="imasks",
+            observer=self._model_data,
+        )
 
     def _init_from_model_data(self, model_data):
         if "_model_run" in model_data.attrs:
@@ -167,6 +169,12 @@ class Model(object):
             name="run_config",
             observer=self._model_data,
         )
+        self.imasks = UpdateObserverDict(
+            initial_yaml_string=model_data.attrs.get("imasks", "{}"),
+            name="imasks",
+            observer=self._model_data,
+        )
+
 
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
@@ -177,60 +185,6 @@ class Model(object):
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
-
-    def save_commented_model_yaml(self, path):
-        """
-        Save a fully built and commented version of the model to a YAML file
-        at the given ``path``. Comments in the file indicate where values
-        were overridden. This is Calliope's internal representation of
-        a model directly before the model_data xarray.Dataset is built,
-        and can be useful for debugging possible issues in the model
-        formulation.
-
-        """
-        if not self._model_run or not self._debug_data:
-            raise KeyError(
-                "This model does not have the fully built model attached, "
-                "so `save_commented_model_yaml` is not available. Likely "
-                "reason is that the model was built with a verion of Calliope "
-                "prior to 0.6.5."
-            )
-
-        yaml = ruamel_yaml.YAML()
-
-        model_run_debug = self._model_run.copy()
-        try:
-            del model_run_debug["timeseries_data"]  # Can't be serialised!
-        except KeyError:
-            # Possible that timeseries_data is already gone if the model
-            # was read from a NetCDF file
-            pass
-
-        # Turn sets in model_run into lists for YAML serialization
-        for k, v in model_run_debug.sets.items():
-            model_run_debug.sets[k] = list(v)
-
-        debug_comments = self._debug_data["comments"]
-
-        stream = StringIO()
-        yaml.dump(model_run_debug.as_dict(), stream=stream)
-        debug_yaml = yaml.load(stream.getvalue())
-
-        for k in debug_comments.model_run.keys_nested():
-            v = debug_comments.model_run.get_key(k)
-            if v:
-                keys = k.split(".")
-                apply_to_dict(
-                    debug_yaml, keys[:-1], "yaml_add_eol_comment", (v, keys[-1])
-                )
-
-        dumper = ruamel_yaml.dumper.RoundTripDumper
-        dumper.ignore_aliases = lambda self, data: True
-
-        with open(path, "w") as f:
-            ruamel_yaml.dump(
-                debug_yaml, stream=f, Dumper=dumper, default_flow_style=False
-            )
 
     def run(self, force_rerun=False, **kwargs):
         """
@@ -258,13 +212,13 @@ class Model(object):
             )
 
         results, self._backend_model, interface = run_backend(
-            self._model_data, self._masks, self._timings, **kwargs
+            self._model_data, self._timings, **kwargs
         )
 
         # Add additional post-processed result variables to results
         if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._masks, self._timings
+                results, self._model_data, self._timings
             )
 
         for var in results.data_vars:
@@ -288,6 +242,11 @@ class Model(object):
             Decision variable for which to return a DataArray.
 
         """
+        warnings.warn(
+            "get_formatted_array() is deprecated and will be removed in a "
+            "future version. Use `model.results.variable` instead.",
+            DeprecationWarning,
+        )
         if var not in self._model_data.data_vars:
             raise KeyError("Variable {} not in Model data".format(var))
 
@@ -326,8 +285,8 @@ class Model(object):
         info_strings = []
         model_name = self.model_config.get("name", "None")
         info_strings.append("Model name:   {}".format(model_name))
-        msize = "{locs} locations, {techs} technologies, {times} timesteps".format(
-            locs=len(self._model_data.coords.get("locs", [])),
+        msize = "{nodes} locations, {techs} technologies, {times} timesteps".format(
+            nodes=len(self._model_data.coords.get("nodes", [])),
             techs=(
                 len(self._model_data.coords.get("techs_non_transmission", []))
                 + len(self._model_data.coords.get("techs_transmission_names", []))

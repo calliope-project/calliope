@@ -55,7 +55,7 @@ def normalized_copy(data):
     ds = data.copy(deep=True)  # Work off a copy
 
     for var in ds.data_vars:
-        ds[var] = abs(ds[var] / abs(ds[var].groupby('techs').max(..., skipna=False)))
+        ds[var] = abs(ds[var] / abs(ds[var]).groupby("techs").max(..., skipna=True))
     return ds
 
 
@@ -191,7 +191,9 @@ def apply_clustering(
                 "time clustering column {} not found in {}.".format(column, file)
             )
         elif isinstance(df, pd.DataFrame):
-            clusters = df.loc[:, column].dropna().groupby(pd.Grouper(freq="1D")).unique()
+            clusters = (
+                df.loc[:, column].dropna().groupby(pd.Grouper(freq="1D")).unique()
+            )
 
         # Check there weren't instances of more than one cluster assigned to a day
         # or days with no information assigned

@@ -2,8 +2,8 @@
 Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-preprocess_model.py
-~~~~~~~~~~~~~~~~~~~
+model_run.py
+~~~~~~~~~~~~
 
 Preprocessing of model and run configuration into a unified model_run
 AttrDict, and building of associated debug information.
@@ -70,7 +70,7 @@ def model_run_from_yaml(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
-    mask_sets = AttrDict.from_yaml(
+    imasks = AttrDict.from_yaml(
         os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
     )
 
@@ -80,7 +80,7 @@ def model_run_from_yaml(
         debug_comments,
         overrides,
         scenario,
-        mask_sets,
+        imasks,
     )
 
 
@@ -114,7 +114,7 @@ def model_run_from_dict(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
-    mask_sets = AttrDict.from_yaml(
+    imasks = AttrDict.from_yaml(
         os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
     )
 
@@ -124,7 +124,7 @@ def model_run_from_dict(
         debug_comments,
         overrides,
         scenario,
-        mask_sets,
+        imasks,
     )
 
 
@@ -213,7 +213,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
                 [i in config_model.get("overrides", {}) for i in scenario.split(",")]
             ):
                 raise exceptions.ModelError(
-                    "Manually defined scenario cannot be a combination of override names."
+                    "Name of a manually defined scenario cannot be a combination of override names."
                 )
             if not isinstance(scenarios[scenario], list):
                 raise exceptions.ModelError(
@@ -490,16 +490,30 @@ def check_timeseries_dataframes(timeseries_dataframes):
 
 
 def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
+
+    # If `df=` is called, timeseries_dataframes must be entered
+    if timeseries_dataframes is None:
+        raise exceptions.ModelError(
+            "Error in loading timeseries. Model config specifies df={} but "
+            "no timeseries passed as arguments in calliope.Model(...). "
+            "Note that, if running from a command line, it is not possible "
+            "to read dataframes via `df=...` and you should specify "
+            "`file=...` with a CSV file.".format(tskey)
+        )
+
     try:
         df = timeseries_dataframes[tskey]
-    except KeyError as e:
-        raise e(
+    except KeyError:
+        raise exceptions.ModelError(
             "Error in loading data from dataframe. "
             "Model attempted to load dataframe with key `{}`, "
             "but avaialable dataframes are {}".format(
                 tskey, set(timeseries_dataframes.keys())
             )
         )
+    df.columns = pd.MultiIndex.from_product(
+        [[tskey], df.columns], names=["source", "column"]
+    )
     return df
 
 
@@ -607,12 +621,12 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                         timeseries_data.index[-1].strftime("%Y-%m-%d"),
                     )
                 )
-        elif isinstance(subset_time_config, list):
-            raise exceptions.ModelError(
-                "Invalid subset_time value: {}".format(subset_time_config)
-            )
         else:
-            time_slice = slice(subset_time_config, subset_time_config)
+            raise exceptions.ModelError(
+                "subset_time must be a list of two datetime strings, not: {}".format(
+                    subset_time_config
+                )
+            )
 
         timeseries_data = timeseries_data.loc[time_slice, :]
         if timeseries_data.empty:
@@ -622,18 +636,26 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                 )
             )
 
-        if timeseries_data[[i[1] for i in constraint_tsnames]].isna().any().any():
-            raise exceptions.ModelError(
-                "Missing data for the timeseries array(s) {}.".format(
-                    timeseries_data.columns[timeseries_data.isna().any()].values
-                )
+    if timeseries_data[[i[1] for i in constraint_tsnames]].isna().any().any():
+        raise exceptions.ModelError(
+            "Missing data for the timeseries array(s) {}.".format(
+                timeseries_data.columns[timeseries_data.isna().any()].values
             )
-        if cluster_tsnames and timeseries_data[[i[1] for i in cluster_tsnames]].resample('1D').mean().isna().any().any():
-            raise exceptions.ModelError(
-                "Missing data for the timeseries array(s) {}.".format(
-                    timeseries_data.columns[timeseries_data.isna().any()].values
-                )
+        )
+    if (
+        cluster_tsnames
+        and timeseries_data[[i[1] for i in cluster_tsnames]]
+        .resample("1D")
+        .mean()
+        .isna()
+        .any()
+        .any()
+    ):
+        raise exceptions.ModelError(
+            "Missing data for the timeseries array(s) {}.".format(
+                timeseries_data.columns[timeseries_data.isna().any()].values
             )
+        )
 
     return timeseries_data.rename_axis(index="timesteps"), constraint_tsvars
 
@@ -644,7 +666,7 @@ def generate_model_run(
     debug_comments,
     applied_overrides,
     scenario,
-    mask_sets,
+    imasks,
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -697,7 +719,7 @@ def generate_model_run(
     model_run["group_constraints"] = config.get("group_constraints", {})
 
     # model_run["sets"] = all_sets
-    model_run["mask_sets"] = mask_sets
+    model_run["imasks"] = imasks
     # model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking

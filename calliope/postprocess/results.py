@@ -20,7 +20,7 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def postprocess_model_results(results, model_data, masks, timings):
+def postprocess_model_results(results, model_data, timings):
     """
     Adds additional post-processed result variables to
     the given model results in-place. Model must have solved successfully.
@@ -49,10 +49,10 @@ def postprocess_model_results(results, model_data, masks, timings):
         results, model_data
     )
     results["systemwide_levelised_cost"] = systemwide_levelised_cost(
-        results, model_data, masks
+        results, model_data
     )
     results["total_levelised_cost"] = systemwide_levelised_cost(
-        results, model_data, masks, total=True
+        results, model_data, total=True
     )
     results = clean_results(results, run_config.get("zero_threshold", 0), timings)
 
@@ -120,7 +120,7 @@ def systemwide_capacity_factor(results, model_data):
     return capacity_factors
 
 
-def systemwide_levelised_cost(results, model_data, masks, total=False):
+def systemwide_levelised_cost(results, model_data, total=False):
     """
     Returns a DataArray with systemwide levelised costs for the given
     results, indexed by techs, carriers and costs if total is False,
@@ -153,8 +153,14 @@ def systemwide_levelised_cost(results, model_data, masks, total=False):
     carrier_prod = carrier_prod.sum(dim=["timesteps", "nodes"])
 
     if total:
+        # cost is the total cost of the system
+        # carrier_prod is only the carrier_prod of supply and conversion technologies
+        allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
+        valid_techs = model_data.inheritance.to_series().str.endswith(allowed_techs)
         cost = cost.sum(dim="techs")
-        carrier_prod = carrier_prod.sum(dim="techs")
+        carrier_prod = carrier_prod.loc[{"techs": valid_techs[valid_techs].index}].sum(
+            dim="techs"
+        )
 
     levelised_cost = []
 

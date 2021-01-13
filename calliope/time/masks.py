@@ -21,7 +21,7 @@ def _get_array(data, var, tech, **kwargs):
         subset.update({k: v for k, v in kwargs.items()})
 
     unusable_dims = (
-        set(subset.keys()).difference(["techs", "locs"]).difference(data[var].dims)
+        set(subset.keys()).difference(["techs", "nodes"]).difference(data[var].dims)
     )
     if unusable_dims:
         raise exceptions.ModelError(
@@ -31,13 +31,7 @@ def _get_array(data, var, tech, **kwargs):
             )
         )
 
-    arr = (
-        data[var]
-        .copy()
-        .loc[subset]
-        .mean(dim=[i for i in arr.dims if i != "timesteps"])
-        .to_pandas()
-    )
+    arr = data[var].loc[subset].groupby("timesteps").mean(...).to_pandas()
     return arr
 
 
@@ -190,6 +184,7 @@ def extreme_diff(
         dimensions will be flattened by mean
 
     """
+
     if normalize:
         # Only normalise the desired var as rest of data may contain
         # non-numeric variables!

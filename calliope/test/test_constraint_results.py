@@ -7,6 +7,9 @@ from calliope.test.common.util import build_test_model as build_model
 
 
 class TestNationalScaleExampleModelSenseChecks:
+    @pytest.mark.xfail(
+        reason="Group constraints no longer working: to be replaced by custom constraints"
+    )
     def test_group_prod_min(self):
         model = calliope.examples.national_scale(
             scenario="cold_fusion_with_production_share"
@@ -14,9 +17,8 @@ class TestNationalScaleExampleModelSenseChecks:
         model.run()
 
         df_carrier_prod = (
-            model.get_formatted_array("carrier_prod")
-            .loc[dict(carriers="power")]
-            .sum("locs")
+            model.results.carrier_prod.loc[dict(carriers="power")]
+            .sum("nodes")
             .sum("timesteps")
             .to_pandas()
         )
@@ -28,6 +30,9 @@ class TestNationalScaleExampleModelSenseChecks:
 
         assert prod_share == approx(0.85)
 
+    @pytest.mark.xfail(
+        reason="Group constraints no longer working: to be replaced by custom constraints"
+    )
     def test_group_cap_max(self):
         model = calliope.examples.national_scale(
             scenario="cold_fusion_with_capacity_share"
@@ -35,12 +40,10 @@ class TestNationalScaleExampleModelSenseChecks:
         model.run()
 
         cap_share = (
-            model.get_formatted_array("energy_cap")
-            .loc[{"techs": ["cold_fusion", "csp"]}]
-            .sum()
-            / model.get_formatted_array("energy_cap")
-            .loc[{"techs": ["ccgt", "cold_fusion", "csp"]}]
-            .sum()
+            model._model_data.energy_cap.loc[{"techs": ["cold_fusion", "csp"]}].sum()
+            / model._model_data.energy_cap.loc[
+                {"techs": ["ccgt", "cold_fusion", "csp"]}
+            ].sum()
         )
 
         assert cap_share == approx(0.2)
@@ -54,17 +57,13 @@ class TestNationalScaleExampleModelSenseChecks:
         )
         model.run()
         # Check that setting `_equals` to a finite value leads to forcing
+        assert model._model_data.energy_cap.loc[{"techs": "ccgt"}].sum() == 10000
         assert (
-            model.get_formatted_array("energy_cap").loc[{"techs": "ccgt"}].sum()
-            == 10000
-        )
-        assert (
-            model.get_formatted_array("energy_cap")
-            .loc[{"techs": "ac_transmission:region1"}]
-            .sum()
+            model._model_data.energy_cap.loc[{"techs": "ac_transmission:region1"}].sum()
             == 6000
         )
 
+    @pytest.mark.xfail(reason="no longer a constraint we're creating")
     def test_reserve_margin(self):
         model = calliope.examples.national_scale(scenario="reserve_margin")
 
@@ -83,7 +82,7 @@ class TestUrbanScaleMILP:
     def test_asynchronous_prod_con(self):
         def _get_prod_con(model, prod_con):
             return (
-                model.get_formatted_array("carrier_{}".format(prod_con))
+                model._model_data[f"carrier_{prod_con}"]
                 .loc[{"techs": "heat_pipes:X1", "carriers": "heat"}]
                 .to_pandas()
                 .dropna(how="all")
@@ -109,11 +108,12 @@ class TestUrbanScaleMILP:
 
 
 class TestModelSettings:
-    def test_feasibility(self):
-        def override(feasibility, cap_val):
+    @pytest.fixture(scope='module')
+    def override(self):
+        def _override(feasibility, cap_val):
             override_dict = {
-                "locations.0.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
-                "links.0,1.exists": False,
+                "locations.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
+                "links.a,b.exists": False,
                 # pick a time subset where demand is uniformally -10 throughout
                 "model.subset_time": ["2005-01-01 06:00:00", "2005-01-01 08:00:00"],
                 "run.ensure_feasibility": feasibility,
@@ -123,66 +123,34 @@ class TestModelSettings:
                     "resource": cap_val,
                     "energy_eff": 1,
                     "energy_cap_equals": 15,
-                    "force_resource": True,
                 },
+                "techs.test_supply_elec.switches.force_resource": True
             }
 
             return override_dict
+        return _override
 
-        # Feasible case, unmet_demand/unused_supply is deleted
-        model_10 = build_model(
-            override_dict=override(True, 10), scenario="investment_costs"
-        )
-        model_10.run()
-        for i in ["unmet_demand", "unused_supply"]:
-            assert hasattr(model_10._backend_model, i)
-            assert i not in model_10._model_data.data_vars.keys()
+    @pytest.mark.parametrize(("feasibility", "resource"), ((True, 10), (True, 5), (True, 15), (False, 15), (False, 5)))
+    def test_feasibility(self, override, feasibility, resource):
 
-        # Infeasible case, unmet_demand is required
-        model_5 = build_model(
-            override_dict=override(True, 5), scenario="investment_costs"
-        )
-        model_5.run()
-        assert hasattr(model_5._backend_model, "unmet_demand")
-        assert hasattr(model_5._backend_model, "unused_supply")
-        assert model_5._model_data["unmet_demand"].sum() == 15
-        assert "unused_supply" not in model_5._model_data.data_vars.keys()
-
-        # Infeasible case, unused_supply is required
-        model_15 = build_model(
-            override_dict=override(True, 15), scenario="investment_costs"
-        )
-        model_15.run()
-        assert hasattr(model_15._backend_model, "unmet_demand")
-        assert hasattr(model_15._backend_model, "unused_supply")
-        assert model_15._model_data["unmet_demand"].sum() == -15
-        assert "unused_supply" not in model_15._model_data.data_vars.keys()
-
-        assert model_15._backend_model.obj.expr() - model_10._backend_model.obj.expr() == approx(
-            1e3 * 15
-        )
-
-        assert model_5._backend_model.obj.expr() - model_10._backend_model.obj.expr() == approx(
-            1e3 * 15
-        )
-
-        # Infeasible cases = non-optimal termination
-        # too much supply
         model = build_model(
-            override_dict=override(False, 15), scenario="investment_costs"
+            override_dict=override(feasibility, resource), scenario="investment_costs"
         )
         model.run()
-        assert not hasattr(model._backend_model, "unmet_demand")
-        assert not hasattr(model._backend_model, "unused_supply")
-        assert not model._model_data.attrs["termination_condition"] == "optimal"
-
-        # too little supply
-        model = build_model(
-            override_dict=override(False, 5), scenario="investment_costs"
-        )
-        model.run()
-        assert not model._model_data.attrs["termination_condition"] == "optimal"
-
+        if feasibility is True:
+            for i in ["unmet_demand", "unused_supply"]:
+                assert hasattr(model._backend_model, i)
+                assert "unused_supply" not in model._model_data.data_vars.keys()
+            if resource != 10:
+                assert "unmet_demand" in model._model_data.data_vars.keys()
+                deviation = (10 - resource) * 3
+                assert model._model_data["unmet_demand"].sum() == approx(deviation)
+            else:
+                assert "unmet_demand" not in model._model_data.data_vars.keys()
+        else:
+            assert not hasattr(model._backend_model, "unmet_demand")
+            assert not hasattr(model._backend_model, "unused_supply")
+            assert model._model_data.attrs["termination_condition"] != "optimal"
 
 class TestEnergyCapacityPerStorageCapacity:
     @pytest.fixture
@@ -197,16 +165,10 @@ class TestEnergyCapacityPerStorageCapacity:
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = (
-            model.get_formatted_array("energy_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
-            model.get_formatted_array("storage_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         assert energy_capacity == pytest.approx(10)
         assert storage_capacity == pytest.approx(180)
@@ -217,16 +179,10 @@ class TestEnergyCapacityPerStorageCapacity:
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = (
-            model.get_formatted_array("energy_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
-            model.get_formatted_array("storage_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)
 
@@ -235,16 +191,10 @@ class TestEnergyCapacityPerStorageCapacity:
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = (
-            model.get_formatted_array("energy_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
-            model.get_formatted_array("storage_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         assert energy_capacity == pytest.approx(10)
         assert storage_capacity == pytest.approx(1000)
@@ -254,16 +204,10 @@ class TestEnergyCapacityPerStorageCapacity:
         model.run()
         assert model.results.termination_condition == "optimal"
         energy_capacity = (
-            model.get_formatted_array("energy_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
-            model.get_formatted_array("storage_cap")
-            .loc[{"techs": "my_storage"}]
-            .sum()
-            .item()
+            model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         assert energy_capacity == pytest.approx(180)
         assert storage_capacity == pytest.approx(180)

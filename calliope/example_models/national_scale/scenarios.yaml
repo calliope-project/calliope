@@ -17,7 +17,7 @@ overrides:
 
     time_resampling:
         model.name: 'National-scale example model with time resampling'
-        model.subset_time: '2005-01'
+        model.subset_time: ['2005-01', '2005-01']
         # Resample time resolution to 6-hourly
         model.time: {function: resample, function_options: {'resolution': '6H'}}
 
@@ -63,7 +63,7 @@ overrides:
             ensure_feasibility: False
             objective: 'check_feasibility'
         model:
-            subset_time: '2005-01-04'
+            subset_time: ['2005-01-04', '2005-01-04']
 
     reserve_margin:
         model:

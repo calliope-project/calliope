@@ -4,7 +4,6 @@ import os
 
 import pandas as pd
 import numpy as np
-import ruamel.yaml as ruamel_yaml
 
 import calliope
 import calliope.exceptions as exceptions
@@ -18,7 +17,7 @@ from calliope.test.common.util import constraint_sets, defaults, check_error_or_
 class TestModelRun:
     def test_model_from_dict(self):
         """
-        Test loading a file from dict/AttrDict instead of from YAML
+        Test creating a model from dict/AttrDict instead of from YAML
         """
         this_path = os.path.dirname(__file__)
         model_location = os.path.join(this_path, "common", "test_model", "model.yaml")
@@ -26,8 +25,8 @@ class TestModelRun:
         location_dict = AttrDict(
             {
                 "locations": {
-                    "0": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
-                    "1": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
+                    "a": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
+                    "b": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
                 }
             }
         )
@@ -42,7 +41,7 @@ class TestModelRun:
         calliope.Model(model_dict.as_dict())
 
     @pytest.mark.filterwarnings(
-        "ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*Not building the link a,b:calliope.exceptions.ModelWarning"
     )
     def test_valid_scenarios(self):
         """
@@ -60,7 +59,7 @@ class TestModelRun:
                     techs.test_supply_elec.constraints.energy_cap_max: 20
 
             locations:
-                0:
+                a:
                     techs:
                         test_supply_gas:
                         test_supply_elec:
@@ -71,13 +70,13 @@ class TestModelRun:
 
         assert (
             model._model_run.locations[
-                "0"
+                "a"
             ].techs.test_supply_gas.constraints.energy_cap_max
             == 20
         )
         assert (
             model._model_run.locations[
-                "0"
+                "a"
             ].techs.test_supply_elec.constraints.energy_cap_max
             == 20
         )
@@ -107,7 +106,7 @@ class TestModelRun:
         override = AttrDict.from_yaml_string(
             """
             scenarios:
-                scenario_1: 'foo1,foo2'
+                scenario_1: 'foo'
             """
         )
         with pytest.raises(exceptions.ModelError) as error:
@@ -124,18 +123,17 @@ class TestModelRun:
         override = AttrDict.from_yaml_string(
             """
             scenarios:
-                'simple_supply,group_share_energy_cap_min': 'foobar'
+                'simple_supply,one_day': ['simple_supply', 'one_day']
             """
         )
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
-                override_dict=override,
-                scenario="simple_supply,group_share_energy_cap_min",
+                override_dict=override, scenario="simple_supply,one_day",
             )
 
         assert check_error_or_warning(
             error,
-            "Manually defined scenario cannot be a combination of override names.",
+            "Name of a manually defined scenario cannot be a combination of override names.",
         )
 
     def test_undefined_carriers(self):
@@ -225,16 +223,22 @@ class TestModelRun:
             == pd.date_range("2005-01", "2005-01-07 23:00:00", freq="H")
         )
 
-        # should pass: one integer/string
-        model = build_model(override_dict=override("2005-01"), scenario="simple_supply")
-        assert all(
-            model.inputs.timesteps.to_index()
-            == pd.date_range("2005-01", "2005-01-31 23:00:00", freq="H")
-        )
+        # should fail: must be a list, not a string
+        with pytest.raises(exceptions.ModelError):
+            model = build_model(
+                override_dict=override("2005-01"), scenario="simple_supply"
+            )
 
         # should fail: time subset out of range of input data
-        with pytest.raises(KeyError):
-            build_model(override_dict=override("2005-03"), scenario="simple_supply")
+        with pytest.raises(exceptions.ModelError) as error:
+            build_model(
+                override_dict=override(["2005-03", "2005-04"]), scenario="simple_supply"
+            )
+
+        assert check_error_or_warning(
+            error,
+            "subset time range ['2005-03', '2005-04'] is outside the input data time range [2005-01-01, 2005-02-01]",
+        )
 
         # should fail: time subset out of range of input data
         with pytest.raises(exceptions.ModelError):
@@ -299,6 +303,24 @@ class TestModelRun:
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
         build_model(override_dict=override1, scenario="simple_conversion,one_day")
 
+    def test_single_timestep(self):
+        """
+        Test that warning is raised on using 1 timestep, that timestep resolution will
+        be inferred to be 1 hour
+        """
+        override1 = {
+            "model.subset_time": ["2005-01-01 00:00:00", "2005-01-01 00:00:00"]
+        }
+        # check in output error that it points to: 07/01/2005 10:00:00
+        with pytest.warns(exceptions.ModelWarning) as warn_info:
+            model = build_model(override_dict=override1, scenario="simple_supply")
+
+        assert check_error_or_warning(
+            warn_info,
+            "Only one timestep defined. Inferring timestep resolution to be 1 hour",
+        )
+        assert model.inputs.timestep_resolution == [1]
+
     def test_empty_key_on_explode(self):
         """
         On exploding locations (from ``'1--3'`` or ``'1,2,3'`` to
@@ -315,8 +337,8 @@ class TestModelRun:
         exploded location
         """
         override = {
-            "locations.0.techs.test_supply_elec.constraints.resource": 10,
-            "locations.0,1.techs.test_supply_elec.constraints.resource": 15,
+            "locations.a.techs.test_supply_elec.constraints.resource": 10,
+            "locations.a,b.techs.test_supply_elec.constraints.resource": 15,
         }
 
         with pytest.raises(KeyError):
@@ -421,22 +443,22 @@ class TestModelRun:
 
         assert check_error_or_warning(
             warn_info,
-            "Deleting empty cost class `carbon` for technology `test_supply_elec` at `0`.",
+            "Deleting empty cost class `carbon` for technology `test_supply_elec` at `a`.",
         )
 
         assert (
             "carbon"
-            not in m._model_run.locations["1"].techs.test_supply_elec.costs.keys()
+            not in m._model_run.locations["b"].techs.test_supply_elec.costs.keys()
         )
         assert "carbon" not in m._model_data.coords["costs"].values
 
     def test_strip_link(self):
         override = {
-            "links.0, 2.techs": {"test_transmission_elec": None},
-            "locations.2.techs": {"test_supply_elec": None},
+            "links.a, c.techs": {"test_transmission_elec": None},
+            "locations.c.techs": {"test_supply_elec": None},
         }
         m = build_model(override_dict=override, scenario="simple_supply,one_day")
-        assert "2" in m._model_run.locations["0"].links.keys()
+        assert "c" in m._model_run.locations["a"].links.keys()
 
     def test_dataframes_passed(self):
         """
@@ -638,6 +660,7 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="one_day")
 
+    @pytest.mark.skip("Planning to remove group constraints")
     def test_warn_on_unknown_group_constraint(self):
         """
         Unkown group constraints raise a warning, but don't crash
@@ -659,6 +682,7 @@ class TestChecks:
             ({"locs": ["1", "foo"], "techs": ["test_supply_elec", "bar"]}),
         ),
     )
+    @pytest.mark.skip("Planning to remove group constraints")
     def test_inexistent_group_constraint_loc_tech(self, loc_tech):
 
         override = {"group_constraints.mygroup": {"energy_cap_max": 100, **loc_tech}}
@@ -675,6 +699,7 @@ class TestChecks:
         assert "1:bar" not in loc_techs
         assert "foo:bar" not in loc_techs
 
+    @pytest.mark.skip("Planning to remove group constraints")
     def test_inexistent_group_constraint_empty_loc_tech(self):
 
         override = {
@@ -691,7 +716,7 @@ class TestChecks:
         assert m._model_run.group_constraints.mygroup.get("exists", True) is False
 
     @pytest.mark.filterwarnings(
-        "ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*Not building the link a,b:calliope.exceptions.ModelWarning"
     )
     def test_abstract_base_tech_group_override(self):
         """
@@ -705,8 +730,8 @@ class TestChecks:
                     constraints:
                         lifetime: 25
             locations:
-                1.techs.test_supply_elec:
-                1.techs.test_demand_elec:
+                b.techs.test_supply_elec:
+                b.techs.test_demand_elec:
             """
         )
 
@@ -726,7 +751,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.1.techs.test_supply_no_parent:
+            locations.b.techs.test_supply_no_parent:
             """
         )
 
@@ -748,7 +773,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.1.techs.test_supply_tech_parent:
+            locations.b.techs.test_supply_tech_parent:
             """
         )
 
@@ -770,7 +795,7 @@ class TestChecks:
             techs.test_supply_tech_parent.essentials:
                         name: Supply tech
                         parent: test_supply_group
-            locations.1.techs.test_supply_tech_parent:
+            locations.b.techs.test_supply_tech_parent:
             """
         )
 
@@ -833,7 +858,7 @@ class TestChecks:
                         name: demand missing constraint
                     switches:
                         resource_unit: power
-            locations.1.techs.demand_missing_constraint:
+            locations.b.techs.demand_missing_constraint:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -851,7 +876,7 @@ class TestChecks:
                         carrier: electricity
                         name: supply missing constraint
                     constraints.energy_cap_max: 10
-            locations.1.techs.supply_missing_constraint:
+            locations.b.techs.supply_missing_constraint:
             """
         )
         build_model(override_dict=override_supply2, scenario="simple_supply,one_day")
@@ -911,7 +936,7 @@ class TestChecks:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
         assert check_error_or_warning(
-            excinfo, "`test_supply_elec` at `1` defines storage_cap as a cost class."
+            excinfo, "`test_supply_elec` at `b` defines storage_cap as a cost class."
         )
 
     def test_exporting_unspecified_carrier(self):
@@ -957,13 +982,13 @@ class TestChecks:
         A tech defined directly within a location rather than within techs
         inside that location is probably an oversight.
         """
-        override = {"locations.1.test_supply_elec.costs.storage_cap": 10}
+        override = {"locations.b.test_supply_elec.costs.storage_cap": 10}
 
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
         assert check_error_or_warning(
-            excinfo, "Location `1` contains unrecognised keys ['test_supply_elec']"
+            excinfo, "Location `b` contains unrecognised keys ['test_supply_elec']"
         )
 
     def test_tech_defined_twice_in_links(self):
@@ -973,8 +998,8 @@ class TestChecks:
         """
 
         override = {
-            "links.0,1.techs.test_transmission_elec": None,
-            "links.1,0.techs.test_transmission_elec": None,
+            "links.a,b.techs.test_transmission_elec": None,
+            "links.b,a.techs.test_transmission_elec": None,
         }
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
@@ -986,11 +1011,11 @@ class TestChecks:
         )
 
         override = {
-            "links.0,1.techs": {
+            "links.a,b.techs": {
                 "test_transmission_elec": None,
                 "test_transmission_heat": None,
             },
-            "links.1,0.techs": {
+            "links.b,a.techs": {
                 "test_transmission_elec": None,
                 "test_transmission_heat": None,
             },
@@ -1009,8 +1034,8 @@ class TestChecks:
                 "essentials.carrier": "heat",
                 "essentials.parent": "transmission",
             },
-            "links.0,1.techs": {"test_transmission_elec": None},
-            "links.1,0.techs": {"test_transmission_heat_2": None},
+            "links.a,b.techs": {"test_transmission_elec": None},
+            "links.b,a.techs": {"test_transmission_heat_2": None},
         }
         build_model(override_dict=override, scenario="simple_supply,one_day")
 
@@ -1063,9 +1088,9 @@ class TestChecks:
         def _override(param0, param1):
             override = {}
             if param0 is not None:
-                override.update({"locations.0.coordinates": param0})
+                override.update({"locations.a.coordinates": param0})
             if param1 is not None:
-                override.update({"locations.1.coordinates": param1})
+                override.update({"locations.b.coordinates": param1})
             return override
 
         cartesian0 = {"x": 0, "y": 1}
@@ -1129,12 +1154,13 @@ class TestChecks:
         loc_tech_carriers_prod and the other from loc_tech_carriers_con.
         """
         override = {
-            "links.X1,N1.techs.heat_pipes.constraints.one_way": True,
-            "links.N1,X2.techs.heat_pipes.constraints.one_way": True,
-            "links.N1,X3.techs.heat_pipes.constraints.one_way": True,
-            "model.subset_time": "2005-01-01",
+            "links.X1,N1.techs.heat_pipes.switches.one_way": True,
+            "links.N1,X2.techs.heat_pipes.switches.one_way": True,
+            "links.N1,X3.techs.heat_pipes.switches.one_way": True,
+            "model.subset_time": ["2005-01-01", "2005-01-01"],
         }
         m = calliope.examples.urban_scale(override_dict=override)
+        m.run(build_only=True)
         removed_prod_links = [
             ("X1", "heat_pipes:N1"),
             ("N1", "heat_pipes:X2"),
@@ -1147,10 +1173,10 @@ class TestChecks:
         ]
 
         for link in removed_prod_links:
-            assert link not in m._model_data.loc_tech_carriers_prod.values
+            assert link not in set(i[1:3] for i in m._backend_model.carrier_prod._index)
 
         for link in removed_con_links:
-            assert link not in m._model_data.loc_tech_carriers_con.values
+            assert link not in set(i[1:3] for i in m._backend_model.carrier_con._index)
 
     def test_carrier_ratio_for_inexistent_carrier(self):
         """
@@ -1183,7 +1209,7 @@ class TestChecks:
         """
         override = AttrDict.from_yaml_string(
             """
-            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+            locations.b.techs.test_conversion_plus.constraints.carrier_ratios:
                 carrier_in:
                     heat: 1.0
             """
@@ -1203,7 +1229,7 @@ class TestChecks:
         """
         override = AttrDict.from_yaml_string(
             """
-            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+            locations.b.techs.test_conversion_plus.constraints.carrier_ratios:
                 carrier_out.heat: file=carrier_ratio.csv
             """
         )
@@ -1249,16 +1275,13 @@ class TestChecks:
 
         override = {
             "techs.test_supply_elec.constraints.resource": np.inf,
-            "techs.test_supply_elec.constraints.force_resource": True,
+            "techs.test_supply_elec.switches.force_resource": True,
         }
 
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
+        with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
-        assert check_error_or_warning(
-            excinfo,
-            "`test_supply_elec` at `0` defines force_resource but not a finite resource",
-        )
+        assert check_error_or_warning(excinfo, "Cannot have `force_resource` = True",)
 
     def test_override_coordinates(self):
         """
@@ -1338,6 +1361,9 @@ class TestChecks:
             (None, {"purchase": 2}),
         ),
     )
+    @pytest.mark.xfail(
+        reason="Expected fail because now the setting of integer/binary variables is more explicit, so users should be aware without the need of a warning"
+    )
     def test_milp_supply_warning(self, constraints, costs):
         override_constraints = {}
         override_costs = {}
@@ -1381,6 +1407,9 @@ class TestChecks:
             ),
             (None, {"purchase": 2}),
         ),
+    )
+    @pytest.mark.xfail(
+        reason="Expected fail because now the setting of integer/binary variables is more explicit, so users should be aware without the need of a warning"
     )
     def test_milp_storage_warning(self, constraints, costs):
         override_constraints = {}
@@ -1463,6 +1492,7 @@ class TestChecks:
             for i in override["run.objective_options.cost_class"].keys()
         )
 
+    @pytest.mark.skip(reason="check is now taken care of in typedconfig")
     def test_storage_initial_fractional_value(self):
         """
         Check that the storage_initial value is a fraction
@@ -1477,7 +1507,7 @@ class TestChecks:
             error, "storage_initial values larger than 1 are not allowed."
         )
 
-    @pytest.mark.xfail(reason="check is now taken care of in typedconfig")
+    @pytest.mark.skip(reason="check is now taken care of in typedconfig")
     def test_storage_initial_smaller_than_discharge_depth(self):
         """
         Check that the storage_initial value is at least equalt to the storage_discharge_depth
@@ -1492,6 +1522,7 @@ class TestChecks:
             error, "storage_initial is smaller than storage_discharge_depth."
         )
 
+    @pytest.mark.skip(reason="check is now taken care of in typedconfig")
     def test_storage_inter_cluster_vs_storage_discharge_depth(self):
         """
         Check that the storage_inter_cluster is not used together with storage_discharge_depth
@@ -1505,6 +1536,7 @@ class TestChecks:
             "storage_discharge_depth is currently not allowed when time clustering is active.",
         )
 
+    @pytest.mark.skip(reason="check is now taken care of in typedconfig")
     def test_warn_on_undefined_cost_classes(self):
 
         with pytest.warns(exceptions.ModelWarning) as warn:
@@ -1590,36 +1622,16 @@ class TestTime:
         """
 
         model = model_national
-        assert model.inputs.resource.loc[("region1", "demand_power")].values[0] == approx(
-            -25284.48
+        assert model.inputs.resource.loc[("region1", "demand_power")].values[
+            0
+        ] == approx(-25284.48)
+        assert model.inputs.resource.loc[("region2", "demand_power")].values[
+            0
+        ] == approx(-2254.098)
+        assert model.inputs.resource.loc[("region1-1", "csp")].values[8] == approx(
+            0.263805
         )
-        assert model.inputs.resource.loc[("region2", "demand_power")].values[0] == approx(
-            -2254.098
+        assert model.inputs.resource.loc[("region1-2", "csp")].values[8] == approx(
+            0.096755
         )
-        assert model.inputs.resource.loc[("region1-1", "csp")].values[8] == approx(0.263805)
-        assert model.inputs.resource.loc[("region1-2", "csp")].values[8] == approx(0.096755)
         assert model.inputs.resource.loc[("region1-3", "csp")].values[8] == approx(0.0)
-
-
-class TestIMask:
-    def parse_yaml(self, yaml_string):
-        return ruamel_yaml.safe_load(yaml_string)
-
-    @pytest.fixture
-    def model_data(self):
-        # TODO create model_data
-        return None
-
-    @pytest.fixture
-    def foreach_imask(self):
-        return self.parse_yaml(
-            """
-            constraints:
-                constraint_A:
-                    foreach: [nodes, techs]
-        """
-        )
-
-    def test_foreach_constraint(self, model_data, foreach_imask):
-        # TODO implement
-        pass
