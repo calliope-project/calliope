@@ -34,7 +34,7 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-# @profile
+
 def build_sets(model_data, backend_model):
     for coord_name, coord_vals in model_data.coords.items():
         setattr(
@@ -44,7 +44,7 @@ def build_sets(model_data, backend_model):
         )
 
 
-# @profile
+
 def build_params(model_data, backend_model):
     # "Parameters"
 
@@ -101,7 +101,7 @@ def build_params(model_data, backend_model):
     )
 
 
-# @profile
+
 def build_variables(backend_model, variable_configs, imasks):
     for var_name, imask in imasks.items():
         config = variable_configs[var_name]
@@ -117,7 +117,7 @@ def build_variables(backend_model, variable_configs, imasks):
         )
 
 
-# @profile
+
 def build_constraints(backend_model, imasks):
     for constraint_name, imask in imasks.items():
         setattr(
@@ -129,7 +129,7 @@ def build_constraints(backend_model, imasks):
         )
 
 
-# @profile
+
 def build_expressions(backend_model, imasks):
     for expression_name, imask in imasks.items():
         if hasattr(constraints, f"{expression_name}_expression_rule"):
@@ -143,7 +143,7 @@ def build_expressions(backend_model, imasks):
         )
 
 
-# @profile
+
 def build_objective(backend_model):
     objective_function = (
         "calliope.backend.pyomo.objective."

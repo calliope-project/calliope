@@ -91,6 +91,7 @@ class Model(object):
 
         self.plot = plotting.ModelPlotMethods(self)
 
+
     def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run
         self._debug_data = debug_data
@@ -134,6 +135,7 @@ class Model(object):
 
         model_config = {
             k: v for k, v in model_run.get("model", {}).items() if k != "file_allowed"
+
         }
         self.model_config = UpdateObserverDict(
             initial_dict=model_config, name="model_config", observer=self._model_data
@@ -144,7 +146,7 @@ class Model(object):
             observer=self._model_data,
         )
         self.imasks = UpdateObserverDict(
-            initial_dict=model_run.get("imasks"),
+            initial_dict=model_run.get("imasks").as_dict_flat(),
             name="imasks",
             observer=self._model_data,
         )
@@ -176,6 +178,7 @@ class Model(object):
             initial_yaml_string=model_data.attrs.get("imasks", "{}"),
             name="imasks",
             observer=self._model_data,
+            flat=True
         )
 
         results = self._model_data.filter_by_attrs(is_result=1)

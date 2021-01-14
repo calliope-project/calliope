@@ -36,6 +36,7 @@ def check_operate_params(model_data):
         initial_yaml_string=model_data.attrs["defaults"],
         name="defaults",
         observer=model_data,
+        flat=True
     )
     run_config = UpdateObserverDict(
         initial_yaml_string=model_data.attrs["run_config"],
