@@ -62,7 +62,7 @@ def check_error_or_warning(error_warning, test_string_or_strings):
     return result
 
 
-def check_variable_exists(backend_model, constraint, variable):
+def check_variable_exists(backend_model, constraint, variable, idx=None):
     """
     Search for existence of a decision variable in a Pyomo constraint.
 
@@ -72,7 +72,6 @@ def check_variable_exists(backend_model, constraint, variable):
     constraint : str, name of constraint which could exist in the backend
     variable : str, string to search in the list of variables to check if existing
     """
-    exists = []
     if getattr(backend_model, constraint) in backend_model.component_objects(
         ctype=po.Constraint
     ):
@@ -81,35 +80,17 @@ def check_variable_exists(backend_model, constraint, variable):
         ctype=po.Expression
     ):
         expression_accessor = "value"
-    for v in getattr(backend_model, constraint).values():
-        variables = identify_variables(getattr(v, expression_accessor))
-        exists.append(any(variable in j.getname() for j in list(variables)))
-    return any(exists)
-
-
-def get_indexed_constraint_body(backend_model, constraint, input_index):
-    """
-    Return all indeces of a specific decision variable used in a constraint.
-    This is useful to check that all expected loc_techs are in a summation.
-
-    Parameters
-    ----------
-    backend_model : Pyomo ConcreteModel
-    constraint : str,
-        Name of constraint which could exist in the backend
-    input_index : tuple or string,
-        The index of the constraint in which to look for a the variable.
-        The index may impact the index of the decision ariable
-
-    """
-    constraint_index = [
-        v
-        for v in getattr(backend_model, constraint).values()
-        if v.index() == input_index
-    ]
-    if len(constraint_index) == 0:
-        raise KeyError(
-            "Unable to find index {} in constraint {}".format(input_index, constraint)
-        )
+    if idx is not None:
+        if idx in getattr(backend_model, constraint)._index:
+            variables = identify_variables(
+                getattr(getattr(backend_model, constraint)[idx], expression_accessor)
+            )
+            return any(variable in j.getname() for j in list(variables))
+        else:
+            return False
     else:
-        return constraint_index[0].body
+        exists = []
+        for v in getattr(backend_model, constraint).values():
+            variables = identify_variables(getattr(v, expression_accessor))
+            exists.append(any(variable in j.getname() for j in list(variables)))
+        return any(exists)

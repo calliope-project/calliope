@@ -204,7 +204,7 @@ def convert_datetime(
     model_data : the Calliope xarray Dataset of model data
     astype : dtype to convert timeseries dataarrays to, e.g. int, str, or np.datetime64
     """
-    if astype == np.datetime64:
+    if astype == "datetime64[ns]":
         for attr, set_name in backend_model.__calliope_datetime_data:
             if attr == "coords" and set_name in model_data:
                 model_data.coords[set_name] = model_data[set_name].astype(astype)

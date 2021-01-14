@@ -16,7 +16,6 @@ import numpy as np
 
 from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
-from calliope.preprocess.util import concat_iterable
 
 logger = logging.getLogger(__name__)
 
@@ -97,28 +96,17 @@ def capacity_factor(results, model_data, systemwide=False):
     else:
         energy_cap = results.energy_cap
 
-    prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(
-        dim=["timesteps", "nodes"]
-    )
+    if systemwide:
+        prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(
+            dim=["timesteps", "nodes"]
+        )
 
-    cap_sum = energy_cap.sum(dim="nodes")
-    time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
+        cap_sum = energy_cap.sum(dim="nodes")
+        time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
 
+        capacity_factors = prod_sum / (cap_sum * time_sum)
     else:
-        extra_dims = {
-            i: model_data[i].to_index() for i in _prod.dims if i not in _cap.dims
-        }
-        capacity_factors = (
-            (_prod / _cap.expand_dims(extra_dims))
-            .fillna(0)
-            .stack({"loc_tech_carriers_prod": ["locs", "techs", "carriers"]})
-        )
-        new_idx = concat_iterable(
-            capacity_factors.loc_tech_carriers_prod.values, ["::", "::"]
-        )
-        capacity_factors = capacity_factors.assign_coords(
-            {"loc_tech_carriers_prod": new_idx}
-        ).reindex({"loc_tech_carriers_prod": results.loc_tech_carriers_prod})
+        capacity_factors = (results["carrier_prod"] / energy_cap).fillna(0)
 
     return capacity_factors
 

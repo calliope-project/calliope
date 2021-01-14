@@ -173,7 +173,7 @@ def generate_model(model_data):
     # FIXME re-enable loading custom objectives
 
     # set datetime data back to datetime dtype
-    convert_datetime(backend_model, model_data, np.datetime64)
+    convert_datetime(backend_model, model_data, "datetime64[ns]")
 
     return backend_model
 

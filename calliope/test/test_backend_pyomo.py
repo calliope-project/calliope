@@ -1,4 +1,3 @@
-import operator
 from itertools import product
 import os
 import collections
@@ -10,14 +9,12 @@ import pyomo.core as po
 import pandas as pd
 import logging
 
-from calliope.backend.pyomo.util import get_param
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import (
     check_error_or_warning,
     check_variable_exists,
-    get_indexed_constraint_body,
 )
 
 
@@ -617,24 +614,23 @@ class TestCostConstraints:
         m = build_model(
             {
                 "techs.test_transmission_elec.costs.monetary.om_prod": 1,
-                "links.0,1.techs.test_transmission_elec.constraints.one_way": True,
+                "links.a,b.techs.test_transmission_elec.switches.one_way": True,
             },
             "simple_supply,two_hours",
         )
         m.run(build_only=True)
         arg1 = m._backend_model
-        arg2 = "cost_var_constraint"
+        arg2 = "cost_var"
         arg3 = [
             "monetary",
-            "1::test_transmission_elec:0",
+            "b",
+            "test_transmission_elec:a",
             m._backend_model.timesteps[1],
         ]
-        has_cost = get_indexed_constraint_body(arg1, arg2, tuple(arg3)).to_string()
+        assert check_variable_exists(arg1, arg2, "carrier_prod", tuple(arg3))
 
-        arg3[1] = "0::test_transmission_elec:1"
-        has_no_cost = get_indexed_constraint_body(arg1, arg2, tuple(arg3)).to_string()
-        assert "cost_om_prod" in has_cost and "carrier_prod" in has_cost
-        assert "cost_om_prod" not in has_no_cost and "carrier_prod" not in has_no_cost
+        arg3[1] = ("a", "test_transmission_elec:b")
+        assert not check_variable_exists(arg1, arg2, "carrier_prod", tuple(arg3))
 
 
 class TestExportConstraints:

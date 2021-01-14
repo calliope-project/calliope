@@ -1852,6 +1852,7 @@ class TestCarrierProdGroupConstraints:
         assert model._model_data.attrs["termination_condition"] != "optimal"
 
 
+@pytest.mark.xfail(reason="Group constraints no longer supported.")
 class TestCarrierConGroupConstraints:
     def test_no_carrier_con_constraint(self, model_file):
         model = build_model(model_file=model_file)

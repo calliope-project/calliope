@@ -230,6 +230,7 @@ class TestEnergyCapacityPerStorageCapacity:
     @pytest.mark.parametrize(
         "horizon_window", [(24, 24), (48, 48), (72, 48), (144, 24)]
     )
+    @pytest.mark.xfail(reason="operate mode not yet expected to run")
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
         override_dict = {

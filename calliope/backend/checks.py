@@ -56,9 +56,7 @@ def check_operate_params(model_data):
     if (model_data.include_storage == 1).any():
         if "storage_initial" not in model_data.data_vars.keys():
             model_data["storage_initial"] = model_data.include_storage.astype(float)
-        elif (
-            (model_data.include_storage == 1) & _is_missing("storage_initial")
-        ).any():
+        elif ((model_data.include_storage == 1) & _is_missing("storage_initial")).any():
             model_data.storage_initial = model_data.storage_initial.fillna(
                 (model_data.include_storage == 1).astype(float)
             )

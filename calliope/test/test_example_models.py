@@ -153,6 +153,7 @@ class TestNationalScaleExampleModelOperate:
         self.example_tester()
 
 
+@pytest.mark.xfail(reason="depends on group constraints which are currently dead")
 class TestNationalScaleExampleModelSpores:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:

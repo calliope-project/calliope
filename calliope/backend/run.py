@@ -16,7 +16,6 @@ from calliope.backend.pyomo import interface as pyomo_interface
 
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.dataset import split_loc_techs
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +185,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
     def _cap_loc_score_default(results, subset=None):
         if subset is None:
             subset = {}
-        cap_loc_score = split_loc_techs(results["energy_cap"]).loc[subset]
+        cap_loc_score = results["energy_cap"].loc[subset]
         cap_loc_score = cap_loc_score.where(cap_loc_score > 1e-3, other=0)
         cap_loc_score = cap_loc_score.where(cap_loc_score == 0, other=100)
 
