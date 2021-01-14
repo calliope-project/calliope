@@ -135,7 +135,6 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
     return xr.DataArray.from_series(result)
 
 
-@memoize
 def loc_tech_is_in(backend_model, loc_tech, model_set):
     """
     Check if set exists and if loc_tech is in the set

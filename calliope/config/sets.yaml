@@ -348,14 +348,15 @@ expressions:
     cost_var:
         foreach: [nodes, techs, costs, timesteps]
         where: [cost_export, or, cost_om_con, or, cost_om_prod]
-        domain: Reals
+        #domain: Reals
 
     cost_investment:
         foreach: [nodes, techs, costs]
         where: [[cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap], and, run.mode='plan']
-        domain: Reals
+        #domain: Reals
 
     cost:
         foreach: [nodes, techs, costs]
         where: [cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap, or, cost_export, or, cost_om_con, or, cost_om_prod]
-        domain: Reals
+        #domain: Reals
+        build_order: 1

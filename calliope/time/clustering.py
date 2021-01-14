@@ -87,10 +87,12 @@ def reshape_for_clustering(data, loc_techs=None, variables=None):
         stacked_var = _stack_data(temp_data, dates, times)
         # reshape the array to split days and timesteps within days, now we have
         # one row of data per day
+
         reshaped_data = np.concatenate([reshaped_data, stacked_var.values], axis=1)
     # put all the columns of data together, keeping rows as days. Also convert
     # all nans to zeros
-    X = np.nan_to_num(reshaped_data)
+
+    X = np.nan_to_num(reshaped_data, nan=0.0, posinf=0.0, neginf=0.0)
 
     return X
 
@@ -220,7 +222,6 @@ def get_closest_days_from_clusters(data, mean_data, clusters, daily_timesteps):
         ]
 
         target = reshape_for_clustering(mean_data.loc[dict(timesteps=subset_t)])
-
         lookup_array = reshape_for_clustering(data)
 
         chosen_days[cluster] = find_nearest_vector_index(lookup_array, target)
@@ -296,6 +297,7 @@ def map_clusters_to_data(
         ).set_index("dates")["counts"]
 
     elif how == "closest":
+
         new_data, chosen_ts = get_closest_days_from_clusters(
             data, new_data, clusters, daily_timesteps
         )

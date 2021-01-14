@@ -14,8 +14,7 @@ import pyomo.core as po  # pylint: disable=import-error
 from calliope.backend.pyomo.util import (
     get_param,
     get_timestep_weight,
-    loc_tech_is_in,
-    invalid,
+    loc_tech_is_in
 )
 
 

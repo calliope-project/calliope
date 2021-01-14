@@ -101,7 +101,6 @@ def build_params(model_data, backend_model):
     )
 
 
-
 def build_variables(backend_model, variable_configs, imasks):
     for var_name, imask in imasks.items():
         config = variable_configs[var_name]
@@ -117,7 +116,6 @@ def build_variables(backend_model, variable_configs, imasks):
         )
 
 
-
 def build_constraints(backend_model, imasks):
     for constraint_name, imask in imasks.items():
         setattr(
@@ -129,19 +127,18 @@ def build_constraints(backend_model, imasks):
         )
 
 
+def build_expressions(backend_model, expression_configs, imasks):
+    build_order_dict = {
+        expr: expression_configs[expr].get('build_order', 0) for expr in imasks.keys()
+    }
+    build_order = sorted(build_order_dict, key=build_order_dict.get)
 
-def build_expressions(backend_model, imasks):
-    for expression_name, imask in imasks.items():
-        if hasattr(constraints, f"{expression_name}_expression_rule"):
-            kwargs = {
-                "rule": getattr(constraints, f"{expression_name}_expression_rule")
-            }
+    for expr_name in build_order:
+        if hasattr(constraints, f"{expr_name}_expression_rule"):
+            kwargs = {"rule": getattr(constraints, f"{expr_name}_expression_rule")}
         else:
             kwargs = {"initialize": 0.0}
-        setattr(
-            backend_model, expression_name, po.Expression(imask, **kwargs),
-        )
-
+        setattr(backend_model, expr_name, po.Expression(imasks[expr_name], **kwargs))
 
 
 def build_objective(backend_model):
@@ -166,7 +163,7 @@ def generate_model(model_data):
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
     build_variables(backend_model, imask_config["variables"], imasks["variables"])
-    build_expressions(backend_model, imasks["expressions"])
+    build_expressions(backend_model, imask_config["expressions"], imasks["expressions"])
     build_constraints(backend_model, imasks["constraints"])
     build_objective(backend_model)
     # FIXME: Optional constraints
