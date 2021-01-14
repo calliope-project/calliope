@@ -376,6 +376,9 @@ def run_operate(model_data, timings, backend, build_only):
     horizon_ends = timestep_cumsum[
         timestep_cumsum.isin(window_ends.values + window_to_horizon)
     ]
+    # solves bug where horizon_ends is empy if window < # of timesteps < horizon
+    if len(horizon_ends) == 0:
+        horizon_ends = timestep_cumsum[timestep_cumsum == window_ends.values[-1]]
 
     if not any(window_starts):
         raise exceptions.ModelError(
@@ -422,8 +425,8 @@ def run_operate(model_data, timings, backend, build_only):
             backend_model = backend.generate_model(window_model_data)
 
         # Build the full model in the last instance(s),
-        # where number of timesteps is less than the horizon length
-        elif i > len(horizon_ends) - 1:
+        # where the number of timesteps may be less than the horizon length
+        elif i > len(horizon_ends) - 1 or i == iterations[-1]:
             warmstart = False
             end_timestep = window_ends.index[i]
             timesteps = slice(start_timestep, end_timestep)
@@ -520,7 +523,7 @@ def run_operate(model_data, timings, backend, build_only):
             if "loc_techs_store" in model_data.dims.keys():
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
-                ].drop("timesteps")
+                ].drop_vars("timesteps")
                 model_data["storage_initial"].loc[
                     storage_initial.coords
                 ] = storage_initial.values
