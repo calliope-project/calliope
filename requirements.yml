@@ -4,6 +4,7 @@ channels:
     - conda-forge
 
 dependencies:
+    - bottleneck
     - click
     - coverage >= 4.4
     - codecov
