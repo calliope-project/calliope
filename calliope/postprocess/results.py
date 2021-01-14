@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
+Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 postprocess.py
@@ -16,6 +16,7 @@ import numpy as np
 
 from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
+from calliope.preprocess.util import concat_iterable
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,8 @@ def postprocess_model_results(results, model_data, timings):
 
     run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
     results["capacity_factor"] = capacity_factor(results, model_data)
-    results["systemwide_capacity_factor"] = systemwide_capacity_factor(
-        results, model_data
+    results["systemwide_capacity_factor"] = capacity_factor(
+        results, model_data, systemwide=True
     )
     results["systemwide_levelised_cost"] = systemwide_levelised_cost(
         results, model_data
@@ -75,11 +76,7 @@ def postprocess_model_results(results, model_data, timings):
     return results
 
 
-def capacity_factor(results, model_data):
-    """
-    Returns a DataArray with capacity factor for the given results,
-    indexed by loc_tech_carriers_prod and timesteps.
-
+def capacity_factor(results, model_data, systemwide=False):
     """
     # In operate mode, energy_cap is an input parameter
     if "energy_cap" not in results.keys():
@@ -89,15 +86,7 @@ def capacity_factor(results, model_data):
 
     capacity_factors = (results["carrier_prod"] / energy_cap).fillna(0)
 
-    return capacity_factors
-
-
-def systemwide_capacity_factor(results, model_data):
-    """
-    Returns a DataArray with systemwide capacity factors over the entire
-    model duration, for the given results, indexed by techs and carriers.
-
-    The weight of timesteps is considered when computing capacity factors,
+    The weight of timesteps is considered when computing systemwide capacity factors,
     such that higher-weighted timesteps have a stronger influence
     on the resulting system-wide time-averaged capacity factor.
 
@@ -115,7 +104,21 @@ def systemwide_capacity_factor(results, model_data):
     cap_sum = energy_cap.sum(dim="nodes")
     time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
 
-    capacity_factors = prod_sum / (cap_sum * time_sum)
+    else:
+        extra_dims = {
+            i: model_data[i].to_index() for i in _prod.dims if i not in _cap.dims
+        }
+        capacity_factors = (
+            (_prod / _cap.expand_dims(extra_dims))
+            .fillna(0)
+            .stack({"loc_tech_carriers_prod": ["locs", "techs", "carriers"]})
+        )
+        new_idx = concat_iterable(
+            capacity_factors.loc_tech_carriers_prod.values, ["::", "::"]
+        )
+        capacity_factors = capacity_factors.assign_coords(
+            {"loc_tech_carriers_prod": new_idx}
+        ).reindex({"loc_tech_carriers_prod": results.loc_tech_carriers_prod})
 
     return capacity_factors
 

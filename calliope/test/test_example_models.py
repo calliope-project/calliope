@@ -3,6 +3,7 @@ import shutil
 import pytest
 from pytest import approx
 import pandas as pd
+import numpy as np
 
 import calliope
 from calliope.test.common.util import check_error_or_warning
@@ -147,6 +148,52 @@ class TestNationalScaleExampleModelOperate:
             model.results.timesteps
             == pd.date_range("2005-01", "2005-01-03 23:00:00", freq="H")
         )
+
+    def test_nationalscale_example_results_cbc(self):
+        self.example_tester()
+
+
+class TestNationalScaleExampleModelSpores:
+    def example_tester(self):
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            model = calliope.examples.national_scale(
+                override_dict={"model.subset_time": ["2005-01-01", "2005-01-03"]},
+                scenario="spores",
+            )
+
+        expected_warning = "All technologies were requested for inclusion in group constraint `systemwide_cost_max`"
+        assert check_error_or_warning(excinfo, expected_warning)
+
+        model.run(build_only=True)
+
+        # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0
+        model._backend_model.objective_cost_class["monetary"].value == 1
+        model._backend_model.objective_cost_class["spores_score"].value == 0
+
+        model.run(force_rerun=True)
+        # Expecting three spores + first optimal run
+        assert np.allclose(model.results.spores, [0, 1, 2, 3])
+
+        costs = model.results.cost.sum("loc_techs_cost")
+        slack_cost = model._backend_model.group_cost_max[
+            ("monetary", "systemwide_cost_max")
+        ].value
+
+        # First run is the optimal run, everything else is coming up against the slack cost
+        assert costs.loc[{"spores": 0, "costs": "monetary"}] * (
+            1 + model.run_config["spores_options"]["slack"]
+        ) == approx(slack_cost)
+        assert all(
+            costs.loc[{"spores": slice(1, None), "costs": "monetary"}]
+            <= slack_cost * 1.0001
+        )
+
+        # In each iteration, the spores_score has to increase
+        all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
+
+        # The final state of the objective cost class scores should be monetary: 0, spores_score: 1
+        model._backend_model.objective_cost_class["monetary"].value == 0
+        model._backend_model.objective_cost_class["spores_score"].value == 1
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()

@@ -115,6 +115,17 @@ class TestAttrDict:
             """
             )
 
+    def test_order_of_subdicts(self):
+        d = AttrDict.from_yaml_string(
+            """
+            A.B.C: 10
+            A.B:
+                E: 20
+        """
+        )
+        assert d.A.B.C == 10
+        assert d.A.B.E == 20
+
     def test_dot_access_first(self, attr_dict):
         d = attr_dict
         assert d.a == 1

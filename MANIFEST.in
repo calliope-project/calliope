@@ -1,1 +1,1 @@
-include README.rst LICENSE CITATION changelog.rst
+include requirements.txt README.md LICENSE CITATION changelog.rst

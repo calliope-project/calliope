@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
+Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 attrdict.py
@@ -217,7 +217,11 @@ class AttrDict(dict):
                 else:
                     raise KeyError("Cannot set nested key on non-dict key.")
         else:
-            self[key] = value
+            if key in self and isinstance(value, AttrDict):
+                for k, v in value.items():
+                    self[key].set_key(k, v)
+            else:
+                self[key] = value
 
     def get_key(self, key, default=_MISSING):
         """

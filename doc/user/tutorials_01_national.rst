@@ -33,7 +33,7 @@ The definition of this technology in the example model's configuration looks as 
 
 There are a few things to note. First, ``ccgt`` defines essential information: a name, a color (given as an HTML color code, for later visualisation), its parent, ``supply``, and its carrier_out, ``power``. It has set itself up as a power supply technology. This is followed by the definition of constraints and costs (the only cost class used is monetary, but this is where other "costs", such as emissions, could be defined).
 
-.. Note:: There are technically no restrictions on the units used in model definitions. Usually, the units will be kW and kWh, alongside a currency like USD for costs. It is the responsibility of the modeler to ensure that units are correct and consistent. Some of the analysis functionality in the :mod:`~calliope.analysis` module assumes that kW and kWh are used when drawing figure and axis labels, but apart from that, there is nothing preventing the use of other units.
+.. Note:: There are technically no restrictions on the units used in model definitions. Usually, the units will be kW and kWh, alongside a currency like USD for costs. It is the responsibility of the modeler to ensure that units are correct and consistent. Some of the analysis functionality in the :mod:`~calliope.postprocess` module assumes that kW and kWh are used when drawing figure and axis labels, but apart from that, there is nothing preventing the use of other units.
 
 The second technology is ``csp`` (concentrating solar power), and serves as an example of a complex supply_plus technology making use of:
 

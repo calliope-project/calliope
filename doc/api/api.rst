@@ -30,7 +30,7 @@ Time series
 Analyzing models
 ================
 
-.. autoclass:: calliope.analysis.plotting.plotting.ModelPlotMethods
+.. autoclass:: calliope.postprocess.plotting.plotting.ModelPlotMethods
     :members: timeseries, capacity, transmission, summary
 
 .. _api_backend_interface:

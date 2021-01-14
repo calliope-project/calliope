@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
+Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 preprocess_locations.py
@@ -131,7 +131,6 @@ def process_locations(model_config, modelrun_techs):
                     tech_settings.union(
                         locations[loc_name].tech_groups[parent], allow_override=True
                     )
-
             # Now overwrite with the tech's own model-wide
             # and location-specific settings
             tech_settings.union(techs_in[tech_name], allow_override=True)

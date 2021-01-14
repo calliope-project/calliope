@@ -5,6 +5,7 @@ import:
     - scenarios_resource_area.yaml
     - scenarios_net_import_share.yaml
     - scenarios_carrier_prod.yaml
+    - scenarios_carrier_con.yaml
 
 model:
     name: Group share constraint test model

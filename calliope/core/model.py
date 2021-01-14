@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
+Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 model.py
@@ -17,6 +17,7 @@ import numpy as np
 import ruamel.yaml as ruamel_yaml
 
 from calliope.postprocess import results as postprocess_results
+from calliope.postprocess import plotting
 from calliope.core import io
 from calliope.preprocess import (
     model_run_from_yaml,
@@ -87,6 +88,8 @@ class Model(object):
                 "Input configuration must either be a string or a dictionary."
             )
         self._check_future_deprecation_warnings()
+
+        self.plot = plotting.ModelPlotMethods(self)
 
     def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run

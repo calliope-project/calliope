@@ -4,6 +4,7 @@ import pandas as pd
 
 import calliope
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 
 class TestNationalScaleExampleModelSenseChecks:
@@ -220,5 +221,25 @@ class TestEnergyCapacityPerStorageCapacity:
     @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_mode(self, model_file):
         model = build_model(model_file=model_file, scenario="operate_mode_min")
-        with pytest.raises(calliope.exceptions.ModelError):
+        with pytest.raises(calliope.exceptions.ModelError) as error:
             model.run()
+        assert check_error_or_warning(
+            error, "Operational mode requires a timestep window and horizon"
+        )
+
+    @pytest.mark.parametrize(
+        "horizon_window", [(24, 24), (48, 48), (72, 48), (144, 24)]
+    )
+    def test_operate_mode_horizon_window(self, model_file, horizon_window):
+        horizon, window = horizon_window
+        override_dict = {
+            "model.subset_time": ["2005-01-01", "2005-01-05"],
+            "run.operation.horizon": horizon,
+            "run.operation.window": window,
+        }
+        model = build_model(
+            model_file=model_file,
+            scenario="operate_mode_min",
+            override_dict=override_dict,
+        )
+        model.run()

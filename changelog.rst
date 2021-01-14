@@ -3,8 +3,18 @@
 Release History
 ===============
 
-0.6.6 (dev)
------------
+0.6.7
+-----
+
+|changed| Fix a bug with `horizon` and `window` lengths in `operate` mode.
+
+
+0.6.6 (2020-10-08)
+------------------
+
+|new| `spores` run mode now available, to find Spatially-explicit Practically Optimal REsultS (SPORES)
+
+|new| New group constraints `carrier_con_min`, `carrier_con_max`, `carrier_con_equals` which restrict the total consumed energy of a subgroup of conversion and/or demand technologies.
 
 |new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
 
@@ -12,11 +22,13 @@ Release History
 
 |changed| Parameters are assigned a domain in Pyomo based on their dtype in `model_data`
 
-|changed| |backwards-incompatible| Plotting is no longer part of Calliope itself, but in a separate module, calliope_plot. FIXME: documentation needs to be updated.
-
 |changed| Internal code reorganisation.
 
-|changed| Updated to Pyomo 5.7.
+|changed| Updated to Pyomo 5.7, pandas 1.1, and xarray 0.16
+
+|fixed| One-way transmission technologies can have `om` costs
+
+|fixed| Silent override of nested dicts when parsing YAML strings
 
 0.6.5 (2020-01-14)
 ------------------

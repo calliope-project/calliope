@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
+Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
@@ -114,7 +114,7 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
 
     if not dims:
         if var + "_index" == var_container.index_set().name:
-            dims = [i.name for i in var_container.index_set().set_tuple]
+            dims = [i.name for i in var_container.index_set().subsets()]
         else:
             dims = [var_container.index_set().name]
 
@@ -160,6 +160,8 @@ def get_domain(var: xr.DataArray) -> str:
             "resource|node_coordinates|cost*|lookup_cluster_last_timestep", var.name
         ):
             return ""
+        elif re.match("group_carrier_con*", var.name):
+            return "NonPositive"
         else:
             return "NonNegative"
 

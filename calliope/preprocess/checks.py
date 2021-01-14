@@ -1,5 +1,5 @@
 """
-Copyright (C) 2013-2019 Calliope contributors listed in AUTHORS.
+Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 preprocess_checks.py
@@ -158,6 +158,32 @@ def check_initial(config_model):
         if k not in DEFAULTS["model"].keys():
             model_warnings.append(
                 "Unrecognised setting in model configuration: {}".format(k)
+            )
+    # If spores run mode is selected, check the correct definition of all needed parameters
+    if config_model.run.mode == "spores":
+        # Check that spores number is greater than 0, otherwise raise warning
+        if config_model.run.spores_options.spores_number == 0:
+            model_warnings.append(
+                "spores run mode is selected, but a number of 0 spores is requested"
+            )
+        # Check that slack cost is greater than 0, otherwise set to default (0.1) and raise warning
+        if config_model.run.spores_options.slack <= 0:
+            config_model.run.spores_options.slack = 0.1
+            model_warnings.append(
+                "Slack must be greater than zero, setting slack to default value of 0.1 "
+            )
+        # Check that score_cost_class is a string
+        _spores_cost_class = config_model.run.spores_options.get("score_cost_class", {})
+        if not isinstance(_spores_cost_class, str):
+            errors.append("`run.spores_options.score_cost_class` must be a string")
+        # Check that slack_cost_group is one of the defined group contraints
+        if (
+            config_model.run.spores_options.slack_cost_group
+            not in config_model.get("group_constraints", {}).keys()
+        ):
+            errors.append(
+                "`run.spores_options.slack_cost_group` must correspond to "
+                "one of the group constraints defined in the model"
             )
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
@@ -335,13 +361,6 @@ def check_initial(config_model):
             'use e.g. "{monetary: 1}", which gives the monetary cost class a weight '
             "of 1 in the objective, and ignores any other cost classes."
         )
-    elif len(_cost_class.keys()) == 0:
-        errors.append(
-            "No cost classes defined for use in the objective. "
-            'Expecting a dict of "{cost_class: weight}" for all cost classes '
-            "to be considered in the objective function."
-        )
-
     else:
         # This next check is only run if we have confirmed that cost_class is
         # a dict, as it errors otherwise
