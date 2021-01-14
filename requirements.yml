@@ -24,5 +24,5 @@ dependencies:
     - pytest-xdist  # pytest distributed testing plugin
     - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
     - ruamel.yaml=0.16
-    - scikit-learn
+    - scikit-learn>=0.22,<0.24  # 0.24 leads to failed clustering, due to some API change
     - xarray=0.16
