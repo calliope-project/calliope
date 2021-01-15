@@ -261,7 +261,7 @@ class TestIMask:
             ),
         ),
     )
-    @pytest.mark.parametrize("initial_operator", ("_and", "_or"))
+    @pytest.mark.parametrize("initial_operator", ("and_", "or_"))
     def test_imask_where_initial_imask(
         self, model_data, where_array, results, initial_operator
     ):
@@ -272,11 +272,11 @@ class TestIMask:
         )
         locs = [{"nodes": "foo", "techs": "foo"}, {"nodes": "bar", "techs": "foo"}]
         for i in range(2):
-            if initial_operator == "_and":
+            if initial_operator == "and_":
                 assert (
                     imask.loc[locs[i]] * results[i] == where_imask.loc[locs[i]]
                 ).all()
-            elif initial_operator == "_or":
+            elif initial_operator == "or_":
                 assert (
                     imask.loc[locs[i]] + results[i] == where_imask.loc[locs[i]]
                 ).all()
