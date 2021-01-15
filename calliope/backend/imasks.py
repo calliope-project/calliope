@@ -197,9 +197,9 @@ def imask_where(
 
 
 def combine_imasks(curr_imask, new_imask, _operator):
-    if "or" in _operator:
+    if _operator in ["or", "or_"]:
         _operator = "or_"
-    elif "and" in _operator:
+    elif _operator in ["and", "and_"]:
         _operator = "and_"
     else:
         raise ValueError(f"Operator `{_operator}` not recognised")

@@ -155,7 +155,7 @@ class TestIMask:
         """
         foreach = ["nodes", "techs"]
         imask = imask_foreach(model_data, foreach)
-        assert imask.sum() == model_data.node_tech.sum()
+        assert set(imask.dims) == set(foreach)
         imask_subset = subset_imask("foo", imask_subset_config(foreach), imask)
         assert (imask_subset.loc[{"nodes": "bar"}] == False).all()
 
@@ -307,8 +307,8 @@ class TestIMask:
         curr = False
         new = True
         if isinstance(result, bool):
-            assert combine_imasks(operator, curr, new) is result
+            assert combine_imasks(curr, new, operator) is result
         elif result == "error":
             with pytest.raises(ValueError) as excinfo:
-                combine_imasks(operator, curr, new)
+                combine_imasks(curr, new, operator)
             assert check_error_or_warning(excinfo, "Operator `foo` not recognised")

@@ -73,14 +73,6 @@ def get_timestep_weight(backend_model):
 
 
 @memoize
-def split_comma_list(comma_list):
-    """
-    Take a comma deliminated string and split it into a list of strings
-    """
-    return comma_list.split(",")
-
-
-@memoize
 def get_conversion_plus_io(backend_model, tier):
     """
     from a carrier_tier, return the primary tier (of `in`, `out`) and
@@ -177,16 +169,6 @@ def invalid(val) -> bool:
         return val._value == po.base.param._NotValid or pd.isnull(po.value(val))
     else:
         return pd.isnull(val)
-
-
-def within(backend_model, var: xr.DataArray):
-    _within = None
-    for i in var.dims:
-        if _within is None:
-            _within = getattr(backend_model, i)
-        else:
-            _within = _within.cross(getattr(backend_model, i))
-    return _within
 
 
 def convert_datetime(
