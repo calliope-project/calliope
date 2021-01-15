@@ -11,11 +11,7 @@ Cost constraints.
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import (
-    get_param,
-    get_timestep_weight,
-    loc_tech_is_in
-)
+from calliope.backend.pyomo.util import get_param, get_timestep_weight, loc_tech_is_in
 
 
 def cost_expression_rule(backend_model, cost, node, tech):

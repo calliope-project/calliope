@@ -10,7 +10,6 @@ time-varying param_dict.
 
 """
 import ast
-import collections
 
 import ruamel.yaml
 import xarray as xr
@@ -58,7 +57,7 @@ def build_model_data(model_run, debug=False):
     )
 
     # param_dict is going to be of the form (*dim_names): {(*dims): {**relevant_parms}}
-    # E.g. "('nodes', 'techs')": {"('N1', 'heat_pipes:X1')": {{'energy_cap_max': 1, 'energy_eff': 0.99, etc.}}
+    # E.g. "('nodes', 'techs')": {"('N1', 'heat_pipes:X1')": {'energy_cap_max': 1, 'energy_eff': 0.99, etc.}}
     param_dict = AttrDict({})
     # Get parameters that are node-specific
     get_node_params(param_dict, model_run)
@@ -357,18 +356,14 @@ def add_attributes(model_run):
     # used in get_param() lookups inside the backend
     ##
 
-    default_tech_dict = checks.DEFAULTS.techs.default_tech.as_dict()
-    default_location_dict = checks.DEFAULTS.locations.default_location.as_dict()
+    tech_dict = checks.DEFAULTS.techs.default_tech
+    cost_dict = {
+        "cost_{}".format(k): v for k, v in tech_dict.costs.default_cost.items()
+    }
+    location_dict = checks.DEFAULTS.locations.default_location
 
-    attr_dict["defaults"] = ruamel.yaml.dump(
-        {
-            **default_tech_dict["constraints"],
-            **{
-                "cost_{}".format(k): v
-                for k, v in default_tech_dict["costs"]["default_cost"].items()
-            },
-            **default_location_dict,
-        }
-    )
+    attr_dict["defaults"] = AttrDict(
+        {**tech_dict.constraints.as_dict(), **cost_dict, **location_dict.as_dict()}
+    ).to_yaml()
 
     return attr_dict

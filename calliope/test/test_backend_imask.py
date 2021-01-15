@@ -1,15 +1,22 @@
 from itertools import chain, combinations
-from re import L
-from pyomo.core.expr.numvalue import ZeroConstant
 
 import pytest
-import ruamel.yaml as ruamel_yaml
 import xarray as xr
 import numpy as np
 import pandas as pd
 
 import calliope
-from calliope.backend.imasks import *
+from calliope.backend.imasks import (
+    build_imasks,
+    param_exists,
+    inheritance,
+    val_is,
+    get_valid_index,
+    subset_imask,
+    imask_where,
+    combine_imasks,
+    imask_foreach,
+)
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import AttrDict
 from calliope.test.common.util import (
@@ -292,3 +299,16 @@ class TestIMask:
                 assert len(constraint_sets[f"{model_name}.{ctype}.{name}"]) == len(
                     imask
                 )
+
+    @pytest.mark.parametrize(
+        ("operator", "result"), (("or", True), ("and", False), ("foo", "error"))
+    )
+    def test_combine_imask(self, operator, result):
+        curr = False
+        new = True
+        if isinstance(result, bool):
+            assert combine_imasks(operator, curr, new) is result
+        elif result == "error":
+            with pytest.raises(ValueError) as excinfo:
+                combine_imasks(operator, curr, new)
+            assert check_error_or_warning(excinfo, "Operator `foo` not recognised")

@@ -21,7 +21,9 @@ class ObservedDict(dict):
             else:
                 attr = "as_dict"
 
-            initial_dict = getattr(AttrDict.from_yaml_string(initial_yaml_string), attr)()
+            initial_dict = getattr(
+                AttrDict.from_yaml_string(initial_yaml_string), attr
+            )()
 
         super().__init__(initial_dict)
 

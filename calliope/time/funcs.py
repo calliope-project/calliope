@@ -159,7 +159,7 @@ def apply_clustering(
 
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
-    with pd.option_context('mode.use_inf_as_na', True):
+    with pd.option_context("mode.use_inf_as_na", True):
         if normalize:
             data_normalized = normalized_copy(data_to_cluster)
         else:

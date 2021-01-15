@@ -34,7 +34,6 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-
 def build_sets(model_data, backend_model):
     for coord_name, coord_vals in model_data.coords.items():
         setattr(
@@ -42,7 +41,6 @@ def build_sets(model_data, backend_model):
             coord_name,
             po.Set(initialize=coord_vals.to_index(), ordered=True),
         )
-
 
 
 def build_params(model_data, backend_model):
@@ -129,7 +127,7 @@ def build_constraints(backend_model, imasks):
 
 def build_expressions(backend_model, expression_configs, imasks):
     build_order_dict = {
-        expr: expression_configs[expr].get('build_order', 0) for expr in imasks.keys()
+        expr: expression_configs[expr].get("build_order", 0) for expr in imasks.keys()
     }
     build_order = sorted(build_order_dict, key=build_order_dict.get)
 

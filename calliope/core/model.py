@@ -8,13 +8,10 @@ model.py
 Implements the core Model class.
 
 """
-
-from io import StringIO
 import logging
 import warnings
 
 import numpy as np
-import ruamel.yaml as ruamel_yaml
 
 from calliope.postprocess import results as postprocess_results
 from calliope.postprocess import plotting
@@ -91,7 +88,6 @@ class Model(object):
 
         self.plot = plotting.ModelPlotMethods(self)
 
-
     def _init_from_model_run(self, model_run, debug_data):
         self._model_run = model_run
         self._debug_data = debug_data
@@ -135,7 +131,6 @@ class Model(object):
 
         model_config = {
             k: v for k, v in model_run.get("model", {}).items() if k != "file_allowed"
-
         }
         self.model_config = UpdateObserverDict(
             initial_dict=model_config, name="model_config", observer=self._model_data
@@ -178,7 +173,7 @@ class Model(object):
             initial_yaml_string=model_data.attrs.get("imasks", "{}"),
             name="imasks",
             observer=self._model_data,
-            flat=True
+            flat=True,
         )
 
         results = self._model_data.filter_by_attrs(is_result=1)
