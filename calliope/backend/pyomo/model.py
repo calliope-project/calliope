@@ -22,8 +22,8 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var, get_domain, convert_datetime
-from calliope.backend.imasks import build_imasks
+from calliope.backend.pyomo.util import get_var, get_domain, string_to_datetime, datetime_to_string
+from calliope.backend.imasks import create_imask
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -99,23 +99,28 @@ def build_params(model_data, backend_model):
     )
 
 
-def build_variables(backend_model, variable_configs, imasks):
-    for var_name, imask in imasks.items():
-        config = variable_configs[var_name]
-        if "bounds" in config:
-            kwargs = {"bounds": get_capacity_bounds(config.bounds)}
+def build_variables(backend_model, model_data, imask_config):
+    for var_name, var_imask in imask_config.items():
+        imask = create_imask(model_data, var_name, var_imask)
+        if imask is None:
+            continue
+        if "bounds" in var_imask:
+            kwargs = {"bounds": get_capacity_bounds(var_imask.bounds)}
         else:
             kwargs = {}
 
         setattr(
             backend_model,
             var_name,
-            po.Var(imask, domain=getattr(po, config.domain), **kwargs),
+            po.Var(imask, domain=getattr(po, var_imask.domain), **kwargs),
         )
 
 
-def build_constraints(backend_model, imasks):
-    for constraint_name, imask in imasks.items():
+def build_constraints(backend_model, model_data, imask_config):
+    for constraint_name, constraint_imask in imask_config.items():
+        imask = create_imask(model_data, constraint_name, constraint_imask)
+        if imask is None:
+            continue
         setattr(
             backend_model,
             f"{constraint_name}_constraint",
@@ -125,18 +130,21 @@ def build_constraints(backend_model, imasks):
         )
 
 
-def build_expressions(backend_model, expression_configs, imasks):
+def build_expressions(backend_model, model_data, imask_config):
     build_order_dict = {
-        expr: expression_configs[expr].get("build_order", 0) for expr in imasks.keys()
+        expr: config.get("build_order", 0) for expr, config in imask_config.items()
     }
     build_order = sorted(build_order_dict, key=build_order_dict.get)
 
     for expr_name in build_order:
+        imask = create_imask(model_data, expr_name, imask_config[expr_name])
+        if imask is None:
+            continue
         if hasattr(constraints, f"{expr_name}_expression_rule"):
             kwargs = {"rule": getattr(constraints, f"{expr_name}_expression_rule")}
         else:
             kwargs = {"initialize": 0.0}
-        setattr(backend_model, expr_name, po.Expression(imasks[expr_name], **kwargs))
+        setattr(backend_model, expr_name, po.Expression(imask, **kwargs))
 
 
 def build_objective(backend_model):
@@ -154,21 +162,21 @@ def generate_model(model_data):
     """
     backend_model = po.ConcreteModel()
     # remove pandas datetime from xarrays, to reduce memory usage on creating pyomo objects
-    convert_datetime(backend_model, model_data, int)
+    model_data = datetime_to_string(backend_model, model_data)
 
     imask_config = AttrDict.from_yaml_string(model_data.attrs["imasks"])
-    imasks = build_imasks(model_data, imask_config)
+    #imasks = build_imasks(model_data, imask_config)
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
-    build_variables(backend_model, imask_config["variables"], imasks["variables"])
-    build_expressions(backend_model, imask_config["expressions"], imasks["expressions"])
-    build_constraints(backend_model, imasks["constraints"])
+    build_variables(backend_model, model_data, imask_config["variables"])
+    build_expressions(backend_model, model_data, imask_config["expressions"])
+    build_constraints(backend_model, model_data, imask_config["constraints"])
     build_objective(backend_model)
     # FIXME: Optional constraints
     # FIXME re-enable loading custom objectives
 
     # set datetime data back to datetime dtype
-    convert_datetime(backend_model, model_data, "datetime64[ns]")
+    model_data = string_to_datetime(backend_model, model_data)
 
     return backend_model
 
@@ -284,6 +292,6 @@ def get_result_array(backend_model, model_data):
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
-    results["timesteps"] = pd.to_datetime(results.timesteps, cache=False)
+    results = string_to_datetime(backend_model, results)
 
     return results

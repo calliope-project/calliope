@@ -8,6 +8,7 @@ policy.py
 Policy constraints.
 
 """
+import pyomo.core as po
 
 from calliope.backend.pyomo.util import get_param
 
@@ -32,11 +33,11 @@ def reserve_margin_constraint_rule(backend_model, carrier):
     max_demand_timestep = backend_model.max_demand_timesteps[carrier]
     max_demand_time_res = backend_model.timestep_resolution[max_demand_timestep]
     techs = [idx[-1] for idx in backend_model.carrier["out", carrier, :].index()]
-    return sum(  # Sum all supply capacity for this carrier
+    return po.quicksum(  # Sum all supply capacity for this carrier
         backend_model.energy_cap[node, tech]
         for node, tech in backend_model.energy_cap._index
         if tech in techs
-    ) >= sum(  # Sum all demand for this carrier and timestep
+    ) >= po.quicksum(  # Sum all demand for this carrier and timestep
         backend_model.carrier_con[carrier, node, tech, max_demand_timestep]
         for tech in techs
         for node in backend_model.nodes

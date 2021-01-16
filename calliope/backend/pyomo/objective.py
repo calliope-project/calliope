@@ -37,28 +37,15 @@ def minmax_cost_optimization(backend_model):
 
     """
 
-    def _sum(var_name, timestep):
-        summation = po.quicksum(
-            getattr(backend_model, var_name)[node, carrier, t]
-            for [node, carrier, t] in getattr(backend_model, var_name)._index
-            if t == timestep
-        )
-        return summation
-
     def obj_rule(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
-
             unmet_demand = po.quicksum(
-                po.quicksum(
-                    [
-                        _sum("unmet_demand", timestep),
-                        -1 * _sum("unused_supply", timestep),
-                    ]
+                (backend_model.unmet_demand[carrier, node, timestep] - backend_model.unused_supply[carrier, node, timestep]
                 )
                 * backend_model.timestep_weights[timestep]
-                * backend_model.bigM
-                for timestep in backend_model.timesteps
-            )
+                for [carrier, node, timestep] in backend_model.carriers*backend_model.nodes*backend_model.timesteps
+                if [carrier, node, timestep] in backend_model.unmet_demand._index
+            ) * backend_model.bigM
             if backend_model.objective_sense == "maximize":
                 unmet_demand *= -1
         else:
@@ -67,13 +54,12 @@ def minmax_cost_optimization(backend_model):
         return (
             po.quicksum(
                 po.quicksum(
-                    backend_model.cost[k, node, tech]
-                    for node in backend_model.nodes
-                    for tech in backend_model.techs
-                    if [k, node, tech] in backend_model.cost_index
+                    backend_model.cost[class_name, node, tech]
+                    for [node, tech] in backend_model.nodes*backend_model.techs
+                    if [class_name, node, tech] in backend_model.cost._index
                 )
-                * v
-                for k, v in backend_model.objective_cost_class.items()
+                * weight
+                for class_name, weight in backend_model.objective_cost_class.items()
             )
             + unmet_demand
         )

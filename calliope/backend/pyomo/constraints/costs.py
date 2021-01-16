@@ -32,11 +32,11 @@ def cost_expression_rule(backend_model, cost, node, tech):
     else:
         cost_investment = 0
 
-    if hasattr(backend_model, "cost_var_index"):
+    if hasattr(backend_model, "cost_var"):
         cost_var = po.quicksum(
             backend_model.cost_var[cost, node, tech, timestep]
             for timestep in backend_model.timesteps
-            if [cost, node, tech, timestep] in backend_model.cost_var_index
+            if [cost, node, tech, timestep] in backend_model.cost_var._index
         )
     else:
         cost_var = 0
@@ -174,7 +174,7 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
 
     weight = backend_model.timestep_weights[timestep]
 
-    all_costs = 0
+    all_costs = []
 
     def _sum(var_name, carriers=backend_model.carriers):
         return po.quicksum(
@@ -189,32 +189,32 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
     )
     if backend_model.inheritance[tech].value.endswith("conversion_plus"):
         carriers = [backend_model.primary_carrier_out[:, tech].index()[0][0]]
-        all_costs += cost_om_prod * _sum("carrier_prod", carriers=carriers)
+        all_costs.append(cost_om_prod * _sum("carrier_prod", carriers=carriers))
     else:
-        all_costs += cost_om_prod * _sum("carrier_prod")
+        all_costs.append(cost_om_prod * _sum("carrier_prod"))
 
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     if cost_om_con:
         if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
-            all_costs += cost_om_con * backend_model.resource_con[node, tech, timestep]
+            all_costs.append(cost_om_con * backend_model.resource_con[node, tech, timestep])
         elif backend_model.inheritance[tech].value.endswith("supply"):
             energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
             # in case energy_eff is zero, to avoid an infinite value
             if po.value(energy_eff) > 0:
-                all_costs += cost_om_con * (_sum("carrier_prod") / energy_eff)
+                all_costs.append(cost_om_con * (_sum("carrier_prod") / energy_eff))
         elif backend_model.inheritance[tech].value.endswith("conversion_plus"):
             carriers = [backend_model.primary_carrier_in[:, tech].index()[0][0]]
-            all_costs += cost_om_con * (-1) * _sum("carrier_con", carriers=carriers)
+            all_costs.append(cost_om_con * (-1) * _sum("carrier_con", carriers=carriers))
         else:
-            all_costs += cost_om_con * (-1) * _sum("carrier_con")
+            all_costs.append(cost_om_con * (-1) * _sum("carrier_con"))
     if hasattr(backend_model, "export_carrier"):
         export_carrier = backend_model.export_carrier[:, node, tech].index()
     else:
         export_carrier = []
     if len(export_carrier) > 0:
-        all_costs += (
+        all_costs.append(
             get_param(backend_model, "cost_export", (cost, node, tech, timestep))
             * backend_model.carrier_export[export_carrier[0][0], node, tech, timestep]
         )
 
-    return all_costs * weight
+    return po.quicksum(all_costs) * weight

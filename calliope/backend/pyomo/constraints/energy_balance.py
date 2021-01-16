@@ -38,20 +38,27 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
             for tech in backend_model.techs
             if [carrier, node, tech, timestep]
-            in getattr(backend_model, f"{var_name}_index")
+            in getattr(backend_model, var_name)._index
         )
 
-    system_balance = [_sum("carrier_prod"), _sum("carrier_con")]
+    carrier_prod = _sum("carrier_prod")
+    carrier_con = _sum("carrier_con")
 
     if hasattr(backend_model, "carrier_export"):
-        system_balance.append(-1 * _sum("carrier_export"))
+       carrier_export = _sum("carrier_export")
+    else:
+        carrier_export = 0
 
     if hasattr(backend_model, "unmet_demand"):
-        system_balance.append(backend_model.unmet_demand[carrier, node, timestep])
+        unmet_demand = backend_model.unmet_demand[carrier, node, timestep]
+    else:
+        unmet_demand = 0
     if hasattr(backend_model, "unused_supply"):
-        system_balance.append(backend_model.unused_supply[carrier, node, timestep])
+        unused_supply = backend_model.unused_supply[carrier, node, timestep]
+    else:
+        unused_supply = 0
 
-    return po.quicksum(system_balance) == 0
+    return carrier_prod + carrier_con - carrier_export + unmet_demand + unused_supply == 0
 
 
 def balance_supply_constraint_rule(backend_model, carrier, node, tech, timestep):

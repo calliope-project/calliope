@@ -33,7 +33,6 @@ def build_imasks(model_data, imask_config):
         imasks[imask_type] = {}
         for set_name, set_config in imask_config[imask_type].items():
             imask = create_imask(model_data, set_name, set_config)
-
             if imask is not None:  # All-zero imasks are not even added to imasks
                 imasks[imask_type][set_name] = imask
 
@@ -69,9 +68,9 @@ def create_imask(model_data, set_name, set_config):
         if len(imask.dims) < len(set_config.foreach):
             raise ValueError(f"Missing dimension(s) in imask for set {set_name}")
 
-        imask = reorganise_xarray_dimensions(imask).astype(bool)
+        imask = get_valid_index(reorganise_xarray_dimensions(imask).astype(bool))
 
-        return get_valid_index(imask)
+        return imask
 
     else:
         return None

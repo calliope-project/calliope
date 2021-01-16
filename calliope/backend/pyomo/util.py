@@ -148,7 +148,7 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
         if re.match(
-            "resource|node_coordinates|cost*|lookup_cluster_last_timestep", var.name
+            "resource|node_coordinates|cost*", var.name
         ):
             return ""
         elif re.match("group_carrier_con*", var.name):
@@ -171,11 +171,11 @@ def invalid(val) -> bool:
         return pd.isnull(val)
 
 
-def convert_datetime(
-    backend_model: po.ConcreteModel, model_data: xr.Dataset, astype: type
+def datetime_to_string(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
 ) -> xr.Dataset:
     """
-    Convert between datetime and integer xarray dataarrays, to reduce the memory
+    Convert from datetime to string xarray dataarrays, to reduce the memory
     footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
     when creating the pyomo model object.
 
@@ -183,21 +183,36 @@ def convert_datetime(
     ----------
     backend_model : the backend pyomo model object
     model_data : the Calliope xarray Dataset of model data
-    astype : dtype to convert timeseries dataarrays to, e.g. int, str, or np.datetime64
     """
-    if astype == "datetime64[ns]":
-        for attr, set_name in backend_model.__calliope_datetime_data:
-            if attr == "coords" and set_name in model_data:
-                model_data.coords[set_name] = model_data[set_name].astype(astype)
-            elif set_name in model_data:
-                model_data[set_name] = model_data[set_name].astype(astype)
-    else:
-        datetime_data = set()
-        for attr in ["coords", "data_vars"]:
-            for set_name, set_data in getattr(model_data, attr).items():
-                if set_data.dtype.kind == "M":
-                    model_data[set_name] = model_data[set_name].astype(astype)
-                    datetime_data.add((attr, set_name))
-        backend_model.__calliope_datetime_data = datetime_data
+    datetime_data = set()
+    for attr in ["coords", "data_vars"]:
+        for set_name, set_data in getattr(model_data, attr).items():
+            if set_data.dtype.kind == "M":
+                attrs = model_data[set_name].attrs
+                model_data[set_name] = model_data[set_name].dt.strftime('%Y-%m-%d %H:%M')
+                model_data[set_name].attrs = attrs
+                datetime_data.add((attr, set_name))
+    backend_model.__calliope_datetime_data = datetime_data
 
+    return model_data
+
+
+def string_to_datetime(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from string to datetime xarray dataarrays, reverting the process
+    undertaken in
+    datetime_to_string
+
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    for attr, set_name in backend_model.__calliope_datetime_data:
+        if attr == "coords" and set_name in model_data:
+            model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
+        elif set_name in model_data:
+            model_data[set_name] = model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
     return model_data

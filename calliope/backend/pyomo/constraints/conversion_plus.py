@@ -53,7 +53,7 @@ def balance_conversion_plus_primary_constraint_rule(
                 / carrier_ratio
             )
 
-    carrier_con = sum(
+    carrier_con = po.quicksum(
         backend_model.carrier_con[idx[1], node, tech, timestep]
         * get_param(
             backend_model, "carrier_ratios", ("in", idx[1], node, tech, timestep)
@@ -84,7 +84,7 @@ def carrier_production_max_conversion_plus_constraint_rule(
     timestep_resolution = backend_model.timestep_resolution[timestep]
     carriers_out = backend_model.carrier["out", :, tech].index()
 
-    carrier_prod = sum(
+    carrier_prod = po.quicksum(
         backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
     )
 
@@ -114,7 +114,7 @@ def carrier_production_min_conversion_plus_constraint_rule(
 
     carriers_out = backend_model.carrier["out", :, tech].index()
 
-    carrier_prod = sum(
+    carrier_prod = po.quicksum(
         backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
     )
 
@@ -188,7 +188,7 @@ def balance_conversion_plus_non_primary_constraint_rule(
     if len(c_2) == 0:
         return po.Constraint.Skip
     else:
-        return sum(c_1) == sum(c_2)
+        return po.quicksum(c_1) == po.quicksum(c_2)
 
 
 def conversion_plus_prod_con_to_zero_constraint_rule(

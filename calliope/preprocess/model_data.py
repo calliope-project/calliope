@@ -84,6 +84,7 @@ def build_model_data(model_run, debug=False):
         data = data.dropna(dim, how="all", subset=["node_tech"])
     for dim in ["carriers", "carrier_tiers"]:
         data = data.dropna(dim, how="all")
+
     data = data.drop_vars(
         [var_name for var_name, var in data.data_vars.items() if var.isnull().all()]
     )
@@ -363,7 +364,7 @@ def add_attributes(model_run):
     location_dict = checks.DEFAULTS.locations.default_location
 
     attr_dict["defaults"] = AttrDict(
-        {**tech_dict.constraints.as_dict(), **cost_dict, **location_dict.as_dict()}
+        {**tech_dict.constraints.as_dict(), **tech_dict.switches.as_dict(), **cost_dict, **location_dict.as_dict()}
     ).to_yaml()
 
     return attr_dict

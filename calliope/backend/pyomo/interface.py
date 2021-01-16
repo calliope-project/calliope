@@ -2,10 +2,9 @@ import logging
 
 import xarray as xr
 import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
 
 import calliope
-from calliope.backend.pyomo.util import get_var, convert_datetime
+from calliope.backend.pyomo.util import get_var, string_to_datetime
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
 
@@ -31,7 +30,7 @@ def access_pyomo_model_inputs(backend_model):
         if i.is_indexed()
     }
     inputs = xr.Dataset(all_params)
-    convert_datetime(backend_model, inputs, "datetime64[ns]")
+    string_to_datetime(backend_model, inputs)
 
     return reorganise_xarray_dimensions(inputs)
 

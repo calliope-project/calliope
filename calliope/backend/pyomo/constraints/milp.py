@@ -92,7 +92,7 @@ def carrier_production_max_conversion_plus_milp_constraint_rule(
     energy_cap = get_param(backend_model, "energy_cap_per_unit", (node, tech))
     carriers_out = backend_model.carrier["out", :, tech].index()
 
-    carrier_prod = sum(
+    carrier_prod = po.quicksum(
         backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
     )
 
@@ -156,7 +156,7 @@ def carrier_production_min_conversion_plus_milp_constraint_rule(
     min_use = get_param(backend_model, "energy_cap_min_use", (node, tech, timestep))
     carriers_out = backend_model.carrier["out", :, tech].index()
 
-    carrier_prod = sum(
+    carrier_prod = po.quicksum(
         backend_model.carrier_prod[idx[1], node, tech, timestep] for idx in carriers_out
     )
 
@@ -386,12 +386,14 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
     equals_systemwide = get_param(backend_model, "units_equals_systemwide", tech)
 
     def _sum(var_name):
-        return po.quicksum(
-            getattr(backend_model, var_name)[node, tech]
-            for node in backend_model.nodes
-            if hasattr(backend_model, var_name)
-            and [node, tech] in getattr(backend_model, var_name)._index
-        )
+        if hasattr(backend_model, var_name):
+            return po.quicksum(
+                getattr(backend_model, var_name)[node, tech]
+                for node in backend_model.nodes
+                if [node, tech] in getattr(backend_model, var_name)._index
+            )
+        else:
+            return 0
 
     sum_expr_units = _sum("units")
     sum_expr_purchase = _sum("purchased")
@@ -422,7 +424,7 @@ def asynchronous_con_milp_constraint_rule(backend_model, node, tech, timestep):
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
             for carrier in backend_model.carriers
             if [carrier, node, tech, timestep]
-            in getattr(backend_model, f"{var_name}_index")
+            in getattr(backend_model, var_name)._index
         )
 
     return (
@@ -452,7 +454,7 @@ def asynchronous_prod_milp_constraint_rule(backend_model, node, tech, timestep):
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
             for carrier in backend_model.carriers
             if [carrier, node, tech, timestep]
-            in getattr(backend_model, f"{var_name}_index")
+            in getattr(backend_model, var_name)._index
         )
 
     return (
