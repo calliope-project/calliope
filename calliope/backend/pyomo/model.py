@@ -22,7 +22,12 @@ import pyomo.environ  # pylint: disable=unused-import,import-error
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var, get_domain, string_to_datetime, datetime_to_string
+from calliope.backend.pyomo.util import (
+    get_var,
+    get_domain,
+    string_to_datetime,
+    datetime_to_string,
+)
 from calliope.backend.imasks import create_imask
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
@@ -165,7 +170,6 @@ def generate_model(model_data):
     model_data = datetime_to_string(backend_model, model_data)
 
     imask_config = AttrDict.from_yaml_string(model_data.attrs["imasks"])
-    #imasks = build_imasks(model_data, imask_config)
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
     build_variables(backend_model, model_data, imask_config["variables"])

@@ -45,7 +45,7 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
     carrier_con = _sum("carrier_con")
 
     if hasattr(backend_model, "carrier_export"):
-       carrier_export = _sum("carrier_export")
+        carrier_export = _sum("carrier_export")
     else:
         carrier_export = 0
 
@@ -58,7 +58,9 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
     else:
         unused_supply = 0
 
-    return carrier_prod + carrier_con - carrier_export + unmet_demand + unused_supply == 0
+    return (
+        carrier_prod + carrier_con - carrier_export + unmet_demand + unused_supply == 0
+    )
 
 
 def balance_supply_constraint_rule(backend_model, carrier, node, tech, timestep):

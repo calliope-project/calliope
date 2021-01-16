@@ -39,13 +39,20 @@ def minmax_cost_optimization(backend_model):
 
     def obj_rule(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
-            unmet_demand = po.quicksum(
-                (backend_model.unmet_demand[carrier, node, timestep] - backend_model.unused_supply[carrier, node, timestep]
+            unmet_demand = (
+                po.quicksum(
+                    (
+                        backend_model.unmet_demand[carrier, node, timestep]
+                        - backend_model.unused_supply[carrier, node, timestep]
+                    )
+                    * backend_model.timestep_weights[timestep]
+                    for [carrier, node, timestep] in backend_model.carriers
+                    * backend_model.nodes
+                    * backend_model.timesteps
+                    if [carrier, node, timestep] in backend_model.unmet_demand._index
                 )
-                * backend_model.timestep_weights[timestep]
-                for [carrier, node, timestep] in backend_model.carriers*backend_model.nodes*backend_model.timesteps
-                if [carrier, node, timestep] in backend_model.unmet_demand._index
-            ) * backend_model.bigM
+                * backend_model.bigM
+            )
             if backend_model.objective_sense == "maximize":
                 unmet_demand *= -1
         else:
@@ -55,7 +62,7 @@ def minmax_cost_optimization(backend_model):
             po.quicksum(
                 po.quicksum(
                     backend_model.cost[class_name, node, tech]
-                    for [node, tech] in backend_model.nodes*backend_model.techs
+                    for [node, tech] in backend_model.nodes * backend_model.techs
                     if [class_name, node, tech] in backend_model.cost._index
                 )
                 * weight

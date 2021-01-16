@@ -196,7 +196,9 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
     if cost_om_con:
         if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
-            all_costs.append(cost_om_con * backend_model.resource_con[node, tech, timestep])
+            all_costs.append(
+                cost_om_con * backend_model.resource_con[node, tech, timestep]
+            )
         elif backend_model.inheritance[tech].value.endswith("supply"):
             energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
             # in case energy_eff is zero, to avoid an infinite value
@@ -204,7 +206,9 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
                 all_costs.append(cost_om_con * (_sum("carrier_prod") / energy_eff))
         elif backend_model.inheritance[tech].value.endswith("conversion_plus"):
             carriers = [backend_model.primary_carrier_in[:, tech].index()[0][0]]
-            all_costs.append(cost_om_con * (-1) * _sum("carrier_con", carriers=carriers))
+            all_costs.append(
+                cost_om_con * (-1) * _sum("carrier_con", carriers=carriers)
+            )
         else:
             all_costs.append(cost_om_con * (-1) * _sum("carrier_con"))
     if hasattr(backend_model, "export_carrier"):

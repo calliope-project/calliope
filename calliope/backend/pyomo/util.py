@@ -147,9 +147,7 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
-        if re.match(
-            "resource|node_coordinates|cost*", var.name
-        ):
+        if re.match("resource|node_coordinates|cost*", var.name):
             return ""
         elif re.match("group_carrier_con*", var.name):
             return "NonPositive"
@@ -189,7 +187,9 @@ def datetime_to_string(
         for set_name, set_data in getattr(model_data, attr).items():
             if set_data.dtype.kind == "M":
                 attrs = model_data[set_name].attrs
-                model_data[set_name] = model_data[set_name].dt.strftime('%Y-%m-%d %H:%M')
+                model_data[set_name] = model_data[set_name].dt.strftime(
+                    "%Y-%m-%d %H:%M"
+                )
                 model_data[set_name].attrs = attrs
                 datetime_data.add((attr, set_name))
     backend_model.__calliope_datetime_data = datetime_data
@@ -214,5 +214,7 @@ def string_to_datetime(
         if attr == "coords" and set_name in model_data:
             model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
         elif set_name in model_data:
-            model_data[set_name] = model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            model_data[set_name] = (
+                model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            )
     return model_data

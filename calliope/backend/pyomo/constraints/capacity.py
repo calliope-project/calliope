@@ -175,7 +175,14 @@ def resource_area_capacity_per_loc_constraint_rule(backend_model, node):
     """
     available_area = backend_model.available_area[node]
 
-    return po.quicksum(backend_model.resource_area[node, tech] for tech in backend_model.techs if [node, tech] in backend_model.resource_area._index) <= available_area
+    return (
+        po.quicksum(
+            backend_model.resource_area[node, tech]
+            for tech in backend_model.techs
+            if [node, tech] in backend_model.resource_area._index
+        )
+        <= available_area
+    )
 
 
 def energy_capacity_systemwide_constraint_rule(backend_model, tech):

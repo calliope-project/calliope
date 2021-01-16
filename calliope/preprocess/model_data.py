@@ -364,7 +364,12 @@ def add_attributes(model_run):
     location_dict = checks.DEFAULTS.locations.default_location
 
     attr_dict["defaults"] = AttrDict(
-        {**tech_dict.constraints.as_dict(), **tech_dict.switches.as_dict(), **cost_dict, **location_dict.as_dict()}
+        {
+            **tech_dict.constraints.as_dict(),
+            **tech_dict.switches.as_dict(),
+            **cost_dict,
+            **location_dict.as_dict(),
+        }
     ).to_yaml()
 
     return attr_dict
