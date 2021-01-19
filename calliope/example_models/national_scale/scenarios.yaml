@@ -180,3 +180,7 @@ overrides:
                 costs:
                     utility:
                         om_prod: 100 # arbitrary utility value
+
+    eurocalliope:
+        techs.battery.constraints.link_con_to_prod: [ccgt]
+        locations.region2.techs.ccgt.constraints.energy_cap_max: 1000

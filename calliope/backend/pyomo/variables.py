@@ -142,7 +142,8 @@ def initialize_decision_variables(backend_model):
         and run_config["mode"] != "operate"
     ):
         backend_model.demand_share_per_timestep_decision = po.Var(
-            backend_model.loc_tech_carriers_prod, within=po.NonNegativeReals
+            backend_model.loc_tech_carriers_demand_share_per_timestep,
+            within=po.NonNegativeReals
         )
 
     if "loc_techs_milp" in model_data_dict["sets"]:

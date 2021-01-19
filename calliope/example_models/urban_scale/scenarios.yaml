@@ -107,6 +107,11 @@ overrides:
             cb: 0.45
             cv: 0.14
 
+    demand_share_per_timestep_decision:
+        group_constraints.chp_and_pv_demand_share:
+            techs: [chp, pv]
+            locs: [X1]
+            demand_share_per_timestep_decision.electricity: 0.95
 scenarios:
     eurocalliope_chp_simple: [eurocalliope_base, chp_extraction_simple]
     eurocalliope_chp_p2h: [eurocalliope_base, chp_extraction_p2h]

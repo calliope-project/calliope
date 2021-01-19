@@ -429,8 +429,8 @@ def generate_constraint_sets(model_run):
         if data.get("exists", True)
     }
     constraint_sets["constraint_groups"] = list(group_constraints.keys())
-
-    for group_constraint_name, group_constraint in group_constraints.items():
+    constraint_sets["loc_tech_carriers_demand_share_per_timestep"] = set()
+    for group_constraint_name, group_constraint in group_constraints.copy().items():
         tech_groups = [
             [
                 k
@@ -444,9 +444,9 @@ def generate_constraint_sets(model_run):
         allowed_techs = sum(
             [sets["techs_{}".format(i)] for i in allowed_tech_groups], []
         )
-        techs = group_constraint.get("techs", allowed_techs)
+        techs = group_constraint.pop("techs", allowed_techs)
 
-        locs = group_constraint.get("locs", sets["locs"])
+        locs = group_constraint.pop("locs", sets["locs"])
 
         # If there are transmission techs, keep only those that link to allowed locations
         techs = [i for i in techs if ":" not in techs or i.split(":")[-1] in locs]
@@ -468,11 +468,38 @@ def generate_constraint_sets(model_run):
         # Some loc_techs may not actually exist in the actual model,
         # so we must filter with actually exising loc_techs
         loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
+        carrier_group_constraints = {
+            "con": ["carrier_con_equals", "carrier_con_min", "carrier_con_max"],
+            "prod": ["demand_share_per_timestep_decision", "carrier_prod_max", "carrier_prod_min", "carrier_prod_equals"]
+        }
 
-        constraint_sets[
-            "group_constraint_loc_techs_{}".format(group_constraint_name)
-        ] = loc_techs
+        if any(key in j for j in carrier_group_constraints.values() for key in group_constraint.keys()):
+            for constr, carrier_config in group_constraint.items():
+                if constr in carrier_group_constraints["con"]:
+                    flow = "con"
+                elif constr in carrier_group_constraints["prod"]:
+                    flow = "prod"
+                carrier = list(carrier_config.keys())[0]
+                loc_tech_carriers = list(set(
+                    f"{loc_tech}::{carrier}"
+                    for loc_tech in loc_techs
+                    if f"{loc_tech}::{carrier}" in sets[f"loc_tech_carriers_{flow}"]
+                ))
+                if constr == "demand_share_per_timestep_decision":
+                    constraint_sets[
+                        "loc_tech_carriers_demand_share_per_timestep"
+                    ].update(loc_tech_carriers)
 
+            constraint_sets[
+                "group_constraint_loc_tech_carriers_{}".format(group_constraint_name)
+            ] = loc_tech_carriers
+        else:
+            constraint_sets[
+                "group_constraint_loc_techs_{}".format(group_constraint_name)
+            ] = loc_techs
+    constraint_sets["loc_tech_carriers_demand_share_per_timestep"] = list(
+        constraint_sets["loc_tech_carriers_demand_share_per_timestep"]
+    )
     # Euro-calliope constraints
     constraint_sets[
         "loc_tech_carriers_carrier_production_max_time_varying_constraint"
@@ -501,4 +528,17 @@ def generate_constraint_sets(model_run):
         and constraint_exists(model_run, i, "constraints.energy_cap_ratio")
     ]
 
+    constraint_sets["loc_tech_carriers_link_con_to_prod_constraint"] = [
+        i for i in sets.loc_tech_carriers_con
+        if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.link_con_to_prod")
+    ]
+    for loc_tech_carrier in constraint_sets["loc_tech_carriers_link_con_to_prod_constraint"]:
+        loc, tech, carrier = loc_tech_carrier.split('::')
+        constraint_sets[f"link_{loc}_{tech}_to_prod"] = [
+            f"{loc}::{i}::{carrier}" for i in model_run.get_key(
+                f"locations.{loc}.techs.{tech}.constraints.link_con_to_prod"
+            )
+            if f"{loc}::{i}::{carrier}" in sets["loc_tech_carriers_prod"]
+        ]
     return constraint_sets
+

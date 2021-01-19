@@ -44,6 +44,12 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             rule=chp_extraction_p2h_constraint_rule,
         )
+    if "loc_tech_carriers_link_con_to_prod_constraint" in sets:
+        backend_model.link_con_to_prod_constraint = po.Constraint(
+            backend_model.loc_tech_carriers_link_con_to_prod_constraint,
+            backend_model.timesteps,
+            rule=link_con_to_prod_constraint_rule,
+        )
 
 
 def carrier_production_max_time_varying_constraint_rule(
@@ -140,4 +146,18 @@ def chp_extraction_p2h_constraint_rule(backend_model, loc_tech, timestep):
             backend_model.energy_cap[loc_tech] * energy_cap_ratio
             - backend_model.carrier_prod[loc_tech_carrier_out_2, timestep]
         )
+    )
+
+
+def link_con_to_prod_constraint_rule(backend_model, loc_tech_carrier, timestep):
+    """
+    Force the carrier consumption of a specific sotrage technology to only come
+    from production of a specific set of other technologies
+    """
+    loc, tech, carrier = loc_tech_carrier.split('::')
+    loc_tech_carriers_prod = getattr(backend_model, f"link_{loc}_{tech}_to_prod")
+
+    return -1 * backend_model.carrier_con[loc_tech_carrier, timestep] <= sum(
+        backend_model.carrier_prod[loc_tech_carrier_prod, timestep]
+        for loc_tech_carrier_prod in loc_tech_carriers_prod
     )

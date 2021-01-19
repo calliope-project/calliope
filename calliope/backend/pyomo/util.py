@@ -159,9 +159,7 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
             dims = [var_container.index_set().name]
 
     if sparse and not expr:
-        result = pd.DataFrame.from_dict(
-            var_container.extract_values_sparse(), orient="index"
-        )
+        result = pd.Series(var_container.extract_values_sparse())
     else:
         if expr:
             result = pd.Series(var_container._data).apply(po.value)
@@ -215,3 +213,52 @@ def invalid(val) -> bool:
         return val._value == po.base.param._NotValid or po.value(val) is None
     else:
         return pd.isnull(val)
+
+
+def datetime_to_string(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from datetime to string xarray dataarrays, to reduce the memory
+    footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
+    when creating the pyomo model object.
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    datetime_data = set()
+    for attr in ["coords", "data_vars"]:
+        for set_name, set_data in getattr(model_data, attr).items():
+            if set_data.dtype.kind == "M":
+                attrs = model_data[set_name].attrs
+                model_data[set_name] = model_data[set_name].dt.strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+                model_data[set_name].attrs = attrs
+                datetime_data.add((attr, set_name))
+    backend_model.__calliope_datetime_data = datetime_data
+
+    return model_data
+
+
+def string_to_datetime(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from string to datetime xarray dataarrays, reverting the process
+    undertaken in
+    datetime_to_string
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    for attr, set_name in backend_model.__calliope_datetime_data:
+        if attr == "coords" and set_name in model_data:
+            model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
+        elif set_name in model_data:
+            model_data[set_name] = (
+                model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            )
+    return model_data

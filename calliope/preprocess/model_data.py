@@ -156,6 +156,7 @@ def constraints_to_dataset(model_run):
                     ".carrier_ratios.",
                     ".energy_cap_ratio.",
                     ".energy_cap_max_time_varying.",
+                    ".link_con_to_prod"
                 ]
             ]
         )
@@ -539,12 +540,8 @@ def group_constraints_to_dataset(model_run):
         constr = checks.DEFAULTS.group_constraints.default_group.get(constr_name, None)
         if isinstance(constr, dict):
             if "default_carrier" in constr.keys():
-                dims.append("carriers")
                 data = [
-                    [
-                        group_constraints[i][constr_name].get(carrier, np.nan)
-                        for carrier in model_run.sets["carriers"]
-                    ]
+                    list(group_constraints[i][constr_name].values())[0]
                     for i in model_run.sets["group_names_" + constr_name]
                 ]
             elif "default_cost" in constr.keys():
