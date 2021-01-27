@@ -212,6 +212,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
         if not all(i in config_model.get("overrides", {}) for i in scenario_overrides):
             raise exceptions.ModelError(
                 "Scenario definition must be a list of override or other scenario names."
+                f" Got {scenario_overrides}"
             )
         else:
             logger.info(

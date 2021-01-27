@@ -12,7 +12,7 @@ of the technologies
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_loc_tech, invalid
+from calliope.backend.pyomo.util import get_param, get_loc_tech, invalid, split_comma_list, get_timestep_weight
 
 ORDER = 10  # order in which to invoke constraints relative to other constraint files
 
@@ -20,9 +20,9 @@ ORDER = 10  # order in which to invoke constraints relative to other constraint 
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data["sets"]
 
-    if "loc_tech_carriers_carrier_production_max_time_varying_constraint" in sets:
+    if "loc_tech_carrier_production_max_time_varying_constraint" in sets:
         backend_model.carrier_production_max_time_varying_constraint = po.Constraint(
-            backend_model.loc_tech_carriers_carrier_production_max_time_varying_constraint,
+            backend_model.loc_tech_carrier_production_max_time_varying_constraint,
             backend_model.timesteps,
             rule=carrier_production_max_time_varying_constraint_rule,
         )
@@ -53,32 +53,25 @@ def load_constraints(backend_model):
 
 
 def carrier_production_max_time_varying_constraint_rule(
-    backend_model, loc_tech_carrier, timestep
+    backend_model, loc_tech, timestep
 ):
     """
     Set maximum carrier production for technologies with time varying maximum capacity
     """
-    loc_tech = get_loc_tech(loc_tech_carrier)
-    carrier_prod = backend_model.carrier_prod[loc_tech_carrier, timestep]
+    model_data_dict = backend_model.__calliope_model_data["data"]
     timestep_resolution = backend_model.timestep_resolution[timestep]
-
-    def _get_cap(carrier_tier):
-        cap = get_param(
-            backend_model,
-            "energy_cap_max_time_varying",
-            (carrier_tier, loc_tech_carrier, timestep),
-        )
-        if invalid(cap):
-            return 0
-        else:
-            return cap
-
-    energy_cap_timeseries = sum(
-        _get_cap(i) for i in backend_model.carrier_tiers if "out" in i
+    loc_tech_carriers_out = split_comma_list(
+        model_data_dict["lookup_loc_techs_conversion_plus"]["out", loc_tech]
     )
 
+    energy_cap_max = backend_model.energy_cap_max_time_varying[loc_tech, timestep]
+
+    carrier_prod = sum(
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        for loc_tech_carrier in loc_tech_carriers_out
+    )
     return carrier_prod <= (
-        backend_model.energy_cap[loc_tech] * timestep_resolution * energy_cap_timeseries
+        backend_model.energy_cap[loc_tech] * timestep_resolution * energy_cap_max
     )
 
 
@@ -161,3 +154,29 @@ def link_con_to_prod_constraint_rule(backend_model, loc_tech_carrier, timestep):
         backend_model.carrier_prod[loc_tech_carrier_prod, timestep]
         for loc_tech_carrier_prod in loc_tech_carriers_prod
     )
+
+
+def capacity_factor_min_constraint_rule(backend_model, loc_tech_carrier):
+    """
+    If there is capacity of a technology, force the annual capacity factor to be
+    at least a certain amount
+    """
+    loc_tech = get_loc_tech(loc_tech_carrier)
+    capacity_factor = get_param(backend_model, "capacity_factor_min", (loc_tech))
+    return sum(
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        for timestep in backend_model.timesteps
+    ) <= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
+
+
+def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+    """
+    If there is capacity of a technology, force the annual capacity factor to be
+    at most a certain amount
+    """
+    loc_tech = get_loc_tech(loc_tech_carrier)
+    capacity_factor = get_param(backend_model, "capacity_factor_max", (loc_tech))
+    return sum(
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        for timestep in backend_model.timesteps
+    ) >= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760

@@ -92,9 +92,7 @@ overrides:
         model.subset_time: '2005-01'
         techs.boiler:
             essentials.parent: conversion_plus
-            constraints.energy_cap_max_time_varying:
-                carrier_out:
-                    heat: file=energy-cap-heat.csv
+            constraints.energy_cap_max_time_varying: file=energy-cap-heat.csv
 
     chp_extraction_p2h:
         techs.chp.constraints:

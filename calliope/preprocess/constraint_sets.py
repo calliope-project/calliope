@@ -502,12 +502,12 @@ def generate_constraint_sets(model_run):
     )
     # Euro-calliope constraints
     constraint_sets[
-        "loc_tech_carriers_carrier_production_max_time_varying_constraint"
+        "loc_tech_carrier_production_max_time_varying_constraint"
     ] = [
         i
-        for i in sets.loc_tech_carriers_prod
+        for i in sets.loc_techs_conversion_plus
         if constraint_exists(
-            model_run, i.rsplit("::", 1)[0], "constraints.energy_cap_max_time_varying"
+            model_run, i, "constraints.energy_cap_max_time_varying"
         )
     ]
     constraint_sets["loc_techs_chp_extraction_cb_constraint"] = [
@@ -540,5 +540,13 @@ def generate_constraint_sets(model_run):
             )
             if f"{loc}::{i}::{carrier}" in sets["loc_tech_carriers_prod"]
         ]
+    constraint_sets["loc_tech_carriers_capacity_factor_min_constraint"] = [
+        i for i in sets.loc_tech_carriers_prod
+        if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.capacity_factor_min")
+    ]
+    constraint_sets["loc_tech_carriers_capacity_factor_max_constraint"] = [
+        i for i in sets.loc_tech_carriers_prod
+        if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.capacity_factor_max")
+    ]
     return constraint_sets
 
