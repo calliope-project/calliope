@@ -50,6 +50,16 @@ def load_constraints(backend_model):
             backend_model.timesteps,
             rule=link_con_to_prod_constraint_rule,
         )
+    if "loc_tech_carriers_capacity_factor_min_constraint" in sets:
+        backend_model.capacity_factor_min = po.Constraint(
+            backend_model.loc_tech_carriers_capacity_factor_min_constraint,
+            rule=capacity_factor_min_constraint_rule,
+        )
+    if "loc_tech_carriers_capacity_factor_max_constraint" in sets:
+        backend_model.capacity_factor_max = po.Constraint(
+            backend_model.loc_tech_carriers_capacity_factor_max_constraint,
+            rule=capacity_factor_max_constraint_rule,
+        )
 
 
 def carrier_production_max_time_varying_constraint_rule(
@@ -169,7 +179,7 @@ def capacity_factor_min_constraint_rule(backend_model, loc_tech_carrier):
     ) <= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
 
 
-def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier, timestep):
+def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier):
     """
     If there is capacity of a technology, force the annual capacity factor to be
     at most a certain amount
