@@ -14,7 +14,7 @@ import logging
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import loc_tech_is_in, get_param, invalid
+from calliope.backend.pyomo.util import loc_tech_is_in, get_param, invalid, get_timestep_weight
 
 logger = logging.getLogger(__name__)
 
@@ -592,6 +592,7 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, what):
     limit = get_param(
         backend_model, "group_carrier_prod_{}".format(what), (constraint_group)
     )
+    time_weight = get_timestep_weight(backend_model)
 
     if invalid(limit):
         return return_noconstraint("carrier_prod", constraint_group)
@@ -603,7 +604,7 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, what):
             for loc_tech_carrier in lhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
-        return equalizer(lhs, limit, what)
+        return equalizer(lhs, limit * time_weight, what)
 
 
 def carrier_con_constraint_rule(backend_model, constraint_group, what):
@@ -622,6 +623,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, what):
     limit = get_param(
         backend_model, "group_carrier_con_{}".format(what), (constraint_group)
     )
+    time_weight = get_timestep_weight(backend_model)
 
     if invalid(limit):
         return return_noconstraint("carrier_con", constraint_group)
@@ -634,7 +636,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, what):
             for timestep in backend_model.timesteps
         )
 
-        return equalizer(limit, lhs, what)
+        return equalizer(limit * time_weight, lhs, what)
 
 
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
