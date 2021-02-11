@@ -141,6 +141,8 @@ def constraints_to_dataset(model_run):
             return "loc_techs_milp"
         elif "export" in constraint:
             return "loc_techs_export"
+        elif "net_transfer" in constraint:
+            return "loc_techs_transmission"
         else:
             return "loc_techs"
 

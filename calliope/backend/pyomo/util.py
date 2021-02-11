@@ -159,7 +159,12 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
             dims = [var_container.index_set().name]
 
     if sparse and not expr:
-        result = pd.Series(var_container.extract_values_sparse())
+        if invalid(var_container.default()):
+            result = pd.Series(var_container._data).apply(
+                lambda x: po.value(x) if not invalid(x) else np.nan
+            )
+        else:
+            result = pd.Series(var_container.extract_values_sparse())
     else:
         if expr:
             result = pd.Series(var_container._data).apply(po.value)
@@ -211,6 +216,8 @@ def get_domain(var: xr.DataArray) -> str:
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
         return val._value == po.base.param._NotValid or po.value(val) is None
+    elif val == po.base.param._NotValid:
+        return True
     else:
         return pd.isnull(val)
 

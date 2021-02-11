@@ -51,14 +51,19 @@ def load_constraints(backend_model):
             rule=link_con_to_prod_constraint_rule,
         )
     if "loc_tech_carriers_capacity_factor_min_constraint" in sets:
-        backend_model.capacity_factor_min = po.Constraint(
+        backend_model.capacity_factor_min_constraint = po.Constraint(
             backend_model.loc_tech_carriers_capacity_factor_min_constraint,
             rule=capacity_factor_min_constraint_rule,
         )
     if "loc_tech_carriers_capacity_factor_max_constraint" in sets:
-        backend_model.capacity_factor_max = po.Constraint(
+        backend_model.capacity_factor_max_constraint = po.Constraint(
             backend_model.loc_tech_carriers_capacity_factor_max_constraint,
             rule=capacity_factor_max_constraint_rule,
+        )
+    if "loc_techs_net_transfer_ratio_constraint" in sets:
+        backend_model.net_transfer_ratio_constraint = po.Constraint(
+            backend_model.loc_techs_net_transfer_ratio_constraint,
+            rule=net_transfer_ratio_constraint_rule
         )
 
 
@@ -175,8 +180,9 @@ def capacity_factor_min_constraint_rule(backend_model, loc_tech_carrier):
     capacity_factor = get_param(backend_model, "capacity_factor_min", (loc_tech))
     return sum(
         backend_model.carrier_prod[loc_tech_carrier, timestep]
+        * backend_model.timestep_weights[timestep]
         for timestep in backend_model.timesteps
-    ) <= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
+    ) >= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
 
 
 def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier):
@@ -188,5 +194,36 @@ def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier):
     capacity_factor = get_param(backend_model, "capacity_factor_max", (loc_tech))
     return sum(
         backend_model.carrier_prod[loc_tech_carrier, timestep]
+        * backend_model.timestep_weights[timestep]
         for timestep in backend_model.timesteps
-    ) >= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
+    ) <= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
+
+
+def net_transfer_ratio_constraint_rule(backend_model, loc_tech):
+    """
+    Set the exact net transfer along a link,
+    throughout the year to a certain ratio of sum(prod)/sum(con)
+    i.e. net transfer of 1 means that sum(prod) == sum(con)
+    i.e. net transfer of 0.5 means that sum(prod) == 0.5 * sum(con)
+    'consumption' on a line is taken to actually be the 'production' on the line
+    in the remote location, i.e. taking account of transmission losses to the remote.
+    """
+
+    net_transfer = get_param(backend_model, "net_transfer_ratio", (loc_tech))
+
+    loc_tech_carrier = backend_model.lookup_loc_techs[loc_tech].value
+    loc_tech_remote = backend_model.lookup_remotes[loc_tech].value
+    loc_tech_carrier_remote = backend_model.lookup_loc_techs[loc_tech_remote].value
+
+    prod = sum(
+        backend_model.carrier_prod[loc_tech_carrier, timestep]
+        * backend_model.timestep_weights[timestep]
+        for timestep in backend_model.timesteps
+    )
+    prod_remote = sum(
+        backend_model.carrier_prod[loc_tech_carrier_remote, timestep]
+        * backend_model.timestep_weights[timestep]
+        for timestep in backend_model.timesteps
+    )
+
+    return prod == prod_remote * net_transfer

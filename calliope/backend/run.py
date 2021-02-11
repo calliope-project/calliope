@@ -165,8 +165,6 @@ def run_spores(model_data, timings, interface, backend, build_only):
         observer=model_data,
     )
 
-    backend_model = backend.generate_model(model_data)
-
     log_time(
         logger,
         timings,
@@ -218,11 +216,13 @@ def run_spores(model_data, timings, interface, backend, build_only):
         results.attrs["objective_function_value"] = backend_model.obj()
         # Storing results and scores in the specific dictionaries
         spores_list = [results]
+        print('Getting capacity scores')
         cum_scores = _cap_loc_score_default(results)
         # Set group constraint "cost_max" equal to slacked cost
         slack_costs = model_data.group_cost_max.loc[
             {"group_names_cost_max": slack_group}
         ].dropna("costs")
+        print('Updating cost group constraint')
         interface.update_pyomo_param(
             backend_model,
             "group_cost_max",
@@ -234,6 +234,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
                 for _cost_class in slack_costs.costs.values
             },
         )
+        print('Updating objective')
         # Modify objective function weights: spores_score -> 1, all others -> 0
         interface.update_pyomo_param(
             backend_model,
@@ -256,6 +257,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
 
     # Iterate over the number of SPORES requested by the user
     for _spore in range(0, n_spores):
+        print(f'Running SPORES {_spore}')
         results, backend_model = run_plan(
             model_data, timings, backend, build_only, backend_rerun=backend_model
         )
@@ -264,6 +266,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
             results.attrs["objective_function_value"] = backend_model.obj()
             # Storing results and scores in the specific dictionaries
             spores_list.append(results)
+            print('Updating capacity scores')
             cum_scores += _cap_loc_score_default(results)
             # Update "spores_score" based on previous iteration
             _update_spores_score(backend_model, cum_scores)
@@ -275,7 +278,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
             timings,
             "run_solution_returned",
             time_since_run_start=True,
-            comment="Backend: generated solution array for the cost-optimal case",
+            comment=f"Backend: generated solution array for the SPORE {_spore}",
         )
         # TODO: make this function work with the spores dimension,
         # so that postprocessing can take place in core/model.py, as with run_plan and run_operate
