@@ -769,7 +769,6 @@ def cost_cap_constraint_rule(backend_model, group_name, cost, what):
     cost_cap = get_param(
         backend_model, "group_cost_{}".format(what), (cost, group_name)
     )
-
     if invalid(cost_cap):
         return return_noconstraint("cost_cap", group_name)
     else:

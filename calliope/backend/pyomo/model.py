@@ -16,7 +16,7 @@ import pyomo.core as po  # pylint: disable=import-error
 from pyomo.opt import SolverFactory  # pylint: disable=import-error
 
 # pyomo.environ is needed for pyomo solver plugins
-import pyomo.environ  # pylint: disable=unused-import,import-error
+import pyomo.environ as pe # pylint: disable=unused-import,import-error
 
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
@@ -188,6 +188,7 @@ def solve_model(
     solver_io=None,
     solver_options=None,
     save_logs=False,
+    opt=None,
     **solve_kwargs,
 ):
     """
@@ -195,7 +196,11 @@ def solve_model(
 
     Returns a Pyomo results object
     """
-    opt = SolverFactory(solver, solver_io=solver_io)
+    if opt is None:
+        opt = SolverFactory(solver, solver_io=solver_io)
+        if 'persistent' in solver:
+            solve_kwargs.update({'save_results': False, 'load_solutions': False})
+            opt.set_instance(backend_model)
 
     if solver_options:
         for k, v in solver_options.items():
@@ -205,28 +210,37 @@ def solve_model(
         solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    if "warmstart" in solve_kwargs.keys() and solver in ["glpk", "cbc"]:
+    if solve_kwargs.get("warmstart", False) and solver in ["glpk", "cbc"]:
         exceptions.warn(
             "The chosen solver, {}, does not suport warmstart, which may "
             "impact performance.".format(solver)
         )
-        del solve_kwargs["warmstart"]
+        solve_kwargs["warmstart"] = False
 
     with redirect_stdout(LogWriter(logger, "debug", strip=True)):
         with redirect_stderr(LogWriter(logger, "error", strip=True)):
             # Ignore most of gurobipy's logging, as it's output is
             # already captured through STDOUT
             logging.getLogger("gurobipy").setLevel(logging.ERROR)
-            results = opt.solve(backend_model, tee=True, **solve_kwargs)
-    return results
+            if 'persistent' in solver:
+                results = opt.solve(tee=True, **solve_kwargs)
+            else:
+                results = opt.solve(backend_model, tee=True, **solve_kwargs)
+    return results, opt
 
 
-def load_results(backend_model, results):
+def load_results(backend_model, results, opt):
     """Load results into model instance for access via model variables."""
-    not_optimal = str(results["Solver"][0]["Termination condition"]) != "optimal"
-    this_result = backend_model.solutions.load_from(results)
+    termination = results.solver.termination_condition
 
-    if this_result is False or not_optimal:
+    if termination == pe.TerminationCondition.optimal:
+        try:
+            opt.load_vars()
+            this_result = True
+        except AttributeError:
+            this_result = backend_model.solutions.load_from(results)
+
+    if this_result is False or termination != pe.TerminationCondition.optimal:
         logger.critical("Problem status:")
         for l in str(results.Problem).split("\n"):
             logger.critical(l)
@@ -234,14 +248,14 @@ def load_results(backend_model, results):
         for l in str(results.Solver).split("\n"):
             logger.critical(l)
 
-        if not_optimal:
+        if termination != pe.TerminationCondition.optimal:
             message = "Model solution was non-optimal."
         else:
             message = "Could not load results into model instance."
 
         exceptions.BackendWarning(message)
 
-    return str(results["Solver"][0]["Termination condition"])
+    return str(termination)
 
 
 def get_result_array(backend_model, model_data):

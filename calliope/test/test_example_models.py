@@ -158,15 +158,18 @@ class TestNationalScaleExampleModelOperate:
 
 
 class TestNationalScaleExampleModelSpores:
-    def example_tester(self):
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            model = calliope.examples.national_scale(
-                override_dict={"model.subset_time": ["2005-01-01", "2005-01-03"]},
-                scenario="spores",
-            )
+    def example_tester(self, solver="cbc", solver_io=None):
+
+        model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": solver, "run.solver_io": solver_io
+            },
+            scenario="spores",
+        )
 
         expected_warning = "All technologies were requested for inclusion in group constraint `systemwide_cost_max`"
-        assert check_error_or_warning(excinfo, expected_warning)
+        #assert check_error_or_warning(excinfo, expected_warning)
 
         model.run(build_only=True)
 
@@ -198,10 +201,17 @@ class TestNationalScaleExampleModelSpores:
         # The final state of the objective cost class scores should be monetary: 0, spores_score: 1
         model._backend_model.objective_cost_class["monetary"].value == 0
         model._backend_model.objective_cost_class["spores_score"].value == 1
+        return model.results
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
+    @pytest.mark.filterwarnings("ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning")
+    def test_nationalscale_example_results_gurobi(self):
+        gurobi_results = self.example_tester("gurobi", "python")
+        gurobi_persistent_results = self.example_tester("gurobi_persistent", "python")
+        assert np.allclose(gurobi_results.energy_cap, gurobi_persistent_results.energy_cap)
+        assert np.allclose(gurobi_results.cost, gurobi_persistent_results.cost)
 
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):

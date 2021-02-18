@@ -43,7 +43,7 @@ def run(model_data, timings, build_only=False):
     run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
 
     if run_config["mode"] == "plan":
-        results, backend = run_plan(
+        results, backend, opt = run_plan(
             model_data,
             timings,
             backend=BACKEND[run_config.backend],
@@ -70,13 +70,13 @@ def run(model_data, timings, build_only=False):
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
+def run_plan(model_data, timings, backend, build_only, backend_rerun=False, allow_warmstart=False, persistent=False):
 
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
+    warmstart = False
     if not backend_rerun:
         backend_model = backend.generate_model(model_data)
-
         log_time(
             logger,
             timings,
@@ -87,15 +87,24 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
 
     else:
         backend_model = backend_rerun
+        if allow_warmstart:
+            warmstart = True
 
     run_config = backend_model.__calliope_run_config
     solver = run_config["solver"]
     solver_io = run_config.get("solver_io", None)
     solver_options = run_config.get("solver_options", None)
     save_logs = run_config.get("save_logs", None)
+    if "persistent" in solver and persistent is False:
+        exceptions.warn(
+            f"The chosen solver, `{solver}` will not be used in this run. "
+            f"`{solver.replace('_persistent', '')}` will be used instead."
+        )
+        solver = solver.replace('_persistent', '')
 
     if build_only:
         results = xr.Dataset()
+        opt = None
 
     else:
         log_time(
@@ -105,12 +114,13 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
             comment="Backend: sending model to solver",
         )
 
-        results = backend.solve_model(
+        results, opt = backend.solve_model(
             backend_model,
             solver=solver,
             solver_io=solver_io,
             solver_options=solver_options,
             save_logs=save_logs,
+            warmstart=warmstart
         )
 
         log_time(
@@ -121,7 +131,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
             comment="Backend: solver finished running",
         )
 
-        termination = backend.load_results(backend_model, results)
+        termination = backend.load_results(backend_model, results, opt)
 
         log_time(
             logger, timings, "run_results_loaded", comment="Backend: loaded results"
@@ -141,7 +151,7 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
             comment="Backend: generated solution array",
         )
 
-    return results, backend_model
+    return results, backend_model, opt
 
 
 def run_spores(model_data, timings, interface, backend, build_only):
@@ -165,37 +175,28 @@ def run_spores(model_data, timings, interface, backend, build_only):
         observer=model_data,
     )
 
-    log_time(
-        logger,
-        timings,
-        "run_backend_model_generated",
-        time_since_run_start=True,
-        comment="Backend: model generated",
-    )
-
     n_spores = run_config["spores_options"]["spores_number"]
     slack = run_config["spores_options"]["slack"]
     spores_score = run_config["spores_options"]["score_cost_class"]
     slack_group = run_config["spores_options"]["slack_cost_group"]
 
+    solver = run_config["solver"]
+    solver_io = run_config.get("solver_io", None)
+    solver_options = run_config.get("solver_options", None)
+    save_logs = run_config.get("save_logs", None)
+
+    loc_tech_df = model_data.cost_energy_cap.loc[{'costs': [spores_score]}].to_series().dropna()
+
     # Define default scoring function, based on integer scoring method
     # TODO: make the function to run optional
-    def _cap_loc_score_default(results, subset=None):
-        if subset is None:
-            subset = {}
-        cap_loc_score = split_loc_techs(results["energy_cap"]).loc[subset]
-        cap_loc_score = cap_loc_score.where(cap_loc_score > 1e-3, other=0)
-        cap_loc_score = cap_loc_score.where(cap_loc_score == 0, other=100)
-
-        return cap_loc_score.to_pandas()
+    def _cap_loc_score_default(results):
+        cap_loc_score = xr.where(results.energy_cap > 1e-3, 100, 0)
+        return cap_loc_score.to_series().rename_axis(index='loc_techs_investment_cost')
 
     # Define function to update "spores_score" after each iteration of the method
     def _update_spores_score(backend_model, cap_loc_score):
-        loc_tech_score_dict = {
-            (spores_score, "{}::{}".format(i, j)): k
-            for (i, j), k in cap_loc_score.stack().items()
-            if "{}::{}".format(i, j) in model_data.loc_techs_investment_cost
-        }
+        print("Updating loc::tech spores scores")
+        loc_tech_score_dict = loc_tech_df.align(cap_loc_score)[1].to_dict()
 
         interface.update_pyomo_param(
             backend_model, "cost_energy_cap", loc_tech_score_dict
@@ -208,7 +209,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
         )
 
     # Run once for the 'cost-optimal' solution
-    results, backend_model = run_plan(model_data, timings, backend, build_only)
+    results, backend_model, opt = run_plan(model_data, timings, backend, build_only, persistent=False)
     if build_only:
         return results, backend_model  # We have what we need, so break out of the loop
 
@@ -241,6 +242,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
             "objective_cost_class",
             {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}},
         )
+        print('Updating spores scores')
         # Update "spores_score" based on previous iteration
         _update_spores_score(backend_model, cum_scores)
     else:
@@ -258,9 +260,45 @@ def run_spores(model_data, timings, interface, backend, build_only):
     # Iterate over the number of SPORES requested by the user
     for _spore in range(0, n_spores):
         print(f'Running SPORES {_spore}')
-        results, backend_model = run_plan(
-            model_data, timings, backend, build_only, backend_rerun=backend_model
-        )
+        if "persistent" in solver and _spore > 0:
+            opt.set_objective(backend_model.obj)
+            for _cost_class in slack_costs.costs.values:
+                opt.remove_constraint(backend_model.group_cost_max_constraint[slack_group, _cost_class, "max"])
+                opt.add_constraint(backend_model.group_cost_max_constraint[slack_group, _cost_class, "max"])
+
+            results, opt = backend.solve_model(
+                backend_model,
+                solver=solver,
+                solver_io=solver_io,
+                solver_options=solver_options,
+                save_logs=save_logs,
+                opt=opt
+            )
+            termination = backend.load_results(backend_model, results, opt)
+
+            log_time(
+                logger, timings, "run_results_loaded", comment="Backend: loaded results"
+            )
+
+            results = backend.get_result_array(backend_model, model_data)
+            results.attrs["termination_condition"] = termination
+
+            if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+                results.attrs["objective_function_value"] = backend_model.obj()
+
+            log_time(
+                logger,
+                timings,
+                "run_solution_returned",
+                time_since_run_start=True,
+                comment="Backend: generated solution array",
+            )
+        else:
+            results, backend_model, opt = run_plan(
+                model_data, timings, backend, build_only=False,
+                backend_rerun=backend_model, allow_warmstart=False,
+                persistent=True
+            )
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results.attrs["objective_function_value"] = backend_model.obj()
