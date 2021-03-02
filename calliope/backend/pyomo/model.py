@@ -283,14 +283,16 @@ def get_result_array(backend_model, model_data):
         and "objective_" not in i.name
     }
 
-    results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
+    results = string_to_datetime(
+        backend_model,
+        reorganise_xarray_dimensions(xr.Dataset(all_variables))
+    )
 
     if all_params:
         additional_inputs = reorganise_xarray_dimensions(xr.Dataset(all_params))
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
-
-    model_data = string_to_datetime(backend_model, model_data)
+        model_data = string_to_datetime(backend_model, model_data)
 
     return results

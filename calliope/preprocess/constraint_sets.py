@@ -552,5 +552,13 @@ def generate_constraint_sets(model_run):
         i for i in sets.loc_techs_transmission
         if constraint_exists(model_run, i, "constraints.net_transfer_ratio")
     ]
+    for sense in ["min", "equals", "max"]:
+        constraint_sets[f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"] = [
+            i for i in sets.loc_tech_carriers_prod
+            if constraint_exists(
+                model_run,
+                i.rsplit("::", 1)[0],
+                f"constraints.carrier_prod_per_week_{sense}.{i.rsplit('::', 1)[1]}"
+            )
+        ]
     return constraint_sets
-

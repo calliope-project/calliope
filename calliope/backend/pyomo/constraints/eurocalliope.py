@@ -65,6 +65,28 @@ def load_constraints(backend_model):
             backend_model.loc_techs_net_transfer_ratio_constraint,
             rule=net_transfer_ratio_constraint_rule
         )
+    for sense in ["min", "max", "equals"]:
+        if f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint" in sets:
+            setattr(
+                backend_model, f"carrier_prod_per_week_{sense}_constraint",
+                po.Constraint(
+                    getattr(backend_model, f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"),
+                    backend_model.weeks,
+                    [sense],
+                    rule=carrier_prod_per_week_constraint_rule
+                )
+            )
+
+
+def equalizer(lhs, rhs, sign):
+    if sign == "max":
+        return lhs <= rhs
+    elif sign == "min":
+        return lhs >= rhs
+    elif sign == "equals":
+        return lhs == rhs
+    else:
+        raise ValueError("Invalid sign: {}".format(sign))
 
 
 def carrier_production_max_time_varying_constraint_rule(
@@ -227,3 +249,29 @@ def net_transfer_ratio_constraint_rule(backend_model, loc_tech):
     )
 
     return prod == prod_remote * net_transfer
+
+
+def carrier_prod_per_week_constraint_rule(backend_model, loc_tech_carrier, week, what):
+    """
+    Set the min/max amount of carrier consumption (relative to annual consumption)
+    for a specific loc tech that must take place in a given calender week in the model
+    """
+
+    prod = backend_model.carrier_prod
+    prod_total = sum(
+        prod[loc_tech_carrier, timestep] for timestep in backend_model.timesteps
+    )
+    prod_week = sum(
+         prod[loc_tech_carrier, timestep] for timestep in backend_model.timesteps
+         if backend_model.week_numbers[timestep] == week
+    )
+    if "timesteps" in [i.name for i in backend_model.carrier_prod_per_week_min._index.subsets()]:
+        prod_fraction = sum(
+            get_param(backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier, timestep))
+            for timestep in backend_model.timesteps if backend_model.week_numbers[timestep] == week
+        )
+    else:
+        prod_fraction = get_param(backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier))
+
+
+    return equalizer(prod_week, prod_total * prod_fraction, what)

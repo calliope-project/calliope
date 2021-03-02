@@ -110,6 +110,17 @@ overrides:
             techs: [chp, pv]
             locs: [X1]
             demand_share_per_timestep_decision.electricity: 0.95
+
+    carrier_prod_per_week:
+        model.subset_time: ['2005-01-01', '2005-01-15']
+        techs.chp.constraints.carrier_prod_per_week_min.electricity: 0.1
+        techs.chp.constraints.carrier_prod_per_week_max.electricity: 0.5
+
+    carrier_prod_per_week_ts:
+        model.subset_time: '2005-01'
+        techs.chp.constraints.carrier_prod_per_week_min.electricity: file=carrier_prod_per_week.csv:min
+        techs.chp.constraints.carrier_prod_per_week_max.electricity: file=carrier_prod_per_week.csv:max
+
 scenarios:
     eurocalliope_chp_simple: [eurocalliope_base, chp_extraction_simple]
     eurocalliope_chp_p2h: [eurocalliope_base, chp_extraction_p2h]

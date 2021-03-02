@@ -181,6 +181,10 @@ overrides:
                     utility:
                         om_prod: 100 # arbitrary utility value
 
+    capacity_factor:
+        techs.ccgt.constraints.capacity_factor_min: 0.8
+        techs.ccgt.constraints.capacity_factor_max: 0.9
+
     eurocalliope:
         techs.battery.constraints.link_con_to_prod: [ccgt]
         locations.region2.techs.ccgt.constraints.energy_cap_max: 1000

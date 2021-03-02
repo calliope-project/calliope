@@ -178,6 +178,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
     n_spores = run_config["spores_options"]["spores_number"]
     slack = run_config["spores_options"]["slack"]
     spores_score = run_config["spores_options"]["score_cost_class"]
+    objective_cost_class = run_config["spores_options"]["objective_cost_class"]
     slack_group = run_config["spores_options"]["slack_cost_group"]
 
     solver = run_config["solver"]
@@ -237,10 +238,12 @@ def run_spores(model_data, timings, interface, backend, build_only):
         )
         print('Updating objective')
         # Modify objective function weights: spores_score -> 1, all others -> 0
+        all_costs = slack_costs.costs.to_index()
+        updated_objective_cost_class = objective_cost_class.copy()
+        for c in all_costs.difference(objective_cost_class):
+            updated_objective_cost_class[c] = 0
         interface.update_pyomo_param(
-            backend_model,
-            "objective_cost_class",
-            {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}},
+            backend_model, "objective_cost_class", updated_objective_cost_class
         )
         print('Updating spores scores')
         # Update "spores_score" based on previous iteration

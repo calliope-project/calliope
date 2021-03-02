@@ -24,6 +24,7 @@ run:
         spores_number: 3  # The number of SPORES to generate
         slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
         score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
+        objective_cost_class: {spores_score: 1, monetary: 0}  # The updated cost class weightings inthe objective when running SPORES
         slack_cost_group: null  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
     solver_io: null  # What method the Pyomo backend should use to communicate with the solver
@@ -42,7 +43,7 @@ model:
     timeseries_data_path: null  # Path to time series data
     timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
     timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
-    file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios']  # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
+    file_allowed: ['clustering_func', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export', 'force_resource', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios', 'carrier_prod_per_week_min', 'carrier_prod_per_week_max', 'carrier_prod_per_week_equals']  # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
 
 ##
 # Base technology groups
@@ -61,7 +62,7 @@ tech_groups:
             energy_prod: true
     conversion_plus:
         required_constraints: []
-        allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min', 'cb', 'cv', 'energy_cap_ratio', 'energy_cap_max_time_varying']
+        allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_con', 'energy_eff', 'energy_prod', 'energy_ramping', 'export_cap', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min', 'cb', 'cv', 'energy_cap_ratio', 'energy_cap_max_time_varying', 'carrier_prod_per_week_min', 'carrier_prod_per_week_max', 'carrier_prod_per_week_equals']
         allowed_group_constraints: [demand_share_min, demand_share_max, demand_share_equals, demand_share_per_timestep_min, demand_share_per_timestep_max, demand_share_per_timestep_equals, demand_share_per_timestep_decision, carrier_prod_share_min, carrier_prod_share_max, carrier_prod_share_equals, carrier_prod_share_per_timestep_min, carrier_prod_share_per_timestep_max, carrier_prod_share_per_timestep_equals, cost_max, cost_min, cost_equals, cost_var_max, cost_var_min, cost_var_equals, cost_investment_min, cost_investment_max, cost_investment_equals, energy_cap_share_min, energy_cap_share_max, energy_cap_share_equals, energy_cap_min, energy_cap_max, energy_cap_equals, carrier_prod_min, carrier_prod_max, carrier_prod_equals, carrier_con_min, carrier_con_max, carrier_con_equals]
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
         essentials:
@@ -145,6 +146,9 @@ techs:
         constraints:
             capacity_factor_min: 0  # name: Minimum capacity factor ¦ unit: fraction ¦ Minimum ratio of annual production to maximum total (theoretical) annual production, based on technology capacity
             capacity_factor_max: 1  # name: Maximum capacity factor ¦ unit: fraction ¦ Maximum ratio of annual production to maximum total (theoretical) annual production, based on technology capacity
+            carrier_prod_per_week_min: null  # name: Min weekly carrier prodcution ¦ unit: fraction ¦ Min amount of total carrier production that must be met in each week.
+            carrier_prod_per_week_max: null  # name: Max weekly carrier prodcution ¦ unit: fraction ¦ Max amount of total carrier production that must be met in each week.
+            carrier_prod_per_week_equals: null  # name: Exact weekly carrier prodcution ¦ unit: fraction ¦ Exact amount of total carrier production that must be met in each week.
             carrier_ratios: 1  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
             charge_rate: false # name: Charge rate ¦ unit: hour :sup:`-1` ¦ (do not use, replaced by energy_cap_per_storage_cap_max) ratio of maximum charge/discharge (kW) for a given maximum storage capacity (kWh).
             cb: null  # name: backpressure ratio (power to heat ratio) for CHP

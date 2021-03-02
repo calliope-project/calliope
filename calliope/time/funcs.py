@@ -307,7 +307,13 @@ def resample(data, timesteps, resolution):
     data_rs = _resample(data_new, how="first")
 
     for var in data_rs.data_vars:
-        if var in ["timestep_resolution", "resource"]:
+        if var in [
+            "timestep_resolution",
+            "resource",
+            "carrier_prod_per_week_max",
+            "carrier_prod_per_week_min",
+            "carrier_prod_per_week_equals"
+        ]:
             data_rs[var] = _resample(data_new[var], how="sum")
         else:
             try:
