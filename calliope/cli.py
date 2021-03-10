@@ -302,6 +302,13 @@ def run(
                     fg="red",
                     bold=True,
                 )
+            # If save_netcdf is used, override the 'save_per_spore_path' to point to a
+            # directory of the same name as the planned netcdf
+
+            if save_netcdf and model.run_config.get('spores_options', {}).get('save_per_spore', False):
+                model.run_config['spores_options']['save_per_spore_path'] = (
+                    save_netcdf.replace('.nc', '/spore_{}.nc')
+                )
 
             model.run()
             termination = model._model_data.attrs.get(

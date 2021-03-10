@@ -159,7 +159,7 @@ def constraints_to_dataset(model_run):
                 for j in [
                     ".carrier_ratios.",
                     ".energy_cap_ratio.",
-                    ".link_con_to_prod"
+                    ".link_con_to_prod",
                     ".carrier_prod_per_week"
                 ]
             ]

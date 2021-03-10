@@ -132,3 +132,19 @@ class TestIO:
 
             with open(out_path, "r") as f:
                 assert "\nmin \nobj:\n+1 cost(monetary_region1_1__csp)" in f.read()
+
+    def test_save_per_spore(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.mkdir(os.path.join(tempdir, "output"))
+            model = calliope.examples.national_scale(
+                scenario="spores",
+                override_dict={
+                    "run.spores_options.save_per_spore": True,
+                    'run.spores_options.save_per_spore_path': os.path.join(tempdir, 'output/spore_{}.nc')
+                }
+            )
+            model.run()
+
+            for i in ["cost_opt", "0", "1", "2"]:
+                assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
+            assert not os.path.isfile(os.path.join(tempdir, "output.nc"))

@@ -265,7 +265,7 @@ def carrier_prod_per_week_constraint_rule(backend_model, loc_tech_carrier, week,
          prod[loc_tech_carrier, timestep] for timestep in backend_model.timesteps
          if backend_model.week_numbers[timestep] == week
     )
-    if "timesteps" in [i.name for i in backend_model.carrier_prod_per_week_min._index.subsets()]:
+    if "timesteps" in [i.name for i in getattr(backend_model, f"carrier_prod_per_week_{what}")._index.subsets()]:
         prod_fraction = sum(
             get_param(backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier, timestep))
             for timestep in backend_model.timesteps if backend_model.week_numbers[timestep] == week

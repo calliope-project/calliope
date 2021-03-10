@@ -17,6 +17,7 @@ from calliope.backend.pyomo import interface as pyomo_interface
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import split_loc_techs
+from calliope.core import io
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,8 @@ def run_spores(model_data, timings, interface, backend, build_only):
     spores_score = run_config["spores_options"]["score_cost_class"]
     objective_cost_class = run_config["spores_options"]["objective_cost_class"]
     slack_group = run_config["spores_options"]["slack_cost_group"]
+    save_per_spore = run_config["spores_options"]["save_per_spore"]
+    save_per_spore_path = run_config["spores_options"]["save_per_spore_path"]
 
     solver = run_config["solver"]
     solver_io = run_config.get("solver_io", None)
@@ -209,6 +212,13 @@ def run_spores(model_data, timings, interface, backend, build_only):
             "No more SPORES will be generated."
         )
 
+    def _save_spore(backend_model, spore_num):
+        inputs = interface.access_pyomo_model_inputs(backend_model)
+        inputs_to_keep = inputs[["cost_energy_cap", "group_cost_max", "objective_cost_class"]]
+        new_ds = xr.merge([results, inputs_to_keep], compat="override", combine_attrs="override")
+        print(f'Saving SPORE {spore_num} to {save_per_spore_path.format(spore_num)}')
+        io.save_netcdf(new_ds, save_per_spore_path.format(spore_num))
+
     # Run once for the 'cost-optimal' solution
     results, backend_model, opt = run_plan(model_data, timings, backend, build_only, persistent=False)
     if build_only:
@@ -216,6 +226,8 @@ def run_spores(model_data, timings, interface, backend, build_only):
 
     if results.attrs["termination_condition"] in ["optimal", "feasible"]:
         results.attrs["objective_function_value"] = backend_model.obj()
+        if save_per_spore is True:
+            _save_spore(backend_model, "cost_opt")
         # Storing results and scores in the specific dictionaries
         spores_list = [results]
         print('Getting capacity scores')
@@ -305,6 +317,8 @@ def run_spores(model_data, timings, interface, backend, build_only):
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results.attrs["objective_function_value"] = backend_model.obj()
+            if save_per_spore is True:
+                _save_spore(backend_model, _spore)
             # Storing results and scores in the specific dictionaries
             spores_list.append(results)
             print('Updating capacity scores')

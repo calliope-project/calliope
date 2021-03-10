@@ -36,6 +36,21 @@ class TestCLI:
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, "output.nc"))
 
+    def test_save_per_spore(self):
+        runner = CliRunner()
+
+        with runner.isolated_filesystem() as tempdir:
+            os.mkdir(os.path.join(tempdir, "output"))
+            print(os.listdir(tempdir))
+            result = runner.invoke(
+                cli.run, [_MODEL_NATIONAL, "--save_netcdf=output.nc", "--scenario=spores", "--override_dict={'run.spores_options.save_per_spore': True}"]
+            )
+            print(os.listdir(os.path.join(tempdir, "output")))
+            assert result.exit_code == 0
+            for i in ["cost_opt", "0", "1", "2"]:
+                assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
+            assert os.path.isfile(os.path.join(tempdir, "output.nc"))
+
     def test_incorrect_file_format(self):
         runner = CliRunner()
 
