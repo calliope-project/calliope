@@ -4,7 +4,7 @@ import pytest
 from pytest import approx
 import pandas as pd
 import numpy as np
-
+import xarray as xr
 import calliope
 from calliope.test.common.util import check_error_or_warning
 
@@ -174,8 +174,8 @@ class TestNationalScaleExampleModelSpores:
         model.run(build_only=True)
 
         # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0
-        model._backend_model.objective_cost_class["monetary"].value == 1
-        model._backend_model.objective_cost_class["spores_score"].value == 0
+        assert model._backend_model.objective_cost_class["monetary"].value == 1
+        assert model._backend_model.objective_cost_class["spores_score"].value == 0
 
         model.run(force_rerun=True)
         # Expecting three spores + first optimal run
@@ -196,22 +196,52 @@ class TestNationalScaleExampleModelSpores:
         )
 
         # In each iteration, the spores_score has to increase
-        all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
+        assert all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
 
         # The final state of the objective cost class scores should be monetary: 0, spores_score: 1
-        model._backend_model.objective_cost_class["monetary"].value == 0
-        model._backend_model.objective_cost_class["spores_score"].value == 1
-        return model.results
+        assert model._backend_model.objective_cost_class["monetary"].value == 0
+        assert model._backend_model.objective_cost_class["spores_score"].value == 1
+        return model._model_data
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
     @pytest.mark.filterwarnings("ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning")
     def test_nationalscale_example_results_gurobi(self):
-        gurobi_results = self.example_tester("gurobi", "python")
-        gurobi_persistent_results = self.example_tester("gurobi_persistent", "python")
-        assert np.allclose(gurobi_results.energy_cap, gurobi_persistent_results.energy_cap)
-        assert np.allclose(gurobi_results.cost, gurobi_persistent_results.cost)
+        gurobi_data = self.example_tester("gurobi", "python")
+        gurobi_persistent_data = self.example_tester("gurobi_persistent", "python")
+        assert np.allclose(gurobi_data.energy_cap, gurobi_persistent_data.energy_cap)
+        assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
+
+    def test_nationalscale_skip_cost_op_spores(self):
+        base_model_data = self.example_tester()
+
+        slack_cost = base_model_data.cost.loc[{'costs': 'monetary', 'spores': 1}].sum().item()
+        initial_spores_scores = (
+            xr.where(base_model_data.energy_cap.loc[{'spores': 0}] > 1e-3, 100, 0)
+            .to_series()
+            .reindex(base_model_data.cost_energy_cap.loc[{'costs': 'spores_score'}].to_series().dropna().index)
+        )
+        spores_model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"], "run.solver": "cbc",
+                "group_constraints.systemwide_cost_max.cost_max.monetary": slack_cost,
+                "run.spores_options.skip_cost_op": True,
+                "run.objective_cost_class": {"monetary": 0, "spores_score": 1}
+            },
+            scenario="spores"
+        )
+        update_idx = {'costs': 'spores_score', 'loc_techs_investment_cost': initial_spores_scores.index}
+        spores_model._model_data.cost_energy_cap.loc[update_idx] = initial_spores_scores.values
+        spores_model.run()
+
+        assert np.allclose(spores_model.results.spores, [1, 2, 3])
+        costs = spores_model.results.cost.sum("loc_techs_cost")
+        assert all(
+            costs.loc[{"spores": slice(1, None), "costs": "monetary"}]
+            <= slack_cost * 1.0001
+        )
+        assert all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
 
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):

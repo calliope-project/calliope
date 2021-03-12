@@ -29,8 +29,11 @@ def access_pyomo_model_inputs(backend_model):
         for i in backend_model.component_objects()
         if isinstance(i, po.base.param.IndexedParam)
     }
+    all_param_ds = reorganise_xarray_dimensions(xr.Dataset(all_params))
+    for var in all_param_ds.data_vars:
+        all_param_ds[var].attrs["is_result"] = 0
 
-    return reorganise_xarray_dimensions(xr.Dataset(all_params))
+    return all_param_ds
 
 
 def update_pyomo_param(backend_model, param, update_dict):

@@ -470,7 +470,11 @@ def generate_constraint_sets(model_run):
         loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
         carrier_group_constraints = {
             "con": ["carrier_con_equals", "carrier_con_min", "carrier_con_max"],
-            "prod": ["demand_share_per_timestep_decision", "carrier_prod_max", "carrier_prod_min", "carrier_prod_equals"]
+            "prod": [
+                "demand_share_per_timestep_decision",
+                "carrier_prod_max", "carrier_prod_min", "carrier_prod_equals",
+                "demand_share_max", "demand_share_min", "demand_share_equals"
+            ]
         }
 
         if any(key in j for j in carrier_group_constraints.values() for key in group_constraint.keys()):

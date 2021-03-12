@@ -95,7 +95,6 @@ def load_constraints(backend_model):
                 "group_demand_share_{}_constraint".format(sense),
                 po.Constraint(
                     getattr(backend_model, "group_names_demand_share_{}".format(sense)),
-                    backend_model.carriers,
                     [sense],
                     rule=demand_share_constraint_rule,
                 ),
@@ -228,7 +227,7 @@ def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name):
     lhs_loc_tech_carriers = getattr(
         backend_model, "group_constraint_loc_tech_carriers_{}".format(group_name)
     )
-    lhs_loc_carriers = set(tuple(loc_tech.split("::")[::2]) for loc_tech in lhs_loc_tech_carriers)
+    lhs_loc_carriers = set(tuple(loc_tech_carrier.split("::")[::2]) for loc_tech_carrier in lhs_loc_tech_carriers)
 
     rhs_loc_tech_carriers = [
         i
