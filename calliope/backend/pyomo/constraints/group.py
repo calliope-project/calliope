@@ -425,7 +425,7 @@ def get_carrier_lhs_loc_techs(backend_model, group_name):
     return lhs_loc_tech_carriers
 
 
-def carrier_prod_share_constraint_rule(backend_model, constraint_group, carrier, what):
+def carrier_prod_share_constraint_rule(backend_model, constraint_group, what):
     """
     Enforces shares of carrier_prod for groups of technologies and locations,
     on average over the entire model period. The share is relative to
