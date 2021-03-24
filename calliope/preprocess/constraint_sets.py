@@ -478,25 +478,52 @@ def generate_constraint_sets(model_run):
         }
 
         if any(key in j for j in carrier_group_constraints.values() for key in group_constraint.keys()):
+            loc_tech_carriers = set()
             for constr, carrier_config in group_constraint.items():
                 if constr in carrier_group_constraints["con"]:
                     flow = "con"
                 elif constr in carrier_group_constraints["prod"]:
                     flow = "prod"
                 carrier = list(carrier_config.keys())[0]
-                loc_tech_carriers = list(set(
+                _loc_tech_carriers = set(
                     f"{loc_tech}::{carrier}"
                     for loc_tech in loc_techs
                     if f"{loc_tech}::{carrier}" in sets[f"loc_tech_carriers_{flow}"]
-                ))
+                )
+                loc_tech_carriers.update(_loc_tech_carriers)
                 if constr == "demand_share_per_timestep_decision":
                     constraint_sets[
                         "loc_tech_carriers_demand_share_per_timestep"
-                    ].update(loc_tech_carriers)
+                    ].update(_loc_tech_carriers)
 
             constraint_sets[
                 "group_constraint_loc_tech_carriers_{}".format(group_constraint_name)
-            ] = loc_tech_carriers
+            ] = list(loc_tech_carriers)
+        elif any("carrier_prod_share" in key for key in group_constraint.keys()):
+            lhs_loc_tech_carriers = set()
+            rhs_loc_tech_carriers = set()
+            for constr, carrier_config in group_constraint.items():
+                carrier = list(carrier_config.keys())[0]
+                _lhs_loc_tech_carriers = set(
+                    f"{loc_tech}::{carrier}"
+                    for loc_tech in loc_techs
+                    if f"{loc_tech}::{carrier}" in sets["loc_tech_carriers_prod"]
+                )
+                lhs_loc_tech_carriers.update(_lhs_loc_tech_carriers)
+                _rhs_loc_tech_carriers = set(
+                    f"{loc_tech}::{carrier}"
+                    for loc_tech in sets["loc_techs_supply_conversion_all"]
+                    if f"{loc_tech}::{carrier}" in sets["loc_tech_carriers_prod"]
+                    and loc_tech.split("::")[0] in locs
+                )
+                rhs_loc_tech_carriers.update(_rhs_loc_tech_carriers)
+            constraint_sets[
+                "group_constraint_loc_tech_carriers_{}_lhs".format(group_constraint_name)
+            ] = list(lhs_loc_tech_carriers)
+            constraint_sets[
+                "group_constraint_loc_tech_carriers_{}_rhs".format(group_constraint_name)
+            ] = list(rhs_loc_tech_carriers)
+
         else:
             constraint_sets[
                 "group_constraint_loc_techs_{}".format(group_constraint_name)
