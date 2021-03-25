@@ -213,9 +213,9 @@ class TestDemandShareGroupConstraints:
         # assert share in each timestep is 0.6
         assert (expensive_generation / demand).round(5) == 0.6
 
-    def test_location_specific_demand_share_max_constraint(self):
+    def test_node_specific_demand_share_max_constraint(self):
         model = build_model(
-            model_file="demand_share.yaml", scenario="demand_share_max_location_0"
+            model_file="demand_share.yaml", scenario="demand_share_max_node_0"
         )
         model.run()
         generation = (
@@ -224,21 +224,21 @@ class TestDemandShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         demand0 = (
-            -model.get_formatted_array("carrier_con").loc[{"locs": "0"}].sum().item()
+            -model.get_formatted_array("carrier_con").loc[{"nodes": "0"}].sum().item()
         )
         cheap_generation0 = generation.loc[
-            {"locs": "0", "techs": "cheap_elec_supply"}
+            {"nodes": "0", "techs": "cheap_elec_supply"}
         ].item()
         expensive_generation1 = generation.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert round(cheap_generation0 / demand0, 5) <= 0.3
         assert expensive_generation1 == 0
 
-    def test_location_specific_demand_share_max_constraint_two_techs(self):
+    def test_node_specific_demand_share_max_constraint_two_techs(self):
         model = build_model(
             model_file="demand_share.yaml",
-            scenario="demand_share_max_location_0_two_techs",
+            scenario="demand_share_max_node_0_two_techs",
         )
         model.run()
         generation = (
@@ -247,20 +247,20 @@ class TestDemandShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         demand0 = (
-            -model.get_formatted_array("carrier_con").loc[{"locs": "0"}].sum().item()
+            -model.get_formatted_array("carrier_con").loc[{"nodes": "0"}].sum().item()
         )
         generation0 = (
             generation.loc[
-                {"locs": "0", "techs": ["cheap_elec_supply", "normal_elec_supply"]}
+                {"nodes": "0", "techs": ["cheap_elec_supply", "normal_elec_supply"]}
             ]
             .sum("techs")
             .item()
         )
         assert round(generation0 / demand0, 5) <= 0.4
 
-    def test_location_specific_demand_share_min_constraint(self):
+    def test_node_specific_demand_share_min_constraint(self):
         model = build_model(
-            model_file="demand_share.yaml", scenario="demand_share_min_location_0"
+            model_file="demand_share.yaml", scenario="demand_share_min_node_0"
         )
         model.run()
         generation = (
@@ -269,13 +269,13 @@ class TestDemandShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         demand0 = (
-            -model.get_formatted_array("carrier_con").loc[{"locs": "0"}].sum().item()
+            -model.get_formatted_array("carrier_con").loc[{"nodes": "0"}].sum().item()
         )
         expensive_generation0 = generation.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_generation1 = generation.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert round(expensive_generation0 / demand0, 5) >= 0.6
         assert expensive_generation1 == 0
@@ -286,7 +286,7 @@ class TestDemandShareGroupConstraints:
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
-            dim=("timesteps", "locs", "carriers")
+            dim=("timesteps", "nodes", "carriers")
         )
         demand = -model.get_formatted_array("carrier_con").sum().item()
         cheap_generation = generation.loc[{"techs": "cheap_elec_supply"}].item()
@@ -301,10 +301,10 @@ class TestDemandShareGroupConstraints:
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
-            dim=("timesteps", "locs")
+            dim=("timesteps", "nodes")
         )
         demand = -model.get_formatted_array("carrier_con").sum(
-            dim=("timesteps", "locs")
+            dim=("timesteps", "nodes")
         )
         cheap_generation_elec = generation.loc[
             {"techs": "cheap_elec_supply", "carriers": "electricity"}
@@ -326,10 +326,10 @@ class TestDemandShareGroupConstraints:
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
-            dim=("timesteps", "locs")
+            dim=("timesteps", "nodes")
         )
         demand = -model.get_formatted_array("carrier_con").sum(
-            dim=("timesteps", "locs")
+            dim=("timesteps", "nodes")
         )
         cheap_generation_elec = generation.loc[
             {"techs": "cheap_elec_supply", "carriers": "electricity"}
@@ -353,9 +353,9 @@ class TestDemandShareGroupConstraints:
         assert round(cheap_generation_heat / demand_heat, 5) <= 0.5
         assert round(expensive_generation_heat / demand_heat, 5) >= 0.4
 
-    def test_different_locations_per_group_constraint(self):
+    def test_different_nodes_per_group_constraint(self):
         model = build_model(
-            model_file="demand_share.yaml", scenario="different_locations_per_group"
+            model_file="demand_share.yaml", scenario="different_nodes_per_group"
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
@@ -363,22 +363,22 @@ class TestDemandShareGroupConstraints:
         )
         demand = -model.get_formatted_array("carrier_con").sum(dim=("timesteps"))
         cheap_generation_0 = generation.loc[
-            {"techs": "cheap_elec_supply", "locs": "0"}
+            {"techs": "cheap_elec_supply", "nodes": "0"}
         ].item()
         expensive_generation_0 = generation.loc[
-            {"techs": "expensive_elec_supply", "locs": "0"}
+            {"techs": "expensive_elec_supply", "nodes": "0"}
         ].item()
         cheap_generation_1 = generation.loc[
-            {"techs": "cheap_elec_supply", "locs": "1"}
+            {"techs": "cheap_elec_supply", "nodes": "1"}
         ].item()
         expensive_generation_1 = generation.loc[
-            {"techs": "expensive_elec_supply", "locs": "1"}
+            {"techs": "expensive_elec_supply", "nodes": "1"}
         ].item()
         demand_elec_0 = demand.loc[
-            {"techs": "electricity_demand", "carriers": "electricity", "locs": "0"}
+            {"techs": "electricity_demand", "carriers": "electricity", "nodes": "0"}
         ].item()
         demand_elec_1 = demand.loc[
-            {"techs": "electricity_demand", "carriers": "electricity", "locs": "1"}
+            {"techs": "electricity_demand", "carriers": "electricity", "nodes": "1"}
         ].item()
 
         assert round(expensive_generation_0 / demand_elec_0, 5) >= 0.6
@@ -408,7 +408,7 @@ class TestDemandShareGroupConstraints:
 
         assert (
             generation.sel(
-                locs="1",
+                nodes="1",
                 techs=[
                     "normal_elec_supply",
                     "cheap_elec_supply",
@@ -419,8 +419,8 @@ class TestDemandShareGroupConstraints:
             .item()
         ) == approx(0)
 
-        cheap_elec_supply_0 = generation.sel(locs="0", techs="cheap_elec_supply").item()
-        demand_0 = demand.sel(locs="0", techs="electricity_demand").item()
+        cheap_elec_supply_0 = generation.sel(nodes="0", techs="cheap_elec_supply").item()
+        demand_0 = demand.sel(nodes="0", techs="electricity_demand").item()
 
         assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
 
@@ -432,9 +432,9 @@ class TestDemandShareGroupConstraints:
         cheap_generation = (
             model.get_formatted_array("carrier_prod")
             .loc[{"techs": "cheap_elec_supply", "carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
         )
-        demand = -1 * model.get_formatted_array("carrier_con").sum("locs")
+        demand = -1 * model.get_formatted_array("carrier_con").sum("nodes")
         # assert share in each timestep is 0.6
         assert ((cheap_generation / demand).round(5) <= 0.3).all()
 
@@ -446,9 +446,9 @@ class TestDemandShareGroupConstraints:
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
             .loc[{"techs": "expensive_elec_supply", "carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
         )
-        demand = -1 * model.get_formatted_array("carrier_con").sum("locs")
+        demand = -1 * model.get_formatted_array("carrier_con").sum("nodes")
         # assert share in each timestep is 0.6
         assert ((expensive_generation / demand).round(5) >= 0.6).all()
 
@@ -460,9 +460,9 @@ class TestDemandShareGroupConstraints:
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
             .loc[{"techs": "expensive_elec_supply", "carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
         )
-        demand = -1 * model.get_formatted_array("carrier_con").sum("locs")
+        demand = -1 * model.get_formatted_array("carrier_con").sum("nodes")
         # assert share in each timestep is 0.6
         assert ((expensive_generation / demand).round(5) == 0.6).all()
 
@@ -476,14 +476,14 @@ class TestDemandShareGroupConstraints:
             -1
             * model.get_formatted_array("carrier_con")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .sum("techs")
             .to_pandas()
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -502,14 +502,14 @@ class TestDemandShareGroupConstraints:
             -1
             * model.get_formatted_array("carrier_con")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .sum("techs")
             .to_pandas()
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -528,14 +528,14 @@ class TestDemandShareGroupConstraints:
             -1
             * model.get_formatted_array("carrier_con")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .sum("techs")
             .to_pandas()
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -548,10 +548,10 @@ class TestDemandShareGroupConstraints:
             == 0.9
         )
 
-    def test_demand_share_per_timestep_decision_per_location(self):
+    def test_demand_share_per_timestep_decision_per_node(self):
         model = build_model(
             model_file="demand_share_decision.yaml",
-            scenario="demand_share_per_timestep_decision_per_location",
+            scenario="demand_share_per_timestep_decision_per_node",
         )
         model.run()
         demand = (
@@ -636,13 +636,13 @@ class TestDemandShareGroupConstraints:
             -1
             * model.get_formatted_array("carrier_con")
             .loc[{"carriers": "electricity"}]
-            .sum(["locs", "techs"])
+            .sum(["nodes", "techs"])
             .to_pandas()
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -661,13 +661,13 @@ class TestDemandShareGroupConstraints:
             -1
             * model.get_formatted_array("carrier_con")
             .loc[{"carriers": "heat"}]
-            .sum(["locs", "techs"])
+            .sum(["nodes", "techs"])
             .to_pandas()
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "heat"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -688,13 +688,13 @@ class TestDemandShareGroupConstraints:
             -1
             * model.get_formatted_array("carrier_con")
             .loc[{"carriers": "heat"}]
-            .sum(["locs", "techs"])
+            .sum(["nodes", "techs"])
             .to_pandas()
         )
         supply_heat = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "heat"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -716,7 +716,7 @@ class TestDemandShareGroupConstraints:
         supply_elec = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .to_pandas()
             .T
         )
@@ -791,10 +791,10 @@ class TestResourceAreaGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("resource_area")
         cheap_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "cheap_elec_supply"}
+            {"nodes": "1", "techs": "cheap_elec_supply"}
         ].item()
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         assert round(cheap_capacity1, 5) <= 8
         assert expensive_capacity0 == 0
@@ -806,10 +806,10 @@ class TestResourceAreaGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("resource_area")
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert round(expensive_capacity0, 5) >= 12
         assert expensive_capacity1 == 0
@@ -821,13 +821,13 @@ class TestResourceAreaGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("resource_area")
         cheap_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "cheap_elec_supply"}
+            {"nodes": "1", "techs": "cheap_elec_supply"}
         ].item()
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert round(cheap_capacity1, 5) <= 8
         assert round(expensive_capacity0, 5) >= 12
@@ -954,9 +954,9 @@ class TestCostCapGroupConstraint:
         )
         assert cheap_cost == approx(210)
 
-    def test_location_specific_cost_max_constraint(self):
+    def test_node_specific_cost_max_constraint(self):
         model = build_model(
-            model_file="model_cost_cap.yaml", scenario="cheap_cost_max_location_0"
+            model_file="model_cost_cap.yaml", scenario="cheap_cost_max_node_0"
         )
         model.run()
         cheap_cost0 = (
@@ -965,7 +965,7 @@ class TestCostCapGroupConstraint:
                     {
                         "costs": "monetary",
                         "techs": "cheap_polluting_supply",
-                        "locs": "0",
+                        "nodes": "0",
                     }
                 ]
             )
@@ -984,13 +984,13 @@ class TestCostCapGroupConstraint:
         )
         assert round(emissions, 5) <= 400
 
-    def test_location_specific_emissions_max_constraint(self):
+    def test_node_specific_emissions_max_constraint(self):
         model = build_model(
-            model_file="model_cost_cap.yaml", scenario="emissions_max_location_0"
+            model_file="model_cost_cap.yaml", scenario="emissions_max_node_0"
         )
         model.run()
         emissions0 = (
-            (model.get_formatted_array("cost").loc[{"costs": "emissions", "locs": "0"}])
+            (model.get_formatted_array("cost").loc[{"costs": "emissions", "nodes": "0"}])
             .sum()
             .item()
         )
@@ -1032,9 +1032,9 @@ class TestCostCapGroupConstraint:
         assert round(emissions, 5) <= 400
         assert round(expensive_cost, 5) <= 600
 
-    def test_different_locations_per_cost_group_constraint(self):
+    def test_different_nodes_per_cost_group_constraint(self):
         model = build_model(
-            model_file="model_cost_cap.yaml", scenario="different_locations_per_group"
+            model_file="model_cost_cap.yaml", scenario="different_nodes_per_group"
         )
         model.run()
         cheap_cost = (
@@ -1052,7 +1052,7 @@ class TestCostCapGroupConstraint:
                     {
                         "costs": "monetary",
                         "techs": "cheap_polluting_supply",
-                        "locs": "0",
+                        "nodes": "0",
                     }
                 ]
             )
@@ -1132,10 +1132,10 @@ class TestSupplyShareGroupConstraints:
         )
         assert round(expensive_generation, 5) >= 0.6
 
-    def test_location_specific_carrier_prod_share_max_constraint(self):
+    def test_node_specific_carrier_prod_share_max_constraint(self):
         model = build_model(
             model_file="carrier_prod_share.yaml",
-            scenario="carrier_prod_share_max_location_0",
+            scenario="carrier_prod_share_max_node_0",
         )
         model.run()
         generation = (
@@ -1144,13 +1144,13 @@ class TestSupplyShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         cheap_generation0 = generation.loc[
-            {"locs": "0", "techs": "cheap_elec_supply"}
+            {"nodes": "0", "techs": "cheap_elec_supply"}
         ].item()
         expensive_generation0 = generation.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_generation1 = generation.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert (
             round(cheap_generation0 / (cheap_generation0 + expensive_generation0), 5)
@@ -1158,10 +1158,10 @@ class TestSupplyShareGroupConstraints:
         )
         assert expensive_generation1 == 0
 
-    def test_location_specific_carrier_prod_share_min_constraint(self):
+    def test_node_specific_carrier_prod_share_min_constraint(self):
         model = build_model(
             model_file="carrier_prod_share.yaml",
-            scenario="carrier_prod_share_min_location_0",
+            scenario="carrier_prod_share_min_node_0",
         )
         model.run()
         generation = (
@@ -1170,13 +1170,13 @@ class TestSupplyShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         cheap_generation0 = generation.loc[
-            {"locs": "0", "techs": "cheap_elec_supply"}
+            {"nodes": "0", "techs": "cheap_elec_supply"}
         ].item()
         expensive_generation0 = generation.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_generation1 = generation.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert (
             round(
@@ -1243,12 +1243,12 @@ class TestSupplyShareGroupConstraints:
         cheap_elec_supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"techs": "cheap_elec_supply", "carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .sum("techs")
         )
         # assert share in each timestep is 0.4
@@ -1263,12 +1263,12 @@ class TestSupplyShareGroupConstraints:
         expensive_elec_supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"techs": "expensive_elec_supply", "carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .sum("techs")
         )
         # assert share in each timestep is 0.6
@@ -1283,12 +1283,12 @@ class TestSupplyShareGroupConstraints:
         expensive_elec_supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"techs": "expensive_elec_supply", "carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
         )
         supply = (
             model.get_formatted_array("carrier_prod")
             .loc[{"carriers": "electricity"}]
-            .sum("locs")
+            .sum("nodes")
             .sum("techs")
         )
         # assert share in each timestep is 0.6
@@ -1387,13 +1387,13 @@ class TestEnergyCapShareGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         capacity_supply_conversion_all_loc1 = capacity.loc[
-            {"locs": "1", "techs": get_supply_conversion_techs(model)}
+            {"nodes": "1", "techs": get_supply_conversion_techs(model)}
         ]
         cheap_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "cheap_elec_supply"}
+            {"nodes": "1", "techs": "cheap_elec_supply"}
         ].item()
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         assert (
             round(cheap_capacity1 / capacity_supply_conversion_all_loc1.sum().item(), 5)
@@ -1408,13 +1408,13 @@ class TestEnergyCapShareGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         capacity_supply_conversion_all_loc0 = capacity.loc[
-            {"locs": "0", "techs": get_supply_conversion_techs(model)}
+            {"nodes": "0", "techs": get_supply_conversion_techs(model)}
         ]
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert (
             round(
@@ -1432,19 +1432,19 @@ class TestEnergyCapShareGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         capacity_supply_conversion_all_loc0 = capacity.loc[
-            {"locs": "0", "techs": get_supply_conversion_techs(model)}
+            {"nodes": "0", "techs": get_supply_conversion_techs(model)}
         ]
         capacity_supply_conversion_all_loc1 = capacity.loc[
-            {"locs": "1", "techs": get_supply_conversion_techs(model)}
+            {"nodes": "1", "techs": get_supply_conversion_techs(model)}
         ]
         cheap_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "cheap_elec_supply"}
+            {"nodes": "1", "techs": "cheap_elec_supply"}
         ].item()
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert (
             round(cheap_capacity1 / capacity_supply_conversion_all_loc1.sum().item(), 5)
@@ -1468,10 +1468,10 @@ class TestEnergyCapShareGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         capacity_supply_conversion_all_loc1 = capacity.loc[
-            {"locs": "1", "techs": get_supply_conversion_techs(model)}
+            {"nodes": "1", "techs": get_supply_conversion_techs(model)}
         ]
-        cheap_heat = capacity.loc[{"locs": "1", "techs": "cheap_heat_supply"}].item()
-        cheap_cool = capacity.loc[{"locs": "1", "techs": "cheap_cool_supply"}].item()
+        cheap_heat = capacity.loc[{"nodes": "1", "techs": "cheap_heat_supply"}].item()
+        cheap_cool = capacity.loc[{"nodes": "1", "techs": "cheap_cool_supply"}].item()
         assert (
             cheap_heat + cheap_cool
         ) / capacity_supply_conversion_all_loc1.sum().item() <= 0.1
@@ -1544,10 +1544,10 @@ class TestEnergyCapGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         cheap_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "cheap_elec_supply"}
+            {"nodes": "1", "techs": "cheap_elec_supply"}
         ].item()
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         assert round(cheap_capacity1, 5) <= 4
         assert expensive_capacity0 == 0
@@ -1559,10 +1559,10 @@ class TestEnergyCapGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert round(expensive_capacity0, 5) >= 6
         assert expensive_capacity1 == 0
@@ -1574,13 +1574,13 @@ class TestEnergyCapGroupConstraints:
         model.run()
         capacity = model.get_formatted_array("energy_cap")
         cheap_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "cheap_elec_supply"}
+            {"nodes": "1", "techs": "cheap_elec_supply"}
         ].item()
         expensive_capacity0 = capacity.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"nodes": "0", "techs": "expensive_elec_supply"}
         ].item()
         expensive_capacity1 = capacity.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"nodes": "1", "techs": "expensive_elec_supply"}
         ].item()
         assert round(cheap_capacity1, 5) <= 4
         assert round(expensive_capacity0, 5) >= 6
@@ -1594,15 +1594,15 @@ class TestEnergyCapGroupConstraints:
         )
         model.run()
         capacity = model.get_formatted_array("energy_cap")
-        elec_to_heat = capacity.loc[{"locs": "1", "techs": "elec_to_heat"}].item()
+        elec_to_heat = capacity.loc[{"nodes": "1", "techs": "elec_to_heat"}].item()
         elec_to_heat_cool_linked = capacity.loc[
-            {"locs": "1", "techs": "elec_to_heat_cool_linked"}
+            {"nodes": "1", "techs": "elec_to_heat_cool_linked"}
         ].item()
         elec_to_heat_cool_unlinked = capacity.loc[
-            {"locs": "1", "techs": "elec_to_heat_cool_unlinked"}
+            {"nodes": "1", "techs": "elec_to_heat_cool_unlinked"}
         ].item()
-        cheap_heat = capacity.loc[{"locs": "1", "techs": "cheap_heat_supply"}].item()
-        cheap_cool = capacity.loc[{"locs": "1", "techs": "cheap_cool_supply"}].item()
+        cheap_heat = capacity.loc[{"nodes": "1", "techs": "cheap_heat_supply"}].item()
+        cheap_cool = capacity.loc[{"nodes": "1", "techs": "cheap_cool_supply"}].item()
         assert cheap_heat == approx(0.8333, rel=0.001)
         assert cheap_cool == approx(0.1667, rel=0.001)
         assert elec_to_heat_cool_linked == approx(1.6667, rel=0.001)
@@ -1670,59 +1670,59 @@ class TestNetImportShareGroupConstraints:
 
     def test_only_imports_without_constraint(self, results_for_scenario):
         results = results_for_scenario("expensive-1")
-        demand = self.retrieve_demand(results).sel(locs="1").item()
-        net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
+        demand = self.retrieve_demand(results).sel(nodes="1").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1").item()
         assert net_imports == pytest.approx(-demand)
 
     def test_only_imports_with_wrong_carrier(self, results_for_scenario):
         results = results_for_scenario("expensive-1,other-carrier")
-        demand = self.retrieve_demand(results).sel(locs="1").item()
-        net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
+        demand = self.retrieve_demand(results).sel(nodes="1").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1").item()
         assert net_imports == pytest.approx(-demand)
 
     def test_no_net_imports(self, results_for_scenario):
         results = results_for_scenario("expensive-1,no-net-imports")
-        net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1").item()
         assert net_imports == pytest.approx(0)
 
     @pytest.mark.xfail(reason="One cannot define transmission techs explicitely.")
     def test_no_imports_explicit_tech(self, results_for_scenario):
         results = results_for_scenario("expensive-1,no-net-imports-explicit-tech")
-        net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1").item()
         assert net_imports == pytest.approx(0)
 
     def test_some_imports_allowed(self, results_for_scenario):
         results = results_for_scenario("expensive-1,some-imports-allowed")
-        demand = self.retrieve_demand(results).sel(locs="1").item()
-        net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
+        demand = self.retrieve_demand(results).sel(nodes="1").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1").item()
         assert net_imports <= -0.2 * demand
 
     def test_some_imports_enforced(self, results_for_scenario):
         results = results_for_scenario("expensive-1,some-imports-enforced")
-        demand = self.retrieve_demand(results).sel(locs="1").item()
-        net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
+        demand = self.retrieve_demand(results).sel(nodes="1").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1").item()
         assert net_imports == pytest.approx(-0.2 * demand)
 
     def test_some_expensive_imports_enforced(self, results_for_scenario):
         results = results_for_scenario("expensive-1,some-expensive-imports-enforced")
-        demand = self.retrieve_demand(results).sel(locs="0").item()
-        net_imports = self.retrieve_net_imports(results).sel(locs="0").item()
+        demand = self.retrieve_demand(results).sel(nodes="0").item()
+        net_imports = self.retrieve_net_imports(results).sel(nodes="0").item()
         assert net_imports >= -0.2 * demand
 
     def test_ignores_imports_within_group(self, results_for_scenario):
         results = results_for_scenario("expensive-1,ignores-imports-within-group")
-        demand = self.retrieve_demand(results).sel(locs="1").item()
-        net_imports = self.retrieve_imports(results).sel(locs="1").item()
+        demand = self.retrieve_demand(results).sel(nodes="1").item()
+        net_imports = self.retrieve_imports(results).sel(nodes="1").item()
         assert net_imports == pytest.approx(-demand)
 
     def test_allows_gross_imports(self, results_for_scenario):
         results = results_for_scenario("no-net-imports,alternating-costs")
-        gross_imports = self.retrieve_imports(results).sel(locs="1").item()
+        gross_imports = self.retrieve_imports(results).sel(nodes="1").item()
         assert gross_imports > 0
 
     def test_no_net_imports_despite_gross_imports(self, results_for_scenario):
         results = results_for_scenario("no-net-imports,alternating-costs")
-        net_imports = self.retrieve_net_imports(results).sel(locs="1")
+        net_imports = self.retrieve_net_imports(results).sel(nodes="1")
         assert net_imports <= 0
 
 
@@ -1775,9 +1775,9 @@ class TestCarrierProdGroupConstraints:
         )
         model.run()
         prod = model.get_formatted_array("carrier_prod")
-        cheap_prod1 = prod.loc[{"locs": "1", "techs": "cheap_elec_supply"}].sum().item()
+        cheap_prod1 = prod.loc[{"nodes": "1", "techs": "cheap_elec_supply"}].sum().item()
         expensive_prod0 = (
-            prod.loc[{"locs": "0", "techs": "expensive_elec_supply"}].sum().item()
+            prod.loc[{"nodes": "0", "techs": "expensive_elec_supply"}].sum().item()
         )
         assert round(cheap_prod1, 5) <= 40
         assert expensive_prod0 == 0
@@ -1789,10 +1789,10 @@ class TestCarrierProdGroupConstraints:
         model.run()
         prod = model.get_formatted_array("carrier_prod")
         expensive_prod0 = (
-            prod.loc[{"locs": "0", "techs": "expensive_elec_supply"}].sum().item()
+            prod.loc[{"nodes": "0", "techs": "expensive_elec_supply"}].sum().item()
         )
         expensive_prod1 = (
-            prod.loc[{"locs": "1", "techs": "expensive_elec_supply"}].sum().item()
+            prod.loc[{"nodes": "1", "techs": "expensive_elec_supply"}].sum().item()
         )
         assert round(expensive_prod0, 5) >= 10
         assert expensive_prod1 == 0
@@ -1803,12 +1803,12 @@ class TestCarrierProdGroupConstraints:
         )
         model.run()
         prod = model.get_formatted_array("carrier_prod")
-        cheap_prod1 = prod.loc[{"locs": "1", "techs": "cheap_elec_supply"}].sum().item()
+        cheap_prod1 = prod.loc[{"nodes": "1", "techs": "cheap_elec_supply"}].sum().item()
         expensive_prod0 = (
-            prod.loc[{"locs": "0", "techs": "expensive_elec_supply"}].sum().item()
+            prod.loc[{"nodes": "0", "techs": "expensive_elec_supply"}].sum().item()
         )
         expensive_prod1 = (
-            prod.loc[{"locs": "1", "techs": "expensive_elec_supply"}].sum().item()
+            prod.loc[{"nodes": "1", "techs": "expensive_elec_supply"}].sum().item()
         )
         assert round(cheap_prod1, 5) <= 40
         assert round(expensive_prod0, 5) >= 10
@@ -1822,15 +1822,15 @@ class TestCarrierProdGroupConstraints:
         )
         model.run()
         prod = model.get_formatted_array("carrier_prod")
-        elec_to_heat = prod.loc[{"locs": "1", "techs": "elec_to_heat"}].sum().item()
+        elec_to_heat = prod.loc[{"nodes": "1", "techs": "elec_to_heat"}].sum().item()
         elec_to_heat_cool_linked = prod.loc[
-            {"locs": "1", "techs": "elec_to_heat_cool_linked"}
+            {"nodes": "1", "techs": "elec_to_heat_cool_linked"}
         ].sum("timesteps")
         elec_to_heat_cool_unlinked = (
-            prod.loc[{"locs": "1", "techs": "elec_to_heat_cool_unlinked"}].sum().item()
+            prod.loc[{"nodes": "1", "techs": "elec_to_heat_cool_unlinked"}].sum().item()
         )
-        cheap_heat = prod.loc[{"locs": "1", "techs": "cheap_heat_supply"}].sum().item()
-        cheap_cool = prod.loc[{"locs": "1", "techs": "cheap_cool_supply"}].sum().item()
+        cheap_heat = prod.loc[{"nodes": "1", "techs": "cheap_heat_supply"}].sum().item()
+        cheap_cool = prod.loc[{"nodes": "1", "techs": "cheap_cool_supply"}].sum().item()
         assert round(cheap_heat, 5) <= 10
         assert round(cheap_cool, 5) <= 5
         assert round(elec_to_heat_cool_linked.loc[{"carriers": "cool"}].item()) >= 1
@@ -1888,8 +1888,8 @@ class TestCarrierConGroupConstraints:
         )
         model.run()
         con = model.get_formatted_array("carrier_con")
-        dem1 = con.loc[{"techs": "electricity_demand", "locs": "1"}].sum().item()
-        dem0 = con.loc[{"techs": "electricity_demand", "locs": "0"}].sum().item()
+        dem1 = con.loc[{"techs": "electricity_demand", "nodes": "1"}].sum().item()
+        dem0 = con.loc[{"techs": "electricity_demand", "nodes": "0"}].sum().item()
         assert round(dem1, 5) >= -80
         assert dem0 == 0
 

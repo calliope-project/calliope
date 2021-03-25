@@ -31,7 +31,7 @@ techs:
                 storage_cap: 300000
                 interest_rate: 0.1
 
-locations:
+nodes:
     a.techs:
         my_storage:
         electricity_demand:

@@ -1,7 +1,7 @@
 national_scale:
     capacity:
         - '"type": "dropdown", "x": 0, "xanchor": "left", "y": 1.13'
-        - '"yaxis": {"showticklabels": true, "title": {"text": "Location"}}'
+        - '"yaxis": {"showticklabels": true, "title": {"text": "Node"}}'
         - '"showLink": false'
         - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
     timeseries:
@@ -47,7 +47,7 @@ milp:
         - '"x": [5, 2, null]'
         - '"y": [7, 7, null]'
         - '"name": "District heat distribution"'
-        - '"name": "Locations",'
+        - '"name": "Nodes",'
         - '"hovermode": "closest"'
         - '"showLink": false'
         - '"modeBarButtonsToRemove": ["sendDataToCloud"]'

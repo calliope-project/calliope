@@ -64,7 +64,7 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
+nodes:
     a,b:
         techs: {cheap_polluting_supply, expensive_clean_supply, mean_supply, electricity_demand}
 
@@ -89,9 +89,9 @@ overrides:
             techs: ['cheap_polluting_supply']
             cost_equals:
                 monetary: 210
-    cheap_cost_max_location_0:
-        group_constraints.example_cheap_cost_max_location_0_constraint:
-            locs: ["a"]
+    cheap_cost_max_node_0:
+        group_constraints.example_cheap_cost_max_node_0_constraint:
+            nodes: ["a"]
             techs: ['cheap_polluting_supply']
             cost_max:
                 monetary: 10
@@ -110,13 +110,13 @@ overrides:
             techs: ['expensive_clean_supply']
             cost_max:
                 emissions: 300
-    emissions_max_location_0:
+    emissions_max_node_0:
         group_constraints.example_emissions_max_constraint:
-            locs: ['a']
+            nodes: ['a']
             cost_max:
                 emissions: 200
 
 scenarios:
     multiple_costs_constraint: ['emissions_max_systemwide', 'expensive_cost_min_systemwide']
-    different_locations_per_group: ['cheap_cost_max_systemwide', 'cheap_cost_max_location_0']
+    different_nodes_per_group: ['cheap_cost_max_systemwide', 'cheap_cost_max_node_0']
     different_techs_per_group: ['clean_emissions_max_systemwide', 'emissions_max_systemwide']

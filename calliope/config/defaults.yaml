@@ -175,7 +175,7 @@ techs:
             resource_unit: energy  # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
             resource_cap_equals_energy_cap: false  # name: Resource capacity equals energy cpacity ¦ unit: boolean ¦ If true, ``resource_cap`` is forced to equal ``energy_cap``
             force_resource: false  # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
-            one_way: false  # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_location_from` to `default_location_to`
+            one_way: false  # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_node_from` to `default_node_to`
             allowed_carrier_con: false  # name: Energy consumption ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
             allowed_carrier_prod: false  # name: Energy production ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
             export: false
@@ -185,9 +185,9 @@ techs:
             energy_cap_per_storage_cap_max: .inf # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_equals: null # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
             energy_cap_equals: null  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
-            energy_cap_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+            energy_cap_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
             energy_cap_max: .inf  # name: Maximum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
-            energy_cap_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+            energy_cap_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
             energy_cap_min: 0  # name: Minimum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a minimum/maximum.
             energy_cap_min_use: 0  # name: Minimum carrier production ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum carrier production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
             energy_cap_per_unit: null  # name: Energy capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
@@ -218,9 +218,9 @@ techs:
             storage_initial: 0  # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
             storage_loss: 0  # name: Storage loss rate ¦ unit: fraction/hour ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
             units_equals: null  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-            units_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+            units_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
             units_max: .inf  # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-            units_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all locations.
+            units_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
             units_min: 0  # name: Minimum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
         costs:
             default_cost:  # These costs are used for any value not defined for a given cost class
@@ -238,25 +238,25 @@ techs:
                 storage_cap: 0  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
         exists: true
 
-locations:
-    default_location:
+nodes:
+    default_node:
         transmission_node: false # true only if no techs are defined (including complete ommission of the `techs` key). Automatically added during processing if not defined by user.
-        coordinates: {}  # The location's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
-        available_area: .inf  # This location's available land area (required if constraining technology deployment by area).
-        techs: None  # A list of technologies, optionally with location-specific settings overriding the technology's global settings.
+        coordinates: {}  # The node's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
+        available_area: .inf  # This node's available land area (required if constraining technology deployment by area).
+        techs: None  # A list of technologies, optionally with node-specific settings overriding the technology's global settings.
         exists: true
 
 links:
-    default_location_from,default_location_to:
+    default_node_from,default_node_to:
         techs:
             default_tech:
-                distance: null # Used for per_distance constraints, but automatically inferred from coordinates of locations in a link if not given directly
+                distance: null # Used for per_distance constraints, but automatically inferred from coordinates of nodes in a link if not given directly
 
         exists: true
 
 group_constraints:
     default_group:
-        locs: []
+        nodes: []
         techs: []
         exists: true
         demand_share_min:

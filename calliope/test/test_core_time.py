@@ -1041,7 +1041,7 @@ class TestFuncs:
 class TestLoadTimeseries:
     def test_invalid_csv_columns(self):
         override = {
-            "locations": {
+            "nodes": {
                 "c.techs": {"test_supply_elec": None, "test_demand_elec": None},
                 "d.techs": {"test_supply_elec": None, "test_demand_elec": None},
             },

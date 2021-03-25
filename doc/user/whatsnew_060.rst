@@ -43,7 +43,7 @@ Sets
 ----
 
 - `y` -> `techs`
-- `x` -> `locs`
+- `x` -> `nodes`
 - `c` -> `carriers`
 - `k` -> `costs`
 

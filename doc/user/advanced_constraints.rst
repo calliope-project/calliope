@@ -229,7 +229,7 @@ The below example shows two such named groups. The first does not specify a subs
         # A constraint group to enforce renewable generation in Germany
         renewable_minimum_share_in_germany:
             techs: ['wind', 'pv']
-            locs: ['germany_north', 'germany_south']
+            nodes: ['germany_north', 'germany_south']
             demand_share_min:
                 electricity: 0.4
 
@@ -240,7 +240,7 @@ When specifying group constraints, a named group must give at least one constrai
     group_constraints:
         group_name:
             techs: []  # Optional, can be left out if empty
-            locs: []  # Optional, can be left out if empty
+            nodes: []  # Optional, can be left out if empty
             # Any number of constraints can be specified for the given group
             constraint_1: ...
             constraint_2: ...

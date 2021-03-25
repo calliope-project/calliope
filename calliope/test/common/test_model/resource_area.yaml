@@ -42,7 +42,7 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
+nodes:
     a:
         techs:
             cheap_supply:
@@ -63,13 +63,13 @@ overrides:
         group_constraints.example_resource_area_min_constraint:
             techs: ["expensive_supply"]
             resource_area_min: 20
-    resource_area_max_location_0:
+    resource_area_max_node_0:
         group_constraints.example_resource_area_max_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["cheap_supply", "expensive_supply"]
             resource_area_max: 15
-    resource_area_min_location_0:
+    resource_area_min_node_0:
         group_constraints.example_resource_area_min_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["expensive_supply"]
             resource_area_min: 10

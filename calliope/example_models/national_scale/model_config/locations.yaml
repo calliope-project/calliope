@@ -1,8 +1,8 @@
 ##
-# LOCATIONS
+# nodes
 ##
 
-locations:
+nodes:
     # region-1-start
     region1:
         coordinates: {lat: 40, lon: -2}

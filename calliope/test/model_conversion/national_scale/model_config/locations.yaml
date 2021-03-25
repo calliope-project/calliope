@@ -1,8 +1,8 @@
 ##
-# LOCATIONS
+# nodes
 ##
 
-locations:
+nodes:
     region1:
         techs: ['demand_power', 'unmet_demand_power', 'ccgt']
         override:
@@ -57,7 +57,7 @@ metadata:
             lat: 45
             lon: 5
 
-    location_coordinates:  # lat, lon coordinates in a dictionary
+    node_coordinates:  # lat, lon coordinates in a dictionary
         region1: {lat: 40, lon: -2}
         region2: {lat: 40, lon: -8}
         region1-1: {lat: 41, lon: -2}

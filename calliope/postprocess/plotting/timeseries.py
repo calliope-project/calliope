@@ -109,8 +109,8 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     else:
         timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
-    def _get_reindexed_array(array, index=["locs", "techs"], fillna=None):
-        # reindexing data means that DataArrays have the same values in locs and techs
+    def _get_reindexed_array(array, index=["nodes", "techs"], fillna=None):
+        # reindexing data means that DataArrays have the same values in nodes and techs
         reindexer = {k: sorted(dataset[k].values) for k in index}
         formatted_array = model.get_formatted_array(array)
         if fillna is not None:
@@ -126,10 +126,10 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
 
     if hasattr(model, "results"):
         array_prod = _get_reindexed_array(
-            "carrier_prod", index=["locs", "techs", "carriers"], fillna=0
+            "carrier_prod", index=["nodes", "techs", "carriers"], fillna=0
         )
         array_con = _get_reindexed_array(
-            "carrier_con", index=["locs", "techs", "carriers"], fillna=0
+            "carrier_con", index=["nodes", "techs", "carriers"], fillna=0
         )
         if "resource_con" in dataset.data_vars:
             resource_con = _get_reindexed_array("resource_con", fillna=0)
@@ -145,7 +145,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         if "carrier_export" in dataset:
             export_flow = subset_sum_squeeze(
                 _get_reindexed_array(
-                    "carrier_export", index=["locs", "techs", "carriers"], fillna=0
+                    "carrier_export", index=["nodes", "techs", "carriers"], fillna=0
                 ).loc[dict(carriers=var)],
                 subset,
                 sum_dims,
@@ -154,7 +154,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         if "unmet_demand" in dataset:
             unmet_flow = subset_sum_squeeze(
                 _get_reindexed_array(
-                    "unmet_demand", index=["locs", "carriers"], fillna=0
+                    "unmet_demand", index=["nodes", "carriers"], fillna=0
                 ).loc[dict(carriers=var)],
                 subset,
                 sum_dims,
@@ -397,7 +397,7 @@ def plot_timeseries(
     timesteps_zoom=None,
     rangeslider=False,
     subset={},
-    sum_dims="locs",
+    sum_dims="nodes",
     squeeze=True,
     **kwargs,
 ):
@@ -422,7 +422,7 @@ def plot_timeseries(
         (helpful primarily in interactive use).
     subset : dict, optional
         Dictionary by which data is subset (uses xarray `loc` indexing). Keys
-        any of ['timeseries', 'locs', 'techs', 'carriers', 'costs'].
+        any of ['timeseries', 'nodes', 'techs', 'carriers', 'costs'].
     sum_dims : str, optional
         List of dimension names to sum plot variable over.
     squeeze : bool, optional

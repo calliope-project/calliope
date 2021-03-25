@@ -2,10 +2,10 @@
 Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-preprocess_locations.py
+preprocess_nodes.py
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Functions to deal with locations and their configuration.
+Functions to deal with nodes and their configuration.
 
 """
 
@@ -17,14 +17,14 @@ from calliope.preprocess.util import vincenty
 from calliope.preprocess.checks import DEFAULTS, POSSIBLE_COSTS
 
 
-def process_locations(model_config, modelrun_techs):
+def process_nodes(model_config, modelrun_techs):
     """
-    Process locations by taking an AttrDict that may include compact keys
+    Process nodes by taking an AttrDict that may include compact keys
     such as ``1,2,3``, and returning an AttrDict with:
 
-    * exactly one key per location with all of its settings
-    * fully resolved installed technologies for each location
-    * fully expanded transmission links for each location
+    * exactly one key per node with all of its settings
+    * fully resolved installed technologies for each node
+    * fully expanded transmission links for each node
 
     Parameters
     ----------
@@ -33,39 +33,39 @@ def process_locations(model_config, modelrun_techs):
 
     Returns
     -------
-    locations : AttrDict
-    locations_comments : AttrDict
+    nodes : AttrDict
+    nodes_comments : AttrDict
 
     """
     techs_in = model_config.techs.copy()
     tech_groups_in = model_config.tech_groups
-    locations_in = model_config.locations
+    nodes_in = model_config.nodes
     links_in = model_config.get("links", AttrDict())
 
     allowed_from_file = DEFAULTS.model.file_allowed
 
     warnings = []
     errors = []
-    locations_comments = AttrDict()
+    nodes_comments = AttrDict()
 
     ##
     # Expand compressed `loc1,loc2,loc3,loc4: ...` definitions
     ##
-    locations = AttrDict()
-    for key in locations_in:
+    nodes = AttrDict()
+    for key in nodes_in:
         if ("--" in key) or ("," in key):
-            key_locs = explode_locations(key)
-            for subkey in key_locs:
-                _set_loc_key(locations, subkey, locations_in[key])
+            key_nodes = explode_nodes(key)
+            for subkey in key_nodes:
+                _set_loc_key(nodes, subkey, nodes_in[key])
         else:
-            _set_loc_key(locations, key, locations_in[key])
+            _set_loc_key(nodes, key, nodes_in[key])
 
     ##
-    # Kill any locations that the modeller does not want to exist
+    # Kill any nodes that the modeller does not want to exist
     ##
-    for loc in list(locations.keys()):
-        if not locations[loc].get("exists", True):
-            locations.del_key(loc)
+    for loc in list(nodes.keys()):
+        if not nodes[loc].get("exists", True):
+            nodes.del_key(loc)
 
     ##
     # Process technologies
@@ -81,7 +81,7 @@ def process_locations(model_config, modelrun_techs):
         # Get and save list of required_constraints from base technology
         base_tech = inheritance_chain[-1]
         rq = model_config.tech_groups[base_tech].required_constraints
-        # locations[loc_name].techs[tech_name].required_constraints = rq
+        # nodes[loc_name].techs[tech_name].required_constraints = rq
         techs_in[tech_name].required_constraints = rq
 
     # Kill any techs that the modeller does not want to exist
@@ -89,18 +89,18 @@ def process_locations(model_config, modelrun_techs):
         del techs_in[tech_name]
 
     ##
-    # Fully expand all installed technologies for the location,
+    # Fully expand all installed technologies for the node,
     # filling in any undefined parameters from defaults
     ##
-    location_techs_to_delete = []
+    node_techs_to_delete = []
 
-    for loc_name, loc in locations.items():
+    for loc_name, loc in nodes.items():
 
         if "techs" not in loc:
             # Mark this as a transmission-only node if it has not allowed
             # any technologies
-            locations[loc_name].transmission_node = True
-            locations_comments.set_key(
+            nodes[loc_name].transmission_node = True
+            nodes_comments.set_key(
                 "{}.transmission_node".format(loc_name),
                 "Automatically inserted: specifies that this node is "
                 "a transmission-only node.",
@@ -112,31 +112,31 @@ def process_locations(model_config, modelrun_techs):
                 # Techs that were removed need not be further considered
                 continue
 
-            if not isinstance(locations[loc_name].techs[tech_name], dict):
-                locations[loc_name].techs[tech_name] = AttrDict()
+            if not isinstance(nodes[loc_name].techs[tech_name], dict):
+                nodes[loc_name].techs[tech_name] = AttrDict()
 
             # Starting at top of the inheritance chain, for each level,
-            # check if the level has location-specific group settings
+            # check if the level has node-specific group settings
             # and keep merging together the settings, overwriting as we
             # go along.
             tech_settings = AttrDict()
             for parent in reversed(modelrun_techs[tech_name].inheritance):
                 # Does the parent group have model-wide settings?
                 tech_settings.union(tech_groups_in[parent], allow_override=True)
-                # Does the parent group have location-specific settings?
+                # Does the parent group have node-specific settings?
                 if (
-                    "tech_groups" in locations[loc_name]
-                    and parent in locations[loc_name].tech_groups
+                    "tech_groups" in nodes[loc_name]
+                    and parent in nodes[loc_name].tech_groups
                 ):
                     tech_settings.union(
-                        locations[loc_name].tech_groups[parent], allow_override=True
+                        nodes[loc_name].tech_groups[parent], allow_override=True
                     )
             # Now overwrite with the tech's own model-wide
-            # and location-specific settings
+            # and node-specific settings
             tech_settings.union(techs_in[tech_name], allow_override=True)
-            if tech_name in locations[loc_name].techs:
+            if tech_name in nodes[loc_name].techs:
                 tech_settings.union(
-                    locations[loc_name].techs[tech_name], allow_override=True
+                    nodes[loc_name].techs[tech_name], allow_override=True
                 )
 
             tech_settings = cleanup_undesired_keys(tech_settings)
@@ -163,20 +163,20 @@ def process_locations(model_config, modelrun_techs):
                 tech_name, loc_name, tech_settings, warnings, errors
             )
 
-            # Now merge the tech settings into the location-specific
+            # Now merge the tech settings into the node-specific
             # tech dict -- but if a tech specifies ``exists: false``,
-            # we kill it at this location
+            # we kill it at this node
             if not tech_settings.get("exists", True):
-                location_techs_to_delete.append(
+                node_techs_to_delete.append(
                     "{}.techs.{}".format(loc_name, tech_name)
                 )
             else:
-                locations[loc_name].techs[tech_name].union(
+                nodes[loc_name].techs[tech_name].union(
                     tech_settings, allow_override=True
                 )
 
-    for k in location_techs_to_delete:
-        locations.del_key(k)
+    for k in node_techs_to_delete:
+        nodes.del_key(k)
 
     # Generate all transmission links
     processed_links = AttrDict()
@@ -186,11 +186,11 @@ def process_locations(model_config, modelrun_techs):
         if not links_in[link].get("exists", True):
             continue
         # Also skip this link - and warn about it - if it links to a
-        # now-inexistant (because removed) location
-        if loc_from not in locations.keys() or loc_to not in locations.keys():
+        # now-inexistant (because removed) node
+        if loc_from not in nodes.keys() or loc_to not in nodes.keys():
             warnings.append(
                 "Not building the link {},{} because one or both of its "
-                "locations have been removed from the model by setting "
+                "nodes have been removed from the model by setting "
                 "``exists: false``".format(loc_from, loc_to)
             )
             continue
@@ -219,8 +219,8 @@ def process_locations(model_config, modelrun_techs):
                 tech_settings = process_per_distance_constraints(
                     tech_name,
                     tech_settings,
-                    locations,
-                    locations_comments,
+                    nodes,
+                    nodes_comments,
                     loc_from,
                     loc_to,
                 )
@@ -256,12 +256,12 @@ def process_locations(model_config, modelrun_techs):
                     ),
                     False,
                 )
-    locations.union(processed_links, allow_override=True)
+    nodes.union(processed_links, allow_override=True)
 
-    return locations, locations_comments, list(set(warnings)), list(set(errors))
+    return nodes, nodes_comments, list(set(warnings)), list(set(errors))
 
 
-def explode_locations(k):
+def explode_nodes(k):
     """
     Expands the given key ``k``. ``k``s of the form ``'1--3'`` or
     ``'1,2,3'`` are both expanded into the list ``['1', '2', '3']``.
@@ -271,7 +271,7 @@ def explode_locations(k):
         ['1', '2', '3', '6', '9', '10', '11', 'a']
 
     Always returns a list, even if ``k`` is just a simple key,
-    i.e. ``explode_locations('1')`` returns ``['1']``.
+    i.e. ``explode_nodes('1')`` returns ``['1']``.
 
     """
     # Ensure sure we don't pass in other things
@@ -297,13 +297,13 @@ def _set_loc_key(d, k, value):
         try:
             d[k].union(value.copy())
         except KeyError as e:
-            raise KeyError("Problem at location {}: {}".format(k, str(e)))
+            raise KeyError("Problem at node {}: {}".format(k, str(e)))
     else:
         d[k] = value.copy()
 
 
 def cleanup_undesired_keys(tech_settings):
-    # These keys are removed from the constructed `locations` dict after
+    # These keys are removed from the constructed `nodes` dict after
     # merging across the inheritance chain, as they are contained in the
     # `techs` dict
     # These are dealt with in process_techs(),
@@ -324,7 +324,7 @@ def cleanup_undesired_keys(tech_settings):
 
     # We also remove any system-wide constraints here,
     # as they should not be accidentally read from or
-    # changed in per-location settings later
+    # changed in per-node settings later
     # FIXME: Raise warning that these constraints are deleted?
     system_wide_keys = [
         k
@@ -338,23 +338,23 @@ def cleanup_undesired_keys(tech_settings):
 
 
 def process_per_distance_constraints(
-    tech_name, tech_settings, locations, locations_comments, loc_from, loc_to
+    tech_name, tech_settings, nodes, nodes_comments, loc_from, loc_to
 ):
     # Process distance, if any per_distance constraints exist
     if any("per_distance" in i for i in tech_settings.keys_nested(subkeys_as="list")):
         # If no distance was given, we calculate it from coordinates
         if "distance" not in tech_settings:
             # Simple check - earlier sense-checking already ensures
-            # that all locations have either lat/lon or x/y coords
-            loc1 = locations[loc_from].coordinates
-            loc2 = locations[loc_to].coordinates
-            if "lat" in locations[loc_from].coordinates:
+            # that all nodes have either lat/lon or x/y coords
+            loc1 = nodes[loc_from].coordinates
+            loc2 = nodes[loc_to].coordinates
+            if "lat" in nodes[loc_from].coordinates:
                 distance = vincenty([loc1.lat, loc1.lon], [loc2.lat, loc2.lon])
             else:
                 distance = math.sqrt((loc1.x - loc2.x) ** 2 + (loc1.y - loc2.y) ** 2)
 
             tech_settings.distance = distance
-            locations_comments.set_key(
+            nodes_comments.set_key(
                 "{}.links.{}.techs.{}.distance".format(loc_from, loc_to, tech_name),
                 "Distance automatically computed from coordinates",
             )
@@ -371,7 +371,7 @@ def process_per_distance_constraints(
                 * distance_energy_eff
             )
             del tech_settings.constraints["energy_eff_per_distance"]
-            locations_comments.set_key(
+            nodes_comments.set_key(
                 "{}.links.{}.techs.{}.constraints.energy_eff".format(
                     loc_from, loc_to, tech_name
                 ),
@@ -388,7 +388,7 @@ def process_per_distance_constraints(
                     + energy_cap_costs_per_distance
                 )
                 tech_settings.costs.del_key(k)
-                locations_comments.set_key(
+                nodes_comments.set_key(
                     "{}.links.{}.techs.{}.costs.{}".format(
                         loc_from, loc_to, tech_name, k
                     ),
@@ -403,7 +403,7 @@ def process_per_distance_constraints(
                     + purchase_costs_per_distance
                 )
                 tech_settings.costs.del_key(k)
-                locations_comments.set_key(
+                nodes_comments.set_key(
                     "{}.links.{}.techs.{}.costs.{}".format(
                         loc_from, loc_to, tech_name, k
                     ),

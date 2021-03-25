@@ -40,7 +40,7 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
+nodes:
     a,b:
         techs:
             cheap_supply:
@@ -56,7 +56,7 @@ overrides:
         group_constraints.demo.exists: False
     group_constraint_without_tech:
         group_constraints.no_tech:
-            locs: ["a"]
+            nodes: ["a"]
             demand_share_max:
                 electricity: 0.4
     several_group_constraints:

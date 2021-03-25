@@ -391,7 +391,7 @@ def get_clusters(
     Returns
     -------
     clusters : dataframe
-        Indexed by timesteps and with locations as columns, giving cluster
+        Indexed by timesteps and with nodes as columns, giving cluster
         membership for first timestep of each day.
     clustered_data : sklearn.cluster object
         Result of clustering using sklearn.KMeans(k).fit(X) or

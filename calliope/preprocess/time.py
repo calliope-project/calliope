@@ -136,7 +136,7 @@ def add_time_dimension(data, model_run):
         if tskeys.empty:
             continue
 
-        # 5) remove all before '=' and split filename and location column
+        # 5) remove all before '=' and split filename and node column
         tskeys = (
             tskeys.str.split("=")
             .str[1]
@@ -233,18 +233,4 @@ def update_dtypes(model_data):
                         model_data[var_name] = var.astype(np.float, copy=False)
                     except ValueError:
                         None
-    return model_data
-
-
-def final_timedimension_processing(model_data):
-    model_data = update_dtypes(model_data)
-
-    # Final checking of the data
-    model_data = reorganise_xarray_dimensions(model_data)
-    model_data, final_check_comments, warns, errors = checks.check_model_data(
-        model_data
-    )
-    exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
-
-    model_data = add_max_demand_timesteps(model_data)
     return model_data

@@ -4,42 +4,42 @@ overrides:
             name: Cheap heating
             parent: cheap_supply
             carrier: heat
-        locations.1.techs: {cheap_heat_supply}
+        nodes.1.techs: {cheap_heat_supply}
 
     add_normal_heat_supply:
         techs.normal_heat_supply.essentials:
             name: Normal heating
             parent: normal_supply
             carrier: heat
-        locations.1.techs: {normal_heat_supply}
+        nodes.1.techs: {normal_heat_supply}
 
     add_expensive_heat_supply:
         techs.expensive_heat_supply.essentials:
             name: Expensive heating
             parent: expensive_supply
             carrier: heat
-        locations.1.techs: {expensive_heat_supply}
+        nodes.1.techs: {expensive_heat_supply}
 
     add_cheap_cooling_supply:
         techs.cheap_cool_supply.essentials:
             name: Cheap cooling
             parent: cheap_supply
             carrier: cool
-        locations.1.techs: {cheap_cool_supply}
+        nodes.1.techs: {cheap_cool_supply}
 
     add_normal_cooling_supply:
         techs.normal_cool_supply.essentials:
             name: Normal cooling
             parent: normal_supply
             carrier: cool
-        locations.1.techs: {normal_cool_supply}
+        nodes.1.techs: {normal_cool_supply}
 
     add_expensive_cooling_supply:
         techs.expensive_cool_supply.essentials:
             name: Expensive cooling
             parent: expensive_supply
             carrier: cool
-        locations.1.techs: {expensive_cool_supply}
+        nodes.1.techs: {expensive_cool_supply}
 
     add_elec_to_heat_conversion:
         techs.elec_to_heat:
@@ -57,7 +57,7 @@ overrides:
                     interest_rate: 0.1
                     om_con: 0.001
                     energy_cap: 0.001
-        locations.1.techs: {elec_to_heat}
+        nodes.1.techs: {elec_to_heat}
 
     add_elec_to_heat_cooling_linked_conversion_plus:
         techs.elec_to_heat_cool_linked:
@@ -78,7 +78,7 @@ overrides:
                     interest_rate: 0.1
                     om_con: 0.001
                     energy_cap: 0.001
-        locations.1.techs: {elec_to_heat_cool_linked}
+        nodes.1.techs: {elec_to_heat_cool_linked}
 
     add_elec_to_heat_cooling_unlinked_conversion_plus:
         techs.elec_to_heat_cool_unlinked:
@@ -98,7 +98,7 @@ overrides:
                     interest_rate: 0.1
                     om_con: 0.001
                     energy_cap: 0.001
-        locations.1.techs: {elec_to_heat_cool_unlinked}
+        nodes.1.techs: {elec_to_heat_cool_unlinked}
 
     add_heat_demand:
         techs.heat_demand:
@@ -108,7 +108,7 @@ overrides:
                 parent: demand
             constraints:
                 resource: -2.5
-        locations.1.techs: {heat_demand}
+        nodes.1.techs: {heat_demand}
 
     add_cooling_demand:
         techs.cool_demand:
@@ -118,7 +118,7 @@ overrides:
                 parent: demand
             constraints:
                 resource: -1
-        locations.1.techs: {cool_demand}
+        nodes.1.techs: {cool_demand}
 
     add_expensive_elec_transmission:
         techs.expensive_elec_transmission:
@@ -152,7 +152,7 @@ overrides:
                     interest_rate: 0.1
                     om_prod: 0.001
                     energy_cap: 0.001
-        locations.1.techs: {elec_storage}
+        nodes.1.techs: {elec_storage}
 
     add_elec_supply_plus:
         techs.elec_supply_plus:
@@ -172,4 +172,4 @@ overrides:
                     interest_rate: 0.1
                     om_prod: 0.001
                     energy_cap: 0.001
-        locations.a,b.techs: {elec_supply_plus}
+        nodes.a,b.techs: {elec_supply_plus}

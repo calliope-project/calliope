@@ -30,7 +30,7 @@ One way to improve solution time is to reduce the size of a problem (another way
 Number of variables
 ^^^^^^^^^^^^^^^^^^^
 
-The sets ``locs``, ``techs``, ``timesteps``, ``carriers``, and ``costs`` all contribute to model complexity. A reduction of any of these sets will reduce the number of resulting decision variables in the optimisation, which in turn will improve solution times.
+The sets ``nodes``, ``techs``, ``timesteps``, ``carriers``, and ``costs`` all contribute to model complexity. A reduction of any of these sets will reduce the number of resulting decision variables in the optimisation, which in turn will improve solution times.
 
 .. note::
     By reducing the number of locations (e.g. merging nearby locations) you also remove the technologies linking those locations to the rest of the system, which is additionally beneficial.

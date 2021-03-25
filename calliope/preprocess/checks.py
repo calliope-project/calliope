@@ -120,7 +120,7 @@ def check_initial(config_model):
         if k not in [
             "model",
             "run",
-            "locations",
+            "nodes",
             "tech_groups",
             "techs",
             "links",
@@ -134,7 +134,7 @@ def check_initial(config_model):
             )
 
     # Check that all required top-level keys are specified
-    for k in ["model", "run", "locations", "techs"]:
+    for k in ["model", "run", "nodes", "techs"]:
         if k not in config_model.keys():
             errors.append(
                 "Model is missing required top-level configuration item: {}".format(k)
@@ -260,14 +260,14 @@ def check_initial(config_model):
                 "be defined (tech: {})".format(t_name)
             )
 
-    # Check whether any unrecognised mid-level keys are defined in techs, locations, or links
-    for k, v in config_model.get("locations", {}).items():
+    # Check whether any unrecognised mid-level keys are defined in techs, nodes, or links
+    for k, v in config_model.get("nodes", {}).items():
         unrecognised_keys = [
-            i for i in v.keys() if i not in DEFAULTS.locations.default_location.keys()
+            i for i in v.keys() if i not in DEFAULTS.nodes.default_node.keys()
         ]
         if len(unrecognised_keys) > 0:
             errors.append(
-                "Location `{}` contains unrecognised keys {}. "
+                "Node `{}` contains unrecognised keys {}. "
                 "These could be mispellings or a technology not defined "
                 "under the `techs` key.".format(k, unrecognised_keys)
             )
@@ -281,13 +281,13 @@ def check_initial(config_model):
             ]
             if len(unrecognised_keys) > 0:
                 errors.append(
-                    "Technology `{}` in location `{}` contains unrecognised keys {}; "
+                    "Technology `{}` in node `{}` contains unrecognised keys {}; "
                     "these are most likely mispellings".format(
                         loc_tech_key, k, unrecognised_keys
                     )
                 )
 
-    default_link = DEFAULTS.links["default_location_from,default_location_to"]
+    default_link = DEFAULTS.links["default_node_from,default_node_to"]
     for k, v in config_model.get("links", {}).items():
         unrecognised_keys = [i for i in v.keys() if i not in default_link.keys()]
         if len(unrecognised_keys) > 0:
@@ -407,13 +407,13 @@ def _check_tech_final(
     model_run, tech_id, tech_config, loc_id, model_warnings, errors, comments
 ):
     """
-    Checks individual tech/tech groups at specific locations.
+    Checks individual tech/tech groups at specific nodes.
     NOTE: Updates `model_warnings` and `errors` lists in-place.
     """
     if tech_id not in model_run.techs:
         model_warnings.append(
             "Tech {} was removed by setting ``exists: False`` - not checking "
-            "the consistency of its constraints at location {}.".format(tech_id, loc_id)
+            "the consistency of its constraints at node {}.".format(tech_id, loc_id)
         )
         return model_warnings, errors
 
@@ -549,7 +549,7 @@ def check_final(model_run):
     comments = AttrDict()
 
     # Go through all loc-tech combinations and check validity
-    for loc_id, loc_config in model_run.locations.items():
+    for loc_id, loc_config in model_run.nodes.items():
         if "techs" in loc_config:
             for tech_id, tech_config in loc_config.techs.items():
                 _check_tech_final(
@@ -575,45 +575,45 @@ def check_final(model_run):
                         comments,
                     )
 
-    # Either all locations or no locations must have coordinates
-    all_locs = list(model_run.locations.keys())
-    locs_with_coords = [
-        k for k in model_run.locations.keys() if "coordinates" in model_run.locations[k]
+    # Either all nodes or no nodes must have coordinates
+    all_nodes = list(model_run.nodes.keys())
+    nodes_with_coords = [
+        k for k in model_run.nodes.keys() if "coordinates" in model_run.nodes[k]
     ]
-    if len(locs_with_coords) != 0 and len(all_locs) != len(locs_with_coords):
+    if len(nodes_with_coords) != 0 and len(all_nodes) != len(nodes_with_coords):
         errors.append(
-            "Either all or no locations must have `coordinates` defined. "
-            "Locations defined: {} - Locations with coordinates: {}".format(
-                all_locs, locs_with_coords
+            "Either all or no nodes must have `coordinates` defined. "
+            "nodes defined: {} - nodes with coordinates: {}".format(
+                all_nodes, nodes_with_coords
             )
         )
 
-    # If locations have coordinates, they must all be either lat/lon or x/y
-    elif len(locs_with_coords) != 0:
-        first_loc = list(model_run.locations.keys())[0]
+    # If nodes have coordinates, they must all be either lat/lon or x/y
+    elif len(nodes_with_coords) != 0:
+        first_loc = list(model_run.nodes.keys())[0]
         try:
-            coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
+            coord_keys = sorted(list(model_run.nodes[first_loc].coordinates.keys()))
             if coord_keys != ["lat", "lon"] and coord_keys != ["x", "y"]:
                 errors.append(
-                    "Unidentified coordinate system. All locations must either"
+                    "Unidentified coordinate system. All nodes must either"
                     "use the format {lat: N, lon: M} or {x: N, y: M}."
                 )
         except AttributeError:
             errors.append(
                 "Coordinates must be given in the format {lat: N, lon: M} or "
-                "{x: N, y: M}, not " + str(model_run.locations[first_loc].coordinates)
+                "{x: N, y: M}, not " + str(model_run.nodes[first_loc].coordinates)
             )
 
-        for loc_id, loc_config in model_run.locations.items():
+        for loc_id, loc_config in model_run.nodes.items():
             try:
                 if sorted(list(loc_config.coordinates.keys())) != coord_keys:
-                    errors.append("All locations must use the same coordinate format.")
+                    errors.append("All nodes must use the same coordinate format.")
                     break
             except AttributeError:
                 errors.append(
                     "Coordinates must be given in the format {lat: N, lon: M} or "
                     "{x: N, y: M}, not "
-                    + str(model_run.locations[first_loc].coordinates)
+                    + str(model_run.nodes[first_loc].coordinates)
                 )
                 break
 

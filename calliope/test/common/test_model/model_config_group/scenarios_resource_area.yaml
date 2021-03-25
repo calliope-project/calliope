@@ -23,7 +23,7 @@ overrides:
 
     resource_area_loc_0:
         group_constraints.example_resource_area_constraint:
-            locs: ["a"]
+            nodes: ["a"]
 
     resource_area_max_cheap_supply:
         group_constraints.example_resource_area_max_constraint:
@@ -32,7 +32,7 @@ overrides:
 
     resource_area_max_loc_1:
         group_constraints.example_resource_area_max_constraint:
-            locs: ["b"]
+            nodes: ["b"]
 
     resource_area_cheap_supply:
         group_constraints.example_resource_area_constraint:

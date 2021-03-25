@@ -63,7 +63,7 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
+nodes:
     a,b:
         techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
@@ -83,21 +83,21 @@ overrides:
             techs: ["expensive_elec_supply"]
             demand_share_equals:
                 electricity: 0.6
-    demand_share_max_location_0:
+    demand_share_max_node_0:
         group_constraints.example_demand_share_max_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["cheap_elec_supply"]
             demand_share_max:
                 electricity: 0.3
-    demand_share_max_location_0_two_techs:
+    demand_share_max_node_0_two_techs:
         group_constraints.example_demand_share_max_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["cheap_elec_supply", "normal_elec_supply"]
             demand_share_max:
                 electricity: 0.4
-    demand_share_min_location_0:
+    demand_share_min_node_0:
         group_constraints.example_demand_share_min_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["expensive_elec_supply"]
             demand_share_min:
                 electricity: 0.6
@@ -125,7 +125,7 @@ overrides:
                     parent: demand
                 constraints:
                     resource: file=demand_heat.csv
-        locations:
+        nodes:
             a,b:
                 techs: {cheap_heat_supply, expensive_heat_supply, normal_heat_supply, heat_demand}
     heat_demand_share_max_systemwide:
@@ -154,12 +154,12 @@ overrides:
         links:
             a,b.techs:
                 free_transmission:
-        locations.a.techs.normal_elec_supply.exists: False
-        locations.a.techs.cheap_elec_supply.exists: False
-        locations.a.techs.expensive_elec_supply.exists: False
+        nodes.a.techs.normal_elec_supply.exists: False
+        nodes.a.techs.cheap_elec_supply.exists: False
+        nodes.a.techs.expensive_elec_supply.exists: False
         group_constraints.transmission_not_counted:
             techs: ["cheap_elec_supply"]
-            locs: ["a"]
+            nodes: ["a"]
             demand_share_max:
                 electricity: 0.4
     demand_share_per_timestep_max:
@@ -183,4 +183,4 @@ scenarios:
     multiple_carriers_max: ['demand_share_max_systemwide', 'second_carrier', 'heat_demand_share_max_systemwide']
     multiple_constraints: ['demand_share_max_systemwide', 'demand_share_min_systemwide']
     multiple_constraints_carriers: ['demand_share_max_systemwide', 'demand_share_min_systemwide', 'second_carrier', 'heat_demand_share_max_systemwide', 'heat_demand_share_min_systemwide']
-    different_locations_per_group: ['demand_share_max_systemwide', 'demand_share_min_location_0']
+    different_nodes_per_group: ['demand_share_max_systemwide', 'demand_share_min_node_0']

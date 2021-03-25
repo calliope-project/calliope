@@ -10,7 +10,7 @@
 overrides:
 
     simple_supply:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -22,7 +22,7 @@ overrides:
                     test_demand_elec:
 
     simple_supply_plus: # does not have a solution
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_plus:
@@ -34,7 +34,7 @@ overrides:
                     test_demand_elec:
 
     simple_supply_and_supply_plus:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -48,7 +48,7 @@ overrides:
                     test_demand_elec:
 
     supply_and_supply_plus_milp:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -64,7 +64,7 @@ overrides:
         links.a,b.exists: false
 
     supply_purchase:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -76,7 +76,7 @@ overrides:
         links.a,b.exists: false
 
     supply_milp:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -94,7 +94,7 @@ overrides:
                 switches.export: true
                 constraints.export_carrier: electricity
                 costs.monetary.export: 0.01
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -106,7 +106,7 @@ overrides:
                     test_demand_elec:
 
     simple_conversion:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -124,7 +124,7 @@ overrides:
                     test_demand_heat:
 
     conversion_and_conversion_plus:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -138,7 +138,7 @@ overrides:
         links.a,b.exists: false
 
     conversion_plus_milp:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -154,7 +154,7 @@ overrides:
         links.a,b.exists: false
 
     conversion_plus_purchase:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -170,7 +170,7 @@ overrides:
         links.a,b.exists: false
 
     simple_conversion_plus:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -183,7 +183,7 @@ overrides:
         links.a,b.exists: false
 
     simple_storage:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -203,7 +203,7 @@ overrides:
                     storage_discharge_depth: 0.8
 
     storage_milp:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:
@@ -218,7 +218,7 @@ overrides:
         links.a,b.exists: false
 
     storage_purchase:
-        locations:
+        nodes:
             a:
                 techs:
                     test_supply_elec:

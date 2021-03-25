@@ -52,7 +52,7 @@ techs:
         constraints:
             resource: file=demand_simple.csv
 
-locations:
+nodes:
     a,b:
         techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
@@ -70,22 +70,22 @@ overrides:
             techs: ["normal_elec_supply", "expensive_elec_supply"]
             demand_share_per_timestep_decision:
                 electricity: 0.9
-    demand_share_per_timestep_decision_per_location:
+    demand_share_per_timestep_decision_per_node:
         group_constraints.demand_share_per_timestep_decision_loc0_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             demand_share_per_timestep_decision:
                 electricity: 1.0
         group_constraints.demand_share_per_timestep_decision_loc1_constraint:
-            locs: ["b"]
+            nodes: ["b"]
             demand_share_per_timestep_decision:
                 electricity: 1.0
-    demand_share_per_timestep_decision_per_location_inf:
+    demand_share_per_timestep_decision_per_node_inf:
         group_constraints.demand_share_per_timestep_decision_loc0_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             demand_share_per_timestep_decision:
                 electricity: .inf
         group_constraints.demand_share_per_timestep_decision_loc1_constraint:
-            locs: ["b"]
+            nodes: ["b"]
             demand_share_per_timestep_decision:
                 electricity: .inf
     with_electricity_transmission:
@@ -106,7 +106,7 @@ overrides:
         links:
             a,b.techs:
                 electricity_transmission:
-        locations:
+        nodes:
             a.techs:
                 cheap_elec_supply.constraints.energy_cap_max: 0
                 normal_elec_supply.constraints.energy_cap_max: 0
@@ -150,7 +150,7 @@ overrides:
                     parent: demand
                 constraints:
                     resource: -2.5
-        locations:
+        nodes:
             a.techs:
                 heating:
                 elec_to_heat:

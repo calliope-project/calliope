@@ -963,7 +963,7 @@ class TestCapacityConstraints:
     def test_locs_resource_area_capacity_per_loc_constraint(self):
         """
         i for i in sets.locs
-        if model_run.locations[i].get_key('available_area', None) is not None
+        if model_run.nodes[i].get_key('available_area', None) is not None
         """
         m = build_model({}, "simple_supply_and_supply_plus,two_hours,investment_costs")
         m.run(build_only=True)
@@ -972,7 +972,7 @@ class TestCapacityConstraints:
         )
 
         m = build_model(
-            {"locations.a.available_area": 1},
+            {"nodes.a.available_area": 1},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.run(build_only=True)
@@ -982,7 +982,7 @@ class TestCapacityConstraints:
 
         m = build_model(
             {
-                "locations.a.available_area": 1,
+                "nodes.a.available_area": 1,
                 "techs.test_supply_plus.constraints.resource_area_max": 10,
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
@@ -1020,7 +1020,7 @@ class TestCapacityConstraints:
     def test_loc_techs_energy_capacity_constraint_warning_on_infinite_equals(self):
         # Check that setting `_equals` to infinity is caught:
         override = {
-            "locations.a.techs.test_supply_elec.constraints.energy_cap_equals": np.inf
+            "nodes.a.techs.test_supply_elec.constraints.energy_cap_equals": np.inf
         }
         with pytest.raises(exceptions.ModelError) as error:
             m = build_model(override, "simple_supply,two_hours,investment_costs")
@@ -1679,7 +1679,7 @@ class TestMILPConstraints:
         override_max = {
             "links.a,b.exists": True,
             "techs.test_conversion_plus.constraints.units_max_systemwide": 2,
-            "locations.b.techs.test_conversion_plus.constraints": {
+            "nodes.b.techs.test_conversion_plus.constraints": {
                 "units_max": 2,
                 "energy_cap_per_unit": 5,
             },
@@ -1701,7 +1701,7 @@ class TestMILPConstraints:
         override_equals = {
             "links.a,b.exists": True,
             "techs.test_conversion_plus.constraints.units_equals_systemwide": 1,
-            "locations.b.techs.test_conversion_plus.costs.monetary.purchase": 1,
+            "nodes.b.techs.test_conversion_plus.costs.monetary.purchase": 1,
         }
         m = build_model(
             override_equals, "conversion_plus_milp,two_hours,investment_costs"
@@ -1755,7 +1755,7 @@ class TestMILPConstraints:
     def test_techs_unit_capacity_max_systemwide_no_transmission_milp_constraint(self):
         override_no_transmission = {
             "techs.test_supply_elec.constraints.units_equals_systemwide": 1,
-            "locations.b.techs.test_supply_elec.costs.monetary.purchase": 1,
+            "nodes.b.techs.test_supply_elec.costs.monetary.purchase": 1,
         }
         m = build_model(
             override_no_transmission,

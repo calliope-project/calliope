@@ -92,7 +92,7 @@ techs:
                 interest_rate: 0.1
                 energy_cap: 5
 
-locations:
+nodes:
     a,b.techs: {cheap_elec_supply, expensive_elec_supply, normal_elec_supply, electricity_demand}
 
 links:

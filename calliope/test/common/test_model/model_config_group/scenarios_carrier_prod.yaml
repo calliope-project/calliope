@@ -23,7 +23,7 @@ overrides:
 
     carrier_prod_loc_0:
         group_constraints.example_carrier_prod_constraint:
-            locs: ["a"]
+            nodes: ["a"]
 
     carrier_prod_max_cheap_supply:
         group_constraints.example_carrier_prod_max_constraint:
@@ -32,7 +32,7 @@ overrides:
 
     carrier_prod_max_loc_1:
         group_constraints.example_carrier_prod_max_constraint:
-            locs: ["b"]
+            nodes: ["b"]
 
     carrier_prod_cheap_supply:
         group_constraints.example_carrier_prod_constraint:

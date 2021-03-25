@@ -29,7 +29,7 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
+nodes:
     a:
         techs:
             test_supply_elec:

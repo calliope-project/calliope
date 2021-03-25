@@ -40,7 +40,7 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
+nodes:
     a:
         techs:
             cheap_supply:
@@ -61,13 +61,13 @@ overrides:
         group_constraints.example_energy_cap_share_min_constraint:
             techs: ["expensive_supply"]
             energy_cap_share_min: 0.6
-    energy_cap_share_max_location_0:
+    energy_cap_share_max_node_0:
         group_constraints.example_energy_cap_share_max_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["cheap_supply"]
             energy_cap_share_max: 0.4
-    energy_cap_share_min_location_0:
+    energy_cap_share_min_node_0:
         group_constraints.example_energy_cap_share_min_constraint:
-            locs: ["a"]
+            nodes: ["a"]
             techs: ["expensive_supply"]
             energy_cap_share_min: 0.6

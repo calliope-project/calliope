@@ -113,7 +113,7 @@ class TestModelSettings:
     def override(self):
         def _override(feasibility, cap_val):
             override_dict = {
-                "locations.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
+                "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
                 "links.a,b.exists": False,
                 # pick a time subset where demand is uniformally -10 throughout
                 "model.subset_time": ["2005-01-01 06:00:00", "2005-01-01 08:00:00"],

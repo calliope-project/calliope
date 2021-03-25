@@ -54,7 +54,7 @@ overrides:
             window: 12
             horizon: 24
         model.subset_time: ['2005-01-01', '2005-01-10']
-        locations:
+        nodes:
             region1.techs.ccgt.constraints.energy_cap_equals: 30000
 
             region2.techs.battery.constraints.energy_cap_equals: 1000
@@ -104,10 +104,10 @@ overrides:
         model.subset_time: ['2005-02-01', '2005-02-31']
     run3:
         model.subset_time: ['2005-01-01', '2005-01-31']
-        locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+        nodes.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
     run4:
         subset_time: ['2005-02-01', '2005-02-31']
-        locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+        nodes.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
 
     ##
     # Overrides to demonstrate group constraints
@@ -128,8 +128,8 @@ overrides:
                     monetary:
                         interest_rate: 0.20
                         energy_cap: 100
-        locations.region1.techs.cold_fusion: null
-        locations.region2.techs.cold_fusion: null
+        nodes.region1.techs.cold_fusion: null
+        nodes.region2.techs.cold_fusion: null
 
     cold_fusion_prod_share:
         group_constraints:
@@ -145,7 +145,7 @@ overrides:
                 techs: ['csp', 'cold_fusion']
                 # At most 20% of total energy_cap can come from CSP and cold fusion together
                 energy_cap_share_max: 0.20
-        locations:
+        nodes:
             region1:
                 techs:
                     ccgt:

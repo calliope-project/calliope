@@ -22,15 +22,15 @@ class TestModelRun:
         this_path = os.path.dirname(__file__)
         model_location = os.path.join(this_path, "common", "test_model", "model.yaml")
         model_dict = AttrDict.from_yaml(model_location)
-        location_dict = AttrDict(
+        node_dict = AttrDict(
             {
-                "locations": {
+                "nodes": {
                     "a": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
                     "b": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
                 }
             }
         )
-        model_dict.union(location_dict)
+        model_dict.union(node_dict)
         model_dict.model["timeseries_data_path"] = os.path.join(
             this_path, "common", "test_model", model_dict.model["timeseries_data_path"]
         )
@@ -58,7 +58,7 @@ class TestModelRun:
                 two:
                     techs.test_supply_elec.constraints.energy_cap_max: 20
 
-            locations:
+            nodes:
                 a:
                     techs:
                         test_supply_gas:
@@ -69,13 +69,13 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_1")
 
         assert (
-            model._model_run.locations[
+            model._model_run.nodes[
                 "a"
             ].techs.test_supply_gas.constraints.energy_cap_max
             == 20
         )
         assert (
-            model._model_run.locations[
+            model._model_run.nodes[
                 "a"
             ].techs.test_supply_elec.constraints.energy_cap_max
             == 20
@@ -150,7 +150,7 @@ class TestModelRun:
                     constraints:
                         resource: .inf
                         energy_cap_max: .inf
-            locations.1.techs.test_undefined_carrier:
+            nodes.1.techs.test_undefined_carrier:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -323,11 +323,11 @@ class TestModelRun:
 
     def test_empty_key_on_explode(self):
         """
-        On exploding locations (from ``'1--3'`` or ``'1,2,3'`` to
+        On exploding nodes (from ``'1--3'`` or ``'1,2,3'`` to
         ``['1', '2', '3']``), raise error on the resulting list being empty
         """
-        list1 = calliope.preprocess.locations.explode_locations("1--3")
-        list2 = calliope.preprocess.locations.explode_locations("1,2,3")
+        list1 = calliope.preprocess.nodes.explode_nodes("1--3")
+        list2 = calliope.preprocess.nodes.explode_nodes("1,2,3")
 
         assert list1 == list2 == ["1", "2", "3"]
 
@@ -337,8 +337,8 @@ class TestModelRun:
         exploded location
         """
         override = {
-            "locations.a.techs.test_supply_elec.constraints.resource": 10,
-            "locations.a,b.techs.test_supply_elec.constraints.resource": 15,
+            "nodes.a.techs.test_supply_elec.constraints.resource": 10,
+            "nodes.a,b.techs.test_supply_elec.constraints.resource": 15,
         }
 
         with pytest.raises(KeyError):
@@ -448,17 +448,17 @@ class TestModelRun:
 
         assert (
             "carbon"
-            not in m._model_run.locations["b"].techs.test_supply_elec.costs.keys()
+            not in m._model_run.nodes["b"].techs.test_supply_elec.costs.keys()
         )
         assert "carbon" not in m._model_data.coords["costs"].values
 
     def test_strip_link(self):
         override = {
             "links.a, c.techs": {"test_transmission_elec": None},
-            "locations.c.techs": {"test_supply_elec": None},
+            "nodes.c.techs": {"test_supply_elec": None},
         }
         m = build_model(override_dict=override, scenario="simple_supply,one_day")
-        assert "c" in m._model_run.locations["a"].links.keys()
+        assert "c" in m._model_run.nodes["a"].links.keys()
 
     def test_dataframes_passed(self):
         """
@@ -518,7 +518,7 @@ class TestModelRun:
 class TestChecks:
     def test_unrecognised_config_keys(self):
         """
-        Check that the only top level keys can be 'model', 'run', 'locations',
+        Check that the only top level keys can be 'model', 'run', 'nodes',
         'techs', 'tech_groups' (+ 'config_path', but that is an internal addition)
         """
         override = {"nonsensical_key": "random_string"}
@@ -532,13 +532,13 @@ class TestChecks:
 
     def test_missing_config_key(self):
         """
-        Check that missing 'locations' raises an error
+        Check that missing 'nodes' raises an error
         """
         with pytest.raises(exceptions.ModelError) as excinfo:
-            build_model()  # Not selecting any scenario means no locations are defined
+            build_model()  # Not selecting any scenario means no nodes are defined
 
         assert check_error_or_warning(
-            excinfo, "Model is missing required top-level configuration item: locations"
+            excinfo, "Model is missing required top-level configuration item: nodes"
         )
 
     def test_unrecognised_model_run_keys(self):
@@ -692,7 +692,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations:
+            nodes:
                 1.techs.supply:
                 0.techs.supply:
             """
@@ -718,9 +718,9 @@ class TestChecks:
     @pytest.mark.parametrize(
         "loc_tech",
         (
-            ({"locs": ["1", "foo"]}),
+            ({"nodes": ["1", "foo"]}),
             ({"techs": ["test_supply_elec", "bar"]}),
-            ({"locs": ["1", "foo"], "techs": ["test_supply_elec", "bar"]}),
+            ({"nodes": ["1", "foo"], "techs": ["test_supply_elec", "bar"]}),
         ),
     )
     @pytest.mark.skip("Planning to remove group constraints")
@@ -770,7 +770,7 @@ class TestChecks:
                 supply:
                     constraints:
                         lifetime: 25
-            locations:
+            nodes:
                 b.techs.test_supply_elec:
                 b.techs.test_demand_elec:
             """
@@ -792,7 +792,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.b.techs.test_supply_no_parent:
+            nodes.b.techs.test_supply_no_parent:
             """
         )
 
@@ -814,7 +814,7 @@ class TestChecks:
                     constraints:
                         energy_cap_max: 10
                         resource: .inf
-            locations.b.techs.test_supply_tech_parent:
+            nodes.b.techs.test_supply_tech_parent:
             """
         )
 
@@ -836,7 +836,7 @@ class TestChecks:
             techs.test_supply_tech_parent.essentials:
                         name: Supply tech
                         parent: test_supply_group
-            locations.b.techs.test_supply_tech_parent:
+            nodes.b.techs.test_supply_tech_parent:
             """
         )
 
@@ -899,7 +899,7 @@ class TestChecks:
                         name: demand missing constraint
                     switches:
                         resource_unit: power
-            locations.b.techs.demand_missing_constraint:
+            nodes.b.techs.demand_missing_constraint:
             """
         )
         with pytest.raises(exceptions.ModelError):
@@ -917,7 +917,7 @@ class TestChecks:
                         carrier: electricity
                         name: supply missing constraint
                     constraints.energy_cap_max: 10
-            locations.b.techs.supply_missing_constraint:
+            nodes.b.techs.supply_missing_constraint:
             """
         )
         build_model(override_dict=override_supply2, scenario="simple_supply,one_day")
@@ -1018,18 +1018,18 @@ class TestChecks:
             scenario="simple_conversion_plus,one_day",
         )
 
-    def test_tech_directly_in_locations(self):
+    def test_tech_directly_in_nodes(self):
         """
         A tech defined directly within a location rather than within techs
         inside that location is probably an oversight.
         """
-        override = {"locations.b.test_supply_elec.costs.storage_cap": 10}
+        override = {"nodes.b.test_supply_elec.costs.storage_cap": 10}
 
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
         assert check_error_or_warning(
-            excinfo, "Location `b` contains unrecognised keys ['test_supply_elec']"
+            excinfo, "Node `b` contains unrecognised keys ['test_supply_elec']"
         )
 
     def test_tech_defined_twice_in_links(self):
@@ -1120,18 +1120,18 @@ class TestChecks:
                 override_dict=override(param), scenario="simple_storage,one_day"
             )
 
-    def test_incorrect_location_coordinates(self):
+    def test_incorrect_node_coordinates(self):
         """
-        Either all or no locations must have `coordinates` defined and, if all
+        Either all or no nodes must have `coordinates` defined and, if all
         defined, they must be in the same coordinate system (lat/lon or x/y)
         """
 
         def _override(param0, param1):
             override = {}
             if param0 is not None:
-                override.update({"locations.a.coordinates": param0})
+                override.update({"nodes.a.coordinates": param0})
             if param1 is not None:
-                override.update({"locations.b.coordinates": param1})
+                override.update({"nodes.b.coordinates": param1})
             return override
 
         cartesian0 = {"x": 0, "y": 1}
@@ -1141,14 +1141,14 @@ class TestChecks:
         fictional0 = {"a": 0, "b": 1}
         fictional1 = {"a": 1, "b": 1}
 
-        # should fail: cannot have locations in one place and not in another
+        # should fail: cannot have nodes in one place and not in another
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
                 override_dict=_override(cartesian0, None),
                 scenario="simple_supply,one_day",
             )
         check_error_or_warning(
-            error, "Either all or no locations must have `coordinates` defined"
+            error, "Either all or no nodes must have `coordinates` defined"
         )
 
         # should fail: cannot have cartesian coordinates in one place and geographic in another
@@ -1158,7 +1158,7 @@ class TestChecks:
                 scenario="simple_supply,one_day",
             )
         check_error_or_warning(
-            error, "All locations must use the same coordinate format"
+            error, "All nodes must use the same coordinate format"
         )
 
         # should fail: cannot use a non-cartesian or non-geographic coordinate system
@@ -1226,7 +1226,7 @@ class TestChecks:
         """
         override = AttrDict.from_yaml_string(
             """
-            locations.1.techs.test_conversion_plus.constraints.carrier_ratios:
+            nodes.1.techs.test_conversion_plus.constraints.carrier_ratios:
                 carrier_in:
                     some_carrier: 1.0
                 carrier_out_2:
@@ -1250,7 +1250,7 @@ class TestChecks:
         """
         override = AttrDict.from_yaml_string(
             """
-            locations.b.techs.test_conversion_plus.constraints.carrier_ratios:
+            nodes.b.techs.test_conversion_plus.constraints.carrier_ratios:
                 carrier_in:
                     heat: 1.0
             """
@@ -1270,7 +1270,7 @@ class TestChecks:
         """
         override = AttrDict.from_yaml_string(
             """
-            locations.b.techs.test_conversion_plus.constraints.carrier_ratios:
+            nodes.b.techs.test_conversion_plus.constraints.carrier_ratios:
                 carrier_out.heat: file=carrier_ratio.csv
             """
         )
@@ -1330,7 +1330,7 @@ class TestChecks:
         coordinate system with an override
         """
         override = {
-            "locations": {
+            "nodes": {
                 "X1.coordinates": {"lat": 51.4596158, "lon": -0.1613446},
                 "X2.coordinates": {"lat": 51.4652373, "lon": -0.1141548},
                 "X3.coordinates": {"lat": 51.4287016, "lon": -0.1310635},
@@ -1616,8 +1616,8 @@ class TestTime:
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
                 "techs.csp.constraints.resource": "df=csp_resource",
-                "locations.region1.techs.demand_power.constraints.resource": "df=demand_1:demand",
-                "locations.region2.techs.demand_power.constraints.resource": "df=demand_2:demand",
+                "nodes.region1.techs.demand_power.constraints.resource": "df=demand_1:demand",
+                "nodes.region2.techs.demand_power.constraints.resource": "df=demand_2:demand",
             }
             return calliope.examples.national_scale(
                 timeseries_dataframes=timeseries_dataframes, override_dict=override_dict

@@ -15,7 +15,7 @@ A model which solved successfully has two primary Datasets with data of interest
 
 In both of these, variables are indexed over concatenated sets of locations and technologies, over a dimension we call ``loc_techs``. For example, if a technology called ``boiler`` only exists in location ``X1`` and not in locations ``X2`` or ``X3``, then it will have a single entry in the loc_techs dimension called ``X1::boiler``. For parameters which also consider different energy carriers, we use a ``loc_tech_carrier`` dimension, such that we would have, in the case of the prior boiler example, ``X1::boiler::heat``.
 
-This concatenated set formulation is memory-efficient but cumbersome to deal with, so the :python:`model.get_formatted_array(name_of_variable)` function can be used to retrieve a DataArray indexed over separate dimensions (any of `techs`, `locs`, `carriers`, `costs`, `timesteps`, depending on the desired variable).
+This concatenated set formulation is memory-efficient but cumbersome to deal with, so the :python:`model.get_formatted_array(name_of_variable)` function can be used to retrieve a DataArray indexed over separate dimensions (any of `techs`, `nodes`, `carriers`, `costs`, `timesteps`, depending on the desired variable).
 
 .. note:: On saving to CSV (see the :ref:`command-line interface documentation <running_cli>`), all variables are saved to a single file each, which are always indexed over all dimensions rather than just the concatenated dimensions.
 
@@ -56,7 +56,7 @@ The data used to build the plots can also be subset and ordered by using the ``s
 .. code-block:: python
 
     # Only show region1 data (rather than the default, which is a sum of all locations)
-    model.plot.timeseries(subset={'locs': ['region1']})
+    model.plot.timeseries(subset={'nodes': ['region1']})
 
     # Only show a subset of technologies
     model.plot.timeseries(subset={'techs': ['ccgt', 'csp']})

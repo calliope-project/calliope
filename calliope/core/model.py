@@ -20,8 +20,6 @@ from calliope.preprocess import (
     model_run_from_yaml,
     model_run_from_dict,
     build_model_data,
-    apply_time_clustering,
-    final_timedimension_processing,
 )
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
@@ -98,7 +96,8 @@ class Model(object):
             comment="Model: preprocessing stage 1 (model_run)",
         )
 
-        self._model_data_original = build_model_data(model_run)
+        self._model_data_original, self._model_data = build_model_data(model_run)
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,
             self._timings,
@@ -106,29 +105,7 @@ class Model(object):
             comment="Model: preprocessing stage 2 (model_data)",
         )
 
-        random_seed = self._model_run.get_key("model.random_seed", None)
-        if random_seed:
-            np.random.seed(seed=random_seed)
-
-        # After setting the random seed, time clustering can take place
-        time_config = model_run.model.get("time", None)
-        if not time_config:
-            _model_data = self._model_data_original
-        else:
-            _model_data = apply_time_clustering(self._model_data_original, model_run)
-        self._model_data = final_timedimension_processing(_model_data)
-        log_time(
-            logger,
-            self._timings,
-            "model_data_creation",
-            comment="Model: preprocessing complete",
-        )
-
         # Ensure model and run attributes of _model_data update themselves
-        for var in self._model_data.data_vars:
-            self._model_data[var].attrs["is_result"] = 0
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
-
         model_config = {
             k: v for k, v in model_run.get("model", {}).items() if k != "file_allowed"
         }
@@ -144,6 +121,13 @@ class Model(object):
             initial_dict=model_run.get("imasks").as_dict_flat(),
             name="imasks",
             observer=self._model_data,
+        )
+
+        log_time(
+            logger,
+            self._timings,
+            "model_data_creation",
+            comment="Model: preprocessing complete",
         )
 
     def _init_from_model_data(self, model_data):
@@ -233,7 +217,7 @@ class Model(object):
 
     def get_formatted_array(self, var):
         """
-        Return an xr.DataArray with locs, techs, and carriers as
+        Return an xr.DataArray with nodes, techs, and carriers as
         separate dimensions.
 
         Parameters
@@ -285,7 +269,7 @@ class Model(object):
         info_strings = []
         model_name = self.model_config.get("name", "None")
         info_strings.append("Model name:   {}".format(model_name))
-        msize = "{nodes} locations, {techs} technologies, {times} timesteps".format(
+        msize = "{nodes} nodes, {techs} technologies, {times} timesteps".format(
             nodes=len(self._model_data.coords.get("nodes", [])),
             techs=(
                 len(self._model_data.coords.get("techs_non_transmission", []))

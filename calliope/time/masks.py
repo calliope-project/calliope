@@ -40,7 +40,7 @@ def zero(data, tech, var="resource", **kwargs):
     Returns timesteps where ``var`` for the technology ``tech`` is zero.
 
     kwargs are additional dimensions to subset on, for example,
-    ``locs=['location1', 'location2]``
+    ``nodes=['node1', 'node2]``
 
     """
     s = _get_array(data, var, tech, **kwargs)
@@ -93,7 +93,7 @@ def extreme(
 ):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
-    ``tech`` across the given list of ``locations`` is either minimal
+    ``tech`` across the given list of ``nodes`` is either minimal
     or maximal.
 
     Parameters

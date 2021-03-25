@@ -17,7 +17,7 @@ def build_model(override_dict, scenario):
 
 class TestExistsFalse:
     """
-    Test removal of techs, locations, links, and transmission techs
+    Test removal of techs, nodes, links, and transmission techs
     with the ``exists: False`` configuration option.
 
     """
@@ -34,11 +34,11 @@ class TestExistsFalse:
         # Ensure warnings were raised
         assert check_error_or_warning(
             excinfo,
-            "Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at location a.",
+            "Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at node a.",
         )
 
-    def test_location_exists_false(self):
-        overrides = {"locations.b.exists": False}
+    def test_node_exists_false(self):
+        overrides = {"nodes.b.exists": False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
@@ -49,11 +49,11 @@ class TestExistsFalse:
         # Ensure warnings were raised
         assert check_error_or_warning(
             excinfo,
-            "Not building the link a,b because one or both of its locations have been removed from the model by setting ``exists: false``",
+            "Not building the link a,b because one or both of its nodes have been removed from the model by setting ``exists: false``",
         )
 
-    def test_location_tech_exists_false(self):
-        overrides = {"locations.b.techs.test_storage.exists": False}
+    def test_node_tech_exists_false(self):
+        overrides = {"nodes.b.techs.test_storage.exists": False}
         model = build_model(overrides, "simple_storage,one_day,investment_costs")
         model.run()
 

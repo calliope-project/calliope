@@ -30,7 +30,7 @@ def access_pyomo_model_inputs(backend_model):
         if i.is_indexed()
     }
     inputs = xr.Dataset(all_params)
-    string_to_datetime(backend_model, inputs)
+    inputs = string_to_datetime(backend_model, inputs)
 
     return reorganise_xarray_dimensions(inputs)
 

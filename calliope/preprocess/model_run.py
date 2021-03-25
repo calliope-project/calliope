@@ -22,7 +22,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.preprocess import locations, checks, util
+from calliope.preprocess import nodes, checks, util
 
 logger = logging.getLogger(__name__)
 
@@ -276,10 +276,10 @@ def apply_overrides(config, scenario=None, override_dict=None):
             FutureWarning,
         )
 
-    # Drop default locations, links, and techs
+    # Drop default nodes, links, and techs
     config_model.del_key("techs.default_tech")
-    config_model.del_key("locations.default_location")
-    config_model.del_key("links.default_location_from,default_location_to")
+    config_model.del_key("nodes.default_node")
+    config_model.del_key("links.default_node_from,default_node_to")
     config_model.del_key("group_constraints.default_group")
 
     return config_model, debug_comments, overrides, scenario
@@ -379,7 +379,7 @@ def process_techs(config_model):
         # also break on missing carrier data
         if "carrier_in" not in tech_result.essentials:
             if tech_result.inheritance[-1] in ["supply", "supply_plus"]:
-                tech_result.essentials.carrier_in = "resource"
+                pass
             elif tech_result.inheritance[-1] in ["demand", "transmission", "storage"]:
                 try:
                     tech_result.essentials.carrier_in = tech_result.essentials.carrier
@@ -397,7 +397,7 @@ def process_techs(config_model):
 
         if "carrier_out" not in tech_result.essentials:
             if tech_result.inheritance[-1] == "demand":
-                tech_result.essentials.carrier_out = "resource"
+                pass
             elif tech_result.inheritance[-1] in [
                 "supply",
                 "supply_plus",
@@ -528,7 +528,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     dtformat = config_model.model["timeseries_dateformat"]
 
     # Generate set of all files and dataframes we want to load
-    location_config = model_run.locations.as_dict_flat()
+    node_config = model_run.nodes.as_dict_flat()
     model_config = config_model.model.as_dict_flat()
 
     # Find names of csv files (file=) or dataframes (df=) called in config
@@ -546,7 +546,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
                     tsvars.append(k.split(".")[-1])
         return set(tsnames), set(tsvars)
 
-    constraint_tsnames, constraint_tsvars = _get_names(location_config)
+    constraint_tsnames, constraint_tsvars = _get_names(node_config)
     cluster_tsnames, cluster_tsvars = _get_names(model_config)
 
     # Check if timeseries_dataframes is in the correct format (dict of
@@ -691,14 +691,14 @@ def generate_model_run(
     # 3) Fully populate tech_groups
     model_run["tech_groups"] = process_tech_groups(config, model_run["techs"])
 
-    # 4) Fully populate locations
+    # 4) Fully populate nodes
     (
-        model_run["locations"],
-        debug_locs,
+        model_run["nodes"],
+        debug_nodes,
         warning_messages,
         errors,
-    ) = locations.process_locations(config, model_run["techs"])
-    debug_comments.set_key("model_run.locations", debug_locs)
+    ) = nodes.process_nodes(config, model_run["techs"])
+    debug_comments.set_key("model_run.nodes", debug_nodes)
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 5) Fully populate timeseries data
