@@ -4,5 +4,3 @@ from calliope.preprocess.model_run import (
     generate_model_run,
     apply_overrides,
 )
-
-from calliope.preprocess.model_data import build_model_data

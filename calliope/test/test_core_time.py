@@ -357,7 +357,7 @@ class TestMasks:
         )
 
     def test_zero(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         mask = masks.zero(data, "csp", var="resource")
 
         dtindex = pd.DatetimeIndex(
@@ -443,7 +443,7 @@ class TestMasks:
         assert dtindex.equals(mask[0:75])
 
     def test_extreme(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         mask = masks.extreme(
             data, "csp", var="resource", how="max", length="2D", n=1, padding="2H"
         )
@@ -508,7 +508,7 @@ class TestMasks:
         assert dtindex.equals(mask)
 
     def test_extreme_diff_and_normalize(self, model_urban):
-        data = model_urban._model_data_original.copy()
+        data = model_urban._model_data_pre_clustering.copy()
         mask = masks.extreme_diff(
             data,
             "demand_heat",
@@ -576,7 +576,7 @@ class TestMasks:
         assert dtindex.equals(mask)
 
     def test_extreme_week_1d(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         mask = masks.extreme(
             data,
             "csp",
@@ -593,7 +593,7 @@ class TestMasks:
         assert days == found_days
 
     def test_extreme_week_2d(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         with pytest.raises(ValueError):
             mask = masks.extreme(
                 data,
@@ -1018,14 +1018,14 @@ class TestFuncs:
         )
 
     def test_drop_invalid_timesteps(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         timesteps = ["XXX2005-01-01 23:00"]
 
         with pytest.raises(exceptions.ModelError):
             funcs.drop(data, timesteps)
 
     def test_drop(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         timesteps = ["2005-01-01 23:00", "2005-01-01 22:00"]
 
         data_dropped = funcs.drop(data, timesteps)

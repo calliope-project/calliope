@@ -419,7 +419,9 @@ class TestDemandShareGroupConstraints:
             .item()
         ) == approx(0)
 
-        cheap_elec_supply_0 = generation.sel(nodes="0", techs="cheap_elec_supply").item()
+        cheap_elec_supply_0 = generation.sel(
+            nodes="0", techs="cheap_elec_supply"
+        ).item()
         demand_0 = demand.sel(nodes="0", techs="electricity_demand").item()
 
         assert round(cheap_elec_supply_0 / demand_0, 5) <= 0.4
@@ -990,7 +992,11 @@ class TestCostCapGroupConstraint:
         )
         model.run()
         emissions0 = (
-            (model.get_formatted_array("cost").loc[{"costs": "emissions", "nodes": "0"}])
+            (
+                model.get_formatted_array("cost").loc[
+                    {"costs": "emissions", "nodes": "0"}
+                ]
+            )
             .sum()
             .item()
         )
@@ -1775,7 +1781,9 @@ class TestCarrierProdGroupConstraints:
         )
         model.run()
         prod = model.get_formatted_array("carrier_prod")
-        cheap_prod1 = prod.loc[{"nodes": "1", "techs": "cheap_elec_supply"}].sum().item()
+        cheap_prod1 = (
+            prod.loc[{"nodes": "1", "techs": "cheap_elec_supply"}].sum().item()
+        )
         expensive_prod0 = (
             prod.loc[{"nodes": "0", "techs": "expensive_elec_supply"}].sum().item()
         )
@@ -1803,7 +1811,9 @@ class TestCarrierProdGroupConstraints:
         )
         model.run()
         prod = model.get_formatted_array("carrier_prod")
-        cheap_prod1 = prod.loc[{"nodes": "1", "techs": "cheap_elec_supply"}].sum().item()
+        cheap_prod1 = (
+            prod.loc[{"nodes": "1", "techs": "cheap_elec_supply"}].sum().item()
+        )
         expensive_prod0 = (
             prod.loc[{"nodes": "0", "techs": "expensive_elec_supply"}].sum().item()
         )

@@ -86,17 +86,11 @@ def _line(
     line_legend[v_coord] = [None]
     line_info_marker[h_coord] = [
         (1 / 2)
-        * (
-            node_coordinates[from_node][h_coord]
-            + node_coordinates[to_node][h_coord]
-        )
+        * (node_coordinates[from_node][h_coord] + node_coordinates[to_node][h_coord])
     ]
     line_info_marker[v_coord] = [
         (1 / 2)
-        * (
-            node_coordinates[from_node][v_coord]
-            + node_coordinates[to_node][v_coord]
-        )
+        * (node_coordinates[from_node][v_coord] + node_coordinates[to_node][v_coord])
     ]
 
     if is_initial_timestep:

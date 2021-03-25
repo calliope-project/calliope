@@ -167,9 +167,7 @@ def process_nodes(model_config, modelrun_techs):
             # tech dict -- but if a tech specifies ``exists: false``,
             # we kill it at this node
             if not tech_settings.get("exists", True):
-                node_techs_to_delete.append(
-                    "{}.techs.{}".format(loc_name, tech_name)
-                )
+                node_techs_to_delete.append("{}.techs.{}".format(loc_name, tech_name))
             else:
                 nodes[loc_name].techs[tech_name].union(
                     tech_settings, allow_override=True
@@ -217,12 +215,7 @@ def process_nodes(model_config, modelrun_techs):
                 tech_settings = cleanup_undesired_keys(tech_settings)
 
                 tech_settings = process_per_distance_constraints(
-                    tech_name,
-                    tech_settings,
-                    nodes,
-                    nodes_comments,
-                    loc_from,
-                    loc_to,
+                    tech_name, tech_settings, nodes, nodes_comments, loc_from, loc_to,
                 )
                 tech_settings = check_costs_and_compute_depreciation_rates(
                     tech_name, link, tech_settings, warnings, errors

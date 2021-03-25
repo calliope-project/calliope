@@ -19,8 +19,8 @@ from calliope.core import io
 from calliope.preprocess import (
     model_run_from_yaml,
     model_run_from_dict,
-    build_model_data,
 )
+from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 from calliope.core.util.tools import apply_to_dict
@@ -46,7 +46,7 @@ class Model(object):
 
     """
 
-    def __init__(self, config, model_data=None, *args, **kwargs):
+    def __init__(self, config, model_data=None, debug=False, *args, **kwargs):
         """
         Returns a new Model from either the path to a YAML model
         configuration file or a dict fully specifying the model.
@@ -69,10 +69,10 @@ class Model(object):
         log_time(logger, self._timings, "model_creation", comment="Model: initialising")
         if isinstance(config, str):
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
-            self._init_from_model_run(model_run, debug_data)
+            self._init_from_model_run(model_run, debug_data, debug)
         elif isinstance(config, dict):
             model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
-            self._init_from_model_run(model_run, debug_data)
+            self._init_from_model_run(model_run, debug_data, debug)
         elif model_data is not None and config is None:
             self._init_from_model_data(model_data)
         else:
@@ -86,9 +86,8 @@ class Model(object):
 
         self.plot = plotting.ModelPlotMethods(self)
 
-    def _init_from_model_run(self, model_run, debug_data):
+    def _init_from_model_run(self, model_run, debug_data, debug):
         self._model_run = model_run
-        self._debug_data = debug_data
         log_time(
             logger,
             self._timings,
@@ -96,7 +95,17 @@ class Model(object):
             comment="Model: preprocessing stage 1 (model_run)",
         )
 
-        self._model_data_original, self._model_data = build_model_data(model_run)
+        model_data_factory = ModelDataFactory(model_run)
+        model_data_factory.extract_node_tech_data()
+        model_data_factory.add_time_dimension(model_run)
+        model_data_factory.clean_model_data()
+
+        self._model_data_pre_clustering = model_data_factory.model_data_pre_clustering
+        self._model_data = model_data_factory.model_data
+        if debug:
+            self._debug_data = debug_data
+            self._model_data_pre_time = model_data_factory.data_pre_time
+            self._model_data_stripped_keys = model_data_factory.stripped_keys
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,

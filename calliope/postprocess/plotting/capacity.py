@@ -255,10 +255,7 @@ def plot_capacity(
         sum_dims,
         squeeze,
         get_var_data_kwargs={"nodes": nodes, "orientation": orientation},
-        get_var_layout_kwargs={
-            "node_axis": node_axis,
-            "value_axis": value_axis,
-        },
+        get_var_layout_kwargs={"node_axis": node_axis, "value_axis": value_axis,},
     )
 
     return data, layout

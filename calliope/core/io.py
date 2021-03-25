@@ -51,7 +51,8 @@ def save_netcdf(model_data, path, model=None):
         for k in ["timeseries_data", "timesteps"]:
             model_run_to_save.pop(k, None)
         model_data_attrs["_model_run"] = model_run_to_save.to_yaml()
-        model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
+        if hasattr(model, "_debug_data"):
+            model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 
     # Convert boolean attrs to ints
     bool_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, bool)]

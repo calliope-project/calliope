@@ -9,7 +9,7 @@ Preprocessing of model and run configuration into a unified model_run
 AttrDict, and building of associated debug information.
 
 """
-# from memory_profiler import profile
+
 import os
 import re
 import logging
@@ -695,12 +695,9 @@ def generate_model_run(
     model_run["tech_groups"] = process_tech_groups(config, model_run["techs"])
 
     # 4) Fully populate nodes
-    (
-        model_run["nodes"],
-        debug_nodes,
-        warning_messages,
-        errors,
-    ) = nodes.process_nodes(config, model_run["techs"])
+    (model_run["nodes"], debug_nodes, warning_messages, errors,) = nodes.process_nodes(
+        config, model_run["techs"]
+    )
     debug_comments.set_key("model_run.nodes", debug_nodes)
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 

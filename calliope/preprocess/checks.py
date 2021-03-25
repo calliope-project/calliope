@@ -612,8 +612,7 @@ def check_final(model_run):
             except AttributeError:
                 errors.append(
                     "Coordinates must be given in the format {lat: N, lon: M} or "
-                    "{x: N, y: M}, not "
-                    + str(model_run.nodes[first_loc].coordinates)
+                    "{x: N, y: M}, not " + str(model_run.nodes[first_loc].coordinates)
                 )
                 break
 

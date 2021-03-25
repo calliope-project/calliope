@@ -69,9 +69,7 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_1")
 
         assert (
-            model._model_run.nodes[
-                "a"
-            ].techs.test_supply_gas.constraints.energy_cap_max
+            model._model_run.nodes["a"].techs.test_supply_gas.constraints.energy_cap_max
             == 20
         )
         assert (
@@ -447,8 +445,7 @@ class TestModelRun:
         )
 
         assert (
-            "carbon"
-            not in m._model_run.nodes["b"].techs.test_supply_elec.costs.keys()
+            "carbon" not in m._model_run.nodes["b"].techs.test_supply_elec.costs.keys()
         )
         assert "carbon" not in m._model_data.coords["costs"].values
 
@@ -1157,9 +1154,7 @@ class TestChecks:
                 override_dict=_override(cartesian0, geographic1),
                 scenario="simple_supply,one_day",
             )
-        check_error_or_warning(
-            error, "All nodes must use the same coordinate format"
-        )
+        check_error_or_warning(error, "All nodes must use the same coordinate format")
 
         # should fail: cannot use a non-cartesian or non-geographic coordinate system
         with pytest.raises(exceptions.ModelError) as error:
@@ -1632,7 +1627,7 @@ class TestTime:
         )
 
     def test_add_max_demand_timesteps(self, model_urban):
-        data = model_urban._model_data_original.copy()
+        data = model_urban._model_data_pre_clustering.copy()
         data = time.add_max_demand_timesteps(data)
 
         assert data["max_demand_timesteps"].loc[

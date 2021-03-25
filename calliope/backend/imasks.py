@@ -20,8 +20,6 @@ import pandas as pd
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 
-# [storage_cap_min, or, inheritance(storage), and, export=True, and, run.mode=plan]
-
 
 def build_imasks(model_data, imask_config):
     """

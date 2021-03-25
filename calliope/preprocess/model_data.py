@@ -26,65 +26,37 @@ from calliope.preprocess import time
 from calliope.core.util import dataset
 
 
-def build_model_data(model_run, debug=False):
+class ModelDataFactory:
     """
     Take a Calliope model_run and convert it into an xarray Dataset, ready for
     constraint generation. Timeseries data is also extracted from file at this
     point, and the time dimension added to the data
 
     ----------
-    model_run : AttrDict
+    model_run_dict : AttrDict
         preprocessed model_run dictionary, as produced by
         Calliope.preprocess.preprocess_model
-    debug : bool, default = False
-        Used to debug steps within build_model_data, particularly before/after
-        time dimension addition. If True, more information is returned
 
     Returns
     -------
     data : xarray Dataset
         Dataset with optimisation param_dict as variables, optimisation sets as
         coordinates, and other information in attributes.
-    data_dict : dict, only returned if debug = True
-        dictionary of param_dict, prior to time dimension addition. Used here to
-        populate the Dataset (using `from_dict()`)
     data_pre_time : xarray Dataset, only returned if debug = True
         Dataset, prior to time dimension addition, with optimisation param_dict
         as variables, optimisation sets as coordinates, and other information
         in attributes.
     """
-    # We build up a dictionary of the data, then convert it to an xarray Dataset
-    # before applying time dimensions
-    model_data = ModelData(model_run)
 
-    model_data.add_param_from_template()
-    model_data.clean_unused_techs_nodes_and_carriers()
-
-    if debug:
-        data_pre_time = model_data.model_data.copy(deep=True)
-
-    model_data.add_time_dimension(model_run)
-    model_data.apply_time_clustering(model_run)
-    model_data.reorganise_xarray_dimensions()
-    model_data.add_var_attrs()
-    model_data.update_dtypes()
-    model_data.check_data()
-
-    if debug:
-        return model_data.model_data_original, model_data.model_data, data_pre_time
-    else:
-        return model_data.model_data_original, model_data.model_data
-
-
-class ModelData:
-    """
-    Class to generate Calliope xarray model dataset, known as `model_data`.
-
-    Takes as input the calliope `model_run` dictionary, reorganises the data into
-    tabular form for inclusion in `model_data`.
-    The method for reorganising `model_run` depends on regular expressions,
-    configuration for which is found in `calliope/config/model_data_lookup.yaml`.
-    """
+    UNWANTED_TECH_KEYS = [
+        "allowed_constraints",
+        "required_constraints",
+        "allowed_group_constraints",
+        "allowed_costs",
+        "allowed_switches",
+        "constraints",
+        "essentials.carrier",
+    ]
 
     def __init__(self, model_run_dict):
         self.node_dict = model_run_dict.nodes.as_dict_flat()
@@ -93,40 +65,53 @@ class ModelData:
         self.model_data = xr.Dataset(
             coords={"timesteps": model_run_dict.timeseries_data.index}
         )
-        self.add_attributes(model_run_dict)
+        self._add_attributes(model_run_dict)
         self.lookup_str = "[\\w\\-]*"  # all alphanumerics + `_` and `-`
         self.template_config = AttrDict.from_yaml(
             os.path.join(
                 os.path.dirname(calliope.__file__), "config", "model_data_lookup.yaml"
             )
         )
-        self.unwanted_tech_keys = [
-            "allowed_constraints",
-            "required_constraints",
-            "allowed_group_constraints",
-            "allowed_costs",
-            "allowed_switches",
-            "constraints",
-            "essentials.carrier",
-        ]
+        self._strip_unwanted_keys()
+        self._add_node_tech_sets()
 
-        self.strip_unwanted_keys()
-        self.add_node_tech_sets()
+    def extract_node_tech_data(self):
+        self._add_param_from_template()
+        self._clean_unused_techs_nodes_and_carriers()
+
+    def add_time_dimension(self, model_run_dict):
+        self.data_pre_time = self.model_data.copy(deep=True)
+        self.model_data = time.add_time_dimension(self.model_data, model_run_dict)
+        self._update_dtypes()
 
         if model_run_dict.get_key("model.random_seed", None):
             np.random.seed(seed=model_run_dict.model.random_seed)
+        self.model_data_pre_clustering = self.model_data.copy(deep=True)
+        if model_run_dict.get_key("model.time", None):
+            self.model_data = time.apply_time_clustering(
+                self.model_data, model_run_dict
+            )
 
-    def empty_or_invalid(self, var):
+        self.model_data = time.add_max_demand_timesteps(self.model_data)
+
+    def clean_model_data(self):
+        self.model_data = dataset.reorganise_xarray_dimensions(self.model_data)
+        self._add_var_attrs()
+        self._update_dtypes()
+        self._check_data()
+
+    @staticmethod
+    def _empty_or_invalid(var):
         if isinstance(var, str):
             return False
-        elif isinstance(var, (tuple, set, list)):
+        elif isinstance(var, list):
             return not var or pd.isnull(var).any()
-        elif isinstance(var, dict):
+        elif isinstance(var, (tuple, set, dict)):
             return not var
         else:
             return pd.isnull(var)
 
-    def strip_unwanted_keys(self):
+    def _strip_unwanted_keys(self):
         """
         These are keys in `model_run` that we don't need in `model_data`.
         Removing them now ensures they don't end up in model_data by mistake
@@ -134,53 +119,56 @@ class ModelData:
         relevant data *has* made it through to model_data.
         """
         self.stripped_keys = list(
-            self.reformat_model_run_dict(
+            self._reformat_model_run_dict(
                 self.tech_dict,
                 [],
                 get_method="pop",
-                end="({})".format("|".join(self.unwanted_tech_keys)),
+                end="({})".format("|".join(self.UNWANTED_TECH_KEYS)),
             ).keys()
         )
 
         for subdict in ["tech", "node"]:
             for key, val in list(getattr(self, f"{subdict}_dict").items()):
-                if self.empty_or_invalid(val):
+                if self._empty_or_invalid(val):
                     self.stripped_keys.append(key)
                     getattr(self, f"{subdict}_dict").pop(key)
 
-    def add_node_tech_sets(self):
+    def _add_node_tech_sets(self):
         """
         Run through the whole `model_run` and extract all the valid combinations of techs
         at nodes.
         """
         kwargs = {"get_method": "get", "end": "\\.({0}).*"}
-        df = self.dict_to_df(
-            data_dict=self.reformat_model_run_dict(self.node_dict, ["techs"], **kwargs),
+        df = self._dict_to_df(
+            data_dict=self._reformat_model_run_dict(
+                self.node_dict, ["techs"], **kwargs
+            ),
             data_dimensions=["nodes", "techs"],
             is_link=False,
             var_name="node_tech",
         )
 
-        link_data_dict=self.reformat_model_run_dict(
+        link_data_dict = self._reformat_model_run_dict(
             self.node_dict, ["links", "techs"], **kwargs
         )
         if not link_data_dict:
             self.link_techs = pd.DataFrame([None])
         else:
-            df_link = self.dict_to_df(link_data_dict,
+            df_link = self._dict_to_df(
+                link_data_dict,
                 data_dimensions=["nodes", "node_to", "techs"],
                 is_link=True,
                 var_name="node_tech",
             )
-            self.get_link_remotes(link_data_dict)
+            self._get_link_remotes(link_data_dict)
             df = df.append(df_link)
 
-        df = self.all_df_to_true(df)
+        df = self._all_df_to_true(df)
 
         self.model_data = self.model_data.merge(xr.Dataset.from_dataframe(df))
 
-    def get_link_remotes(self, link_data_dict):
-        df = self.dict_to_df(
+    def _get_link_remotes(self, link_data_dict):
+        df = self._dict_to_df(
             data_dict=link_data_dict,
             data_dimensions=["nodes", "node_to", "techs"],
             is_link=False,
@@ -193,7 +181,7 @@ class ModelData:
             link_remote_nodes=df.index.get_level_values("node_to"),
             base_techs=df.index.get_level_values("techs"),
         )
-        df_all_link_techs = self.update_link_idx_levels(df)
+        df_all_link_techs = self._update_link_idx_levels(df)
         self.link_techs = df_all_link_techs["base_techs"].groupby(level="techs").first()
 
         self.model_data = self.model_data.merge(
@@ -202,19 +190,23 @@ class ModelData:
             )
         )
 
-    def format_lookup(self, string_to_format):
+    def _format_lookup(self, string_to_format):
         return string_to_format.format(self.lookup_str)
 
-    def get_key_matching_nesting(
+    def _get_key_matching_nesting(
         self, nesting, key_to_check, start="({0})\\.", end="\\.({0})", **kwargs
     ):
         nesting_string = "\\.({0})\\.".join(nesting)
-        search_string = self.format_lookup(f"^{start}{nesting_string}{end}$")
+        search_string = self._format_lookup(f"^{start}{nesting_string}{end}$")
         return re.search(search_string, key_to_check)
 
-    def reformat_model_run_dict(
-        self, model_run_subdict, expected_nesting, get_method="pop",
-        values_as_dimension=False, **kwargs
+    def _reformat_model_run_dict(
+        self,
+        model_run_subdict,
+        expected_nesting,
+        get_method="pop",
+        values_as_dimension=False,
+        **kwargs,
     ):
         """
         Extract key:value pairs from `model_run` which match the expected dictionary
@@ -223,13 +215,13 @@ class ModelData:
         data_dict = {}
 
         for key in list(model_run_subdict.keys()):
-            key_match = self.get_key_matching_nesting(expected_nesting, key, **kwargs)
+            key_match = self._get_key_matching_nesting(expected_nesting, key, **kwargs)
             if key_match is None:
                 continue
 
             groups = [tuple(key_match.groups())]
             val = getattr(model_run_subdict, get_method)(key)
-            if self.empty_or_invalid(val):
+            if self._empty_or_invalid(val):
                 continue
             if values_as_dimension:
                 # this if/else is for multiple carriers defined under one carrier tier
@@ -248,14 +240,14 @@ class ModelData:
         else:
             return data_dict
 
-    def dict_to_df(
+    def _dict_to_df(
         self,
         data_dict,
         data_dimensions,
         var_name=None,
         var_name_prefix=None,
         is_link=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Take in a dictionary with tuple keys and turn it into a pandas multi-index dataframe.
@@ -275,17 +267,17 @@ class ModelData:
             df = df.rename(columns=lambda x: var_name_prefix + "_" + x)
 
         if is_link:
-            df = self.update_link_idx_levels(df)
+            df = self._update_link_idx_levels(df)
 
         return df
 
-    def model_run_dict_to_dataset(
+    def _model_run_dict_to_dataset(
         self,
         group_name,
         model_run_subdict_name,
         expected_nesting,
         data_dimensions,
-        **kwargs
+        **kwargs,
     ):
         """
         Pop out key:value pairs from `model_run` nodes or techs subdicts,
@@ -293,7 +285,7 @@ class ModelData:
         xarray dataset.
         """
         model_run_subdict = getattr(self, f"{model_run_subdict_name}_dict")
-        data_dict = self.reformat_model_run_dict(
+        data_dict = self._reformat_model_run_dict(
             model_run_subdict, expected_nesting, **kwargs
         )
         if not data_dict:
@@ -301,14 +293,14 @@ class ModelData:
                 f"No relevant data found for `{group_name}` group of parameters"
             )
             return None
-        df = self.dict_to_df(data_dict, data_dimensions, **kwargs)
+        df = self._dict_to_df(data_dict, data_dimensions, **kwargs)
         if model_run_subdict_name == "tech":
-            df = self.update_link_tech_names(df)
+            df = self._update_link_tech_names(df)
         new_model_data_vars = xr.Dataset.from_dataframe(df)
 
         self.model_data = self.model_data.combine_first(new_model_data_vars)
 
-    def update_link_tech_names(self, df):
+    def _update_link_tech_names(self, df):
         """
         tech-specific information will only have info on link techs by their base name,
         but the data needs to be duplicated across all link techs, i.e. for every node
@@ -326,18 +318,19 @@ class ModelData:
         df = (
             df.append(df_link_tech_data)
             .drop(self.link_techs.unique(), errors="ignore")
-            .dropna(how='all')
+            .dropna(how="all")
             .stack(idx_to_stack)
         )
 
         return df
 
-    def add_var_attrs(self):
+    def _add_var_attrs(self):
         for var_data in self.model_data.data_vars.values():
             var_data.attrs["parameters"] = 1
             var_data.attrs["is_result"] = 0
 
-    def update_link_idx_levels(self, df):
+    @staticmethod
+    def _update_link_idx_levels(df):
         """
         ([(`tech_name`, `node1`), (`tech_name`, `node2`)] -> [`tech_name:node1`, `tech_name:node2`])
         """
@@ -353,10 +346,11 @@ class ModelData:
         )
         return df
 
-    def all_df_to_true(self, df):
+    @staticmethod
+    def _all_df_to_true(df):
         return df == df
 
-    def add_attributes(self, model_run):
+    def _add_attributes(self, model_run):
         attr_dict = AttrDict()
 
         attr_dict["calliope_version"] = __version__
@@ -381,7 +375,7 @@ class ModelData:
 
         self.model_data.attrs = attr_dict
 
-    def clean_unused_techs_nodes_and_carriers(self):
+    def _clean_unused_techs_nodes_and_carriers(self):
         """
         Remove techs not assigned to nodes, nodes with no associated techs, and carriers associated with removed techs
         """
@@ -400,25 +394,11 @@ class ModelData:
             ]
         )
 
-    def add_param_from_template(self):
+    def _add_param_from_template(self):
         for group, group_config in self.template_config.items():
-            self.model_run_dict_to_dataset(group_name=group, **group_config)
+            self._model_run_dict_to_dataset(group_name=group, **group_config)
 
-    def add_time_dimension(self, model_run):
-        self.model_data = time.add_time_dimension(self.model_data, model_run)
-        self.update_dtypes()
-        self.model_data = time.add_max_demand_timesteps(self.model_data)
-
-    def apply_time_clustering(self, model_run):
-        self.model_data_original = self.model_data.copy(deep=True)
-        time_config = model_run.model.get("time", None)
-        if time_config:
-            self.model_data = time.apply_time_clustering(self.model_data, model_run)
-
-    def reorganise_xarray_dimensions(self):
-        self.model_data = dataset.reorganise_xarray_dimensions(self.model_data)
-
-    def update_dtypes(self):
+    def _update_dtypes(self):
         """
         Update dtypes to not be 'Object', if possible.
         Order of preference is: bool, int, float
@@ -440,7 +420,7 @@ class ModelData:
                         except ValueError:
                             None
 
-    def check_data(self):
+    def _check_data(self):
         if self.node_dict or self.tech_dict:
             raise exceptions.ModelError(
                 "Some data not extracted from inputs into model dataset:\n"
