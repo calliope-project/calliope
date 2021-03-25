@@ -507,7 +507,7 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
         raise exceptions.ModelError(
             "Error in loading data from dataframe. "
             "Model attempted to load dataframe with key `{}`, "
-            "but avaialable dataframes are {}".format(
+            "but available dataframes are {}".format(
                 tskey, set(timeseries_dataframes.keys())
             )
         )
@@ -521,6 +521,24 @@ def _parser(x, dtformat):
     return pd.to_datetime(x, format=dtformat, exact=False)
 
 
+def _get_names(config):
+    """
+    Find names of csv files (file=) or dataframes (df=) called in config
+    """
+    tsnames = []
+    tsvars = []
+    for k, v in config.items():
+        if "=" in str(v):
+            tsnames.append((v.split("=")[0], v.split("=")[1].rsplit(":", 1)[0]))
+            if ".costs." in k:
+                tsvars.append(f"cost_{k.split('.')[-1]}")
+            elif ".carrier_ratios." in k:
+                tsvars.append("carrier_ratios")
+            else:
+                tsvars.append(k.split(".")[-1])
+    return set(tsnames), set(tsvars)
+
+
 def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     timeseries_data = config_model.model.get("timeseries_data", None)
@@ -530,21 +548,6 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     # Generate set of all files and dataframes we want to load
     node_config = model_run.nodes.as_dict_flat()
     model_config = config_model.model.as_dict_flat()
-
-    # Find names of csv files (file=) or dataframes (df=) called in config
-    def _get_names(config):
-        tsnames = []
-        tsvars = []
-        for k, v in config.items():
-            if "=" in str(v):
-                tsnames.append((v.split("=")[0], v.split("=")[1].rsplit(":", 1)[0]))
-                if ".costs." in k:
-                    tsvars.append(f"cost_{k.split('.')[-1]}")
-                elif ".carrier_ratios." in k:
-                    tsvars.append("carrier_ratios")
-                else:
-                    tsvars.append(k.split(".")[-1])
-        return set(tsnames), set(tsvars)
 
     constraint_tsnames, constraint_tsvars = _get_names(node_config)
     cluster_tsnames, cluster_tsvars = _get_names(model_config)
