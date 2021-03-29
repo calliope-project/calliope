@@ -2,11 +2,10 @@
 Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-masks.py
-~~~~~~~~
+subsets.py
+~~~~~~~~~~
 
-Functionality to generate an xarray.Dataset of boolean masks for all
-constraints and decision variables, based on the model_data xarray.Dataset.
+Create subsets over which the model objects are valid.
 
 """
 
@@ -21,60 +20,59 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 
 
-def build_imasks(model_data, imask_config):
+def create_valid_subset(model_data, name, config):
     """
-    Returns a dict of dicts containing valid indices.
-    """
+    Returns the subset for which a given constraint, variable or
+    expression is valid, based on the given configuration. See `config/subsets.yaml` for
+    the configuration definitions.
 
-    imasks = {}
-    for imask_type in imask_config.keys():  # "variables", "expressions", "constraints"
-        imasks[imask_type] = {}
-        for set_name, set_config in imask_config[imask_type].items():
-            imask = create_imask(model_data, set_name, set_config)
-            if imask is not None:  # All-zero imasks are not even added to imasks
-                imasks[imask_type][set_name] = imask
+    Parameters
+    ----------
 
-    return imasks
+    model_data : xarray.Dataset (calliope.Model._model_data)
+    name : str
+        Name of the constraint, variable or expression
+    config : dict
+        Configuration for the constraint, variable or expression
 
+    Returns
+    -------
+    valid_subset : pandas.MultiIndex
 
-def create_imask(model_data, set_name, set_config):
-    """
-    Create boolean masks for constraints and decision variables
-    from data stored in config/sets.yaml
     """
 
     # Start with a mask that is True where the tech exists at a node (across all timesteps and for a each carrier and cost, where appropriate)
-    imask = imask_foreach(model_data, set_config.foreach)
+    imask = _imask_foreach(model_data, config.foreach)
     if imask is False:  # i.e. not all of 'foreach' are in model_data
         return None
     # Add "where" info as imasks
-    where_array = set_config.get_key("where", default=[])
+    where_array = config.get_key("where", default=[])
     if where_array:
-        imask = imask_where(model_data, set_name, where_array, imask, "and_")
+        imask = _imask_where(model_data, name, where_array, imask, "and_")
 
     # Add imask based on subsets
-    imask = subset_imask(set_name, set_config, imask)
+    imask = _subset_imask(name, config, imask)
 
     # Only build and return imask if there are some non-zero elements
     if isinstance(imask, xr.DataArray) and imask.sum() != 0:
         # Squeeze out any unwanted dimensions
-        if len(imask.dims) > len(set_config.foreach):
-            imask = (
-                imask.sum([i for i in imask.dims if i not in set_config.foreach]) > 0
-            )
+        if len(imask.dims) > len(config.foreach):
+            imask = imask.sum([i for i in imask.dims if i not in config.foreach]) > 0
         # We have a problem if we have too few dimensions at this point...
-        if len(imask.dims) < len(set_config.foreach):
-            raise ValueError(f"Missing dimension(s) in imask for set {set_name}")
+        if len(imask.dims) < len(config.foreach):
+            raise ValueError(f"Missing dimension(s) in imask for set {name}")
 
-        imask = get_valid_index(reorganise_xarray_dimensions(imask).astype(bool))
+        valid_subset = _get_valid_subset(
+            reorganise_xarray_dimensions(imask).astype(bool)
+        )
 
-        return imask
+        return valid_subset
 
     else:
         return None
 
 
-def param_exists(model_data, param):
+def _param_exists(model_data, param):
     # mask by NaN and INF/-INF values = False, otherwise True
     with pd.option_context("mode.use_inf_as_na", True):
         if isinstance(model_data.get(param), xr.DataArray):
@@ -84,12 +82,7 @@ def param_exists(model_data, param):
             return False
 
 
-def inheritance(model_data, tech_group):
-    # Only for base tech inheritance
-    return model_data.inheritance.str.endswith(tech_group)
-
-
-def val_is(model_data, param, val):
+def _val_is(model_data, param, val):
     if param.startswith(("model.", "run.")):
         group = param.split(".")[0]
         config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
@@ -103,7 +96,7 @@ def val_is(model_data, param, val):
     return imask
 
 
-def get_valid_index(imask):
+def _get_valid_subset(imask):
     if len(imask.dims) == 1:
         return imask[imask].coords.to_index()
     else:
@@ -111,7 +104,7 @@ def get_valid_index(imask):
         return mask_stacked[mask_stacked].coords.to_index()
 
 
-def subset_imask(set_name, set_config, imask):
+def _subset_imask(set_name, set_config, imask):
     # For some masks, we take a subset of a given dimension (e.g. only "out" in 'carrier_tier')
     for subset_name, subset in set_config.get("subset", {}).items():
         # Keep the axis if it is expected for this constraint/variable
@@ -133,7 +126,17 @@ def subset_imask(set_name, set_config, imask):
     return imask
 
 
-def imask_where(
+def _inheritance(model_data, tech_group):
+    # Only for base tech inheritance
+    return model_data.inheritance.str.endswith(tech_group)
+
+
+VALID_HELPER_FUNCTIONS = {
+    "inheritance": _inheritance,
+}
+
+
+def _imask_where(
     model_data, set_name, where_array, initial_imask=None, initial_operator=None
 ):
     """
@@ -145,15 +148,15 @@ def imask_where(
     imasks = []
     operators = []
 
-    def _func(imask_string):
+    def __is_function(imask_string):
         return re.search(r"(\w+)\((\w+)\)", imask_string)
 
-    def _val_is(imask_string):
+    def __is_equals_statement(imask_string):
         return re.search(r"([\w\.]+)\=([\'\w\.\:\,]+)", imask_string)
 
     for i in where_array:
         if isinstance(i, list):
-            imasks.append(imask_where(model_data, set_name, i))
+            imasks.append(_imask_where(model_data, set_name, i))
         elif i in ["or", "and"]:
             operators.append(i)
         else:
@@ -164,14 +167,14 @@ def imask_where(
             if i.startswith("not "):
                 _not = True
                 i = i.replace("not ", "")
-            if _func(i) is not None:
-                func, val = _func(i).groups()
-                imask = globals()[func](model_data, val)
-            elif _val_is(i) is not None:
-                param, val = _val_is(i).groups()
-                imask = val_is(model_data, param, val)
+            if __is_function(i) is not None:
+                func, val = __is_function(i).groups()
+                imask = VALID_HELPER_FUNCTIONS[func](model_data, val)
+            elif __is_equals_statement(i) is not None:
+                param, val = __is_equals_statement(i).groups()
+                imask = _val_is(model_data, param, val)
             elif i in model_data.data_vars.keys():
-                imask = param_exists(model_data, i)
+                imask = _param_exists(model_data, i)
             else:
                 imask = False  # TODO: this should differntiate between a valid parameter not being in model_data and an e.g. incorrectly spelled parameter
             # Separately check whether the condition should be inverted
@@ -185,15 +188,15 @@ def imask_where(
     # Run through and combine all imasks using defined operators
     imask = imasks[0]
     for i in range(len(imasks) - 1):
-        imask = combine_imasks(imask, imasks[i + 1], operators[i])
+        imask = _combine_imasks(imask, imasks[i + 1], operators[i])
 
     if initial_imask is not None and initial_operator is not None:
-        imask = combine_imasks(imask, initial_imask, initial_operator)
+        imask = _combine_imasks(imask, initial_imask, initial_operator)
 
     return imask
 
 
-def combine_imasks(curr_imask, new_imask, _operator):
+def _combine_imasks(curr_imask, new_imask, _operator):
     if _operator in ["or", "or_"]:
         _operator = "or_"
     elif _operator in ["and", "and_"]:
@@ -204,7 +207,7 @@ def combine_imasks(curr_imask, new_imask, _operator):
     return imask
 
 
-def imask_foreach(model_data, foreach):
+def _imask_foreach(model_data, foreach):
     if not all(i in model_data.dims for i in foreach):
         # ignore constraints/variables if the set doesn't even exist (e.g. datesteps)
         return False

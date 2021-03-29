@@ -27,26 +27,6 @@ from calliope.core.util import dataset
 
 
 class ModelDataFactory:
-    """
-    Take a Calliope model_run and convert it into an xarray Dataset, ready for
-    constraint generation. Timeseries data is also extracted from file at this
-    point, and the time dimension added to the data
-
-    ----------
-    model_run_dict : AttrDict
-        preprocessed model_run dictionary, as produced by
-        Calliope.preprocess.preprocess_model
-
-    Returns
-    -------
-    data : xarray Dataset
-        Dataset with optimisation param_dict as variables, optimisation sets as
-        coordinates, and other information in attributes.
-    data_pre_time : xarray Dataset, only returned if debug = True
-        Dataset, prior to time dimension addition, with optimisation param_dict
-        as variables, optimisation sets as coordinates, and other information
-        in attributes.
-    """
 
     UNWANTED_TECH_KEYS = [
         "allowed_constraints",
@@ -59,6 +39,28 @@ class ModelDataFactory:
     ]
 
     def __init__(self, model_run_dict):
+        """
+        Take a Calliope model_run and convert it into an xarray Dataset, ready for
+        constraint generation. Timeseries data is also extracted from file at this
+        point, and the time dimension added to the data
+
+        Parameters
+        ----------
+        model_run_dict : AttrDict
+            preprocessed model_run dictionary, as produced by
+            Calliope.preprocess.preprocess_model
+
+        Returns
+        -------
+        data : xarray Dataset
+            Dataset with optimisation param_dict as variables, optimisation sets as
+            coordinates, and other information in attributes.
+        data_pre_time : xarray Dataset, only returned if debug = True
+            Dataset, prior to time dimension addition, with optimisation param_dict
+            as variables, optimisation sets as coordinates, and other information
+            in attributes.
+
+        """
         self.node_dict = model_run_dict.nodes.as_dict_flat()
         self.tech_dict = model_run_dict.techs.as_dict_flat()
 

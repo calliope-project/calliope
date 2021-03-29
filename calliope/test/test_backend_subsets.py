@@ -6,29 +6,29 @@ import numpy as np
 import pandas as pd
 
 import calliope
-from calliope.backend.imasks import (
-    build_imasks,
-    param_exists,
-    inheritance,
-    val_is,
-    get_valid_index,
-    subset_imask,
-    imask_where,
-    combine_imasks,
-    imask_foreach,
+from calliope.backend.subsets import (
+    create_valid_subset,
+    _param_exists,
+    _inheritance,
+    _val_is,
+    _get_valid_subset,
+    _subset_imask,
+    _imask_where,
+    _combine_imasks,
+    _imask_foreach,
 )
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import AttrDict
 from calliope.test.common.util import (
     check_error_or_warning,
     constraint_sets,
-    imask_config,
+    subsets_config,
 )
 
 BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
 
 
-class TestIMask:
+class TestSubsets:
     def parse_yaml(self, yaml_string):
         return AttrDict.from_yaml_string(yaml_string)
 
@@ -71,7 +71,9 @@ class TestIMask:
             observer=model_data,
         )
         UpdateObserverDict(
-            initial_dict={"foz": 0}, name="model_config", observer=model_data,
+            initial_dict={"foz": 0},
+            name="model_config",
+            observer=model_data,
         )
         return model_data
 
@@ -96,7 +98,7 @@ class TestIMask:
         ),
     )
     def test_foreach_constraint(self, model_data, foreach):
-        imask = imask_foreach(model_data, foreach)
+        imask = _imask_foreach(model_data, foreach)
 
         assert sorted(imask.dims) == sorted(foreach)
 
@@ -104,7 +106,7 @@ class TestIMask:
         ("param", "result"), (("inexistent", False), ("all_inf", 0), ("with_inf", 5))
     )
     def test_param_exists(self, model_data, param, result):
-        imask = param_exists(model_data, param)
+        imask = _param_exists(model_data, param)
         if param == "inexistent":
             assert imask is result
         else:
@@ -114,7 +116,7 @@ class TestIMask:
         ("tech_group", "result"), (("foo", 0), ("bar", 2), ("baz", 1))
     )
     def test_inheritance(self, model_data, tech_group, result):
-        imask = inheritance(model_data, tech_group)
+        imask = _inheritance(model_data, tech_group)
         assert imask.sum() == result
 
     @pytest.mark.parametrize(
@@ -133,7 +135,7 @@ class TestIMask:
         ),
     )
     def test_val_is(self, model_data, param, val, result):
-        imask = val_is(model_data, param, val)
+        imask = _val_is(model_data, param, val)
         if isinstance(result, bool):
             assert imask is result
         else:
@@ -142,9 +144,9 @@ class TestIMask:
     @pytest.mark.parametrize(
         "foreach", (["techs"], ["nodes", "techs"], ["nodes", "techs", "carriers"])
     )
-    def test_get_valid_index(self, model_data, foreach):
-        imask = imask_foreach(model_data, foreach)
-        idx = get_valid_index(imask)
+    def test_get_valid_subset(self, model_data, foreach):
+        imask = _imask_foreach(model_data, foreach)
+        idx = _get_valid_subset(imask)
         assert isinstance(idx, pd.Index)
         assert len(idx) == imask.sum()
         assert all(imask.loc[i] == True for i in idx)
@@ -154,9 +156,9 @@ class TestIMask:
         Subset on nodes
         """
         foreach = ["nodes", "techs"]
-        imask = imask_foreach(model_data, foreach)
+        imask = _imask_foreach(model_data, foreach)
         assert set(imask.dims) == set(foreach)
-        imask_subset = subset_imask("foo", imask_subset_config(foreach), imask)
+        imask_subset = _subset_imask("foo", imask_subset_config(foreach), imask)
         assert (imask_subset.loc[{"nodes": "bar"}] == False).all()
 
     def test_subset_imask_squeeze(self, model_data, imask_subset_config):
@@ -165,12 +167,12 @@ class TestIMask:
         """
         # foreach doesn't have this additional dimension
         foreach = ["techs"]
-        imask = imask_foreach(model_data, foreach)
+        imask = _imask_foreach(model_data, foreach)
         assert imask.dims == ("techs",)
         # on using 'where', the 'nodes' dimension is added
-        imask = imask_where(model_data, "foo", ["node_tech"], imask, "and_")
+        imask = _imask_where(model_data, "foo", ["node_tech"], imask, "and_")
         assert sorted(imask.dims) == sorted(["nodes", "techs"])
-        imask_subset = subset_imask("foo", imask_subset_config(foreach), imask)
+        imask_subset = _subset_imask("foo", imask_subset_config(foreach), imask)
         assert imask_subset.dims == ("techs",)
         assert imask_subset.equals(imask.loc[{"nodes": "foo"}].drop_vars("nodes"))
 
@@ -179,10 +181,10 @@ class TestIMask:
         Subset using a string, when a non-string iterable is required
         """
         foreach = ["nodes", "techs"]
-        imask = imask_foreach(model_data, foreach)
+        imask = _imask_foreach(model_data, foreach)
 
         with pytest.raises(TypeError) as excinfo:
-            subset_imask(
+            _subset_imask(
                 "foo", AttrDict({"foreach": foreach, "subset.nodes": "bar"}), imask
             )
         assert check_error_or_warning(
@@ -191,16 +193,16 @@ class TestIMask:
         )
 
     def test_imask_where_ineritance(self, model_data):
-        where_imask = imask_where(model_data, "foo", ["inheritance(bar)"])
+        where_imask = _imask_where(model_data, "foo", ["inheritance(bar)"])
         assert (
             where_imask == [[True, False, False, False], [True, False, False, False]]
         ).all()
 
     @pytest.mark.parametrize("param", ("node_tech", "with_inf", "inexistent"))
     def test_imask_where_param_exists(self, model_data, param):
-        where_imask = imask_where(model_data, "foo", [param])
+        where_imask = _imask_where(model_data, "foo", [param])
         if param in model_data:
-            assert (where_imask == param_exists(model_data, param)).all()
+            assert (where_imask == _param_exists(model_data, param)).all()
         else:
             assert where_imask is False
 
@@ -213,15 +215,15 @@ class TestIMask:
         ),
     )
     def test_imask_where_val_is(self, model_data, val, result):
-        where_imask = imask_where(model_data, "foo", [val])
+        where_imask = _imask_where(model_data, "foo", [val])
         assertion = where_imask == result
         if isinstance(result, list):
             assertion = assertion.all()
         assert assertion
 
     def test_imask_where_not(self, model_data):
-        where_imask = imask_where(model_data, "foo", ["with_inf"])
-        not_where_imask = imask_where(model_data, "foo", ["not with_inf"])
+        where_imask = _imask_where(model_data, "foo", ["with_inf"])
+        not_where_imask = _imask_where(model_data, "foo", ["not with_inf"])
         assert where_imask.equals(~not_where_imask)
 
     @pytest.mark.parametrize(
@@ -240,7 +242,7 @@ class TestIMask:
         ),
     )
     def test_imask_where_array(self, model_data, where_array, results):
-        where_imask = imask_where(model_data, "foo", where_array)
+        where_imask = _imask_where(model_data, "foo", where_array)
         assert (
             where_imask
             == [[results[0], False, False, False], [results[1], False, False, False]]
@@ -266,8 +268,8 @@ class TestIMask:
         self, model_data, where_array, results, initial_operator
     ):
         foreach = ["nodes", "techs", "carriers"]
-        imask = imask_foreach(model_data, foreach)
-        where_imask = imask_where(
+        imask = _imask_foreach(model_data, foreach)
+        where_imask = _imask_where(
             model_data, "foo", where_array, imask, initial_operator
         )
         locs = [{"nodes": "foo", "techs": "foo"}, {"nodes": "bar", "techs": "foo"}]
@@ -283,22 +285,30 @@ class TestIMask:
 
     def test_imask_where_incorrect_where(self, model_data):
         with pytest.raises(ValueError) as excinfo:
-            imask_where(model_data, "foo", ["node_tech", "inheritance(bar)"])
+            _imask_where(model_data, "foo", ["node_tech", "inheritance(bar)"])
         assert check_error_or_warning(excinfo, "'where' array for set `foo` must")
 
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
-    def test_create_imask(self, model_name):
+    def test_create_valid_subset(self, model_name):
         model = getattr(calliope.examples, model_name)()
-        imask_dict = build_imasks(model._model_data, imask_config)
-        for ctype in ["constraints", "expressions"]:
-            for name, imask in imask_dict[ctype].items():
-                if "timesteps" in imask.names:
-                    imask = imask.droplevel("timesteps").unique()
+
+        for object_type in ["constraints", "expressions"]:
+
+            valid_subsets = {
+                name: create_valid_subset(model._model_data, name, config)
+                for name, config in subsets_config[object_type].items()
+            }
+
+            for name, subset in valid_subsets.items():
+                if subset is None:
+                    continue
+                if "timesteps" in subset.names:
+                    subset = subset.droplevel("timesteps").unique()
                 # FIXME: simplified comparison since constraint_sets.yaml isn't completely cleaned
                 # up to match current representation of set elements
-                assert len(constraint_sets[f"{model_name}.{ctype}.{name}"]) == len(
-                    imask
-                )
+                assert len(
+                    constraint_sets[f"{model_name}.{object_type}.{name}"]
+                ) == len(subset)
 
     @pytest.mark.parametrize(
         ("operator", "result"), (("or", True), ("and", False), ("foo", "error"))
@@ -307,8 +317,8 @@ class TestIMask:
         curr = False
         new = True
         if isinstance(result, bool):
-            assert combine_imasks(curr, new, operator) is result
+            assert _combine_imasks(curr, new, operator) is result
         elif result == "error":
             with pytest.raises(ValueError) as excinfo:
-                combine_imasks(curr, new, operator)
+                _combine_imasks(curr, new, operator)
             assert check_error_or_warning(excinfo, "Operator `foo` not recognised")

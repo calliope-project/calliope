@@ -23,8 +23,8 @@ defaults = AttrDict.from_yaml(
     os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
 )
 
-imask_config = AttrDict.from_yaml(
-    os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
+subsets_config = AttrDict.from_yaml(
+    os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
 )
 
 python36_or_higher = pytest.mark.skipif(

@@ -126,9 +126,9 @@ class Model(object):
             name="run_config",
             observer=self._model_data,
         )
-        self.imasks = UpdateObserverDict(
-            initial_dict=model_run.get("imasks").as_dict_flat(),
-            name="imasks",
+        self.subsets = UpdateObserverDict(
+            initial_dict=model_run.get("subsets").as_dict_flat(),
+            name="subsets",
             observer=self._model_data,
         )
 
@@ -162,9 +162,9 @@ class Model(object):
             name="run_config",
             observer=self._model_data,
         )
-        self.imasks = UpdateObserverDict(
-            initial_yaml_string=model_data.attrs.get("imasks", "{}"),
-            name="imasks",
+        self.subsets = UpdateObserverDict(
+            initial_yaml_string=model_data.attrs.get("subsets", "{}"),
+            name="subsets",
             observer=self._model_data,
             flat=True,
         )

@@ -70,8 +70,8 @@ def model_run_from_yaml(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
-    imasks = AttrDict.from_yaml(
-        os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
+    subsets = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
     )
 
     return generate_model_run(
@@ -80,7 +80,7 @@ def model_run_from_yaml(
         debug_comments,
         overrides,
         scenario,
-        imasks,
+        subsets,
     )
 
 
@@ -114,8 +114,8 @@ def model_run_from_dict(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
-    imasks = AttrDict.from_yaml(
-        os.path.join(os.path.dirname(calliope.__file__), "config", "sets.yaml")
+    subsets = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
     )
 
     return generate_model_run(
@@ -124,7 +124,7 @@ def model_run_from_dict(
         debug_comments,
         overrides,
         scenario,
-        imasks,
+        subsets,
     )
 
 
@@ -664,7 +664,12 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
 
 def generate_model_run(
-    config, timeseries_dataframes, debug_comments, applied_overrides, scenario, imasks,
+    config,
+    timeseries_dataframes,
+    debug_comments,
+    applied_overrides,
+    scenario,
+    subsets,
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -695,9 +700,12 @@ def generate_model_run(
     model_run["tech_groups"] = process_tech_groups(config, model_run["techs"])
 
     # 4) Fully populate nodes
-    (model_run["nodes"], debug_nodes, warning_messages, errors,) = nodes.process_nodes(
-        config, model_run["techs"]
-    )
+    (
+        model_run["nodes"],
+        debug_nodes,
+        warning_messages,
+        errors,
+    ) = nodes.process_nodes(config, model_run["techs"])
     debug_comments.set_key("model_run.nodes", debug_nodes)
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
@@ -714,7 +722,7 @@ def generate_model_run(
     model_run["group_constraints"] = config.get("group_constraints", {})
 
     # model_run["sets"] = all_sets
-    model_run["imasks"] = imasks
+    model_run["subsets"] = subsets
     # model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking
@@ -723,6 +731,11 @@ def generate_model_run(
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
-    debug_data = AttrDict({"comments": debug_comments, "config_initial": config,})
+    debug_data = AttrDict(
+        {
+            "comments": debug_comments,
+            "config_initial": config,
+        }
+    )
 
     return model_run, debug_data

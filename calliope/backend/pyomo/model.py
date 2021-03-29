@@ -28,7 +28,7 @@ from calliope.backend.pyomo.util import (
     string_to_datetime,
     datetime_to_string,
 )
-from calliope.backend.imasks import create_imask
+from calliope.backend.subsets import create_valid_subset
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -104,52 +104,64 @@ def build_params(model_data, backend_model):
     )
 
 
-def build_variables(backend_model, model_data, imask_config):
-    for var_name, var_imask in imask_config.items():
-        imask = create_imask(model_data, var_name, var_imask)
-        if imask is None:
+def build_variables(backend_model, model_data, variable_definitions):
+    for var_name, var_config in variable_definitions.items():
+        subset = create_valid_subset(model_data, var_name, var_config)
+        if subset is None:
             continue
-        if "bounds" in var_imask:
-            kwargs = {"bounds": get_capacity_bounds(var_imask.bounds)}
+        if "bounds" in var_config:
+            kwargs = {"bounds": get_capacity_bounds(var_config.bounds)}
         else:
             kwargs = {}
 
         setattr(
             backend_model,
             var_name,
-            po.Var(imask, domain=getattr(po, var_imask.domain), **kwargs),
+            po.Var(subset, domain=getattr(po, var_config.domain), **kwargs),
         )
 
 
-def build_constraints(backend_model, model_data, imask_config):
-    for constraint_name, constraint_imask in imask_config.items():
-        imask = create_imask(model_data, constraint_name, constraint_imask)
-        if imask is None:
+def _load_rule_function(name):
+    try:
+        return getattr(constraints, name)
+    except AttributeError:
+        return None
+
+
+def build_constraints(backend_model, model_data, constraint_definitions):
+    for constraint_name, constraint_config in constraint_definitions.items():
+        subset = create_valid_subset(model_data, constraint_name, constraint_config)
+        if subset is None:
             continue
         setattr(
             backend_model,
             f"{constraint_name}_constraint",
             po.Constraint(
-                imask, rule=getattr(constraints, f"{constraint_name}_constraint_rule"),
+                subset,
+                rule=_load_rule_function(f"{constraint_name}_constraint_rule"),
             ),
         )
 
 
-def build_expressions(backend_model, model_data, imask_config):
+def build_expressions(backend_model, model_data, expression_definitions):
     build_order_dict = {
-        expr: config.get("build_order", 0) for expr, config in imask_config.items()
+        expr: config.get("build_order", 0)
+        for expr, config in expression_definitions.items()
     }
     build_order = sorted(build_order_dict, key=build_order_dict.get)
 
     for expr_name in build_order:
-        imask = create_imask(model_data, expr_name, imask_config[expr_name])
-        if imask is None:
+        subset = create_valid_subset(
+            model_data, expr_name, expression_definitions[expr_name]
+        )
+        if subset is None:
             continue
-        if hasattr(constraints, f"{expr_name}_expression_rule"):
-            kwargs = {"rule": getattr(constraints, f"{expr_name}_expression_rule")}
+        expression_function = _load_rule_function(f"{expr_name}_expression_rule")
+        if expression_function:
+            kwargs = dict(rule=expression_function)
         else:
-            kwargs = {"initialize": 0.0}
-        setattr(backend_model, expr_name, po.Expression(imask, **kwargs))
+            kwargs = dict(initialize=0.0)
+        setattr(backend_model, expr_name, po.Expression(subset, **kwargs))
 
 
 def build_objective(backend_model):
@@ -169,12 +181,12 @@ def generate_model(model_data):
     # remove pandas datetime from xarrays, to reduce memory usage on creating pyomo objects
     model_data = datetime_to_string(backend_model, model_data)
 
-    imask_config = AttrDict.from_yaml_string(model_data.attrs["imasks"])
+    subsets_config = AttrDict.from_yaml_string(model_data.attrs["subsets"])
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
-    build_variables(backend_model, model_data, imask_config["variables"])
-    build_expressions(backend_model, model_data, imask_config["expressions"])
-    build_constraints(backend_model, model_data, imask_config["constraints"])
+    build_variables(backend_model, model_data, subsets_config["variables"])
+    build_expressions(backend_model, model_data, subsets_config["expressions"])
+    build_constraints(backend_model, model_data, subsets_config["constraints"])
     build_objective(backend_model)
     # FIXME: Optional constraints
     # FIXME re-enable loading custom objectives
@@ -254,7 +266,7 @@ def get_result_array(backend_model, model_data):
     the backend (instead of being passed by calliope.Model().inputs) are also
     added to calliope.Model()._model_data in-place.
     """
-    imask_config = AttrDict.from_yaml_string(model_data.attrs["imasks"])
+    subsets_config = AttrDict.from_yaml_string(model_data.attrs["subsets"])
 
     def _get_dim_order(foreach):
         return tuple([i for i in model_data.dims.keys() if i in foreach])
@@ -263,7 +275,7 @@ def get_result_array(backend_model, model_data):
         i.name: get_var(
             backend_model,
             i.name,
-            dims=_get_dim_order(imask_config.variables[i.name].foreach),
+            dims=_get_dim_order(subsets_config.variables[i.name].foreach),
         )
         for i in backend_model.component_objects(ctype=po.Var)
     }
@@ -273,7 +285,7 @@ def get_result_array(backend_model, model_data):
             i.name: get_var(
                 backend_model,
                 i.name,
-                dims=_get_dim_order(imask_config.expressions[i.name].foreach),
+                dims=_get_dim_order(subsets_config.expressions[i.name].foreach),
                 expr=True,
             )
             for i in backend_model.component_objects(ctype=po.Expression)

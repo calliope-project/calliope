@@ -25,7 +25,11 @@ def access_pyomo_model_inputs(backend_model):
     """
     # TODO: update replace with 'removeprefix' once using py 3.9+
     all_params = {
-        i.name.replace("calliope_", ""): get_var(backend_model, i.name, sparse=True,)
+        i.name.replace("calliope_", ""): get_var(
+            backend_model,
+            i.name,
+            sparse=True,
+        )
         for i in backend_model.component_objects(ctype=po.Param)
         if i.is_indexed()
     }
@@ -246,7 +250,7 @@ def add_pyomo_constraint(
     return backend_model
 
 
-def get_all_pyomo_model_attrs(imasks, backend_model):
+def get_all_pyomo_model_attrs(subsets, backend_model):
     """
     Get the name of all sets, parameters, and variables in the generated Pyomo model.
 
@@ -267,8 +271,8 @@ def get_all_pyomo_model_attrs(imasks, backend_model):
     # Indexed objected
     objects = {
         pyomo_obj: {
-            i.name: imasks.get(objname, {})[i.name]["foreach"]
-            if i.name in imasks.get(objname, {})
+            i.name: subsets.get(objname, {})[i.name]["foreach"]
+            if i.name in subsets.get(objname, {})
             else [i.index_set().name]
             for i in backend_model.component_objects(ctype=getattr(po, pyomo_obj))
         }
@@ -285,7 +289,7 @@ class BackendInterfaceMethods:
         self._backend = model._backend_model
         self._model_data = model._model_data
         self.run_config = model.run_config
-        self.imasks = model.imasks
+        self.subsets = model.subsets
 
     def access_model_inputs(self):
         return access_pyomo_model_inputs(self._backend)
@@ -304,7 +308,11 @@ class BackendInterfaceMethods:
 
     def rerun(self, *args, **kwargs):
         return rerun_pyomo_model(
-            self._model_data, self.run_config, self._backend, *args, **kwargs,
+            self._model_data,
+            self.run_config,
+            self._backend,
+            *args,
+            **kwargs,
         )
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
@@ -315,6 +323,6 @@ class BackendInterfaceMethods:
     add_constraint.__doc__ = add_pyomo_constraint.__doc__
 
     def get_all_model_attrs(self, *args, **kwargs):
-        return get_all_pyomo_model_attrs(self.imasks, self._backend, *args, **kwargs)
+        return get_all_pyomo_model_attrs(self.subsets, self._backend, *args, **kwargs)
 
     get_all_model_attrs.__doc__ = get_all_pyomo_model_attrs.__doc__
