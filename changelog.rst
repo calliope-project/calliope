@@ -3,8 +3,22 @@
 Release History
 ===============
 
-0.6.7
------
+0.7.0 (dev)
+-----------
+
+|new| Hard-coded subsetting moved to YAML configuration files (`model_data_lookup.yaml` and `subsets.yaml`) to reduce the need to update code when incorporating additional functionality in future.
+
+|changed| |backwards incompatible| Group constraints are depracated. They will be replaced by `custom constraint` functionality.
+
+|changed| Timestamps are converted to strings when generating sets in Pyomo. This reduces the time and memory footprint of variable/constraint generation.
+
+|changed| |backwards incompatible| model dimensions no longer include subsets. E.g. a user cannot access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
+
+|changed| Costs are now Pyomo expressions rather than decision variables.
+
+|changed| |backwards incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
+
+|changed| |backwards incompatible| Unconcatenate `loc::tech` and `loc::tech::carrier` sets. To not lose performance in the Pyomo backend, tuple subsets equivalent to the concatenated sets are generated when running the model. Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. Instead of e.g. `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]`, a user now calls `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]`. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")`.
 
 |changed| Fix a bug with `horizon` and `window` lengths in `operate` mode.
 
