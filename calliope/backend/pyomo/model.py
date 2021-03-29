@@ -137,8 +137,7 @@ def build_constraints(backend_model, model_data, constraint_definitions):
             backend_model,
             f"{constraint_name}_constraint",
             po.Constraint(
-                subset,
-                rule=_load_rule_function(f"{constraint_name}_constraint_rule"),
+                subset, rule=_load_rule_function(f"{constraint_name}_constraint_rule"),
             ),
         )
 

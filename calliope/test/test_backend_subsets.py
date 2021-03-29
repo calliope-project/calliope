@@ -71,9 +71,7 @@ class TestSubsets:
             observer=model_data,
         )
         UpdateObserverDict(
-            initial_dict={"foz": 0},
-            name="model_config",
-            observer=model_data,
+            initial_dict={"foz": 0}, name="model_config", observer=model_data,
         )
         return model_data
 

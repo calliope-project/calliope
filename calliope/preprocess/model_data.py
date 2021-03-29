@@ -38,6 +38,8 @@ class ModelDataFactory:
         "essentials.carrier",
     ]
 
+    LOOKUP_STR = "[\\w\\-]*"  # all alphanumerics + `_` and `-`
+
     def __init__(self, model_run_dict):
         """
         Take a Calliope model_run and convert it into an xarray Dataset, ready for
@@ -63,12 +65,11 @@ class ModelDataFactory:
         """
         self.node_dict = model_run_dict.nodes.as_dict_flat()
         self.tech_dict = model_run_dict.techs.as_dict_flat()
-
+        self.model_run = model_run_dict
         self.model_data = xr.Dataset(
             coords={"timesteps": model_run_dict.timeseries_data.index}
         )
         self._add_attributes(model_run_dict)
-        self.lookup_str = "[\\w\\-]*"  # all alphanumerics + `_` and `-`
         self.template_config = AttrDict.from_yaml(
             os.path.join(
                 os.path.dirname(calliope.__file__), "config", "model_data_lookup.yaml"
@@ -77,26 +78,38 @@ class ModelDataFactory:
         self._strip_unwanted_keys()
         self._add_node_tech_sets()
 
-    def extract_node_tech_data(self):
+    def __call__(self):
+        self._extract_node_tech_data()
+        self._add_time_dimension()
+        self._clean_model_data()
+
+        return (
+            self.model_data_pre_clustering,
+            self.model_data,
+            self.data_pre_time,
+            self.stripped_keys,
+        )
+
+    def _extract_node_tech_data(self):
         self._add_param_from_template()
         self._clean_unused_techs_nodes_and_carriers()
 
-    def add_time_dimension(self, model_run_dict):
+    def _add_time_dimension(self):
         self.data_pre_time = self.model_data.copy(deep=True)
-        self.model_data = time.add_time_dimension(self.model_data, model_run_dict)
+        self.model_data = time.add_time_dimension(self.model_data, self.model_run)
         self._update_dtypes()
 
-        if model_run_dict.get_key("model.random_seed", None):
-            np.random.seed(seed=model_run_dict.model.random_seed)
+        if self.model_run.get_key("model.random_seed", None):
+            np.random.seed(seed=self.model_run.model.random_seed)
         self.model_data_pre_clustering = self.model_data.copy(deep=True)
-        if model_run_dict.get_key("model.time", None):
+        if self.model_run.get_key("model.time", None):
             self.model_data = time.apply_time_clustering(
-                self.model_data, model_run_dict
+                self.model_data, self.model_run
             )
 
         self.model_data = time.add_max_demand_timesteps(self.model_data)
 
-    def clean_model_data(self):
+    def _clean_model_data(self):
         self.model_data = dataset.reorganise_xarray_dimensions(self.model_data)
         self._add_var_attrs()
         self._update_dtypes()
@@ -193,7 +206,7 @@ class ModelDataFactory:
         )
 
     def _format_lookup(self, string_to_format):
-        return string_to_format.format(self.lookup_str)
+        return string_to_format.format(self.LOOKUP_STR)
 
     def _get_key_matching_nesting(
         self, nesting, key_to_check, start="({0})\\.", end="\\.({0})", **kwargs

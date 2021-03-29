@@ -96,16 +96,19 @@ class Model(object):
         )
 
         model_data_factory = ModelDataFactory(model_run)
-        model_data_factory.extract_node_tech_data()
-        model_data_factory.add_time_dimension(model_run)
-        model_data_factory.clean_model_data()
+        (
+            model_data_pre_clustering,
+            model_data,
+            data_pre_time,
+            stripped_keys,
+        ) = model_data_factory()
 
-        self._model_data_pre_clustering = model_data_factory.model_data_pre_clustering
-        self._model_data = model_data_factory.model_data
+        self._model_data_pre_clustering = model_data_pre_clustering
+        self._model_data = model_data
         if debug:
             self._debug_data = debug_data
-            self._model_data_pre_time = model_data_factory.data_pre_time
-            self._model_data_stripped_keys = model_data_factory.stripped_keys
+            self._model_data_pre_time = data_pre_time
+            self._model_data_stripped_keys = stripped_keys
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,

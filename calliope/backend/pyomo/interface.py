@@ -25,11 +25,7 @@ def access_pyomo_model_inputs(backend_model):
     """
     # TODO: update replace with 'removeprefix' once using py 3.9+
     all_params = {
-        i.name.replace("calliope_", ""): get_var(
-            backend_model,
-            i.name,
-            sparse=True,
-        )
+        i.name.replace("calliope_", ""): get_var(backend_model, i.name, sparse=True,)
         for i in backend_model.component_objects(ctype=po.Param)
         if i.is_indexed()
     }
@@ -308,11 +304,7 @@ class BackendInterfaceMethods:
 
     def rerun(self, *args, **kwargs):
         return rerun_pyomo_model(
-            self._model_data,
-            self.run_config,
-            self._backend,
-            *args,
-            **kwargs,
+            self._model_data, self.run_config, self._backend, *args, **kwargs,
         )
 
     rerun.__doc__ = rerun_pyomo_model.__doc__

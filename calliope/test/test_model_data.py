@@ -34,10 +34,11 @@ class TestModelData:
 
     def test_model_data_init(self, model_data):
         for attr in [
+            "LOOKUP_STR",
+            "UNWANTED_TECH_KEYS",
             "node_dict",
             "tech_dict",
             "model_data",
-            "lookup_str",
             "template_config",
             "link_techs",
         ]:
@@ -354,7 +355,7 @@ class TestModelData:
             ["node_tech", "link_remote_techs", "link_remote_nodes"]
         )
         model_data_init = model_data.model_data.copy()
-        model_data.extract_node_tech_data()
+        model_data._extract_node_tech_data()
         model_data_new = model_data.model_data
         for data_var in ["node_tech", "link_remote_techs", "link_remote_nodes"]:
             assert model_data_init[data_var].equals(model_data_new[data_var])
@@ -368,12 +369,12 @@ class TestModelData:
             if "constraints" in key or "switches" in key:
                 assert key.split(".")[-1] in model_data_new.data_vars.keys()
 
-    def test_add_time_dimension(self, model_data, model_run):
-        model_data.extract_node_tech_data()
+    def test_add_time_dimension(self, model_data):
+        model_data._extract_node_tech_data()
         assert not hasattr(model_data, "data_pre_time")
         assert not hasattr(model_data, "model_data_pre_clustering")
 
-        model_data.add_time_dimension(model_run)
+        model_data._add_time_dimension()
         assert hasattr(model_data, "data_pre_time")
         assert hasattr(model_data, "model_data_pre_clustering")
 
@@ -388,19 +389,19 @@ class TestModelData:
                 .empty
             )
 
-    def test_clean_model_data(self, model_data, model_run):
-        model_data.extract_node_tech_data()
-        model_data.add_time_dimension(model_run)
+    def test_clean_model_data(self, model_data):
+        model_data._extract_node_tech_data()
+        model_data._add_time_dimension()
         for var in model_data.model_data.data_vars.values():
             assert var.attrs == {}
 
-        model_data.clean_model_data()
+        model_data._clean_model_data()
         for var in model_data.model_data.data_vars.values():
             assert var.attrs == {"parameters": 1, "is_result": 0}
 
     @pytest.mark.parametrize("subdict", ["tech", "node"])
     def test_check_data(self, model_data, subdict):
-        model_data.extract_node_tech_data()
+        model_data._extract_node_tech_data()
         setattr(model_data, f"{subdict}_dict", {"foo": 1})
         with pytest.raises(exceptions.ModelError) as errmsg:
             model_data._check_data()
