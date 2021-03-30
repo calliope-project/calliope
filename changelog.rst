@@ -6,19 +6,27 @@ Release History
 0.7.0 (dev)
 -----------
 
-|new| Hard-coded subsetting moved to YAML configuration files (`model_data_lookup.yaml` and `subsets.yaml`) to reduce the need to update code when incorporating additional functionality in future.
+v0.7 includes a major change to how Calliope internally operates. Most of this affects the user only marginally. We group changes into those that are primarily user-facing and relevant for all Calliope users, and those that are primarily internal, and relevant only for Calliope developers.
 
-|changed| |backwards incompatible| Group constraints are depracated. They will be replaced by `custom constraint` functionality.
-
-|changed| Timestamps are converted to strings when generating sets in Pyomo. This reduces the time and memory footprint of variable/constraint generation.
-
-|changed| |backwards incompatible| model dimensions no longer include subsets. E.g. a user cannot access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
-
-|changed| Costs are now Pyomo expressions rather than decision variables.
+User-facing changes
+~~~~~~~~~~~~~~~~~~~
 
 |changed| |backwards incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
 
-|changed| |backwards incompatible| Unconcatenate `loc::tech` and `loc::tech::carrier` sets. To not lose performance in the Pyomo backend, tuple subsets equivalent to the concatenated sets are generated when running the model. Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. Instead of e.g. `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]`, a user now calls `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]`. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")`.
+|changed| |backwards incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
+
+|changed| |backwards incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
+
+|changed| |backwards incompatible| Group constraints have been removed. They will be replaced by `custom constraint` functionality.
+
+Internal changes
+~~~~~~~~~~~~~~~~
+
+|new| Generation of subsets over the model dimensions is now automated and determined by hardcoded YAML configuration files (`model_data_lookup.yaml` and `subsets.yaml`). This reduces the need to update code when incorporating additional functionality in the future.
+
+|changed| Timestamps are converted to strings when generating sets in Pyomo. This reduces the time and memory footprint of variable/constraint generation.
+
+|changed| Costs are now Pyomo expressions rather than decision variables.
 
 |changed| Fix a bug with `horizon` and `window` lengths in `operate` mode.
 
