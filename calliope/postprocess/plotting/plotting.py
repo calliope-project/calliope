@@ -52,7 +52,9 @@ def plot_summary(model, to_file=False, mapbox_access_token=None):
             html_only=True,
         )
     else:
-        transmission = "<br><br><p>No location coordinates defined -<br>not plotting transmission.</p>"
+        transmission = (
+            "<br><br><p>No node coordinates defined -<br>not plotting transmission.</p>"
+        )
 
     template_path = os.path.join(
         os.path.dirname(__file__), "..", "..", "config", "plots_template.html"
@@ -110,7 +112,10 @@ def _plot(
 
     plotly_kwargs = dict(
         show_link=False,
-        config={"displaylogo": False, "modeBarButtonsToRemove": ["sendDataToCloud"],},
+        config={
+            "displaylogo": False,
+            "modeBarButtonsToRemove": ["sendDataToCloud"],
+        },
     )
 
     if type_of_script() == "jupyter":

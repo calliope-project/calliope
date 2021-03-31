@@ -64,6 +64,8 @@ techs:
             storage_cap_max: 35
             energy_cap_per_storage_cap_max: 0.5
             storage_loss: 0.01
+        switches:
+            include_storage: true
 
     test_storage:
         essentials:
@@ -133,7 +135,7 @@ techs:
             energy_cap_max: 5
 
 links:
-    0,1:
+    a,b:
         techs:
             test_transmission_elec:
                 distance: 1

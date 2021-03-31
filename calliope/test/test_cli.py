@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 from click.testing import CliRunner
 
 import calliope

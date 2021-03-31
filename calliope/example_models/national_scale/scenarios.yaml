@@ -17,7 +17,7 @@ overrides:
 
     time_resampling:
         model.name: 'National-scale example model with time resampling'
-        model.subset_time: '2005-01'
+        model.subset_time: ['2005-01', '2005-01']
         # Resample time resolution to 6-hourly
         model.time: {function: resample, function_options: {'resolution': '6H'}}
 
@@ -32,12 +32,10 @@ overrides:
         run.mode: spores
         run.spores_options:
             score_cost_class: 'spores_score'
-            slack_cost_group: 'systemwide_cost_max'
+            slack_cost_class: 'monetary'
             slack: 0.1
             spores_number: 3
         run.objective_options.cost_class: {'monetary': 1, 'spores_score': 0}
-        group_constraints:
-            systemwide_cost_max.cost_max.monetary: .inf
 
         techs.ccgt.costs.spores_score.energy_cap: 0
         techs.ccgt.costs.spores_score.interest_rate: 1
@@ -54,7 +52,7 @@ overrides:
             window: 12
             horizon: 24
         model.subset_time: ['2005-01-01', '2005-01-10']
-        locations:
+        nodes:
             region1.techs.ccgt.constraints.energy_cap_equals: 30000
 
             region2.techs.battery.constraints.energy_cap_equals: 1000
@@ -83,7 +81,7 @@ overrides:
             ensure_feasibility: False
             objective: 'check_feasibility'
         model:
-            subset_time: '2005-01-04'
+            subset_time: ['2005-01-04', '2005-01-04']
 
     reserve_margin:
         model:
@@ -104,10 +102,10 @@ overrides:
         model.subset_time: ['2005-02-01', '2005-02-31']
     run3:
         model.subset_time: ['2005-01-01', '2005-01-31']
-        locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+        nodes.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
     run4:
         subset_time: ['2005-02-01', '2005-02-31']
-        locations.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
+        nodes.region1.techs.ccgt.constraints.energy_cap_max: 0  # Disallow CCGT
 
     ##
     # Overrides to demonstrate group constraints
@@ -128,29 +126,30 @@ overrides:
                     monetary:
                         interest_rate: 0.20
                         energy_cap: 100
-        locations.region1.techs.cold_fusion: null
-        locations.region2.techs.cold_fusion: null
+        nodes.region1.techs.cold_fusion: null
+        nodes.region2.techs.cold_fusion: null
 
-    cold_fusion_prod_share:
-        group_constraints:
-            min_carrier_prod_share_group:
-                techs: ['csp', 'cold_fusion']
-                carrier_prod_share_min:
-                    # At least 85% of power supply must come from CSP and cold fusion together
-                    power: 0.85
+    # TODO: replace with non-group constraint
+    # cold_fusion_prod_share:
+    #     group_constraints:
+    #         min_carrier_prod_share_group:
+    #             techs: ['csp', 'cold_fusion']
+    #             carrier_prod_share_min:
+    #                 # At least 85% of power supply must come from CSP and cold fusion together
+    #                 power: 0.85
 
-    cold_fusion_cap_share:
-        group_constraints:
-            max_cap_share_group:
-                techs: ['csp', 'cold_fusion']
-                # At most 20% of total energy_cap can come from CSP and cold fusion together
-                energy_cap_share_max: 0.20
-        locations:
-            region1:
-                techs:
-                    ccgt:
-                        constraints:
-                            energy_cap_max: 100000  # Increased to keep model feasible
+    # cold_fusion_cap_share:
+    #     group_constraints:
+    #         max_cap_share_group:
+    #             techs: ['csp', 'cold_fusion']
+    #             # At most 20% of total energy_cap can come from CSP and cold fusion together
+    #             energy_cap_share_max: 0.20
+    #     nodes:
+    #         region1:
+    #             techs:
+    #                 ccgt:
+    #                     constraints:
+    #                         energy_cap_max: 100000  # Increased to keep model feasible
 
     minimize_emissions_costs:
         run:

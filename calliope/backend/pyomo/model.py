@@ -4,6 +4,7 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
+from calliope.backend.pyomo.constraints.capacity import get_capacity_bounds
 import logging
 import os
 from contextlib import redirect_stdout, redirect_stderr
@@ -12,16 +13,22 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import pyomo.core as po  # pylint: disable=import-error
-from pyomo.opt import SolverFactory  # pylint: disable=import-error
+import pyomo.core as po
+from pyomo.opt import SolverFactory
 
 # pyomo.environ is needed for pyomo solver plugins
-import pyomo.environ  # pylint: disable=unused-import,import-error
+import pyomo.environ  # noqa: F401
 
 # TempfileManager is required to set log directory
-from pyutilib.services import TempfileManager  # pylint: disable=import-error
+from pyutilib.services import TempfileManager
 
-from calliope.backend.pyomo.util import get_var, get_domain
+from calliope.backend.pyomo.util import (
+    get_var,
+    get_domain,
+    string_to_datetime,
+    datetime_to_string,
+)
+from calliope.backend.subsets import create_valid_subset
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -32,41 +39,18 @@ from calliope.core.attrdict import AttrDict
 logger = logging.getLogger(__name__)
 
 
-def generate_model(model_data):
-    """
-    Generate a Pyomo model.
+def build_sets(model_data, backend_model):
+    for coord_name, coord_vals in model_data.coords.items():
+        setattr(
+            backend_model,
+            coord_name,
+            po.Set(initialize=coord_vals.to_index(), ordered=True),
+        )
 
-    """
-    backend_model = po.ConcreteModel()
 
-    # Sets
-    for coord in list(model_data.coords):
-        set_data = list(model_data.coords[coord].data)
-        # Ensure that time steps are pandas.Timestamp objects
-        if isinstance(set_data[0], np.datetime64):
-            set_data = pd.to_datetime(set_data)
-        setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
-
+def build_params(model_data, backend_model):
     # "Parameters"
-    model_data_dict = {
-        "data": {
-            k: v.to_series().dropna().replace("inf", np.inf).to_dict()
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "dims": {
-            k: v.dims
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "sets": list(model_data.coords),
-        "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
-    }
 
-    # Dims in the dict's keys are ordered as in model_data, which is enforced
-    # in model_data generation such that timesteps are always last and the
-    # remainder of dims are in alphabetic order
-    backend_model.__calliope_model_data = model_data_dict
     backend_model.__calliope_defaults = AttrDict.from_yaml_string(
         model_data.attrs["defaults"]
     )
@@ -74,29 +58,33 @@ def generate_model(model_data):
         model_data.attrs["run_config"]
     )
 
-    for k, v in model_data_dict["data"].items():
-        _kwargs = {
-            "initialize": v,
-            "mutable": True,
-            "within": getattr(po, get_domain(model_data[k])),
-        }
-        if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
-            _kwargs["default"] = backend_model.__calliope_defaults[k]
-        # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
-        # so add those in.
-        if (
-            backend_model.__calliope_run_config["mode"] == "operate"
-            and model_data[k].attrs.get("operate_param") == 1
+    for k, v in model_data.data_vars.items():
+        if v.attrs["is_result"] == 0 or (
+            v.attrs.get("operate_param", 0) == 1
+            and backend_model.__calliope_run_config["mode"] == "operate"
         ):
-            dims = [getattr(backend_model, model_data_dict["dims"][k][0])]
-        else:
-            dims = [getattr(backend_model, i) for i in model_data_dict["dims"][k]]
-        setattr(backend_model, k, po.Param(*dims, **_kwargs))
+            with pd.option_context("mode.use_inf_as_na", True):
+                _kwargs = {
+                    "initialize": v.to_series().dropna().to_dict(),
+                    "mutable": True,
+                    "within": getattr(po, get_domain(v)),
+                }
+            if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
+                _kwargs["default"] = backend_model.__calliope_defaults[k]
+            dims = [getattr(backend_model, i) for i in v.dims]
+            if hasattr(backend_model, k):
+                logger.debug(
+                    f"The parameter {k} is already an attribute of the Pyomo model."
+                    "It will be prepended with `calliope_` for differentiatation."
+                )
+                k = f"calliope_{k}"
+            setattr(backend_model, k, po.Param(*dims, **_kwargs))
 
     for option_name, option_val in backend_model.__calliope_run_config[
         "objective_options"
     ].items():
         if option_name == "cost_class":
+            # TODO: shouldn't require filtering out unused costs (this should be caught by typedconfig?)
             objective_cost_class = {
                 k: v for k, v in option_val.items() if k in backend_model.costs
             }
@@ -109,64 +97,102 @@ def generate_model(model_data):
             )
         else:
             setattr(backend_model, "objective_" + option_name, option_val)
-
-    # Variables
-    load_function("calliope.backend.pyomo.variables.initialize_decision_variables")(
-        backend_model
+    backend_model.bigM = po.Param(
+        initialize=backend_model.__calliope_run_config.get("bigM", 1e10),
+        mutable=True,
+        within=po.NonNegativeReals,
     )
 
-    # Constraints
-    constraints_to_add = [
-        i.split(".py")[0]
-        for i in os.listdir(constraints.__path__[0])
-        if not i.startswith("_") and not i.startswith(".")
-    ]
 
-    # The list is sorted to ensure that some constraints are added after pyomo
-    # expressions have been created in other constraint files.
-    # Ordering is given by the number assigned to the variable ORDER within each
-    # file (higher number = added later).
+def build_variables(backend_model, model_data, variable_definitions):
+    for var_name, var_config in variable_definitions.items():
+        subset = create_valid_subset(model_data, var_name, var_config)
+        if subset is None:
+            continue
+        if "bounds" in var_config:
+            kwargs = {"bounds": get_capacity_bounds(var_config.bounds)}
+        else:
+            kwargs = {}
+
+        setattr(
+            backend_model,
+            var_name,
+            po.Var(subset, domain=getattr(po, var_config.domain), **kwargs),
+        )
+
+
+def _load_rule_function(name):
     try:
-        constraints_to_add.sort(
-            key=lambda x: load_function(
-                "calliope.backend.pyomo.constraints." + x + ".ORDER"
-            )
-        )
-    except AttributeError as e:
-        raise AttributeError(
-            "{}. This attribute must be set to an integer value based "
-            "on the order in which the constraints in the file {}.py should be "
-            "loaded relative to constraints in other constraint files. If order "
-            "does not matter, set ORDER to a value of 10.".format(
-                e.args[0], e.args[0].split(".")[-1].split("'")[0]
-            )
-        )
+        return getattr(constraints, name)
+    except AttributeError:
+        return None
 
-    logger.info(
-        "constraints are loaded in the following order: {}".format(constraints_to_add)
-    )
 
-    for c in constraints_to_add:
-        load_function("calliope.backend.pyomo.constraints." + c + ".load_constraints")(
-            backend_model
+def build_constraints(backend_model, model_data, constraint_definitions):
+    for constraint_name, constraint_config in constraint_definitions.items():
+        subset = create_valid_subset(model_data, constraint_name, constraint_config)
+        if subset is None:
+            continue
+        setattr(
+            backend_model,
+            f"{constraint_name}_constraint",
+            po.Constraint(
+                subset,
+                rule=_load_rule_function(f"{constraint_name}_constraint_rule"),
+            ),
         )
 
-    # FIXME: Optional constraints
-    # optional_constraints = model_data.attrs['constraints']
-    # if optional_constraints:
-    #     for c in optional_constraints:
-    #         self.add_constraint(load_function(c))
 
-    # Objective function
-    # FIXME re-enable loading custom objectives
+def build_expressions(backend_model, model_data, expression_definitions):
+    build_order_dict = {
+        expr: config.get("build_order", 0)
+        for expr, config in expression_definitions.items()
+    }
+    build_order = sorted(build_order_dict, key=build_order_dict.get)
 
-    # fetch objective function by name, pass through objective options
-    # if they are present
+    for expr_name in build_order:
+        subset = create_valid_subset(
+            model_data, expr_name, expression_definitions[expr_name]
+        )
+        if subset is None:
+            continue
+        expression_function = _load_rule_function(f"{expr_name}_expression_rule")
+        if expression_function:
+            kwargs = dict(rule=expression_function)
+        else:
+            kwargs = dict(initialize=0.0)
+        setattr(backend_model, expr_name, po.Expression(subset, **kwargs))
+
+
+def build_objective(backend_model):
     objective_function = (
         "calliope.backend.pyomo.objective."
         + backend_model.__calliope_run_config["objective"]
     )
     load_function(objective_function)(backend_model)
+
+
+def generate_model(model_data):
+    """
+    Generate a Pyomo model.
+
+    """
+    backend_model = po.ConcreteModel()
+    # remove pandas datetime from xarrays, to reduce memory usage on creating pyomo objects
+    model_data = datetime_to_string(backend_model, model_data)
+
+    subsets_config = AttrDict.from_yaml_string(model_data.attrs["subsets"])
+    build_sets(model_data, backend_model)
+    build_params(model_data, backend_model)
+    build_variables(backend_model, model_data, subsets_config["variables"])
+    build_expressions(backend_model, model_data, subsets_config["expressions"])
+    build_constraints(backend_model, model_data, subsets_config["constraints"])
+    build_objective(backend_model)
+    # FIXME: Optional constraints
+    # FIXME re-enable loading custom objectives
+
+    # set datetime data back to datetime dtype
+    model_data = string_to_datetime(backend_model, model_data)
 
     return backend_model
 
@@ -240,19 +266,39 @@ def get_result_array(backend_model, model_data):
     the backend (instead of being passed by calliope.Model().inputs) are also
     added to calliope.Model()._model_data in-place.
     """
+    subsets_config = AttrDict.from_yaml_string(model_data.attrs["subsets"])
+
+    def _get_dim_order(foreach):
+        return tuple([i for i in model_data.dims.keys() if i in foreach])
+
     all_variables = {
-        i.name: get_var(backend_model, i.name)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.Var)
+        i.name: get_var(
+            backend_model,
+            i.name,
+            dims=_get_dim_order(subsets_config.variables[i.name].foreach),
+        )
+        for i in backend_model.component_objects(ctype=po.Var)
     }
+    # Add in expressions, which are combinations of variables (e.g. costs)
+    all_variables.update(
+        {
+            i.name: get_var(
+                backend_model,
+                i.name,
+                dims=_get_dim_order(subsets_config.expressions[i.name].foreach),
+                expr=True,
+            )
+            for i in backend_model.component_objects(ctype=po.Expression)
+        }
+    )
 
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
-        i.name: get_var(backend_model, i.name)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.param.IndexedParam)
-        and i.name not in model_data.data_vars.keys()
+        i.name: get_var(backend_model, i.name, expr=True)
+        for i in backend_model.component_objects(ctype=po.Param)
+        if i.name not in model_data.data_vars.keys()
         and "objective_" not in i.name
+        and isinstance(i, po.base.param.IndexedParam)
     }
 
     results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
@@ -262,5 +308,6 @@ def get_result_array(backend_model, model_data):
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
+    results = string_to_datetime(backend_model, results)
 
     return results

@@ -70,7 +70,7 @@ def _get_relevant_vars(dataset, array):
 
 
 def _get_var_data(
-    cap, model, dataset, visible, subset, sum_dims, squeeze, locations, orientation
+    cap, model, dataset, visible, subset, sum_dims, squeeze, nodes, orientation
 ):
     if "systemwide" in cap:
         array_cap = subset_sum_squeeze(dataset[cap], subset)
@@ -85,7 +85,7 @@ def _get_var_data(
             array_cap = array_cap.sortby("carriers")
 
     else:
-        array_cap = model.get_formatted_array(cap).reindex(locs=locations)
+        array_cap = model.get_formatted_array(cap).reindex(nodes=nodes)
         array_cap = subset_sum_squeeze(array_cap, subset, sum_dims, squeeze)
 
     if len(array_cap.dims) > 2:
@@ -123,10 +123,10 @@ def _get_var_data(
             if "systemwide" in cap:
                 y = natsorted(array_cap.carriers.values)
             else:
-                if "locs" in array_cap.dims:
-                    y = natsorted(array_cap.locs.values)
-                else:  # Single location
-                    y = [array_cap.locs.values]
+                if "nodes" in array_cap.dims:
+                    y = natsorted(array_cap.nodes.values)
+                else:  # Single node
+                    y = [array_cap.nodes.values]
 
             if orientation == "v":
                 x, y = y, x  # Flip axes
@@ -154,7 +154,7 @@ def _get_var_data(
     return data
 
 
-def _get_var_layout(cap, dataset, location_axis, value_axis):
+def _get_var_layout(cap, dataset, node_axis, value_axis):
     args = {}
     if "area" in cap:
         value_axis_title = "Installed area"
@@ -166,7 +166,7 @@ def _get_var_layout(cap, dataset, location_axis, value_axis):
         value_axis_title = "Installed energy capacity"
     elif "systemwide" in cap:
         value_axis_title = cap.replace("_", " ").capitalize()
-        args.update({location_axis: {"title": "Carrier"}})
+        args.update({node_axis: {"title": "Carrier"}})
     else:
         value_axis_title = "Installed capacity"
 
@@ -180,7 +180,7 @@ def _get_var_layout(cap, dataset, location_axis, value_axis):
         title = value_axis_title
 
     if "systemwide" not in cap:
-        args.update({location_axis: {"title": "Location"}})
+        args.update({node_axis: {"title": "node"}})
 
     # Grouped, not stacked, barcharts for the systemwide variables
     if "systemwide" in cap:
@@ -211,7 +211,7 @@ def plot_capacity(
         'h' for horizontal or 'v' for vertical barchart
     subset : dict, optional
         Dictionary by which data is selected (using xarray indexing `loc[]`).
-        Keys any of ['timeseries', 'locs', 'techs', 'carriers', 'costs']).
+        Keys any of ['timeseries', 'nodes', 'techs', 'carriers', 'costs']).
     sum_dims : str, optional
         List of dimension names to sum plot variable over.
     squeeze : bool, optional
@@ -219,22 +219,22 @@ def plot_capacity(
 
     """
     dataset = model._model_data.copy()
-    locations = natsorted(list(dataset.locs.values))
+    nodes = natsorted(list(dataset.nodes.values))
 
     if orient in ["horizontal", "h"]:
         orientation = "h"
-        location_axis = "yaxis"
+        node_axis = "yaxis"
         value_axis = "xaxis"
     elif orient in ["vertical", "v"]:
         orientation = "v"
-        location_axis = "xaxis"
+        node_axis = "xaxis"
         value_axis = "yaxis"
     else:
         raise ValueError("Orient must be `v`/`vertical` or `h`/`horizontal`")
 
     layout = {
-        location_axis: dict(
-            title="Location",
+        node_axis: dict(
+            title="node",
             showticklabels=True,  # FIXME: Ensure labels do not get hidden if little vertical space
         ),
         "legend": (dict(traceorder="reversed")),
@@ -254,9 +254,9 @@ def plot_capacity(
         subset,
         sum_dims,
         squeeze,
-        get_var_data_kwargs={"locations": locations, "orientation": orientation},
+        get_var_data_kwargs={"nodes": nodes, "orientation": orientation},
         get_var_layout_kwargs={
-            "location_axis": location_axis,
+            "node_axis": node_axis,
             "value_axis": value_axis,
         },
     )

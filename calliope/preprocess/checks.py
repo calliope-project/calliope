@@ -11,6 +11,8 @@ Checks for model consistency and possible errors during preprocessing.
 
 import os
 import logging
+import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -119,25 +121,35 @@ def check_initial(config_model):
         if k not in [
             "model",
             "run",
-            "locations",
+            "nodes",
+            "locations",  # TODO: remove in v0.7.1
             "tech_groups",
             "techs",
             "links",
             "overrides",
             "scenarios",
             "config_path",
-            "group_constraints",
         ]:
             model_warnings.append(
                 "Unrecognised top-level configuration item: {}".format(k)
             )
 
     # Check that all required top-level keys are specified
-    for k in ["model", "run", "locations", "techs"]:
+    for k in ["model", "run", "nodes", "techs"]:
         if k not in config_model.keys():
-            errors.append(
-                "Model is missing required top-level configuration item: {}".format(k)
-            )
+            if k == "nodes" and "locations" in config_model.keys():
+                # TODO: remove in v0.7.1
+                warnings.warn(
+                    "`locations` has been renamed to `nodes` and will stop working "
+                    "in v0.7.1. Please update your model configuration accordingly.",
+                    DeprecationWarning,
+                )
+            else:
+                errors.append(
+                    "Model is missing required top-level configuration item: {}".format(
+                        k
+                    )
+                )
 
     # Check run configuration
     # Exclude solver_options and objective_options.cost_class from checks,
@@ -175,15 +187,6 @@ def check_initial(config_model):
         _spores_cost_class = config_model.run.spores_options.get("score_cost_class", {})
         if not isinstance(_spores_cost_class, str):
             errors.append("`run.spores_options.score_cost_class` must be a string")
-        # Check that slack_cost_group is one of the defined group contraints
-        if (
-            config_model.run.spores_options.slack_cost_group
-            not in config_model.get("group_constraints", {}).keys()
-        ):
-            errors.append(
-                "`run.spores_options.slack_cost_group` must correspond to "
-                "one of the group constraints defined in the model"
-            )
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
     # are allowed as carrier tiers
@@ -196,17 +199,6 @@ def check_initial(config_model):
                 "'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3'] "
                 "is valid.".format(key)
             )
-
-    # Warn if any unknown group constraints are defined
-    permitted_group_constraints = DEFAULTS.group_constraints.default_group.keys()
-
-    for group in config_model.get("group_constraints", {}).keys():
-        for key in config_model.group_constraints[group].keys():
-            if key not in permitted_group_constraints:
-                model_warnings.append(
-                    "Unrecognised group constraint `{}` in group `{}` "
-                    "will be ignored - possibly a misspelling?".format(key, group)
-                )
 
     # No techs may have the same identifier as a tech_group
     name_overlap = set(config_model.tech_groups.keys()) & set(config_model.techs.keys())
@@ -259,14 +251,14 @@ def check_initial(config_model):
                 "be defined (tech: {})".format(t_name)
             )
 
-    # Check whether any unrecognised mid-level keys are defined in techs, locations, or links
-    for k, v in config_model.get("locations", {}).items():
+    # Check whether any unrecognised mid-level keys are defined in techs, nodes, or links
+    for k, v in config_model.get("nodes", {}).items():
         unrecognised_keys = [
-            i for i in v.keys() if i not in DEFAULTS.locations.default_location.keys()
+            i for i in v.keys() if i not in DEFAULTS.nodes.default_node.keys()
         ]
         if len(unrecognised_keys) > 0:
             errors.append(
-                "Location `{}` contains unrecognised keys {}. "
+                "Node `{}` contains unrecognised keys {}. "
                 "These could be mispellings or a technology not defined "
                 "under the `techs` key.".format(k, unrecognised_keys)
             )
@@ -280,13 +272,13 @@ def check_initial(config_model):
             ]
             if len(unrecognised_keys) > 0:
                 errors.append(
-                    "Technology `{}` in location `{}` contains unrecognised keys {}; "
+                    "Technology `{}` in node `{}` contains unrecognised keys {}; "
                     "these are most likely mispellings".format(
                         loc_tech_key, k, unrecognised_keys
                     )
                 )
 
-    default_link = DEFAULTS.links["default_location_from,default_location_to"]
+    default_link = DEFAULTS.links["default_node_from,default_node_to"]
     for k, v in config_model.get("links", {}).items():
         unrecognised_keys = [i for i in v.keys() if i not in default_link.keys()]
         if len(unrecognised_keys) > 0:
@@ -406,13 +398,13 @@ def _check_tech_final(
     model_run, tech_id, tech_config, loc_id, model_warnings, errors, comments
 ):
     """
-    Checks individual tech/tech groups at specific locations.
+    Checks individual tech/tech groups at specific nodes.
     NOTE: Updates `model_warnings` and `errors` lists in-place.
     """
     if tech_id not in model_run.techs:
         model_warnings.append(
             "Tech {} was removed by setting ``exists: False`` - not checking "
-            "the consistency of its constraints at location {}.".format(tech_id, loc_id)
+            "the consistency of its constraints at node {}.".format(tech_id, loc_id)
         )
         return model_warnings, errors
 
@@ -423,10 +415,10 @@ def _check_tech_final(
     # Error if required constraints are not defined
     for r in required:
         # If it's a string, it must be defined
-        single_ok = isinstance(r, str) and r in tech_config.constraints
+        single_ok = isinstance(r, str) and r in tech_config.get("constraints", {})
         # If it's a list of strings, one of them must be defined
         multiple_ok = isinstance(r, list) and any(
-            [i in tech_config.constraints for i in r]
+            [i in tech_config.get("constraints", {}) for i in r]
         )
         if not single_ok and not multiple_ok:
             errors.append(
@@ -440,7 +432,7 @@ def _check_tech_final(
     defined_carriers = get_all_carriers(model_run.techs[tech_id].essentials)
     carriers_in_ratios = [
         i.split(".")[-1]
-        for i in tech_config.constraints.get_key("carrier_ratios", AttrDict())
+        for i in tech_config.get_key("constraints.carrier_ratios", AttrDict())
         .as_dict_flat()
         .keys()
     ]
@@ -451,26 +443,10 @@ def _check_tech_final(
                 "configure `{c}` as a carrier.".format(t=tech_id, c=carrier)
             )
 
-    # If the technology involves storage, warn when energy_cap and storage_cap aren't connected
-    energy_cap_per_storage_cap_params = [
-        "charge_rate",
-        "energy_cap_per_storage_cap_min",
-        "energy_cap_per_storage_cap_max",
-        "energy_cap_per_storage_cap_equals",
-    ]
-    if loc_id + "::" + tech_id in model_run.sets.loc_techs_store and not any(
-        i in tech_config.constraints.keys() for i in energy_cap_per_storage_cap_params
-    ):
-        logger.info(
-            "`{}` at `{}` has no constraint to explicitly connect `energy_cap` to "
-            "`storage_cap`, consider defining a `energy_cap_per_storage_cap_min/max/equals` "
-            "constraint".format(tech_id, loc_id)
-        )
-
     # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
     if (
-        any(["units_" in k for k in tech_config.constraints.keys()])
-        and "energy_cap_per_unit" not in tech_config.constraints.keys()
+        any(["units_" in k for k in tech_config.get("constraints", {}).keys()])
+        and "energy_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
             "`{}` at `{}` fails to define energy_cap_per_unit when specifying "
@@ -479,29 +455,18 @@ def _check_tech_final(
 
     # If a technology is defined by units & is a storage tech, it must define storage_cap_per_unit
     if (
-        any(["units_" in k for k in tech_config.constraints.keys()])
+        any(["units_" in k for k in tech_config.get("constraints", {}).keys()])
         and model_run.techs[tech_id].essentials.parent in ["storage", "supply_plus"]
-        and any(["storage" in k for k in tech_config.constraints.keys()])
-        and "storage_cap_per_unit" not in tech_config.constraints.keys()
+        and any(["storage" in k for k in tech_config.get("constraints", {}).keys()])
+        and "storage_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
             "`{}` at `{}` fails to define storage_cap_per_unit when specifying "
             "technology in units_max/min/equals".format(tech_id, loc_id, required)
         )
 
-    # If a technology defines force_resource but is not in loc_techs_finite_resource
-    if (
-        "force_resource" in tech_config.constraints.keys()
-        and loc_id + "::" + tech_id not in model_run.sets.loc_techs_finite_resource
-    ):
-
-        model_warnings.append(
-            "`{}` at `{}` defines force_resource but not a finite resource, so "
-            "force_resource will not be applied".format(tech_id, loc_id)
-        )
-
     # Gather remaining unallowed constraints
-    remaining = set(tech_config.constraints) - set(allowed)
+    remaining = set(tech_config.get("constraints", {})) - set(allowed)
 
     # Error if something is defined that's not allowed, but is in defaults
     # Warn if something is defined that's not allowed, but is not in defaults
@@ -519,7 +484,7 @@ def _check_tech_final(
             )
 
     # Error if an `export` statement does not match the given carrier_outs
-    if "export_carrier" in tech_config.constraints:
+    if "export_carrier" in tech_config.get("constraints", {}):
         essentials = model_run.techs[tech_id].essentials
         export = tech_config.constraints.export_carrier
         if export and export not in [
@@ -541,7 +506,7 @@ def _check_tech_final(
                 )
 
     # Error if non-allowed `resource_unit` is defined
-    if tech_config.constraints.get("resource_unit", "energy") not in [
+    if tech_config.switches.get("resource_unit", "energy") not in [
         "energy",
         "energy_per_cap",
         "energy_per_area",
@@ -549,7 +514,7 @@ def _check_tech_final(
         errors.append(
             "`{}` is an unknown resource unit for `{}` at `{}`. "
             "Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed.".format(
-                tech_config.constraints.resource_unit, tech_id, loc_id
+                tech_config.switches.resource_unit, tech_id, loc_id
             )
         )
 
@@ -575,7 +540,7 @@ def check_final(model_run):
     comments = AttrDict()
 
     # Go through all loc-tech combinations and check validity
-    for loc_id, loc_config in model_run.locations.items():
+    for loc_id, loc_config in model_run.nodes.items():
         if "techs" in loc_config:
             for tech_id, tech_config in loc_config.techs.items():
                 _check_tech_final(
@@ -601,45 +566,44 @@ def check_final(model_run):
                         comments,
                     )
 
-    # Either all locations or no locations must have coordinates
-    all_locs = list(model_run.locations.keys())
-    locs_with_coords = [
-        k for k in model_run.locations.keys() if "coordinates" in model_run.locations[k]
+    # Either all nodes or no nodes must have coordinates
+    all_nodes = list(model_run.nodes.keys())
+    nodes_with_coords = [
+        k for k in model_run.nodes.keys() if "coordinates" in model_run.nodes[k]
     ]
-    if len(locs_with_coords) != 0 and len(all_locs) != len(locs_with_coords):
+    if len(nodes_with_coords) != 0 and len(all_nodes) != len(nodes_with_coords):
         errors.append(
-            "Either all or no locations must have `coordinates` defined. "
-            "Locations defined: {} - Locations with coordinates: {}".format(
-                all_locs, locs_with_coords
+            "Either all or no nodes must have `coordinates` defined. "
+            "nodes defined: {} - nodes with coordinates: {}".format(
+                all_nodes, nodes_with_coords
             )
         )
 
-    # If locations have coordinates, they must all be either lat/lon or x/y
-    elif len(locs_with_coords) != 0:
-        first_loc = list(model_run.locations.keys())[0]
+    # If nodes have coordinates, they must all be either lat/lon or x/y
+    elif len(nodes_with_coords) != 0:
+        first_loc = list(model_run.nodes.keys())[0]
         try:
-            coord_keys = sorted(list(model_run.locations[first_loc].coordinates.keys()))
+            coord_keys = sorted(list(model_run.nodes[first_loc].coordinates.keys()))
             if coord_keys != ["lat", "lon"] and coord_keys != ["x", "y"]:
                 errors.append(
-                    "Unidentified coordinate system. All locations must either"
+                    "Unidentified coordinate system. All nodes must either"
                     "use the format {lat: N, lon: M} or {x: N, y: M}."
                 )
         except AttributeError:
             errors.append(
                 "Coordinates must be given in the format {lat: N, lon: M} or "
-                "{x: N, y: M}, not " + str(model_run.locations[first_loc].coordinates)
+                "{x: N, y: M}, not " + str(model_run.nodes[first_loc].coordinates)
             )
 
-        for loc_id, loc_config in model_run.locations.items():
+        for _loc_id, loc_config in model_run.nodes.items():
             try:
                 if sorted(list(loc_config.coordinates.keys())) != coord_keys:
-                    errors.append("All locations must use the same coordinate format.")
+                    errors.append("All nodes must use the same coordinate format.")
                     break
             except AttributeError:
                 errors.append(
                     "Coordinates must be given in the format {lat: N, lon: M} or "
-                    "{x: N, y: M}, not "
-                    + str(model_run.locations[first_loc].coordinates)
+                    "{x: N, y: M}, not " + str(model_run.nodes[first_loc].coordinates)
                 )
                 break
 
@@ -649,120 +613,6 @@ def check_final(model_run):
             errors.append(
                 "Time series `{}` contains non-unique timestamp values.".format(k)
             )
-
-    # Warn if loc/tech is defined in group constraint that doesn't exist in the model
-    for i in ["locs", "techs"]:
-        config_i = "locations" if i == "locs" else i
-        _missing = set()
-        for group, group_vals in model_run.get("group_constraints", {}).items():
-            if i in group_vals.keys() and set(group_vals[i]).difference(
-                model_run[config_i].keys()
-            ):
-                _missing.update(
-                    set(group_vals[i]).difference(model_run[config_i].keys())
-                )
-                model_run["group_constraints"][group][i] = list(
-                    set(group_vals[i]).intersection(model_run[config_i].keys())
-                )
-                if model_run["group_constraints"][group][i] == []:
-                    model_warnings.append(
-                        "Constraint group `{}` will be completely ignored since "
-                        "none of the defined {} are valid for this model.".format(
-                            group, i
-                        )
-                    )
-                    model_run["group_constraints"][group]["exists"] = False
-        if _missing:
-            model_warnings.append(
-                "Possible misspelling in group constraints: {0} {1} given in "
-                "group constraints, but not defined as {0} in the model. They "
-                "will be ignored in the optimisation run".format(i, _missing)
-            )
-
-    # Warn if a group constraint will ignore tech(s)
-    group_constraints = {
-        name: data
-        for name, data in model_run["group_constraints"].items()
-        if data.get("exists", True)
-    }
-    for group_constraint_name, group_constraint in group_constraints.items():
-        requested_techs = [i for i in group_constraint.get("techs", [])]
-        requested_locs = group_constraint.get("locs", model_run.sets.locs)
-
-        allowed_tech_groups = [
-            [
-                k
-                for k, v in DEFAULTS.tech_groups.items()
-                if i in v["allowed_group_constraints"]
-            ]
-            for i in group_constraint.keys()
-            if i not in ["techs", "locs", "exists"]
-        ]
-        unallowed_tech_groups = set(
-            [item for sublist in allowed_tech_groups for item in sublist]
-        ).symmetric_difference(DEFAULTS.tech_groups.keys())
-
-        stripped_allowed_tech_groups = set(allowed_tech_groups[0]).intersection(
-            *allowed_tech_groups
-        )
-        group_loc_techs = model_run.constraint_sets[
-            "group_constraint_loc_techs_{}".format(group_constraint_name)
-        ]
-        dropped_tech_groups = (
-            set([item for sublist in allowed_tech_groups for item in sublist])
-            - stripped_allowed_tech_groups
-        )
-
-        if not group_loc_techs:
-            model_warnings.append(
-                "Group constraint `{}` cannot be applied as there are no valid loc_tech "
-                "combinations available.".format(group_constraint_name)
-            )
-            continue
-
-        if not requested_techs:
-            model_warnings.append(
-                "All technologies were requested for inclusion in group constraint "
-                "`{}`, but those from tech group(s) `{}` have been ignored as one "
-                "or more of the constraints cannot be applied to technologies "
-                "in these groups".format(
-                    group_constraint_name,
-                    sorted(dropped_tech_groups | unallowed_tech_groups),
-                )
-            )
-        else:
-            trans_techs = set(requested_techs).intersection(
-                model_run.sets["techs_transmission_names"]
-            )
-            for i in trans_techs:
-                requested_techs += [i + ":" + j for j in requested_locs]
-                requested_techs.remove(i)
-            group_techs = set(i.split("::")[1] for i in group_loc_techs)
-            dropped_techs = set(requested_techs).difference(group_techs)
-            if dropped_techs:
-                _mismatch = [
-                    group_constraint_name,
-                    dropped_techs,
-                    unallowed_tech_groups,
-                    dropped_tech_groups,
-                ]
-                model_warnings.append(
-                    "The following requested techs have been removed in group constraint "
-                    "`{}`: {}. This has been caused by no constraints allowing "
-                    "techs from tech group(s) {} and some constraints not "
-                    "allowing techs from tech group(s) {}.".format(*_mismatch)
-                )
-
-    # Warn if objective cost class is not defined elsewhere in the model
-    objective_cost_class = set(model_run.run.objective_options.cost_class.keys())
-    cost_classes = model_run.sets.costs
-    cost_classes_mismatch = objective_cost_class.difference(cost_classes)
-    if cost_classes_mismatch:
-        model_warnings.append(
-            "Cost classes `{}` are defined in the objective options but not "
-            "defined elsewhere in the model. They will be ignored in the "
-            "objective function.".format(cost_classes_mismatch)
-        )
 
     # FIXME:
     # make sure `comments` is at the the base level:
@@ -790,77 +640,49 @@ def check_model_data(model_data):
     comments = AttrDict()
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
-    if "force_resource" in model_data.data_vars:
-        relevant_loc_techs = [
-            i.loc_techs_finite_resource.item()
-            for i in model_data.force_resource
-            if i.item() is True
-        ]
-        forced_resource = model_data.resource.loc[
-            dict(loc_techs_finite_resource=relevant_loc_techs)
-        ]
-        conflict = forced_resource.where(forced_resource == np.inf).to_pandas().dropna()
-        if not conflict.empty:
-            errors.append(
-                "loc_tech(s) {} cannot have `force_resource` set as infinite "
-                "resource values are given".format(", ".join(conflict.index))
-            )
+    if (
+        (
+            model_data.get("force_resource", False)
+            * np.isinf(model_data.resource).max("timesteps")
+        )
+        .fillna(False)
+        .any()
+    ):
+        errors.append(
+            "Cannot have `force_resource` = True if setting infinite resource values"
+        )
 
     # Ensure that if a tech has negative costs, there is a max cap defined
     # FIXME: doesn't consider capacity being set by a linked constraint e.g.
     # `resource_cap_per_energy_cap`.
-    relevant_caps = [
-        i
-        for i in ["energy_cap", "storage_cap", "resource_cap", "resource_area"]
-        if "cost_" + i in model_data.data_vars.keys()
-    ]
+    relevant_caps = set(
+        [re.search(r"cost_(\w+_cap)", i) for i in model_data.data_vars.keys()]
+    ).difference([None])
     for cap in relevant_caps:
-        relevant_loc_techs = (
-            model_data["cost_" + cap]
-            .where(model_data["cost_" + cap] < 0, drop=True)
-            .to_pandas()
-        )
-        cap_max = cap + "_max"
-        cap_equals = cap + "_equals"
-        for loc_tech in relevant_loc_techs.columns:
-            try:
-                cap_val = model_data[cap_max][loc_tech].item()
-            except KeyError:
-                try:
-                    cap_val = model_data[cap_equals][loc_tech].item()
-                except KeyError:
-                    cap_val = np.nan
-            if np.isinf(cap_val) or np.isnan(cap_val):
-                errors.append(
-                    "loc_tech {} cannot have a negative cost_{} as the "
-                    "corresponding capacity constraint is not set".format(loc_tech, cap)
-                )
-
-    for loc_tech in set(model_data.loc_techs_demand.values).intersection(
-        model_data.loc_techs_finite_resource.values
-    ):
-        if any(model_data.resource.loc[loc_tech].values > 0):
+        if (
+            (model_data[cap.group(0)] < 0)
+            & pd.isnull(model_data.get(f"{cap.group(1)}_max", np.nan))
+            & pd.isnull(model_data.get(f"{cap.group(1)}_equals", np.nan))
+        ).any():
             errors.append(
-                "Positive resource given for demand loc_tech {}. All demands "
-                "must have negative resource".format(loc_tech)
+                f"Cannot have a negative {cap.group(0)} as there is an unset "
+                "corresponding capacity constraint"
             )
 
-    # Delete all empty dimensions & the variables associated with them
-    for dim_name, dim_length in model_data.dims.items():
-        if dim_length == 0:
-            if dim_name in model_data.coords.keys():
-                del model_data[dim_name]
-            associated_vars = [
-                var
-                for var, data in model_data.data_vars.items()
-                if dim_name in data.dims
-            ]
-            model_data = model_data.drop(associated_vars)
-            model_warnings.append(
-                "dimension {} and associated variables {} were empty, so have "
-                "been deleted".format(dim_name, ", ".join(associated_vars))
-            )
-
+    if (model_data.inheritance.str.endswith("demand") * model_data.resource).max() > 0:
+        relevant_node_techs = (
+            (model_data.inheritance.str.endswith("demand") * model_data.resource)
+            .max("timesteps")
+            .where(lambda x: x > 0)
+            .to_series()
+            .dropna()
+        )
+        errors.append(
+            f"Positive resource given for demands {relevant_node_techs.index}. "
+            "All demands must have negative resource"
+        )
+    # TODO: fix operate mode by implementing windowsteps, etc., which should make this
+    # issue of resolution changes redundant
     # Check if we're allowed to use operate mode
     if "allow_operate_mode" not in model_data.attrs.keys():
         daily_timesteps = [
@@ -875,61 +697,5 @@ def check_model_data(model_data):
             )
         else:
             model_data.attrs["allow_operate_mode"] = 1
-
-    # Check for any milp constraints, and warn that the problem contains binary /
-    # integer decision variables
-    if any("_milp_constraint" in i for i in model_data.dims):
-        model_warnings.append(
-            "Integer and / or binary decision variables are included in this model. "
-            "This may adversely affect solution time, particularly if you are "
-            "using a non-commercial solver. To improve solution time, consider "
-            "changing MILP related solver options (e.g. `mipgap`) or removing "
-            "MILP constraints."
-        )
-
-    # Check for storage_initial being a fractional value
-
-    if hasattr(model_data, "loc_techs_store"):
-        for loc_tech in model_data.loc_techs_store.values:
-            if hasattr(model_data, "storage_initial"):
-                if (
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}].values
-                    > 1
-                ):
-                    errors.append(
-                        "storage_initial values larger than 1 are not allowed."
-                    )
-                if (
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}].values
-                    == 0
-                ):
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}] = 0.0
-
-    # Check for storage_initial being greater than or equal to the storage_discharge_depth
-
-    if hasattr(model_data, "loc_techs_store"):
-        for loc_tech in model_data.loc_techs_store.values:
-            if hasattr(model_data, "storage_initial") and hasattr(
-                model_data, "storage_discharge_depth"
-            ):
-                if (
-                    model_data.storage_initial.loc[{"loc_techs_store": loc_tech}].values
-                    < model_data.storage_discharge_depth.loc[
-                        {"loc_techs_store": loc_tech}
-                    ].values
-                ):
-                    errors.append(
-                        "storage_initial is smaller than storage_discharge_depth."
-                        " Please change the model configuration to ensure that"
-                        " storage initial is greater than or equal to storage_discharge_depth"
-                    )
-
-    # Check for storage_inter_cluster not being used together with storage_discharge_depth
-    if hasattr(model_data, "clusters") and hasattr(
-        model_data, "storage_discharge_depth"
-    ):
-        errors.append(
-            "storage_discharge_depth is currently not allowed when time clustering is active."
-        )
 
     return model_data, comments, model_warnings, errors

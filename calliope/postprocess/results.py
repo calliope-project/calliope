@@ -14,10 +14,8 @@ import logging
 import xarray as xr
 import numpy as np
 
-from calliope.core.util.dataset import split_loc_techs
 from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
-from calliope.preprocess.util import concat_iterable
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +77,13 @@ def postprocess_model_results(results, model_data, timings):
 
 def capacity_factor(results, model_data, systemwide=False):
     """
-    Returns a DataArray with capacity factor for the given results.
-    The results are either indexed by loc_tech_carriers_prod and timesteps,
-    or by techs and carriers if systemwide results are being calculated.
+    # In operate mode, energy_cap is an input parameter
+    if "energy_cap" not in results.keys():
+        energy_cap = model_data.energy_cap
+    else:
+        energy_cap = results.energy_cap
+
+    capacity_factors = (results["carrier_prod"] / energy_cap).fillna(0)
 
     The weight of timesteps is considered when computing systemwide capacity factors,
     such that higher-weighted timesteps have a stronger influence
@@ -94,30 +96,17 @@ def capacity_factor(results, model_data, systemwide=False):
     else:
         energy_cap = results.energy_cap
 
-    _prod = split_loc_techs(results["carrier_prod"])
-    _cap = split_loc_techs(energy_cap)
     if systemwide:
-        # Aggregated/clustered days are represented `timestep_weights` times
-        prod_sum = (_prod * model_data.timestep_weights).sum(["timesteps", "locs"])
-        cap_sum = _cap.sum(dim="locs")
-        time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
-        capacity_factors = prod_sum / (cap_sum * time_sum)
+        prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(
+            dim=["timesteps", "nodes"]
+        )
 
+        cap_sum = energy_cap.sum(dim="nodes")
+        time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
+
+        capacity_factors = prod_sum / (cap_sum * time_sum)
     else:
-        extra_dims = {
-            i: model_data[i].to_index() for i in _prod.dims if i not in _cap.dims
-        }
-        capacity_factors = (
-            (_prod / _cap.expand_dims(extra_dims))
-            .fillna(0)
-            .stack({"loc_tech_carriers_prod": ["locs", "techs", "carriers"]})
-        )
-        new_idx = concat_iterable(
-            capacity_factors.loc_tech_carriers_prod.values, ["::", "::"]
-        )
-        capacity_factors = capacity_factors.assign_coords(
-            {"loc_tech_carriers_prod": new_idx}
-        ).reindex({"loc_tech_carriers_prod": results.loc_tech_carriers_prod})
+        capacity_factors = (results["carrier_prod"] / energy_cap).fillna(0)
 
     return capacity_factors
 
@@ -149,28 +138,25 @@ def systemwide_levelised_cost(results, model_data, total=False):
         returns overall system-wide levelised cost.
 
     """
-    cost = results["cost"]
     # Here we scale production by timestep weight
     carrier_prod = results["carrier_prod"] * model_data.timestep_weights
+    cost = results["cost"].sum(dim="nodes")
+    carrier_prod = carrier_prod.sum(dim=["timesteps", "nodes"])
 
     if total:
-        cost = split_loc_techs(cost).sum(dim=["locs", "techs"])
-        supply_only_carrier_prod = carrier_prod.sel(
-            loc_tech_carriers_prod=list(
-                model_data.loc_tech_carriers_supply_conversion_all.values
-            )
+        # cost is the total cost of the system
+        # carrier_prod is only the carrier_prod of supply and conversion technologies
+        allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
+        valid_techs = model_data.inheritance.to_series().str.endswith(allowed_techs)
+        cost = cost.sum(dim="techs")
+        carrier_prod = carrier_prod.loc[{"techs": valid_techs[valid_techs].index}].sum(
+            dim="techs"
         )
-        carrier_prod = split_loc_techs(supply_only_carrier_prod).sum(
-            dim=["timesteps", "locs", "techs"]
-        )
-    else:
-        cost = split_loc_techs(cost).sum(dim=["locs"])
-        carrier_prod = split_loc_techs(carrier_prod).sum(["timesteps", "locs"])
 
     levelised_cost = []
 
     for carrier in carrier_prod["carriers"].values:
-        levelised_cost.append(cost / carrier_prod.loc[dict(carriers=carrier)])
+        levelised_cost.append(cost / carrier_prod.loc[{"carriers": carrier}])
 
     return xr.concat(levelised_cost, dim="carriers")
 

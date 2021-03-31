@@ -1,0 +1,362 @@
+constraints:
+
+    energy_capacity_per_storage_capacity_min:
+        foreach: [nodes, techs]
+        where: [energy_cap_per_storage_cap_min, and, not energy_cap_per_storage_cap_equals, and, not run.mode='operate']
+
+    energy_capacity_per_storage_capacity_max:
+        foreach: [nodes, techs]
+        where: [energy_cap_per_storage_cap_max, and, not energy_cap_per_storage_cap_equals, and, not run.mode='operate']
+
+    energy_capacity_per_storage_capacity_equals:
+        foreach: [nodes, techs]
+        where: [energy_cap_per_storage_cap_equals, and, not run.mode='operate']
+
+    resource_capacity_equals_energy_capacity:
+        foreach: [nodes, techs]
+        where: [resource_cap_equals_energy_cap=True, and, not run.mode='operate']
+
+    force_zero_resource_area:
+        foreach: [nodes, techs]
+        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_unit='energy_per_area'], and, not run.mode='operate', and, energy_cap_max=0]
+
+    resource_area_per_energy_capacity:
+        foreach: [nodes, techs]
+        where: [resource_area_per_energy_cap, and, not run.mode='operate']
+
+    resource_area_capacity_per_loc:
+        foreach: [nodes]
+        where: [available_area, and, [resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, not run.mode='operate']
+
+    energy_capacity_systemwide:
+        foreach: [techs]
+        where: [[energy_cap_equals_systemwide, or, energy_cap_max_systemwide], and, not run.mode='operate']
+
+    balance_conversion_plus_primary:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(conversion_plus)]
+
+    carrier_production_max_conversion_plus:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(conversion_plus), and, not cap_method='integer']
+
+    carrier_production_min_conversion_plus:
+        foreach: [nodes, techs, timesteps]
+        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, not cap_method='integer']
+
+    balance_conversion_plus_non_primary:
+        foreach: [nodes, techs, carrier_tiers, timesteps]
+        where: [inheritance(conversion_plus)]
+        subset:
+            carrier_tiers: [in_2, out_2, in_3, out_3]
+
+    conversion_plus_prod_con_to_zero:
+        foreach: [nodes, techs, carriers, carrier_tiers, timesteps]
+        where: [carrier_ratios=0, and, inheritance(conversion_plus)]
+
+    balance_conversion:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(conversion)]
+
+    carrier_production_max:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
+        subset:
+            carrier_tiers: [out]
+
+    carrier_production_min:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, energy_cap_min_use, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
+        subset:
+            carrier_tiers: [out]
+
+    carrier_consumption_max:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, [inheritance(transmission), or, inheritance(demand), or, inheritance(storage)], and, [not cap_method='integer', or, inheritance(demand)], and, allowed_carrier_con=True]
+        subset:
+            carrier_tiers: [in]
+
+    resource_max:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(supply_plus)]
+
+    storage_max:
+        foreach: [nodes, techs, timesteps]
+        where: [include_storage=True, and, not model.time.function_options.storage_inter_cluster=True]
+
+    storage_discharge_depth:
+        foreach: [nodes, techs, timesteps]
+        where: [storage_discharge_depth]
+
+    ramping_up:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [energy_ramping]
+
+    ramping_down:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [energy_ramping]
+
+    system_balance:
+        foreach: [nodes, carriers, timesteps]
+
+    balance_supply:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [resource, and, inheritance(supply)]
+
+    balance_demand:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [inheritance(demand)]
+
+    balance_transmission:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [inheritance(transmission), and, allowed_carrier_prod=True]
+
+    balance_supply_plus:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [inheritance(supply_plus)]
+
+    resource_availability_supply_plus:
+        foreach: [nodes, techs, timesteps]
+        where: [resource, and, inheritance(supply_plus)]
+
+    balance_storage:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [inheritance(storage)]
+
+    storage_initial:
+        foreach: [nodes, techs]
+        where: [storage_initial, and, include_storage=True, and, not model.time.function_options.storage_inter_cluster=True, and, run.cyclic_storage=True]
+
+    export_balance:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [export_carrier, and, export=True]
+
+    export_max:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [export_max, and, export_carrier, and, export=True]
+
+    unit_commitment_milp:
+        foreach: [nodes, techs, timesteps]
+        where: [cap_method='integer']
+
+    carrier_production_max_milp:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, not inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
+
+    carrier_production_max_conversion_plus_milp:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
+
+    carrier_consumption_max_milp:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [not inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_con=True]
+
+    carrier_production_min_milp:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, energy_cap_min_use, and, not inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
+
+    carrier_production_min_conversion_plus_milp:
+        foreach: [nodes, techs, timesteps]
+        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
+
+    storage_capacity_units_milp:
+        foreach: [nodes, techs]
+        where: [[inheritance(storage), or, inheritance(supply_plus)], and, cap_method='integer', and, include_storage=True, and, not run.mode='operate']
+
+    energy_capacity_units_milp:
+        foreach: [nodes, techs]
+        where: [energy_cap_per_unit, and, cap_method='integer', and, not run.mode='operate']
+
+    energy_capacity_max_purchase_milp:
+        foreach: [nodes, techs]
+        where: [cost_purchase, and, [energy_cap_max, or, energy_cap_equals], and, cap_method='binary']
+
+    energy_capacity_min_purchase_milp:
+        foreach: [nodes, techs]
+        where: [cost_purchase, and, energy_cap_min, and, not energy_cap_equals, and, cap_method='binary']
+
+    storage_capacity_max_purchase_milp:
+        foreach: [nodes, techs]
+        where: [cost_purchase, and, [storage_cap_max, or, storage_cap_equals], and, cap_method='binary']
+
+    storage_capacity_min_purchase_milp:
+        foreach: [nodes, techs]
+        where: [cost_purchase, and, storage_cap_min, and, not storage_cap_equals, and, cap_method='binary']
+
+    unit_capacity_systemwide_milp:
+        foreach: [techs]
+        where: [[units_max_systemwide, or, units_equals_systemwide], and, not run.mode='operate']
+
+    asynchronous_con_milp:
+        foreach: [nodes, techs, timesteps]
+        where: [force_asynchronous_prod_con=True]
+
+    asynchronous_prod_milp:
+        foreach: [nodes, techs, timesteps]
+        where: [force_asynchronous_prod_con=True]
+
+    symmetric_transmission:
+        foreach: [nodes, techs]
+        where: [inheritance(transmission), and, not run.mode='operate']
+
+    storage_intra_max:
+        foreach: [nodes, techs, timesteps]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+
+    storage_intra_min:
+        foreach: [nodes, techs, timesteps]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+
+    storage_inter_max:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+
+    storage_inter_min:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+
+    balance_storage_inter:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+
+variables:
+
+    energy_cap:
+        foreach: [nodes, techs]
+        where: [not run.mode='operate']
+        domain: NonNegativeReals
+        bounds:
+            min: energy_cap_min
+            max: energy_cap_max
+            equals: energy_cap_equals
+            scale: energy_cap_scale
+
+    carrier_prod:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, allowed_carrier_prod=True]
+        subset:
+            carrier_tiers: [out, out_2, out_3]
+        domain: NonNegativeReals
+
+    carrier_con:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, allowed_carrier_con=True]
+        domain: NonPositiveReals
+        subset:
+            carrier_tiers: [in, in_2, in_3]
+
+    resource_area:
+        foreach: [nodes, techs]
+        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, not run.mode='operate']
+        domain: NonNegativeReals
+        bounds:
+            min: resource_area_min
+            max: resource_area_max
+            equals: resource_area_equals
+
+    storage_cap:
+        foreach: [nodes, techs]
+        where: [[inheritance(storage), or, inheritance(supply_plus)], and, not run.mode='operate', and, include_storage=True]
+        domain: NonNegativeReals  # FIXME: when storage_inter_cluster is active, this should be 'Reals'
+        bounds:
+            min: storage_cap_min
+            max: storage_cap_max
+            equals: storage_cap_equals
+
+    storage_inter_cluster:
+        foreach: [nodes, techs, datesteps]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+        domain: NonNegativeReals
+
+    storage_intra_cluster_max:
+        foreach: [nodes, techs, clusters]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+        domain: Reals
+
+    storage_intra_cluster_min:
+        foreach: [nodes, techs, clusters]
+        where: [include_storage=True, and, model.time.function_options.storage_inter_cluster=True]
+        domain: Reals
+
+    storage:
+        foreach: [nodes, techs, timesteps]
+        where: [[inheritance(storage), or, inheritance(supply_plus)], and, include_storage=True]
+        domain: NonNegativeReals
+
+    resource_con:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(supply_plus)]
+        domain: NonNegativeReals
+
+    resource_cap:
+        foreach: [nodes, techs]
+        where: [inheritance(supply_plus), and, not run.mode='operate']
+        domain: NonNegativeReals
+        bounds:
+            min: resource_cap_min
+            max: resource_cap_max
+            equals: resource_cap_equals
+
+    carrier_export:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [export_carrier, and, export=True]
+        domain: NonNegativeReals
+
+    purchased:
+        foreach: [nodes, techs]
+        where: [cap_method='binary', and, not run.mode='operate']
+        domain: Binary
+
+    #demand_share_per_timestep_decision:
+    #    foreach: [nodes, techs, carriers]
+    #    domain: NonNegativeReals
+
+    units:
+        foreach: [nodes, techs]
+        where: [cap_method='integer', and, not run.mode='operate']
+        domain: NonNegativeIntegers
+        bounds:
+            min: units_min
+            max: units_max
+            equals: units_equals
+
+    operating_units:
+        foreach: [nodes, techs, timesteps]
+        where: [cap_method='integer']
+        domain: NonNegativeIntegers
+
+    prod_con_switch:
+        foreach: [nodes, techs, timesteps]
+        where: [force_asynchronous_prod_con=True]
+        domain: Binary
+
+    unmet_demand:
+        foreach: [nodes, carriers, timesteps]
+        where: [run.ensure_feasibility=True]
+        domain: NonNegativeReals
+
+    unused_supply:
+        foreach: [nodes, carriers, timesteps]
+        where: [run.ensure_feasibility=True]
+        domain: NegativeReals
+
+expressions:
+    required_resource:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(demand)]
+
+    cost_var:
+        foreach: [nodes, techs, costs, timesteps]
+        where: [cost_export, or, cost_om_con, or, cost_om_prod]
+        #domain: Reals
+
+    cost_investment:
+        foreach: [nodes, techs, costs]
+        where: [[cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap], and, not run.mode='operate']
+        #domain: Reals
+
+    cost:
+        foreach: [nodes, techs, costs]
+        where: [cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap, or, cost_export, or, cost_om_con, or, cost_om_prod]
+        #domain: Reals
+        build_order: 1

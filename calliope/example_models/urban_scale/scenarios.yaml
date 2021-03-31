@@ -9,6 +9,7 @@ overrides:
         techs:
             # chp-start
             chp:
+                switches.cap_method: integer
                 constraints:
                     units_max: 4
                     energy_cap_per_unit: 300
@@ -20,6 +21,7 @@ overrides:
             # chp-end
             # boiler-start
             boiler:
+                switches.cap_method: binary
                 costs:
                     monetary:
                         energy_cap: 35
@@ -32,7 +34,7 @@ overrides:
             # heat_pipes-end
 
     mapbox_ready:
-        locations:
+        nodes:
             X1.coordinates: {lat: 51.4596158, lon: -0.1613446}
             X2.coordinates: {lat: 51.4652373, lon: -0.1141548}
             X3.coordinates: {lat: 51.4287016, lon: -0.1310635}
@@ -50,7 +52,7 @@ overrides:
             window: 24
             horizon: 48
         model.subset_time: ['2005-07-01', '2005-07-10']
-        locations:
+        nodes:
             X1:
                 techs:
                     chp.constraints.energy_cap_max: 300
@@ -79,7 +81,7 @@ overrides:
 
     time_masking:
         model.name: 'Urban-scale example model with time masking'
-        model.subset_time: '2005-01'
+        model.subset_time: ['2005-01', '2005-01']
         # Resample time resolution to 6-hourly
         model.time:
             masks:

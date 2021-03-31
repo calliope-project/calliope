@@ -27,9 +27,9 @@ parallel:
     post_run:  # Commands to run after executing model
     iterations:
         - subset_t: ['2005-01-01', '2005-01-31']
-          override.locations.r1.techs: ['demand', 'unmet_demand', 'ccgt']
+          override.nodes.r1.techs: ['demand', 'unmet_demand', 'ccgt']
         - subset_t: ['2005-02-01', '2005-02-31']
-          override.locations.r1.techs: ['demand', 'unmet_demand']
+          override.nodes.r1.techs: ['demand', 'unmet_demand']
     resources:  # Request resources on a computing cluster
         threads:  # Non-default number of threads
         wall_time:  # Run time (minutes)
@@ -53,7 +53,7 @@ parallel:
 # Leave any of these empty to disable subsetting
 
 subset_y: []  # Subset of technologies
-subset_x: []  # Subset of locations
+subset_x: []  # Subset of nodes
 subset_t: ['2005-01-01', '2005-01-02']  # Subset of timesteps
 
 ##

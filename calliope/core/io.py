@@ -15,7 +15,6 @@ import xarray as xr
 
 from calliope._version import __version__
 from calliope import exceptions
-from calliope.core.util.dataset import split_loc_techs
 
 
 def read_netcdf(path):
@@ -49,10 +48,11 @@ def save_netcdf(model_data, path, model=None):
     if model is not None and hasattr(model, "_model_run"):
         # Attach _model_run and _debug_data to _model_data
         model_run_to_save = model._model_run.copy()
-        if "timeseries_data" in model_run_to_save:
-            del model_run_to_save["timeseries_data"]  # Can't be serialised!
+        for k in ["timeseries_data", "timesteps"]:
+            model_run_to_save.pop(k, None)
         model_data_attrs["_model_run"] = model_run_to_save.to_yaml()
-        model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
+        if hasattr(model, "_debug_data"):
+            model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 
     # Convert boolean attrs to ints
     bool_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, bool)]
@@ -101,7 +101,7 @@ def save_csv(model_data, path, dropna=True):
     for var in data_vars:
         in_out = "results" if model_data[var].attrs["is_result"] else "inputs"
         out_path = os.path.join(path, "{}_{}.csv".format(in_out, var))
-        series = split_loc_techs(model_data[var], return_as="Series")
+        series = model_data[var].to_series()
         if dropna:
             series = series.dropna()
         series.to_csv(out_path, header=True)

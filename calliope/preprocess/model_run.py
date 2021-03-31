@@ -2,8 +2,8 @@
 Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
-preprocess_model.py
-~~~~~~~~~~~~~~~~~~~
+model_run.py
+~~~~~~~~~~~~
 
 Preprocessing of model and run configuration into a unified model_run
 AttrDict, and building of associated debug information.
@@ -21,7 +21,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.preprocess import locations, sets, checks, constraint_sets, util
+from calliope.preprocess import nodes, checks, util
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,9 @@ def model_run_from_yaml(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
+    subsets = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
+    )
 
     return generate_model_run(
         config_with_overrides,
@@ -76,6 +79,7 @@ def model_run_from_yaml(
         debug_comments,
         overrides,
         scenario,
+        subsets,
     )
 
 
@@ -109,6 +113,9 @@ def model_run_from_dict(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
+    subsets = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
+    )
 
     return generate_model_run(
         config_with_overrides,
@@ -116,6 +123,7 @@ def model_run_from_dict(
         debug_comments,
         overrides,
         scenario,
+        subsets,
     )
 
 
@@ -204,7 +212,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
                 [i in config_model.get("overrides", {}) for i in scenario.split(",")]
             ):
                 raise exceptions.ModelError(
-                    "Manually defined scenario cannot be a combination of override names."
+                    "Name of a manually defined scenario cannot be a combination of override names."
                 )
             if not isinstance(scenarios[scenario], list):
                 raise exceptions.ModelError(
@@ -267,11 +275,10 @@ def apply_overrides(config, scenario=None, override_dict=None):
             FutureWarning,
         )
 
-    # Drop default locations, links, and techs
+    # Drop default nodes, links, and techs
     config_model.del_key("techs.default_tech")
-    config_model.del_key("locations.default_location")
-    config_model.del_key("links.default_location_from,default_location_to")
-    config_model.del_key("group_constraints.default_group")
+    config_model.del_key("nodes.default_node")
+    config_model.del_key("links.default_node_from,default_node_to")
 
     return config_model, debug_comments, overrides, scenario
 
@@ -357,8 +364,8 @@ def process_techs(config_model):
         keys_to_add = [
             "required_constraints",
             "allowed_constraints",
-            "allowed_group_constraints",
             "allowed_costs",
+            "allowed_switches",
         ]
         for k in keys_to_add:
             tech_result[k] = config_model.tech_groups[tech_result.inheritance[-1]].get(
@@ -369,7 +376,7 @@ def process_techs(config_model):
         # also break on missing carrier data
         if "carrier_in" not in tech_result.essentials:
             if tech_result.inheritance[-1] in ["supply", "supply_plus"]:
-                tech_result.essentials.carrier_in = "resource"
+                pass
             elif tech_result.inheritance[-1] in ["demand", "transmission", "storage"]:
                 try:
                     tech_result.essentials.carrier_in = tech_result.essentials.carrier
@@ -387,7 +394,7 @@ def process_techs(config_model):
 
         if "carrier_out" not in tech_result.essentials:
             if tech_result.inheritance[-1] == "demand":
-                tech_result.essentials.carrier_out = "resource"
+                pass
             elif tech_result.inheritance[-1] in [
                 "supply",
                 "supply_plus",
@@ -457,6 +464,9 @@ def process_tech_groups(config_model, techs):
 def load_timeseries_from_file(config_model, tskey):
     file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
     df = pd.read_csv(file_path, index_col=0)
+    df.columns = pd.MultiIndex.from_product(
+        [[tskey], df.columns], names=["source", "column"]
+    )
     return df
 
 
@@ -494,67 +504,58 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
         raise exceptions.ModelError(
             "Error in loading data from dataframe. "
             "Model attempted to load dataframe with key `{}`, "
-            "but time series passed as arguments are {}".format(
+            "but available dataframes are {}".format(
                 tskey, set(timeseries_dataframes.keys())
             )
         )
-    if not isinstance(df, pd.DataFrame):
-        raise exceptions.ModelError(
-            "Error in loading data. Object passed in time series "
-            "dictionary under key {} is a {}, not a DataFrame.".format(tskey, type(df))
-        )
+    df.columns = pd.MultiIndex.from_product(
+        [[tskey], df.columns], names=["source", "column"]
+    )
     return df
+
+
+def _parser(x, dtformat):
+    return pd.to_datetime(x, format=dtformat, exact=False)
+
+
+def _get_names(config):
+    """
+    Find names of csv files (file=) or dataframes (df=) called in config
+    """
+    tsnames = []
+    tsvars = []
+    for k, v in config.items():
+        if "=" in str(v):
+            tsnames.append((v.split("=")[0], v.split("=")[1].rsplit(":", 1)[0]))
+            if ".costs." in k:
+                tsvars.append(f"cost_{k.split('.')[-1]}")
+            elif ".carrier_ratios." in k:
+                tsvars.append("carrier_ratios")
+            else:
+                tsvars.append(k.split(".")[-1])
+    return set(tsnames), set(tsvars)
 
 
 def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
-    if config_model.model.timeseries_data is None:
-        timeseries_data = AttrDict()
-    else:
-        timeseries_data = config_model.model.timeseries_data
-
-    def _parser(x, dtformat):
-        return pd.to_datetime(x, format=dtformat, exact=False)
+    timeseries_data = config_model.model.get("timeseries_data", None)
 
     dtformat = config_model.model["timeseries_dateformat"]
 
     # Generate set of all files and dataframes we want to load
-    location_config = model_run.locations.as_dict_flat()
+    node_config = model_run.nodes.as_dict_flat()
     model_config = config_model.model.as_dict_flat()
 
-    # Find names of csv files (file=) or dataframes (df=) called in config
-    def get_names(datatype, config):
-        return set(
-            [
-                v.split("=")[1].rsplit(":", 1)[0]
-                for v in config.values()
-                if str(datatype) + "=" in str(v)
-            ]
-        )
-
-    constraint_filenames = get_names("file", location_config)
-    cluster_filenames = get_names("file", model_config)
-    constraint_dfnames = get_names("df", location_config)
-    cluster_dfnames = get_names("df", model_config)
+    constraint_tsnames, constraint_tsvars = _get_names(node_config)
+    cluster_tsnames, cluster_tsvars = _get_names(model_config)
 
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
     if timeseries_dataframes is not None:
         check_timeseries_dataframes(timeseries_dataframes)
 
-    datetime_min = []
-    datetime_max = []
-
     # Check there is at least one timeseries present
-    if (
-        len(
-            constraint_filenames
-            | cluster_filenames
-            | constraint_dfnames
-            | cluster_dfnames
-        )
-        == 0
-    ):
+    if len(constraint_tsnames) == 0:
         raise exceptions.ModelError(
             "There is no timeseries in the model. At least one timeseries is "
             "necessary to run the model."
@@ -562,21 +563,22 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
-    for tskey in (
-        constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
-    ):  # Filenames or dict keys
+    for tskey in constraint_tsnames | cluster_tsnames:
         # If tskey is a CSV path, load the CSV, else load the dataframe
-        if tskey in constraint_filenames | cluster_filenames:
-            df = load_timeseries_from_file(config_model, tskey)
-        elif tskey in constraint_dfnames | cluster_dfnames:
-            df = load_timeseries_from_dataframe(timeseries_dataframes, tskey)
+
+        if tskey[0] == "file":
+            df = load_timeseries_from_file(config_model, tskey[1])
+        elif tskey[0] == "df":
+            df = load_timeseries_from_dataframe(timeseries_dataframes, tskey[1])
+        else:
+            raise KeyError(f"Unrecognised timeseries data source {tskey[0]}")
 
         try:
             df.apply(pd.to_numeric)
         except ValueError as e:
             raise exceptions.ModelError(
                 "Error in loading data from {}. Ensure all entries are "
-                "numeric. Full error: {}".format(tskey, e)
+                "numeric. Full error: {}".format(tskey[1], e)
             )
         # Parse the dates, checking for errors specific to this
         try:
@@ -584,18 +586,17 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
         except ValueError as e:
             raise exceptions.ModelError(
                 "Error in parsing dates in timeseries data from {}, "
-                "using datetime format `{}`: {}".format(tskey, dtformat, e)
+                "using datetime format `{}`: {}".format(tskey[1], dtformat, e)
             )
-        timeseries_data[tskey] = df
-
-        datetime_min.append(df.index[0].date())
-        datetime_max.append(df.index[-1].date())
+        if timeseries_data is None:
+            timeseries_data = df
+        else:
+            timeseries_data = pd.concat([timeseries_data, df], axis=1)
 
     # Apply time subsetting, if supplied in model_run
-    subset_time_config = config_model.model.subset_time
+    subset_time_config = config_model.model.get("subset_time", None)
     if subset_time_config is not None:
         # Test parsing dates first, to make sure they fit our required subset format
-
         try:
             subset_time = _parser(subset_time_config, "%Y-%m-%d %H:%M:%S")
         except ValueError as e:
@@ -608,53 +609,64 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             time_slice = slice(subset_time_config[0], subset_time_config[1])
 
             # Don't allow slicing outside the range of input data
-            if subset_time[0].date() < max(datetime_min) or subset_time[1].date() > min(
-                datetime_max
+            if (
+                subset_time[0].date() < timeseries_data.index[0]
+                or subset_time[1].date() > timeseries_data.index[-1]
             ):
-
                 raise exceptions.ModelError(
                     "subset time range {} is outside the input data time range "
                     "[{}, {}]".format(
                         subset_time_config,
-                        max(datetime_min).strftime("%Y-%m-%d"),
-                        min(datetime_max).strftime("%Y-%m-%d"),
+                        timeseries_data.index[0].strftime("%Y-%m-%d"),
+                        timeseries_data.index[-1].strftime("%Y-%m-%d"),
                     )
                 )
-        elif isinstance(subset_time_config, list):
-            raise exceptions.ModelError(
-                "Invalid subset_time value: {}".format(subset_time_config)
-            )
         else:
-            time_slice = str(subset_time_config)
-
-        for k in timeseries_data.keys():
-            timeseries_data[k] = timeseries_data[k].loc[time_slice, :]
-            if timeseries_data[k].empty:
-                raise exceptions.ModelError(
-                    "The time slice {} creates an empty timeseries array for {}".format(
-                        time_slice, k
-                    )
-                )
-
-    # Ensure all timeseries have the same index
-    indices = [
-        (tskey, df.index)
-        for tskey, df in timeseries_data.items()
-        if tskey not in cluster_filenames | cluster_dfnames
-    ]
-    first_tskey, first_index = indices[0]
-    for tskey, idx in indices[1:]:
-        if not first_index.equals(idx):
             raise exceptions.ModelError(
-                "Time series indices do not match "
-                "between {} and {}".format(first_tskey, tskey)
+                "subset_time must be a list of two datetime strings, not: {}".format(
+                    subset_time_config
+                )
             )
 
-    return timeseries_data, first_index
+        timeseries_data = timeseries_data.loc[time_slice, :]
+        if timeseries_data.empty:
+            raise exceptions.ModelError(
+                "The time slice {} creates an empty timeseries array.".format(
+                    time_slice
+                )
+            )
+
+    if timeseries_data[[i[1] for i in constraint_tsnames]].isna().any().any():
+        raise exceptions.ModelError(
+            "Missing data for the timeseries array(s) {}.".format(
+                timeseries_data.columns[timeseries_data.isna().any()].values
+            )
+        )
+    if (
+        cluster_tsnames
+        and timeseries_data[[i[1] for i in cluster_tsnames]]
+        .resample("1D")
+        .mean()
+        .isna()
+        .any()
+        .any()
+    ):
+        raise exceptions.ModelError(
+            "Missing data for the timeseries array(s) {}.".format(
+                timeseries_data.columns[timeseries_data.isna().any()].values
+            )
+        )
+
+    return timeseries_data.rename_axis(index="timesteps"), constraint_tsvars
 
 
 def generate_model_run(
-    config, timeseries_dataframes, debug_comments, applied_overrides, scenario
+    config,
+    timeseries_dataframes,
+    debug_comments,
+    applied_overrides,
+    scenario,
+    subsets,
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -684,33 +696,30 @@ def generate_model_run(
     # 3) Fully populate tech_groups
     model_run["tech_groups"] = process_tech_groups(config, model_run["techs"])
 
-    # 4) Fully populate locations
+    # 4) Fully populate nodes
     (
-        model_run["locations"],
-        debug_locs,
+        model_run["nodes"],
+        debug_nodes,
         warning_messages,
         errors,
-    ) = locations.process_locations(config, model_run["techs"])
-    debug_comments.set_key("model_run.locations", debug_locs)
+    ) = nodes.process_nodes(config, model_run["techs"])
+    debug_comments.set_key("model_run.nodes", debug_nodes)
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 5) Fully populate timeseries data
     # Raises ModelErrors if there are problems with timeseries data at this stage
-    model_run["timeseries_data"], model_run["timesteps"] = process_timeseries_data(
-        config, model_run, timeseries_dataframes
-    )
+    (
+        model_run["timeseries_data"],
+        model_run["timeseries_vars"],
+    ) = process_timeseries_data(config, model_run, timeseries_dataframes)
 
     # 6) Grab additional relevant bits from run and model config
     model_run["run"] = config["run"]
     model_run["model"] = config["model"]
-    model_run["group_constraints"] = config.get("group_constraints", {})
 
-    # 7) Initialize sets
-    all_sets = sets.generate_simple_sets(model_run)
-    all_sets.union(sets.generate_loc_tech_sets(model_run, all_sets))
-    all_sets = AttrDict({k: list(v) for k, v in all_sets.items()})
-    model_run["sets"] = all_sets
-    model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
+    # model_run["sets"] = all_sets
+    model_run["subsets"] = subsets
+    # model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking
     final_check_comments, warning_messages, errors = checks.check_final(model_run)
@@ -718,6 +727,11 @@ def generate_model_run(
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
-    debug_data = AttrDict({"comments": debug_comments, "config_initial": config,})
+    debug_data = AttrDict(
+        {
+            "comments": debug_comments,
+            "config_initial": config,
+        }
+    )
 
     return model_run, debug_data

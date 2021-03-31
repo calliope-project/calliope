@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions
@@ -242,7 +242,7 @@ class TestClustering:
             "model.time": {
                 "function": "apply_clustering",
                 "function_options": {
-                    "clustering_func": "file=clusters.csv:0",
+                    "clustering_func": "file=clusters.csv:a",
                     "how": "mean",
                 },
             },
@@ -257,7 +257,7 @@ class TestClustering:
         override2 = {
             **override,
             **{
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:1"
+                "model.time.function_options.clustering_func": "file=cluster_days.csv:b"
             },
         }
 
@@ -270,7 +270,7 @@ class TestClustering:
         override3 = {
             **override,
             **{
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:1",
+                "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
                 "model.time.function_options.how": "closest",
             },
         }
@@ -286,7 +286,7 @@ class TestClustering:
             "model.time": {
                 "function": "apply_clustering",
                 "function_options": {
-                    "clustering_func": "file=clusters.csv:0",
+                    "clustering_func": "file=clusters.csv:a",
                     "how": "mean",
                 },
             },
@@ -330,14 +330,17 @@ class TestClustering:
             **override,
             **{
                 "model.subset_time": ["2005-01-01", "2005-01-06"],
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:1",
+                "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
             },
         }
 
         with pytest.raises(exceptions.ModelError) as error:
             build_test_model(override4, scenario="simple_supply")
 
-        assert check_error_or_warning(error, "Missing cluster days")
+        assert check_error_or_warning(
+            error,
+            "Missing data for the timeseries array(s) [('cluster_days.csv', 'a') ('cluster_days.csv', 'b')]",
+        )
 
 
 class TestMasks:
@@ -354,7 +357,7 @@ class TestMasks:
         )
 
     def test_zero(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         mask = masks.zero(data, "csp", var="resource")
 
         dtindex = pd.DatetimeIndex(
@@ -440,7 +443,7 @@ class TestMasks:
         assert dtindex.equals(mask[0:75])
 
     def test_extreme(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         mask = masks.extreme(
             data, "csp", var="resource", how="max", length="2D", n=1, padding="2H"
         )
@@ -505,7 +508,7 @@ class TestMasks:
         assert dtindex.equals(mask)
 
     def test_extreme_diff_and_normalize(self, model_urban):
-        data = model_urban._model_data_original.copy()
+        data = model_urban._model_data_pre_clustering.copy()
         mask = masks.extreme_diff(
             data,
             "demand_heat",
@@ -573,7 +576,7 @@ class TestMasks:
         assert dtindex.equals(mask)
 
     def test_extreme_week_1d(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         mask = masks.extreme(
             data,
             "csp",
@@ -590,7 +593,7 @@ class TestMasks:
         assert days == found_days
 
     def test_extreme_week_2d(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         with pytest.raises(ValueError):
             mask = masks.extreme(
                 data,
@@ -1011,18 +1014,18 @@ class TestFuncs:
     @pytest.fixture
     def model_national(self, scope="module"):
         return calliope.examples.national_scale(
-            override_dict={"model.subset_time": "2005-01"}
+            override_dict={"model.subset_time": ["2005-01", "2005-01"]}
         )
 
     def test_drop_invalid_timesteps(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         timesteps = ["XXX2005-01-01 23:00"]
 
         with pytest.raises(exceptions.ModelError):
             funcs.drop(data, timesteps)
 
     def test_drop(self, model_national):
-        data = model_national._model_data_original.copy()
+        data = model_national._model_data_pre_clustering.copy()
         timesteps = ["2005-01-01 23:00", "2005-01-01 22:00"]
 
         data_dropped = funcs.drop(data, timesteps)
@@ -1038,13 +1041,13 @@ class TestFuncs:
 class TestLoadTimeseries:
     def test_invalid_csv_columns(self):
         override = {
-            "locations": {
-                "2.techs": {"test_supply_elec": None, "test_demand_elec": None},
-                "3.techs": {"test_supply_elec": None, "test_demand_elec": None},
+            "nodes": {
+                "c.techs": {"test_supply_elec": None, "test_demand_elec": None},
+                "d.techs": {"test_supply_elec": None, "test_demand_elec": None},
             },
             "links": {
-                "0,1": {"exists": False},
-                "2,3.techs": {"test_transmission_elec": None},
+                "a,b": {"exists": False},
+                "c,d.techs": {"test_transmission_elec": None},
             },
         }
         with pytest.raises(exceptions.ModelError) as excinfo:
@@ -1053,7 +1056,6 @@ class TestLoadTimeseries:
         assert check_error_or_warning(
             excinfo,
             [
-                "column `2` not found in dataframe `demand_elec.csv`, but was requested by loc::tech `2::test_demand_elec`.",
-                "column `3` not found in dataframe `demand_elec.csv`, but was requested by loc::tech `3::test_demand_elec`.",
+                "file:column combinations `[('demand_elec.csv', 'c') ('demand_elec.csv', 'd')]` not found, but are requested by parameter `resource`."
             ],
         )

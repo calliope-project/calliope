@@ -7,6 +7,7 @@ import logging
 
 import numpy as np
 import xarray as xr
+import pyomo.core as po
 
 from calliope.core.util.logging import log_time
 from calliope import exceptions
@@ -16,7 +17,6 @@ from calliope.backend.pyomo import interface as pyomo_interface
 
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.dataset import split_loc_techs
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ def run(model_data, timings, build_only=False):
     if run_config["mode"] == "plan":
         results, backend = run_plan(
             model_data,
+            run_config,
             timings,
             backend=BACKEND[run_config.backend],
             build_only=build_only,
@@ -70,7 +71,7 @@ def run(model_data, timings, build_only=False):
     return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
-def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
+def run_plan(model_data, run_config, timings, backend, build_only, backend_rerun=False):
 
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
@@ -88,7 +89,6 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
     else:
         backend_model = backend_rerun
 
-    run_config = backend_model.__calliope_run_config
     solver = run_config["solver"]
     solver_io = run_config.get("solver_io", None)
     solver_options = run_config.get("solver_options", None)
@@ -127,11 +127,12 @@ def run_plan(model_data, timings, backend, build_only, backend_rerun=False):
             logger, timings, "run_results_loaded", comment="Backend: loaded results"
         )
 
-        results = backend.get_result_array(backend_model, model_data)
-        results.attrs["termination_condition"] = termination
-
-        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+        if termination in ["optimal", "feasible"]:
+            results = backend.get_result_array(backend_model, model_data)
             results.attrs["objective_function_value"] = backend_model.obj()
+        else:
+            results = xr.Dataset()
+        results.attrs["termination_condition"] = termination
 
         log_time(
             logger,
@@ -178,14 +179,15 @@ def run_spores(model_data, timings, interface, backend, build_only):
     n_spores = run_config["spores_options"]["spores_number"]
     slack = run_config["spores_options"]["slack"]
     spores_score = run_config["spores_options"]["score_cost_class"]
-    slack_group = run_config["spores_options"]["slack_cost_group"]
+    slack_cost_class = run_config["spores_options"]["slack_cost_class"]
+    objective_cost_class = run_config["spores_options"]["objective_cost_class"]
 
     # Define default scoring function, based on integer scoring method
     # TODO: make the function to run optional
     def _cap_loc_score_default(results, subset=None):
         if subset is None:
             subset = {}
-        cap_loc_score = split_loc_techs(results["energy_cap"]).loc[subset]
+        cap_loc_score = results["energy_cap"].loc[subset]
         cap_loc_score = cap_loc_score.where(cap_loc_score > 1e-3, other=0)
         cap_loc_score = cap_loc_score.where(cap_loc_score == 0, other=100)
 
@@ -194,9 +196,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
     # Define function to update "spores_score" after each iteration of the method
     def _update_spores_score(backend_model, cap_loc_score):
         loc_tech_score_dict = {
-            (spores_score, "{}::{}".format(i, j)): k
-            for (i, j), k in cap_loc_score.stack().items()
-            if "{}::{}".format(i, j) in model_data.loc_techs_investment_cost
+            (spores_score, i, j): k for (i, j), k in cap_loc_score.stack().items()
         }
 
         interface.update_pyomo_param(
@@ -209,36 +209,44 @@ def run_spores(model_data, timings, interface, backend, build_only):
             "No more SPORES will be generated."
         )
 
+    def _limit_total_system_costs_constraint_rule(backend_model, cost):
+        cost_max = backend_model.cost_max
+
+        return (
+            sum(
+                backend_model.cost[cost, node, tech]
+                for [node, tech] in backend_model.nodes * backend_model.techs
+                if [cost, node, tech] in backend_model.cost._index
+            )
+        ) <= cost_max
+
     # Run once for the 'cost-optimal' solution
-    results, backend_model = run_plan(model_data, timings, backend, build_only)
+    results, backend_model = run_plan(
+        model_data, run_config, timings, backend, build_only
+    )
     if build_only:
         return results, backend_model  # We have what we need, so break out of the loop
 
     if results.attrs["termination_condition"] in ["optimal", "feasible"]:
         results.attrs["objective_function_value"] = backend_model.obj()
+        initial_system_cost = backend_model.obj()
         # Storing results and scores in the specific dictionaries
         spores_list = [results]
         cum_scores = _cap_loc_score_default(results)
         # Set group constraint "cost_max" equal to slacked cost
-        slack_costs = model_data.group_cost_max.loc[
-            {"group_names_cost_max": slack_group}
-        ].dropna("costs")
-        interface.update_pyomo_param(
-            backend_model,
-            "group_cost_max",
-            {
-                (_cost_class, slack_group): results.cost.loc[{"costs": _cost_class}]
-                .sum()
-                .item()
-                * (1 + slack)
-                for _cost_class in slack_costs.costs.values
-            },
+        slack_cost = initial_system_cost * (1 + slack)
+        backend_model.cost_max = po.Param(
+            initialize=slack_cost, mutable=True, within=po.Reals
+        )
+        backend_model.limit_total_system_costs_constraint = po.Constraint(
+            [slack_cost_class],
+            rule=_limit_total_system_costs_constraint_rule,
         )
         # Modify objective function weights: spores_score -> 1, all others -> 0
         interface.update_pyomo_param(
             backend_model,
             "objective_cost_class",
-            {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}},
+            objective_cost_class,
         )
         # Update "spores_score" based on previous iteration
         _update_spores_score(backend_model, cum_scores)
@@ -257,7 +265,12 @@ def run_spores(model_data, timings, interface, backend, build_only):
     # Iterate over the number of SPORES requested by the user
     for _spore in range(0, n_spores):
         results, backend_model = run_plan(
-            model_data, timings, backend, build_only, backend_rerun=backend_model
+            model_data,
+            run_config,
+            timings,
+            backend,
+            build_only,
+            backend_rerun=backend_model,
         )
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
@@ -302,6 +315,7 @@ def run_operate(model_data, timings, backend, build_only):
         initial_yaml_string=model_data.attrs["defaults"],
         name="defaults",
         observer=model_data,
+        flat=True,
     )
     run_config = UpdateObserverDict(
         initial_yaml_string=model_data.attrs["run_config"],
@@ -507,8 +521,10 @@ def run_operate(model_data, timings, backend, build_only):
             _termination = backend.load_results(backend_model, _results)
             terminations.append(_termination)
 
-            _results = backend.get_result_array(backend_model, model_data)
-
+            if _termination in ["optimal", "feasible"]:
+                _results = backend.get_result_array(backend_model, model_data)
+            else:
+                _results = xr.Dataset()
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
             _results["timesteps"] = window_model_data.timesteps.copy()
@@ -520,7 +536,8 @@ def run_operate(model_data, timings, backend, build_only):
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
-            if "loc_techs_store" in model_data.dims.keys():
+            # 1 represents boolean True here
+            if (model_data.get("include_storage", False) == 1).any():
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
                 ].drop_vars("timesteps")
@@ -532,7 +549,7 @@ def run_operate(model_data, timings, backend, build_only):
                 )
 
             # Set up total operated units for the next iteration
-            if "loc_techs_milp" in model_data.dims.keys():
+            if (model_data.get("cap_method", False) == "integer").any():
                 operated_units = _results.operating_units.sum("timesteps").astype(
                     np.int
                 )

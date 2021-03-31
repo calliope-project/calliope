@@ -10,15 +10,14 @@ Functions to process time series data.
 """
 
 import logging
+import datetime
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.core.util.dataset import get_loc_techs
 from calliope.time import clustering
-from calliope.preprocess.lookup import lookup_clusters
 
 logger = logging.getLogger(__name__)
 
@@ -56,24 +55,7 @@ def normalized_copy(data):
     ds = data.copy(deep=True)  # Work off a copy
 
     for var in ds.data_vars:
-        # Each DataArray is indexed over a different subset of loc_techs,
-        # so we find it in the list of dimensions
-        loc_tech_dim = [i for i in ds[var].dims if "loc_techs" in i][0]
-
-        # For each technology, get the loc_techs which are relevant
-        loc_tech_subsets = [
-            get_loc_techs(ds[loc_tech_dim].values, tech)
-            for tech in set(i.split("::")[1] for i in ds[loc_tech_dim].values)
-        ]
-        # remove empty lists within the _techs list
-        loc_tech_subsets = [i for i in loc_tech_subsets if i]
-
-        # For each technology, divide all values by the maximum absolute value
-        for loc_tech in loc_tech_subsets:
-            ds[var].loc[{loc_tech_dim: loc_tech}] = abs(
-                ds[var].loc[{loc_tech_dim: loc_tech}]
-                / abs(ds[var].loc[{loc_tech_dim: loc_tech}]).max()
-            )
+        ds[var] = abs(ds[var] / abs(ds[var]).groupby("techs").max(..., skipna=True))
     return ds
 
 
@@ -177,11 +159,11 @@ def apply_clustering(
 
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
-
-    if normalize:
-        data_normalized = normalized_copy(data_to_cluster)
-    else:
-        data_normalized = data_to_cluster
+    with pd.option_context("mode.use_inf_as_na", True):
+        if normalize:
+            data_normalized = normalized_copy(data_to_cluster)
+        else:
+            data_normalized = data_to_cluster
 
     if "file=" in clustering_func:
         file = clustering_func.split("=")[1]
@@ -209,7 +191,9 @@ def apply_clustering(
                 "time clustering column {} not found in {}.".format(column, file)
             )
         elif isinstance(df, pd.DataFrame):
-            clusters = df.loc[:, column].groupby(pd.Grouper(freq="1D")).unique()
+            clusters = (
+                df.loc[:, column].dropna().groupby(pd.Grouper(freq="1D")).unique()
+            )
 
         # Check there weren't instances of more than one cluster assigned to a day
         # or days with no information assigned
@@ -373,3 +357,45 @@ def drop(data, timesteps):
     )
 
     return data
+
+
+def lookup_clusters(dataset):
+    """
+    For any given timestep in a time clustered model, get:
+    1. the first and last timestep of the cluster,
+    2. the last timestep of the cluster corresponding to a date in the original timeseries
+    """
+
+    data_dict_first = dict(dims=["timesteps"], data=[])
+    data_dict_last = dict(dims=["timesteps"], data=[])
+    for timestep in dataset.timesteps:
+        t = pd.to_datetime(timestep.item()).date().strftime("%Y-%m-%d")
+        timestep_first = dataset.timesteps.loc[t][0]
+        timestep_last = dataset.timesteps.loc[t][-1]
+        if timestep == timestep_first:
+            data_dict_first["data"].append(1)
+            data_dict_last["data"].append(timestep_last.values)
+        else:
+            data_dict_first["data"].append(0)
+            data_dict_last["data"].append(None)
+    dataset["lookup_cluster_first_timestep"] = xr.DataArray.from_dict(data_dict_first)
+    dataset["lookup_cluster_last_timestep"] = xr.DataArray.from_dict(data_dict_last)
+
+    if "datesteps" in dataset.dims:
+        last_timesteps = dict(dims=["datesteps"], data=[])
+        cluster_date = dataset.timestep_cluster.to_pandas().resample("1D").mean()
+        for datestep in dataset.datesteps.to_index():
+            cluster = dataset.lookup_datestep_cluster.loc[
+                datestep.strftime("%Y-%m-%d")
+            ].item()
+            last_timesteps["data"].append(
+                datetime.datetime.combine(
+                    cluster_date[cluster_date == cluster].index[0].date(),
+                    dataset.timesteps.to_index().time[-1],
+                )
+            )
+        dataset["lookup_datestep_last_cluster_timestep"] = xr.DataArray.from_dict(
+            last_timesteps
+        )
+
+    return dataset

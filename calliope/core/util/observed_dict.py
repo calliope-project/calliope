@@ -14,9 +14,16 @@ class ObservedDict(dict):
     in the values assigned to keys in the dictionary.
     """
 
-    def __init__(self, initial_dict, initial_yaml_string, on_changed=None):
+    def __init__(self, initial_dict, initial_yaml_string, on_changed=None, flat=False):
         if initial_yaml_string is not None:
-            initial_dict = AttrDict.from_yaml_string(initial_yaml_string).as_dict()
+            if flat:
+                attr = "as_dict_flat"
+            else:
+                attr = "as_dict"
+
+            initial_dict = getattr(
+                AttrDict.from_yaml_string(initial_yaml_string), attr
+            )()
 
         super().__init__(initial_dict)
 

@@ -9,6 +9,7 @@ model:
 run:
     mode: plan
     solver: cbc
+    objective_options.cost_class.monetary: 1
 
 techs:
     test_supply_elec:
@@ -28,8 +29,8 @@ techs:
         constraints:
             resource: file=demand_elec.csv
 
-locations:
-    0:
+nodes:
+    a:
         techs:
             test_supply_elec:
             test_demand_elec:

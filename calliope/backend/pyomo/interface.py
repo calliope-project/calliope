@@ -1,17 +1,16 @@
 import logging
 
 import xarray as xr
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 
 import calliope
-from calliope.backend.pyomo.util import get_var
+from calliope.backend.pyomo.util import get_var, string_to_datetime
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
 
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
-from calliope.core.attrdict import AttrDict
 from calliope.postprocess.results import postprocess_model_results
 
 logger = logging.getLogger(__name__)
@@ -23,14 +22,20 @@ def access_pyomo_model_inputs(backend_model):
     model, they can access a new Dataset of all the backend model inputs, including
     defaults applied where the user did not specify anything for a loc::tech
     """
-
+    # TODO: update replace with 'removeprefix' once using py 3.9+
     all_params = {
-        i.name: get_var(backend_model, i.name, sparse=True)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.param.IndexedParam)
+        i.name.replace("calliope_", ""): get_var(
+            backend_model,
+            i.name,
+            sparse=True,
+        )
+        for i in backend_model.component_objects(ctype=po.Param)
+        if i.is_indexed()
     }
+    inputs = xr.Dataset(all_params)
+    inputs = string_to_datetime(backend_model, inputs)
 
-    return reorganise_xarray_dimensions(xr.Dataset(all_params))
+    return reorganise_xarray_dimensions(inputs)
 
 
 def update_pyomo_param(backend_model, param, update_dict):
@@ -100,7 +105,7 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
         raise ValueError("Argument `active` must be True or False")
 
 
-def rerun_pyomo_model(model_data, backend_model):
+def rerun_pyomo_model(model_data, run_config, backend_model):
     """
     Rerun the Pyomo backend, perhaps after updating a parameter value,
     (de)activating a constraint/objective or updating run options in the model
@@ -111,21 +116,24 @@ def rerun_pyomo_model(model_data, backend_model):
     new_model : calliope.Model
         New calliope model, including both inputs and results, but no backend interface.
     """
-    backend_model.__calliope_run_config = AttrDict.from_yaml_string(
-        model_data.attrs["run_config"]
-    )
+    backend_model.__calliope_run_config = run_config
 
-    if backend_model.__calliope_run_config["mode"] != "plan":
+    if run_config["mode"] != "plan":
         raise exceptions.ModelError(
             "Cannot rerun the backend in {} run mode. Only `plan` mode is "
-            "possible.".format(backend_model.__calliope_run_config["mode"])
+            "possible.".format(run_config["mode"])
         )
 
     timings = {}
     log_time(logger, timings, "model_creation")
 
     results, backend_model = backend_run.run_plan(
-        model_data, timings, run_pyomo, build_only=False, backend_rerun=backend_model
+        model_data,
+        run_config,
+        timings,
+        run_pyomo,
+        build_only=False,
+        backend_rerun=backend_model,
     )
 
     inputs = access_pyomo_model_inputs(backend_model)
@@ -241,7 +249,7 @@ def add_pyomo_constraint(
     return backend_model
 
 
-def get_all_pyomo_model_attrs(backend_model):
+def get_all_pyomo_model_attrs(subsets, backend_model):
     """
     Get the name of all sets, parameters, and variables in the generated Pyomo model.
 
@@ -252,21 +260,25 @@ def get_all_pyomo_model_attrs(backend_model):
     values are a list of dimensions over which they are indexed. These dimensions correspond to the
     sets.
     """
+
+    mapping_dict = {
+        "Var": "variables",
+        "Param": "parameters",
+        "Expression": "expressions",
+    }
+
     # Indexed objected
     objects = {
-        objname: {
-            i.name: [j.name for j in i.index_set().subsets()]
-            if i.name + "_index" == i.index_set().name
+        pyomo_obj: {
+            i.name: subsets.get(objname, {})[i.name]["foreach"]
+            if i.name in subsets.get(objname, {})
             else [i.index_set().name]
-            for i in backend_model.component_objects()
-            if isinstance(i, getattr(po.base, objname))
+            for i in backend_model.component_objects(ctype=getattr(po, pyomo_obj))
         }
-        for objname in ["Var", "Param"]
+        for pyomo_obj, objname in mapping_dict.items()
     }
     # Indices
-    objects["Set"] = [
-        i.name for i in backend_model.component_objects() if isinstance(i, po.base.Set)
-    ]
+    objects["Set"] = [i.name for i in backend_model.component_objects(ctype=po.Set)]
 
     return objects
 
@@ -275,6 +287,8 @@ class BackendInterfaceMethods:
     def __init__(self, model):
         self._backend = model._backend_model
         self._model_data = model._model_data
+        self.run_config = model.run_config
+        self.subsets = model.subsets
 
     def access_model_inputs(self):
         return access_pyomo_model_inputs(self._backend)
@@ -292,7 +306,13 @@ class BackendInterfaceMethods:
     activate_constraint.__doc__ = activate_pyomo_constraint.__doc__
 
     def rerun(self, *args, **kwargs):
-        return rerun_pyomo_model(self._model_data, self._backend, *args, **kwargs)
+        return rerun_pyomo_model(
+            self._model_data,
+            self.run_config,
+            self._backend,
+            *args,
+            **kwargs,
+        )
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
 
@@ -302,6 +322,6 @@ class BackendInterfaceMethods:
     add_constraint.__doc__ = add_pyomo_constraint.__doc__
 
     def get_all_model_attrs(self, *args, **kwargs):
-        return get_all_pyomo_model_attrs(self._backend, *args, **kwargs)
+        return get_all_pyomo_model_attrs(self.subsets, self._backend, *args, **kwargs)
 
     get_all_model_attrs.__doc__ = get_all_pyomo_model_attrs.__doc__

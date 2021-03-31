@@ -60,42 +60,6 @@ def get_previous_timestep(timesteps, timestep):
 
 
 @memoize
-def get_loc_tech_carriers(backend_model, loc_carrier):
-    """
-    For a given loc_carrier concatenation, get lists of the relevant
-    loc_tech_carriers which produce energy (loc_tech_carriers_prod), consume
-    energy (loc_tech_carriers_con) and export energy (loc_tech_carriers_export)
-    """
-    lookup = backend_model.__calliope_model_data["data"]["lookup_loc_carriers"]
-    loc_tech_carriers = split_comma_list(lookup[loc_carrier])
-
-    loc_tech_carriers_prod = [
-        i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_prod
-    ]
-    loc_tech_carriers_con = [
-        i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_con
-    ]
-
-    if hasattr(backend_model, "loc_tech_carriers_export"):
-        loc_tech_carriers_export = [
-            i for i in loc_tech_carriers if i in backend_model.loc_tech_carriers_export
-        ]
-    else:
-        loc_tech_carriers_export = []
-
-    return (loc_tech_carriers_prod, loc_tech_carriers_con, loc_tech_carriers_export)
-
-
-@memoize
-def get_loc_tech(loc_tech_carrier):
-    """
-    Split the string of a loc_tech_carrier (e.g. `region1::ccgt::power`) to get
-    just the loc_tech (e.g. `region1::ccgt`)
-    """
-    return loc_tech_carrier.rsplit("::", 1)[0]
-
-
-@memoize
 def get_timestep_weight(backend_model):
     """
     Get the total number of years this model considers, by summing all
@@ -103,18 +67,9 @@ def get_timestep_weight(backend_model):
     and divide it by number of hours in the year. Weight/resolution will almost
     always be 1 per step, unless time clustering/masking/resampling has taken place.
     """
-    model_data_dict = backend_model.__calliope_model_data
-    time_res = list(model_data_dict["data"]["timestep_resolution"].values())
-    weights = list(model_data_dict["data"]["timestep_weights"].values())
+    time_res = [po.value(i) for i in backend_model.timestep_resolution.values()]
+    weights = [po.value(i) for i in backend_model.timestep_weights.values()]
     return sum(np.multiply(time_res, weights)) / 8760
-
-
-@memoize
-def split_comma_list(comma_list):
-    """
-    Take a comma deliminated string and split it into a list of strings
-    """
-    return comma_list.split(",")
 
 
 @memoize
@@ -129,7 +84,7 @@ def get_conversion_plus_io(backend_model, tier):
         return "in", backend_model.carrier_con
 
 
-def get_var(backend_model, var, dims=None, sparse=False):
+def get_var(backend_model, var, dims=None, sparse=False, expr=False):
     """
     Return output for variable `var` as a pandas.Series (1d),
     pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
@@ -155,35 +110,23 @@ def get_var(backend_model, var, dims=None, sparse=False):
         else:
             dims = [var_container.index_set().name]
 
-    if sparse:
-        result = pd.DataFrame.from_dict(
-            var_container.extract_values_sparse(), orient="index"
-        )
+    if sparse and not expr:
+        result = pd.Series(var_container.extract_values_sparse())
     else:
-        result = pd.DataFrame.from_dict(var_container.extract_values(), orient="index")
-
+        if expr:
+            result = pd.Series(var_container._data).apply(
+                lambda x: po.value(x) if not invalid(x) else np.nan
+            )
+        else:
+            result = pd.Series(var_container.extract_values())
     if result.empty:
         raise exceptions.BackendError("Variable {} has no data.".format(var))
 
-    result = result[0]  # Get the only column in the dataframe
+    result = result.rename_axis(index=dims)
 
-    if len(dims) > 1:
-        result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
-
-    if len(result.index.names) == 1:
-        result = result.sort_index()
-        result.index.name = dims[0]
-    elif len(result.index.names) == 2:
-        # if len(dims) is 2, we already have a well-formed DataFrame
-        result = result.unstack(level=0)
-        result = result.sort_index()
-    else:  # len(dims) >= 3
-        result = xr.DataArray.from_series(result)
-
-    return result
+    return xr.DataArray.from_series(result)
 
 
-@memoize
 def loc_tech_is_in(backend_model, loc_tech, model_set):
     """
     Check if set exists and if loc_tech is in the set
@@ -204,10 +147,8 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
 
 def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
-        if re.match("resource|loc_coordinates|cost*", var.name):
+        if re.match("resource|node_coordinates|cost*", var.name):
             return ""
-        elif re.match("group_carrier_con*", var.name):
-            return "NonPositive"
         else:
             return "NonNegative"
 
@@ -221,6 +162,57 @@ def get_domain(var: xr.DataArray) -> str:
 
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
-        return val._value == po.base.param._NotValid or po.value(val) is None
+        return val._value == po.base.param._NotValid or pd.isnull(po.value(val))
     else:
         return pd.isnull(val)
+
+
+def datetime_to_string(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from datetime to string xarray dataarrays, to reduce the memory
+    footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
+    when creating the pyomo model object.
+
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    datetime_data = set()
+    for attr in ["coords", "data_vars"]:
+        for set_name, set_data in getattr(model_data, attr).items():
+            if set_data.dtype.kind == "M":
+                attrs = model_data[set_name].attrs
+                model_data[set_name] = model_data[set_name].dt.strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+                model_data[set_name].attrs = attrs
+                datetime_data.add((attr, set_name))
+    backend_model.__calliope_datetime_data = datetime_data
+
+    return model_data
+
+
+def string_to_datetime(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from string to datetime xarray dataarrays, reverting the process
+    undertaken in
+    datetime_to_string
+
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    for attr, set_name in backend_model.__calliope_datetime_data:
+        if attr == "coords" and set_name in model_data:
+            model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
+        elif set_name in model_data:
+            model_data[set_name] = (
+                model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            )
+    return model_data

@@ -12,7 +12,6 @@ Functions to pick timesteps from data given certain criteria.
 import pandas as pd
 
 from calliope.time import funcs
-from calliope.core.util.dataset import split_loc_techs
 from calliope import exceptions
 
 
@@ -22,7 +21,7 @@ def _get_array(data, var, tech, **kwargs):
         subset.update({k: v for k, v in kwargs.items()})
 
     unusable_dims = (
-        set(subset.keys()).difference(["techs", "locs"]).difference(data[var].dims)
+        set(subset.keys()).difference(["techs", "nodes"]).difference(data[var].dims)
     )
     if unusable_dims:
         raise exceptions.ModelError(
@@ -32,8 +31,7 @@ def _get_array(data, var, tech, **kwargs):
             )
         )
 
-    arr = split_loc_techs(data[var].copy()).loc[subset]
-    arr = arr.mean(dim=[i for i in arr.dims if i != "timesteps"]).to_pandas()
+    arr = data[var].loc[subset].groupby("timesteps").mean(...).to_pandas()
     return arr
 
 
@@ -42,7 +40,7 @@ def zero(data, tech, var="resource", **kwargs):
     Returns timesteps where ``var`` for the technology ``tech`` is zero.
 
     kwargs are additional dimensions to subset on, for example,
-    ``locs=['location1', 'location2]``
+    ``nodes=['node1', 'node2]``
 
     """
     s = _get_array(data, var, tech, **kwargs)
@@ -95,7 +93,7 @@ def extreme(
 ):
     """
     Returns timesteps for period of ``length`` where ``var`` for the technology
-    ``tech`` across the given list of ``locations`` is either minimal
+    ``tech`` across the given list of ``nodes`` is either minimal
     or maximal.
 
     Parameters
@@ -186,6 +184,7 @@ def extreme_diff(
         dimensions will be flattened by mean
 
     """
+
     if normalize:
         # Only normalise the desired var as rest of data may contain
         # non-numeric variables!

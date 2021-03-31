@@ -14,10 +14,10 @@ from calliope.postprocess.plotting.util import break_name, get_range
 
 
 def _line(
-    locs_coordinates,
+    node_coordinates,
     transmission_type,
-    to_location,
-    from_location,
+    to_node,
+    from_node,
     carrier,
     tech,
     prod,
@@ -29,8 +29,8 @@ def _line(
 ):
     # e.g. "Region1->Region2: 256.54 by gas_transmission (gas)"
     hover_info = "%s->%s: %.2f by %s (%s)" % (
-        from_location,
-        to_location,
+        from_node,
+        to_node,
         prod,
         transmission_type,
         carrier,
@@ -69,34 +69,28 @@ def _line(
         showlegend=False,
     )
 
-    if set(locs_coordinates.index) == set(["x", "y"]):
+    if set(node_coordinates.index) == set(["x", "y"]):
         h_coord, v_coord = "x", "y"
-    elif set(locs_coordinates.index) == set(["lon", "lat"]):
+    elif set(node_coordinates.index) == set(["lon", "lat"]):
         h_coord, v_coord = "lon", "lat"
 
     line[h_coord] = [
-        locs_coordinates[from_location][h_coord],
-        locs_coordinates[to_location][h_coord],
+        node_coordinates[from_node][h_coord],
+        node_coordinates[to_node][h_coord],
     ]
     line[v_coord] = [
-        locs_coordinates[from_location][v_coord],
-        locs_coordinates[to_location][v_coord],
+        node_coordinates[from_node][v_coord],
+        node_coordinates[to_node][v_coord],
     ]
     line_legend[h_coord] = [None]
     line_legend[v_coord] = [None]
     line_info_marker[h_coord] = [
         (1 / 2)
-        * (
-            locs_coordinates[from_location][h_coord]
-            + locs_coordinates[to_location][h_coord]
-        )
+        * (node_coordinates[from_node][h_coord] + node_coordinates[to_node][h_coord])
     ]
     line_info_marker[v_coord] = [
         (1 / 2)
-        * (
-            locs_coordinates[from_location][v_coord]
-            + locs_coordinates[to_location][v_coord]
-        )
+        * (node_coordinates[from_node][v_coord] + node_coordinates[to_node][v_coord])
     ]
 
     if is_initial_timestep:
@@ -111,8 +105,8 @@ def _line(
 
 
 def _marker(
-    locs_coordinates,
-    location,
+    node_coordinates,
+    node,
     carrier,
     tech,
     prod,
@@ -123,7 +117,7 @@ def _marker(
     name,
 ):
     # Example: "Region1: 3552.65 of pipe_import (gas)"
-    hover_info = "%s: %.2f of %s (%s)" % (location, prod, tech, carrier)
+    hover_info = "%s: %.2f of %s (%s)" % (node, prod, tech, carrier)
 
     marker_dict = dict(
         visible=False,
@@ -146,19 +140,22 @@ def _marker(
         text=hover_info,
         mode="markers",
         marker=dict(
-            symbol="circle-dot", opacity=0.6, size=10, color=techs_colors[tech],
+            symbol="circle-dot",
+            opacity=0.6,
+            size=10,
+            color=techs_colors[tech],
         ),
         legendgroup=tech,
         name=break_name(name, 18),
     )
 
-    if set(locs_coordinates.index) == set(["x", "y"]):
+    if set(node_coordinates.index) == set(["x", "y"]):
         h_coord, v_coord = "x", "y"
-    elif set(locs_coordinates.index) == set(["lon", "lat"]):
+    elif set(node_coordinates.index) == set(["lon", "lat"]):
         h_coord, v_coord = "lon", "lat"
 
-    marker_dict[h_coord] = [locs_coordinates[location][h_coord]]
-    marker_dict[v_coord] = [locs_coordinates[location][v_coord]]
+    marker_dict[h_coord] = [node_coordinates[node][h_coord]]
+    marker_dict[v_coord] = [node_coordinates[node][v_coord]]
     marker_legend[h_coord] = [None]
     marker_legend[v_coord] = [None]
 
@@ -174,11 +171,11 @@ def _marker(
 
 def _production_data(model, timesteps, timestep):
     """
-    returns a list of dicts, each dict is a plotly marker (location production)
+    returns a list of dicts, each dict is a plotly marker (node production)
     or line (transmission) on the map.
     """
-    locs_coordinates = model._model_data.loc_coordinates.to_pandas()
-    locs_techs_carriers_production = model.get_formatted_array("carrier_prod")
+    node_coordinates = model._model_data.loc_coordinates.to_pandas()
+    node_techs_carriers_production = model.get_formatted_array("carrier_prod")
     techs_colors = model._model_data.colors.to_pandas()
     scale_factor = 100 / abs(
         model.results.carrier_prod.values.max()
@@ -188,22 +185,22 @@ def _production_data(model, timesteps, timestep):
 
     production_data = []
     # we iterate through each dimension for one timestep in order to
-    # add the different production sources of the location and line
+    # add the different production sources of the node and line
     # transmissions toward it
-    # Complexity: O(len(carriers)*len(techs)*len(locations)). Considering
+    # Complexity: O(len(carriers)*len(techs)*len(nodes)). Considering
     # len(carriers) is supposed to be small (<10), we have a large margin in
-    # terms of techs and locations numbers (len(techs)*len(locations) <= 10^9,
+    # terms of techs and nodes numbers (len(techs)*len(nodes) <= 10^9,
     # equivalent to one second processing time for python)
     links = []
-    # list of sets { tech, from_location, to_location }
+    # list of sets { tech, from_node, to_node }
     links_data = []
     # links associated data, like prod, carrier, transmission_type
     # [ [prod, carrier, transmission_type], [] ..]
-    for location in locs_techs_carriers_production.locs.values:
+    for node in node_techs_carriers_production.nodes.values:
 
-        for carrier in locs_techs_carriers_production.carriers.values:
-            techs_production = locs_techs_carriers_production.sel(
-                carriers=carrier, locs=location
+        for carrier in node_techs_carriers_production.carriers.values:
+            techs_production = node_techs_carriers_production.sel(
+                carriers=carrier, nodes=node
             ).to_pandas()
             for tech, prod in techs_production.loc[:, timestep].iteritems():
                 if prod and prod > 0:
@@ -220,15 +217,15 @@ def _production_data(model, timesteps, timestep):
                         name = ""
 
                     if len(tech.split(":")) > 1:
-                        # "transmission_type:location"
-                        # if it gets energy from another location
-                        [transmission_type, from_location] = tech.split(":")
-                        links.append({tech_name, from_location, location})
+                        # "transmission_type:node"
+                        # if it gets energy from another node
+                        [transmission_type, from_node] = tech.split(":")
+                        links.append({tech_name, from_node, node})
                         links_data.append(
                             {
                                 "transmission_type": transmission_type,
-                                "from_location": from_location,
-                                "to_location": location,
+                                "from_node": from_node,
+                                "to_node": node,
                                 "prod": prod,
                                 "carrier": carrier,
                                 "tech": tech,
@@ -237,11 +234,11 @@ def _production_data(model, timesteps, timestep):
                             }
                         )
                     else:
-                        # if the energy comes from this location
+                        # if the energy comes from this node
                         production_data.extend(
                             _marker(
-                                locs_coordinates,
-                                location,
+                                node_coordinates,
+                                node,
                                 carrier,
                                 tech,
                                 prod,
@@ -287,10 +284,10 @@ def _production_data(model, timesteps, timestep):
     for link in links_merged:
         if link:
             params_list = [
-                locs_coordinates,
+                node_coordinates,
                 link["transmission_type"],
-                link["to_location"],
-                link["from_location"],
+                link["to_node"],
+                link["from_node"],
                 link["carrier"],
                 link["tech"],
                 link["prod"],
@@ -324,10 +321,10 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
         timestep_start, timestep_end = 0, len(model._model_data.timesteps.values)
 
     try:
-        locs_coordinates = model._model_data.loc_coordinates
+        node_coordinates = model._model_data.loc_coordinates
     except AttributeError:
         raise ValueError(
-            "Model does not define location coordinates "
+            "Model does not define node coordinates "
             "- no energy flow plotting possible."
         )
 
@@ -360,7 +357,10 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
     sliders = [
         dict(
             # active="start sliding",True
-            currentvalue=dict(visible=True, prefix="Timestep: ",),
+            currentvalue=dict(
+                visible=True,
+                prefix="Timestep: ",
+            ),
             pad={"t": 50},
             activebgcolor="black",
             bgcolor="grey",
@@ -380,12 +380,12 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
     )
 
     # change the range of the plot whether its x,y or lat,lon coords
-    if sorted(locs_coordinates.coordinates.values) == ["x", "y"]:
-        layout["xaxis"] = dict(range=get_range(locs_coordinates, "x", 0.2))
-        layout["yaxis"] = dict(range=get_range(locs_coordinates, "y", 0.2))
+    if sorted(node_coordinates.coordinates.values) == ["x", "y"]:
+        layout["xaxis"] = dict(range=get_range(node_coordinates, "x", 0.2))
+        layout["yaxis"] = dict(range=get_range(node_coordinates, "y", 0.2))
         for trace in data:
             trace["type"] = "scatter"
-    elif sorted(locs_coordinates.coordinates.values) == ["lat", "lon"]:
+    elif sorted(node_coordinates.coordinates.values) == ["lat", "lon"]:
         layout["geo"] = dict(
             scope="world",
             showland=True,
@@ -395,8 +395,8 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
             oceancolor="#aec6cf",
             subunitcolor="blue",
             countrycolor="green",
-            lonaxis=dict(range=get_range(locs_coordinates, "lon", 0.2)),
-            lataxis=dict(range=get_range(locs_coordinates, "lat", 0.2)),
+            lonaxis=dict(range=get_range(node_coordinates, "lon", 0.2)),
+            lataxis=dict(range=get_range(node_coordinates, "lat", 0.2)),
             countrywidth=0.5,
             subunitwidth=0.5,
             landcolor="rgb(255,255,255)",

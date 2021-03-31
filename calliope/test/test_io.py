@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions
@@ -104,31 +104,10 @@ class TestIO:
             model_from_disk.to_netcdf(out_path)
             assert os.path.isfile(out_path)
 
-    def test_netcdf_roundtrip_modelrun_to_yaml(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path_nc = os.path.join(tempdir, "model.nc")
-            out_path_yaml = os.path.join(tempdir, "modelrun.yaml")
-            model.to_netcdf(out_path_nc)
-            model_from_disk = calliope.read_netcdf(out_path_nc)
-
-            model_from_disk.save_commented_model_yaml(out_path_yaml)
-            assert os.path.isfile(out_path_yaml)
-
-    def test_netcdf_to_yaml_raises_if_attrs_missing(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path_yaml = os.path.join(tempdir, "modelrun.yaml")
-            model._model_run = {}
-            with pytest.raises(KeyError) as error:
-                model.save_commented_model_yaml(out_path_yaml)
-
-        assert check_error_or_warning(
-            error, "This model does not have the fully built model attached"
-        )
-
     def test_save_lp(self, model):
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.lp")
             model.to_lp(out_path)
 
             with open(out_path, "r") as f:
-                assert "\nmin \nobj:\n+1 cost(monetary_region1_1__csp)" in f.read()
+                assert "energy_cap(region1_ccgt)" in f.read()

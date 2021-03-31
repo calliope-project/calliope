@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 import calliope
 import logging
 import datetime
@@ -32,25 +32,17 @@ _MODEL_URBAN = os.path.join(
 
 class TestDataset:
     @pytest.fixture()
-    def loc_techs(self):
-        loc_techs = [
-            "region1-3::csp",
-            "region1::demand_power",
-            "region1-1::csp",
-            "region1-2::csp",
-            "region2::demand_power",
-            "region1-1::demand_power",
-        ]
-        return loc_techs
-
-    @pytest.fixture()
     def example_dataarray(self):
         return xr.DataArray(
-            [[[0], [1], [2]], [[3], [4], [5]]],
-            dims=("timesteps", "loc_techs_bar", "costs"),
+            [
+                [[[0], [1], [2]], [[3], [4], [5]], [[6], [7], [8]]],
+                [[[0], [1], [2]], [[3], [4], [5]], [[6], [7], [8]]],
+            ],
+            dims=("timesteps", "nodes", "techs", "costs"),
             coords={
                 "timesteps": ["foo", "bar"],
-                "loc_techs_bar": ["1::foo", "2::bar", "3::baz"],
+                "nodes": ["a", "b", "c"],
+                "techs": ["foo", "bar", "baz"],
                 "costs": ["foo"],
             },
         )
@@ -67,91 +59,19 @@ class TestDataset:
             {"foo": example_dataarray, "bar": example_dataarray.squeeze()}
         )
 
-    def test_get_loc_techs_tech(self, loc_techs):
-        loc_techs = dataset.get_loc_techs(loc_techs, tech="csp")
-        assert loc_techs == ["region1-3::csp", "region1-1::csp", "region1-2::csp"]
-
-    def test_get_loc_techs_loc(self, loc_techs):
-        loc_techs = dataset.get_loc_techs(loc_techs, loc="region1-1")
-        assert loc_techs == ["region1-1::csp", "region1-1::demand_power"]
-
-    def test_get_loc_techs_loc_and_tech(self, loc_techs):
-        loc_techs = dataset.get_loc_techs(loc_techs, tech="demand_power", loc="region1")
-        assert loc_techs == ["region1::demand_power"]
-
-    def test_split_loc_tech_to_dataarray(self, example_dataarray):
-        formatted_array = dataset.split_loc_techs(example_dataarray)
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("costs", "locs", "techs", "timesteps")
-
-    def test_split_loc_tech_to_series(self, example_dataarray):
-        formatted_series = dataset.split_loc_techs(
-            example_dataarray, return_as="Series"
-        )
-        assert isinstance(formatted_series, pd.Series)
-        assert formatted_series.index.names == ["costs", "locs", "techs", "timesteps"]
-
-    def test_split_loc_tech_to_multiindex_dataarray(self, example_dataarray):
-        formatted_array = dataset.split_loc_techs(
-            example_dataarray, return_as="MultiIndex DataArray"
-        )
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("timesteps", "loc_techs_bar", "costs")
-        assert isinstance(formatted_array.loc_techs_bar.to_index(), pd.MultiIndex)
-
-    def test_split_loc_tech_too_many_loc_tech_dims(self, example_dataarray):
-        _array = example_dataarray.rename({"costs": "loc_techs_2"})
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            dataset.split_loc_techs(_array)
-        assert check_error_or_warning(
-            excinfo, "Cannot split loc_techs or loc_tech_carriers dimension"
-        )
-
-    def test_split_loc_tech_one_dim_to_dataarray(self, example_one_dim_dataarray):
-        formatted_array = dataset.split_loc_techs(example_one_dim_dataarray)
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("timesteps",)
-
-    def test_split_loc_tech_one_dim_to_series(self, example_one_dim_dataarray):
-        formatted_series = dataset.split_loc_techs(
-            example_one_dim_dataarray, return_as="Series"
-        )
-        assert isinstance(formatted_series, pd.Series)
-        assert formatted_series.index.names == ["timesteps"]
-
-    def test_split_loc_tech_one_dim_to_multiindex_dataarray(
-        self, example_one_dim_dataarray
-    ):
-        formatted_array = dataset.split_loc_techs(
-            example_one_dim_dataarray, return_as="MultiIndex DataArray"
-        )
-        assert isinstance(formatted_array, xr.DataArray)
-        assert formatted_array.dims == ("timesteps",)
-
-    def test_split_loc_tech_unknown_output(
-        self, example_dataarray, example_one_dim_dataarray
-    ):
-        for array in [example_dataarray, example_one_dim_dataarray]:
-            with pytest.raises(ValueError) as excinfo:
-                dataset.split_loc_techs(array, return_as="foo")
-            assert check_error_or_warning(
-                excinfo,
-                "`return_as` must be `DataArray`, `Series`, or `MultiIndex DataArray`",
-            )
-
     def test_reorganise_dataset_dimensions(self, example_dataset):
         reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataset)
         dataset_dims = [i for i in reorganised_dataset.dims.keys()]
-        assert dataset_dims == ["costs", "loc_techs_bar", "timesteps"]
+        assert dataset_dims == ["costs", "nodes", "techs", "timesteps"]
 
     def test_reorganise_dataarray_dimensions(self, example_dataarray):
         reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataarray)
-        assert reorganised_dataset.dims == ("costs", "loc_techs_bar", "timesteps")
+        assert reorganised_dataset.dims == ("costs", "nodes", "techs", "timesteps")
 
     def test_fail_reorganise_dimensions(self):
         with pytest.raises(TypeError) as excinfo:
             dataset.reorganise_xarray_dimensions(
-                ["timesteps", "loc_techs_bar", "costs"]
+                ["timesteps", "nodes", "techs", "costs"]
             )
         assert check_error_or_warning(
             excinfo, "Must provide either xarray Dataset or DataArray to be reorganised"
@@ -253,7 +173,10 @@ class TestGenerateRuns:
 
     @python36_or_higher
     def test_generate_runs_scenarios_none_with_overrides(self):
-        runs = generate_runs(_MODEL_URBAN, scenarios=None,)
+        runs = generate_runs(
+            _MODEL_URBAN,
+            scenarios=None,
+        )
         assert len(runs) == 4
         assert runs[0].endswith("--scenario milp --save_netcdf out_1_milp.nc")
 
@@ -270,7 +193,7 @@ class TestPandasExport:
         ),
     )
     def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
-        model.get_formatted_array(variable_name).to_dataframe()
+        model.inputs[variable_name].to_dataframe()
 
 
 class TestObservedDict:

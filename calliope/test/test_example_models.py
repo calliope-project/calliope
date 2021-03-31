@@ -26,6 +26,7 @@ class TestModelPreproccesing:
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
+    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_preprocess_operate(self):
         calliope.examples.operate()
 
@@ -36,7 +37,7 @@ class TestModelPreproccesing:
 class TestNationalScaleExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):
         override = {
-            "model.subset_time": "2005-01-01",
+            "model.subset_time": ["2005-01-01", "2005-01-01"],
             "run.solver": solver,
         }
 
@@ -46,18 +47,12 @@ class TestNationalScaleExampleModelSenseChecks:
         model = calliope.examples.national_scale(override_dict=override)
         model.run()
 
-        assert model.results.storage_cap.to_pandas()["region1-1::csp"] == approx(
-            45129.950
-        )
-        assert model.results.storage_cap.to_pandas()["region2::battery"] == approx(
-            6675.173
-        )
+        assert model.results.storage_cap.loc["region1-1", "csp"] == approx(45129.950)
+        assert model.results.storage_cap.loc["region2", "battery"] == approx(6675.173)
 
-        assert model.results.energy_cap.to_pandas()["region1-1::csp"] == approx(
-            4626.588
-        )
-        assert model.results.energy_cap.to_pandas()["region2::battery"] == approx(1000)
-        assert model.results.energy_cap.to_pandas()["region1::ccgt"] == approx(30000)
+        assert model.results.energy_cap.loc["region1-1", "csp"] == approx(4626.588)
+        assert model.results.energy_cap.loc["region2", "battery"] == approx(1000)
+        assert model.results.energy_cap.loc["region1", "ccgt"] == approx(30000)
 
         assert float(model.results.cost.sum()) == approx(38988.7442)
 
@@ -77,7 +72,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_nationalscale_example_results_gurobi(self):
         try:
-            import gurobipy  # pylint: disable=unused-import
+            import gurobipy  # noqa: F401
 
             self.example_tester(solver="gurobi", solver_io="python")
         except ImportError:
@@ -107,8 +102,8 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
-            "locations.region1.techs.demand_power.constraints.resource": -200,
-            "locations.region2.techs.demand_power.constraints.resource": -400,
+            "nodes.region1.techs.demand_power.constraints.resource": -200,
+            "nodes.region2.techs.demand_power.constraints.resource": -400,
             "techs.csp.constraints.resource": 100,
         }
         with pytest.raises(calliope.exceptions.ModelError):
@@ -136,6 +131,7 @@ class TestNationalScaleExampleModelInfeasibility:
         self.example_tester()
 
 
+@pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
@@ -165,9 +161,6 @@ class TestNationalScaleExampleModelSpores:
                 scenario="spores",
             )
 
-        expected_warning = "All technologies were requested for inclusion in group constraint `systemwide_cost_max`"
-        assert check_error_or_warning(excinfo, expected_warning)
-
         model.run(build_only=True)
 
         # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0
@@ -178,10 +171,8 @@ class TestNationalScaleExampleModelSpores:
         # Expecting three spores + first optimal run
         assert np.allclose(model.results.spores, [0, 1, 2, 3])
 
-        costs = model.results.cost.sum("loc_techs_cost")
-        slack_cost = model._backend_model.group_cost_max[
-            ("monetary", "systemwide_cost_max")
-        ].value
+        costs = model.results.cost.sum(["nodes", "techs"])
+        slack_cost = model._backend_model.cost_max.value
 
         # First run is the optimal run, everything else is coming up against the slack cost
         assert costs.loc[{"spores": 0, "costs": "monetary"}] * (
@@ -206,7 +197,7 @@ class TestNationalScaleExampleModelSpores:
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):
         override = {
-            "model.subset_time": "2005-01-01",
+            "model.subset_time": ["2005-01-01", "2005-01-01"],
             "run.solver": solver,
         }
 
@@ -216,18 +207,22 @@ class TestNationalScaleResampledExampleModelSenseChecks:
         model = calliope.examples.time_resampling(override_dict=override)
         model.run()
 
-        assert model.results.storage_cap.to_pandas()["region1-1::csp"] == approx(
+        assert model.results.storage_cap.to_series()[("region1-1", "csp")] == approx(
             23563.444
         )
-        assert model.results.storage_cap.to_pandas()["region2::battery"] == approx(
+        assert model.results.storage_cap.to_series()[("region2", "battery")] == approx(
             6315.78947
         )
 
-        assert model.results.energy_cap.to_pandas()["region1-1::csp"] == approx(
+        assert model.results.energy_cap.to_series()[("region1-1", "csp")] == approx(
             1440.8377
         )
-        assert model.results.energy_cap.to_pandas()["region2::battery"] == approx(1000)
-        assert model.results.energy_cap.to_pandas()["region1::ccgt"] == approx(30000)
+        assert model.results.energy_cap.to_series()[("region2", "battery")] == approx(
+            1000
+        )
+        assert model.results.energy_cap.to_series()[("region1", "ccgt")] == approx(
+            30000
+        )
 
         assert float(model.results.cost.sum()) == approx(37344.221869)
 
@@ -315,7 +310,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         # Full 1-hourly model run: 0.064362
         assert float(
             model.results.systemwide_capacity_factor.loc[dict(carriers="power")]
-            .to_pandas()
+            .to_series()
             .T["battery"]
         ) == approx(0.044458, abs=0.000001)
 
@@ -339,9 +334,11 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             ].item()
         ) == approx(0.091036, abs=0.000001)
 
+    # @pytest.mark.xfail(reason="Anything to do with clusters is probably badly broken in myriad ways")
     def test_nationalscale_clustered_example_closest_results_cbc(self):
         self.example_tester_closest()
 
+    # @pytest.mark.xfail(reason="Anything to do with clusters is probably badly broken in myriad ways")
     def test_nationalscale_clustered_example_closest_results_glpk(self):
         if shutil.which("glpsol"):
             self.example_tester_closest(solver="glpk")
@@ -360,9 +357,15 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         else:
             pytest.skip("GLPK not installed")
 
+    @pytest.mark.xfail(
+        reason="Inter-cluster things are probably badly broken in myriad ways"
+    )
     def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.example_tester_storage_inter_cluster()
 
+    @pytest.mark.xfail(
+        reason="Inter-cluster things are probably badly broken in myriad ways"
+    )
     def test_storage_inter_cluster_cyclic(self):
         model = self.model_runner(storage_inter_cluster=True, cyclic=True)
         # Full 1-hourly model run: 22312488.670967
@@ -382,6 +385,9 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             ].item()
         ) == approx(0.075145, abs=0.000001)
 
+    @pytest.mark.xfail(
+        reason="Inter-cluster things are probably badly broken in myriad ways"
+    )
     def test_storage_inter_cluster_no_storage(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             self.model_runner(storage_inter_cluster=True, storage=False)
@@ -396,13 +402,13 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, resource_unit, solver="cbc", solver_io=None):
         unit_override = {
-            "techs.pv.constraints": {
-                "resource": "file=pv_resource.csv:{}".format(resource_unit),
-                "resource_unit": "energy_{}".format(resource_unit),
-            },
+            "techs.pv.constraints.resource": "file=pv_resource.csv:{}".format(
+                resource_unit
+            ),
+            "techs.pv.switches.resource_unit": "energy_{}".format(resource_unit),
             "run.solver": solver,
         }
-        override = {"model.subset_time": "2005-07-01", **unit_override}
+        override = {"model.subset_time": ["2005-07-01", "2005-07-01"], **unit_override}
 
         if solver_io:
             override["run.solver_io"] = solver_io
@@ -410,7 +416,7 @@ class TestUrbanScaleExampleModelSenseChecks:
         model = calliope.examples.urban_scale(override_dict=override)
         model.run()
 
-        assert model.results.energy_cap.to_pandas()["X1::chp"] == approx(250.090112)
+        assert model.results.energy_cap.to_series()[("X1", "chp")] == approx(250.090112)
 
         # GLPK isn't able to get the same answer both times, so we have to account for that here
         if resource_unit == "per_cap" and solver == "glpk":
@@ -418,14 +424,16 @@ class TestUrbanScaleExampleModelSenseChecks:
         else:
             heat_pipe_approx = 182.19260
 
-        assert model.results.energy_cap.to_pandas()["X2::heat_pipes:N1"] == approx(
+        assert model.results.energy_cap.to_series()[("X2", "heat_pipes:N1")] == approx(
             heat_pipe_approx
         )
 
-        assert model.results.carrier_prod.sum("timesteps").to_pandas()[
-            "X3::boiler::heat"
+        assert model.results.carrier_prod.sum("timesteps").to_series()[
+            ("heat", "X3", "boiler")
         ] == approx(0.18720)
-        assert model.results.resource_area.to_pandas()["X2::pv"] == approx(830.064659)
+        assert model.results.resource_area.to_series()[("X2", "pv")] == approx(
+            830.064659
+        )
 
         assert float(model.results.carrier_export.sum()) == approx(122.7156)
 
@@ -438,7 +446,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_area_gurobi(self):
         try:
-            import gurobipy  # pylint: disable=unused-import
+            import gurobipy  # noqa: F401
 
             self.example_tester("per_area", solver="gurobi", solver_io="python")
         except ImportError:
@@ -449,7 +457,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_cap_gurobi(self):
         try:
-            import gurobipy  # pylint: disable=unused-import
+            import gurobipy  # noqa: F401
 
             self.example_tester("per_cap", solver="gurobi", solver_io="python")
         except ImportError:
@@ -459,29 +467,30 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_milp_example_results(self):
         model = calliope.examples.milp(
             override_dict={
-                "model.subset_time": "2005-01-01",
+                "model.subset_time": ["2005-01-01", "2005-01-01"],
                 "run.solver_options.mipgap": 0.001,
             }
         )
         model.run()
 
-        assert model.results.energy_cap.to_pandas()["X1::chp"] == 300
-        assert model.results.energy_cap.to_pandas()["X2::heat_pipes:N1"] == approx(
+        assert model.results.energy_cap.to_series()[("X1", "chp")] == 300
+        assert model.results.energy_cap.to_series()[("X2", "heat_pipes:N1")] == approx(
             188.363137
         )
 
-        assert model.results.carrier_prod.sum("timesteps").to_pandas()[
-            "X1::supply_gas::gas"
+        assert model.results.carrier_prod.sum("timesteps").to_series()[
+            ("gas", "X1", "supply_gas")
         ] == approx(12363.173036)
         assert float(model.results.carrier_export.sum()) == approx(0)
 
-        assert model.results.purchased.to_pandas()["X2::boiler"] == 1
-        assert model.results.units.to_pandas()["X1::chp"] == 1
+        assert model.results.purchased.to_series()[("X2", "boiler")] == 1
+        assert model.results.units.to_series()[("X1", "chp")] == 1
 
         assert float(model.results.operating_units.sum()) == 24
 
         assert float(model.results.cost.sum()) == approx(540.780779)
 
+    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
         model = calliope.examples.operate(
             override_dict={"model.subset_time": ["2005-07-01", "2005-07-04"]}

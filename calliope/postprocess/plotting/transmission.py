@@ -48,8 +48,8 @@ def _get_zoom(coordinate_array, width):
     }
 
     bounds = [
-        coordinate_array.max(dim="locs").values,
-        coordinate_array.min(dim="locs").values,
+        coordinate_array.max(dim="nodes").values,
+        coordinate_array.min(dim="nodes").values,
     ]
 
     max_distance = vincenty(*bounds)
@@ -67,7 +67,7 @@ def _get_zoom(coordinate_array, width):
 
 
 def _get_data(model, var, sum_dims=None):
-    var_da = model.get_formatted_array(var).rename({"locs": "locs_to"})
+    var_da = model.get_formatted_array(var).rename({"nodes": "nodes_to"})
 
     if sum_dims:
         var_da = var_da.sum(dim=sum_dims)
@@ -84,7 +84,7 @@ def _get_data(model, var, sum_dims=None):
     ]
 
     clean_var.columns = pd.MultiIndex.from_tuples(
-        clean_var.columns.str.split(":").tolist(), names=["techs", "locs_from"]
+        clean_var.columns.str.split(":").tolist(), names=["techs", "nodes_from"]
     )
 
     return xr.DataArray.from_series(clean_var.stack().stack())
@@ -93,27 +93,27 @@ def _get_data(model, var, sum_dims=None):
 def _fill_scatter(coordinates, energy_cap, scatter_dict, dict_entry, tech):
     mid_edge = (
         lambda _from, _to: (
-            coordinates.loc[{"locs": _from, "coordinates": dict_entry}]
-            + coordinates.loc[{"locs": _to, "coordinates": dict_entry}]
+            coordinates.loc[{"nodes": _from, "coordinates": dict_entry}]
+            + coordinates.loc[{"nodes": _to, "coordinates": dict_entry}]
         ).item()
         / 2
     )
 
     edge = lambda _from, _to: [
-        coordinates.loc[{"locs": _from, "coordinates": dict_entry}].item(),
-        coordinates.loc[{"locs": _to, "coordinates": dict_entry}].item(),
+        coordinates.loc[{"nodes": _from, "coordinates": dict_entry}].item(),
+        coordinates.loc[{"nodes": _to, "coordinates": dict_entry}].item(),
         None,
     ]
 
     links = []
     filled_list = []
 
-    for loc_from in energy_cap.loc[dict(techs=tech)].locs_from:
-        for loc_to in energy_cap.loc[dict(techs=tech)].locs_to:
+    for loc_from in energy_cap.loc[dict(techs=tech)].nodes_from:
+        for loc_to in energy_cap.loc[dict(techs=tech)].nodes_to:
             if [loc_to, loc_from] in links:
                 continue
             e_cap = energy_cap.loc[
-                dict(techs=tech, locs_to=loc_to, locs_from=loc_from)
+                dict(techs=tech, nodes_to=loc_to, nodes_from=loc_from)
             ].fillna(0)
             if e_cap:
                 links.append([loc_from, loc_to])
@@ -134,7 +134,7 @@ def _get_centre(coordinates):
     """
     Get centre of a map based on given lat and lon coordinates
     """
-    centre = (coordinates.max(dim="locs") + coordinates.min(dim="locs")) / 2
+    centre = (coordinates.max(dim="nodes") + coordinates.min(dim="nodes")) / 2
 
     return dict(
         lat=centre.loc[dict(coordinates="lat")].item(),
@@ -153,10 +153,10 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
 
     """
     try:
-        coordinates = model._model_data.loc_coordinates.sortby("locs")
+        coordinates = model._model_data.loc_coordinates.sortby("nodes")
     except AttributeError:
         raise ValueError(
-            "Model does not define location coordinates "
+            "Model does not define node coordinates "
             "- no transmission plotting possible."
         )
 
@@ -277,17 +277,17 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
 
     node_scatter_dict = {
         h_coord: [
-            coordinates.loc[dict(locs=loc, coordinates=h_coord)].item()
-            for loc in coordinates.locs
+            coordinates.loc[dict(nodes=loc, coordinates=h_coord)].item()
+            for loc in coordinates.nodes
         ],
         v_coord: [
-            coordinates.loc[dict(locs=loc, coordinates=v_coord)].item()
-            for loc in coordinates.locs
+            coordinates.loc[dict(nodes=loc, coordinates=v_coord)].item()
+            for loc in coordinates.nodes
         ],
-        "text": [loc.item() for loc in coordinates.locs],
-        "name": "Locations",
+        "text": [loc.item() for loc in coordinates.nodes],
+        "name": "nodes",
         "type": scatter_type,
-        "legendgroup": "locations",
+        "legendgroup": "nodes",
         "mode": "markers",
         "hoverinfo": "text",
         "marker": {"symbol": "square", "size": 8, "color": "grey"},

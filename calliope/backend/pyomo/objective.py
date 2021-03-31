@@ -10,7 +10,7 @@ Objective functions.
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 from calliope.core.util.tools import load_function
 
 
@@ -40,14 +40,16 @@ def minmax_cost_optimization(backend_model):
     def obj_rule(backend_model):
         if backend_model.__calliope_run_config.get("ensure_feasibility", False):
             unmet_demand = (
-                sum(
+                po.quicksum(
                     (
-                        backend_model.unmet_demand[loc_carrier, timestep]
-                        - backend_model.unused_supply[loc_carrier, timestep]
+                        backend_model.unmet_demand[carrier, node, timestep]
+                        - backend_model.unused_supply[carrier, node, timestep]
                     )
                     * backend_model.timestep_weights[timestep]
-                    for loc_carrier in backend_model.loc_carriers
-                    for timestep in backend_model.timesteps
+                    for [carrier, node, timestep] in backend_model.carriers
+                    * backend_model.nodes
+                    * backend_model.timesteps
+                    if [carrier, node, timestep] in backend_model.unmet_demand._index
                 )
                 * backend_model.bigM
             )
@@ -57,10 +59,14 @@ def minmax_cost_optimization(backend_model):
             unmet_demand = 0
 
         return (
-            sum(
-                backend_model.cost[k, loc_tech] * v
-                for loc_tech in backend_model.loc_techs_cost
-                for k, v in backend_model.objective_cost_class.items()
+            po.quicksum(
+                po.quicksum(
+                    backend_model.cost[class_name, node, tech]
+                    for [node, tech] in backend_model.nodes * backend_model.techs
+                    if [class_name, node, tech] in backend_model.cost._index
+                )
+                * weight
+                for class_name, weight in backend_model.objective_cost_class.items()
             )
             + unmet_demand
         )
