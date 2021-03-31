@@ -12,6 +12,7 @@ Checks for model consistency and possible errors during preprocessing.
 import os
 import logging
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -121,6 +122,7 @@ def check_initial(config_model):
             "model",
             "run",
             "nodes",
+            "locations",  # TODO: remove in v0.7.1
             "tech_groups",
             "techs",
             "links",
@@ -135,9 +137,19 @@ def check_initial(config_model):
     # Check that all required top-level keys are specified
     for k in ["model", "run", "nodes", "techs"]:
         if k not in config_model.keys():
-            errors.append(
-                "Model is missing required top-level configuration item: {}".format(k)
-            )
+            if k == "nodes" and "locations" in config_model.keys():
+                # TODO: remove in v0.7.1
+                warnings.warn(
+                    "`locations` has been renamed to `nodes` and will stop working "
+                    "in v0.7.1. Please update your model configuration accordingly.",
+                    DeprecationWarning,
+                )
+            else:
+                errors.append(
+                    "Model is missing required top-level configuration item: {}".format(
+                        k
+                    )
+                )
 
     # Check run configuration
     # Exclude solver_options and objective_options.cost_class from checks,

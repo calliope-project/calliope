@@ -160,8 +160,7 @@ class TestBuildConversionPlusConstraints:
         )
 
     def test_loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint(self):
-        """
-        """
+        """"""
 
         m = build_model({}, "simple_conversion_plus,one_day,investment_costs")
         m.run(build_only=True)

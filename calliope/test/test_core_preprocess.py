@@ -126,7 +126,8 @@ class TestModelRun:
         )
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
-                override_dict=override, scenario="simple_supply,one_day",
+                override_dict=override,
+                scenario="simple_supply,one_day",
             )
 
         assert check_error_or_warning(
@@ -1304,7 +1305,10 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
-        assert check_error_or_warning(excinfo, "Cannot have `force_resource` = True",)
+        assert check_error_or_warning(
+            excinfo,
+            "Cannot have `force_resource` = True",
+        )
 
     def test_override_coordinates(self):
         """

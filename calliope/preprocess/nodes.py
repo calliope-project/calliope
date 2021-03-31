@@ -39,7 +39,12 @@ def process_nodes(model_config, modelrun_techs):
     """
     techs_in = model_config.techs.copy()
     tech_groups_in = model_config.tech_groups
-    nodes_in = model_config.nodes
+
+    try:
+        nodes_in = model_config.nodes
+    except KeyError:
+        nodes_in = model_config.locations  # TODO: Remove in v0.7.1
+
     links_in = model_config.get("links", AttrDict())
 
     allowed_from_file = DEFAULTS.model.file_allowed
@@ -215,7 +220,12 @@ def process_nodes(model_config, modelrun_techs):
                 tech_settings = cleanup_undesired_keys(tech_settings)
 
                 tech_settings = process_per_distance_constraints(
-                    tech_name, tech_settings, nodes, nodes_comments, loc_from, loc_to,
+                    tech_name,
+                    tech_settings,
+                    nodes,
+                    nodes_comments,
+                    loc_from,
+                    loc_to,
                 )
                 tech_settings = check_costs_and_compute_depreciation_rates(
                     tech_name, link, tech_settings, warnings, errors

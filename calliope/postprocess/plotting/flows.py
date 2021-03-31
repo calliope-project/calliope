@@ -140,7 +140,10 @@ def _marker(
         text=hover_info,
         mode="markers",
         marker=dict(
-            symbol="circle-dot", opacity=0.6, size=10, color=techs_colors[tech],
+            symbol="circle-dot",
+            opacity=0.6,
+            size=10,
+            color=techs_colors[tech],
         ),
         legendgroup=tech,
         name=break_name(name, 18),
@@ -354,7 +357,10 @@ def plot_flows(model, timestep_cycle=1, timestep_index_subset=[], **kwargs):
     sliders = [
         dict(
             # active="start sliding",True
-            currentvalue=dict(visible=True, prefix="Timestep: ",),
+            currentvalue=dict(
+                visible=True,
+                prefix="Timestep: ",
+            ),
             pad={"t": 50},
             activebgcolor="black",
             bgcolor="grey",

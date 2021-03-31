@@ -72,7 +72,8 @@ class TestUpdateParam:
         """
         time = model._backend_model.timesteps[1]
         model.backend.update_param(
-            "resource", {("a", "test_demand_elec", time): -10},
+            "resource",
+            {("a", "test_demand_elec", time): -10},
         )
 
         assert (

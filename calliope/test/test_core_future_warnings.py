@@ -15,3 +15,14 @@ class TestDeprecationWarnings:
             model.get_formatted_array("carrier_prod")
 
         assert check_error_or_warning(warning, "get_formatted_array() is deprecated")
+
+    def test_locations_instead_of_nodes(self):
+        with pytest.warns(DeprecationWarning) as warning:
+            model = build_model(
+                scenario="simple_supply_locations,one_day,investment_costs"
+            )
+
+        assert check_error_or_warning(warning, "`locations` has been renamed")
+
+        model.run()
+        assert model.get_formatted_array("carrier_prod").sum() == 420
