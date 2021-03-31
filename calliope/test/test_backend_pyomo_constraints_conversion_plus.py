@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_variable_exists

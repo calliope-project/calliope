@@ -139,11 +139,13 @@ class TestModelData:
     def test_get_key_matching_nesting_default_start_end(
         self, model_data, nesting, key_to_check, search_result
     ):
-        search_results = model_data._get_key_matching_nesting(nesting, key_to_check)
+        matching_search_results = model_data._get_key_matching_nesting(
+            nesting, key_to_check
+        )
         if search_result is not None:
-            assert search_results.groups() == tuple(search_result)
+            assert matching_search_results.groups() == tuple(search_result)
         else:
-            assert search_results == None
+            assert matching_search_results is None
 
     @pytest.mark.parametrize(
         ("start", "end", "search_result"),
@@ -159,13 +161,13 @@ class TestModelData:
     ):
         nesting = ["techs"]
         key_to_check = "aA.techs.bB"
-        search_results = model_data._get_key_matching_nesting(
+        matching_search_results = model_data._get_key_matching_nesting(
             nesting, key_to_check, start, end
         )
         if search_result is not None:
-            assert search_results.groups() == tuple(search_result)
+            assert matching_search_results.groups() == tuple(search_result)
         else:
-            assert search_results == None
+            assert matching_search_results is None
 
     @pytest.mark.parametrize(
         ("model_run_dict", "nesting", "expected_data_dict"),

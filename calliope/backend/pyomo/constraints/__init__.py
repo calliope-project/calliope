@@ -1,10 +1,12 @@
-from calliope.backend.pyomo.constraints.capacity import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.conversion import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.conversion_plus import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.costs import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.dispatch import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.energy_balance import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.export import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.milp import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.network import *  # pylint: disable=unused-import
-from calliope.backend.pyomo.constraints.policy import *  # pylint: disable=unused-import
+# flake8: noqa
+
+from calliope.backend.pyomo.constraints.capacity import *
+from calliope.backend.pyomo.constraints.conversion import *
+from calliope.backend.pyomo.constraints.conversion_plus import *
+from calliope.backend.pyomo.constraints.costs import *
+from calliope.backend.pyomo.constraints.dispatch import *
+from calliope.backend.pyomo.constraints.energy_balance import *
+from calliope.backend.pyomo.constraints.export import *
+from calliope.backend.pyomo.constraints.milp import *
+from calliope.backend.pyomo.constraints.network import *
+from calliope.backend.pyomo.constraints.policy import *

@@ -3,7 +3,7 @@ import os
 import collections
 
 
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 import numpy as np
 import pyomo.core as po
 import pandas as pd
@@ -857,7 +857,7 @@ class TestCapacityConstraints:
             elif override == "equals":
                 assert expr.ub == 10
                 assert expr.lb == 10
-            if override is "min":
+            if override == "min":
                 assert expr.lb == 10
                 assert expr.ub == np.inf
 

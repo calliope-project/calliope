@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 import pandas as pd
 import pyomo.core as po
 

@@ -523,7 +523,7 @@ def run_operate(model_data, timings, backend, build_only):
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
-            if (model_data.get("include_storage", False) == True).any():
+            if (model_data.get("include_storage", False) == 1).any():  # 1 represents boolean True here
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
                 ].drop_vars("timesteps")

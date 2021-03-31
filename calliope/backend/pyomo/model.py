@@ -13,14 +13,14 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import pyomo.core as po  # pylint: disable=import-error
-from pyomo.opt import SolverFactory  # pylint: disable=import-error
+import pyomo.core as po
+from pyomo.opt import SolverFactory
 
 # pyomo.environ is needed for pyomo solver plugins
-import pyomo.environ  # pylint: disable=unused-import,import-error
+import pyomo.environ  # noqa: F401
 
 # TempfileManager is required to set log directory
-from pyutilib.services import TempfileManager  # pylint: disable=import-error
+from pyutilib.services import TempfileManager
 
 from calliope.backend.pyomo.util import (
     get_var,

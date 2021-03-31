@@ -1,6 +1,6 @@
 import os
 
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions

@@ -9,7 +9,7 @@ Conversion plus technology constraints.
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 
 from calliope.backend.pyomo.util import (
     get_param,

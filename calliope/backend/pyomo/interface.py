@@ -1,7 +1,7 @@
 import logging
 
 import xarray as xr
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 
 import calliope
 from calliope.backend.pyomo.util import get_var, string_to_datetime
@@ -11,7 +11,6 @@ from calliope.backend.pyomo import model as run_pyomo
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
 from calliope import exceptions
-from calliope.core.attrdict import AttrDict
 from calliope.postprocess.results import postprocess_model_results
 
 logger = logging.getLogger(__name__)

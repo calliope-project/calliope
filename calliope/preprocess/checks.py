@@ -604,7 +604,7 @@ def check_final(model_run):
                 "{x: N, y: M}, not " + str(model_run.nodes[first_loc].coordinates)
             )
 
-        for loc_id, loc_config in model_run.nodes.items():
+        for _loc_id, loc_config in model_run.nodes.items():
             try:
                 if sorted(list(loc_config.coordinates.keys())) != coord_keys:
                     errors.append("All nodes must use the same coordinate format.")

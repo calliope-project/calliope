@@ -47,7 +47,7 @@ def get_data_layout(
     data = []
     buttons = []
     # fill trace data and add number of traces per var to 'data_len' for use with
-    # visibility. first var in loop has visibility == True by default
+    # visibility. first var in loop has visibility True by default
     visible = True
 
     for var in relevant_vars:

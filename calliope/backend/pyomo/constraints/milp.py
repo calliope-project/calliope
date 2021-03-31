@@ -9,7 +9,7 @@ Constraints for binary and integer decision variables
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 
 from calliope.backend.pyomo.util import get_param
 

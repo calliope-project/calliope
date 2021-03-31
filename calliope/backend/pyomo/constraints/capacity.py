@@ -9,11 +9,9 @@ Capacity constraints for technologies (output, resource, area, and storage).
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
-import numpy as np
+import pyomo.core as po
 
 from calliope.backend.pyomo.util import get_param, invalid
-from calliope import exceptions
 
 
 def get_capacity_bounds(bounds):

@@ -10,7 +10,7 @@ of the technologies
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 
 from calliope.backend.pyomo.util import get_param, get_previous_timestep
 

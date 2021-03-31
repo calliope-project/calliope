@@ -109,7 +109,9 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
     else:
         timesteps = pd.to_datetime(model._model_data.timesteps.values)
 
-    def _get_reindexed_array(array, index=["nodes", "techs"], fillna=None):
+    def _get_reindexed_array(array, index=None, fillna=None):
+        if index is None:
+            index = ["nodes", "techs"]
         # reindexing data means that DataArrays have the same values in nodes and techs
         reindexer = {k: sorted(dataset[k].values) for k in index}
         formatted_array = model.get_formatted_array(array)

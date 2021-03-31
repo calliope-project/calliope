@@ -72,7 +72,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_nationalscale_example_results_gurobi(self):
         try:
-            import gurobipy  # pylint: disable=unused-import
+            import gurobipy  # noqa: F401
 
             self.example_tester(solver="gurobi", solver_io="python")
         except ImportError:
@@ -452,7 +452,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_area_gurobi(self):
         try:
-            import gurobipy  # pylint: disable=unused-import
+            import gurobipy  # noqa: F401
 
             self.example_tester("per_area", solver="gurobi", solver_io="python")
         except ImportError:
@@ -463,7 +463,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     def test_urban_example_results_cap_gurobi(self):
         try:
-            import gurobipy  # pylint: disable=unused-import
+            import gurobipy  # noqa: F401
 
             self.example_tester("per_cap", solver="gurobi", solver_io="python")
         except ImportError:

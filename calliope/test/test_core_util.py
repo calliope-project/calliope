@@ -1,4 +1,4 @@
-import pytest  # pylint: disable=unused-import
+import pytest  # noqa: F401
 import calliope
 import logging
 import datetime

@@ -71,7 +71,9 @@ class TestSubsets:
             observer=model_data,
         )
         UpdateObserverDict(
-            initial_dict={"foz": 0}, name="model_config", observer=model_data,
+            initial_dict={"foz": 0},
+            name="model_config",
+            observer=model_data,
         )
         return model_data
 
@@ -147,7 +149,7 @@ class TestSubsets:
         idx = _get_valid_subset(imask)
         assert isinstance(idx, pd.Index)
         assert len(idx) == imask.sum()
-        assert all(imask.loc[i] == True for i in idx)
+        assert all(imask.loc[i] == 1 for i in idx)  # 1 represents boolean True here
 
     def test_subset_imask_no_squeeze(self, model_data, imask_subset_config):
         """
@@ -157,7 +159,9 @@ class TestSubsets:
         imask = _imask_foreach(model_data, foreach)
         assert set(imask.dims) == set(foreach)
         imask_subset = _subset_imask("foo", imask_subset_config(foreach), imask)
-        assert (imask_subset.loc[{"nodes": "bar"}] == False).all()
+        assert (
+            imask_subset.loc[{"nodes": "bar"}] == 0
+        ).all()  # 0 represents boolean False here
 
     def test_subset_imask_squeeze(self, model_data, imask_subset_config):
         """

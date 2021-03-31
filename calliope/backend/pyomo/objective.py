@@ -10,7 +10,7 @@ Objective functions.
 
 """
 
-import pyomo.core as po  # pylint: disable=import-error
+import pyomo.core as po
 from calliope.core.util.tools import load_function
 
 

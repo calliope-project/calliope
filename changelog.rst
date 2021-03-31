@@ -163,7 +163,7 @@ Internal changes
 
 |fixed| Unknown technology parameters are detected and the user is warned.
 
-|fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
+|fixed| Loc::techs with empty cost classes (i.e. value is None) are handled by a warning and cost class deletion, instead of messy failure.
 
 0.6.3 (2018-10-03)
 ------------------
