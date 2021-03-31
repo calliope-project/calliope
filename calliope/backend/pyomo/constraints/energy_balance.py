@@ -129,9 +129,8 @@ def balance_supply_constraint_rule(backend_model, carrier, node, tech, timestep)
     else:
         available_resource = resource * resource_scale
 
-    if (
-        backend_model.force_resource[node, tech].value == 1
-    ):  # 1 represents boolean True here
+    # 1 represents boolean True here
+    if backend_model.force_resource[node, tech].value == 1:
         return carrier_prod == available_resource
     elif min_use:
         return min_use * available_resource <= carrier_prod <= available_resource
@@ -202,9 +201,8 @@ def balance_demand_constraint_rule(backend_model, carrier, node, tech, timestep)
     # e.g. in the group constraints
     backend_model.required_resource[node, tech, timestep].expr = required_resource
 
-    if (
-        backend_model.force_resource[node, tech].value == 1
-    ):  # 1 represents boolean True here
+    # 1 represents boolean True here
+    if backend_model.force_resource[node, tech].value == 1:
         return carrier_con == backend_model.required_resource[node, tech, timestep]
     else:
         return carrier_con >= backend_model.required_resource[node, tech, timestep]
@@ -268,7 +266,8 @@ def resource_availability_supply_plus_constraint_rule(
     else:
         available_resource = resource * resource_scale
 
-    if backend_model.force_resource[node, tech].value == 1:  # 1 represents boolean True here
+    # 1 represents boolean True here
+    if backend_model.force_resource[node, tech].value == 1:
         return backend_model.resource_con[node, tech, timestep] == available_resource
     else:
         return backend_model.resource_con[node, tech, timestep] <= available_resource
