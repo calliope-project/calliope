@@ -7,6 +7,7 @@ import logging
 
 import numpy as np
 import xarray as xr
+import pyomo.core as po
 
 from calliope.core.util.logging import log_time
 from calliope import exceptions
@@ -178,7 +179,8 @@ def run_spores(model_data, timings, interface, backend, build_only):
     n_spores = run_config["spores_options"]["spores_number"]
     slack = run_config["spores_options"]["slack"]
     spores_score = run_config["spores_options"]["score_cost_class"]
-    slack_group = run_config["spores_options"]["slack_cost_group"]
+    slack_cost_class = run_config["spores_options"]["slack_cost_class"]
+    objective_cost_class = run_config["spores_options"]["objective_cost_class"]
 
     # Define default scoring function, based on integer scoring method
     # TODO: make the function to run optional
@@ -194,9 +196,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
     # Define function to update "spores_score" after each iteration of the method
     def _update_spores_score(backend_model, cap_loc_score):
         loc_tech_score_dict = {
-            (spores_score, "{}::{}".format(i, j)): k
-            for (i, j), k in cap_loc_score.stack().items()
-            if "{}::{}".format(i, j) in model_data.loc_techs_investment_cost
+            (spores_score, i, j): k for (i, j), k in cap_loc_score.stack().items()
         }
 
         interface.update_pyomo_param(
@@ -209,36 +209,44 @@ def run_spores(model_data, timings, interface, backend, build_only):
             "No more SPORES will be generated."
         )
 
+    def _limit_total_system_costs_constraint_rule(backend_model, cost):
+        cost_max = backend_model.cost_max
+
+        return (
+            sum(
+                backend_model.cost[cost, node, tech]
+                for [node, tech] in backend_model.nodes * backend_model.techs
+                if [cost, node, tech] in backend_model.cost._index
+            )
+        ) <= cost_max
+
     # Run once for the 'cost-optimal' solution
-    results, backend_model = run_plan(model_data, timings, backend, build_only)
+    results, backend_model = run_plan(
+        model_data, run_config, timings, backend, build_only
+    )
     if build_only:
         return results, backend_model  # We have what we need, so break out of the loop
 
     if results.attrs["termination_condition"] in ["optimal", "feasible"]:
         results.attrs["objective_function_value"] = backend_model.obj()
+        initial_system_cost = backend_model.obj()
         # Storing results and scores in the specific dictionaries
         spores_list = [results]
         cum_scores = _cap_loc_score_default(results)
         # Set group constraint "cost_max" equal to slacked cost
-        slack_costs = model_data.group_cost_max.loc[
-            {"group_names_cost_max": slack_group}
-        ].dropna("costs")
-        interface.update_pyomo_param(
-            backend_model,
-            "group_cost_max",
-            {
-                (_cost_class, slack_group): results.cost.loc[{"costs": _cost_class}]
-                .sum()
-                .item()
-                * (1 + slack)
-                for _cost_class in slack_costs.costs.values
-            },
+        slack_cost = initial_system_cost * (1 + slack)
+        backend_model.cost_max = po.Param(
+            initialize=slack_cost, mutable=True, within=po.Reals
+        )
+        backend_model.limit_total_system_costs_constraint = po.Constraint(
+            [slack_cost_class],
+            rule=_limit_total_system_costs_constraint_rule,
         )
         # Modify objective function weights: spores_score -> 1, all others -> 0
         interface.update_pyomo_param(
             backend_model,
             "objective_cost_class",
-            {spores_score: 1, **{i: 0 for i in slack_costs.costs.values}},
+            objective_cost_class,
         )
         # Update "spores_score" based on previous iteration
         _update_spores_score(backend_model, cum_scores)
@@ -257,7 +265,12 @@ def run_spores(model_data, timings, interface, backend, build_only):
     # Iterate over the number of SPORES requested by the user
     for _spore in range(0, n_spores):
         results, backend_model = run_plan(
-            model_data, timings, backend, build_only, backend_rerun=backend_model
+            model_data,
+            run_config,
+            timings,
+            backend,
+            build_only,
+            backend_rerun=backend_model,
         )
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:

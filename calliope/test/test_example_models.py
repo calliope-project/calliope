@@ -153,7 +153,6 @@ class TestNationalScaleExampleModelOperate:
         self.example_tester()
 
 
-@pytest.mark.xfail(reason="depends on group constraints which are currently dead")
 class TestNationalScaleExampleModelSpores:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
@@ -161,9 +160,6 @@ class TestNationalScaleExampleModelSpores:
                 override_dict={"model.subset_time": ["2005-01-01", "2005-01-03"]},
                 scenario="spores",
             )
-
-        expected_warning = "All technologies were requested for inclusion in group constraint `systemwide_cost_max`"
-        assert check_error_or_warning(excinfo, expected_warning)
 
         model.run(build_only=True)
 
@@ -175,10 +171,8 @@ class TestNationalScaleExampleModelSpores:
         # Expecting three spores + first optimal run
         assert np.allclose(model.results.spores, [0, 1, 2, 3])
 
-        costs = model.results.cost.sum("loc_techs_cost")
-        slack_cost = model._backend_model.group_cost_max[
-            ("monetary", "systemwide_cost_max")
-        ].value
+        costs = model.results.cost.sum(["nodes", "techs"])
+        slack_cost = model._backend_model.cost_max.value
 
         # First run is the optimal run, everything else is coming up against the slack cost
         assert costs.loc[{"spores": 0, "costs": "monetary"}] * (

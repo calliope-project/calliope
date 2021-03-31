@@ -2,35 +2,35 @@ constraints:
 
     energy_capacity_per_storage_capacity_min:
         foreach: [nodes, techs]
-        where: [energy_cap_per_storage_cap_min, and, not energy_cap_per_storage_cap_equals, and, run.mode='plan']
+        where: [energy_cap_per_storage_cap_min, and, not energy_cap_per_storage_cap_equals, and, not run.mode='operate']
 
     energy_capacity_per_storage_capacity_max:
         foreach: [nodes, techs]
-        where: [energy_cap_per_storage_cap_max, and, not energy_cap_per_storage_cap_equals, and, run.mode='plan']
+        where: [energy_cap_per_storage_cap_max, and, not energy_cap_per_storage_cap_equals, and, not run.mode='operate']
 
     energy_capacity_per_storage_capacity_equals:
         foreach: [nodes, techs]
-        where: [energy_cap_per_storage_cap_equals, and, run.mode='plan']
+        where: [energy_cap_per_storage_cap_equals, and, not run.mode='operate']
 
     resource_capacity_equals_energy_capacity:
         foreach: [nodes, techs]
-        where: [resource_cap_equals_energy_cap=True, and, run.mode='plan']
+        where: [resource_cap_equals_energy_cap=True, and, not run.mode='operate']
 
     force_zero_resource_area:
         foreach: [nodes, techs]
-        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_unit='energy_per_area'], and, run.mode='plan', and, energy_cap_max=0]
+        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_unit='energy_per_area'], and, not run.mode='operate', and, energy_cap_max=0]
 
     resource_area_per_energy_capacity:
         foreach: [nodes, techs]
-        where: [resource_area_per_energy_cap, and, run.mode='plan']
+        where: [resource_area_per_energy_cap, and, not run.mode='operate']
 
     resource_area_capacity_per_loc:
         foreach: [nodes]
-        where: [available_area, and, [resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, run.mode='plan']
+        where: [available_area, and, [resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, not run.mode='operate']
 
     energy_capacity_systemwide:
         foreach: [techs]
-        where: [[energy_cap_equals_systemwide, or, energy_cap_max_systemwide], and, run.mode='plan']
+        where: [[energy_cap_equals_systemwide, or, energy_cap_max_systemwide], and, not run.mode='operate']
 
     balance_conversion_plus_primary:
         foreach: [nodes, techs, timesteps]
@@ -161,11 +161,11 @@ constraints:
 
     storage_capacity_units_milp:
         foreach: [nodes, techs]
-        where: [[inheritance(storage), or, inheritance(supply_plus)], and, cap_method='integer', and, include_storage=True, and, run.mode='plan']
+        where: [[inheritance(storage), or, inheritance(supply_plus)], and, cap_method='integer', and, include_storage=True, and, not run.mode='operate']
 
     energy_capacity_units_milp:
         foreach: [nodes, techs]
-        where: [energy_cap_per_unit, and, cap_method='integer', and, run.mode='plan']
+        where: [energy_cap_per_unit, and, cap_method='integer', and, not run.mode='operate']
 
     energy_capacity_max_purchase_milp:
         foreach: [nodes, techs]
@@ -185,7 +185,7 @@ constraints:
 
     unit_capacity_systemwide_milp:
         foreach: [techs]
-        where: [[units_max_systemwide, or, units_equals_systemwide], and, run.mode='plan']
+        where: [[units_max_systemwide, or, units_equals_systemwide], and, not run.mode='operate']
 
     asynchronous_con_milp:
         foreach: [nodes, techs, timesteps]
@@ -197,7 +197,7 @@ constraints:
 
     symmetric_transmission:
         foreach: [nodes, techs]
-        where: [inheritance(transmission), and, run.mode='plan']
+        where: [inheritance(transmission), and, not run.mode='operate']
 
     storage_intra_max:
         foreach: [nodes, techs, timesteps]
@@ -223,7 +223,7 @@ variables:
 
     energy_cap:
         foreach: [nodes, techs]
-        where: [run.mode='plan']
+        where: [not run.mode='operate']
         domain: NonNegativeReals
         bounds:
             min: energy_cap_min
@@ -247,7 +247,7 @@ variables:
 
     resource_area:
         foreach: [nodes, techs]
-        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, run.mode='plan']
+        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, not run.mode='operate']
         domain: NonNegativeReals
         bounds:
             min: resource_area_min
@@ -256,7 +256,7 @@ variables:
 
     storage_cap:
         foreach: [nodes, techs]
-        where: [[inheritance(storage), or, inheritance(supply_plus)], and, run.mode='plan', and, include_storage=True]
+        where: [[inheritance(storage), or, inheritance(supply_plus)], and, not run.mode='operate', and, include_storage=True]
         domain: NonNegativeReals  # FIXME: when storage_inter_cluster is active, this should be 'Reals'
         bounds:
             min: storage_cap_min
@@ -290,7 +290,7 @@ variables:
 
     resource_cap:
         foreach: [nodes, techs]
-        where: [inheritance(supply_plus), and, run.mode='plan']
+        where: [inheritance(supply_plus), and, not run.mode='operate']
         domain: NonNegativeReals
         bounds:
             min: resource_cap_min
@@ -304,7 +304,7 @@ variables:
 
     purchased:
         foreach: [nodes, techs]
-        where: [cap_method='binary', and, run.mode='plan']
+        where: [cap_method='binary', and, not run.mode='operate']
         domain: Binary
 
     #demand_share_per_timestep_decision:
@@ -313,7 +313,7 @@ variables:
 
     units:
         foreach: [nodes, techs]
-        where: [cap_method='integer', and, run.mode='plan']
+        where: [cap_method='integer', and, not run.mode='operate']
         domain: NonNegativeIntegers
         bounds:
             min: units_min
@@ -352,7 +352,7 @@ expressions:
 
     cost_investment:
         foreach: [nodes, techs, costs]
-        where: [[cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap], and, run.mode='plan']
+        where: [[cost_energy_cap, or, cost_om_annual, or, cost_om_annual_investment_fraction, or, cost_purchase, or, cost_resource_area, or, cost_resource_cap, or, cost_storage_cap], and, not run.mode='operate']
         #domain: Reals
 
     cost:

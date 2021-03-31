@@ -24,7 +24,8 @@ run:
         spores_number: 3  # The number of SPORES to generate
         slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
         score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
-        slack_cost_group: null  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+        slack_cost_class: monetary  # The cost class to use when limiting the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+        objective_cost_class: {monetary: 0, spores_score: 1}
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
     solver_io: null  # What method the Pyomo backend should use to communicate with the solver
     solver_options: null  # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent
