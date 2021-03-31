@@ -54,9 +54,9 @@ def initialize_decision_variables(backend_model):
         backend_model.timesteps,
         within=po.NegativeReals,
     )
-    #backend_model.cost = po.Var(
+    # backend_model.cost = po.Var(
     #    backend_model.costs, backend_model.loc_techs_cost, within=po.Reals
-    #)
+    # )
 
     ##
     # Conditionally assigned variables
@@ -111,24 +111,24 @@ def initialize_decision_variables(backend_model):
             within=po.NonNegativeReals,
         )
 
-    #if "loc_techs_om_cost" in model_data_dict["sets"]:
+    # if "loc_techs_om_cost" in model_data_dict["sets"]:
     #    backend_model.cost_var = po.Var(
     #        backend_model.costs,
     #        backend_model.loc_techs_om_cost,
     #        backend_model.timesteps,
     #        within=po.Reals,
     #    )
-#
-    #if (
+    #
+    # if (
     #    "loc_techs_investment_cost" in model_data_dict["sets"]
     #    and run_config["mode"] != "operate"
-    #):
+    # ):
     #    backend_model.cost_investment = po.Var(
     #        backend_model.costs,
     #        backend_model.loc_techs_investment_cost,
     #        within=po.Reals,
     #    )
-#
+    #
     if (
         "loc_techs_purchase" in model_data_dict["sets"]
         and run_config["mode"] != "operate"
@@ -143,7 +143,7 @@ def initialize_decision_variables(backend_model):
     ):
         backend_model.demand_share_per_timestep_decision = po.Var(
             backend_model.loc_tech_carriers_demand_share_per_timestep,
-            within=po.NonNegativeReals
+            within=po.NonNegativeReals,
         )
 
     if "loc_techs_milp" in model_data_dict["sets"]:

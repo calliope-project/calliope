@@ -16,12 +16,17 @@ import pyomo.core as po  # pylint: disable=import-error
 from pyomo.opt import SolverFactory  # pylint: disable=import-error
 
 # pyomo.environ is needed for pyomo solver plugins
-import pyomo.environ as pe # pylint: disable=unused-import,import-error
+import pyomo.environ as pe  # pylint: disable=unused-import,import-error
 
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var, get_domain, datetime_to_string, string_to_datetime
+from calliope.backend.pyomo.util import (
+    get_var,
+    get_domain,
+    datetime_to_string,
+    string_to_datetime,
+)
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -155,7 +160,7 @@ def generate_model(model_data):
     )
 
     for c in constraints_to_add:
-        logger.info(f'creating {c} constraints')
+        logger.info(f"creating {c} constraints")
         load_function("calliope.backend.pyomo.constraints." + c + ".load_constraints")(
             backend_model
         )
@@ -198,8 +203,8 @@ def solve_model(
     """
     if opt is None:
         opt = SolverFactory(solver, solver_io=solver_io)
-        if 'persistent' in solver:
-            solve_kwargs.update({'save_results': False, 'load_solutions': False})
+        if "persistent" in solver:
+            solve_kwargs.update({"save_results": False, "load_solutions": False})
             opt.set_instance(backend_model)
 
     if solver_options:
@@ -222,7 +227,7 @@ def solve_model(
             # Ignore most of gurobipy's logging, as it's output is
             # already captured through STDOUT
             logging.getLogger("gurobipy").setLevel(logging.ERROR)
-            if 'persistent' in solver:
+            if "persistent" in solver:
                 results = opt.solve(tee=True, **solve_kwargs)
             else:
                 results = opt.solve(backend_model, tee=True, **solve_kwargs)
@@ -270,22 +275,22 @@ def get_result_array(backend_model, model_data):
         for i in backend_model.component_objects()
         if isinstance(i, po.base.Var)
     }
-    all_variables.update({
-        i.name: get_var(backend_model, i.name, expr=True)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.Expression)
-    })
+    all_variables.update(
+        {
+            i.name: get_var(backend_model, i.name, expr=True)
+            for i in backend_model.component_objects()
+            if isinstance(i, po.base.Expression)
+        }
+    )
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
         i.name: get_var(backend_model, i.name, expr=True)
         for i in backend_model.component_objects(ctype=po.base.param.IndexedParam)
-        if i.name not in model_data.data_vars.keys()
-        and "objective_" not in i.name
+        if i.name not in model_data.data_vars.keys() and "objective_" not in i.name
     }
 
     results = string_to_datetime(
-        backend_model,
-        reorganise_xarray_dimensions(xr.Dataset(all_variables))
+        backend_model, reorganise_xarray_dimensions(xr.Dataset(all_variables))
     )
 
     if all_params:

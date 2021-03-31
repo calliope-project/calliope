@@ -472,12 +472,20 @@ def generate_constraint_sets(model_run):
             "con": ["carrier_con_equals", "carrier_con_min", "carrier_con_max"],
             "prod": [
                 "demand_share_per_timestep_decision",
-                "carrier_prod_max", "carrier_prod_min", "carrier_prod_equals",
-                "demand_share_max", "demand_share_min", "demand_share_equals"
-            ]
+                "carrier_prod_max",
+                "carrier_prod_min",
+                "carrier_prod_equals",
+                "demand_share_max",
+                "demand_share_min",
+                "demand_share_equals",
+            ],
         }
 
-        if any(key in j for j in carrier_group_constraints.values() for key in group_constraint.keys()):
+        if any(
+            key in j
+            for j in carrier_group_constraints.values()
+            for key in group_constraint.keys()
+        ):
             loc_tech_carriers = set()
             for constr, carrier_config in group_constraint.items():
                 if constr in carrier_group_constraints["con"]:
@@ -518,10 +526,14 @@ def generate_constraint_sets(model_run):
                 )
                 rhs_loc_tech_carriers.update(_rhs_loc_tech_carriers)
             constraint_sets[
-                "group_constraint_loc_tech_carriers_{}_lhs".format(group_constraint_name)
+                "group_constraint_loc_tech_carriers_{}_lhs".format(
+                    group_constraint_name
+                )
             ] = list(lhs_loc_tech_carriers)
             constraint_sets[
-                "group_constraint_loc_tech_carriers_{}_rhs".format(group_constraint_name)
+                "group_constraint_loc_tech_carriers_{}_rhs".format(
+                    group_constraint_name
+                )
             ] = list(rhs_loc_tech_carriers)
 
         else:
@@ -532,14 +544,10 @@ def generate_constraint_sets(model_run):
         constraint_sets["loc_tech_carriers_demand_share_per_timestep"]
     )
     # Euro-calliope constraints
-    constraint_sets[
-        "loc_tech_carrier_production_max_time_varying_constraint"
-    ] = [
+    constraint_sets["loc_tech_carrier_production_max_time_varying_constraint"] = [
         i
         for i in sets.loc_techs_conversion_plus
-        if constraint_exists(
-            model_run, i, "constraints.energy_cap_max_time_varying"
-        )
+        if constraint_exists(model_run, i, "constraints.energy_cap_max_time_varying")
     ]
     constraint_sets["loc_techs_chp_extraction_cb_constraint"] = [
         i
@@ -560,36 +568,52 @@ def generate_constraint_sets(model_run):
     ]
 
     constraint_sets["loc_tech_carriers_link_con_to_prod_constraint"] = [
-        i for i in sets.loc_tech_carriers_con
-        if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.link_con_to_prod")
+        i
+        for i in sets.loc_tech_carriers_con
+        if constraint_exists(
+            model_run, i.rsplit("::", 1)[0], "constraints.link_con_to_prod"
+        )
     ]
-    for loc_tech_carrier in constraint_sets["loc_tech_carriers_link_con_to_prod_constraint"]:
-        loc, tech, carrier = loc_tech_carrier.split('::')
+    for loc_tech_carrier in constraint_sets[
+        "loc_tech_carriers_link_con_to_prod_constraint"
+    ]:
+        loc, tech, carrier = loc_tech_carrier.split("::")
         constraint_sets[f"link_{loc}_{tech}_to_prod"] = [
-            f"{loc}::{i}::{carrier}" for i in model_run.get_key(
+            f"{loc}::{i}::{carrier}"
+            for i in model_run.get_key(
                 f"locations.{loc}.techs.{tech}.constraints.link_con_to_prod"
             )
             if f"{loc}::{i}::{carrier}" in sets["loc_tech_carriers_prod"]
         ]
     constraint_sets["loc_tech_carriers_capacity_factor_min_constraint"] = [
-        i for i in sets.loc_tech_carriers_prod
-        if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.capacity_factor_min")
+        i
+        for i in sets.loc_tech_carriers_prod
+        if constraint_exists(
+            model_run, i.rsplit("::", 1)[0], "constraints.capacity_factor_min"
+        )
     ]
     constraint_sets["loc_tech_carriers_capacity_factor_max_constraint"] = [
-        i for i in sets.loc_tech_carriers_prod
-        if constraint_exists(model_run, i.rsplit("::", 1)[0], "constraints.capacity_factor_max")
+        i
+        for i in sets.loc_tech_carriers_prod
+        if constraint_exists(
+            model_run, i.rsplit("::", 1)[0], "constraints.capacity_factor_max"
+        )
     ]
     constraint_sets["loc_techs_net_transfer_ratio_constraint"] = [
-        i for i in sets.loc_techs_transmission
+        i
+        for i in sets.loc_techs_transmission
         if constraint_exists(model_run, i, "constraints.net_transfer_ratio")
     ]
     for sense in ["min", "equals", "max"]:
-        constraint_sets[f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"] = [
-            i for i in sets.loc_tech_carriers_prod
+        constraint_sets[
+            f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"
+        ] = [
+            i
+            for i in sets.loc_tech_carriers_prod
             if constraint_exists(
                 model_run,
                 i.rsplit("::", 1)[0],
-                f"constraints.carrier_prod_per_week_{sense}.{i.rsplit('::', 1)[1]}"
+                f"constraints.carrier_prod_per_week_{sense}.{i.rsplit('::', 1)[1]}",
             )
         ]
     return constraint_sets

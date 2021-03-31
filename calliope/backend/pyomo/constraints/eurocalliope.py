@@ -12,7 +12,13 @@ of the technologies
 
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_param, get_loc_tech, invalid, split_comma_list, get_timestep_weight
+from calliope.backend.pyomo.util import (
+    get_param,
+    get_loc_tech,
+    invalid,
+    split_comma_list,
+    get_timestep_weight,
+)
 
 ORDER = 10  # order in which to invoke constraints relative to other constraint files
 
@@ -63,18 +69,22 @@ def load_constraints(backend_model):
     if "loc_techs_net_transfer_ratio_constraint" in sets:
         backend_model.net_transfer_ratio_constraint = po.Constraint(
             backend_model.loc_techs_net_transfer_ratio_constraint,
-            rule=net_transfer_ratio_constraint_rule
+            rule=net_transfer_ratio_constraint_rule,
         )
     for sense in ["min", "max", "equals"]:
         if f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint" in sets:
             setattr(
-                backend_model, f"carrier_prod_per_week_{sense}_constraint",
+                backend_model,
+                f"carrier_prod_per_week_{sense}_constraint",
                 po.Constraint(
-                    getattr(backend_model, f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"),
+                    getattr(
+                        backend_model,
+                        f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint",
+                    ),
                     backend_model.weeks,
                     [sense],
-                    rule=carrier_prod_per_week_constraint_rule
-                )
+                    rule=carrier_prod_per_week_constraint_rule,
+                ),
             )
 
 
@@ -184,7 +194,7 @@ def link_con_to_prod_constraint_rule(backend_model, loc_tech_carrier, timestep):
     Force the carrier consumption of a specific sotrage technology to only come
     from production of a specific set of other technologies
     """
-    loc, tech, carrier = loc_tech_carrier.split('::')
+    loc, tech, carrier = loc_tech_carrier.split("::")
     loc_tech_carriers_prod = getattr(backend_model, f"link_{loc}_{tech}_to_prod")
 
     return -1 * backend_model.carrier_con[loc_tech_carrier, timestep] <= sum(
@@ -200,11 +210,17 @@ def capacity_factor_min_constraint_rule(backend_model, loc_tech_carrier):
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     capacity_factor = get_param(backend_model, "capacity_factor_min", (loc_tech))
-    return sum(
-        backend_model.carrier_prod[loc_tech_carrier, timestep]
-        * backend_model.timestep_weights[timestep]
-        for timestep in backend_model.timesteps
-    ) >= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
+    return (
+        sum(
+            backend_model.carrier_prod[loc_tech_carrier, timestep]
+            * backend_model.timestep_weights[timestep]
+            for timestep in backend_model.timesteps
+        )
+        >= backend_model.energy_cap[loc_tech]
+        * capacity_factor
+        * get_timestep_weight(backend_model)
+        * 8760
+    )
 
 
 def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier):
@@ -214,11 +230,17 @@ def capacity_factor_max_constraint_rule(backend_model, loc_tech_carrier):
     """
     loc_tech = get_loc_tech(loc_tech_carrier)
     capacity_factor = get_param(backend_model, "capacity_factor_max", (loc_tech))
-    return sum(
-        backend_model.carrier_prod[loc_tech_carrier, timestep]
-        * backend_model.timestep_weights[timestep]
-        for timestep in backend_model.timesteps
-    ) <= backend_model.energy_cap[loc_tech] * capacity_factor * get_timestep_weight(backend_model) * 8760
+    return (
+        sum(
+            backend_model.carrier_prod[loc_tech_carrier, timestep]
+            * backend_model.timestep_weights[timestep]
+            for timestep in backend_model.timesteps
+        )
+        <= backend_model.energy_cap[loc_tech]
+        * capacity_factor
+        * get_timestep_weight(backend_model)
+        * 8760
+    )
 
 
 def net_transfer_ratio_constraint_rule(backend_model, loc_tech):
@@ -262,16 +284,28 @@ def carrier_prod_per_week_constraint_rule(backend_model, loc_tech_carrier, week,
         prod[loc_tech_carrier, timestep] for timestep in backend_model.timesteps
     )
     prod_week = sum(
-         prod[loc_tech_carrier, timestep] for timestep in backend_model.timesteps
-         if backend_model.week_numbers[timestep] == week
+        prod[loc_tech_carrier, timestep]
+        for timestep in backend_model.timesteps
+        if backend_model.week_numbers[timestep] == week
     )
-    if "timesteps" in [i.name for i in getattr(backend_model, f"carrier_prod_per_week_{what}")._index.subsets()]:
+    if "timesteps" in [
+        i.name
+        for i in getattr(
+            backend_model, f"carrier_prod_per_week_{what}"
+        )._index.subsets()
+    ]:
         prod_fraction = sum(
-            get_param(backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier, timestep))
-            for timestep in backend_model.timesteps if backend_model.week_numbers[timestep] == week
+            get_param(
+                backend_model,
+                f"carrier_prod_per_week_{what}",
+                (loc_tech_carrier, timestep),
+            )
+            for timestep in backend_model.timesteps
+            if backend_model.week_numbers[timestep] == week
         )
     else:
-        prod_fraction = get_param(backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier))
-
+        prod_fraction = get_param(
+            backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier)
+        )
 
     return equalizer(prod_week, prod_total * prod_fraction, what)

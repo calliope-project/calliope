@@ -14,7 +14,12 @@ import logging
 import numpy as np
 import pyomo.core as po  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import loc_tech_is_in, get_param, invalid, get_timestep_weight
+from calliope.backend.pyomo.util import (
+    loc_tech_is_in,
+    get_param,
+    invalid,
+    get_timestep_weight,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +231,10 @@ def get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name):
     lhs_loc_tech_carriers = getattr(
         backend_model, "group_constraint_loc_tech_carriers_{}".format(group_name)
     )
-    lhs_loc_carriers = set(tuple(loc_tech_carrier.split("::")[::2]) for loc_tech_carrier in lhs_loc_tech_carriers)
+    lhs_loc_carriers = set(
+        tuple(loc_tech_carrier.split("::")[::2])
+        for loc_tech_carrier in lhs_loc_tech_carriers
+    )
 
     rhs_loc_tech_carriers = [
         i
@@ -251,9 +259,7 @@ def demand_share_constraint_rule(backend_model, group_name, what):
             carrier_{con}(loc::tech::carrier, timestep)
 
     """
-    share = get_param(
-        backend_model, "group_demand_share_{}".format(what), (group_name)
-    )
+    share = get_param(backend_model, "group_demand_share_{}".format(what), (group_name))
 
     if invalid(share):
         return return_noconstraint("demand_share", group_name)
@@ -261,9 +267,7 @@ def demand_share_constraint_rule(backend_model, group_name, what):
         (
             lhs_loc_tech_carriers,
             rhs_loc_tech_carriers,
-        ) = get_demand_share_lhs_and_rhs_loc_tech_carriers(
-            backend_model, group_name
-        )
+        ) = get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name)
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech_carrier, timestep]
@@ -308,9 +312,10 @@ def demand_share_per_timestep_constraint_rule(
     if invalid(share):
         return return_noconstraint("demand_share_per_timestep", group_name)
     else:
-        lhs_loc_tech_carriers, rhs_loc_tech_carriers = (
-            get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name)
-        )
+        (
+            lhs_loc_tech_carriers,
+            rhs_loc_tech_carriers,
+        ) = get_demand_share_lhs_and_rhs_loc_tech_carriers(backend_model, group_name)
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech_carrier, timestep]
@@ -378,9 +383,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
     return equalizer(lhs, rhs, "min")
 
 
-def demand_share_per_timestep_decision_sum_constraint_rule(
-    backend_model, group_name
-):
+def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_name):
     """
     Allows the model to decide on how a fraction of demand for a carrier is met
     by the given groups, which will all have the same share in each timestep.
@@ -449,11 +452,11 @@ def carrier_prod_share_constraint_rule(backend_model, constraint_group, what):
     else:
         lhs_loc_tech_carriers = getattr(
             backend_model,
-            "group_constraint_loc_tech_carriers_{}_lhs".format(constraint_group)
+            "group_constraint_loc_tech_carriers_{}_lhs".format(constraint_group),
         )
         rhs_loc_tech_carriers = getattr(
             backend_model,
-            "group_constraint_loc_tech_carriers_{}_rhs".format(constraint_group)
+            "group_constraint_loc_tech_carriers_{}_rhs".format(constraint_group),
         )
 
         lhs = sum(
@@ -498,13 +501,12 @@ def carrier_prod_share_per_timestep_constraint_rule(
     else:
         lhs_loc_tech_carriers = getattr(
             backend_model,
-            "group_constraint_loc_tech_carriers_{}_lhs".format(constraint_group)
+            "group_constraint_loc_tech_carriers_{}_lhs".format(constraint_group),
         )
         rhs_loc_tech_carriers = getattr(
             backend_model,
-            "group_constraint_loc_tech_carriers_{}_rhs".format(constraint_group)
+            "group_constraint_loc_tech_carriers_{}_rhs".format(constraint_group),
         )
-
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech_carrier, timestep]
@@ -592,7 +594,9 @@ def carrier_prod_constraint_rule(backend_model, constraint_group, what):
     if invalid(limit):
         return return_noconstraint("carrier_prod", constraint_group)
     else:
-        lhs_loc_tech_carriers = get_carrier_lhs_loc_techs(backend_model, constraint_group)
+        lhs_loc_tech_carriers = get_carrier_lhs_loc_techs(
+            backend_model, constraint_group
+        )
 
         lhs = sum(
             backend_model.carrier_prod[loc_tech_carrier, timestep]
@@ -623,7 +627,9 @@ def carrier_con_constraint_rule(backend_model, constraint_group, what):
     if invalid(limit):
         return return_noconstraint("carrier_con", constraint_group)
     else:
-        lhs_loc_tech_carriers = get_carrier_lhs_loc_techs(backend_model, constraint_group)
+        lhs_loc_tech_carriers = get_carrier_lhs_loc_techs(
+            backend_model, constraint_group
+        )
 
         lhs = sum(
             backend_model.carrier_con[loc_tech_carrier, timestep]

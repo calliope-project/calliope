@@ -48,7 +48,9 @@ def load_constraints(backend_model):
         for cost in backend_model.costs:
             for loc_tech in backend_model.loc_techs_cost_var_conversion_plus_constraint:
                 for timestep in backend_model.timesteps:
-                    cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, timestep)
+                    cost_var_conversion_plus_constraint_rule(
+                        backend_model, cost, loc_tech, timestep
+                    )
 
     if "loc_techs_balance_conversion_plus_in_2_constraint" in sets:
         backend_model.balance_conversion_plus_in_2_constraint = po.Constraint(

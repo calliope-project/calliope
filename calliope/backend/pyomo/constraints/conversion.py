@@ -30,7 +30,9 @@ def load_constraints(backend_model):
         for cost in backend_model.costs:
             for loc_tech in backend_model.loc_techs_cost_var_conversion_constraint:
                 for timestep in backend_model.timesteps:
-                    cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
+                    cost_var_conversion_constraint_rule(
+                        backend_model, cost, loc_tech, timestep
+                    )
 
 
 def balance_conversion_constraint_rule(backend_model, loc_tech, timestep):

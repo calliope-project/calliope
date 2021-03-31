@@ -160,7 +160,7 @@ def constraints_to_dataset(model_run):
                     ".carrier_ratios.",
                     ".energy_cap_ratio.",
                     ".link_con_to_prod",
-                    ".carrier_prod_per_week"
+                    ".carrier_prod_per_week",
                 ]
             ]
         )
@@ -372,14 +372,12 @@ def carrier_specific_to_dataset(model_run):
                         model_run.locations[loc]
                         .techs[tech]
                         .constraints.get_key(
-                            f"carrier_prod_per_week_{sense}.{carrier}",
-                            np.nan,
+                            f"carrier_prod_per_week_{sense}.{carrier}", np.nan,
                         )
                     )
-                    data_dict[f"carrier_prod_per_week_{sense}"]["data"].append(carrier_prod_per_week)
-
-
-
+                    data_dict[f"carrier_prod_per_week_{sense}"]["data"].append(
+                        carrier_prod_per_week
+                    )
 
     # Additional system-wide constraints from model_run.model
     if model_run.model.get("reserve_margin", {}) != {}:

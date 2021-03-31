@@ -140,8 +140,10 @@ class TestIO:
                 scenario="spores",
                 override_dict={
                     "run.spores_options.save_per_spore": True,
-                    'run.spores_options.save_per_spore_path': os.path.join(tempdir, 'output/spore_{}.nc')
-                }
+                    "run.spores_options.save_per_spore_path": os.path.join(
+                        tempdir, "output/spore_{}.nc"
+                    ),
+                },
             )
             model.run()
 

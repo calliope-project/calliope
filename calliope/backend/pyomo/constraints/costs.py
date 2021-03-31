@@ -47,14 +47,11 @@ def load_constraints(backend_model):
     if "loc_techs_cost_constraint" in sets:
         # Right-hand side expression can be later updated by MILP investment costs
         backend_model.cost = po.Expression(
-            backend_model.costs,
-            backend_model.loc_techs_cost,
-            initialize=0.0,
+            backend_model.costs, backend_model.loc_techs_cost, initialize=0.0,
         )
         for cost in backend_model.costs:
             for loc_tech in backend_model.loc_techs_cost:
                 cost_constraint_rule(backend_model, cost, loc_tech)
-
 
 
 def cost_constraint_rule(backend_model, cost, loc_tech):

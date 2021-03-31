@@ -312,7 +312,7 @@ def resample(data, timesteps, resolution):
             "resource",
             "carrier_prod_per_week_max",
             "carrier_prod_per_week_min",
-            "carrier_prod_per_week_equals"
+            "carrier_prod_per_week_equals",
         ]:
             data_rs[var] = _resample(data_new[var], how="sum")
         else:

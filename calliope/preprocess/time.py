@@ -265,11 +265,14 @@ def add_timestep_weeks(model_data):
     """
     Get the weeknumber of every timestep. If multiple years, weeks will continue beyond 52
     """
-    if any(i in model_data.coords for i in [
-        "loc_tech_carriers_carrier_prod_per_week_min_constraint",
-        "loc_tech_carriers_carrier_prod_per_week_max_constraint",
-        "loc_tech_carriers_carrier_prod_per_week_equals_constraint"
-    ]):
+    if any(
+        i in model_data.coords
+        for i in [
+            "loc_tech_carriers_carrier_prod_per_week_min_constraint",
+            "loc_tech_carriers_carrier_prod_per_week_max_constraint",
+            "loc_tech_carriers_carrier_prod_per_week_equals_constraint",
+        ]
+    ):
         model_data["week_numbers"] = model_data.timesteps.dt.week
         model_data.coords["weeks"] = np.unique(model_data.timesteps.dt.week.values)
 

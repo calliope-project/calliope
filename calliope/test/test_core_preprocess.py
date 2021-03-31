@@ -1551,11 +1551,11 @@ class TestChecks:
 class TestDataset:
 
     ## FIXME: What are we testing here?
-    #def test_inconsistent_timesteps(self):
+    # def test_inconsistent_timesteps(self):
     #    """
     #    Timesteps must be consistent?
     #    """
-#
+    #
     @pytest.mark.parametrize(
         ("model", "_set"),
         [
@@ -1564,7 +1564,7 @@ class TestDataset:
             (calliope.examples.milp(), "model_milp"),
         ],
     )
-    #@pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+    # @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_unassigned_sets(self, model, _set):
         """
         Check that all sets in which there are possible loc:techs are assigned

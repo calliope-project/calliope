@@ -43,7 +43,13 @@ class TestCLI:
             os.mkdir(os.path.join(tempdir, "output"))
             print(os.listdir(tempdir))
             result = runner.invoke(
-                cli.run, [_MODEL_NATIONAL, "--save_netcdf=output.nc", "--scenario=spores", "--override_dict={'run.spores_options.save_per_spore': True}"]
+                cli.run,
+                [
+                    _MODEL_NATIONAL,
+                    "--save_netcdf=output.nc",
+                    "--scenario=spores",
+                    "--override_dict={'run.spores_options.save_per_spore': True}",
+                ],
             )
             print(os.listdir(os.path.join(tempdir, "output")))
             assert result.exit_code == 0

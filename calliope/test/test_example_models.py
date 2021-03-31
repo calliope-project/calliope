@@ -163,13 +163,14 @@ class TestNationalScaleExampleModelSpores:
         model = calliope.examples.national_scale(
             override_dict={
                 "model.subset_time": ["2005-01-01", "2005-01-03"],
-                "run.solver": solver, "run.solver_io": solver_io
+                "run.solver": solver,
+                "run.solver_io": solver_io,
             },
             scenario="spores",
         )
 
         expected_warning = "All technologies were requested for inclusion in group constraint `systemwide_cost_max`"
-        #assert check_error_or_warning(excinfo, expected_warning)
+        # assert check_error_or_warning(excinfo, expected_warning)
 
         model.run(build_only=True)
 
@@ -206,7 +207,9 @@ class TestNationalScaleExampleModelSpores:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
-    @pytest.mark.filterwarnings("ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning")
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning"
+    )
     def test_nationalscale_example_results_gurobi(self):
         gurobi_data = self.example_tester("gurobi", "python")
         gurobi_persistent_data = self.example_tester("gurobi_persistent", "python")
@@ -216,23 +219,36 @@ class TestNationalScaleExampleModelSpores:
     def test_nationalscale_skip_cost_op_spores(self):
         base_model_data = self.example_tester()
 
-        slack_cost = base_model_data.cost.loc[{'costs': 'monetary', 'spores': 1}].sum().item()
+        slack_cost = (
+            base_model_data.cost.loc[{"costs": "monetary", "spores": 1}].sum().item()
+        )
         initial_spores_scores = (
-            xr.where(base_model_data.energy_cap.loc[{'spores': 0}] > 1e-3, 100, 0)
+            xr.where(base_model_data.energy_cap.loc[{"spores": 0}] > 1e-3, 100, 0)
             .to_series()
-            .reindex(base_model_data.cost_energy_cap.loc[{'costs': 'spores_score'}].to_series().dropna().index)
+            .reindex(
+                base_model_data.cost_energy_cap.loc[{"costs": "spores_score"}]
+                .to_series()
+                .dropna()
+                .index
+            )
         )
         spores_model = calliope.examples.national_scale(
             override_dict={
-                "model.subset_time": ["2005-01-01", "2005-01-03"], "run.solver": "cbc",
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": "cbc",
                 "group_constraints.systemwide_cost_max.cost_max.monetary": slack_cost,
                 "run.spores_options.skip_cost_op": True,
-                "run.objective_cost_class": {"monetary": 0, "spores_score": 1}
+                "run.objective_cost_class": {"monetary": 0, "spores_score": 1},
             },
-            scenario="spores"
+            scenario="spores",
         )
-        update_idx = {'costs': 'spores_score', 'loc_techs_investment_cost': initial_spores_scores.index}
-        spores_model._model_data.cost_energy_cap.loc[update_idx] = initial_spores_scores.values
+        update_idx = {
+            "costs": "spores_score",
+            "loc_techs_investment_cost": initial_spores_scores.index,
+        }
+        spores_model._model_data.cost_energy_cap.loc[
+            update_idx
+        ] = initial_spores_scores.values
         spores_model.run()
 
         assert np.allclose(spores_model.results.spores, [1, 2, 3])
@@ -242,6 +258,7 @@ class TestNationalScaleExampleModelSpores:
             <= slack_cost * 1.0001
         )
         assert all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
+
 
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):
