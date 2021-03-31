@@ -127,7 +127,6 @@ def check_initial(config_model):
             "overrides",
             "scenarios",
             "config_path",
-            "group_constraints",
         ]:
             model_warnings.append(
                 "Unrecognised top-level configuration item: {}".format(k)
@@ -176,15 +175,6 @@ def check_initial(config_model):
         _spores_cost_class = config_model.run.spores_options.get("score_cost_class", {})
         if not isinstance(_spores_cost_class, str):
             errors.append("`run.spores_options.score_cost_class` must be a string")
-        # Check that slack_cost_group is one of the defined group contraints
-        if (
-            config_model.run.spores_options.slack_cost_group
-            not in config_model.get("group_constraints", {}).keys()
-        ):
-            errors.append(
-                "`run.spores_options.slack_cost_group` must correspond to "
-                "one of the group constraints defined in the model"
-            )
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
     # are allowed as carrier tiers
@@ -197,17 +187,6 @@ def check_initial(config_model):
                 "'carrier_' + ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3'] "
                 "is valid.".format(key)
             )
-
-    # Warn if any unknown group constraints are defined
-    permitted_group_constraints = DEFAULTS.group_constraints.default_group.keys()
-
-    for group in config_model.get("group_constraints", {}).keys():
-        for key in config_model.group_constraints[group].keys():
-            if key not in permitted_group_constraints:
-                model_warnings.append(
-                    "Unrecognised group constraint `{}` in group `{}` "
-                    "will be ignored - possibly a misspelling?".format(key, group)
-                )
 
     # No techs may have the same identifier as a tech_group
     name_overlap = set(config_model.tech_groups.keys()) & set(config_model.techs.keys())

@@ -230,11 +230,4 @@ def check_operate_params(model_data):
         )
         run_config["cyclic_storage"] = False
 
-    if "group_demand_share_per_timestep_decision" in model_data.data_vars:
-        warnings.append(
-            "`demand_share_per_timestep_decision` group constraints cannot be "
-            "used in operate mode, so will not be built."
-        )
-        del model_data["group_demand_share_per_timestep_decision"]
-
     return comments, warnings, errors

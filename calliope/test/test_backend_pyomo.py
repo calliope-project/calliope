@@ -109,19 +109,6 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.run(build_only=True)  # will fail to complete run if there's a problem
 
-    def test_operate_group_demand_share_per_timestep_decision(self):
-        """Cannot have group_demand_share_per_timestep_decision in operate mode"""
-        m = build_model(
-            {},
-            "simple_supply,investment_costs,operate,enable_group_demand_share_per_timestep_decision",
-        )
-        with pytest.warns(exceptions.ModelWarning) as warning:
-            m.run(build_only=True)
-        assert check_error_or_warning(
-            warning, "`demand_share_per_timestep_decision` group constraints cannot be"
-        )
-        assert "group_demand_share_per_timestep_decision" not in m._model_data
-
     @pytest.mark.parametrize("force", (True, False))
     def test_operate_energy_cap_min_use(self, force):
         """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
@@ -1900,15 +1887,16 @@ class TestLogging:
     @pytest.fixture(scope="module")
     def gurobi_model(self):
         pytest.importorskip("gurobipy")
-        model_file = os.path.join("model_config_group", "base_model.yaml")
+        model_file = "model.yaml"
         return build_model(
             model_file=model_file,
+            scenario="simple_supply,investment_costs",
             override_dict={"run": {"solver": "gurobi", "solver_io": "python"}},
         )
 
     def test_no_duplicate_log_message(self, caplog, gurobi_model):
         caplog.set_level(logging.DEBUG)
-        gurobi_model.run()
+        gurobi_model.run(build_only=True)
         all_log_messages = [r.msg for r in caplog.records]
         duplicates = [
             item

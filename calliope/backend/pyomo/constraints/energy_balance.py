@@ -197,8 +197,7 @@ def balance_demand_constraint_rule(backend_model, carrier, node, tech, timestep)
     else:
         required_resource = resource * resource_scale
 
-    # We save the expression to the backend_model so it can be used elsewhere,
-    # e.g. in the group constraints
+    # We save the expression to the backend_model so it can be used elsewhere
     backend_model.required_resource[node, tech, timestep].expr = required_resource
 
     # 1 represents boolean True here

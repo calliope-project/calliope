@@ -307,7 +307,6 @@ def cleanup_undesired_keys(tech_settings):
         "allowed_costs",
         "allowed_switches",
         "required_constraints",
-        "allowed_group_constraints",
     ]
     for k in keys_to_kill:
         try:

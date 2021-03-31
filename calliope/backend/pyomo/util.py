@@ -149,8 +149,6 @@ def get_domain(var: xr.DataArray) -> str:
     def check_sign(var):
         if re.match("resource|node_coordinates|cost*", var.name):
             return ""
-        elif re.match("group_carrier_con*", var.name):
-            return "NonPositive"
         else:
             return "NonNegative"
 

@@ -607,6 +607,7 @@ class TestChecks:
             excinfo, "`run.spores_options.score_cost_class` must be a string"
         )
 
+    @pytest.mark.xfail(reason="Need to replace group constraint requirement in SPORES")
     def test_no_spore_group_constraint(self):
         """
         Ensure an error is raised if pointing to a non-existent group constraint
@@ -698,20 +699,6 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="one_day")
 
-    @pytest.mark.skip("Planning to remove group constraints")
-    def test_warn_on_unknown_group_constraint(self):
-        """
-        Unkown group constraints raise a warning, but don't crash
-        """
-        override = {"group_constraints.mygroup.foobar": 0}
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override, scenario="simple_supply")
-
-        assert check_error_or_warning(
-            excinfo, "Unrecognised group constraint `foobar` in group `mygroup`"
-        )
-
     @pytest.mark.parametrize(
         "loc_tech",
         (
@@ -720,7 +707,7 @@ class TestChecks:
             ({"nodes": ["1", "foo"], "techs": ["test_supply_elec", "bar"]}),
         ),
     )
-    @pytest.mark.skip("Planning to remove group constraints")
+    @pytest.mark.xfail(reason="Planning to remove group constraints")
     def test_inexistent_group_constraint_loc_tech(self, loc_tech):
 
         override = {"group_constraints.mygroup": {"energy_cap_max": 100, **loc_tech}}
@@ -737,7 +724,7 @@ class TestChecks:
         assert "1:bar" not in loc_techs
         assert "foo:bar" not in loc_techs
 
-    @pytest.mark.skip("Planning to remove group constraints")
+    @pytest.mark.xfail(reason="Planning to remove group constraints")
     def test_inexistent_group_constraint_empty_loc_tech(self):
 
         override = {

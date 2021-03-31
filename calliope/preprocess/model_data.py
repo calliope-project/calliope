@@ -31,7 +31,6 @@ class ModelDataFactory:
     UNWANTED_TECH_KEYS = [
         "allowed_constraints",
         "required_constraints",
-        "allowed_group_constraints",
         "allowed_costs",
         "allowed_switches",
         "constraints",
