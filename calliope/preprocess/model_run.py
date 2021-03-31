@@ -11,7 +11,6 @@ AttrDict, and building of associated debug information.
 """
 
 import os
-import re
 import logging
 import itertools
 import warnings
@@ -664,7 +663,12 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
 
 def generate_model_run(
-    config, timeseries_dataframes, debug_comments, applied_overrides, scenario, subsets,
+    config,
+    timeseries_dataframes,
+    debug_comments,
+    applied_overrides,
+    scenario,
+    subsets,
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -695,9 +699,12 @@ def generate_model_run(
     model_run["tech_groups"] = process_tech_groups(config, model_run["techs"])
 
     # 4) Fully populate nodes
-    (model_run["nodes"], debug_nodes, warning_messages, errors,) = nodes.process_nodes(
-        config, model_run["techs"]
-    )
+    (
+        model_run["nodes"],
+        debug_nodes,
+        warning_messages,
+        errors,
+    ) = nodes.process_nodes(config, model_run["techs"])
     debug_comments.set_key("model_run.nodes", debug_nodes)
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
@@ -723,6 +730,11 @@ def generate_model_run(
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
-    debug_data = AttrDict({"comments": debug_comments, "config_initial": config,})
+    debug_data = AttrDict(
+        {
+            "comments": debug_comments,
+            "config_initial": config,
+        }
+    )
 
     return model_run, debug_data
