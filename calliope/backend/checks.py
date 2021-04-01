@@ -107,7 +107,8 @@ def _create_var(var_to_create, model_data, run_config):
         if var_name in model_data.data_vars.keys():
             model_data.update({var_name: model_data[var_name].combine_first(new_data)})
         else:
-            model_data[var_name] = new_data
+            dim_order = [i for i in model_data.dims]
+            model_data[var_name] = new_data.transpose(*[i for i in dim_order if i in new_data.dims])
             model_data[var_name].attrs = {"parameters": 1, "is_result": 0}
     else:
         raise ValueError(

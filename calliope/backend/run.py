@@ -541,6 +541,7 @@ def run_operate(model_data, timings, backend, build_only):
                 _results = backend.get_result_array(backend_model, model_data)
             else:
                 _results = xr.Dataset()
+                continue
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
             _results["timesteps"] = window_model_data.timesteps.copy()
@@ -557,9 +558,6 @@ def run_operate(model_data, timings, backend, build_only):
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
                 ].drop_vars("timesteps")
-                model_data["storage_initial"].loc[
-                    storage_initial.coords
-                ] = storage_initial.values
                 backend_model.storage_initial.store_values(
                     storage_initial.to_series().dropna().to_dict()
                 )

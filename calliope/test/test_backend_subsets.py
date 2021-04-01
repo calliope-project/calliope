@@ -133,7 +133,7 @@ class TestSubsets:
         ),
     )
     def test_val_is(self, model_data, param, val, result):
-        imask = _val_is(model_data, param, val)
+        imask = _val_is(model_data, param, val, "=")
         if isinstance(result, bool):
             assert imask is result
         else:

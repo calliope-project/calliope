@@ -139,15 +139,12 @@ class TestNationalScaleExampleModelOperate:
             )
             model.run()
 
-        expected_warning = "Resource capacity constraint defined and set to infinity for all supply_plus techs"
-
-        assert check_error_or_warning(excinfo, expected_warning)
         assert all(
             model.results.timesteps
             == pd.date_range("2005-01", "2005-01-03 23:00:00", freq="H")
         )
 
-    def test_nationalscale_example_results_cbc(self):
+    def test_nationalscale_operate_example_results_cbc(self):
         self.example_tester()
 
 

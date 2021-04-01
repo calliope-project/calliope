@@ -3,15 +3,15 @@ infinite_forced_resource:
     error: "Cannot have `force_resource` = True if setting infinite resource values"
 
 negative_cost_energy_cap_no_constraint:
-    where: [[cost_energy_cap<0, and, not energy_cap_max, and, not energy_cap_equals] ]
+    where: [[cost_energy_cap<0, and, not energy_cap_max, and, not energy_cap_equals]]
     error: "Cannot have a negative energy capacity cost as there is an unset corresponding capacity constraint"
 
 negative_cost_resource_cap_no_constraint:
-    where: [[cost_resource_cap<0, and, not resource_cap_max, and, not resource_cap_equals] ]
+    where: [[cost_resource_cap<0, and, not resource_cap_max, and, not resource_cap_equals]]
     error: "Cannot have a negative resource capacity cost as there is an unset corresponding capacity constraint"
 
 negative_cost_resource_area_no_constraint:
-    where: [[cost_resource_area<0, and, not resource_area_max, and, not resource_area_equals] ]
+    where: [[cost_resource_area<0, and, not resource_area_max, and, not resource_area_equals]]
     error: "Cannot have a negative resource area cost as there is an unset corresponding capacity constraint"
 
 positive_demand:
