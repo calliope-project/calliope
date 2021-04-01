@@ -56,20 +56,23 @@ overrides:
             X1:
                 techs:
                     chp.constraints.energy_cap_max: 300
-                    pv.constraints.energy_cap_max: 0
+                    pv.constraints.resource_area_max: 0
+                    pv.constraints.energy_cap_max: .inf
                     supply_grid_power.constraints.energy_cap_max: 40
                     supply_gas.constraints.energy_cap_max: 700
 
             X2:
                 techs:
                     boiler.constraints.energy_cap_max: 200
-                    pv.constraints.energy_cap_max: 70
+                    pv.constraints.resource_area_max: 490
+                    pv.constraints.energy_cap_max: .inf
                     supply_gas.constraints.energy_cap_max: 250
 
             X3:
                 techs:
                     boiler.constraints.energy_cap_max: 0
-                    pv.constraints.energy_cap_max: 50
+                    pv.constraints.resource_area_max: 350
+                    pv.constraints.energy_cap_max: .inf
                     supply_gas.constraints.energy_cap_max: 0
 
         links:

@@ -60,25 +60,25 @@ constraints:
 
     carrier_production_max:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
+        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
         subset:
             carrier_tiers: [out]
 
     carrier_production_min:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [carrier, and, energy_cap_min_use, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
+        where: [carrier, and, energy_cap_min_use, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
         subset:
             carrier_tiers: [out]
 
     carrier_consumption_max:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [carrier, and, [inheritance(transmission), or, inheritance(demand), or, inheritance(storage)], and, [not cap_method='integer', or, inheritance(demand)], and, allowed_carrier_con=True]
+        where: [carrier, and, [inheritance(transmission), or, inheritance(demand), or, inheritance(storage)], and, [not cap_method='integer', or, inheritance(demand)], and, allowed_carrier_con=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
         subset:
             carrier_tiers: [in]
 
     resource_max:
         foreach: [nodes, techs, timesteps]
-        where: [inheritance(supply_plus)]
+        where: [inheritance(supply_plus), and, [run.mode='plan', or, [run.mode='operate', and, resource_cap]]]
 
     storage_max:
         foreach: [nodes, techs, timesteps]
@@ -90,11 +90,11 @@ constraints:
 
     ramping_up:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [energy_ramping]
+        where: [energy_ramping, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
 
     ramping_down:
         foreach: [nodes, techs, carriers, timesteps]
-        where: [energy_ramping]
+        where: [energy_ramping, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
 
     system_balance:
         foreach: [nodes, carriers, timesteps]
@@ -137,7 +137,7 @@ constraints:
 
     unit_commitment_milp:
         foreach: [nodes, techs, timesteps]
-        where: [cap_method='integer']
+        where: [cap_method='integer', and, [run.mode='plan', or, [run.mode='operate', and, units]]]
 
     carrier_production_max_milp:
         foreach: [nodes, techs, carriers, timesteps]
@@ -145,7 +145,7 @@ constraints:
 
     carrier_production_max_conversion_plus_milp:
         foreach: [nodes, techs, timesteps]
-        where: [inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
+        where: [inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
 
     carrier_consumption_max_milp:
         foreach: [nodes, techs, carriers, timesteps]
@@ -157,7 +157,7 @@ constraints:
 
     carrier_production_min_conversion_plus_milp:
         foreach: [nodes, techs, timesteps]
-        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True]
+        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, cap_method='integer', and, allowed_carrier_prod=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
 
     storage_capacity_units_milp:
         foreach: [nodes, techs]
@@ -169,19 +169,19 @@ constraints:
 
     energy_capacity_max_purchase_milp:
         foreach: [nodes, techs]
-        where: [cost_purchase, and, [energy_cap_max, or, energy_cap_equals], and, cap_method='binary']
+        where: [cost_purchase, and, [energy_cap_max, or, energy_cap_equals], and, cap_method='binary', and, run.mode='plan']
 
     energy_capacity_min_purchase_milp:
         foreach: [nodes, techs]
-        where: [cost_purchase, and, energy_cap_min, and, not energy_cap_equals, and, cap_method='binary']
+        where: [cost_purchase, and, energy_cap_min, and, not energy_cap_equals, and, cap_method='binary', and, run.mode='plan']
 
     storage_capacity_max_purchase_milp:
         foreach: [nodes, techs]
-        where: [cost_purchase, and, [storage_cap_max, or, storage_cap_equals], and, cap_method='binary']
+        where: [cost_purchase, and, [storage_cap_max, or, storage_cap_equals], and, cap_method='binary', and, run.mode='plan']
 
     storage_capacity_min_purchase_milp:
         foreach: [nodes, techs]
-        where: [cost_purchase, and, storage_cap_min, and, not storage_cap_equals, and, cap_method='binary']
+        where: [cost_purchase, and, storage_cap_min, and, not storage_cap_equals, and, cap_method='binary', and, run.mode='plan']
 
     unit_capacity_systemwide_milp:
         foreach: [techs]

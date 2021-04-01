@@ -440,7 +440,5 @@ class ModelDataFactory:
                 "Some data not extracted from inputs into model dataset:\n"
                 f"{self.node_dict}"
             )
-        self.model_data, final_check_comments, warns, errors = checks.check_model_data(
-            self.model_data
-        )
+        warns, errors = checks.check_model_data(self.model_data)
         exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)

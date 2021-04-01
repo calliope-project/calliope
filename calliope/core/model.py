@@ -198,9 +198,8 @@ class Model(object):
                 "the results to be overwritten with a new run."
             )
 
-        if (
-            self.run_config["mode"] == "operate"
-            and not self._model_data.attrs["allow_operate_mode"]
+        if self.run_config["mode"] == "operate" and not self._model_data.attrs.get(
+            "allow_operate_mode", 1
         ):
             raise exceptions.ModelError(
                 "Unable to run this model in operational mode, probably because "

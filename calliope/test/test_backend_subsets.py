@@ -13,7 +13,7 @@ from calliope.backend.subsets import (
     _val_is,
     _get_valid_subset,
     _subset_imask,
-    _imask_where,
+    imask_where,
     _combine_imasks,
     _imask_foreach,
 )
@@ -170,7 +170,7 @@ class TestSubsets:
         imask = _imask_foreach(model_data, foreach)
         assert imask.dims == ("techs",)
         # on using 'where', the 'nodes' dimension is added
-        imask = _imask_where(model_data, "foo", ["node_tech"], imask, "and_")
+        imask = imask_where(model_data, "foo", ["node_tech"], imask, "and_")
         assert sorted(imask.dims) == sorted(["nodes", "techs"])
         imask_subset = _subset_imask("foo", imask_subset_config(foreach), imask)
         assert imask_subset.dims == ("techs",)
@@ -192,15 +192,15 @@ class TestSubsets:
             "set `foo` must subset over an iterable, instead got non-iterable `bar` for subset `nodes`",
         )
 
-    def test_imask_where_ineritance(self, model_data):
-        where_imask = _imask_where(model_data, "foo", ["inheritance(bar)"])
+    def testimask_where_ineritance(self, model_data):
+        where_imask = imask_where(model_data, "foo", ["inheritance(bar)"])
         assert (
             where_imask == [[True, False, False, False], [True, False, False, False]]
         ).all()
 
     @pytest.mark.parametrize("param", ("node_tech", "with_inf", "inexistent"))
-    def test_imask_where_param_exists(self, model_data, param):
-        where_imask = _imask_where(model_data, "foo", [param])
+    def testimask_where_param_exists(self, model_data, param):
+        where_imask = imask_where(model_data, "foo", [param])
         if param in model_data:
             assert (where_imask == _param_exists(model_data, param)).all()
         else:
@@ -214,16 +214,16 @@ class TestSubsets:
             ("inexistent='foo'", False),
         ),
     )
-    def test_imask_where_val_is(self, model_data, val, result):
-        where_imask = _imask_where(model_data, "foo", [val])
+    def testimask_where_val_is(self, model_data, val, result):
+        where_imask = imask_where(model_data, "foo", [val])
         assertion = where_imask == result
         if isinstance(result, list):
             assertion = assertion.all()
         assert assertion
 
-    def test_imask_where_not(self, model_data):
-        where_imask = _imask_where(model_data, "foo", ["with_inf"])
-        not_where_imask = _imask_where(model_data, "foo", ["not with_inf"])
+    def testimask_where_not(self, model_data):
+        where_imask = imask_where(model_data, "foo", ["with_inf"])
+        not_where_imask = imask_where(model_data, "foo", ["not with_inf"])
         assert where_imask.equals(~not_where_imask)
 
     @pytest.mark.parametrize(
@@ -241,8 +241,8 @@ class TestSubsets:
             ),
         ),
     )
-    def test_imask_where_array(self, model_data, where_array, results):
-        where_imask = _imask_where(model_data, "foo", where_array)
+    def testimask_where_array(self, model_data, where_array, results):
+        where_imask = imask_where(model_data, "foo", where_array)
         assert (
             where_imask
             == [[results[0], False, False, False], [results[1], False, False, False]]
@@ -264,12 +264,12 @@ class TestSubsets:
         ),
     )
     @pytest.mark.parametrize("initial_operator", ("and_", "or_"))
-    def test_imask_where_initial_imask(
+    def testimask_where_initial_imask(
         self, model_data, where_array, results, initial_operator
     ):
         foreach = ["nodes", "techs", "carriers"]
         imask = _imask_foreach(model_data, foreach)
-        where_imask = _imask_where(
+        where_imask = imask_where(
             model_data, "foo", where_array, imask, initial_operator
         )
         locs = [{"nodes": "foo", "techs": "foo"}, {"nodes": "bar", "techs": "foo"}]
@@ -283,9 +283,9 @@ class TestSubsets:
                     imask.loc[locs[i]] + results[i] == where_imask.loc[locs[i]]
                 ).all()
 
-    def test_imask_where_incorrect_where(self, model_data):
+    def testimask_where_incorrect_where(self, model_data):
         with pytest.raises(ValueError) as excinfo:
-            _imask_where(model_data, "foo", ["node_tech", "inheritance(bar)"])
+            imask_where(model_data, "foo", ["node_tech", "inheritance(bar)"])
         assert check_error_or_warning(excinfo, "'where' array for set `foo` must")
 
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))

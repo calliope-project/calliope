@@ -218,7 +218,7 @@ class TestEnergyCapacityPerStorageCapacity:
         assert energy_capacity == pytest.approx(180)
         assert storage_capacity == pytest.approx(180)
 
-    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
+    @pytest.mark.xfail(reason="To be implemented as a rule in typedconfig")
     def test_operate_mode(self, model_file):
         model = build_model(model_file=model_file, scenario="operate_mode_min")
         with pytest.raises(calliope.exceptions.ModelError) as error:
@@ -230,7 +230,9 @@ class TestEnergyCapacityPerStorageCapacity:
     @pytest.mark.parametrize(
         "horizon_window", [(24, 24), (48, 48), (72, 48), (144, 24)]
     )
-    @pytest.mark.xfail(reason="operate mode not yet expected to run")
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*does not support warmstart:calliope.exceptions.ModelWarning"
+    )
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
         override_dict = {

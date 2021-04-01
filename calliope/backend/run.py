@@ -4,10 +4,12 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 import logging
+import os
 
 import numpy as np
 import xarray as xr
 import pyomo.core as po
+import pandas as pd
 
 from calliope.core.util.logging import log_time
 from calliope import exceptions
@@ -364,7 +366,10 @@ def run_operate(model_data, timings, backend, build_only):
             cap.attrs["operate_param"] = 1
         model_data.update(caps)
 
-    comments, warnings, errors = checks.check_operate_params(model_data)
+    checklist_path = os.path.join(os.path.dirname(__file__), "checks.yaml")
+    warnings, errors = checks.check_operate_params(
+        model_data, checklist_path, run_config
+    )
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # Initialize our variables
@@ -375,6 +380,14 @@ def run_operate(model_data, timings, backend, build_only):
     window = run_config["operation"]["window"]
     horizon = run_config["operation"]["horizon"]
     window_to_horizon = horizon - window
+    if solver in ["glpk", "cbc"]:
+        exceptions.warn(
+            "The chosen solver, {}, does not support warmstart, which may "
+            "impact performance.".format(solver)
+        )
+        allow_warmstart = False
+    else:
+        allow_warmstart = True
 
     # get the cumulative sum of timestep resolution, to find where we hit our window and horizon
     timestep_cumsum = model_data.timestep_resolution.cumsum("timesteps").to_pandas()
@@ -479,13 +492,15 @@ def run_operate(model_data, timings, backend, build_only):
             # values associated with those timestamps
             for var in timeseries_data_vars:
                 # New values
-                var_series = (
-                    window_model_data[var].to_series().dropna().replace("inf", np.inf)
-                )
+                with pd.option_context("mode.use_inf_as_na", True):
+                    var_series = window_model_data[var].to_series().dropna()
                 # Same timestamps
-                var_series.index = backend_model.__calliope_model_data["data"][
-                    var
-                ].keys()
+                if len(var_series.index.names) == 1:
+                    var_series.index = list(backend_model.timesteps)
+                else:
+                    var_series.index = var_series.index.set_levels(
+                        list(backend_model.timesteps), level="timesteps"
+                    )
                 var_dict = var_series.to_dict()
                 # Update pyomo Param with new dictionary
 
@@ -500,14 +515,15 @@ def run_operate(model_data, timings, backend, build_only):
                 comment="Backend: iteration {}: sending model to solver".format(i + 1),
             )
             # After iteration 1, warmstart = True, which should speed up the process
-            # Note: Warmstart isn't possible with GLPK (dealt with later on)
+            # Note: Warmstart isn't possible with GLPK (dealt with here to avoid the warning being duplicated)
+
             _results = backend.solve_model(
                 backend_model,
                 solver=solver,
                 solver_io=solver_io,
                 solver_options=solver_options,
                 save_logs=save_logs,
-                warmstart=warmstart,
+                warmstart=warmstart * allow_warmstart,
             )
 
             log_time(
@@ -546,16 +562,6 @@ def run_operate(model_data, timings, backend, build_only):
                 ] = storage_initial.values
                 backend_model.storage_initial.store_values(
                     storage_initial.to_series().dropna().to_dict()
-                )
-
-            # Set up total operated units for the next iteration
-            if (model_data.get("cap_method", False) == "integer").any():
-                operated_units = _results.operating_units.sum("timesteps").astype(
-                    np.int
-                )
-                model_data["operated_units"].loc[{}] += operated_units.values
-                backend_model.operated_units.store_values(
-                    operated_units.to_series().dropna().to_dict()
                 )
 
             log_time(

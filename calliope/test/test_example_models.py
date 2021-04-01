@@ -22,11 +22,10 @@ class TestModelPreproccesing:
     def test_preprocess_urban_scale(self):
         calliope.examples.urban_scale()
 
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+    # @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
-    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_preprocess_operate(self):
         calliope.examples.operate()
 
@@ -131,7 +130,6 @@ class TestNationalScaleExampleModelInfeasibility:
         self.example_tester()
 
 
-@pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
@@ -490,7 +488,6 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert float(model.results.cost.sum()) == approx(540.780779)
 
-    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
         model = calliope.examples.operate(
             override_dict={"model.subset_time": ["2005-07-01", "2005-07-04"]}
@@ -499,9 +496,7 @@ class TestUrbanScaleExampleModelSenseChecks:
             model.run()
 
         expected_warnings = [
-            "Energy capacity constraint removed",
-            "Resource capacity constraint defined and set to infinity for all supply_plus techs",
-            "Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run",
+            "Storage cannot be cyclic in operate run mode",
         ]
 
         assert check_error_or_warning(excinfo, expected_warnings)

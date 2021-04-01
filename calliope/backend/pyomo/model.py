@@ -20,7 +20,7 @@ from pyomo.opt import SolverFactory
 import pyomo.environ  # noqa: F401
 
 # TempfileManager is required to set log directory
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 from calliope.backend.pyomo.util import (
     get_var,
@@ -220,12 +220,6 @@ def solve_model(
         solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    if "warmstart" in solve_kwargs.keys() and solver in ["glpk", "cbc"]:
-        exceptions.warn(
-            "The chosen solver, {}, does not suport warmstart, which may "
-            "impact performance.".format(solver)
-        )
-        del solve_kwargs["warmstart"]
 
     with redirect_stdout(LogWriter(logger, "debug", strip=True)):
         with redirect_stderr(LogWriter(logger, "error", strip=True)):

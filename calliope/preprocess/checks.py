@@ -24,6 +24,7 @@ from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess.util import get_all_carriers
 from calliope.core.util.tools import load_function
+from calliope.backend import checks
 
 logger = logging.getLogger(__name__)
 
@@ -636,66 +637,7 @@ def check_model_data(model_data):
         serious issues that should raise a ModelError
 
     """
-    model_warnings, errors = [], []
-    comments = AttrDict()
+    checklist_path = os.path.join(os.path.dirname(__file__), "checks.yaml")
+    warnings, errors = checks.check_operate_params(model_data, checklist_path)
 
-    # Ensure that no loc-tech specifies infinite resource and force_resource=True
-    if (
-        (
-            model_data.get("force_resource", False)
-            * np.isinf(model_data.resource).max("timesteps")
-        )
-        .fillna(False)
-        .any()
-    ):
-        errors.append(
-            "Cannot have `force_resource` = True if setting infinite resource values"
-        )
-
-    # Ensure that if a tech has negative costs, there is a max cap defined
-    # FIXME: doesn't consider capacity being set by a linked constraint e.g.
-    # `resource_cap_per_energy_cap`.
-    relevant_caps = set(
-        [re.search(r"cost_(\w+_cap)", i) for i in model_data.data_vars.keys()]
-    ).difference([None])
-    for cap in relevant_caps:
-        if (
-            (model_data[cap.group(0)] < 0)
-            & pd.isnull(model_data.get(f"{cap.group(1)}_max", np.nan))
-            & pd.isnull(model_data.get(f"{cap.group(1)}_equals", np.nan))
-        ).any():
-            errors.append(
-                f"Cannot have a negative {cap.group(0)} as there is an unset "
-                "corresponding capacity constraint"
-            )
-
-    if (model_data.inheritance.str.endswith("demand") * model_data.resource).max() > 0:
-        relevant_node_techs = (
-            (model_data.inheritance.str.endswith("demand") * model_data.resource)
-            .max("timesteps")
-            .where(lambda x: x > 0)
-            .to_series()
-            .dropna()
-        )
-        errors.append(
-            f"Positive resource given for demands {relevant_node_techs.index}. "
-            "All demands must have negative resource"
-        )
-    # TODO: fix operate mode by implementing windowsteps, etc., which should make this
-    # issue of resolution changes redundant
-    # Check if we're allowed to use operate mode
-    if "allow_operate_mode" not in model_data.attrs.keys():
-        daily_timesteps = [
-            model_data.timestep_resolution.loc[i].values
-            for i in np.unique(model_data.timesteps.to_index().strftime("%Y-%m-%d"))
-        ]
-        if not np.all(daily_timesteps == daily_timesteps[0]):
-            model_data.attrs["allow_operate_mode"] = 0
-            model_warnings.append(
-                "Operational mode requires the same timestep resolution profile "
-                "to be emulated on each date"
-            )
-        else:
-            model_data.attrs["allow_operate_mode"] = 1
-
-    return model_data, comments, model_warnings, errors
+    return warnings, errors

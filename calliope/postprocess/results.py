@@ -91,10 +91,15 @@ def capacity_factor(results, model_data, systemwide=False):
 
     """
     # In operate mode, energy_cap is an input parameter
-    if "energy_cap" not in results.keys():
-        energy_cap = model_data.energy_cap
-    else:
+    try:
         energy_cap = results.energy_cap
+    except AttributeError:
+        try:
+            energy_cap = model_data.energy_cap
+        except AttributeError:
+            energy_cap = (results.carrier_prod / model_data.timestep_resolution).max(
+                "timesteps"
+            )
 
     if systemwide:
         prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(

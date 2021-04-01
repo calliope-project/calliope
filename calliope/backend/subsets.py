@@ -16,6 +16,7 @@ import ast
 
 import xarray as xr
 import pandas as pd
+import numpy as np
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 
@@ -48,7 +49,7 @@ def create_valid_subset(model_data, name, config):
     # Add "where" info as imasks
     where_array = config.get_key("where", default=[])
     if where_array:
-        imask = _imask_where(model_data, name, where_array, imask, "and_")
+        imask = imask_where(model_data, name, where_array, imask, "and_")
 
     # Add imask based on subsets
     imask = _subset_imask(name, config, imask)
@@ -82,17 +83,22 @@ def _param_exists(model_data, param):
             return False
 
 
-def _val_is(model_data, param, val):
+def _val_is(model_data, param, val, _operator):
+    if val == "inf":
+        val = np.inf
+    else:
+        val = ast.literal_eval(val)
     if param.startswith(("model.", "run.")):
         group = param.split(".")[0]
         config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
         # TODO: update to str.removeprefix() in Python 3.9+
-        imask = config.get_key(param[len(f"{group}.") :], None) == ast.literal_eval(val)
+        lhs = config.get_key(param[len(f"{group}.") :], None)
     elif param in model_data.data_vars.keys():
-        imask = model_data[param] == ast.literal_eval(val)
+        lhs = model_data[param]
     else:
         return False
 
+    imask = _combine_imasks(lhs, val, _operator)
     return imask
 
 
@@ -136,7 +142,7 @@ VALID_HELPER_FUNCTIONS = {
 }
 
 
-def _imask_where(
+def imask_where(
     model_data, set_name, where_array, initial_imask=None, initial_operator=None
 ):
     """
@@ -151,12 +157,12 @@ def _imask_where(
     def __is_function(imask_string):
         return re.search(r"(\w+)\((\w+)\)", imask_string)
 
-    def __is_equals_statement(imask_string):
-        return re.search(r"([\w\.]+)\=([\'\w\.\:\,]+)", imask_string)
+    def __is_statement(imask_string):
+        return re.search(r"([\w\.]+)(\=|\<|\>|\<=|\>=)([\'\w\.\:\,]+)", imask_string)
 
     for i in where_array:
         if isinstance(i, list):
-            imasks.append(_imask_where(model_data, set_name, i))
+            imasks.append(imask_where(model_data, set_name, i))
         elif i in ["or", "and"]:
             operators.append(i)
         else:
@@ -170,13 +176,13 @@ def _imask_where(
             if __is_function(i) is not None:
                 func, val = __is_function(i).groups()
                 imask = VALID_HELPER_FUNCTIONS[func](model_data, val)
-            elif __is_equals_statement(i) is not None:
-                param, val = __is_equals_statement(i).groups()
-                imask = _val_is(model_data, param, val)
+            elif __is_statement(i) is not None:
+                param, statement_operator, val = __is_statement(i).groups()
+                imask = _val_is(model_data, param, val, statement_operator)
             elif i in model_data.data_vars.keys():
                 imask = _param_exists(model_data, i)
             else:
-                imask = False  # TODO: this should differntiate between a valid parameter not being in model_data and an e.g. incorrectly spelled parameter
+                imask = False  # TODO: this should differentiate between a valid parameter not being in model_data and an e.g. incorrectly spelled parameter
             # Separately check whether the condition should be inverted
             if _not is True:
                 imask = ~imask
@@ -196,14 +202,29 @@ def _imask_where(
     return imask
 
 
-def _combine_imasks(curr_imask, new_imask, _operator):
+def _translate_operator(_operator):
     if _operator in ["or", "or_"]:
         _operator = "or_"
     elif _operator in ["and", "and_"]:
         _operator = "and_"
-    else:
+    elif _operator == "=":
+        _operator = "eq"
+    elif _operator == "<":
+        _operator = "lt"
+    elif _operator == ">":
+        _operator = "gt"
+    elif _operator == "<=":
+        _operator = "le"
+    elif _operator == ">=":
+        _operator = "ge"
+    elif not hasattr(operator, _operator):
         raise ValueError(f"Operator `{_operator}` not recognised")
-    imask = functools.reduce(getattr(operator, _operator), [curr_imask, new_imask])
+
+    return getattr(operator, _operator)
+
+
+def _combine_imasks(curr_imask, new_imask, _operator):
+    imask = functools.reduce(_translate_operator(_operator), [curr_imask, new_imask])
     return imask
 
 
