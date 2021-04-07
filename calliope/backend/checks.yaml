@@ -1,7 +1,6 @@
 storage_initial:
     where: [include_storage=True, and, not storage_initial]
     warning: "Initial stored energy not defined, set to zero for all storage technologies, for use in iterative optimisation"
-    must_exist: storage_initial[nodes, techs]=0
 
 energy_cap_per_storage_cap_max:
     where: [include_storage=True, and, storage_cap, and, energy_cap, and, energy_cap_per_storage_cap_max]
@@ -35,20 +34,10 @@ resource_area_and_energy_per_cap:
     where: [resource, and, energy_cap, and, resource_area, and, [resource_unit='energy_per_cap', or, resource_unit='energy_per_area'], and, force_resource=True]
     error: "If using a resource unit of `energy_per_cap` or `energy_per_area` and `force_resource=True`, only one of energy_cap ('energy_per_cap') or resource_area ('energy_per_area') should be defined. Set the other parameter to infinite or remove it entirely."
 
-
 window_and_horizon:
     where: [run.operation.window=None, or, run.operation.horizon=None]
     error: "Timestep `window` and `horizon` must be defined under run.operation"
 
-#window_gt_horizon:
-#    where: [run.operation.window, and, run.operation.horizon]
-#    error: "Iteration `horizon` must be greater than or equals to iteration `window`"
-#    eq:
-#        lhs: run.operation.window
-#        operator: gt
-#        rhs: run.operation.horizon
-
 cyclic_storage:
     where: [run.cyclic_storage=True]
     warning: "Storage cannot be cyclic in operate run mode, `run.cyclic_storage` will be ignored"
-    must_exist: run.cyclic_storage=False

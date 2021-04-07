@@ -367,10 +367,21 @@ def run_operate(model_data, timings, backend, build_only):
         model_data.update(caps)
 
     checklist_path = os.path.join(os.path.dirname(__file__), "checks.yaml")
-    warnings, errors = checks.check_operate_params(
-        model_data, checklist_path, run_config
-    )
+    warnings, errors = checks.check_operate_params(model_data, checklist_path)
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
+
+    # Users will have been warned about these updates, which we now make
+    run_config["cyclic_storage"] = False
+    if (model_data.get("include_storage", np.array([0])) == 1).any():
+        ideal_storage_initial = model_data.include_storage.where(
+            model_data.include_storage.isnull(), other=0
+        )
+        if "storage_initial" not in model_data.data_vars.keys():
+            model_data["storage_initial"] = ideal_storage_initial
+        elif "storage_initial" in model_data.data_vars.keys():
+            model_data["storage_initial"] = model_data.storage_initial.combine_first(
+                ideal_storage_initial
+            )
 
     # Initialize our variables
     solver = run_config["solver"]

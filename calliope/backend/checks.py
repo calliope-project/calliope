@@ -8,13 +8,10 @@ run_checks.py
 Checks for model consistency and possible errors when preparing run in the backend.
 
 """
-import re
-import ast
-
 import numpy as np
 import xarray as xr
 from calliope.core.attrdict import AttrDict
-from calliope.backend.subsets import imask_where, _combine_imasks, _imask_foreach
+from calliope.backend.subsets import imask_where, _combine_imasks
 
 
 def _equation_parser(model_data, eq_dict):
@@ -44,7 +41,7 @@ def _equation_parser(model_data, eq_dict):
     )
 
 
-def check_operate_params(model_data, checklist_path, run_config=None):
+def check_operate_params(model_data, checklist_path):
     """
     if model mode = `operate`, check for clashes in capacity constraints.
     In this mode, all capacity constraints are set to parameters in the backend,
@@ -74,43 +71,5 @@ def check_operate_params(model_data, checklist_path, run_config=None):
                 for exctype, exclist in logs.items():
                     if exctype in check_config.keys():
                         exclist.append(check_config[exctype])
-                if "must_exist" in check_config.keys():
-                    _create_var(check_config["must_exist"], model_data, run_config)
 
     return logs["warning"], logs["error"]
-
-
-def _create_var(var_to_create, model_data, run_config):
-    def __is_run_config(search_string):
-        return re.search("^run\\.(.*)\\=(.*)$", search_string)
-
-    def __set_in_dict(run_config, key_list, value):
-        for key in key_list[:-1]:
-            run_config = run_config.setdefault(key, {})
-        run_config[key_list[-1]] = value
-
-    def __model_data_var(search_string):
-        return re.search("^([\\w\\-]*)\\[(.*)\\]\\=(.*)$", search_string)
-
-    if __is_run_config(var_to_create) is not None:
-        config_keys, config_val = __is_run_config(var_to_create).groups()
-        config_key_list = config_keys.split(".")
-        if not isinstance(config_key_list, list):
-            config_key_list = [config_key_list]
-        __set_in_dict(run_config, config_key_list, ast.literal_eval(config_val))
-
-    elif __model_data_var(var_to_create) is not None:
-        var_name, dims, var_val = __model_data_var(var_to_create).groups()
-
-        imask = _imask_foreach(model_data, dims.replace(" ", "").split(","))
-        new_data = imask.where(imask) * ast.literal_eval(var_val)
-        if var_name in model_data.data_vars.keys():
-            model_data.update({var_name: model_data[var_name].combine_first(new_data)})
-        else:
-            dim_order = [i for i in model_data.dims]
-            model_data[var_name] = new_data.transpose(*[i for i in dim_order if i in new_data.dims])
-            model_data[var_name].attrs = {"parameters": 1, "is_result": 0}
-    else:
-        raise ValueError(
-            f"Malformed variable / run config option to create: {var_to_create}"
-        )
