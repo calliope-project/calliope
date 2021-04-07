@@ -21,9 +21,8 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
-from calliope.preprocess import checks
 from calliope.preprocess import time
-from calliope.core.util import dataset
+from calliope.core.util import dataset, checks
 
 
 class ModelDataFactory:
@@ -440,5 +439,9 @@ class ModelDataFactory:
                 "Some data not extracted from inputs into model dataset:\n"
                 f"{self.node_dict}"
             )
-        warns, errors = checks.check_model_data(self.model_data)
-        exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
+        checklist_path = os.path.join(
+            os.path.dirname(__file__), "model_data_checks.yaml"
+        )
+        warnings, errors = checks.check_tabular_data(self.model_data, checklist_path)
+
+        exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)

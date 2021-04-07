@@ -23,8 +23,6 @@ import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess.util import get_all_carriers
-from calliope.core.util.tools import load_function
-from calliope.backend import checks
 
 logger = logging.getLogger(__name__)
 
@@ -620,24 +618,3 @@ def check_final(model_run):
     # i.e. comments.model_run.xxxxx....
 
     return comments, model_warnings, errors
-
-
-def check_model_data(model_data):
-    """
-    Perform final checks of the completely built xarray Dataset `model_data`.
-
-    Returns
-    -------
-    comments : AttrDict
-        debug output
-    model_warnings : list
-        possible problems that do not prevent the model run
-        from continuing
-    errors : list
-        serious issues that should raise a ModelError
-
-    """
-    checklist_path = os.path.join(os.path.dirname(__file__), "checks.yaml")
-    warnings, errors = checks.check_operate_params(model_data, checklist_path)
-
-    return warnings, errors

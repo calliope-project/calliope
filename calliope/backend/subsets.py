@@ -42,7 +42,8 @@ def create_valid_subset(model_data, name, config):
 
     """
 
-    # Start with a mask that is True where the tech exists at a node (across all timesteps and for a each carrier and cost, where appropriate)
+    # Start with a mask that is True where the tech exists at a node
+    # (across all timesteps and for a each carrier and cost, where appropriate)
     imask = _imask_foreach(model_data, config.foreach)
     if imask is False:  # i.e. not all of 'foreach' are in model_data
         return None
@@ -74,7 +75,7 @@ def create_valid_subset(model_data, name, config):
 
 
 def _param_exists(model_data, param):
-    # mask by NaN and INF/-INF values = False, otherwise True
+    """ Assign a model data variable NaN and INF/-INF values to False, otherwise True """
     with pd.option_context("mode.use_inf_as_na", True):
         if isinstance(model_data.get(param), xr.DataArray):
             _da = model_data.get(param)
@@ -84,6 +85,11 @@ def _param_exists(model_data, param):
 
 
 def _val_is(model_data, param, val, _operator):
+    """
+    Return True if `param` exists as a model data variable or a configuration option and if it matches `val`.
+    If param is a model data variable, a boolean array will be returned.
+    `_operator` defines the comparison between `param` and `val`, e.g. `==`, `<=`, etc...
+    """
     if val == "inf":
         val = np.inf
     else:
@@ -98,11 +104,12 @@ def _val_is(model_data, param, val, _operator):
     else:
         return False
 
-    imask = _combine_imasks(lhs, val, _operator)
+    imask = combine_imasks(lhs, val, _operator)
     return imask
 
 
 def _get_valid_subset(imask):
+    """ From a boolean N-dimensional array to a pandas Index (1 dimension) / MultiIndex (>1 dimension) where index values are `True`"""
     if len(imask.dims) == 1:
         return imask[imask].coords.to_index()
     else:
@@ -111,7 +118,7 @@ def _get_valid_subset(imask):
 
 
 def _subset_imask(set_name, set_config, imask):
-    # For some masks, we take a subset of a given dimension (e.g. only "out" in 'carrier_tier')
+    """ For some masks, we take a subset of a given dimension (e.g. only "out" in "carrier_tier") """
     for subset_name, subset in set_config.get("subset", {}).items():
         # Keep the axis if it is expected for this constraint/variable
         # Set those not in the set to False
@@ -133,7 +140,7 @@ def _subset_imask(set_name, set_config, imask):
 
 
 def _inheritance(model_data, tech_group):
-    # Only for base tech inheritance
+    """ Checks for base tech group inheritance (supply, supply_plus, etc.)"""
     return model_data.inheritance.str.endswith(tech_group)
 
 
@@ -146,10 +153,51 @@ def imask_where(
     model_data, set_name, where_array, initial_imask=None, initial_operator=None
 ):
     """
-    Example mask: [cost_purchase, and, [param(energy_cap_max), or, not inheritance(supply_plus)]]
-    i.e. a list of "param(...)", "inheritance(...)" and operators.
+    Take a set of arrays (`where_array`) and overlay them to create a multidimensional
+    boolean array (here known as `imask`) including all dimensions in the `where_array`
+     arrays, where an indexed element is True if:
+
+    1. there is some non-null / non-infinite data in all `where_array` elements
+        (`where_array` element is a simple string referring to model_data variable, e.g. `energy_cap_max`)
+    2. a configuration option is set to a specific value
+        (`where_array` element is of the form `run.config_option=val` or `model.config_option=val`).
+        If `val` is a string, it must be enclosed in `'`, e.g. `'plan'`.
+    3. `techs` inherit from a specific base tech group
+        (`where_array` element is of the form `inheritance(tech_group_name)`, where `tech_group_name` is e.g. `supply`)
+
+    Each element in the `where_array` is combined to produce the final boolean array
+    based on connecting operators `and`/`or`
+    For example: `[energy_cap_max, and, run.mode='plan', or, inheritance(supply)]`
+
     Sublists will be handled recursively.
-    "not" before param/inheritance will invert the mask
+
+    `not` before any `where_array` element that isn't an operator will invert
+    the result of that comparison (e.g. `not inheritance(supply)`).
+
+    An initial boolean array `initial_imask` can be optionally included as a starting point,
+    along with an initial operator to set how it is to be compared to the imask produced by the `where_array`.
+
+    Parameters
+    ----------
+    model_data: xarray Dataset
+    set_name: str
+        Name of the subset being produced, to use when raising errors/warnings
+    where_array: list of strings
+        Elements to find and compare to produce boolean imask, must be of the form
+        [element_to_compare, operator, element_to_compare, operator, ...].
+        `element_to_compare` can itself be a list of strings, and will be handled recursively.
+    initial_imask: xarray DataArray or None, default=None
+        Boolean array to initialise the where_array
+    initial_operator: str or None, default=None
+        Operator to connect `initial_imask` with the result of processing `where_array`.
+        Can be one of "and" or "or".
+
+    Returns
+    -------
+    imask: xarray DataArray or boolean
+        Boolean N-dimensional array where (multi)index values are True for the
+        (multi)index elements to be included in the final subset.
+        If there are no valid (multi)index elements, imask will return `False`.
     """
     imasks = []
     operators = []
@@ -194,18 +242,19 @@ def imask_where(
     # Run through and combine all imasks using defined operators
     imask = imasks[0]
     for i in range(len(imasks) - 1):
-        imask = _combine_imasks(imask, imasks[i + 1], operators[i])
+        imask = combine_imasks(imask, imasks[i + 1], operators[i])
 
     if initial_imask is not None and initial_operator is not None:
-        imask = _combine_imasks(imask, initial_imask, initial_operator)
+        imask = combine_imasks(imask, initial_imask, initial_operator)
 
     return imask
 
 
 def _translate_operator(_operator):
-    if _operator in ["or", "or_"]:
+    """ Go from 'human-readable' operators to the `operator` package methods """
+    if _operator == "or":
         _operator = "or_"
-    elif _operator in ["and", "and_"]:
+    elif _operator == "and":
         _operator = "and_"
     elif _operator == "=":
         _operator = "eq"
@@ -223,12 +272,23 @@ def _translate_operator(_operator):
     return getattr(operator, _operator)
 
 
-def _combine_imasks(curr_imask, new_imask, _operator):
+def combine_imasks(curr_imask, new_imask, _operator):
+    """ Combine two booleans / boolean arrays using a specified operator (e.g. `and`, `or`)"""
     imask = functools.reduce(_translate_operator(_operator), [curr_imask, new_imask])
     return imask
 
 
 def _imask_foreach(model_data, foreach):
+    """
+    Create an initial array of booleans based on core Calliope dimensions.
+    These include `techs`, `nodes`, `timesteps`, `carriers`, `carrier_tiers`.
+    If `foreach` is [nodes, techs] then all instances of a technology existing at a node
+    will result in a value of True in the output array (all others will be False).
+    The number of elements given in `foreach` is equal to the number of dimenstions on
+    the output array. If not all dimensions exist in the model, this function will simply
+    return False.
+
+    """
     if not all(i in model_data.dims for i in foreach):
         # ignore constraints/variables if the set doesn't even exist (e.g. datesteps)
         return False

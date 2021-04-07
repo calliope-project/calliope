@@ -13,7 +13,7 @@ import pandas as pd
 
 from calliope.core.util.logging import log_time
 from calliope import exceptions
-from calliope.backend import checks
+from calliope.core.util import checks
 from calliope.backend.pyomo import model as run_pyomo
 from calliope.backend.pyomo import interface as pyomo_interface
 
@@ -366,8 +366,8 @@ def run_operate(model_data, timings, backend, build_only):
             cap.attrs["operate_param"] = 1
         model_data.update(caps)
 
-    checklist_path = os.path.join(os.path.dirname(__file__), "checks.yaml")
-    warnings, errors = checks.check_operate_params(model_data, checklist_path)
+    checklist_path = os.path.join(os.path.dirname(__file__), "operate_mode_checks.yaml")
+    warnings, errors = checks.check_tabular_data(model_data, checklist_path)
     exceptions.print_warnings_and_raise_errors(warnings=warnings, errors=errors)
 
     # Users will have been warned about these updates, which we now make
@@ -552,7 +552,6 @@ def run_operate(model_data, timings, backend, build_only):
                 _results = backend.get_result_array(backend_model, model_data)
             else:
                 _results = xr.Dataset()
-                continue
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
             _results["timesteps"] = window_model_data.timesteps.copy()
@@ -565,7 +564,9 @@ def run_operate(model_data, timings, backend, build_only):
 
             # Set up initial storage for the next iteration
             # 1 represents boolean True here
-            if (model_data.get("include_storage", False) == 1).any():
+            if (
+                model_data.get("include_storage", False) == 1
+            ).any() and _termination in ["optimal", "feasible"]:
                 storage_initial = _results.storage.loc[
                     {"timesteps": window_ends.index[i]}
                 ].drop_vars("timesteps")

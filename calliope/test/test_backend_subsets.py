@@ -14,7 +14,7 @@ from calliope.backend.subsets import (
     _get_valid_subset,
     _subset_imask,
     imask_where,
-    _combine_imasks,
+    combine_imasks,
     _imask_foreach,
 )
 from calliope.core.util.observed_dict import UpdateObserverDict
@@ -317,8 +317,8 @@ class TestSubsets:
         curr = False
         new = True
         if isinstance(result, bool):
-            assert _combine_imasks(curr, new, operator) is result
+            assert combine_imasks(curr, new, operator) is result
         elif result == "error":
             with pytest.raises(ValueError) as excinfo:
-                _combine_imasks(curr, new, operator)
+                combine_imasks(curr, new, operator)
             assert check_error_or_warning(excinfo, "Operator `foo` not recognised")
