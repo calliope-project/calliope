@@ -23,6 +23,7 @@ from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.preprocess import time
 from calliope.core.util import dataset, checks
+from calliope.preprocess.checks import DEFAULTS
 
 
 class ModelDataFactory:
@@ -370,12 +371,12 @@ class ModelDataFactory:
         attr_dict["applied_overrides"] = model_run["applied_overrides"]
         attr_dict["scenario"] = model_run["scenario"]
 
-        default_tech_dict = checks.DEFAULTS.techs.default_tech
+        default_tech_dict = DEFAULTS.techs.default_tech
         default_cost_dict = {
             "cost_{}".format(k): v
             for k, v in default_tech_dict.costs.default_cost.items()
         }
-        default_node_dict = checks.DEFAULTS.nodes.default_node
+        default_node_dict = DEFAULTS.nodes.default_node
 
         attr_dict["defaults"] = AttrDict(
             {

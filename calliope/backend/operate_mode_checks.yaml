@@ -1,43 +1,43 @@
 storage_initial:
-    where: [include_storage=True, and, not storage_initial]
+    fail_where: [include_storage=True, and, not storage_initial]
     warning: "Initial stored energy not defined, set to zero for all storage technologies, for use in iterative optimisation"
 
 energy_cap_per_storage_cap_max:
-    where: [include_storage=True, and, storage_cap, and, energy_cap, and, energy_cap_per_storage_cap_max]
+    fail_where: [include_storage=True, and, storage_cap, and, energy_cap, and, energy_cap_per_storage_cap_max]
     error: "Fixed storage capacity * energy_cap_per_storage_cap_max is not larger than fixed energy capacity for some storage technologies"
-    assert:
+    fail_if_any:
         lhs: [storage_cap, multiply, energy_cap_per_storage_cap_max]
-        operator: ge
+        operator: lt
         rhs: [energy_cap]
 
 energy_cap_per_storage_cap_min:
-    where: [include_storage=True, and, storage_cap, and, energy_cap, and, energy_cap_per_storage_cap_min]
+    fail_where: [include_storage=True, and, storage_cap, and, energy_cap, and, energy_cap_per_storage_cap_min]
     error: "Fixed storage capacity * energy_cap_per_storage_cap_min is not smaller than fixed energy capacity for some storage technologies"
-    assert:
+    fail_if_any:
         lhs: [storage_cap, multiply, energy_cap_per_storage_cap_min]
-        operator: le
+        operator: gt
         rhs: [energy_cap]
 
 energy_per_cap:
-    where: [resource, and, not energy_cap, and, resource_unit='energy_per_cap', and, [resource_min_use, or, force_resource=True]]
+    fail_where: [resource, and, not energy_cap, and, resource_unit='energy_per_cap', and, [resource_min_use, or, force_resource=True]]
     error: "User must define a finite energy_cap (via energy_cap_equals or energy_cap_max) if using force_resource or resource_min_use"
 
 energy_cap_min_use:
-    where: [not energy_cap, and, energy_cap_min_use]
+    fail_where: [not energy_cap, and, energy_cap_min_use]
     error: "User must define a finite energy_cap (via energy_cap_equals or energy_cap_max) if using energy_cap_min_use"
 
 resource_area:
-    where: [resource, and, not resource_area, and, resource_unit='energy_per_area', and, [resource_min_use, or, force_resource=True]]
+    fail_where: [resource, and, not resource_area, and, resource_unit='energy_per_area', and, [resource_min_use, or, force_resource=True]]
     error: "User must define a finite resource_area (via resource_area_equals or resource_area_max) if using force_resource or resource_min_use and if available resource is linked to resource_area (resource_unit = `energy_per_area`)"
 
 resource_area_and_energy_per_cap:
-    where: [resource, and, energy_cap, and, resource_area, and, [resource_unit='energy_per_cap', or, resource_unit='energy_per_area'], and, force_resource=True]
+    fail_where: [resource, and, energy_cap, and, resource_area, and, [resource_unit='energy_per_cap', or, resource_unit='energy_per_area'], and, force_resource=True]
     error: "If using a resource unit of `energy_per_cap` or `energy_per_area` and `force_resource=True`, only one of energy_cap ('energy_per_cap') or resource_area ('energy_per_area') should be defined. Set the other parameter to infinite or remove it entirely."
 
 window_and_horizon:
-    where: [run.operation.window=None, or, run.operation.horizon=None]
+    fail_where: [run.operation.window=None, or, run.operation.horizon=None]
     error: "Timestep `window` and `horizon` must be defined under run.operation"
 
 cyclic_storage:
-    where: [run.cyclic_storage=True]
+    fail_where: [run.cyclic_storage=True]
     warning: "Storage cannot be cyclic in operate run mode, `run.cyclic_storage` will be ignored"

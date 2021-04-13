@@ -1,3 +1,5 @@
+from calliope.backend.run import run
+from calliope.core.attrdict import AttrDict
 import pytest  # noqa: F401
 import calliope
 import logging
@@ -7,14 +9,16 @@ import tempfile
 
 import xarray as xr
 import pandas as pd
+import numpy as np
 
-from calliope.core.util import dataset, observed_dict
+from calliope.core.util import dataset, observed_dict, checks
 
 from calliope.core.util.tools import memoize, memoize_instancemethod
 
 from calliope import exceptions
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
+
 from calliope.test.common.util import (
     python36_or_higher,
     check_error_or_warning,
@@ -338,3 +342,116 @@ class TestObservedDict:
             assert "run_config" in model_from_disk._model_data.attrs.keys()
             assert hasattr(model_from_disk, "model_config")
             assert "model_config" in model_from_disk._model_data.attrs.keys()
+
+
+class TestChecks:
+    @pytest.fixture
+    def model_data(self):
+        foo = [[1, 0], [0, 2], [0, 1]]
+        bar = [1, 0, 0]
+        x = ["a", "b", "c"]
+        y = ["A", "B"]
+        run_config_dict = AttrDict(
+            {"run.option1.suboption1": 1, "run.option2": 2}
+        )
+        model_config_dict = AttrDict(
+            {"model.option1.suboption1": True, "model.option2": False}
+        )
+
+        ds = xr.Dataset(
+            data_vars={"foo": (["x", "y"], foo), "bar": (["x"], bar)},
+            coords={"x": x, "y": y},
+            attrs={
+                "run_config": run_config_dict.to_yaml(),
+                "model_config": model_config_dict.to_yaml(),
+            },
+        )
+        return ds
+
+    @pytest.fixture
+    def check_dict(self):
+        return {
+            "checkname1": {
+                "fail_where": ["foo=2", "and", "bar=1"],
+                "error": "expected_pass",
+            },
+            "checkname2": {
+                "fail_where": ["foo=2", "and", "bar=0"],
+                "error": "expected_error",
+            },
+            "checkname3": {
+                "fail_where": ["foo", "and", "bar"],
+                "fail_if_any": {"lhs": ["foo", "multiply", "bar"], "operator": "ge", "rhs": [1]},
+                "warning": "expected_warning",
+            },
+            "checkname4": {
+                "fail_where": ["foo", "and", "bar"],
+                "fail_if_any": {"lhs": ["foo", "multiply", "bar"], "operator": "gt", "rhs": [1]},
+                "warning": "expected_pass",
+            },
+        }
+
+    @pytest.mark.parametrize(
+        ("method", "result"),
+        [
+            ("multiply", [[1, 0], [0, 0], [0, 0]]),
+            ("add", [[2, 1], [0, 2], [0, 1]]),
+            ("subtract", [[0, -1], [0, 2], [0, 1]]),
+        ],
+    )
+    def test_simple_equations(self, model_data, method, result):
+        parsed = checks._parse_vars(model_data, ["foo", method, "bar"], "name")
+        assert np.array_equal(parsed, result)
+
+    @pytest.mark.parametrize(
+        ("method", "result"),
+        [("multiply", [[1, 0], [0, 2], [0, 1]]), ("add", [[2, 1], [1, 3], [1, 2]])],
+    )
+    @pytest.mark.parametrize(
+        "static_val", [1, 1.0, "run.option1.suboption1"]
+    )
+    def test_static_vals(self, model_data, method, result, static_val):
+        parsed = checks._parse_vars(model_data, ["foo", method, static_val], "name")
+        assert np.array_equal(parsed, result)
+
+    def test_longer_equation(self, model_data):
+        var_list = ["foo", "multiply", 2, "add", "bar"]
+        parsed = checks._parse_vars(model_data, var_list, "name")
+        assert np.array_equal(parsed, [[3, 1], [0, 4], [0, 2]])
+
+    @pytest.mark.parametrize("var", ["foo", "bar"])
+    def test_single_array(self, model_data, var):
+        parsed = checks._parse_vars(model_data, [var], "name")
+        assert np.array_equal(parsed, model_data[var])
+
+    @pytest.mark.parametrize("var", [1, 2, 1e3])
+    def test_single_val(self, model_data, var):
+        parsed = checks._parse_vars(model_data, [var], "name")
+        assert parsed == var
+
+    def test_too_many_methods(self, model_data):
+        with pytest.raises(
+            AssertionError,
+            match=f"Too many numpy operators compared to variables to check in tabular data check name",
+        ):
+            checks._parse_vars(model_data, ["foo", "multiply", "divide"], "name")
+
+    def test_unknown_var(self, model_data):
+        with pytest.raises(
+            ValueError, match=f"Unable to parse variable baz in tabular data check name"
+        ):
+            checks._parse_vars(model_data, ["foo", "multiply", "baz"], "name")
+
+    def test_check_yaml_config(self, model_data, check_dict):
+        with tempfile.TemporaryDirectory() as tempdir:
+            checklist_path = os.path.join(tempdir, "checks.yaml")
+            AttrDict(check_dict).to_yaml(checklist_path)
+
+            warnings, errors = checks.check_tabular_data(model_data, checklist_path)
+            assert "expected_error" in errors
+            assert not "expected_pass" in errors
+            assert not "expected_warning" in errors
+
+            assert "expected_warning" in warnings
+            assert not "expected_pass" in warnings
+            assert not "expected_error" in warnings

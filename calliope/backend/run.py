@@ -548,10 +548,13 @@ def run_operate(model_data, timings, backend, build_only):
             _termination = backend.load_results(backend_model, _results)
             terminations.append(_termination)
 
-            if _termination in ["optimal", "feasible"]:
-                _results = backend.get_result_array(backend_model, model_data)
-            else:
-                _results = xr.Dataset()
+            if _termination not in ["optimal", "feasible"]:
+                exceptions.warn(
+                    "Infeasible operation window occured. Please check your model configuration. "
+                    "Operation mode will stop here."
+                )
+                break
+            _results = backend.get_result_array(backend_model, model_data)
             # We give back the actual timesteps for this iteration and take a slice
             # equal to the window length
             _results["timesteps"] = window_model_data.timesteps.copy()

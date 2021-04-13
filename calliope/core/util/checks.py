@@ -8,13 +8,15 @@ run_checks.py
 Checks for model consistency and possible errors when preparing run in the backend.
 
 """
+import ast
+
 import numpy as np
 import xarray as xr
 from calliope.core.attrdict import AttrDict
 from calliope.backend.subsets import imask_where, combine_imasks
 
 
-def _equation_parser(model_data, eq_dict):
+def _equation_parser(model_data, eq_dict, check_name):
     """
     Take a dictionary of the form
     {lhs: [param1, combination_method1, param2, ...],
@@ -45,30 +47,44 @@ def _equation_parser(model_data, eq_dict):
     The parser returns a single boolean or a boolean array, where True refers to value(s) meeting the specified conditions.
     """
 
-    def __parse_vars(var_list):
-        operators = []
-        parsed_vars = []
-        for var in var_list:
-            if isinstance(var, list):
-                parsed_vars.append(__parse_vars(var))
-            elif hasattr(np, var):
-                operators.append(getattr(np, var))
-            elif var in model_data.data_vars.keys():
-                parsed_vars.append(model_data[var])
-            elif isinstance(var, (int, float)) or (
-                isinstance(var, str) and var.isnumeric()
-            ):
-                parsed_vars.append(var)
-        assert len(parsed_vars) - 1 == len(operators)
-        var = parsed_vars[0]
-        for i in range(len(parsed_vars) - 1):
-            var = operators[i](var, parsed_vars[i + 1])
-
-        return var
-
     return combine_imasks(
-        __parse_vars(eq_dict["lhs"]), __parse_vars(eq_dict["rhs"]), eq_dict.operator
+        _parse_vars(model_data, eq_dict["lhs"], check_name),
+        _parse_vars(model_data, eq_dict["rhs"], check_name),
+        eq_dict.operator,
     )
+
+
+def _parse_vars(model_data, var_list, check_name):
+    operators = []
+    parsed_vars = []
+    for var in var_list:
+        if isinstance(var, list):
+            parsed_vars.append(_parse_vars(var))
+        elif isinstance(var, (int, float)):
+            parsed_vars.append(var)
+        elif hasattr(np, var):
+            operators.append(getattr(np, var))
+        elif var in model_data.data_vars.keys():
+            parsed_vars.append(model_data[var])
+        elif isinstance(var, str) and (
+            var.startswith("run.") or var.startswith("model.")
+        ):
+            group, key = var.split(".", 1)
+            config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
+            parsed_vars.append(config.get_key(key, 1))
+        else:
+            raise ValueError(
+                f"Unable to parse variable {var} in tabular data check {check_name}"
+            )
+
+    assert len(parsed_vars) - 1 == len(
+        operators
+    ), f"Too many numpy operators compared to variables to check in tabular data check {check_name}"
+    var = parsed_vars[0]
+    for i in range(len(parsed_vars) - 1):
+        var = operators[i](var, parsed_vars[i + 1])
+
+    return var
 
 
 def check_tabular_data(model_data, checklist_path):
@@ -98,10 +114,12 @@ def check_tabular_data(model_data, checklist_path):
     logs = {"warning": [], "error": []}
 
     for check_name, check_config in checklist.items():
-        imask = imask_where(model_data, check_name, check_config.where)
+        imask = imask_where(model_data, check_name, check_config.fail_where)
         if isinstance(imask, xr.DataArray) and imask.any() or imask is True:
-            if "assert" in check_config.keys():
-                imask *= ~_equation_parser(model_data, check_config["assert"])
+            if "fail_if_any" in check_config.keys():
+                imask *= _equation_parser(
+                    model_data, check_config["fail_if_any"], check_name
+                )
             if isinstance(imask, xr.DataArray) and imask.any() or imask is True:
                 for exctype, exclist in logs.items():
                     if exctype in check_config.keys():
