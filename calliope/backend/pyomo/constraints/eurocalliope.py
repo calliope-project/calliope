@@ -72,18 +72,18 @@ def load_constraints(backend_model):
             rule=net_transfer_ratio_constraint_rule,
         )
     for sense in ["min", "max", "equals"]:
-        if f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint" in sets:
+        if f"loc_tech_carriers_carrier_prod_per_month_{sense}_constraint" in sets:
             setattr(
                 backend_model,
-                f"carrier_prod_per_week_{sense}_constraint",
+                f"carrier_prod_per_month_{sense}_constraint",
                 po.Constraint(
                     getattr(
                         backend_model,
-                        f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint",
+                        f"loc_tech_carriers_carrier_prod_per_month_{sense}_constraint",
                     ),
-                    backend_model.weeks,
+                    backend_model.months,
                     [sense],
-                    rule=carrier_prod_per_week_constraint_rule,
+                    rule=carrier_prod_per_month_constraint_rule,
                 ),
             )
 
@@ -273,39 +273,39 @@ def net_transfer_ratio_constraint_rule(backend_model, loc_tech):
     return prod == prod_remote * net_transfer
 
 
-def carrier_prod_per_week_constraint_rule(backend_model, loc_tech_carrier, week, what):
+def carrier_prod_per_month_constraint_rule(backend_model, loc_tech_carrier, month, what):
     """
     Set the min/max amount of carrier consumption (relative to annual consumption)
-    for a specific loc tech that must take place in a given calender week in the model
+    for a specific loc tech that must take place in a given calender month in the model
     """
 
     prod = backend_model.carrier_prod
     prod_total = sum(
         prod[loc_tech_carrier, timestep] for timestep in backend_model.timesteps
     )
-    prod_week = sum(
+    prod_month = sum(
         prod[loc_tech_carrier, timestep]
         for timestep in backend_model.timesteps
-        if backend_model.week_numbers[timestep] == week
+        if backend_model.month_numbers[timestep] == month
     )
     if "timesteps" in [
         i.name
         for i in getattr(
-            backend_model, f"carrier_prod_per_week_{what}"
+            backend_model, f"carrier_prod_per_month_{what}"
         )._index.subsets()
     ]:
         prod_fraction = sum(
             get_param(
                 backend_model,
-                f"carrier_prod_per_week_{what}",
+                f"carrier_prod_per_month_{what}",
                 (loc_tech_carrier, timestep),
             )
             for timestep in backend_model.timesteps
-            if backend_model.week_numbers[timestep] == week
+            if backend_model.month_numbers[timestep] == month
         )
     else:
         prod_fraction = get_param(
-            backend_model, f"carrier_prod_per_week_{what}", (loc_tech_carrier)
+            backend_model, f"carrier_prod_per_month_{what}", (loc_tech_carrier)
         )
 
-    return equalizer(prod_week, prod_total * prod_fraction, what)
+    return equalizer(prod_month, prod_total * prod_fraction, what)

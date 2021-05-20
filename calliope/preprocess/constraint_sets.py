@@ -606,14 +606,14 @@ def generate_constraint_sets(model_run):
     ]
     for sense in ["min", "equals", "max"]:
         constraint_sets[
-            f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"
+            f"loc_tech_carriers_carrier_prod_per_month_{sense}_constraint"
         ] = [
             i
             for i in sets.loc_tech_carriers_prod
             if constraint_exists(
                 model_run,
                 i.rsplit("::", 1)[0],
-                f"constraints.carrier_prod_per_week_{sense}.{i.rsplit('::', 1)[1]}",
+                f"constraints.carrier_prod_per_month_{sense}.{i.rsplit('::', 1)[1]}",
             )
         ]
     return constraint_sets

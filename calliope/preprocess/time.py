@@ -261,20 +261,20 @@ def add_zero_carrier_ratio_sets(model_data):
     )
 
 
-def add_timestep_weeks(model_data):
+def add_timestep_months(model_data):
     """
-    Get the weeknumber of every timestep. If multiple years, weeks will continue beyond 52
+    Get the monthnumber of every timestep. If multiple years, months will continue beyond 52
     """
     if any(
         i in model_data.coords
         for i in [
-            "loc_tech_carriers_carrier_prod_per_week_min_constraint",
-            "loc_tech_carriers_carrier_prod_per_week_max_constraint",
-            "loc_tech_carriers_carrier_prod_per_week_equals_constraint",
+            "loc_tech_carriers_carrier_prod_per_month_min_constraint",
+            "loc_tech_carriers_carrier_prod_per_month_max_constraint",
+            "loc_tech_carriers_carrier_prod_per_month_equals_constraint",
         ]
     ):
-        model_data["week_numbers"] = model_data.timesteps.dt.week
-        model_data.coords["weeks"] = np.unique(model_data.timesteps.dt.week.values)
+        model_data["month_numbers"] = model_data.timesteps.dt.month
+        model_data.coords["months"] = np.unique(model_data.timesteps.dt.month.values)
 
     return model_data
 
@@ -289,7 +289,7 @@ def final_timedimension_processing(model_data):
     # exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)
 
     model_data = add_max_demand_timesteps(model_data)  # not needed in euro-calliope
-    model_data = add_timestep_weeks(model_data)
+    model_data = add_timestep_months(model_data)
     model_data = add_zero_carrier_ratio_sets(model_data)
     model_data = reorganise_xarray_dimensions(model_data)
 

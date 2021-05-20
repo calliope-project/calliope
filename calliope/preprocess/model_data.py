@@ -129,7 +129,7 @@ def constraints_to_dataset(model_run):
             "resource" in constraint
         ):  # i.e. everything with 'resource' in the name that isn't resource_cap
             return "loc_techs_finite_resource"
-        elif "prod_per_week" in constraint:
+        elif "prod_per_month" in constraint:
             return "loc_techs_conversion_plus"
         elif (
             "storage" in constraint
@@ -160,7 +160,7 @@ def constraints_to_dataset(model_run):
                     ".carrier_ratios.",
                     ".energy_cap_ratio.",
                     ".link_con_to_prod",
-                    ".carrier_prod_per_week",
+                    ".carrier_prod_per_month",
                 ]
             ]
         )
@@ -363,20 +363,20 @@ def carrier_specific_to_dataset(model_run):
                     data.append(carrier_ratio)
                 data_dict["energy_cap_ratio"]["data"].append(data)
         for sense in ["min", "equals", "max"]:
-            _set = f"loc_tech_carriers_carrier_prod_per_week_{sense}_constraint"
+            _set = f"loc_tech_carriers_carrier_prod_per_month_{sense}_constraint"
             if model_run.constraint_sets.get(_set, []) != []:
-                data_dict[f"carrier_prod_per_week_{sense}"] = dict(dims=[_set], data=[])
+                data_dict[f"carrier_prod_per_month_{sense}"] = dict(dims=[_set], data=[])
                 for loc_tech_carrier in model_run.constraint_sets[_set]:
                     loc, tech, carrier = loc_tech_carrier.split("::")
-                    carrier_prod_per_week = (
+                    carrier_prod_per_month = (
                         model_run.locations[loc]
                         .techs[tech]
                         .constraints.get_key(
-                            f"carrier_prod_per_week_{sense}.{carrier}", np.nan,
+                            f"carrier_prod_per_month_{sense}.{carrier}", np.nan,
                         )
                     )
-                    data_dict[f"carrier_prod_per_week_{sense}"]["data"].append(
-                        carrier_prod_per_week
+                    data_dict[f"carrier_prod_per_month_{sense}"]["data"].append(
+                        carrier_prod_per_month
                     )
 
     # Additional system-wide constraints from model_run.model
