@@ -129,7 +129,7 @@ def get_conversion_plus_io(backend_model, tier):
         return "in", backend_model.carrier_con
 
 
-def get_var(backend_model, var, dims=None, sparse=False):
+def get_var(backend_model, var, dims=None, sparse=False, expr=False):
     """
     Return output for variable `var` as a pandas.Series (1d),
     pandas.Dataframe (2d), or xarray.DataArray (3d and higher).
@@ -143,6 +143,9 @@ def get_var(backend_model, var, dims=None, sparse=False):
     sparse : bool, optional; default = False
         If extracting Pyomo Param data, the output sparse array includes inputs
         the user left as NaN replaced with the default value for that Param.
+    expr : bool, optional
+        If True, treat var as a pyomo expression, which requires calculating
+        the result of the expression before translating into nd data structure
     """
     try:
         var_container = getattr(backend_model, var)
@@ -155,32 +158,24 @@ def get_var(backend_model, var, dims=None, sparse=False):
         else:
             dims = [var_container.index_set().name]
 
-    if sparse:
-        result = pd.DataFrame.from_dict(
-            var_container.extract_values_sparse(), orient="index"
-        )
+    if sparse and not expr:
+        if invalid(var_container.default()):
+            result = pd.Series(var_container._data).apply(
+                lambda x: po.value(x) if not invalid(x) else np.nan
+            )
+        else:
+            result = pd.Series(var_container.extract_values_sparse())
     else:
-        result = pd.DataFrame.from_dict(var_container.extract_values(), orient="index")
-
+        if expr:
+            result = pd.Series(var_container._data).apply(po.value)
+        else:
+            result = pd.Series(var_container.extract_values())
     if result.empty:
         raise exceptions.BackendError("Variable {} has no data.".format(var))
 
-    result = result[0]  # Get the only column in the dataframe
+    result = result.rename_axis(index=dims)
 
-    if len(dims) > 1:
-        result.index = pd.MultiIndex.from_tuples(result.index, names=dims)
-
-    if len(result.index.names) == 1:
-        result = result.sort_index()
-        result.index.name = dims[0]
-    elif len(result.index.names) == 2:
-        # if len(dims) is 2, we already have a well-formed DataFrame
-        result = result.unstack(level=0)
-        result = result.sort_index()
-    else:  # len(dims) >= 3
-        result = xr.DataArray.from_series(result)
-
-    return result
+    return xr.DataArray.from_series(result)
 
 
 @memoize
@@ -222,5 +217,56 @@ def get_domain(var: xr.DataArray) -> str:
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
         return val._value == po.base.param._NotValid or po.value(val) is None
+    elif val == po.base.param._NotValid:
+        return True
     else:
         return pd.isnull(val)
+
+
+def datetime_to_string(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from datetime to string xarray dataarrays, to reduce the memory
+    footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
+    when creating the pyomo model object.
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    datetime_data = set()
+    for attr in ["coords", "data_vars"]:
+        for set_name, set_data in getattr(model_data, attr).items():
+            if set_data.dtype.kind == "M":
+                attrs = model_data[set_name].attrs
+                model_data[set_name] = model_data[set_name].dt.strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+                model_data[set_name].attrs = attrs
+                datetime_data.add((attr, set_name))
+    backend_model.__calliope_datetime_data = datetime_data
+
+    return model_data
+
+
+def string_to_datetime(
+    backend_model: po.ConcreteModel, model_data: xr.Dataset
+) -> xr.Dataset:
+    """
+    Convert from string to datetime xarray dataarrays, reverting the process
+    undertaken in
+    datetime_to_string
+    Parameters
+    ----------
+    backend_model : the backend pyomo model object
+    model_data : the Calliope xarray Dataset of model data
+    """
+    for attr, set_name in backend_model.__calliope_datetime_data:
+        if attr == "coords" and set_name in model_data:
+            model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
+        elif set_name in model_data:
+            model_data[set_name] = (
+                model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            )
+    return model_data

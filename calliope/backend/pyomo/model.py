@@ -16,12 +16,17 @@ import pyomo.core as po  # pylint: disable=import-error
 from pyomo.opt import SolverFactory  # pylint: disable=import-error
 
 # pyomo.environ is needed for pyomo solver plugins
-import pyomo.environ  # pylint: disable=unused-import,import-error
+import pyomo.environ as pe  # pylint: disable=unused-import,import-error
 
 # TempfileManager is required to set log directory
 from pyutilib.services import TempfileManager  # pylint: disable=import-error
 
-from calliope.backend.pyomo.util import get_var, get_domain
+from calliope.backend.pyomo.util import (
+    get_var,
+    get_domain,
+    datetime_to_string,
+    string_to_datetime,
+)
 from calliope.backend.pyomo import constraints
 from calliope.core.util.tools import load_function
 from calliope.core.util.logging import LogWriter
@@ -37,8 +42,11 @@ def generate_model(model_data):
     Generate a Pyomo model.
 
     """
-    backend_model = po.ConcreteModel()
 
+    backend_model = po.ConcreteModel()
+    model_data = datetime_to_string(backend_model, model_data)
+
+    logger.info("Loading sets")
     # Sets
     for coord in list(model_data.coords):
         set_data = list(model_data.coords[coord].data)
@@ -46,22 +54,22 @@ def generate_model(model_data):
         if isinstance(set_data[0], np.datetime64):
             set_data = pd.to_datetime(set_data)
         setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
-
+    logger.info("Loading parameters")
     # "Parameters"
-    model_data_dict = {
-        "data": {
+        model_data_dict = {
+            "data": {
             k: v.to_series().dropna().replace("inf", np.inf).to_dict()
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "dims": {
-            k: v.dims
-            for k, v in model_data.data_vars.items()
-            if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
-        },
-        "sets": list(model_data.coords),
-        "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
-    }
+                for k, v in model_data.data_vars.items()
+                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
+            },
+            "dims": {
+                k: v.dims
+                for k, v in model_data.data_vars.items()
+                if v.attrs["is_result"] == 0 or v.attrs.get("operate_param", 0) == 1
+            },
+            "sets": list(model_data.coords),
+            "attrs": {k: v for k, v in model_data.attrs.items() if k != "defaults"},
+        }
 
     # Dims in the dict's keys are ordered as in model_data, which is enforced
     # in model_data generation such that timesteps are always last and the
@@ -147,6 +155,7 @@ def generate_model(model_data):
     )
 
     for c in constraints_to_add:
+        logger.info(f"creating {c} constraints")
         load_function("calliope.backend.pyomo.constraints." + c + ".load_constraints")(
             backend_model
         )
@@ -168,6 +177,8 @@ def generate_model(model_data):
     )
     load_function(objective_function)(backend_model)
 
+    model_data = string_to_datetime(backend_model, model_data)
+
     return backend_model
 
 
@@ -177,6 +188,7 @@ def solve_model(
     solver_io=None,
     solver_options=None,
     save_logs=False,
+    opt=None,
     **solve_kwargs,
 ):
     """
@@ -184,7 +196,11 @@ def solve_model(
 
     Returns a Pyomo results object
     """
-    opt = SolverFactory(solver, solver_io=solver_io)
+    if opt is None:
+        opt = SolverFactory(solver, solver_io=solver_io)
+        if "persistent" in solver:
+            solve_kwargs.update({"save_results": False, "load_solutions": False})
+            opt.set_instance(backend_model)
 
     if solver_options:
         for k, v in solver_options.items():
@@ -194,28 +210,37 @@ def solve_model(
         solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    if "warmstart" in solve_kwargs.keys() and solver in ["glpk", "cbc"]:
+    if solve_kwargs.get("warmstart", False) and solver in ["glpk", "cbc"]:
         exceptions.warn(
             "The chosen solver, {}, does not suport warmstart, which may "
             "impact performance.".format(solver)
         )
-        del solve_kwargs["warmstart"]
+        solve_kwargs["warmstart"] = False
 
     with redirect_stdout(LogWriter(logger, "debug", strip=True)):
         with redirect_stderr(LogWriter(logger, "error", strip=True)):
             # Ignore most of gurobipy's logging, as it's output is
             # already captured through STDOUT
             logging.getLogger("gurobipy").setLevel(logging.ERROR)
-            results = opt.solve(backend_model, tee=True, **solve_kwargs)
-    return results
+            if "persistent" in solver:
+                results = opt.solve(tee=True, **solve_kwargs)
+            else:
+                results = opt.solve(backend_model, tee=True, **solve_kwargs)
+    return results, opt
 
 
-def load_results(backend_model, results):
+def load_results(backend_model, results, opt):
     """Load results into model instance for access via model variables."""
-    not_optimal = str(results["Solver"][0]["Termination condition"]) != "optimal"
-    this_result = backend_model.solutions.load_from(results)
+    termination = results.solver.termination_condition
 
-    if this_result is False or not_optimal:
+    if termination == pe.TerminationCondition.optimal:
+        try:
+            opt.load_vars()
+            this_result = True
+        except AttributeError:
+            this_result = backend_model.solutions.load_from(results)
+
+    if this_result is False or termination != pe.TerminationCondition.optimal:
         logger.critical("Problem status:")
         for l in str(results.Problem).split("\n"):
             logger.critical(l)
@@ -223,14 +248,14 @@ def load_results(backend_model, results):
         for l in str(results.Solver).split("\n"):
             logger.critical(l)
 
-        if not_optimal:
+        if termination != pe.TerminationCondition.optimal:
             message = "Model solution was non-optimal."
         else:
             message = "Could not load results into model instance."
 
         exceptions.BackendWarning(message)
 
-    return str(results["Solver"][0]["Termination condition"])
+    return str(termination)
 
 
 def get_result_array(backend_model, model_data):
@@ -245,22 +270,29 @@ def get_result_array(backend_model, model_data):
         for i in backend_model.component_objects()
         if isinstance(i, po.base.Var)
     }
-
+    all_variables.update(
+        {
+            i.name: get_var(backend_model, i.name, expr=True)
+            for i in backend_model.component_objects()
+            if isinstance(i, po.base.Expression)
+        }
+    )
     # Get any parameters that did not appear in the user's model.inputs Dataset
     all_params = {
-        i.name: get_var(backend_model, i.name)
-        for i in backend_model.component_objects()
-        if isinstance(i, po.base.param.IndexedParam)
-        and i.name not in model_data.data_vars.keys()
-        and "objective_" not in i.name
+        i.name: get_var(backend_model, i.name, expr=True)
+        for i in backend_model.component_objects(ctype=po.base.param.IndexedParam)
+        if i.name not in model_data.data_vars.keys() and "objective_" not in i.name
     }
 
-    results = reorganise_xarray_dimensions(xr.Dataset(all_variables))
+    results = string_to_datetime(
+        backend_model, reorganise_xarray_dimensions(xr.Dataset(all_variables))
+    )
 
     if all_params:
         additional_inputs = reorganise_xarray_dimensions(xr.Dataset(all_params))
         for var in additional_inputs.data_vars:
             additional_inputs[var].attrs["is_result"] = 0
         model_data.update(additional_inputs)
+        model_data = string_to_datetime(backend_model, model_data)
 
     return results
