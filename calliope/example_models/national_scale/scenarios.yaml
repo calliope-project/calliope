@@ -37,7 +37,7 @@ overrides:
             spores_number: 3
         run.objective_options.cost_class: {'monetary': 1, 'spores_score': 0}
         group_constraints:
-            systemwide_cost_max.cost_max.monetary: .inf
+            systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
 
         techs.ccgt.costs.spores_score.energy_cap: 0
         techs.ccgt.costs.spores_score.interest_rate: 1
@@ -180,3 +180,11 @@ overrides:
                 costs:
                     utility:
                         om_prod: 100 # arbitrary utility value
+
+    capacity_factor:
+        techs.ccgt.constraints.capacity_factor_min: 0.8
+        techs.ccgt.constraints.capacity_factor_max: 0.9
+
+    eurocalliope:
+        techs.battery.constraints.link_con_to_prod: [ccgt]
+        locations.region2.techs.ccgt.constraints.energy_cap_max: 1000
