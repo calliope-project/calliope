@@ -147,11 +147,12 @@ def run_plan(
             logger, timings, "run_results_loaded", comment="Backend: loaded results"
         )
 
-        results = backend.get_result_array(backend_model, model_data)
-        results.attrs["termination_condition"] = termination
-
-        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
+        if termination in ["optimal", "feasible"]:
+            results = backend.get_result_array(backend_model, model_data)
+            results.attrs["termination_condition"] = termination
             results.attrs["objective_function_value"] = backend_model.obj()
+        else:
+            results = xr.Dataset(attrs={"termination_condition": termination})
 
         log_time(
             logger,

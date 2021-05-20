@@ -1602,8 +1602,8 @@ class TestEnergyCapGroupConstraints:
         assert cheap_heat == approx(0.8333, rel=0.001)
         assert cheap_cool == approx(0.1667, rel=0.001)
         assert elec_to_heat_cool_linked == approx(1.6667, rel=0.001)
-        assert elec_to_heat_cool_unlinked == 0
-        assert elec_to_heat == 0
+        assert elec_to_heat_cool_unlinked == approx(0)
+        assert elec_to_heat == approx(0)
 
     # All technologies, but insufficient energy_cap_max for enough installed capacity to meet demand
     @pytest.mark.filterwarnings(

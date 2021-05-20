@@ -65,12 +65,12 @@ class TestUpdateParam:
 
         model.backend.update_param(
             "resource",
-            {("0::test_demand_elec", pd.Timestamp("2005-01-01 01:00:00")): -10},
+            {("0::test_demand_elec", "2005-01-01 01:00"): -10},
         )
 
         assert (
             model._backend_model.resource.extract_values()[
-                ("0::test_demand_elec", pd.Timestamp("2005-01-01 01:00:00"))
+                ("0::test_demand_elec", "2005-01-01 01:00")
             ]
             == -10
         )

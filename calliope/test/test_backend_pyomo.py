@@ -84,7 +84,7 @@ class TestModel:
         """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run(build_only=True)
-        timestep_0 = pd.Timestamp("2005-01-01 00:00:00")
+        timestep_0 = "2005-01-01 00:00"
         assert m._backend_model.timesteps.ord(timestep_0) == 1
 
 

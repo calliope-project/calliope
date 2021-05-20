@@ -124,7 +124,7 @@ def rerun_pyomo_model(model_data, backend_model):
     timings = {}
     log_time(logger, timings, "model_creation")
 
-    results, backend_model = backend_run.run_plan(
+    results, backend_model, _opt = backend_run.run_plan(
         model_data, timings, run_pyomo, build_only=False, backend_rerun=backend_model
     )
 
