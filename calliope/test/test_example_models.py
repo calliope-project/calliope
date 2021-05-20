@@ -169,9 +169,6 @@ class TestNationalScaleExampleModelSpores:
             scenario="spores",
         )
 
-        expected_warning = "All technologies were requested for inclusion in group constraint `systemwide_cost_max`"
-        # assert check_error_or_warning(excinfo, expected_warning)
-
         model.run(build_only=True)
 
         # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0

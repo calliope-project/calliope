@@ -147,6 +147,6 @@ class TestIO:
             )
             model.run()
 
-            for i in ["cost_opt", "0", "1", "2"]:
+            for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
             assert not os.path.isfile(os.path.join(tempdir, "output.nc"))

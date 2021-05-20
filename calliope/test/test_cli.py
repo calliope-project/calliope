@@ -53,7 +53,7 @@ class TestCLI:
             )
             print(os.listdir(os.path.join(tempdir, "output")))
             assert result.exit_code == 0
-            for i in ["cost_opt", "0", "1", "2"]:
+            for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
             assert os.path.isfile(os.path.join(tempdir, "output.nc"))
 

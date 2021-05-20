@@ -210,12 +210,12 @@ def solve_model(
         solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
         os.makedirs(save_logs, exist_ok=True)
         TempfileManager.tempdir = save_logs  # Sets log output dir
-    if solve_kwargs.get("warmstart", False) and solver in ["glpk", "cbc"]:
-        exceptions.warn(
-            "The chosen solver, {}, does not suport warmstart, which may "
-            "impact performance.".format(solver)
-        )
-        solve_kwargs["warmstart"] = False
+    if "warmstart" in solve_kwargs.keys() and solver in ["glpk", "cbc"]:
+        if solve_kwargs.pop("warmstart") is True:
+            exceptions.warn(
+                "The chosen solver, {}, does not suport warmstart, which may "
+                "impact performance.".format(solver)
+            )
 
     with redirect_stdout(LogWriter(logger, "debug", strip=True)):
         with redirect_stderr(LogWriter(logger, "error", strip=True)):

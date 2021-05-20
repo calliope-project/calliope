@@ -385,11 +385,13 @@ def run_spores(model_data, timings, interface, backend, build_only):
                 _save_spore(backend_model, results, _spore)
             # Storing results and scores in the specific dictionaries
             spores_results[_spore] = results
-            print("Updating capacity scores")
+            print(f"Updating capacity scores from {cum_scores.sum()}...")
             cum_scores += _cap_loc_score_default(results)
+            print(f"... to {cum_scores.sum()}")
             # Update "spores_score" based on previous iteration
             _update_spores_score(backend_model, cum_scores)
             skip_cost_op = False
+            print(backend_model.obj())
         else:
             _warn_on_infeasibility()
             break
