@@ -213,48 +213,24 @@ class TestNationalScaleExampleModelSpores:
         assert np.allclose(gurobi_data.energy_cap, gurobi_persistent_data.energy_cap)
         assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
 
-    def test_nationalscale_skip_cost_op_spores(self):
+    @pytest.mark.parametrize("init_spore", (None, 0, 1))
+    def test_nationalscale_skip_cost_op_spores(self, init_spore):
         base_model_data = self.example_tester()
 
         slack_cost = (
             base_model_data.cost.loc[{"costs": "monetary", "spores": 1}].sum().item()
         )
-        initial_spores_scores = (
-            xr.where(base_model_data.energy_cap.loc[{"spores": 0}] > 1e-3, 100, 0)
-            .to_series()
-            .reindex(
-                base_model_data.cost_energy_cap.loc[{"costs": "spores_score"}]
-                .to_series()
-                .dropna()
-                .index
-            )
-        )
-        spores_model = calliope.examples.national_scale(
-            override_dict={
-                "model.subset_time": ["2005-01-01", "2005-01-03"],
-                "run.solver": "cbc",
-                "group_constraints.systemwide_cost_max.cost_max.monetary": slack_cost,
-                "run.spores_options.skip_cost_op": True,
-                "run.objective_cost_class": {"monetary": 0, "spores_score": 1},
-            },
-            scenario="spores",
-        )
-        update_idx = {
-            "costs": "spores_score",
-            "loc_techs_investment_cost": initial_spores_scores.index,
-        }
-        spores_model._model_data.cost_energy_cap.loc[
-            update_idx
-        ] = initial_spores_scores.values
-        spores_model.run()
+        spores_model = calliope.Model(config=None, model_data=base_model_data)
+        spores_model.run_config["spores_options"]["skip_cost_op"] = True
 
-        assert np.allclose(spores_model.results.spores, [1, 2, 3])
-        costs = spores_model.results.cost.sum("loc_techs_cost")
-        assert all(
-            costs.loc[{"spores": slice(1, None), "costs": "monetary"}]
-            <= slack_cost * 1.0001
-        )
-        assert all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
+        if init_spore is not None:
+            spores_model._model_data = spores_model._model_data.loc[{"spores": slice(None, init_spore + 1)}]
+        else:
+            init_spore = 0
+        spores_model.run(force_rerun=True)
+
+        assert set(spores_model.results.spores.values) == set(range(init_spore, 4))
+        assert base_model_data.loc[{"spores": slice(init_spore, None)}].equals(spores_model._model_data)
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:

@@ -204,10 +204,13 @@ def run_spores(model_data, timings, interface, backend, build_only):
         model_data.cost_energy_cap.loc[{"costs": [spores_score]}].to_series().dropna()
     )
     spores_results = {}
+
     # Define default scoring function, based on integer scoring method
     # TODO: make the function to run optional
     def _cap_loc_score_default(results):
-        cap_loc_score = xr.where(results.energy_cap > 1e-3, 100, 0)
+        cap_loc_score = xr.where(results.energy_cap > 1e-3, 100, 0).loc[
+            {"loc_techs": results.loc_techs_investment_cost}
+        ]
         return cap_loc_score.to_series().rename_axis(index="loc_techs_investment_cost")
 
     # Define function to update "spores_score" after each iteration of the method
@@ -298,15 +301,26 @@ def run_spores(model_data, timings, interface, backend, build_only):
             _warn_on_infeasibility()
             return results, backend_model
     else:
+        if "spores" in model_data.dims:
+            spores_results.update({
+                _spore: model_data.filter_by_attrs(is_result=1).loc[{"spores": [_spore]}]
+                for _spore in model_data.spores.values
+            })
+            init_spore = model_data.spores.max().item()
+            results = model_data.loc[{"spores": init_spore}].drop_vars("spores")
+        else:
+            spores_results[0] = model_data.filter_by_attrs(is_result=1)
+            init_spore = 0
+            results = model_data.copy()
         print("Skipping cost optimal run and using model_data as a direct SPORES result")
         cum_scores = (
-            model_data.cost_energy_cap.loc[{"costs": spores_score}]
+            results.cost_energy_cap.loc[{"costs": spores_score}]
             .to_series()
             .dropna()
             .rename_axis(index="loc_techs_investment_cost")
         )
         print(f"Input SPORES scores amount to {cum_scores.sum()}")
-        cum_scores += _cap_loc_score_default(model_data)
+        cum_scores += _cap_loc_score_default(results)
         print(f"SPORES scores being used for next run amount to {cum_scores.sum()}")
         slack_costs = model_data.group_cost_max.loc[
             {"group_names_cost_max": slack_group}
@@ -321,8 +335,6 @@ def run_spores(model_data, timings, interface, backend, build_only):
         print("Updating capacity scores")
         # Update "spores_score" based on previous iteration
         _update_spores_score(backend_model, cum_scores)
-        init_spore = model_data.spores.max().item()
-
 
     # Iterate over the number of SPORES requested by the user
     for _spore in range(init_spore + 1, n_spores + 1):
@@ -339,6 +351,19 @@ def run_spores(model_data, timings, interface, backend, build_only):
                     backend_model.group_cost_max_constraint[
                         slack_group, _cost_class, "max"
                     ]
+                )
+            for loc_tech in cum_scores.index:
+                opt.remove_constraint(
+                    backend_model.cost_investment_constraint[spores_score, loc_tech]
+                )
+                opt.add_constraint(
+                    backend_model.cost_investment_constraint[spores_score, loc_tech]
+                )
+                opt.remove_constraint(
+                    backend_model.cost_constraint[spores_score, loc_tech]
+                )
+                opt.add_constraint(
+                    backend_model.cost_constraint[spores_score, loc_tech]
                 )
 
             results, opt = backend.solve_model(
