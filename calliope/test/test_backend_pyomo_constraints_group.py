@@ -1351,8 +1351,9 @@ class TestEnergyCapShareGroupConstraints:
         expensive_capacity = (
             capacity.loc[{"techs": "expensive_elec_supply"}].sum().item()
         )
-        assert expensive_capacity / capacity_supply_conversion_all.sum().item() == approx(
-            0.3
+        assert (
+            expensive_capacity / capacity_supply_conversion_all.sum().item()
+            == approx(0.3)
         )
 
     def test_energy_cap_share_min_max_supply_constraint(self, model_file):

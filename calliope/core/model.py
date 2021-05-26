@@ -14,6 +14,7 @@ import logging
 import warnings
 
 import numpy as np
+import xarray as xr
 import ruamel.yaml as ruamel_yaml
 
 from calliope.postprocess import results as postprocess_results
@@ -157,14 +158,24 @@ class Model(object):
             del model_data.attrs["_debug_data"]
 
         self._model_data = model_data
+        self._add_model_data_methods()
+
+        log_time(
+            logger,
+            self._timings,
+            "model_data_loaded",
+            comment="Model: loaded model_data",
+        )
+
+    def _add_model_data_methods(self):
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.model_config = UpdateObserverDict(
-            initial_yaml_string=model_data.attrs.get("model_config", "{}"),
+            initial_yaml_string=self._model_data.attrs.get("model_config", "{}"),
             name="model_config",
             observer=self._model_data,
         )
         self.run_config = UpdateObserverDict(
-            initial_yaml_string=model_data.attrs.get("run_config", "{}"),
+            initial_yaml_string=self._model_data.attrs.get("run_config", "{}"),
             name="run_config",
             observer=self._model_data,
         )
@@ -172,12 +183,6 @@ class Model(object):
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
             self.results = results
-        log_time(
-            logger,
-            self._timings,
-            "model_data_loaded",
-            comment="Model: loaded model_data",
-        )
 
     def save_commented_model_yaml(self, path):
         """
@@ -267,14 +272,11 @@ class Model(object):
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
-
-        for var in results.data_vars:
-            results[var].attrs["is_result"] = 1
-
-        self._model_data.update(results)
         self._model_data.attrs.update(results.attrs)
-
-        self.results = self._model_data.filter_by_attrs(is_result=1)
+        self._model_data = xr.merge(
+            [results, self._model_data], compat="override", combine_attrs="no_conflicts"
+        )
+        self._add_model_data_methods()
 
         self.backend = interface(self)
 

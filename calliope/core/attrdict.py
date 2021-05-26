@@ -171,7 +171,11 @@ class AttrDict(dict):
 
         """
         if isinstance(f, str) or isinstance(f, Path):
-            with open(f, "r", encoding="utf-8",) as src:
+            with open(
+                f,
+                "r",
+                encoding="utf-8",
+            ) as src:
                 loaded = cls(_yaml_load(src))
         else:
             loaded = cls(_yaml_load(f))

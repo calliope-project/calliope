@@ -142,7 +142,8 @@ class TestModelRun:
             build_model(override_dict=override, scenario="scenario_1")
 
         assert check_error_or_warning(
-            error, "Scenario definition must be a list of override or other scenario names."
+            error,
+            "Scenario definition must be a list of override or other scenario names.",
         )
 
     def test_invalid_scenarios_str(self):
@@ -159,7 +160,8 @@ class TestModelRun:
             build_model(override_dict=override, scenario="scenario_1")
 
         assert check_error_or_warning(
-            error, "Scenario definition must be a list of override or other scenario names."
+            error,
+            "Scenario definition must be a list of override or other scenario names.",
         )
 
     def test_scenario_name_overlaps_overrides(self):

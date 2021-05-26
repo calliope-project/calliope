@@ -158,12 +158,14 @@ class TestModelSettings:
         assert model_15._model_data["unmet_demand"].sum() == -15
         assert "unused_supply" not in model_15._model_data.data_vars.keys()
 
-        assert model_15._backend_model.obj.expr() - model_10._backend_model.obj.expr() == approx(
-            1e3 * 15
+        assert (
+            model_15._backend_model.obj.expr() - model_10._backend_model.obj.expr()
+            == approx(1e3 * 15)
         )
 
-        assert model_5._backend_model.obj.expr() - model_10._backend_model.obj.expr() == approx(
-            1e3 * 15
+        assert (
+            model_5._backend_model.obj.expr() - model_10._backend_model.obj.expr()
+            == approx(1e3 * 15)
         )
 
         # Infeasible cases = non-optimal termination

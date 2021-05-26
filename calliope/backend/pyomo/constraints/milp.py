@@ -99,7 +99,9 @@ def load_constraints(backend_model):
         ):
 
             update_costs_investment_units_milp_constraint(
-                backend_model, cost, loc_tech,
+                backend_model,
+                cost,
+                loc_tech,
             )
 
     if (
@@ -112,7 +114,9 @@ def load_constraints(backend_model):
         ):
 
             update_costs_investment_purchase_milp_constraint(
-                backend_model, cost, loc_tech,
+                backend_model,
+                cost,
+                loc_tech,
             )
 
     if "loc_techs_energy_capacity_max_purchase_milp_constraint" in sets:

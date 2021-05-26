@@ -202,8 +202,9 @@ def apply_overrides(config, scenario=None, override_dict=None):
             )
         else:
             logger.info(
-                "Applying the following overrides from scenario definition: {} "
-                .format(scenario_overrides)
+                "Applying the following overrides from scenario definition: {} ".format(
+                    scenario_overrides
+                )
             )
         overrides_from_scenario = combine_overrides(config_model, scenario_overrides)
 
@@ -438,7 +439,7 @@ def load_overrides_from_scenario(config_model, scenario):
             return [_overrides]
 
     if scenario in config_model.get("scenarios", {}).keys():
-        if ',' in scenario:
+        if "," in scenario:
             logger.warn(
                 f"Scenario name `{scenario}` includes commas that won't be parsed as a list of overrides."
             )
@@ -453,7 +454,9 @@ def load_overrides_from_scenario(config_model, scenario):
                 "Scenario definition must be a list of override or other scenario names."
             )
         if override in config_model.get("scenarios", {}).keys():
-            scenario_overrides.update(load_overrides_from_scenario(config_model, override))
+            scenario_overrides.update(
+                load_overrides_from_scenario(config_model, override)
+            )
         else:
             scenario_overrides.add(override)
 
@@ -732,6 +735,11 @@ def generate_model_run(
     exceptions.print_warnings_and_raise_errors(warnings=warning_messages, errors=errors)
 
     # 9) Build a debug data dict with comments and the original configs
-    debug_data = AttrDict({"comments": debug_comments, "config_initial": config,})
+    debug_data = AttrDict(
+        {
+            "comments": debug_comments,
+            "config_initial": config,
+        }
+    )
 
     return model_run, debug_data

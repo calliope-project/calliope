@@ -48,12 +48,14 @@ def generate_model(model_data):
 
     logger.info("Loading sets")
     # Sets
-    for coord in list(model_data.coords):
-        set_data = list(model_data.coords[coord].data)
+    for coord_name, coord_data in model_data.coords.items():
+        if not coord_data.shape:
+            continue
+        set_data = list(coord_data.data)
         # Ensure that time steps are pandas.Timestamp objects
         if isinstance(set_data[0], np.datetime64):
             set_data = pd.to_datetime(set_data)
-        setattr(backend_model, coord, po.Set(initialize=set_data, ordered=True))
+        setattr(backend_model, coord_name, po.Set(initialize=set_data, ordered=True))
     logger.info("Loading parameters")
     # "Parameters"
     model_data_dict = {

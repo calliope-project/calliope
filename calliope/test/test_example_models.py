@@ -1,3 +1,4 @@
+from calliope import exceptions
 import shutil
 
 import pytest
@@ -124,13 +125,13 @@ class TestNationalScaleExampleModelInfeasibility:
 
         model.run()
 
-        assert model.results.attrs["termination_condition"] in [
+        assert model._model_data.attrs["termination_condition"] in [
             "infeasible",
             "other",
         ]  # glpk gives 'other' as result
 
-        assert "systemwide_levelised_cost" not in model.results.data_vars
-        assert "systemwide_capacity_factor" not in model.results.data_vars
+        assert not hasattr(model, "results")
+        assert "energy_cap" not in model._model_data.data_vars
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
@@ -213,24 +214,55 @@ class TestNationalScaleExampleModelSpores:
         assert np.allclose(gurobi_data.energy_cap, gurobi_persistent_data.energy_cap)
         assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
 
-    @pytest.mark.parametrize("init_spore", (None, 0, 1))
-    def test_nationalscale_skip_cost_op_spores(self, init_spore):
-        base_model_data = self.example_tester()
-
-        slack_cost = (
-            base_model_data.cost.loc[{"costs": "monetary", "spores": 1}].sum().item()
+    @pytest.fixture
+    def base_model_data(self):
+        model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": "cbc",
+            },
+            scenario="spores",
         )
-        spores_model = calliope.Model(config=None, model_data=base_model_data)
+
+        model.run()
+
+        return model._model_data
+
+    @pytest.mark.parametrize("init_spore", (0, 1, 2))
+    def test_nationalscale_skip_cost_op_spores(self, base_model_data, init_spore):
+        if init_spore is None:
+            _spore = 0
+            spores_model = calliope.Model(
+                config=None,
+                model_data=base_model_data.loc[{"spores": _spore + 1}].drop_vars(
+                    "spores"
+                ),
+            )
+        else:
+            _spore = init_spore
+            spores_model = calliope.Model(
+                config=None, model_data=base_model_data.loc[{"spores": [_spore + 1]}]
+            )
+            spores_model._model_data.coords["spores"] = [_spore]
+
         spores_model.run_config["spores_options"]["skip_cost_op"] = True
 
-        if init_spore is not None:
-            spores_model._model_data = spores_model._model_data.loc[{"spores": slice(None, init_spore + 1)}]
-        else:
-            init_spore = 0
         spores_model.run(force_rerun=True)
 
-        assert set(spores_model.results.spores.values) == set(range(init_spore, 4))
-        assert base_model_data.loc[{"spores": slice(init_spore, None)}].equals(spores_model._model_data)
+        assert set(spores_model.results.spores.values) == set(range(_spore, 4))
+        assert base_model_data.loc[{"spores": slice(_spore + 1, None)}].equals(
+            spores_model._model_data.loc[{"spores": slice(_spore + 1, None)}]
+        )
+
+    def test_fail_with_spores_as_input_dim(self, base_model_data):
+        spores_model = calliope.Model(
+            config=None, model_data=base_model_data.loc[{"spores": [0, 1]}]
+        )
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            spores_model.run(force_rerun=True)
+        assert check_error_or_warning(
+            excinfo, "Cannot run SPORES with a SPORES dimension in any input"
+        )
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:

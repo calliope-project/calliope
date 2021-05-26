@@ -110,7 +110,10 @@ def _plot(
 
     plotly_kwargs = dict(
         show_link=False,
-        config={"displaylogo": False, "modeBarButtonsToRemove": ["sendDataToCloud"],},
+        config={
+            "displaylogo": False,
+            "modeBarButtonsToRemove": ["sendDataToCloud"],
+        },
     )
 
     if type_of_script() == "jupyter":

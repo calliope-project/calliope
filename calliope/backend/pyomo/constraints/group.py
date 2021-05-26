@@ -200,17 +200,21 @@ def load_constraints(backend_model):
             )
 
     if "group_demand_share_per_timestep_decision" in model_data_dict:
-        backend_model.group_demand_share_per_timestep_decision_main_constraint = po.Constraint(
-            backend_model.group_names_demand_share_per_timestep_decision,
-            backend_model.carriers,
-            backend_model.techs,
-            backend_model.timesteps,
-            rule=demand_share_per_timestep_decision_main_constraint_rule,
+        backend_model.group_demand_share_per_timestep_decision_main_constraint = (
+            po.Constraint(
+                backend_model.group_names_demand_share_per_timestep_decision,
+                backend_model.carriers,
+                backend_model.techs,
+                backend_model.timesteps,
+                rule=demand_share_per_timestep_decision_main_constraint_rule,
+            )
         )
-        backend_model.group_demand_share_per_timestep_decision_sum_constraint = po.Constraint(
-            backend_model.group_names_demand_share_per_timestep_decision,
-            backend_model.carriers,
-            rule=demand_share_per_timestep_decision_sum_constraint_rule,
+        backend_model.group_demand_share_per_timestep_decision_sum_constraint = (
+            po.Constraint(
+                backend_model.group_names_demand_share_per_timestep_decision,
+                backend_model.carriers,
+                rule=demand_share_per_timestep_decision_sum_constraint_rule,
+            )
         )
 
 
@@ -426,21 +430,21 @@ def demand_share_per_timestep_decision_sum_constraint_rule(
     backend_model, group_name, carrier
 ):
     """
-    Allows the model to decide on how a fraction of demand for a carrier is met
-    by the given groups, which will all have the same share in each timestep.
-    The share is relative to the actual demand from ``demand`` technologies only.
+       Allows the model to decide on how a fraction of demand for a carrier is met
+       by the given groups, which will all have the same share in each timestep.
+       The share is relative to the actual demand from ``demand`` technologies only.
 
-    The sum constraint ensures that all decision shares add up to the share of
-    carrier demand specified in the constraint.
+       The sum constraint ensures that all decision shares add up to the share of
+       carrier demand specified in the constraint.
 
-    This constraint is only applied if the share of carrier demand has been
-    set to a not-None value.
+       This constraint is only applied if the share of carrier demand has been
+       set to a not-None value.
 
- .. container:: scrolling-wrapper
+    .. container:: scrolling-wrapper
 
-        .. math::
-            share = \\sum_{loc::tech::carrier \\in given\\_group}
-            demand\\_share\\_per\\_timestep\\_decision(loc::tech::carrier)
+           .. math::
+               share = \\sum_{loc::tech::carrier \\in given\\_group}
+               demand\\_share\\_per\\_timestep\\_decision(loc::tech::carrier)
 
 
     """

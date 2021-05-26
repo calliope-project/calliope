@@ -355,8 +355,8 @@ def generate_loc_tech_sets(model_run, simple_sets):
     )
 
     # `supply_plus` technologies that specify a finite resource
-    sets.loc_techs_finite_resource_supply_plus = sets.loc_techs_finite_resource.intersection(
-        sets.loc_techs_supply_plus
+    sets.loc_techs_finite_resource_supply_plus = (
+        sets.loc_techs_finite_resource.intersection(sets.loc_techs_supply_plus)
     )
 
     # Technologies that define ramping constraints

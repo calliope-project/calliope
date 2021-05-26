@@ -239,7 +239,7 @@ class TestGetAllModelAttrs:
 
 class TestAddConstraint:
     def test_no_backend(self, model):
-        """Must include 'backend_model' as first function argument """
+        """Must include 'backend_model' as first function argument"""
 
         def energy_cap_time_varying_rule(backend, loc_tech, timestep):
 

@@ -58,6 +58,10 @@ def postprocess_model_results(results, model_data, timings):
     )
     results = clean_results(results, run_config.get("zero_threshold", 0), timings)
 
+    for var_data in results.data_vars.values():
+        if "is_result" not in var_data.attrs.keys():
+            var_data.attrs["is_result"] = 1
+
     log_time(
         logger,
         timings,

@@ -720,7 +720,7 @@ def check_final(model_run):
             )
             continue
 
-        if not requested_techs:
+        if not requested_techs and (dropped_tech_groups | unallowed_tech_groups):
             model_warnings.append(
                 "All technologies were requested for inclusion in group constraint "
                 "`{}`, but those from tech group(s) `{}` have been ignored as one "
