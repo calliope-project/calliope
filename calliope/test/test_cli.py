@@ -31,10 +31,11 @@ class TestCLI:
 
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(
-                cli.run, [_MODEL_NATIONAL, "--save_netcdf=output.nc"]
+                cli.run, [_MODEL_NATIONAL, "--save_netcdf=output.nc", "--save_plots=results.html"]
             )
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, "output.nc"))
+            assert os.path.isfile(os.path.join(tempdir, 'results.html'))
 
     def test_save_per_spore(self):
         runner = CliRunner()

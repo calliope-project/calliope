@@ -53,7 +53,8 @@ def generate_runs(model_file, scenarios=None, additional_args=None, override_dic
         cmd = (
             (
                 "calliope run {model} --scenario {scenario} "
-                "--save_netcdf out_{i}_{scenario}.nc"
+                "--save_netcdf out_{i}_{scenario}.nc "
+                "--save_plots plots_{i}_{scenario}.html"
             )
             .format(
                 i=i_string.format(i + 1),

@@ -195,7 +195,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
             "Cannot run SPORES with a SPORES dimension in any input (e.g. `cost_energy_cap`)."
         )
     init_spores_scores = (
-        model_data.cost_energy_cap.loc[{"costs": [run_config["score_cost_class"]]}]
+        model_data.cost_energy_cap.loc[{"costs": [spores_config["score_cost_class"]]}]
         .to_series()
         .dropna()
     )
