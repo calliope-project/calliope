@@ -217,14 +217,4 @@ def clean_results(results, zero_threshold, timings):
 
         results = results.drop_vars("unused_supply")
 
-        if not results.unmet_demand.sum():
-
-            log_time(
-                logger,
-                timings,
-                "delete_unmet_demand",
-                comment="Postprocessing: Model was feasible, deleting unmet_demand variable",
-            )
-            results = results.drop_vars("unmet_demand")
-
     return results
