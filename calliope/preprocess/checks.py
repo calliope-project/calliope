@@ -705,9 +705,14 @@ def check_final(model_run):
         stripped_allowed_tech_groups = set(allowed_tech_groups[0]).intersection(
             *allowed_tech_groups
         )
-        group_loc_techs = model_run.constraint_sets[
-            "group_constraint_loc_techs_{}".format(group_constraint_name)
-        ]
+        group_loc_techs = model_run.get_key(
+            "constraint_sets.group_constraint_loc_techs_{}".format(group_constraint_name),
+            model_run.get_key(
+                "constraint_sets.group_constraint_loc_tech_carriers_{}".format(group_constraint_name),
+                "constraint_sets.group_constraint_loc_tech_carriers_{}_lhs".format(group_constraint_name)
+            )
+        )
+
         dropped_tech_groups = (
             set([item for sublist in allowed_tech_groups for item in sublist])
             - stripped_allowed_tech_groups

@@ -381,7 +381,7 @@ def balance_transmission_constraint_rule(backend_model, loc_tech, timestep):
 
     if (
         loc_tech_is_in(backend_model, remote_loc_tech, "loc_techs_transmission")
-        and get_param(backend_model, "energy_prod", (loc_tech)) == 1
+        and get_param(backend_model, "energy_prod", (loc_tech)).value == 1
     ):
         return (
             backend_model.carrier_prod[loc_tech_carrier, timestep]

@@ -125,9 +125,7 @@ class TestModelSettings:
                 "force_resource": True,
             },
         }
-        model = build_model(
-            override_dict=override_dict, scenario="investment_costs"
-        )
+        model = build_model(override_dict=override_dict, scenario="investment_costs")
         model.run()
 
         return model
@@ -168,14 +166,18 @@ class TestModelSettings:
         assert model_unused_supply._model_data["unmet_demand"].sum() == -15
         assert "unused_supply" not in model_unused_supply._model_data.data_vars.keys()
 
-    def test_expected_impact_on_objective_function_value(self, model_no_unmet, model_unmet_demand, model_unused_supply):
+    def test_expected_impact_on_objective_function_value(
+        self, model_no_unmet, model_unmet_demand, model_unused_supply
+    ):
         assert (
-            model_unused_supply._backend_model.obj.expr() - model_no_unmet._backend_model.obj.expr()
+            model_unused_supply._backend_model.obj.expr()
+            - model_no_unmet._backend_model.obj.expr()
             == approx(1e3 * 15)
         )
 
         assert (
-            model_unmet_demand._backend_model.obj.expr() - model_no_unmet._backend_model.obj.expr()
+            model_unmet_demand._backend_model.obj.expr()
+            - model_no_unmet._backend_model.obj.expr()
             == approx(1e3 * 15)
         )
 
