@@ -326,13 +326,14 @@ def run(
                 click.secho("Saving NetCDF results to file: {}".format(save_netcdf))
                 model.to_netcdf(save_netcdf)
             if save_plots:
-                if termination == 'optimal':
-                    click.secho('Saving HTML file with plots to: {}'.format(save_plots))
+                if termination == "optimal":
+                    click.secho("Saving HTML file with plots to: {}".format(save_plots))
                     model.plot.summary(to_file=save_plots)
                 else:
                     click.secho(
-                        'Model termination condition non-optimal. Not saving plots',
-                        fg='red', bold=True
+                        "Model termination condition non-optimal. Not saving plots",
+                        fg="red",
+                        bold=True,
                     )
 
             print_end_time(start_time)

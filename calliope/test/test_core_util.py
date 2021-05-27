@@ -258,7 +258,9 @@ class TestGenerateRuns:
             scenarios=None,
         )
         assert len(runs) == 4
-        assert runs[0].endswith("--scenario milp --save_netcdf out_1_milp.nc --save_plots plots_1_milp.html")
+        assert runs[0].endswith(
+            "--scenario milp --save_netcdf out_1_milp.nc --save_plots plots_1_milp.html"
+        )
 
 
 class TestPandasExport:
