@@ -467,7 +467,6 @@ def generate_constraint_sets(model_run):
             and "default_carrier" in default_group_config[_constraint].keys()
             for _constraint in group_constraint.keys()
         ):
-            br
             if len(group_constraint) > 1:
                 raise exceptions.ModelError(
                     "Can only handle one constraint in a group constraint if one of them is carrier-based"
