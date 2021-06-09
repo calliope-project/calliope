@@ -472,33 +472,32 @@ def group_constraints_to_dataset(model_run):
 
     group_constraints = model_run["group_constraints"]
 
-    for constr_name in model_run.sets["group_constraints"]:
+    for constr_name in model_run.constraint_sets["group_constraints"]:
         dims = ["group_names_" + constr_name]
         constr = checks.DEFAULTS.group_constraints.default_group.get(constr_name, None)
-        if isinstance(constr, dict):
-            if "default_carrier" in constr.keys():
-                data = [
-                    [
-                        group_constraints[i][constr_name].get(carrier, np.nan)
-                        for carrier in model_run.sets["carriers"]
-                    ][0]
-                    for i in model_run.sets["group_names_" + constr_name]
-                ]
-            elif "default_cost" in constr.keys():
-                dims.append("costs")
-                data = [
-                    [
-                        group_constraints[i][constr_name].get(cost, np.nan)
-                        for cost in model_run.sets["costs"]
+        if constr is not None:
+            group_names = model_run.constraint_sets.get(f"group_names_{constr_name}", None)
+            if isinstance(constr, dict):
+                if "default_carrier" in constr.keys():
+                    data = [
+                        list(group_constraints[i][constr_name].as_dict_flat().values())[0]
+                        for i in group_names
                     ]
-                    for i in model_run.sets["group_names_" + constr_name]
+                elif "default_cost" in constr.keys():
+                    dims.append("costs")
+                    data = [
+                        [
+                            group_constraints[i][constr_name].get(cost, np.nan)
+                            for cost in model_run.sets["costs"]
+                        ]
+                        for i in group_names
+                    ]
+            else:
+                data = [
+                    group_constraints[i][constr_name]
+                    for i in group_names
                 ]
-        elif constr is not None:
-            data = [
-                group_constraints[i][constr_name]
-                for i in model_run.sets["group_names_" + constr_name]
-            ]
-        else:  # Do nothing if it is an unknown constraint
+        else:
             continue
 
         data_dict["group_" + constr_name] = {"dims": dims, "data": data}

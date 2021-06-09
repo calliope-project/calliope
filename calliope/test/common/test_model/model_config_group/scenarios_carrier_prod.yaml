@@ -43,8 +43,10 @@ overrides:
             techs: ["expensive_elec_supply"]
 
     carrier_prod_non_conversion:
-        group_constraints.example_carrier_prod_constraint:
+        group_constraints.example_carrier_prod_constraint_heat:
             carrier_prod_max.heat: 10
+            techs: ["cheap_cool_supply", "cheap_heat_supply"]
+        group_constraints.example_carrier_prod_constraint_cool:
             carrier_prod_max.cool: 5
             techs: ["cheap_cool_supply", "cheap_heat_supply"]
 

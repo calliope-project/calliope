@@ -557,7 +557,6 @@ def carrier_prod_constraint_rule(backend_model, group_name, what):
 
     """
     limit = get_param(backend_model, f"group_carrier_prod_{what}", (group_name))
-    time_weight = get_timestep_weight(backend_model)
 
     if invalid(limit):
         return return_noconstraint("carrier_prod", group_name)
@@ -571,7 +570,7 @@ def carrier_prod_constraint_rule(backend_model, group_name, what):
             for loc_tech_carrier in lhs_loc_tech_carriers
             for timestep in backend_model.timesteps
         )
-        return equalizer(lhs, limit * time_weight, what)
+        return equalizer(lhs, limit, what)
 
 
 def carrier_con_constraint_rule(backend_model, constraint_group, what):
@@ -590,7 +589,6 @@ def carrier_con_constraint_rule(backend_model, constraint_group, what):
     limit = get_param(
         backend_model, "group_carrier_con_{}".format(what), (constraint_group)
     )
-    time_weight = get_timestep_weight(backend_model)
 
     if invalid(limit):
         return return_noconstraint("carrier_con", constraint_group)
@@ -605,7 +603,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, what):
             for timestep in backend_model.timesteps
         )
 
-        return equalizer(limit * time_weight, lhs, what)
+        return equalizer(limit, lhs, what)
 
 
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):

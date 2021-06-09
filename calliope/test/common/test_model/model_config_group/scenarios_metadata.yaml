@@ -92,21 +92,19 @@ resource_area_max_all_techs:
 carrier_prod_min_max_supply:
     constraint: [carrier_prod_min, carrier_prod_max]
     group_name: [example_carrier_prod_constraint, example_carrier_prod_max_constraint]
-    loc_techs: [[0::expensive_elec_supply, 1::expensive_elec_supply], [0::cheap_elec_supply, 1::cheap_elec_supply]]
+    loc_techs: [[0::expensive_elec_supply::electricity, 1::expensive_elec_supply::electricity], [0::cheap_elec_supply::electricity, 1::cheap_elec_supply::electricity]]
 carrier_prod_min_max_supply_loc_0_1:
     constraint: [carrier_prod_min, carrier_prod_max]
     group_name: [example_carrier_prod_constraint, example_carrier_prod_max_constraint]
-    loc_techs: [[0::expensive_elec_supply], [1::cheap_elec_supply]]
+    loc_techs: [[0::expensive_elec_supply::electricity], [1::cheap_elec_supply::electricity]]
 carrier_prod_min_all_techs:
     constraint: [carrier_prod_min]
     group_name: [example_carrier_prod_constraint]
-    loc_techs: [['1::elec_to_heat_cool_unlinked', '0::cheap_elec_supply',
-                 '1::elec_to_heat_cool_linked', '1::elec_to_heat',
-                 '1::expensive_elec_supply', '1::cheap_elec_supply',
-                 '0::normal_elec_supply', '1::normal_elec_supply',
-                 '0::expensive_elec_supply',
-                 '0::elec_supply_plus', '1::elec_supply_plus']]
+    loc_techs: [['0::cheap_elec_supply::electricity', '1::expensive_elec_supply::electricity',
+                 '1::cheap_elec_supply::electricity', '0::normal_elec_supply::electricity',
+                 '1::normal_elec_supply::electricity', '0::expensive_elec_supply::electricity',
+                 '0::elec_supply_plus::electricity', '1::elec_supply_plus::electricity']]
 carrier_prod_max_non_conversion_all:
-    constraint: [carrier_prod_max]
-    group_name: [example_carrier_prod_constraint]
-    loc_techs: [['1::cheap_cool_supply', '1::cheap_heat_supply',]]
+    constraint: [carrier_prod_max, carrier_prod_max]
+    group_name: [example_carrier_prod_constraint_heat, example_carrier_prod_constraint_cool]
+    loc_techs: [['1::cheap_heat_supply::heat'], ['1::cheap_cool_supply::cool']]

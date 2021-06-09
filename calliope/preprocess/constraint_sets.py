@@ -419,7 +419,7 @@ def generate_constraint_sets(model_run):
         for name, data in model_run["group_constraints"].items()
         if data.get("exists", True)
     }
-    constraint_sets["constraint_groups"] = list(group_constraints.keys())
+    constraint_sets["group_constraints"] = set()
     for group_constraint_name, group_constraint in group_constraints.copy().items():
         tech_groups = [
             [
@@ -475,16 +475,26 @@ def generate_constraint_sets(model_run):
             loc_tech_carrier_dict = _get_carrier_group_constraint_loc_techs(
                 loc_techs, locs, _config, _name, sets, constraint_sets
             )
-            for key, loc_tech_carriers in loc_tech_carrier_dict.items():
-                constraint_sets[
-                    key.format(group_constraint_name)
-                ] = loc_tech_carriers
+            if any(len(val) == 0 for val in loc_tech_carrier_dict.values()):
+                exceptions.warn(f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology::carrier combinations")
+                break
+            else:
+                for key, loc_tech_carriers in loc_tech_carrier_dict.items():
+                    constraint_sets[
+                        key.format(group_constraint_name)
+                    ] = loc_tech_carriers
 
         else:
+            if len(loc_techs) == 0:
+                exceptions.warn(
+                    f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology combinations"
+                )
+                break
             constraint_sets[
                 "group_constraint_loc_techs_{}".format(group_constraint_name)
             ] = loc_techs
-
+        _add_to_group_constraint_mapping(constraint_sets, group_constraint_name, list(group_constraint.keys()))
+    constraint_sets["group_constraints"] = list(constraint_sets["group_constraints"])
     return constraint_sets
 
 
@@ -492,6 +502,10 @@ def _get_carrier_group_constraint_loc_techs(
     loc_techs, locs, config, constraint_name, sets, constraint_sets
 ):
     flow = "con" if "_con_" in constraint_name else "prod"
+    if len(config.keys()) > 1:
+        raise exceptions.ModelError(
+            "Can only handle one carrier per group constraint that is carrier-based"
+        )
     carrier = list(config.keys())[0]
     if "net_import" in constraint_name:
         _loc_tech_carriers = _get_net_import_loc_tech_carrier_subset(
@@ -551,3 +565,12 @@ def _get_net_import_loc_tech_carrier_subset(
         if f"{loc_tech}::{carrier}" in loc_tech_carriers
         and loc_tech.split(":")[-1] not in locs
     )
+
+
+def _add_to_group_constraint_mapping(constraint_sets, group_name, constraint_names):
+    for constraint_name in constraint_names:
+        if f"group_names_{constraint_name}" in constraint_sets.keys() and group_name not in constraint_sets[f"group_names_{constraint_name}"]:
+            constraint_sets[f"group_names_{constraint_name}"] += [group_name]
+        else:
+            constraint_sets[f"group_names_{constraint_name}"] = [group_name]
+        constraint_sets["group_constraints"].update([constraint_name])

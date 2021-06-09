@@ -8,6 +8,7 @@ import pandas as pd
 import calliope
 from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 
 def get_supply_conversion_techs(model):
@@ -80,9 +81,10 @@ class TestBuildGroupConstraints:
             len(
                 set(loc_techs[i])
                 - set(
-                    scenario_model._model_data[
-                        "group_constraint_loc_techs_" + group_names[i]
-                    ].values
+                    scenario_model._model_data.get(
+                        "group_constraint_loc_techs_" + group_names[i],
+                        scenario_model._model_data.get("group_constraint_loc_tech_carriers_" + group_names[i], set())
+                    ).values
                 )
             )
             == 0
@@ -1706,7 +1708,10 @@ class TestNetImportShareGroupConstraints:
         assert net_imports >= -0.2 * demand
 
     def test_ignores_imports_within_group(self, results_for_scenario):
-        results = results_for_scenario("expensive-1,ignores-imports-within-group")
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            results = results_for_scenario("expensive-1,ignores-imports-within-group")
+        assert check_error_or_warning(warn, "Constraint group `example_net_import_share_constraint` will be completely ignored")
+
         demand = self.retrieve_demand(results).sel(locs="1").item()
         net_imports = self.retrieve_imports(results).sel(locs="1").item()
         assert net_imports == pytest.approx(-demand)

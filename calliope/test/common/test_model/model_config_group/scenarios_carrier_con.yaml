@@ -54,8 +54,10 @@ overrides:
         techs.heat_demand.costs.monetary.om_con: -1
         techs.cool_demand.constraints.force_resource: false
         techs.cool_demand.costs.monetary.om_con: -1
-        group_constraints.example_carrier_con_constraint:
+        group_constraints.example_carrier_con_constraint_heat:
             carrier_con_max.heat: -10
+            techs: [heat_demand, cool_demand]
+        group_constraints.example_carrier_con_constraint_cool:
             carrier_con_max.cool: -5
             techs: [heat_demand, cool_demand]
 
