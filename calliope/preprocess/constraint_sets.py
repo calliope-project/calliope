@@ -449,8 +449,7 @@ def generate_constraint_sets(model_run):
             techs += [i + ":" + j for j in locs]
             techs.remove(i)
 
-        # If the group constraint defines its own techs, remove those that are
-        # not allowed (there is a warning for this in checks.py)
+        # If the group constraint defines its own techs, remove those that are not allowed
         techs = list(set(techs).intersection(allowed_techs))
 
         # All possible loc_techs for this constraint
