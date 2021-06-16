@@ -420,7 +420,7 @@ def generate_constraint_sets(model_run):
         if data.get("exists", True)
     }
     constraint_sets["group_constraints"] = set()
-    for group_constraint_name, group_constraint in group_constraints.copy().items():
+    for group_constraint_name, group_constraint in group_constraints.items():
         tech_groups = [
             [
                 k
@@ -434,12 +434,9 @@ def generate_constraint_sets(model_run):
         allowed_techs = sum(
             [sets["techs_{}".format(i)] for i in allowed_tech_groups], []
         )
-        techs = group_constraint.pop("techs", allowed_techs)
+        techs = group_constraint.get("techs", allowed_techs)
 
-        locs = group_constraint.pop("locs", sets["locs"])
-
-        if group_constraint.pop("exists", True) is False:
-            continue
+        locs = group_constraint.get("locs", sets["locs"])
 
         # If there are transmission techs, keep only those that link to allowed locations
         techs = [i for i in techs if ":" not in techs or i.split(":")[-1] in locs]
@@ -461,21 +458,28 @@ def generate_constraint_sets(model_run):
         # so we must filter with actually exising loc_techs
         loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
         default_group_config = checks.DEFAULTS.group_constraints.default_group
+        _constraints = {
+            k: v
+            for k, v in group_constraint.items()
+            if k not in ["locs", "techs", "exists"]
+        }
         if any(
-            isinstance(default_group_config[_constraint], dict)
+            isinstance(default_group_config.get(_constraint, False), dict)
             and "default_carrier" in default_group_config[_constraint].keys()
-            for _constraint in group_constraint.keys()
+            for _constraint in _constraints.keys()
         ):
-            if len(group_constraint) > 1:
+            if len(_constraints) > 1:
                 raise exceptions.ModelError(
                     "Can only handle one constraint in a group constraint if one of them is carrier-based"
                 )
-            _name, _config = list(group_constraint.items())[0]
+            _name, _config = list(_constraints.items())[0]
             loc_tech_carrier_dict = _get_carrier_group_constraint_loc_techs(
                 loc_techs, locs, _config, _name, sets, constraint_sets
             )
             if any(len(val) == 0 for val in loc_tech_carrier_dict.values()):
-                exceptions.warn(f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology::carrier combinations")
+                exceptions.warn(
+                    f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology::carrier combinations"
+                )
                 continue
             else:
                 for key, loc_tech_carriers in loc_tech_carrier_dict.items():
@@ -492,7 +496,9 @@ def generate_constraint_sets(model_run):
             constraint_sets[
                 "group_constraint_loc_techs_{}".format(group_constraint_name)
             ] = loc_techs
-        _add_to_group_constraint_mapping(constraint_sets, group_constraint_name, list(group_constraint.keys()))
+        _add_to_group_constraint_mapping(
+            constraint_sets, group_constraint_name, list(_constraints.keys())
+        )
     constraint_sets["group_constraints"] = list(constraint_sets["group_constraints"])
     return constraint_sets
 
@@ -568,7 +574,10 @@ def _get_net_import_loc_tech_carrier_subset(
 
 def _add_to_group_constraint_mapping(constraint_sets, group_name, constraint_names):
     for constraint_name in constraint_names:
-        if f"group_names_{constraint_name}" in constraint_sets.keys() and group_name not in constraint_sets[f"group_names_{constraint_name}"]:
+        if (
+            f"group_names_{constraint_name}" in constraint_sets.keys()
+            and group_name not in constraint_sets[f"group_names_{constraint_name}"]
+        ):
             constraint_sets[f"group_names_{constraint_name}"] += [group_name]
         else:
             constraint_sets[f"group_names_{constraint_name}"] = [group_name]

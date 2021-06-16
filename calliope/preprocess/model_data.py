@@ -476,11 +476,15 @@ def group_constraints_to_dataset(model_run):
         dims = ["group_names_" + constr_name]
         constr = checks.DEFAULTS.group_constraints.default_group.get(constr_name, None)
         if constr is not None:
-            group_names = model_run.constraint_sets.get(f"group_names_{constr_name}", None)
+            group_names = model_run.constraint_sets.get(
+                f"group_names_{constr_name}", None
+            )
             if isinstance(constr, dict):
                 if "default_carrier" in constr.keys():
                     data = [
-                        list(group_constraints[i][constr_name].as_dict_flat().values())[0]
+                        list(group_constraints[i][constr_name].as_dict_flat().values())[
+                            0
+                        ]
                         for i in group_names
                     ]
                 elif "default_cost" in constr.keys():
@@ -493,10 +497,7 @@ def group_constraints_to_dataset(model_run):
                         for i in group_names
                     ]
             else:
-                data = [
-                    group_constraints[i][constr_name]
-                    for i in group_names
-                ]
+                data = [group_constraints[i][constr_name] for i in group_names]
         else:
             continue
 

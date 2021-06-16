@@ -83,7 +83,10 @@ class TestBuildGroupConstraints:
                 - set(
                     scenario_model._model_data.get(
                         "group_constraint_loc_techs_" + group_names[i],
-                        scenario_model._model_data.get("group_constraint_loc_tech_carriers_" + group_names[i], set())
+                        scenario_model._model_data.get(
+                            "group_constraint_loc_tech_carriers_" + group_names[i],
+                            set(),
+                        ),
                     ).values
                 )
             )
@@ -1710,7 +1713,10 @@ class TestNetImportShareGroupConstraints:
     def test_ignores_imports_within_group(self, results_for_scenario):
         with pytest.warns(calliope.exceptions.ModelWarning) as warn:
             results = results_for_scenario("expensive-1,ignores-imports-within-group")
-        assert check_error_or_warning(warn, "Constraint group `example_net_import_share_constraint` will be completely ignored")
+        assert check_error_or_warning(
+            warn,
+            "Constraint group `example_net_import_share_constraint` will be completely ignored",
+        )
 
         demand = self.retrieve_demand(results).sel(locs="1").item()
         net_imports = self.retrieve_imports(results).sel(locs="1").item()
