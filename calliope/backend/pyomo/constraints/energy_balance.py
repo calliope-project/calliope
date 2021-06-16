@@ -23,6 +23,7 @@ ORDER = 10  # order in which to invoke constraints relative to other constraint 
 
 def load_constraints(backend_model):
     sets = backend_model.__calliope_model_data["sets"]
+    run_config = backend_model.__calliope_run_config
 
     if "loc_carriers_system_balance_constraint" in sets:
         backend_model.system_balance = po.Expression(
@@ -92,7 +93,10 @@ def load_constraints(backend_model):
             rule=balance_storage_inter_cluster_rule,
         )
 
-    if "loc_techs_storage_initial_constraint" in sets:
+    if (
+        "loc_techs_storage_initial_constraint" in sets
+        and run_config["mode"] != "operate"
+    ):
         backend_model.storage_initial_constraint = po.Constraint(
             backend_model.loc_techs_storage_initial_constraint,
             rule=storage_initial_rule,
