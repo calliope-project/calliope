@@ -1,4 +1,5 @@
 import pytest  # pylint: disable=unused-import
+from pytest import approx
 import pandas as pd
 
 import calliope
@@ -331,3 +332,116 @@ class TestAddConstraint:
             new_model.results.energy_cap.loc["1::test_demand_elec"]
             == model.results.energy_cap.loc["1::test_demand_elec"] * 2
         )
+
+
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
+)
+class TestRegeneratePersistentConstraints:
+    @pytest.fixture(scope="class")
+    def model_persistent(self):
+        m = build_model(
+            {"run.solver": "gurobi_persistent"},
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.run()
+        return m
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_opt_exists(self, model_persistent):
+        assert hasattr(model_persistent, "_backend_model_opt")
+        assert model_persistent._backend_model_opt.name == "gurobi_persistent"
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_update_param_without_regeneration(self, model_persistent):
+        model_persistent.backend.update_param(
+            "energy_cap_max", {"1::test_supply_elec": 5}
+        )
+        model2 = model_persistent.backend.rerun()
+        assert model2.results.energy_cap.loc[{"loc_techs": "1::test_supply_elec"}] == 10
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_update_param_with_regeneration_one_dim(self, model_persistent):
+        model_persistent.backend.update_param(
+            "energy_cap_max", {"1::test_supply_elec": 5, "0::test_supply_elec": 5}
+        )
+        model_persistent.backend.regenerate_persistent_solver(
+            constraints={
+                "energy_capacity_constraint": [
+                    "1::test_supply_elec",
+                    "0::test_supply_elec",
+                ]
+            }
+        )
+        model2 = model_persistent.backend.rerun()
+        for i in ["1::test_supply_elec", "0::test_supply_elec"]:
+            assert model2.results.energy_cap.loc[i] == 5
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_update_param_with_regeneration_two_dims(self, model_persistent):
+        model_persistent.backend.update_param(
+            "resource", {("1::test_demand_elec", "2005-01-01 01:00"): -4}
+        )
+        model_persistent.backend.regenerate_persistent_solver(
+            constraints={
+                "balance_demand_constraint": [
+                    ("1::test_demand_elec", "2005-01-01 01:00")
+                ]
+            }
+        )
+        model2 = model_persistent.backend.rerun()
+        assert (
+            model_persistent.results.required_resource.loc[
+                ("1::test_demand_elec", "2005-01-01 01:00")
+            ]
+            == -5
+        )
+        assert (
+            model2.results.required_resource.loc[
+                ("1::test_demand_elec", "2005-01-01 01:00")
+            ]
+            == -4
+        )
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_update_obj_without_regeneration(self, model_persistent):
+        model_persistent.backend.update_param("objective_cost_class", {"monetary": 0.5})
+        model2 = model_persistent.backend.rerun()
+        assert model2._model_data.attrs["objective_function_value"] == approx(
+            model_persistent._model_data.attrs["objective_function_value"]
+        )
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_update_obj_with_regeneration(self, model_persistent):
+        model_persistent.backend.update_param("objective_cost_class", {"monetary": 0.5})
+        model_persistent.backend.regenerate_persistent_solver(obj=True)
+        model2 = model_persistent.backend.rerun()
+        assert model2._model_data.attrs["objective_function_value"] == approx(
+            0.5 * model_persistent._model_data.attrs["objective_function_value"]
+        )
+
+    def test_regeneration_needed_warning(self, model_persistent):
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            model_persistent.backend.update_param(
+                "objective_cost_class", {"monetary": 0.5}
+            )
+        assert check_error_or_warning(
+            excinfo, "Updating the Pyomo parameter won't affect the optimisation"
+        )
+
+    def test_fail_to_regenerate_non_persistent_solver(self, model):
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            model.backend.regenerate_persistent_solver(obj=True)
+        assert check_error_or_warning(excinfo, "Can only regenerate persistent solvers")

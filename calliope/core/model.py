@@ -263,7 +263,7 @@ class Model(object):
                 "there exist non-uniform timesteps (e.g. from time masking)"
             )
 
-        results, self._backend_model, interface = run_backend(
+        results, self._backend_model, self._backend_model_opt, interface = run_backend(
             self._model_data, self._timings, **kwargs
         )
 

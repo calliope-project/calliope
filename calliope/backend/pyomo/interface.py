@@ -37,7 +37,7 @@ def access_pyomo_model_inputs(backend_model):
     return all_param_ds
 
 
-def update_pyomo_param(backend_model, param, update_dict):
+def update_pyomo_param(backend_model, opt, param, update_dict):
     """
     A Pyomo Param value can be updated without the user directly accessing the
     backend model.
@@ -70,9 +70,47 @@ def update_pyomo_param(backend_model, param, update_dict):
         )
     elif not isinstance(update_dict, dict):
         raise TypeError("`update_dict` must be a dictionary")
-
     else:
         getattr(backend_model, param).store_values(update_dict)
+
+    if opt is not None and "persistent" in opt.name:
+        exceptions.warn(
+            "Updating the Pyomo parameter won't affect the optimisation run without also "
+            "regenerating the relevant constraints or the objective function (see `regenerate_persistent_solver`)."
+        )
+
+
+def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, obj=False):
+    """
+    Having updated a Pyomo Param or several of them, this function can be used
+    to regenerate associated constraints in a persistent solver interface, such
+    as "gurobi_persistent", before rerunning the model.
+    The entire constraint need not be regenerated, it is possible to only point to
+    those indexes whose associated parameters have changed.
+
+    Parameters
+    ----------
+    constraints : dict of lists or None, default = None
+        Names of constraints as keys and list of constraint index items as values,
+        e.g. `{"energy_capacity_constraint": ["X1::pv"]}` or `{"cost_constraint": [("monetary", "X1::pv"), ("monetary", "X2::pv")])}`.
+        Order of index values can be inferred by inspecting the constraint.
+    obj : bool, default = False
+        If True, will also regenerate the objective function.
+    """
+    if opt is None or "persistent" not in opt.name:
+        raise exceptions.ModelError(
+            "Can only regenerate persistent solvers. No persistent solver object found for this model run."
+        )
+
+    if obj is True:
+        opt.set_objective(backend_model.obj)
+    if constraints is not None:
+        for constraint_name, constraint_idx in constraints.items():
+            for idx in constraint_idx:
+                opt.remove_constraint(getattr(backend_model, constraint_name)[idx])
+                opt.add_constraint(getattr(backend_model, constraint_name)[idx])
+
+    return opt
 
 
 def activate_pyomo_constraint(backend_model, constraint, active=True):
@@ -104,7 +142,7 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
         raise ValueError("Argument `active` must be True or False")
 
 
-def rerun_pyomo_model(model_data, backend_model):
+def rerun_pyomo_model(model_data, backend_model, opt):
     """
     Rerun the Pyomo backend, perhaps after updating a parameter value,
     (de)activating a constraint/objective or updating run options in the model
@@ -128,8 +166,13 @@ def rerun_pyomo_model(model_data, backend_model):
     timings = {}
     log_time(logger, timings, "model_creation")
 
-    results, backend_model, _opt = backend_run.run_plan(
-        model_data, timings, run_pyomo, build_only=False, backend_rerun=backend_model
+    results, backend_model, opt = backend_run.run_plan(
+        model_data,
+        timings,
+        run_pyomo,
+        build_only=False,
+        backend_rerun=backend_model,
+        opt=opt,
     )
 
     inputs = access_pyomo_model_inputs(backend_model)
@@ -278,6 +321,7 @@ def get_all_pyomo_model_attrs(backend_model):
 class BackendInterfaceMethods:
     def __init__(self, model):
         self._backend = model._backend_model
+        self._opt = model._backend_model_opt
         self._model_data = model._model_data
 
     def access_model_inputs(self):
@@ -286,7 +330,7 @@ class BackendInterfaceMethods:
     access_model_inputs.__doc__ = access_pyomo_model_inputs.__doc__
 
     def update_param(self, *args, **kwargs):
-        return update_pyomo_param(self._backend, *args, **kwargs)
+        return update_pyomo_param(self._backend, self._opt, *args, **kwargs)
 
     update_param.__doc__ = update_pyomo_param.__doc__
 
@@ -296,9 +340,18 @@ class BackendInterfaceMethods:
     activate_constraint.__doc__ = activate_pyomo_constraint.__doc__
 
     def rerun(self, *args, **kwargs):
-        return rerun_pyomo_model(self._model_data, self._backend, *args, **kwargs)
+        return rerun_pyomo_model(
+            self._model_data, self._backend, self._opt, *args, **kwargs
+        )
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
+
+    def regenerate_persistent_solver(self, *args, **kwargs):
+        self._opt = regenerate_persistent_pyomo_solver(
+            self._backend, self._opt, *args, **kwargs
+        )
+
+    regenerate_persistent_solver.__doc__ = regenerate_persistent_pyomo_solver.__doc__
 
     def add_constraint(self, *args, **kwargs):
         self._backend = add_pyomo_constraint(self._backend, *args, **kwargs)

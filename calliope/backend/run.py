@@ -6,19 +6,17 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 import logging
 
 import numpy as np
-import xarray as xr
 import pandas as pd
-
-from calliope.core.util.logging import log_time
+import xarray as xr
 from calliope import exceptions
 from calliope.backend import checks
-from calliope.backend.pyomo import model as run_pyomo
 from calliope.backend.pyomo import interface as pyomo_interface
-
-from calliope.core.util.observed_dict import UpdateObserverDict
+from calliope.backend.pyomo import model as run_pyomo
+from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import split_loc_techs
-from calliope.core import io
+from calliope.core.util.logging import log_time
+from calliope.core.util.observed_dict import UpdateObserverDict
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +51,7 @@ def run(model_data, timings, build_only=False):
         )
 
     elif run_config["mode"] == "operate":
-        results, backend = run_operate(
+        results, backend, opt = run_operate(
             model_data,
             timings,
             backend=BACKEND[run_config.backend],
@@ -61,7 +59,7 @@ def run(model_data, timings, build_only=False):
         )
 
     elif run_config["mode"] == "spores":
-        results, backend = run_spores(
+        results, backend, opt = run_spores(
             model_data,
             timings,
             interface=INTERFACE[run_config.backend],
@@ -69,7 +67,7 @@ def run(model_data, timings, build_only=False):
             build_only=build_only,
         )
 
-    return results, backend, INTERFACE[run_config.backend].BackendInterfaceMethods
+    return results, backend, opt, INTERFACE[run_config.backend].BackendInterfaceMethods
 
 
 def run_plan(
@@ -79,7 +77,7 @@ def run_plan(
     build_only,
     backend_rerun=False,
     allow_warmstart=False,
-    persistent=False,
+    persistent=True,
     opt=None,
 ):
 
@@ -151,7 +149,10 @@ def run_plan(
         if termination in ["optimal", "feasible"]:
             results = backend.get_result_array(backend_model, model_data)
             results.attrs["termination_condition"] = termination
-            results.attrs["objective_function_value"] = backend_model.obj()
+            if "persistent" in opt.name and persistent is True:
+                results.attrs["objective_function_value"] = opt.get_model_attr("ObjVal")
+            else:
+                results.attrs["objective_function_value"] = backend_model.obj()
         else:
             results = xr.Dataset(attrs={"termination_condition": termination})
 
@@ -215,7 +216,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
         loc_tech_score_dict = cap_loc_score.to_dict()
 
         interface.update_pyomo_param(
-            backend_model, "cost_energy_cap", loc_tech_score_dict
+            backend_model, opt, "cost_energy_cap", loc_tech_score_dict
         )
 
     def _warn_on_infeasibility():
@@ -265,6 +266,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
         ].dropna("costs")
         interface.update_pyomo_param(
             backend_model,
+            opt,
             "group_cost_max",
             {
                 (_cost_class, spores_config["slack_cost_group"]): results.cost.loc[
@@ -279,7 +281,10 @@ def run_spores(model_data, timings, interface, backend, build_only):
 
     def _update_to_spores_objective(backend_model):
         interface.update_pyomo_param(
-            backend_model, "objective_cost_class", spores_config["objective_cost_class"]
+            backend_model,
+            opt,
+            "objective_cost_class",
+            spores_config["objective_cost_class"],
         )
 
     if not spores_config["skip_cost_op"]:
@@ -291,6 +296,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
             return (
                 results,
                 backend_model,
+                opt,
             )  # We have what we need, so break out of the loop
         init_spore = 0
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
@@ -317,7 +323,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
             )
         else:
             _warn_on_infeasibility()
-            return results, backend_model
+            return results, backend_model, opt
     else:
         if "spores" in model_data.coords:
             init_spore = model_data.spores.max().item()
@@ -336,20 +342,15 @@ def run_spores(model_data, timings, interface, backend, build_only):
     for _spore in range(init_spore + 1, spores_config["spores_number"] + 1):
         print(f"Running SPORES {_spore}")
         if opt is not None and "persistent" in opt.type:
-            opt.set_objective(backend_model.obj)
-            for (spores_score, loc_tech) in cumulative_spores_scores.index:
-                opt.remove_constraint(
-                    backend_model.cost_investment_constraint[spores_score, loc_tech]
-                )
-                opt.add_constraint(
-                    backend_model.cost_investment_constraint[spores_score, loc_tech]
-                )
-                opt.remove_constraint(
-                    backend_model.cost_constraint[spores_score, loc_tech]
-                )
-                opt.add_constraint(
-                    backend_model.cost_constraint[spores_score, loc_tech]
-                )
+            opt = interface.regenerate_persistent_pyomo_solver(
+                backend_model,
+                opt,
+                obj=True,
+                constraints={
+                    "cost_investment_constraint": cumulative_spores_scores.index,
+                    "cost_constraint": cumulative_spores_scores.index,
+                },
+            )
         else:
             opt = None
         results, backend_model, opt = run_plan(
@@ -389,7 +390,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
         spores_results.values(), dim=pd.Index(spores_results.keys(), name="spores")
     )
 
-    return results, backend_model
+    return results, backend_model, opt
 
 
 def run_operate(model_data, timings, backend, build_only):
@@ -658,6 +659,7 @@ def run_operate(model_data, timings, backend, build_only):
 
     if build_only:
         results = xr.Dataset()
+        _opt = None
     else:
         # Concatenate results over the timestep dimension to get a single
         # xarray Dataset of interest
@@ -677,4 +679,4 @@ def run_operate(model_data, timings, backend, build_only):
             comment="Backend: generated full solution array",
         )
 
-    return results, backend_model
+    return results, backend_model, _opt
