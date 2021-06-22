@@ -131,7 +131,7 @@ class TestIO:
             model.to_lp(out_path)
 
             with open(out_path, "r") as f:
-                assert "\nmin \nobj:\n+1 cost(monetary_region1_1__csp)" in f.read()
+                assert "\nmin \nobj:\n+1 cost(monetary__region1_1__csp_)" in f.read()
 
     def test_save_per_spore(self):
         with tempfile.TemporaryDirectory() as tempdir:

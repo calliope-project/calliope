@@ -216,8 +216,8 @@ def get_domain(var: xr.DataArray) -> str:
 
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
-        return val._value == po.base.param._NotValid or po.value(val) is None
-    elif val == po.base.param._NotValid:
+        return val._value == po.Param.NoValue or po.value(val) is None
+    elif val == po.Param.NoValue:
         return True
     else:
         return pd.isnull(val)
