@@ -212,7 +212,7 @@ def run_spores(model_data, timings, interface, backend, build_only):
     # Define function to update "spores_score" after each iteration of the method
     def _update_spores_score(backend_model, cap_loc_score):
         print("Updating loc::tech spores scores")
-        loc_tech_score_dict = loc_tech_df.align(cap_loc_score)[1].to_dict()
+        loc_tech_score_dict = cap_loc_score.reindex(loc_tech_df.index).to_dict()
 
         interface.update_pyomo_param(
             backend_model, "cost_energy_cap", loc_tech_score_dict

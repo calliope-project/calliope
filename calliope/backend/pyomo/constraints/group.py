@@ -114,7 +114,6 @@ def load_constraints(backend_model):
                         backend_model,
                         "group_names_demand_share_per_timestep_{}".format(sense),
                     ),
-                    backend_model.carriers,
                     backend_model.timesteps,
                     [sense],
                     rule=demand_share_per_timestep_constraint_rule,
@@ -323,13 +322,16 @@ def demand_share_per_timestep_constraint_rule(
         )
 
         rhs = (
-            share
-            * -1
+            -1
             * sum(
-                backend_model.carrier_con[loc_tech_carrier, timestep]
-                for loc_tech_carrier in rhs_loc_tech_carriers
+                backend_model.required_resource[
+                    rhs_loc_tech_carrier.rsplit("::", 1)[0], timestep
+                ]
+                for rhs_loc_tech_carrier in rhs_loc_tech_carriers
             )
+            * share
         )
+
 
         return equalizer(lhs, rhs, what)
 
