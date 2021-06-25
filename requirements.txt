@@ -10,4 +10,4 @@ plotly >= 3.10, < 3.11
 pyomo >= 5.7, < 5.8
 ruamel.yaml >= 0.16
 scikit-learn >= 0.22
-xarray >= 0.16, < 0.17
+xarray >= 0.17, < 0.18
