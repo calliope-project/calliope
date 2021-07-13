@@ -16,13 +16,13 @@ dependencies:
     - natsort
     - netcdf4
     - numpy
-    - pandas=1.1
+    - pandas=1.2
     - plotly=3.10.0
     - pre-commit
-    - pyomo=5.7
+    - pyomo=6.0
     - pytest-cov
     - pytest-xdist  # pytest distributed testing plugin
     - pytest=5.2  # 5.3 fails with KeyError: '__name__' when collecting items
     - ruamel.yaml=0.16
     - scikit-learn
-    - xarray=0.16
+    - xarray=0.17
