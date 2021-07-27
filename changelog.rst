@@ -3,14 +3,16 @@
 Release History
 ===============
 
-0.6.7 (2021-06-23)
-------------------
+0.6.7-dev
+---------
 
 |new| `spores` run mode can skip the cost-optimal run, with the user providing initial conditions for `spores_score` and slack system cost.
 
 |new| Support for Pyomo's `gurobi_persistent` solver interface, which enables a more memory- and time-efficient update and re-running of models. A new backend interface has been added to re-build constraints / the objective in the Gurobi persistent solver after updating Pyomo parameters.
 
 |new| A scenario can now be a mix of overrides *and* other scenarios, not just overrides.
+
+|changed| `model.backend.rerun()` can work with both `spores` and `plan` run modes. In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
 
 |changed| Carrier-specific group constraints are only allowed in isolation (one constraint in the group)
 
@@ -20,7 +22,7 @@ Release History
 
 |fixed| CLI plotting command has been re-enabled.
 
-|fixed| Group constraints are more robust to variations in user inputs
+|fixed| Group constraints are more robust to variations in user inputs. This entails a trade-off whereby some previously accepted user configurations will no longer be possible, since we want to avoid the complexity of processing them.
 
 |fixed| `demand_share_per_timestep_decision` now functions as expected, where it previously did not enforce the per-timestep share after having decided upon it.
 

@@ -7,6 +7,7 @@ import calliope
 from calliope.backend.pyomo.util import get_var, string_to_datetime
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
+import calliope.backend.pyomo.interface as pyomo_interface
 
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
@@ -156,40 +157,42 @@ def rerun_pyomo_model(model_data, backend_model, opt):
     backend_model.__calliope_run_config = AttrDict.from_yaml_string(
         model_data.attrs["run_config"]
     )
-
-    if backend_model.__calliope_run_config["mode"] != "plan":
-        raise exceptions.ModelError(
-            "Cannot rerun the backend in {} run mode. Only `plan` mode is "
-            "possible.".format(backend_model.__calliope_run_config["mode"])
-        )
-
     timings = {}
     log_time(logger, timings, "model_creation")
+    inputs = access_pyomo_model_inputs(backend_model)
 
-    results, backend_model, opt = backend_run.run_plan(
-        model_data,
-        timings,
-        run_pyomo,
+    run_mode = backend_model.__calliope_run_config["mode"]
+    if run_mode == "plan":
+        kwargs = {}
+    elif run_mode == "spores":
+        kwargs = {"interface": pyomo_interface}
+    else:
+        raise exceptions.ModelError(
+            "Cannot rerun the backend in {} run mode. Only `plan` or `spores` modes are "
+            "possible.".format(run_mode)
+        )
+    run_func = getattr(backend_run, f"run_{run_mode}")
+    results, backend_model, opt = run_func(
+        model_data=model_data,
+        timings=timings,
+        backend=run_pyomo,
         build_only=False,
         backend_rerun=backend_model,
         opt=opt,
+        **kwargs,
     )
-
-    inputs = access_pyomo_model_inputs(backend_model)
 
     # Add additional post-processed result variables to results
     if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
-        results = postprocess_model_results(
-            results, model_data.reindex(results.coords), timings
-        )
+        results = postprocess_model_results(results, model_data, timings)
 
-    for key, var in results.data_vars.items():
+    for var in results.data_vars.values():
         var.attrs["is_result"] = 1
 
-    for key, var in inputs.data_vars.items():
+    for var in inputs.data_vars.values():
         var.attrs["is_result"] = 0
 
-    new_model_data = xr.merge((results, inputs))
+    new_model_data = xr.merge((results, inputs), compat="override")
     new_model_data.attrs.update(model_data.attrs)
     new_model_data.attrs.update(results.attrs)
 

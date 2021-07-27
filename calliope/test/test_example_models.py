@@ -230,28 +230,18 @@ class TestNationalScaleExampleModelSpores:
 
     @pytest.mark.parametrize("init_spore", (0, 1, 2))
     def test_nationalscale_skip_cost_op_spores(self, base_model_data, init_spore):
-        if init_spore is None:
-            _spore = 0
-            spores_model = calliope.Model(
-                config=None,
-                model_data=base_model_data.loc[{"spores": _spore + 1}].drop_vars(
-                    "spores"
-                ),
-            )
-        else:
-            _spore = init_spore
-            spores_model = calliope.Model(
-                config=None, model_data=base_model_data.loc[{"spores": [_spore + 1]}]
-            )
-            spores_model._model_data.coords["spores"] = [_spore]
+        spores_model = calliope.Model(
+            config=None, model_data=base_model_data.loc[{"spores": [init_spore + 1]}]
+        )
+        spores_model._model_data.coords["spores"] = [init_spore]
 
         spores_model.run_config["spores_options"]["skip_cost_op"] = True
 
         spores_model.run(force_rerun=True)
 
-        assert set(spores_model.results.spores.values) == set(range(_spore, 4))
-        assert base_model_data.loc[{"spores": slice(_spore + 1, None)}].equals(
-            spores_model._model_data.loc[{"spores": slice(_spore + 1, None)}]
+        assert set(spores_model.results.spores.values) == set(range(init_spore, 4))
+        assert base_model_data.loc[{"spores": slice(init_spore + 1, None)}].equals(
+            spores_model._model_data.loc[{"spores": slice(init_spore + 1, None)}]
         )
 
     def test_fail_with_spores_as_input_dim(self, base_model_data):

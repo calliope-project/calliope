@@ -209,6 +209,37 @@ class TestBackendRerun:
             excinfo, "The results of rerunning the backend model are only available"
         )
 
+    def test_rerun_spores(self, model):
+        model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": "cbc",
+            },
+            scenario="spores",
+        )
+
+        model.run(build_only=True)
+        new_model = model.backend.rerun()
+        for i in ["_timings", "inputs", "results"]:
+            assert hasattr(new_model, i)
+        assert "spores" in new_model.results.dims
+
+    def test_rerun_spores_fail_on_rerun_with_results(self, model):
+        model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": "cbc",
+            },
+            scenario="spores",
+        )
+
+        model.run()
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            model.backend.rerun()
+        assert check_error_or_warning(
+            excinfo, "Cannot run SPORES if the backend model already has a solution"
+        )
+
     def test_rerun_fail_on_operate(self, model):
         # should fail if the run mode is not 'plan'
         model.run_config["mode"] = "operate"
