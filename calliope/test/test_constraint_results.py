@@ -144,7 +144,7 @@ class TestModelSettings:
 
     def test_unmet_demand_zero(self, model_no_unmet):
 
-        # Feasible case, unmet_demand/unused_supply is deleted
+        # Feasible case, but unmet_demand/unused_supply is not deleted
         for i in ["unmet_demand", "unused_supply"]:
             assert hasattr(model_no_unmet._backend_model, i)
         assert "unmet_demand" in model_no_unmet._model_data.data_vars.keys()

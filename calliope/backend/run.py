@@ -122,7 +122,7 @@ def run_plan(
             comment="Backend: sending model to solver",
         )
 
-        results, opt = backend.solve_model(
+        backend_results, opt = backend.solve_model(
             backend_model,
             solver=solver,
             solver_io=solver_io,
@@ -140,7 +140,7 @@ def run_plan(
             comment="Backend: solver finished running",
         )
 
-        termination = backend.load_results(backend_model, results, opt)
+        termination = backend.load_results(backend_model, backend_results, opt)
 
         log_time(
             logger, timings, "run_results_loaded", comment="Backend: loaded results"
