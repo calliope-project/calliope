@@ -32,6 +32,8 @@ Release History
 
 |fixed| Various bugs squashed in running operate mode.
 
+|fixed| Handle number of timesteps lower than the horizon length in `operate` mode (#337).
+
 0.6.6 (2020-10-08)
 ------------------
 
