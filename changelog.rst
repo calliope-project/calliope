@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.7-dev
----------
+0.6.7 (2021-06-29)
+------------------
 
 |new| `spores` run mode can skip the cost-optimal run, with the user providing initial conditions for `spores_score` and slack system cost.
 
@@ -14,11 +14,11 @@ Release History
 
 |new| `model.backend.rerun()` can work with both `spores` and `plan` run modes (previously only `plan` worked). In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
 
-|changed| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
+|changed||backwards-incompatible| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
 
 |changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible. Fixes issue #355.
 
-|changed| Updated to Pyomo 6.0, pandas 1.2, xarray 0.17 and pytest version is no longer fixed.
+|changed| Updated to Pyomo 6.0, pandas 1.2, xarray 0.17.
 
 |changed| Update CBC Windows binary link in documentation.
 
