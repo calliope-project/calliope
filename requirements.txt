@@ -1,12 +1,10 @@
 click >= 7, < 8
 ipython >= 7
 ipdb >= 0.11
-jinja2 >= 2.10
 natsort >= 5
 netcdf4 >= 1.2.2
 numpy >= 1.15
 pandas >= 1.1, < 1.2
-plotly >= 3.10, < 3.11
 pyomo >= 5.7, < 5.8
 ruamel.yaml >= 0.16
 scikit-learn >= 0.22, < 0.24
