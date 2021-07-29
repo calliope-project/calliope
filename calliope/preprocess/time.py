@@ -199,7 +199,7 @@ def add_time_dimension(data, model_run):
         else:
             try:
                 timeseries_data_array = timeseries_data_array.astype(
-                    np.float, copy=False
+                    float, copy=False
                 )
             except ValueError:
                 None

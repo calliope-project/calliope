@@ -669,9 +669,7 @@ def run_operate(model_data, timings, backend, build_only):
 
             # Set up total operated units for the next iteration
             if "loc_techs_milp" in model_data.dims.keys():
-                operated_units = _results.operating_units.sum("timesteps").astype(
-                    np.int
-                )
+                operated_units = _results.operating_units.sum("timesteps").astype(int)
                 model_data["operated_units"].loc[{}] += operated_units.values
                 backend_model.operated_units.store_values(
                     operated_units.to_series().dropna().to_dict()
