@@ -440,7 +440,7 @@ def load_overrides_from_scenario(config_model, scenario):
 
     if scenario in config_model.get("scenarios", {}).keys():
         if "," in scenario:
-            logger.warn(
+            warnings.warn(
                 f"Scenario name `{scenario}` includes commas that won't be parsed as a list of overrides."
             )
         logger.info("Loading overrides from scenario: {} ".format(scenario))

@@ -14,6 +14,7 @@ and loc_tech_carriers, to avoid string operations during backend operations.
 import xarray as xr
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from calliope import exceptions
 
@@ -115,7 +116,7 @@ def lookup_loc_techs_conversion(dataset, model_run):
     loc_techs_conversion_array = xr.DataArray(
         data=np.empty(
             (len(model_run.sets["loc_techs_conversion"]), len(carrier_tiers)),
-            dtype=np.object,
+            dtype=object,
         ),
         dims=["loc_techs_conversion", "carrier_tiers"],
         coords={
@@ -168,7 +169,7 @@ def lookup_loc_techs_conversion_plus(dataset, model_run):
     loc_techs_conversion_plus = model_run.sets["loc_techs_conversion_plus"]
 
     loc_techs_conversion_plus_array = np.empty(
-        (len(loc_techs_conversion_plus), len(carrier_tiers)), dtype=np.object
+        (len(loc_techs_conversion_plus), len(carrier_tiers)), dtype=object
     )
     primary_carrier_data = {"_in": [], "_out": []}
     for loc_tech_idx, loc_tech in enumerate(loc_techs_conversion_plus):
@@ -282,7 +283,7 @@ def lookup_clusters(dataset):
                 datestep.strftime("%Y-%m-%d")
             ].item()
             last_timesteps["data"].append(
-                pd.datetime.combine(
+                datetime.combine(
                     cluster_date[cluster_date == cluster].index[0].date(),
                     dataset.timesteps.to_index().time[-1],
                 )

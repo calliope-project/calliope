@@ -1676,7 +1676,12 @@ class TestNetImportShareGroupConstraints:
         assert net_imports == pytest.approx(-demand)
 
     def test_only_imports_with_wrong_carrier(self, results_for_scenario):
-        results = results_for_scenario("expensive-1,other-carrier")
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            results = results_for_scenario("expensive-1,other-carrier")
+        assert check_error_or_warning(
+            warn,
+            "Constraint group `example_net_import_share_constraint` will be completely ignored",
+        )
         demand = self.retrieve_demand(results).sel(locs="1").item()
         net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
         assert net_imports == pytest.approx(-demand)
@@ -1688,7 +1693,12 @@ class TestNetImportShareGroupConstraints:
 
     @pytest.mark.xfail(reason="One cannot define transmission techs explicitely.")
     def test_no_imports_explicit_tech(self, results_for_scenario):
-        results = results_for_scenario("expensive-1,no-net-imports-explicit-tech")
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            results = results_for_scenario("expensive-1,no-net-imports-explicit-tech")
+        assert check_error_or_warning(
+            warn,
+            "Constraint group `example_net_import_share_constraint` will be completely ignored",
+        )
         net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
         assert net_imports == pytest.approx(0)
 
@@ -1823,8 +1833,13 @@ class TestCarrierProdGroupConstraints:
     # All conversion technologies with insufficient supply_max to use the
     # cheap direct heat/cooling supply techs
     def test_carrier_prod_max_non_conversion_all_constraint(self, model_file):
-        model = build_model(
-            model_file=model_file, scenario="carrier_prod_max_non_conversion_all"
+        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
+            model = build_model(
+                model_file=model_file, scenario="carrier_prod_max_non_conversion_all"
+            )
+        assert check_error_or_warning(
+            warn,
+            "Constraint group `example_carrier_prod_constraint` will be completely ignored ",
         )
         model.run()
         prod = model.get_formatted_array("carrier_prod")

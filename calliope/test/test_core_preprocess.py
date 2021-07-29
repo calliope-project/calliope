@@ -164,6 +164,9 @@ class TestModelRun:
             "Scenario definition must be a list of override or other scenario names.",
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*includes commas:calliope.exceptions.ModelWarning"
+    )
     def test_scenario_name_overlaps_overrides(self):
         """
         Test that a scenario name cannot be a combination of override names
@@ -903,7 +906,7 @@ class TestChecks:
             build_model(override_dict=override2, scenario="simple_supply,one_day")
 
     @pytest.mark.filterwarnings(
-        "ignore: defines force_resource but not a finite resource:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*defines force_resource but not a finite resource:calliope.exceptions.ModelWarning"
     )
     def test_missing_required_constraints(self):
         """
