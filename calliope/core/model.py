@@ -169,6 +169,7 @@ class Model(object):
 
     def _add_model_data_methods(self):
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
+        self.results = self._model_data.filter_by_attrs(is_result=1)
         self.model_config = UpdateObserverDict(
             initial_yaml_string=self._model_data.attrs.get("model_config", "{}"),
             name="model_config",
@@ -179,10 +180,6 @@ class Model(object):
             name="run_config",
             observer=self._model_data,
         )
-
-        results = self._model_data.filter_by_attrs(is_result=1)
-        if len(results.data_vars) > 0:
-            self.results = results
 
     def save_commented_model_yaml(self, path):
         """

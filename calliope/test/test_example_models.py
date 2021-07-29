@@ -125,12 +125,12 @@ class TestNationalScaleExampleModelInfeasibility:
 
         model.run()
 
-        assert model._model_data.attrs["termination_condition"] in [
+        assert model.results.termination_condition in [
             "infeasible",
             "other",
         ]  # glpk gives 'other' as result
 
-        assert not hasattr(model, "results")
+        assert len(model.results.data_vars) == 0
         assert "energy_cap" not in model._model_data.data_vars
 
     def test_nationalscale_example_results_cbc(self):
