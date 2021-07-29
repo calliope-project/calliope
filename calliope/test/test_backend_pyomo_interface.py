@@ -368,16 +368,8 @@ class TestAddConstraint:
 @pytest.mark.filterwarnings(
     "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
 )
+@pytest.importorskip("gurobipy")
 class TestRegeneratePersistentConstraints:
-    @pytest.fixture(scope="class")
-    def model_persistent(self):
-        m = build_model(
-            {"run.solver": "gurobi_persistent"},
-            "simple_supply,two_hours,investment_costs",
-        )
-        m.run()
-        return m
-
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
     )

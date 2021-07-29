@@ -76,13 +76,9 @@ class TestNationalScaleExampleModelSenseChecks:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
+    @pytest.importorskip("gurobipy")
     def test_nationalscale_example_results_gurobi(self):
-        try:
-            import gurobipy  # pylint: disable=unused-import
-
-            self.example_tester(solver="gurobi", solver_io="python")
-        except ImportError:
-            pytest.skip("Gurobi not installed")
+        self.example_tester(solver="gurobi", solver_io="python")
 
     def test_nationalscale_example_results_cplex(self):
         if shutil.which("cplex"):
@@ -208,6 +204,7 @@ class TestNationalScaleExampleModelSpores:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning"
     )
+    @pytest.importorskip("gurobipy")
     def test_nationalscale_example_results_gurobi(self):
         gurobi_data = self.example_tester("gurobi", "python")
         gurobi_persistent_data = self.example_tester("gurobi_persistent", "python")
@@ -488,24 +485,16 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_urban_example_results_area(self):
         self.example_tester("per_area")
 
+    @pytest.importorskip("gurobipy")
     def test_urban_example_results_area_gurobi(self):
-        try:
-            import gurobipy  # pylint: disable=unused-import
-
-            self.example_tester("per_area", solver="gurobi", solver_io="python")
-        except ImportError:
-            pytest.skip("Gurobi not installed")
+        self.example_tester("per_area", solver="gurobi", solver_io="python")
 
     def test_urban_example_results_cap(self):
         self.example_tester("per_cap")
 
+    @pytest.importorskip("gurobipy")
     def test_urban_example_results_cap_gurobi(self):
-        try:
-            import gurobipy  # pylint: disable=unused-import
-
-            self.example_tester("per_cap", solver="gurobi", solver_io="python")
-        except ImportError:
-            pytest.skip("Gurobi not installed")
+        self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_example_results(self):
