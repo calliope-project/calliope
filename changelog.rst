@@ -14,11 +14,15 @@ Release History
 
 |changed| `model.backend.rerun()` can work with both `spores` and `plan` run modes. In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
 
-|changed| Carrier-specific group constraints are only allowed in isolation (one constraint in the group)
+|changed| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
 
 |changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible.
 
-|changed| Updated to Pyomo 6.0, pandas 1.2, and xarray 0.17
+|changed| Updated to Pyomo 6.0, pandas 1.2, xarray 0.17 and pytest version is no longer fixed.
+
+|changed| Update CBC Windows binary link in documentation.
+
+|fixed| AttrDict now has a `__name__` attribute, which makes pytest happy.
 
 |fixed| CLI plotting command has been re-enabled.
 

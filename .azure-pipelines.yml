@@ -64,7 +64,6 @@ steps:
       set PATH=cbc/bin;%PATH%
       call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
       call activate base
-      pip install cbc
       python utils/conda_create.py requirements.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
