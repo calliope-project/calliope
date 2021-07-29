@@ -4,11 +4,13 @@ import os
 
 import pandas as pd
 import numpy as np
+import xarray as xr
 
 import calliope
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess import time
+from calliope.preprocess.model_data import update_dtypes
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import constraint_sets, defaults, check_error_or_warning
@@ -1781,6 +1783,20 @@ class TestDataset:
         )
         assert "lookup_datestep_cluster" not in model._model_data.data_vars
         assert "timestep_cluster" in model._model_data.data_vars
+
+    @pytest.mark.parametrize(
+        ("input_array", "expected", "dtype"), (
+            [["True", "False", True, False, 0, 1, 1.0, "0", "1"], [True, False, True, False, False, True, True, False, True], "b"],
+            [["nan", 1, 2, 3.0], [-1, 1, 2, 3], "f"],  # will use fillna to get -1 from np.nan (for comparison)
+            [["0", "1", "2", "3"], [0, 1, 2, 3], "i"],
+            [[0, 1, 2, 3], [0, 1, 2, 3], "i"],
+        )
+    )
+    def test_update_dtypes(self, input_array, expected, dtype):
+        input_ds = xr.Dataset({"foo": xr.DataArray(pd.Series(input_array))})
+        output_ds = update_dtypes(input_ds)
+        assert (output_ds.foo.fillna(-1).values == expected).all()
+        assert output_ds.foo.dtype.kind == dtype
 
 
 class TestUtil:
