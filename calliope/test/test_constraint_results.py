@@ -277,11 +277,7 @@ class TestEnergyCapacityPerStorageCapacity:
 
     def test_operate_mode(self, model_file):
         model = build_model(model_file=model_file, scenario="operate_mode_min")
-        with pytest.raises(calliope.exceptions.ModelError) as error:
-            model.run()
-        assert check_error_or_warning(
-            error, "Operational mode requires a timestep window and horizon"
-        )
+        model.run()
 
     @pytest.mark.parametrize(
         "horizon_window", [(24, 24), (48, 48), (72, 48), (144, 24)]
