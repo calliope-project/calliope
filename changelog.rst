@@ -14,7 +14,7 @@ Release History
 
 |new| `model.backend.rerun()` can work with both `spores` and `plan` run modes (previously only `plan` worked). In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
 
-|changed||backwards-incompatible| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
+|changed| |backwards-incompatible| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
 
 |changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible. Fixes issue #355.
 
