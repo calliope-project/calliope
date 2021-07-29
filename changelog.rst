@@ -12,11 +12,11 @@ Release History
 
 |new| A scenario can now be a mix of overrides *and* other scenarios, not just overrides.
 
-|changed| `model.backend.rerun()` can work with both `spores` and `plan` run modes. In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
+|new| `model.backend.rerun()` can work with both `spores` and `plan` run modes (previously only `plan` worked). In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
 
 |changed| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
 
-|changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible.
+|changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible. Fixes issue #355.
 
 |changed| Updated to Pyomo 6.0, pandas 1.2, xarray 0.17 and pytest version is no longer fixed.
 
@@ -24,7 +24,7 @@ Release History
 
 |fixed| AttrDict now has a `__name__` attribute, which makes pytest happy.
 
-|fixed| CLI plotting command has been re-enabled.
+|fixed| CLI plotting command has been re-enabled. Fixes issue #341.
 
 |fixed| Group constraints are more robust to variations in user inputs. This entails a trade-off whereby some previously accepted user configurations will no longer be possible, since we want to avoid the complexity of processing them.
 
