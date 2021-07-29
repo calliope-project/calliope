@@ -19,7 +19,7 @@ from pyomo.opt import SolverFactory  # pylint: disable=import-error
 import pyomo.environ as pe  # pylint: disable=unused-import,import-error
 
 # TempfileManager is required to set log directory
-from pyutilib.services import TempfileManager  # pylint: disable=import-error
+from pyomo.common.tempfiles import TempfileManager  # pylint: disable=import-error
 
 from calliope.backend.pyomo.util import (
     get_var,

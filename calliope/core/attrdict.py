@@ -65,7 +65,13 @@ class AttrDict(dict):
 
     """
 
-    __getattr__ = dict.__getitem__
+    def __getattr__(self, item):
+        try:
+            return self[item]
+        except KeyError:
+            if item.startswith("__"):
+                raise AttributeError
+
     __setattr__ = dict.__setitem__
 
     def __init__(self, source_dict=None):
