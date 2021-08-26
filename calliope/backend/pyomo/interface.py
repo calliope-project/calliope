@@ -11,7 +11,6 @@ import calliope.backend.pyomo.interface as pyomo_interface
 
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
-from calliope import exceptions, AttrDict
 from calliope.postprocess.results import postprocess_model_results
 
 logger = logging.getLogger(__name__)
@@ -62,13 +61,13 @@ def update_pyomo_param(backend_model, opt, param, update_dict):
 
     """
     if not hasattr(backend_model, param):
-        raise exceptions.ModelError(
+        raise calliope.exceptions.ModelError(
             "Parameter `{}` not in the Pyomo Backend. Check that the string "
             "matches the corresponding constraint/cost in the model.inputs "
             "xarray Dataset".format(param)
         )
     elif not isinstance(getattr(backend_model, param), po.base.param.IndexedParam):
-        raise exceptions.ModelError(
+        raise calliope.exceptions.ModelError(
             "`{}` not a Parameter in the Pyomo Backend. Sets and decision variables "
             "cannot be updated by the user".format(param)
         )
@@ -78,7 +77,7 @@ def update_pyomo_param(backend_model, opt, param, update_dict):
         getattr(backend_model, param).store_values(update_dict)
 
     if opt is not None and "persistent" in opt.name:
-        exceptions.warn(
+        calliope.exceptions.warn(
             "Updating the Pyomo parameter won't affect the optimisation run without also "
             "regenerating the relevant constraints or the objective function (see `regenerate_persistent_solver`)."
         )
@@ -102,7 +101,7 @@ def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, obj
         If True, will also regenerate the objective function.
     """
     if opt is None or "persistent" not in opt.name:
-        raise exceptions.ModelError(
+        raise calliope.exceptions.ModelError(
             "Can only regenerate persistent solvers. No persistent solver object found for this model run."
         )
 
@@ -131,11 +130,11 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
         status to set the constraint/objective
     """
     if not hasattr(backend_model, constraint):
-        raise exceptions.ModelError(
+        raise calliope.exceptions.ModelError(
             "constraint/objective `{}` not in the Pyomo Backend.".format(constraint)
         )
     elif not isinstance(getattr(backend_model, constraint), po.base.Constraint):
-        raise exceptions.ModelError(
+        raise calliope.exceptions.ModelError(
             "`{}` not a constraint in the Pyomo Backend.".format(constraint)
         )
     elif active is True:
@@ -157,7 +156,7 @@ def rerun_pyomo_model(model_data, backend_model, opt):
     new_model : calliope.Model
         New calliope model, including both inputs and results, but no backend interface.
     """
-    backend_model.__calliope_run_config = AttrDict.from_yaml_string(
+    backend_model.__calliope_run_config = calliope.AttrDict.from_yaml_string(
         model_data.attrs["run_config"]
     )
     timings = {}
@@ -170,13 +169,14 @@ def rerun_pyomo_model(model_data, backend_model, opt):
     elif run_mode == "spores":
         kwargs = {"interface": pyomo_interface}
     else:
-        raise exceptions.ModelError(
+        raise calliope.exceptions.ModelError(
             "Cannot rerun the backend in {} run mode. Only `plan` or `spores` modes are "
             "possible.".format(run_mode)
         )
     run_func = getattr(backend_run, f"run_{run_mode}")
     results, backend_model, opt = run_func(
         model_data=model_data,
+        run_config=backend_model.__calliope_run_config,
         timings=timings,
         backend=run_pyomo,
         build_only=False,
@@ -209,7 +209,7 @@ def rerun_pyomo_model(model_data, backend_model, opt):
     # the same order of items in each dimension
     new_model_data = new_model_data.reindex(model_data.coords)
 
-    exceptions.warn(
+    calliope.exceptions.warn(
         "The results of rerunning the backend model are only available within "
         "the Calliope model returned by this function call."
     )
