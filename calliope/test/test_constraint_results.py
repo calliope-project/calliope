@@ -108,8 +108,8 @@ class TestUrbanScaleMILP:
 
 class TestModelSettings:
     @pytest.fixture
-    def model(self):
-        def _model(self, feasibility, cap_val):
+    def run_model(self):
+        def _run_model(feasibility, cap_val):
             override_dict = {
                 "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
                 "links.a,b.exists": False,
@@ -129,20 +129,21 @@ class TestModelSettings:
                 override_dict=override_dict, scenario="investment_costs"
             )
             model.run()
+            return model
 
-        return _model
-
-    @pytest.fixture
-    def model_no_unmet(self):
-        return self.model(True, 10)
+        return _run_model
 
     @pytest.fixture
-    def model_unmet_demand(self):
-        return self.model(True, 5)
+    def model_no_unmet(self, run_model):
+        return run_model(True, 10)
 
     @pytest.fixture
-    def model_unused_supply(self):
-        return self.model(True, 15)
+    def model_unmet_demand(self, run_model):
+        return run_model(True, 5)
+
+    @pytest.fixture
+    def model_unused_supply(self, run_model):
+        return run_model(True, 15)
 
     def test_unmet_demand_zero(self, model_no_unmet):
 
@@ -184,8 +185,8 @@ class TestModelSettings:
         )
 
     @pytest.mark.parametrize("override", (5, 15))
-    def test_expected_infeasible_result(self, override):
-        model = self.model(False, override)
+    def test_expected_infeasible_result(self, override, run_model):
+        model = run_model(False, override)
 
         assert not hasattr(model._backend_model, "unmet_demand")
         assert not hasattr(model._backend_model, "unused_supply")

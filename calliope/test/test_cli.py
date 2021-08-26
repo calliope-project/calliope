@@ -35,13 +35,12 @@ class TestCLI:
                 [
                     _MODEL_NATIONAL,
                     "--save_netcdf=output.nc",
-                    "--save_plots=results.html",
                 ],
             )
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, "output.nc"))
-            assert os.path.isfile(os.path.join(tempdir, "results.html"))
 
+    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
     def test_save_per_spore(self):
         runner = CliRunner()
 

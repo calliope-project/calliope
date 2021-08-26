@@ -112,6 +112,7 @@ class TestIO:
             with open(out_path, "r") as f:
                 assert "energy_cap(region1_ccgt)" in f.read()
 
+    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
     def test_save_per_spore(self):
         with tempfile.TemporaryDirectory() as tempdir:
             os.mkdir(os.path.join(tempdir, "output"))
