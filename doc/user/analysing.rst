@@ -120,7 +120,7 @@ By calling :python:`model.plot.flows()` you will see a plot similar to `transmis
 
 Summary plots
 -------------
-If you want all the data in one place, you can run :python:`model.plot.summary(to_file='path/to/file.html')`, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to 'path/to/file.html'. This HTML file can be opened in a web browser to show all the plots. This funcionality is made available in the command line interface by using the command :sh:`--save_plots=filename.html` when running the model.
+If you want all the data in one place, you can run :python:`model.plot.summary(to_file='path/to/file.html')`, which will build a HTML file of all the interactive plots (maintaining the interactivity) and save it to 'path/to/file.html'. This HTML file can be opened in a web browser to show all the plots. This functionality is made available in the command line interface by using the command :sh:`--save_plots=filename.html` when running the model.
 
 See an `example of such a HTML plot here <../_static/plot_summary.html>`_.
 
