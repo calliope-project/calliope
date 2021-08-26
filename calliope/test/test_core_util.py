@@ -6,19 +6,16 @@ import os
 import tempfile
 
 import xarray as xr
-import pandas as pd
 
 from calliope.core.util import dataset, observed_dict
 
 from calliope.core.util.tools import memoize, memoize_instancemethod
 
-from calliope import exceptions
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
 from calliope.test.common.util import (
     python36_or_higher,
     check_error_or_warning,
-    build_test_model,
 )
 
 _MODEL_NATIONAL = os.path.join(
@@ -178,9 +175,7 @@ class TestGenerateRuns:
             scenarios=None,
         )
         assert len(runs) == 4
-        assert runs[0].endswith(
-            "--scenario milp --save_netcdf out_1_milp.nc"
-        )
+        assert runs[0].endswith("--scenario milp --save_netcdf out_1_milp.nc")
 
 
 class TestPandasExport:

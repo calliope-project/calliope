@@ -6,7 +6,6 @@ import collections
 import pytest  # noqa: F401
 import numpy as np
 import pyomo.core as po
-import pandas as pd
 import logging
 
 import calliope.exceptions as exceptions
@@ -106,7 +105,7 @@ class TestChecks:
         )
         assert "timesteps" in m._model_data[param].dims
 
-        with pytest.warns(exceptions.ModelWarning) as warning:
+        with pytest.warns(exceptions.ModelWarning):
             m.run(build_only=True)  # will fail to complete run if there's a problem
 
     @pytest.mark.parametrize("force", (True, False))
@@ -156,13 +155,13 @@ class TestChecks:
 
         if force is True:
             with pytest.raises(exceptions.ModelError) as error:
-                with pytest.warns(exceptions.ModelWarning) as warning:
+                with pytest.warns(exceptions.ModelWarning):
                     m.run(build_only=True)
             assert check_error_or_warning(
                 error, ["Operate mode: User must define a finite energy_cap"]
             )
         elif force is False:
-            with pytest.warns(exceptions.ModelWarning) as warning:
+            with pytest.warns(exceptions.ModelWarning):
                 m.run(build_only=True)
 
     @pytest.mark.parametrize(

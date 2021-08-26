@@ -5,7 +5,6 @@ import pytest
 from pytest import approx
 import pandas as pd
 import numpy as np
-import xarray as xr
 import calliope
 from calliope.test.common.util import check_error_or_warning
 

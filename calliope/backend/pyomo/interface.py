@@ -11,7 +11,7 @@ import calliope.backend.pyomo.interface as pyomo_interface
 
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
-from calliope import exceptions
+from calliope import exceptions, AttrDict
 from calliope.postprocess.results import postprocess_model_results
 
 logger = logging.getLogger(__name__)

@@ -12,7 +12,6 @@ Command-line interface.
 import contextlib
 import datetime
 import itertools
-import logging
 import os
 import pstats
 import shutil

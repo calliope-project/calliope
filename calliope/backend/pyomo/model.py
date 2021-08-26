@@ -9,7 +9,6 @@ import logging
 import os
 from contextlib import redirect_stdout, redirect_stderr
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 

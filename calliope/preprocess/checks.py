@@ -17,13 +17,10 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from inspect import signature
-
 import calliope
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess.util import get_all_carriers
-from calliope.core.util.tools import load_function
 
 logger = logging.getLogger(__name__)
 
@@ -449,8 +446,8 @@ def _check_tech_final(
         and "energy_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
-            "`{}` at `{}` fails to define energy_cap_per_unit when specifying "
-            "technology in units_max/min/equals".format(tech_id, loc_id, required)
+            f"`{tech_id}` at `{loc_id}` fails to define energy_cap_per_unit when "
+            "specifying technology in units_max/min/equals"
         )
 
     # If a technology is defined by units & is a storage tech, it must define storage_cap_per_unit
@@ -461,8 +458,8 @@ def _check_tech_final(
         and "storage_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
-            "`{}` at `{}` fails to define storage_cap_per_unit when specifying "
-            "technology in units_max/min/equals".format(tech_id, loc_id, required)
+            f"`{tech_id}` at `{loc_id}` fails to define storage_cap_per_unit when "
+            "specifying technology in units_max/min/equals"
         )
 
     # Gather remaining unallowed constraints

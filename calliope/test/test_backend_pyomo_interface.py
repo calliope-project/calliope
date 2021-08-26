@@ -404,14 +404,18 @@ class TestRegeneratePersistentConstraints:
             "energy_cap_max", {("b", "test_supply_elec"): 5}
         )
         model2 = model_persistent.backend.rerun()
-        assert model2.results.energy_cap.loc[{"nodes": "b", "techs": "test_supply_elec"}] == 10
+        assert (
+            model2.results.energy_cap.loc[{"nodes": "b", "techs": "test_supply_elec"}]
+            == 10
+        )
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
     )
     def test_update_param_with_regeneration_one_dim(self, model_persistent):
         model_persistent.backend.update_param(
-            "energy_cap_max", {("b", "test_supply_elec"): 5, ("a", "test_supply_elec"): 5}
+            "energy_cap_max",
+            {("b", "test_supply_elec"): 5, ("a", "test_supply_elec"): 5},
         )
         model_persistent.backend.regenerate_persistent_solver(
             constraints={

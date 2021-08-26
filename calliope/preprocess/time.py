@@ -15,8 +15,6 @@ import pandas as pd
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
-from calliope.preprocess import checks
-from calliope.core.util.dataset import reorganise_xarray_dimensions
 
 
 def apply_time_clustering(model_data, model_run):
