@@ -45,5 +45,8 @@ overrides:
         techs.my_storage.constraints.energy_cap_per_storage_cap_min: 1
     operate_mode_min:
         techs.my_storage.constraints.energy_cap_per_storage_cap_min: 1
-        techs.my_storage.constraints.storage_cap_equals: 21
+        techs.my_storage.constraints.storage_cap_equals: 900
         run.mode: operate
+        run.operation:
+            window: 24
+            horizon: 24

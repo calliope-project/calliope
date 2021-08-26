@@ -56,6 +56,10 @@ def postprocess_model_results(results, model_data, timings):
     )
     results = clean_results(results, run_config.get("zero_threshold", 0), timings)
 
+    for var_data in results.data_vars.values():
+        if "is_result" not in var_data.attrs.keys():
+            var_data.attrs["is_result"] = 1
+
     log_time(
         logger,
         timings,
@@ -198,15 +202,5 @@ def clean_results(results, zero_threshold, timings):
         )
 
         results = results.drop_vars("unused_supply")
-
-        if not results.unmet_demand.sum():
-
-            log_time(
-                logger,
-                timings,
-                "delete_unmet_demand",
-                comment="Postprocessing: Model was feasible, deleting unmet_demand variable",
-            )
-            results = results.drop_vars("unmet_demand")
 
     return results

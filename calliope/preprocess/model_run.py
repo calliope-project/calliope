@@ -203,34 +203,18 @@ def apply_overrides(config, scenario=None, override_dict=None):
         config_model.union(override_dict, allow_override=True, allow_replacement=True)
 
     if scenario:
-        scenarios = config_model.get("scenarios", {})
-
-        if scenario in scenarios.keys():
-            # Manually defined scenario names cannot be the same as single
-            # overrides or any combination of semicolon-delimited overrides
-            if all(
-                [i in config_model.get("overrides", {}) for i in scenario.split(",")]
-            ):
-                raise exceptions.ModelError(
-                    "Name of a manually defined scenario cannot be a combination of override names."
-                )
-            if not isinstance(scenarios[scenario], list):
-                raise exceptions.ModelError(
-                    "Scenario definition must be a list of override names."
-                )
-            overrides = [str(i) for i in scenarios[scenario]]
-            logger.info(
-                "Using scenario `{}` leading to the application of "
-                "overrides `{}`.".format(scenario, overrides)
+        scenario_overrides = load_overrides_from_scenario(config_model, scenario)
+        if not all(i in config_model.get("overrides", {}) for i in scenario_overrides):
+            raise exceptions.ModelError(
+                "Scenario definition must be a list of override or other scenario names."
             )
         else:
-            overrides = str(scenario).split(",")
             logger.info(
-                "Applying the following overrides without a "
-                "specific scenario name: {}".format(overrides)
+                "Applying the following overrides from scenario definition: {} ".format(
+                    scenario_overrides
+                )
             )
-
-        overrides_from_scenario = combine_overrides(config_model, overrides)
+        overrides_from_scenario = combine_overrides(config_model, scenario_overrides)
 
         warning_messages = checks.check_overrides(config_model, overrides_from_scenario)
         exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
@@ -251,7 +235,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
         for k, v in overrides_from_scenario.as_dict_flat().items():
             debug_comments.set_key("{}".format(k), "Applied from override")
     else:
-        overrides = []
+        scenario_overrides = []
 
     # Second pass of applying override dict after applying scenarios,
     # so that scenario-based overrides are overridden by override_dict!
@@ -280,7 +264,7 @@ def apply_overrides(config, scenario=None, override_dict=None):
     config_model.del_key("nodes.default_node")
     config_model.del_key("links.default_node_from,default_node_to")
 
-    return config_model, debug_comments, overrides, scenario
+    return config_model, debug_comments, scenario_overrides, scenario
 
 
 def get_parents(tech_id, model_config):
@@ -451,6 +435,39 @@ def process_techs(config_model):
         result[tech_id] = tech_result
 
     return result, debug_comments, errors
+
+
+def load_overrides_from_scenario(config_model, scenario):
+    def _get_overrides(scenario_name):
+        _overrides = config_model.get_key(f"scenarios.{scenario_name}", [scenario_name])
+        if isinstance(_overrides, list):
+            return _overrides
+        else:
+            return [_overrides]
+
+    if scenario in config_model.get("scenarios", {}).keys():
+        if "," in scenario:
+            warnings.warn(
+                f"Scenario name `{scenario}` includes commas that won't be parsed as a list of overrides."
+            )
+        logger.info("Loading overrides from scenario: {} ".format(scenario))
+        scenario_list = _get_overrides(scenario)
+    else:
+        scenario_list = scenario.split(",")
+    scenario_overrides = set()
+    for override in scenario_list:
+        if isinstance(override, dict):
+            raise exceptions.ModelError(
+                "Scenario definition must be a list of override or other scenario names."
+            )
+        if override in config_model.get("scenarios", {}).keys():
+            scenario_overrides.update(
+                load_overrides_from_scenario(config_model, override)
+            )
+        else:
+            scenario_overrides.add(override)
+
+    return list(scenario_overrides)
 
 
 def process_tech_groups(config_model, techs):

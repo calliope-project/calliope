@@ -1901,7 +1901,6 @@ class TestLogging:
         duplicates = [
             item
             for item, count in collections.Counter(all_log_messages).items()
-            if count > 1
-            if item != ""
+            if count > 1 and item != "" and not item.startswith("Constructing")
         ]
         assert duplicates == []
