@@ -13,7 +13,7 @@ def model():
 
 class TestGetParam:
     def test_get_param_with_timestep_existing(self):
-        """"""
+        """ """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run()
         param = get_param(
@@ -24,7 +24,7 @@ class TestGetParam:
         assert po.value(param) == -5  # see demand_elec.csv
 
     def test_get_param_no_timestep_existing(self):
-        """"""
+        """ """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run()
         param = get_param(
@@ -35,7 +35,7 @@ class TestGetParam:
         assert po.value(param) == 0.9  # see test model.yaml
 
     def test_get_param_no_timestep_possible(self):
-        """"""
+        """ """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run()
         param = get_param(m._backend_model, "energy_cap_max", ("b", "test_supply_elec"))
@@ -47,7 +47,7 @@ class TestGetParam:
         assert po.value(param) == 10
 
     def test_get_param_from_default(self):
-        """"""
+        """ """
         m = build_model({}, "simple_supply_and_supply_plus,two_hours,investment_costs")
         m.run()
 

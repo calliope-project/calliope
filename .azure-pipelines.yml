@@ -1,6 +1,6 @@
 trigger:
   - master
-  - '*'
+  - "*"
 
 pr:
   - master
@@ -35,7 +35,7 @@ steps:
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - powershell: |
-      wget https://bintray.com/coin-or/download/download_file?file_path=Cbc-2.10.3-win32-msvc15.zip -O cbc.zip
+      wget https://www.coin-or.org/download/binary/Cbc/Cbc-2.10-win64-msvc15-md.zip -O cbc.zip
       7z x cbc.zip -ocbc
     displayName: Download and set path for CBC (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )

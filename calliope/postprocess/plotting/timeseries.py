@@ -126,7 +126,7 @@ def _get_var_data(var, model, dataset, visible, subset, sum_dims, squeeze):
         else:
             return array.values
 
-    if hasattr(model, "results"):
+    if hasattr(model, "results") and len(model.results.data_vars) > 0:
         array_prod = _get_reindexed_array(
             "carrier_prod", index=["nodes", "techs", "carriers"], fillna=0
         )

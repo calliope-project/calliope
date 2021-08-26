@@ -109,9 +109,9 @@ class TestUrbanScaleMILP:
 
 
 class TestModelSettings:
-    @pytest.fixture(scope="module")
-    def override(self):
-        def _override(feasibility, cap_val):
+    @pytest.fixture
+    def model(self):
+        def _model(self, feasibility, cap_val):
             override_dict = {
                 "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
                 "links.a,b.exists": False,
@@ -127,35 +127,69 @@ class TestModelSettings:
                 },
                 "techs.test_supply_elec.switches.force_resource": True,
             }
+            model = build_model(override_dict=override_dict, scenario="investment_costs")
+            model.run()
 
-            return override_dict
+        return _model
 
-        return _override
+    @pytest.fixture
+    def model_no_unmet(self):
+        return self.model(True, 10)
 
-    @pytest.mark.parametrize(
-        ("feasibility", "resource"),
-        ((True, 10), (True, 5), (True, 15), (False, 15), (False, 5)),
-    )
-    def test_feasibility(self, override, feasibility, resource):
+    @pytest.fixture
+    def model_unmet_demand(self):
+        return self.model(True, 5)
 
-        model = build_model(
-            override_dict=override(feasibility, resource), scenario="investment_costs"
+    @pytest.fixture
+    def model_unused_supply(self):
+        return self.model(True, 15)
+
+    def test_unmet_demand_zero(self, model_no_unmet):
+
+        # Feasible case, but unmet_demand/unused_supply is not deleted
+        for i in ["unmet_demand", "unused_supply"]:
+            assert hasattr(model_no_unmet._backend_model, i)
+        assert "unmet_demand" in model_no_unmet._model_data.data_vars.keys()
+        assert "unused_supply" not in model_no_unmet._model_data.data_vars.keys()
+        assert (model_no_unmet._model_data["unmet_demand"] == 0).all()
+
+    def test_unmet_demand_nonzero(self, model_unmet_demand):
+
+        # Infeasible case, unmet_demand is required
+        assert hasattr(model_unmet_demand._backend_model, "unmet_demand")
+        assert hasattr(model_unmet_demand._backend_model, "unused_supply")
+        assert model_unmet_demand._model_data["unmet_demand"].sum() == 15
+        assert "unused_supply" not in model_unmet_demand._model_data.data_vars.keys()
+
+    def test_unmet_supply_nonzero(self, model_unused_supply):
+        # Infeasible case, unused_supply is required
+        assert hasattr(model_unused_supply._backend_model, "unmet_demand")
+        assert hasattr(model_unused_supply._backend_model, "unused_supply")
+        assert model_unused_supply._model_data["unmet_demand"].sum() == -15
+        assert "unused_supply" not in model_unused_supply._model_data.data_vars.keys()
+
+    def test_expected_impact_on_objective_function_value(
+        self, model_no_unmet, model_unmet_demand, model_unused_supply
+    ):
+        assert (
+            model_unused_supply._backend_model.obj.expr()
+            - model_no_unmet._backend_model.obj.expr()
+            == approx(1e3 * 15)
         )
-        model.run()
-        if feasibility is True:
-            for i in ["unmet_demand", "unused_supply"]:
-                assert hasattr(model._backend_model, i)
-                assert "unused_supply" not in model._model_data.data_vars.keys()
-            if resource != 10:
-                assert "unmet_demand" in model._model_data.data_vars.keys()
-                deviation = (10 - resource) * 3
-                assert model._model_data["unmet_demand"].sum() == approx(deviation)
-            else:
-                assert "unmet_demand" not in model._model_data.data_vars.keys()
-        else:
-            assert not hasattr(model._backend_model, "unmet_demand")
-            assert not hasattr(model._backend_model, "unused_supply")
-            assert model._model_data.attrs["termination_condition"] != "optimal"
+
+        assert (
+            model_unmet_demand._backend_model.obj.expr()
+            - model_no_unmet._backend_model.obj.expr()
+            == approx(1e3 * 15)
+        )
+
+    @pytest.mark.parametrize("override", (5, 15))
+    def test_expected_infeasible_result(self, override):
+        model = self.model(False, override)
+
+        assert not hasattr(model._backend_model, "unmet_demand")
+        assert not hasattr(model._backend_model, "unused_supply")
+        assert not model._model_data.attrs["termination_condition"] == "optimal"
 
 
 class TestEnergyCapacityPerStorageCapacity:
@@ -221,11 +255,7 @@ class TestEnergyCapacityPerStorageCapacity:
     @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_mode(self, model_file):
         model = build_model(model_file=model_file, scenario="operate_mode_min")
-        with pytest.raises(calliope.exceptions.ModelError) as error:
-            model.run()
-        assert check_error_or_warning(
-            error, "Operational mode requires a timestep window and horizon"
-        )
+        model.run()
 
     @pytest.mark.parametrize(
         "horizon_window", [(24, 24), (48, 48), (72, 48), (144, 24)]
