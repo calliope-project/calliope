@@ -204,8 +204,8 @@ def run_spores(
             subset = {}
         # Define default scoring function, based on integer scoring method
         # TODO: make it possible to point to a custom function instead of this one
-        cap_loc_score = xr.where(results.energy_cap > 1e-3, 100, 0).loc[subset]
-        return cap_loc_score.to_series()
+        cap_loc_score = xr.where(results.energy_cap > 1e-3, 100, 0)
+        return cap_loc_score.to_series()[subset]
 
     # Define function to update "spores_score" after each iteration of the method
     def _update_spores_score(backend_model, cap_loc_score):
@@ -224,7 +224,7 @@ def run_spores(
 
     def _get_updated_spores_inputs(backend_model):
         inputs = interface.access_pyomo_model_inputs(backend_model)
-        inputs_to_keep = ["cost_energy_cap", "group_cost_max"]
+        inputs_to_keep = ["cost_energy_cap"]
         return inputs[inputs_to_keep]
 
     def _combine_spores_results_and_inputs(
@@ -364,7 +364,7 @@ def run_spores(
         # Storing results and scores in the specific dictionaries
         _add_results_to_list(backend_model, spores_results, results, 0)
         cumulative_spores_scores = init_spores_scores + _cap_loc_score_default(
-            results, init_spores_scores.index
+            results, init_spores_scores.index.droplevel("costs")
         )
         # Set group constraint "cost_max" equal to slacked cost
         _update_slack_cost_constraint(backend_model)
@@ -418,7 +418,7 @@ def run_spores(
             _add_results_to_list(backend_model, spores_results, results, _spore)
             print(f"Updating capacity scores from {cumulative_spores_scores.sum()}...")
             cumulative_spores_scores += _cap_loc_score_default(
-                results, init_spores_scores.index
+                results, init_spores_scores.index.droplevel("costs")
             )
             print(f"... to {cumulative_spores_scores.sum()}")
             # Update "spores_score" based on previous iteration

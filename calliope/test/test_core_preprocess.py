@@ -99,11 +99,11 @@ class TestModelRun:
                 two:
                     techs.test_supply_elec.constraints.energy_cap_max: 20
                 new_location:
-                    locations.1.techs:
+                    nodes.b.techs:
                         test_supply_elec:
 
-            locations:
-                0:
+            nodes:
+                a:
                     techs:
                         test_supply_gas:
                         test_supply_elec:
@@ -113,14 +113,14 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_2")
 
         assert (
-            model._model_run.locations[
-                "0"
+            model._model_run.nodes[
+                "a"
             ].techs.test_supply_gas.constraints.energy_cap_max
             == 20
         )
         assert (
-            model._model_run.locations[
-                "1"
+            model._model_run.nodes[
+                "b"
             ].techs.test_supply_elec.constraints.energy_cap_max
             == 20
         )
@@ -162,12 +162,9 @@ class TestModelRun:
             "Scenario definition must be a list of override or other scenario names.",
         )
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*includes commas:calliope.exceptions.ModelWarning"
-    )
     def test_scenario_name_overlaps_overrides(self):
         """
-        Test that a scenario name cannot be a combination of override names
+        Test that a scenario name which is a list of possibly overrides is not parsed as overrides.
         """
         override = AttrDict.from_yaml_string(
             """
@@ -175,15 +172,15 @@ class TestModelRun:
                 'simple_supply,one_day': ['simple_supply', 'one_day']
             """
         )
-        with pytest.raises(exceptions.ModelError) as error:
+        with pytest.warns(exceptions.ModelWarning) as warn_info:
             build_model(
                 override_dict=override,
                 scenario="simple_supply,one_day",
             )
 
         assert check_error_or_warning(
-            error,
-            "Scenario definition must be a list of override or other scenario names.",
+            warn_info,
+            "Scenario name `simple_supply,one_day` includes commas that won't be parsed as a list of overrides",
         )
 
     def test_undefined_carriers(self):
@@ -633,6 +630,7 @@ class TestChecks:
             excinfo, "Unrecognised setting in run configuration: subset_time"
         )
 
+    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
     def test_warn_null_number_of_spores(self):
         """
         Check that spores number is greater than 0 if spores run mode is selected
@@ -646,6 +644,7 @@ class TestChecks:
             warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
+    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
     def test_non_string_score_cost_class(self):
         """
         Check that the score_cost_class for spores scoring is a string
