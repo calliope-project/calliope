@@ -41,14 +41,18 @@ def run(model_data, timings, build_only=False):
 
     INTERFACE = {"pyomo": pyomo_interface}
 
-    run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
-
+    run_config = UpdateObserverDict(
+        initial_yaml_string=model_data.attrs["run_config"],
+        name="run_config",
+        observer=model_data,
+    )
+    backend_name = run_config["backend"]
     if run_config["mode"] == "plan":
         results, backend, opt = run_plan(
             model_data,
             run_config,
             timings,
-            backend=BACKEND[run_config.backend],
+            backend=BACKEND[backend_name],
             build_only=build_only,
         )
 
@@ -57,7 +61,7 @@ def run(model_data, timings, build_only=False):
             model_data,
             run_config,
             timings,
-            backend=BACKEND[run_config.backend],
+            backend=BACKEND[backend_name],
             build_only=build_only,
         )
 
@@ -66,12 +70,12 @@ def run(model_data, timings, build_only=False):
             model_data,
             run_config,
             timings,
-            interface=INTERFACE[run_config.backend],
-            backend=BACKEND[run_config.backend],
+            interface=INTERFACE[backend_name],
+            backend=BACKEND[backend_name],
             build_only=build_only,
         )
 
-    return results, backend, opt, INTERFACE[run_config.backend].BackendInterfaceMethods
+    return results, backend, opt, INTERFACE[backend_name].BackendInterfaceMethods
 
 
 def run_plan(
@@ -104,11 +108,6 @@ def run_plan(
         if allow_warmstart:
             warmstart = True
 
-    run_config = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs["run_config"],
-        name="run_config",
-        observer=model_data,
-    )
     solver = run_config["solver"]
     solver_io = run_config.get("solver_io", None)
     solver_options = run_config.get("solver_options", None)
