@@ -18,7 +18,7 @@ import os
 sys.path.append(os.path.abspath("_extensions"))
 sys.path.append(os.path.abspath("helpers"))
 
-from sphinx.builders.html import StandaloneHTMLBuilder, SingleFileHTMLBuilder
+from sphinx.builders.singlehtml import StandaloneHTMLBuilder, SingleFileHTMLBuilder
 
 import generate_tables  # from helpers
 
@@ -65,9 +65,9 @@ MOCK_MODULES = [
     "pyomo.core",
     "pyomo.opt",
     "pyomo.environ",
-    "pyutilib",
-    "pyutilib.services",
-    "pyutilib.services.TempfileManager",
+    "pyomo.common",
+    "pyomo.common.tempfiles",
+    "pyomo.common.tempfiles.TempfileManager",
     "yaml",
     "pandas",
     "pandas.api",

@@ -165,7 +165,7 @@ def plot_transmission(model, mapbox_access_token=None, **kwargs):
 
     plot_width = 1000
 
-    if hasattr(model, "results"):
+    if hasattr(model, "results") and len(model.results.data_vars) > 0:
         energy_cap = _get_data(model, "energy_cap")
         carrier_prod = _get_data(
             model, "carrier_prod", sum_dims=["timesteps", "carriers"]

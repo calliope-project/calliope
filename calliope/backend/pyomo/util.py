@@ -98,6 +98,9 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
     sparse : bool, optional; default = False
         If extracting Pyomo Param data, the output sparse array includes inputs
         the user left as NaN replaced with the default value for that Param.
+    expr : bool, optional
+        If True, treat var as a pyomo expression, which requires calculating
+        the result of the expression before translating into nd data structure
     """
     try:
         var_container = getattr(backend_model, var)
@@ -111,12 +114,15 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
             dims = [var_container.index_set().name]
 
     if sparse and not expr:
-        result = pd.Series(var_container.extract_values_sparse())
-    else:
-        if expr:
+        if invalid(var_container.default()):
             result = pd.Series(var_container._data).apply(
                 lambda x: po.value(x) if not invalid(x) else np.nan
             )
+        else:
+            result = pd.Series(var_container.extract_values_sparse())
+    else:
+        if expr:
+            result = pd.Series(var_container._data).apply(po.value)
         else:
             result = pd.Series(var_container.extract_values())
     if result.empty:
@@ -162,7 +168,9 @@ def get_domain(var: xr.DataArray) -> str:
 
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
-        return val._value == po.base.param._NotValid or pd.isnull(po.value(val))
+        return val._value == po.Param.NoValue or po.value(val) is None
+    elif val == po.Param.NoValue:
+        return True
     else:
         return pd.isnull(val)
 
@@ -200,8 +208,7 @@ def string_to_datetime(
 ) -> xr.Dataset:
     """
     Convert from string to datetime xarray dataarrays, reverting the process
-    undertaken in
-    datetime_to_string
+    undertaken in datetime_to_string
 
     Parameters
     ----------

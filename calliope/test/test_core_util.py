@@ -1,4 +1,3 @@
-from calliope.backend.run import run
 from calliope.core.attrdict import AttrDict
 import pytest  # noqa: F401
 import calliope
@@ -8,21 +7,18 @@ import os
 import tempfile
 
 import xarray as xr
-import pandas as pd
 import numpy as np
 
 from calliope.core.util import dataset, observed_dict, checks
 
 from calliope.core.util.tools import memoize, memoize_instancemethod
 
-from calliope import exceptions
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
 
 from calliope.test.common.util import (
     python36_or_higher,
     check_error_or_warning,
-    build_test_model,
 )
 
 _MODEL_NATIONAL = os.path.join(
@@ -164,7 +160,7 @@ class TestGenerateRuns:
         )
         assert len(runs) == 3
         assert runs[0].endswith(
-            "--scenario time_resampling --save_netcdf out_1_time_resampling.nc"
+            "--scenario time_resampling --save_netcdf out_1_time_resampling.nc --save_plots plots_1_time_resampling.html"
         )
 
     @python36_or_higher
@@ -172,7 +168,7 @@ class TestGenerateRuns:
         runs = generate_runs(_MODEL_NATIONAL, scenarios=None)
         assert len(runs) == 2
         assert runs[0].endswith(
-            "--scenario cold_fusion_with_production_share --save_netcdf out_1_cold_fusion_with_production_share.nc"
+            "--scenario cold_fusion_with_production_share --save_netcdf out_1_cold_fusion_with_production_share.nc --save_plots plots_1_cold_fusion_with_production_share.html"
         )
 
     @python36_or_higher
@@ -182,7 +178,9 @@ class TestGenerateRuns:
             scenarios=None,
         )
         assert len(runs) == 4
-        assert runs[0].endswith("--scenario milp --save_netcdf out_1_milp.nc")
+        assert runs[0].endswith(
+            "--scenario milp --save_netcdf out_1_milp.nc --save_plots plots_1_milp.html"
+        )
 
 
 class TestPandasExport:
@@ -351,9 +349,7 @@ class TestChecks:
         bar = [1, 0, 0]
         x = ["a", "b", "c"]
         y = ["A", "B"]
-        run_config_dict = AttrDict(
-            {"run.option1.suboption1": 1, "run.option2": 2}
-        )
+        run_config_dict = AttrDict({"run.option1.suboption1": 1, "run.option2": 2})
         model_config_dict = AttrDict(
             {"model.option1.suboption1": True, "model.option2": False}
         )
@@ -381,12 +377,20 @@ class TestChecks:
             },
             "checkname3": {
                 "fail_where": ["foo", "and", "bar"],
-                "fail_if_any": {"lhs": ["foo", "multiply", "bar"], "operator": "ge", "rhs": [1]},
+                "fail_if_any": {
+                    "lhs": ["foo", "multiply", "bar"],
+                    "operator": "ge",
+                    "rhs": [1],
+                },
                 "warning": "expected_warning",
             },
             "checkname4": {
                 "fail_where": ["foo", "and", "bar"],
-                "fail_if_any": {"lhs": ["foo", "multiply", "bar"], "operator": "gt", "rhs": [1]},
+                "fail_if_any": {
+                    "lhs": ["foo", "multiply", "bar"],
+                    "operator": "gt",
+                    "rhs": [1],
+                },
                 "warning": "expected_pass",
             },
         }
@@ -407,9 +411,7 @@ class TestChecks:
         ("method", "result"),
         [("multiply", [[1, 0], [0, 2], [0, 1]]), ("add", [[2, 1], [1, 3], [1, 2]])],
     )
-    @pytest.mark.parametrize(
-        "static_val", [1, 1.0, "run.option1.suboption1"]
-    )
+    @pytest.mark.parametrize("static_val", [1, 1.0, "run.option1.suboption1"])
     def test_static_vals(self, model_data, method, result, static_val):
         parsed = checks._parse_vars(model_data, ["foo", method, static_val], "name")
         assert np.array_equal(parsed, result)
@@ -432,13 +434,13 @@ class TestChecks:
     def test_too_many_methods(self, model_data):
         with pytest.raises(
             AssertionError,
-            match=f"Too many numpy operators compared to variables to check in tabular data check name",
+            match="Too many numpy operators compared to variables to check in tabular data check name",
         ):
             checks._parse_vars(model_data, ["foo", "multiply", "divide"], "name")
 
     def test_unknown_var(self, model_data):
         with pytest.raises(
-            ValueError, match=f"Unable to parse variable baz in tabular data check name"
+            ValueError, match="Unable to parse variable baz in tabular data check name"
         ):
             checks._parse_vars(model_data, ["foo", "multiply", "baz"], "name")
 
@@ -449,9 +451,9 @@ class TestChecks:
 
             warnings, errors = checks.check_tabular_data(model_data, checklist_path)
             assert "expected_error" in errors
-            assert not "expected_pass" in errors
-            assert not "expected_warning" in errors
+            assert "expected_pass" not in errors
+            assert "expected_warning" not in errors
 
             assert "expected_warning" in warnings
-            assert not "expected_pass" in warnings
-            assert not "expected_error" in warnings
+            assert "expected_pass" not in warnings
+            assert "expected_error" not in warnings

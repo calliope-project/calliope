@@ -65,6 +65,8 @@ class AttrDict(dict):
 
     """
 
+    __name__ = "AttrDict"
+
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
 

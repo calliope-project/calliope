@@ -11,7 +11,7 @@ from calliope.core.attrdict import AttrDict
 from calliope.preprocess import time
 
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import constraint_sets, defaults, check_error_or_warning
+from calliope.test.common.util import defaults, check_error_or_warning
 
 
 class TestModelRun:
@@ -45,7 +45,7 @@ class TestModelRun:
     )
     def test_valid_scenarios(self):
         """
-        Test that valid scenario definition raises no error and results in applied scenario.
+        Test that valid scenario definition from overrides raises no error and results in applied scenario.
         """
         override = AttrDict.from_yaml_string(
             """
@@ -79,6 +79,52 @@ class TestModelRun:
             == 20
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning"
+    )
+    def test_valid_scenario_of_scenarios(self):
+        """
+        Test that valid scenario definition which groups scenarios and overrides raises
+        no error and results in applied scenario.
+        """
+        override = AttrDict.from_yaml_string(
+            """
+            scenarios:
+                scenario_1: ['one', 'two']
+                scenario_2: ['scenario_1', 'new_location']
+
+            overrides:
+                one:
+                    techs.test_supply_gas.constraints.energy_cap_max: 20
+                two:
+                    techs.test_supply_elec.constraints.energy_cap_max: 20
+                new_location:
+                    locations.1.techs:
+                        test_supply_elec:
+
+            locations:
+                0:
+                    techs:
+                        test_supply_gas:
+                        test_supply_elec:
+                        test_demand_elec:
+            """
+        )
+        model = build_model(override_dict=override, scenario="scenario_2")
+
+        assert (
+            model._model_run.locations[
+                "0"
+            ].techs.test_supply_gas.constraints.energy_cap_max
+            == 20
+        )
+        assert (
+            model._model_run.locations[
+                "1"
+            ].techs.test_supply_elec.constraints.energy_cap_max
+            == 20
+        )
+
     def test_invalid_scenarios_dict(self):
         """
         Test that invalid scenario definition raises appropriate error
@@ -94,7 +140,8 @@ class TestModelRun:
             build_model(override_dict=override, scenario="scenario_1")
 
         assert check_error_or_warning(
-            error, "Scenario definition must be a list of override names."
+            error,
+            "Scenario definition must be a list of override or other scenario names.",
         )
 
     def test_invalid_scenarios_str(self):
@@ -111,9 +158,13 @@ class TestModelRun:
             build_model(override_dict=override, scenario="scenario_1")
 
         assert check_error_or_warning(
-            error, "Scenario definition must be a list of override names."
+            error,
+            "Scenario definition must be a list of override or other scenario names.",
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*includes commas:calliope.exceptions.ModelWarning"
+    )
     def test_scenario_name_overlaps_overrides(self):
         """
         Test that a scenario name cannot be a combination of override names
@@ -132,7 +183,7 @@ class TestModelRun:
 
         assert check_error_or_warning(
             error,
-            "Name of a manually defined scenario cannot be a combination of override names.",
+            "Scenario definition must be a list of override or other scenario names.",
         )
 
     def test_undefined_carriers(self):
@@ -850,7 +901,7 @@ class TestChecks:
             build_model(override_dict=override2, scenario="simple_supply,one_day")
 
     @pytest.mark.filterwarnings(
-        "ignore: defines force_resource but not a finite resource:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*defines force_resource but not a finite resource:calliope.exceptions.ModelWarning"
     )
     def test_missing_required_constraints(self):
         """

@@ -7,10 +7,11 @@ import calliope
 from calliope.backend.pyomo.util import get_var, string_to_datetime
 from calliope.backend import run as backend_run
 from calliope.backend.pyomo import model as run_pyomo
+import calliope.backend.pyomo.interface as pyomo_interface
 
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.core.util.logging import log_time
-from calliope import exceptions
+from calliope import exceptions, AttrDict
 from calliope.postprocess.results import postprocess_model_results
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def access_pyomo_model_inputs(backend_model):
     """
     If the user wishes to inspect the parameter values used as inputs in the backend
     model, they can access a new Dataset of all the backend model inputs, including
-    defaults applied where the user did not specify anything for a loc::tech
+    defaults applied where the user did not specify anything for a specific indexed element.
     """
     # TODO: update replace with 'removeprefix' once using py 3.9+
     all_params = {
@@ -32,13 +33,15 @@ def access_pyomo_model_inputs(backend_model):
         for i in backend_model.component_objects(ctype=po.Param)
         if i.is_indexed()
     }
-    inputs = xr.Dataset(all_params)
-    inputs = string_to_datetime(backend_model, inputs)
+    all_param_ds = reorganise_xarray_dimensions(xr.Dataset(all_params))
+    all_param_ds = string_to_datetime(backend_model, all_param_ds)
+    for var in all_param_ds.data_vars:
+        all_param_ds[var].attrs["is_result"] = 0
 
-    return reorganise_xarray_dimensions(inputs)
+    return all_param_ds
 
 
-def update_pyomo_param(backend_model, param, update_dict):
+def update_pyomo_param(backend_model, opt, param, update_dict):
     """
     A Pyomo Param value can be updated without the user directly accessing the
     backend model.
@@ -71,9 +74,47 @@ def update_pyomo_param(backend_model, param, update_dict):
         )
     elif not isinstance(update_dict, dict):
         raise TypeError("`update_dict` must be a dictionary")
-
     else:
         getattr(backend_model, param).store_values(update_dict)
+
+    if opt is not None and "persistent" in opt.name:
+        exceptions.warn(
+            "Updating the Pyomo parameter won't affect the optimisation run without also "
+            "regenerating the relevant constraints or the objective function (see `regenerate_persistent_solver`)."
+        )
+
+
+def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, obj=False):
+    """
+    Having updated a Pyomo Param or several of them, this function can be used
+    to regenerate associated constraints in a persistent solver interface, such
+    as "gurobi_persistent", before rerunning the model.
+    The entire constraint need not be regenerated, it is possible to only point to
+    those indexes whose associated parameters have changed.
+
+    Parameters
+    ----------
+    constraints : dict of lists or None, default = None
+        Names of constraints as keys and list of constraint index items as values,
+        e.g. `{"energy_capacity_constraint": [("X1", "pv")]}` or `{"cost_constraint": [("monetary", "X1", "pv"), ("monetary", "X2", "pv")])}`.
+        Order of index values can be inferred by inspecting the constraint.
+    obj : bool, default = False
+        If True, will also regenerate the objective function.
+    """
+    if opt is None or "persistent" not in opt.name:
+        raise exceptions.ModelError(
+            "Can only regenerate persistent solvers. No persistent solver object found for this model run."
+        )
+
+    if obj is True:
+        opt.set_objective(backend_model.obj)
+    if constraints is not None:
+        for constraint_name, constraint_idx in constraints.items():
+            for idx in constraint_idx:
+                opt.remove_constraint(getattr(backend_model, constraint_name)[idx])
+                opt.add_constraint(getattr(backend_model, constraint_name)[idx])
+
+    return opt
 
 
 def activate_pyomo_constraint(backend_model, constraint, active=True):
@@ -105,7 +146,7 @@ def activate_pyomo_constraint(backend_model, constraint, active=True):
         raise ValueError("Argument `active` must be True or False")
 
 
-def rerun_pyomo_model(model_data, run_config, backend_model):
+def rerun_pyomo_model(model_data, backend_model, opt):
     """
     Rerun the Pyomo backend, perhaps after updating a parameter value,
     (de)activating a constraint/objective or updating run options in the model
@@ -116,41 +157,45 @@ def rerun_pyomo_model(model_data, run_config, backend_model):
     new_model : calliope.Model
         New calliope model, including both inputs and results, but no backend interface.
     """
-    backend_model.__calliope_run_config = run_config
-
-    if run_config["mode"] != "plan":
-        raise exceptions.ModelError(
-            "Cannot rerun the backend in {} run mode. Only `plan` mode is "
-            "possible.".format(run_config["mode"])
-        )
-
+    backend_model.__calliope_run_config = AttrDict.from_yaml_string(
+        model_data.attrs["run_config"]
+    )
     timings = {}
     log_time(logger, timings, "model_creation")
+    inputs = access_pyomo_model_inputs(backend_model)
 
-    results, backend_model = backend_run.run_plan(
-        model_data,
-        run_config,
-        timings,
-        run_pyomo,
+    run_mode = backend_model.__calliope_run_config["mode"]
+    if run_mode == "plan":
+        kwargs = {}
+    elif run_mode == "spores":
+        kwargs = {"interface": pyomo_interface}
+    else:
+        raise exceptions.ModelError(
+            "Cannot rerun the backend in {} run mode. Only `plan` or `spores` modes are "
+            "possible.".format(run_mode)
+        )
+    run_func = getattr(backend_run, f"run_{run_mode}")
+    results, backend_model, opt = run_func(
+        model_data=model_data,
+        timings=timings,
+        backend=run_pyomo,
         build_only=False,
         backend_rerun=backend_model,
+        opt=opt,
+        **kwargs,
     )
-
-    inputs = access_pyomo_model_inputs(backend_model)
 
     # Add additional post-processed result variables to results
     if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
-        results = postprocess_model_results(
-            results, model_data.reindex(results.coords), timings
-        )
+        results = postprocess_model_results(results, model_data, timings)
 
-    for key, var in results.data_vars.items():
+    for var in results.data_vars.values():
         var.attrs["is_result"] = 1
 
-    for key, var in inputs.data_vars.items():
+    for var in inputs.data_vars.values():
         var.attrs["is_result"] = 0
 
-    new_model_data = xr.merge((results, inputs))
+    new_model_data = xr.merge((results, inputs), compat="override")
     new_model_data.attrs.update(model_data.attrs)
     new_model_data.attrs.update(results.attrs)
 
@@ -286,6 +331,7 @@ def get_all_pyomo_model_attrs(subsets, backend_model):
 class BackendInterfaceMethods:
     def __init__(self, model):
         self._backend = model._backend_model
+        self._opt = model._backend_model_opt
         self._model_data = model._model_data
         self.run_config = model.run_config
         self.subsets = model.subsets
@@ -296,7 +342,7 @@ class BackendInterfaceMethods:
     access_model_inputs.__doc__ = access_pyomo_model_inputs.__doc__
 
     def update_param(self, *args, **kwargs):
-        return update_pyomo_param(self._backend, *args, **kwargs)
+        return update_pyomo_param(self._backend, self._opt, *args, **kwargs)
 
     update_param.__doc__ = update_pyomo_param.__doc__
 
@@ -307,14 +353,17 @@ class BackendInterfaceMethods:
 
     def rerun(self, *args, **kwargs):
         return rerun_pyomo_model(
-            self._model_data,
-            self.run_config,
-            self._backend,
-            *args,
-            **kwargs,
+            self._model_data, self._backend, self._opt, *args, **kwargs
         )
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
+
+    def regenerate_persistent_solver(self, *args, **kwargs):
+        self._opt = regenerate_persistent_pyomo_solver(
+            self._backend, self._opt, *args, **kwargs
+        )
+
+    regenerate_persistent_solver.__doc__ = regenerate_persistent_pyomo_solver.__doc__
 
     def add_constraint(self, *args, **kwargs):
         self._backend = add_pyomo_constraint(self._backend, *args, **kwargs)

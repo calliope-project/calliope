@@ -1,10 +1,10 @@
+from calliope import exceptions
 import shutil
 
 import pytest
 from pytest import approx
 import pandas as pd
 import numpy as np
-
 import calliope
 from calliope.test.common.util import check_error_or_warning
 
@@ -69,13 +69,9 @@ class TestNationalScaleExampleModelSenseChecks:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
+    @pytest.importorskip("gurobipy")
     def test_nationalscale_example_results_gurobi(self):
-        try:
-            import gurobipy  # noqa: F401
-
-            self.example_tester(solver="gurobi", solver_io="python")
-        except ImportError:
-            pytest.skip("Gurobi not installed")
+        self.example_tester(solver="gurobi", solver_io="python")
 
     def test_nationalscale_example_results_cplex(self):
         if shutil.which("cplex"):
@@ -118,13 +114,13 @@ class TestNationalScaleExampleModelInfeasibility:
 
         model.run()
 
-        assert model.results.attrs["termination_condition"] in [
+        assert model.results.termination_condition in [
             "infeasible",
             "other",
         ]  # glpk gives 'other' as result
 
-        assert "systemwide_levelised_cost" not in model.results.data_vars
-        assert "systemwide_capacity_factor" not in model.results.data_vars
+        assert len(model.results.data_vars) == 0
+        assert "energy_cap" not in model._model_data.data_vars
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
@@ -149,18 +145,22 @@ class TestNationalScaleExampleModelOperate:
 
 
 class TestNationalScaleExampleModelSpores:
-    def example_tester(self):
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            model = calliope.examples.national_scale(
-                override_dict={"model.subset_time": ["2005-01-01", "2005-01-03"]},
-                scenario="spores",
-            )
+    def example_tester(self, solver="cbc", solver_io=None):
+
+        model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": solver,
+                "run.solver_io": solver_io,
+            },
+            scenario="spores",
+        )
 
         model.run(build_only=True)
 
         # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0
-        model._backend_model.objective_cost_class["monetary"].value == 1
-        model._backend_model.objective_cost_class["spores_score"].value == 0
+        assert model._backend_model.objective_cost_class["monetary"].value == 1
+        assert model._backend_model.objective_cost_class["spores_score"].value == 0
 
         model.run(force_rerun=True)
         # Expecting three spores + first optimal run
@@ -179,14 +179,65 @@ class TestNationalScaleExampleModelSpores:
         )
 
         # In each iteration, the spores_score has to increase
-        all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
+        assert all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
 
         # The final state of the objective cost class scores should be monetary: 0, spores_score: 1
-        model._backend_model.objective_cost_class["monetary"].value == 0
-        model._backend_model.objective_cost_class["spores_score"].value == 1
+        assert model._backend_model.objective_cost_class["monetary"].value == 0
+        assert model._backend_model.objective_cost_class["spores_score"].value == 1
+        return model._model_data
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning"
+    )
+    @pytest.importorskip("gurobipy")
+    def test_nationalscale_example_results_gurobi(self):
+        gurobi_data = self.example_tester("gurobi", "python")
+        gurobi_persistent_data = self.example_tester("gurobi_persistent", "python")
+        assert np.allclose(gurobi_data.energy_cap, gurobi_persistent_data.energy_cap)
+        assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
+
+    @pytest.fixture
+    def base_model_data(self):
+        model = calliope.examples.national_scale(
+            override_dict={
+                "model.subset_time": ["2005-01-01", "2005-01-03"],
+                "run.solver": "cbc",
+            },
+            scenario="spores",
+        )
+
+        model.run()
+
+        return model._model_data
+
+    @pytest.mark.parametrize("init_spore", (0, 1, 2))
+    def test_nationalscale_skip_cost_op_spores(self, base_model_data, init_spore):
+        spores_model = calliope.Model(
+            config=None, model_data=base_model_data.loc[{"spores": [init_spore + 1]}]
+        )
+        spores_model._model_data.coords["spores"] = [init_spore]
+
+        spores_model.run_config["spores_options"]["skip_cost_op"] = True
+
+        spores_model.run(force_rerun=True)
+
+        assert set(spores_model.results.spores.values) == set(range(init_spore, 4))
+        assert base_model_data.loc[{"spores": slice(init_spore + 1, None)}].equals(
+            spores_model._model_data.loc[{"spores": slice(init_spore + 1, None)}]
+        )
+
+    def test_fail_with_spores_as_input_dim(self, base_model_data):
+        spores_model = calliope.Model(
+            config=None, model_data=base_model_data.loc[{"spores": [0, 1]}]
+        )
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            spores_model.run(force_rerun=True)
+        assert check_error_or_warning(
+            excinfo, "Cannot run SPORES with a SPORES dimension in any input"
+        )
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:
@@ -439,24 +490,16 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_urban_example_results_area(self):
         self.example_tester("per_area")
 
+    @pytest.importorskip("gurobipy")
     def test_urban_example_results_area_gurobi(self):
-        try:
-            import gurobipy  # noqa: F401
-
-            self.example_tester("per_area", solver="gurobi", solver_io="python")
-        except ImportError:
-            pytest.skip("Gurobi not installed")
+        self.example_tester("per_area", solver="gurobi", solver_io="python")
 
     def test_urban_example_results_cap(self):
         self.example_tester("per_cap")
 
+    @pytest.importorskip("gurobipy")
     def test_urban_example_results_cap_gurobi(self):
-        try:
-            import gurobipy  # noqa: F401
-
-            self.example_tester("per_cap", solver="gurobi", solver_io="python")
-        except ImportError:
-            pytest.skip("Gurobi not installed")
+        self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_example_results(self):

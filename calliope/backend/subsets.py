@@ -75,7 +75,7 @@ def create_valid_subset(model_data, name, config):
 
 
 def _param_exists(model_data, param):
-    """ Assign a model data variable NaN and INF/-INF values to False, otherwise True """
+    """Assign a model data variable NaN and INF/-INF values to False, otherwise True"""
     with pd.option_context("mode.use_inf_as_na", True):
         if isinstance(model_data.get(param), xr.DataArray):
             _da = model_data.get(param)
@@ -109,7 +109,7 @@ def _val_is(model_data, param, val, _operator):
 
 
 def _get_valid_subset(imask):
-    """ From a boolean N-dimensional array to a pandas Index (1 dimension) / MultiIndex (>1 dimension) where index values are `True`"""
+    """From a boolean N-dimensional array to a pandas Index (1 dimension) / MultiIndex (>1 dimension) where index values are `True`"""
     if len(imask.dims) == 1:
         return imask[imask].coords.to_index()
     else:
@@ -118,7 +118,7 @@ def _get_valid_subset(imask):
 
 
 def _subset_imask(set_name, set_config, imask):
-    """ For some masks, we take a subset of a given dimension (e.g. only "out" in "carrier_tier") """
+    """For some masks, we take a subset of a given dimension (e.g. only "out" in "carrier_tier")"""
     for subset_name, subset in set_config.get("subset", {}).items():
         # Keep the axis if it is expected for this constraint/variable
         # Set those not in the set to False
@@ -140,7 +140,7 @@ def _subset_imask(set_name, set_config, imask):
 
 
 def _inheritance(model_data, tech_group):
-    """ Checks for base tech group inheritance (supply, supply_plus, etc.)"""
+    """Checks for base tech group inheritance (supply, supply_plus, etc.)"""
     return model_data.inheritance.str.endswith(tech_group)
 
 
@@ -251,7 +251,7 @@ def imask_where(
 
 
 def _translate_operator(_operator):
-    """ Go from 'human-readable' operators to the `operator` package methods """
+    """Go from 'human-readable' operators to the `operator` package methods"""
     if _operator == "or":
         _operator = "or_"
     elif _operator == "and":
@@ -273,7 +273,7 @@ def _translate_operator(_operator):
 
 
 def combine_imasks(curr_imask, new_imask, _operator):
-    """ Combine two booleans / boolean arrays using a specified operator (e.g. `and`, `or`)"""
+    """Combine two booleans / boolean arrays using a specified operator (e.g. `and`, `or`)"""
     imask = functools.reduce(_translate_operator(_operator), [curr_imask, new_imask])
     return imask
 

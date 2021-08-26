@@ -5,7 +5,6 @@ import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions
-from calliope.test.common.util import check_error_or_warning
 
 
 class TestIO:
@@ -84,7 +83,8 @@ class TestIO:
             assert os.path.isfile(out_path)
 
             model_from_disk = calliope.read_netcdf(out_path)
-            # FIXME test for some data in model_from_disk
+            for attr in ["results", "inputs", "run_config", "model_config"]:
+                assert hasattr(model_from_disk, attr)
 
     def test_save_read_solve_save_netcdf(self, model):
 
@@ -111,3 +111,21 @@ class TestIO:
 
             with open(out_path, "r") as f:
                 assert "energy_cap(region1_ccgt)" in f.read()
+
+    def test_save_per_spore(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            os.mkdir(os.path.join(tempdir, "output"))
+            model = calliope.examples.national_scale(
+                scenario="spores",
+                override_dict={
+                    "run.spores_options.save_per_spore": True,
+                    "run.spores_options.save_per_spore_path": os.path.join(
+                        tempdir, "output/spore_{}.nc"
+                    ),
+                },
+            )
+            model.run()
+
+            for i in ["0", "1", "2", "3"]:
+                assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
+            assert not os.path.isfile(os.path.join(tempdir, "output.nc"))
