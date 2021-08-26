@@ -1,10 +1,8 @@
 import pytest
 from pytest import approx
-import pandas as pd
 
 import calliope
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import check_error_or_warning
 
 
 class TestNationalScaleExampleModelSenseChecks:
@@ -127,7 +125,9 @@ class TestModelSettings:
                 },
                 "techs.test_supply_elec.switches.force_resource": True,
             }
-            model = build_model(override_dict=override_dict, scenario="investment_costs")
+            model = build_model(
+                override_dict=override_dict, scenario="investment_costs"
+            )
             model.run()
 
         return _model

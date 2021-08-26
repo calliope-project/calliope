@@ -176,7 +176,14 @@ def run_plan(
 
 
 def run_spores(
-    model_data, run_config, timings, interface, backend, build_only, backend_rerun=False, opt=None
+    model_data,
+    run_config,
+    timings,
+    interface,
+    backend,
+    build_only,
+    backend_rerun=False,
+    opt=None,
 ):
     """
     For use when mode is 'spores', to allow the model to be built, edited, and
@@ -286,11 +293,19 @@ def run_spores(
             print(
                 "Skipping cost optimal run and using model_data to initialise SPORES directly"
             )
-            return run_plan(model_data, run_config, timings, backend, build_only=True, **kwargs)
+            return run_plan(
+                model_data, run_config, timings, backend, build_only=True, **kwargs
+            )
         else:
             # Run once for the 'cost-optimal' solution
             return run_plan(
-                model_data, run_config, timings, backend, build_only, persistent=False, **kwargs
+                model_data,
+                run_config,
+                timings,
+                backend,
+                build_only,
+                persistent=False,
+                **kwargs,
             )
 
     def _initialise_spores_number():
@@ -320,7 +335,7 @@ def run_spores(
     if backend_rerun:
         model_data = _combine_spores_results_and_inputs(
             backend_rerun, xr.Dataset(), 0, model_data=model_data
-        )#
+        )  #
 
     spores_config = run_config["spores_options"]
     if "spores" in model_data.dims and model_data.spores.size == 1:
@@ -348,7 +363,9 @@ def run_spores(
             _save_spore(backend_model, results, init_spore, model_data=model_data)
         # Storing results and scores in the specific dictionaries
         _add_results_to_list(backend_model, spores_results, results, 0)
-        cumulative_spores_scores = init_spores_scores + _cap_loc_score_default(results, init_spores_scores.index)
+        cumulative_spores_scores = init_spores_scores + _cap_loc_score_default(
+            results, init_spores_scores.index
+        )
         # Set group constraint "cost_max" equal to slacked cost
         _update_slack_cost_constraint(backend_model)
         _update_to_spores_objective(backend_model)
@@ -400,7 +417,9 @@ def run_spores(
             # Storing results and scores in the specific dictionaries
             _add_results_to_list(backend_model, spores_results, results, _spore)
             print(f"Updating capacity scores from {cumulative_spores_scores.sum()}...")
-            cumulative_spores_scores += _cap_loc_score_default(results, init_spores_scores.index)
+            cumulative_spores_scores += _cap_loc_score_default(
+                results, init_spores_scores.index
+            )
             print(f"... to {cumulative_spores_scores.sum()}")
             # Update "spores_score" based on previous iteration
             _update_spores_score(backend_model, cumulative_spores_scores)
@@ -654,7 +673,9 @@ def run_operate(model_data, run_config, timings, backend, build_only):
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
-            if (model_data.get("include_storage", False) == 1).any() and _termination in ["optimal", "feasible"]:
+            if (
+                model_data.get("include_storage", False) == 1
+            ).any() and _termination in ["optimal", "feasible"]:
                 storage_initial = (
                     _results.storage.loc[{"timesteps": window_ends.index[i]}].drop_vars(
                         "timesteps"
@@ -669,7 +690,9 @@ def run_operate(model_data, run_config, timings, backend, build_only):
                 )
 
             # Set up total operated units for the next iteration
-            if (model_data.get("cap_method", False) == "integer").any() and _termination in ["optimal", "feasible"]:
+            if (
+                model_data.get("cap_method", False) == "integer"
+            ).any() and _termination in ["optimal", "feasible"]:
                 operated_units = _results.operating_units.sum("timesteps").astype(int)
                 model_data["operated_units"].loc[{}] += operated_units.values
                 backend_model.operated_units.store_values(

@@ -5,7 +5,6 @@ import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions
-from calliope.test.common.util import check_error_or_warning
 
 
 class TestIO:
@@ -84,7 +83,8 @@ class TestIO:
             assert os.path.isfile(out_path)
 
             model_from_disk = calliope.read_netcdf(out_path)
-            # FIXME test for some data in model_from_disk
+            for attr in ["results", "inputs", "run_config", "model_config"]:
+                assert hasattr(model_from_disk, attr)
 
     def test_save_read_solve_save_netcdf(self, model):
 

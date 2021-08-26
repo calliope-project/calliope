@@ -11,7 +11,7 @@ Implements the core Model class.
 import logging
 import warnings
 
-import numpy as np
+import xarray as xr
 
 from calliope.postprocess import results as postprocess_results
 from calliope.postprocess import plotting
@@ -23,7 +23,6 @@ from calliope.preprocess import (
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import apply_to_dict
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
@@ -177,7 +176,7 @@ class Model(object):
             observer=self._model_data,
         )
         self.subsets = UpdateObserverDict(
-            initial_yaml_string=model_data.attrs.get("subsets", "{}"),
+            initial_yaml_string=self._model_data.attrs.get("subsets", "{}"),
             name="subsets",
             observer=self._model_data,
             flat=True,
