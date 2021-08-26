@@ -733,6 +733,7 @@ def generate_model_run(
     # 6) Grab additional relevant bits from run and model config
     model_run["run"] = config["run"]
     model_run["model"] = config["model"]
+    model_run["custom_constraints"] = config.get("custom_constraints", {})
 
     # model_run["sets"] = all_sets
     model_run["subsets"] = subsets

@@ -56,6 +56,9 @@ def build_params(model_data, backend_model):
     backend_model.__calliope_run_config = AttrDict.from_yaml_string(
         model_data.attrs["run_config"]
     )
+    backend_model.__calliope_custom_constraints = AttrDict.from_yaml_string(
+        model_data.attrs["custom_constraints"]
+    )
 
     for k, v in model_data.data_vars.items():
         if v.attrs["is_result"] == 0 or (

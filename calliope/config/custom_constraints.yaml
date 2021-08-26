@@ -1,0 +1,162 @@
+custom_constraints:
+    sets:
+        wind_techs:
+            elements:
+                - onshore_wind
+                - offshore_wind
+            within: techs
+        ac_transmission:
+            elements:
+                - ac_transmission
+            within: techs
+        nordic_countries:
+            elements:
+                - FIN
+                - CHE
+                - NOR
+            within: locs
+        tims_favorite_timesteps:
+            elements:
+                - "2016-04-01 04:00"
+                - "2016-06-16 08:00"
+            within: timesteps
+        monetary_cost:
+            elements:
+                - monetary
+            within: costs
+        heat_techs:
+            elements:
+                - hp
+                - boiler
+            within: techs
+        heat:
+            elements:
+                - heat
+            within: carriers
+    parameters:
+        carrier_prod_share: 0.25
+        net_import_share: 0.7
+        energy_cap_share: 0.2
+        energy_cap: 200
+        cost_cap: 1e6
+        cost_var_cap: 1e4
+        cost_investment_cap: 1e3
+        resource_area_cap: 100
+        demand_ratio: 0.8
+    variables:
+        demand_ratio_var:
+            dimensions:
+                - heat_techs
+            within: NonNegativeReals
+    # TODO add variables
+    constraints:
+        net_import_share:
+            foreach: [nordic_locs, carriers]
+            eq: net_import_sum <= net_import_share * demand_sum
+            components:
+                net_import_sum:
+                    sum: carrier_prod + carrier_con
+                    over: [ac_transmission, timesteps]
+                demand_sum:
+                    sum: carrier_con
+                    over: [demand, timesteps]
+
+        carrier_prod_share:
+            eq: energy_sum_wind <= carrier_prod_share * total_energy_sum
+            foreach: [nordic_locs, carriers]
+            components:
+                energy_sum_wind:
+                    sum: carrier_prod
+                    over: [wind_techs, timesteps]
+                total_energy_sum:
+                    sum: carrier_prod
+                    over: [supply_techs, timesteps]
+            # TODO: allow for conditional statements
+
+        energy_cap_share:
+            eq: energy_cap_sum_wind <= energy_cap_share * energy_cap_sum_all
+            foreach: [locs, electricity]
+            components:
+                energy_cap_sum_wind:
+                    sum: energy_cap
+                    over: [wind_techs]
+                energy_cap_sum_all:
+                    sum: energy_cap
+                    over: [techs_supply]
+
+        energy_cap:
+            eq: energy_cap_sum_wind <= energy_cap
+            foreach: [locs, electricity]
+            components:
+                energy_cap_sum_wind:
+                    sum: energy_cap
+                    over: [wind_techs]
+
+        carrier_prod_share_per_timestep:
+            eq: energy_sum_wind <= carrier_prod_share * total_energy_sum
+            foreach: [nordic_locs, carriers, tims_favorite_timesteps]
+            components:
+                energy_sum_wind:
+                    sum: carrier_prod
+                    over: [wind_techs]
+                total_energy_sum:
+                    sum: carrier_prod
+                    over: [supply_techs]
+
+        demand_share:
+            foreach: [locs, carriers]
+            eq: net_import_sum <= demand_share * -1 * demand_sum
+            components:
+                net_import_sum:
+                    sum: carrier_prod
+                    over: [wind_techs, timesteps]
+                demand_sum:
+                    sum: carrier_con
+                    over: [demand, timesteps]
+
+        resource_area:
+            foreach: []
+            eq: resource_area_sum <= resource_area_cap
+            components:
+                resource_area_sum:
+                    sum: resource_area
+                    over: [wind_techs, nordic_countries]
+
+        cost_cap:
+            foreach: [monetary_cost]
+            eq: cost_sum <= cost_cap
+            components:
+                cost_sum:
+                    sum: cost
+                    over: [locs, techs, timesteps]
+
+        cost_var_cap:
+            foreach: [monetary_cost]
+            eq: cost_sum <= cost_cap
+            components:
+                cost_sum:
+                    sum: cost_var
+                    over: [locs, techs, timesteps]
+
+        cost_investment_cap:
+            foreach: [monetary_cost]
+            eq: cost_sum <= cost_cap
+            components:
+                cost_sum:
+                    sum: cost_investment
+                    over: [locs, techs]
+    #TODO needs variables to be managed
+        demand_per_timestep_fixed_ratio:
+            foreach: [locs, heat_techs, timesteps, heat]
+            eq: carrier_prod / demand_resource == demand_ratio_var
+            components:
+                demand_resource:
+                    sum: -1 * resource
+                    over: [demand_techs]
+        demand_per_timestep_ratio:
+            foreach: [locs, timesteps, heat]
+            eq: carrier_prod_sum == demand_ratio
+            components:
+                carrier_prod_sum:
+                    sum: demand_ratio_var
+                    over: [demand]
