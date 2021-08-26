@@ -113,9 +113,7 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_2")
 
         assert (
-            model._model_run.nodes[
-                "a"
-            ].techs.test_supply_gas.constraints.energy_cap_max
+            model._model_run.nodes["a"].techs.test_supply_gas.constraints.energy_cap_max
             == 20
         )
         assert (
@@ -630,7 +628,9 @@ class TestChecks:
             excinfo, "Unrecognised setting in run configuration: subset_time"
         )
 
-    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+    @pytest.mark.xfail(
+        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+    )
     def test_warn_null_number_of_spores(self):
         """
         Check that spores number is greater than 0 if spores run mode is selected
@@ -644,7 +644,9 @@ class TestChecks:
             warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
-    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+    @pytest.mark.xfail(
+        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+    )
     def test_non_string_score_cost_class(self):
         """
         Check that the score_cost_class for spores scoring is a string

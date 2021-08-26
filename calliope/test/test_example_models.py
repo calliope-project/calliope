@@ -144,7 +144,9 @@ class TestNationalScaleExampleModelOperate:
         self.example_tester()
 
 
-@pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+@pytest.mark.xfail(
+    reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+)
 class TestNationalScaleExampleModelSpores:
     def example_tester(self, solver="cbc", solver_io=None):
 

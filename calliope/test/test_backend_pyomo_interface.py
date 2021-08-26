@@ -220,7 +220,10 @@ class TestBackendRerun:
         assert check_error_or_warning(
             excinfo, "The results of rerunning the backend model are only available"
         )
-    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+
+    @pytest.mark.xfail(
+        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+    )
     def test_rerun_spores(self, model):
         model = calliope.examples.national_scale(
             override_dict={
