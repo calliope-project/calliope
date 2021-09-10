@@ -198,14 +198,19 @@ def load_constraints(backend_model):
             )
 
     if "group_demand_share_per_timestep_decision" in model_data_dict:
-        backend_model.group_demand_share_per_timestep_decision_main_constraint = (
-            po.Constraint(
-                backend_model.group_names_demand_share_per_timestep_decision,
-                backend_model.loc_tech_carriers_demand_share_per_timestep_lhs,
-                backend_model.timesteps,
-                rule=demand_share_per_timestep_decision_main_constraint_rule,
+        for group_name in backend_model.group_names_demand_share_per_timestep_decision:
+            setattr(
+                backend_model,
+                f"group_demand_share_per_timestep_decision_{group_name}_constraint",
+                po.Constraint(
+                    [group_name],
+                    get_group_lhs_and_rhs_loc_tech_carriers(backend_model, group_name)[
+                        0
+                    ],
+                    backend_model.timesteps,
+                    rule=demand_share_per_timestep_decision_main_constraint_rule,
+                ),
             )
-        )
         backend_model.group_demand_share_per_timestep_decision_sum_constraint = (
             po.Constraint(
                 backend_model.group_names_demand_share_per_timestep_decision,
@@ -377,7 +382,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
         * backend_model.demand_share_per_timestep_decision[loc_tech_carrier]
     )
 
-    return equalizer(lhs, rhs, "min")
+    return equalizer(lhs, rhs, "equals")
 
 
 def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_name):
