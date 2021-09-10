@@ -744,30 +744,6 @@ class TestChecks:
             excinfo, "Unrecognised group constraint `foobar` in group `mygroup`"
         )
 
-    @pytest.mark.parametrize(
-        "loc_tech",
-        (
-            ({"locs": ["1", "foo"]}),
-            ({"techs": ["test_supply_elec", "bar"]}),
-            ({"locs": ["1", "foo"], "techs": ["test_supply_elec", "bar"]}),
-        ),
-    )
-    def test_inexistent_group_constraint_loc_tech(self, loc_tech):
-
-        override = {"group_constraints.mygroup": {"energy_cap_max": 100, **loc_tech}}
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            m = build_model(override_dict=override, scenario="simple_supply")
-
-        assert check_error_or_warning(
-            excinfo, "Possible misspelling in group constraints:"
-        )
-
-        loc_techs = m._model_data.group_constraint_loc_techs_mygroup.values
-        assert "foo:test_supply_elec" not in loc_techs
-        assert "1:bar" not in loc_techs
-        assert "foo:bar" not in loc_techs
-
     def test_inexistent_group_constraint_empty_loc_tech(self):
 
         override = {
@@ -781,7 +757,7 @@ class TestChecks:
             excinfo, "Constraint group `mygroup` will be completely ignored"
         )
 
-        assert m._model_run.group_constraints.mygroup.get("exists", True) is False
+        assert "group_energy_cap_max" not in m._model_data.data_vars
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Not building the link 0,1:calliope.exceptions.ModelWarning"
@@ -1785,12 +1761,21 @@ class TestDataset:
         assert "timestep_cluster" in model._model_data.data_vars
 
     @pytest.mark.parametrize(
-        ("input_array", "expected", "dtype"), (
-            [["True", "False", True, False, 0, 1, 1.0, "0", "1"], [True, False, True, False, False, True, True, False, True], "b"],
-            [["nan", 1, 2, 3.0], [-1, 1, 2, 3], "f"],  # will use fillna to get -1 from np.nan (for comparison)
+        ("input_array", "expected", "dtype"),
+        (
+            [
+                ["True", "False", True, False, 0, 1, 1.0, "0", "1"],
+                [True, False, True, False, False, True, True, False, True],
+                "b",
+            ],
+            [
+                ["nan", 1, 2, 3.0],
+                [-1, 1, 2, 3],
+                "f",
+            ],  # will use fillna to get -1 from np.nan (for comparison)
             [["0", "1", "2", "3"], [0, 1, 2, 3], "i"],
             [[0, 1, 2, 3], [0, 1, 2, 3], "i"],
-        )
+        ),
     )
     def test_update_dtypes(self, input_array, expected, dtype):
         input_ds = xr.Dataset({"foo": xr.DataArray(pd.Series(input_array))})

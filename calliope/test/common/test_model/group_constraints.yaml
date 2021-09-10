@@ -59,10 +59,53 @@ overrides:
             locs: ["0"]
             demand_share_max:
                 electricity: 0.4
-    several_group_constraints:
-        group_constraints.several: # TODO add more/other constraints whose combination is more interesting
+    several_infeasible_group_constraints:
+        group_constraints.several:
+            locs: ["0"]
+            techs: ["expensive_supply"]
+            energy_cap_share_min: 0.5
+            energy_cap_max: 4
+    several_feasible_group_constraints:
+        group_constraints.several:
+            locs: ["0"]
+            techs: ["expensive_supply"]
+            energy_cap_share_min: 0.5
+            energy_cap_max: 6
+    several_w_carrier_group_constraints:
+        group_constraints.several:
             techs: ["expensive_supply"]
             demand_share_min:
                 electricity: 0.6
             carrier_prod_share_min:
                 electricity: 0.8
+    several_carriers_group_constraints:
+        techs:
+            heat_supply:
+                essentials:
+                    name: Heat supply
+                    carrier: heat
+                    parent: supply
+                constraints:
+                    lifetime: 25
+                    energy_cap_max: .inf
+                costs:
+                    monetary:
+                        interest_rate: 0.1
+                        energy_cap: 10
+            heat_demand:
+                essentials:
+                    name: Heat demand
+                    carrier: heat
+                    parent: demand
+                constraints:
+                    resource: file=demand_heat.csv
+        locations:
+            0,1:
+                techs:
+                    heat_supply:
+                    heat_demand:
+        group_constraints.several:
+            techs: ["expensive_supply", "heat_supply"]
+            demand_share_min:
+                electricity: 0.6
+                heat: 0.1

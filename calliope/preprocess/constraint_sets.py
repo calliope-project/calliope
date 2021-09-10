@@ -437,15 +437,10 @@ def generate_constraint_sets(model_run):
         techs = group_constraint.get("techs", allowed_techs)
 
         locs = group_constraint.get("locs", sets["locs"])
-
-        # If there are transmission techs, keep only those that link to allowed locations
-        techs = [i for i in techs if ":" not in techs or i.split(":")[-1] in locs]
-
         trans_techs = set(techs).intersection(sets["techs_transmission_names"])
         for i in trans_techs:
-            techs += [i + ":" + j for j in locs]
+            techs += [i + ":" + j for j in sets["locs"]]
             techs.remove(i)
-
         # If the group constraint defines its own techs, remove those that are not allowed
         techs = list(set(techs).intersection(allowed_techs))
 
@@ -454,7 +449,7 @@ def generate_constraint_sets(model_run):
             set(concat_iterable([(l, t) for l, t in product(locs, techs)], ["::"]))
         )
 
-        # Some loc_techs may not actually exist in the actual model,
+        # Some loc_techs may not actually exist in the model,
         # so we must filter with actually exising loc_techs
         loc_techs = [i for i in loc_techs_all if i in sets.loc_techs]
         default_group_config = checks.DEFAULTS.group_constraints.default_group

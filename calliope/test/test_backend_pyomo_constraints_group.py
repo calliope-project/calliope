@@ -101,7 +101,6 @@ class TestBuildGroupConstraints:
         )
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings(
     "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
 )
@@ -111,7 +110,7 @@ class TestGroupConstraints:
         model.run()
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply"}]
+            .loc[{"techs": "expensive_supply"}]
             .sum()
             .item()
         )
@@ -125,39 +124,52 @@ class TestGroupConstraints:
         model.run()
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply"}]
+            .loc[{"techs": "expensive_supply"}]
             .sum()
             .item()
         )
         assert expensive_generation == 0
 
-    @pytest.mark.xfail(reason="Check not yet implemented.")
-    def test_group_constraint_without_technology(self):
+    def test_group_constraint_with_several_constraints_infeasible(self):
+
         model = build_model(
             model_file="group_constraints.yaml",
-            scenario="group_constraint_without_tech",
-        )
-        with pytest.raises(calliope.exceptions.ModelError):
-            model.run()
-
-    def test_group_constraint_with_several_constraints(self):
-        model = build_model(
-            model_file="group_constraints.yaml", scenario="several_group_constraints"
+            scenario="several_infeasible_group_constraints",
         )
         model.run()
-        expensive_generation = (
-            model.get_formatted_array("carrier_prod")
-            .to_dataframe()
-            .reset_index()
-            .groupby("techs")
-            .carrier_prod.sum()
-            .transform(lambda x: x / x.sum())
-            .loc["expensive_elec_supply"]
+        assert model._model_data.termination_condition != "optimal"
+
+    def test_group_constraint_with_several_constraints_feasible(self):
+
+        model = build_model(
+            model_file="group_constraints.yaml",
+            scenario="several_feasible_group_constraints",
         )
-        assert round(expensive_generation, 5) >= 0.8
+        model.run()
+        assert model._model_data.energy_cap.loc["0::expensive_supply"].item() <= 6
+        assert model._model_data.energy_cap.loc["0::expensive_supply"].item() >= 5
+
+    @pytest.mark.parametrize(
+        ("scenario", "message"),
+        [
+            (
+                "several_w_carrier_group_constraints",
+                "Can only handle one constraint in a group constraint if one of them is carrier-based",
+            ),
+            (
+                "several_carriers_group_constraints",
+                "Can only handle one carrier per group constraint that is carrier-based",
+            ),
+        ],
+    )
+    def test_group_constraint_with_several_carriers(self, scenario, message):
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            build_model(model_file="group_constraints.yaml", scenario=scenario)
+
+        assert check_error_or_warning(excinfo, message)
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings(
     "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
 )
@@ -470,6 +482,11 @@ class TestDemandShareGroupConstraints:
         # assert share in each timestep is 0.6
         assert ((expensive_generation / demand).round(5) == 0.6).all()
 
+
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
+)
+class TestDemandShareDecisionGroupConstraints:
     def test_demand_share_per_timestep_decision_inf(self):
         model = build_model(
             model_file="demand_share_decision.yaml",
@@ -851,7 +868,6 @@ class TestResourceAreaGroupConstraints:
         assert model._model_data.attrs["termination_condition"] != "optimal"
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings(
     "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
 )
@@ -1086,7 +1102,6 @@ class TestCostCapGroupConstraint:
         assert round(clean_emissions, 5) <= 300
 
 
-@pytest.mark.xfail(reason="Tests not yet implemented.")
 @pytest.mark.filterwarnings(
     "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
 )
@@ -1096,7 +1111,7 @@ class TestSupplyShareGroupConstraints:
         model.run()
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply"}]
+            .loc[{"techs": "expensive_supply"}]
             .sum()
         ).item()
         assert expensive_generation == 0
@@ -1114,7 +1129,7 @@ class TestSupplyShareGroupConstraints:
             .groupby("techs")
             .carrier_prod.sum()
             .transform(lambda x: x / x.sum())
-            .loc["cheap_elec_supply"]
+            .loc["cheap_supply"]
         )
         assert round(cheap_generation, 5) <= 0.4
 
@@ -1131,7 +1146,7 @@ class TestSupplyShareGroupConstraints:
             .groupby("techs")
             .carrier_prod.sum()
             .transform(lambda x: x / x.sum())
-            .loc["expensive_elec_supply"]
+            .loc["expensive_supply"]
         )
         assert round(expensive_generation, 5) >= 0.6
 
@@ -1147,13 +1162,13 @@ class TestSupplyShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         cheap_generation0 = generation.loc[
-            {"locs": "0", "techs": "cheap_elec_supply"}
+            {"locs": "0", "techs": "cheap_supply"}
         ].item()
         expensive_generation0 = generation.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"locs": "0", "techs": "expensive_supply"}
         ].item()
         expensive_generation1 = generation.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"locs": "1", "techs": "expensive_supply"}
         ].item()
         assert (
             round(cheap_generation0 / (cheap_generation0 + expensive_generation0), 5)
@@ -1173,13 +1188,13 @@ class TestSupplyShareGroupConstraints:
             .loc[{"carriers": "electricity"}]
         )
         cheap_generation0 = generation.loc[
-            {"locs": "0", "techs": "cheap_elec_supply"}
+            {"locs": "0", "techs": "cheap_supply"}
         ].item()
         expensive_generation0 = generation.loc[
-            {"locs": "0", "techs": "expensive_elec_supply"}
+            {"locs": "0", "techs": "expensive_supply"}
         ].item()
         expensive_generation1 = generation.loc[
-            {"locs": "1", "techs": "expensive_elec_supply"}
+            {"locs": "1", "techs": "expensive_supply"}
         ].item()
         assert (
             round(
@@ -1197,7 +1212,7 @@ class TestSupplyShareGroupConstraints:
         model.run()
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply"}]
+            .loc[{"techs": "expensive_supply"}]
             .sum()
             .item()
         )
@@ -1221,7 +1236,7 @@ class TestSupplyShareGroupConstraints:
         model.run()
         expensive_generation = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply"}]
+            .loc[{"techs": "expensive_supply"}]
             .sum()
             .item()
         )
@@ -1245,7 +1260,7 @@ class TestSupplyShareGroupConstraints:
         model.run()
         cheap_elec_supply = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "cheap_elec_supply", "carriers": "electricity"}]
+            .loc[{"techs": "cheap_supply", "carriers": "electricity"}]
             .sum("locs")
         )
         supply = (
@@ -1265,7 +1280,7 @@ class TestSupplyShareGroupConstraints:
         model.run()
         expensive_elec_supply = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply", "carriers": "electricity"}]
+            .loc[{"techs": "expensive_supply", "carriers": "electricity"}]
             .sum("locs")
         )
         supply = (
@@ -1285,7 +1300,7 @@ class TestSupplyShareGroupConstraints:
         model.run()
         expensive_elec_supply = (
             model.get_formatted_array("carrier_prod")
-            .loc[{"techs": "expensive_elec_supply", "carriers": "electricity"}]
+            .loc[{"techs": "expensive_supply", "carriers": "electricity"}]
             .sum("locs")
         )
         supply = (
@@ -1691,14 +1706,8 @@ class TestNetImportShareGroupConstraints:
         net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
         assert net_imports == pytest.approx(0)
 
-    @pytest.mark.xfail(reason="One cannot define transmission techs explicitely.")
     def test_no_imports_explicit_tech(self, results_for_scenario):
-        with pytest.warns(calliope.exceptions.ModelWarning) as warn:
-            results = results_for_scenario("expensive-1,no-net-imports-explicit-tech")
-        assert check_error_or_warning(
-            warn,
-            "Constraint group `example_net_import_share_constraint` will be completely ignored",
-        )
+        results = results_for_scenario("expensive-1,no-net-imports-explicit-tech")
         net_imports = self.retrieve_net_imports(results).sel(locs="1").item()
         assert net_imports == pytest.approx(0)
 

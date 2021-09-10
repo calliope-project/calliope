@@ -564,9 +564,15 @@ def update_dtypes(model_data):
             no_nans = var.where(var != "nan", drop=True)
             model_data[var_name] = var.where(var != "nan")
 
-            if (no_nans.isin(["True", "False", "0", "1"]) | no_nans.isin([0, 1]) | no_nans.isin([True, False])).all():
+            if (
+                no_nans.isin(["True", "False", "0", "1"])
+                | no_nans.isin([0, 1])
+                | no_nans.isin([True, False])
+            ).all():
                 # Turn to bool
-                model_data[var_name] = var.isin(["True", "1"]) | var.isin([1]) | var.isin([True])
+                model_data[var_name] = (
+                    var.isin(["True", "1"]) | var.isin([1]) | var.isin([True])
+                )
             else:
                 try:
                     model_data[var_name] = var.astype(np.int, copy=False)
