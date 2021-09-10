@@ -228,7 +228,6 @@ def _run_setup_model(model_file, scenario, model_format, override_dict):
 @click.option("--override_dict")
 @click.option("--save_netcdf")
 @click.option("--save_csv")
-@click.option("--save_plots")
 @click.option("--save_logs")
 @click.option(
     "--save_lp",
@@ -248,7 +247,6 @@ def run(
     override_dict,
     save_netcdf,
     save_csv,
-    save_plots,
     save_logs,
     save_lp,
     debug,
@@ -296,7 +294,7 @@ def run(
             if save_logs:
                 model.run_config["save_logs"] = save_logs
 
-            if save_csv is None and save_netcdf is None and save_plots is not None:
+            if save_csv is None and save_netcdf is None:
                 click.secho(
                     "\n!!!\nWARNING: No options to save results have been "
                     "specified.\nModel will run without saving results!\n!!!\n",
@@ -324,16 +322,6 @@ def run(
             if save_netcdf:
                 click.secho("Saving NetCDF results to file: {}".format(save_netcdf))
                 model.to_netcdf(save_netcdf)
-            if save_plots:
-                if termination == "optimal":
-                    click.secho("Saving HTML file with plots to: {}".format(save_plots))
-                    model.plot.summary(to_file=save_plots)
-                else:
-                    click.secho(
-                        "Model termination condition non-optimal. Not saving plots",
-                        fg="red",
-                        bold=True,
-                    )
 
             print_end_time(start_time)
             if fail_when_infeasible and termination != "optimal":

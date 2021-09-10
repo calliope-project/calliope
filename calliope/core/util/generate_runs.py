@@ -53,7 +53,6 @@ def generate_runs(model_file, scenarios=None, additional_args=None, override_dic
         cmd = (
             f"calliope run {model_file} --scenario {run} "
             f"--save_netcdf out_{i_string.format(i + 1)}_{run}.nc "
-            f"--save_plots plots_{i_string.format(i + 1)}_{run}.html"
         ).strip()
 
         if override_dict:
