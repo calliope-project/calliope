@@ -59,6 +59,17 @@ def load_constraints(backend_model):
                 ),
             )
 
+        if "group_storage_cap_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_storage_cap_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(backend_model, "group_names_storage_cap_{}".format(sense)),
+                    [sense],
+                    rule=storage_cap_constraint_rule,
+                ),
+            )
+
         if "group_resource_area_{}".format(sense) in model_data_dict:
             setattr(
                 backend_model,
@@ -691,8 +702,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
 
 def storage_cap_constraint_rule(backend_model, constraint_group, what):
     """
-    Enforce upper and lower bounds for storage_cap of storage_cap
-    for groups of technologies and locations.
+    Enforce upper and lower bounds of storage_cap for groups of technologies and locations.
 
     .. container:: scrolling-wrapper
 

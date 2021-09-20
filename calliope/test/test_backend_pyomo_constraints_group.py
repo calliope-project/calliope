@@ -1640,6 +1640,50 @@ class TestEnergyCapGroupConstraints:
         assert model._model_data.attrs["termination_condition"] != "optimal"
 
 
+class TestStorageCapGroupConstraints:
+    def test_no_storage_cap_constraint(self):
+        model = build_model(model_file="storage_cap.yaml")
+        model.run()
+        capacity = model.get_formatted_array("storage_cap")
+        assert capacity.loc[{"techs": "expensive_elec_storage"}].sum().item() == 0
+
+    def test_storage_cap_max_constraint(self):
+        model = build_model(model_file="storage_cap.yaml", scenario="storage_cap_max")
+        model.run()
+        capacity = model.get_formatted_array("storage_cap")
+        cheap_capacity = capacity.loc[{"techs": "cheap_elec_storage"}].sum().item()
+        assert round(cheap_capacity, 5) <= 5
+
+    def test_storage_cap_min_constraint(self):
+        model = build_model(model_file="storage_cap.yaml", scenario="storage_cap_min")
+        model.run()
+        capacity = model.get_formatted_array("storage_cap")
+        expensive_capacity = (
+            capacity.loc[{"techs": "expensive_elec_storage"}].sum().item()
+        )
+        assert round(expensive_capacity, 5) >= 4
+
+    def test_storage_cap_equals_constraint(self):
+        model = build_model(model_file="storage_cap.yaml", scenario="storage_cap_equals")
+        model.run()
+        capacity = model.get_formatted_array("storage_cap")
+        expensive_capacity = (
+            capacity.loc[{"techs": "expensive_elec_storage"}].sum().item()
+        )
+        assert expensive_capacity == approx(6)
+
+    def test_storage_cap_min_max_constraint(self):
+        model = build_model(model_file="storage_cap.yaml", scenario="storage_cap_min_max")
+        model.run()
+        capacity = model.get_formatted_array("storage_cap")
+        cheap_capacity = capacity.loc[{"techs": "cheap_elec_storage"}].sum().item()
+        expensive_capacity = (
+            capacity.loc[{"techs": "expensive_elec_storage"}].sum().item()
+        )
+        assert round(cheap_capacity, 5) <= 2
+        assert round(expensive_capacity, 5) >= 2
+
+
 class TestNetImportShareGroupConstraints:
     @pytest.fixture
     def results_for_scenario(self, model_file):
