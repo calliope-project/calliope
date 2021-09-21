@@ -1664,7 +1664,9 @@ class TestStorageCapGroupConstraints:
         assert round(expensive_capacity, 5) >= 4
 
     def test_storage_cap_equals_constraint(self):
-        model = build_model(model_file="storage_cap.yaml", scenario="storage_cap_equals")
+        model = build_model(
+            model_file="storage_cap.yaml", scenario="storage_cap_equals"
+        )
         model.run()
         capacity = model.get_formatted_array("storage_cap")
         expensive_capacity = (
@@ -1673,7 +1675,9 @@ class TestStorageCapGroupConstraints:
         assert expensive_capacity == approx(6)
 
     def test_storage_cap_min_max_constraint(self):
-        model = build_model(model_file="storage_cap.yaml", scenario="storage_cap_min_max")
+        model = build_model(
+            model_file="storage_cap.yaml", scenario="storage_cap_min_max"
+        )
         model.run()
         capacity = model.get_formatted_array("storage_cap")
         cheap_capacity = capacity.loc[{"techs": "cheap_elec_storage"}].sum().item()
