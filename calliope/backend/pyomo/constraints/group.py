@@ -209,6 +209,13 @@ def load_constraints(backend_model):
             )
 
     if "group_demand_share_per_timestep_decision" in model_data_dict:
+        relaxation = backend_model.__calliope_run_config["relax_constraint"][
+            "demand_share_per_timestep_decision_main_constraint"
+        ]
+        if relaxation == 0:
+            sense_scale = [("equals", 1)]
+        else:
+            sense_scale = [("min", 1 - relaxation), ("max", 1 + relaxation)]
         for group_name in backend_model.group_names_demand_share_per_timestep_decision:
             setattr(
                 backend_model,
@@ -219,6 +226,7 @@ def load_constraints(backend_model):
                         0
                     ],
                     backend_model.timesteps,
+                    sense_scale,
                     rule=demand_share_per_timestep_decision_main_constraint_rule,
                 ),
             )
@@ -350,7 +358,7 @@ def demand_share_per_timestep_constraint_rule(
 
 
 def demand_share_per_timestep_decision_main_constraint_rule(
-    backend_model, group_name, loc_tech_carrier, timestep
+    backend_model, group_name, loc_tech_carrier, timestep, sense, scale
 ):
     """
     Allows the model to decide on how a fraction demand for a carrier is met
@@ -384,6 +392,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
     lhs = backend_model.carrier_prod[loc_tech_carrier, timestep]
     rhs = (
         -1
+        * scale
         * sum(
             backend_model.required_resource[
                 rhs_loc_tech_carrier.rsplit("::", 1)[0], timestep
@@ -393,7 +402,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
         * backend_model.demand_share_per_timestep_decision[loc_tech_carrier]
     )
 
-    return equalizer(lhs, rhs, "equals")
+    return equalizer(lhs, rhs, sense)
 
 
 def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_name):

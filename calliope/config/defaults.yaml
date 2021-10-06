@@ -29,6 +29,8 @@ run:
         save_per_spore: false  # whether or not to save each SPORE run results separately or as one concatenated NetCDF. If True, "save_per_spore_path" or CLI argument "--to_netcdf" must be defined (to_netcdf will take precendence and be used a the directory name).
         save_per_spore_path: null  # file path for each spore run, which will be used if save_per_spore is used, and CLI command "--to_netcdf" is not defined. Will apply spore number using the python "format" method, so the path should include a "{}" at the position where the spore number should be included (e.g. "/path/to/spores/spore_{}.nc" will save results for SPORE 1 to "/path/to/spores/spore_1.nc"). The cost-optimal solution will be saved by using spore number 0.
         skip_cost_op: false  # whether or not to run the initial cost optimisation model to ascertain the cost-optimal cost and initial spores scores. If True, will take the group constraint and cost_energy_cap values directly.
+    relax_constraint:  # Enable relaxing some equality constraints to be min/max constraints. The extent of relaxation is given as a fraction.
+        demand_share_per_timestep_decision_main_constraint: 0  # 0 == no relaxation, 0.01 == 1% relaxation (lhs == rhs -> lhs >= 0.99 * rhs & lhs <= 1.01 * rhs)
     save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
     solver_io: null  # What method the Pyomo backend should use to communicate with the solver
     solver_options: null  # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent

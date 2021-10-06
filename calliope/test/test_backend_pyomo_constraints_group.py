@@ -487,31 +487,35 @@ class TestDemandShareGroupConstraints:
     "ignore:(?s).*Not all requested techs:calliope.exceptions.ModelWarning"
 )
 class TestDemandShareDecisionGroupConstraints:
+    @staticmethod
+    def get_shares(model, sumlocs=True, carrier="electricity", con_contains=""):
+        demand = (
+            -1
+            * model.get_formatted_array("carrier_con")
+            .loc[{"carriers": carrier}]
+            .where(lambda x: x.techs.str.contains(con_contains))
+            .sum("techs", min_count=1)
+        )
+        supply = (
+            model.get_formatted_array("carrier_prod")
+            .loc[{"carriers": carrier}]
+        )
+        if sumlocs:
+            return supply.sum("locs", min_count=1) / demand.sum("locs", min_count=1)
+        else:
+            return supply / demand
+
+
     def test_demand_share_per_timestep_decision_inf(self):
         model = build_model(
             model_file="demand_share_decision.yaml",
             scenario="demand_share_per_timestep_decision_inf",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .sum("techs")
-            .to_pandas()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model)
 
-        assert (shares["cheap_elec_supply"] == 0.1875).all()
-        assert (shares["normal_elec_supply"] == 0.8125).all()
+        assert all(shares.loc[{"techs": "cheap_elec_supply"}] == 0.1875)
+        assert all(shares.loc[{"techs": "normal_elec_supply"}] == 0.8125)
 
     def test_demand_share_per_timestep_decision_simple(self):
         model = build_model(
@@ -519,25 +523,11 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_simple",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .sum("techs")
-            .to_pandas()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model)
 
-        assert (shares["cheap_elec_supply"] == 0.1875).all()
-        assert (shares["normal_elec_supply"] == 0.8125).all()
+        assert all(shares.sel(techs="cheap_elec_supply") == 0.1875)
+        assert all(shares.sel(techs="normal_elec_supply") == 0.8125)
+        assert model._model_data.demand_share_per_timestep_decision.sum().item() == 1
 
     def test_demand_share_per_timestep_decision_not_one(self):
         model = build_model(
@@ -545,29 +535,12 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_not_one",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .sum("techs")
-            .to_pandas()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model)
 
-        assert (shares["cheap_elec_supply"] == 0.1).all()
-        assert (shares["normal_elec_supply"] == 0.9).all()
-        assert (
-            shares["expensive_elec_supply"].mean() + shares["normal_elec_supply"].mean()
-            == 0.9
-        )
+        assert all(shares.sel(techs="cheap_elec_supply") == 0.1)
+        assert all(shares.sel(techs="normal_elec_supply") == 0.9)
+        assert all(shares.sel(techs="expensive_elec_supply") == 0)
+        assert model._model_data.demand_share_per_timestep_decision.sum().item() == 0.9
 
     def test_demand_share_per_timestep_decision_per_location(self):
         model = build_model(
@@ -575,34 +548,13 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_per_location",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "electricity"}]
-            .sum("techs")
-            .to_series()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .to_series()
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model, sumlocs=False)
 
-        assert (
-            shares.loc[pd.IndexSlice["0", :, :]].unstack()["cheap_elec_supply"] == 0.25
-        ).all()
-        assert (
-            shares.loc[pd.IndexSlice["0", :, :]].unstack()["normal_elec_supply"] == 0.75
-        ).all()
+        assert all(shares.sel(techs="cheap_elec_supply", locs= "0") == 0.25)
+        assert all(shares.sel(techs="normal_elec_supply", locs= "0") == 0.75)
 
-        assert (
-            shares.loc[pd.IndexSlice["1", :, :]].unstack()["cheap_elec_supply"] == 0.125
-        ).all()
-        assert (
-            shares.loc[pd.IndexSlice["1", :, :]].unstack()["normal_elec_supply"]
-            == 0.875
-        ).all()
+        assert all(shares.sel(techs="cheap_elec_supply", locs= "1") == 0.125)
+        assert all(shares.sel(techs="normal_elec_supply", locs= "1") == 0.875)
 
     def test_demand_share_per_timestep_decision_inf_with_transmission(self):
         model = build_model(
@@ -610,42 +562,13 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_inf,with_electricity_transmission",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "electricity"}]
-            .sum("techs")
-            .to_series()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .to_series()
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model, sumlocs=False)
 
-        assert all(
-            [
-                i == approx(0.12373737)
-                for i in shares.loc[pd.IndexSlice["0", :, :]]
-                .unstack()["cheap_elec_supply"]
-                .values
-            ]
-        )
-        assert all(
-            [
-                i == approx(0.87626263)
-                for i in shares.loc[pd.IndexSlice["0", :, :]]
-                .unstack()["normal_elec_supply"]
-                .values
-            ]
-        )
-        assert (
-            shares.loc[pd.IndexSlice["1", :, :]].unstack()["electricity_transmission:0"]
-            == 1.0
-        ).all()
+        assert all(shares.sel(techs="cheap_elec_supply", locs= "0") == 0.125)
+        assert all(shares.sel(techs="normal_elec_supply", locs= "0") == 0.875)
+        assert all(shares.sel(techs="electricity_transmission:0", locs= "1") == 1.0)
 
-    def test_demand_share_per_timestep_decision_inf_with_heat_cosntrain_electricity(
+    def test_demand_share_per_timestep_decision_inf_with_heat_constrain_electricity(
         self,
     ):
         model = build_model(
@@ -653,24 +576,10 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_inf,with_electricity_conversion_tech",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "electricity"}]
-            .sum(["locs", "techs"])
-            .to_pandas()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model)
 
-        assert all([i == approx(0.175926) for i in shares["cheap_elec_supply"].values])
-        assert all([i == approx(0.824074) for i in shares["normal_elec_supply"].values])
+        assert all(shares.sel(techs="cheap_elec_supply") == approx(0.1759259))
+        assert all(shares.sel(techs="normal_elec_supply") == approx(0.82407407))
 
     def test_demand_share_per_timestep_decision_inf_with_heat_constrain_heat(self):
         model = build_model(
@@ -678,24 +587,10 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_inf_with_heat,with_electricity_conversion_tech",
         )
         model.run()
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "heat"}]
-            .sum(["locs", "techs"])
-            .to_pandas()
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "heat"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares = supply.div(demand, axis=0)
+        shares = self.get_shares(model, carrier="heat")
 
-        assert all([i == approx(0.5) for i in shares["elec_to_heat"].values])
-        assert all([i == approx(0.5) for i in shares["heating"].values])
+        assert all(shares.sel(techs="elec_to_heat") == approx(0.5))
+        assert all(shares.sel(techs="heating") == approx(0.5))
 
     def test_demand_share_per_timestep_decision_inf_with_heat_constrain_heat_and_electricity(
         self,
@@ -705,50 +600,36 @@ class TestDemandShareDecisionGroupConstraints:
             scenario="demand_share_per_timestep_decision_inf_with_heat,demand_share_per_timestep_decision_not_one,with_electricity_conversion_tech",
         )
         model.run()
-        demand_heat = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": "heat"}]
-            .sum(["locs", "techs"])
-            .to_pandas()
-        )
-        supply_heat = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "heat"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares_heat = supply_heat.div(demand_heat, axis=0)
+        shares_heat = self.get_shares(model, carrier="heat", con_contains="demand")
+        shares_elec = self.get_shares(model, carrier="electricity", con_contains="demand")
 
-        demand_elec = -1 * (
-            model._model_data.carrier_con.loc[
-                {
-                    "loc_tech_carriers_con": [
-                        i
-                        for i in model._model_data.loc_tech_carriers_demand.values
-                        if "electricity" in i
-                    ]
-                }
-            ]
-            .sum(["loc_tech_carriers_con"])
-            .to_pandas()
-        )
-        supply_elec = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": "electricity"}]
-            .sum("locs")
-            .to_pandas()
-            .T
-        )
-        shares_elec = supply_elec.div(demand_elec, axis=0)
+        assert all(shares_heat.sel(techs="elec_to_heat") == 0.5)
+        assert all(shares_heat.sel(techs="heating") == 0.5)
+        assert all(shares_elec.sel(techs="normal_elec_supply") == approx(0.9))
+        assert all(shares_elec.sel(techs="cheap_elec_supply").round(5) >= 0.1)
 
-        assert all([i == approx(0.5) for i in shares_heat["elec_to_heat"].values])
-        assert all([i == approx(0.5) for i in shares_heat["heating"].values])
-        assert all([i == approx(0.9) for i in shares_elec["normal_elec_supply"].values])
-        assert all(
-            [round(i, 5) >= 0.1 for i in shares_elec["cheap_elec_supply"].values]
+    @pytest.mark.parametrize("relax", [0, 0.01, 0.05, 0.1])
+    def test_demand_share_per_timestep_decision_relax(self, relax):
+        model = build_model(
+            model_file="demand_share_decision.yaml",
+            scenario="demand_share_per_timestep_decision_not_one",
+            override_dict={"run.relax_constraint.demand_share_per_timestep_decision_main_constraint": relax}
         )
+        model.run()
+        shares = self.get_shares(model)
+
+        assert all(shares.sel(techs="expensive_elec_supply") == 0)
+        assert model._model_data.demand_share_per_timestep_decision.sum().item() == 0.9
+
+        if relax == 0:
+            assert all(shares.sel(techs="cheap_elec_supply") == 0.1)
+            assert all(shares.sel(techs="normal_elec_supply") == 0.9)
+        else:
+            assert not all(shares.sel(techs="cheap_elec_supply") == 0.1)
+            assert not all(shares.sel(techs="normal_elec_supply") == 0.9)
+            assert all(shares.sel(techs="normal_elec_supply").round(5) >= 0.9 * (1 - relax))
+            assert all(shares.sel(techs="normal_elec_supply").round(5) <= 0.9 * (1 + relax))
+
 
 
 @pytest.mark.filterwarnings(
