@@ -86,6 +86,22 @@ class TestIO:
             model_from_disk = calliope.read_netcdf(out_path)
             # FIXME test for some data in model_from_disk
 
+    def test_rerun_save_read_netcdf_with_mixed_dtype(self, model):
+        new_model = model.backend.rerun()
+        assert model._model_data.force_resource.dtype.kind == "f"
+        assert new_model._model_data.force_resource.dtype.kind == "O"
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = os.path.join(tempdir, "model.nc")
+            with pytest.warns(exceptions.ModelWarning) as warning:
+                new_model.to_netcdf(out_path)
+
+            check_error_or_warning(
+                warning, "'force_resource' contains mixed data types"
+            )
+            assert new_model._model_data.force_resource.dtype.kind == "O"
+            model_from_disk = calliope.read_netcdf(out_path)
+            assert model_from_disk._model_data.force_resource.dtype.kind == "f"
+
     def test_save_read_solve_save_netcdf(self, model):
 
         with tempfile.TemporaryDirectory() as tempdir:
