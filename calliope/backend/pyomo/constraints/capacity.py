@@ -12,7 +12,7 @@ Capacity constraints for technologies (output, resource, area, and storage).
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import get_param, split_comma_list
+from calliope.backend.pyomo.util import apply_equals, get_param, split_comma_list, invalid
 from calliope import exceptions
 
 ORDER = 10  # order in which to invoke constraints relative to other constraint files
@@ -109,14 +109,7 @@ def get_capacity_constraint(
         _max = get_param(backend_model, parameter + "_max", loc_tech)
     if not _min:
         _min = get_param(backend_model, parameter + "_min", loc_tech)
-    if po.value(_equals) is not False and po.value(_equals) is not None:
-        if np.isinf(po.value(_equals)):
-            e = exceptions.ModelError
-            raise e(
-                "Cannot use inf for {}_equals for loc:tech `{}`".format(
-                    parameter, loc_tech
-                )
-            )
+    if apply_equals(_equals):
         if scale:
             _equals *= scale
         return decision_variable[loc_tech] == _equals
@@ -236,10 +229,13 @@ def energy_capacity_storage_equals_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{store}
 
     """
-    return backend_model.energy_cap[loc_tech] == (
-        backend_model.storage_cap[loc_tech]
-        * get_param(backend_model, "energy_cap_per_storage_cap_equals", loc_tech)
-    )
+    energy_cap_per_storage_cap = get_param(backend_model, "energy_cap_per_storage_cap_equals", loc_tech)
+    if apply_equals(energy_cap_per_storage_cap):
+        return backend_model.energy_cap[loc_tech] == (
+            backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap
+        )
+    else:
+        return po.Constraint.Skip
 
 
 def resource_capacity_constraint_rule(backend_model, loc_tech):
@@ -443,16 +439,12 @@ def energy_capacity_systemwide_constraint_rule(backend_model, tech):
     max_systemwide = get_param(backend_model, "energy_cap_max_systemwide", tech)
     equals_systemwide = get_param(backend_model, "energy_cap_equals_systemwide", tech)
 
-    if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
+    if np.isinf(po.value(max_systemwide)) and not apply_equals(equals_systemwide):
         return po.Constraint.NoConstraint
-    elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
-        raise exceptions.ModelError(
-            "Cannot use inf for energy_cap_equals_systemwide for tech `{}`".format(tech)
-        )
 
     sum_expr = sum(backend_model.energy_cap[loc_tech] for loc_tech in all_loc_techs)
 
-    if equals_systemwide:
+    if not invalid(equals_systemwide):
         return sum_expr == equals_systemwide * multiplier
     else:
         return sum_expr <= max_systemwide * multiplier

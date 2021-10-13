@@ -96,7 +96,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
 
     cost_om_prod = get_param(backend_model, "cost_om_prod", (cost, loc_tech, timestep))
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, loc_tech, timestep))
-    if po.value(cost_om_prod):
+    if po.value(cost_om_prod) != 0:
         cost_prod = (
             cost_om_prod
             * weight
@@ -105,7 +105,7 @@ def cost_var_conversion_constraint_rule(backend_model, cost, loc_tech, timestep)
     else:
         cost_prod = 0
 
-    if po.value(cost_om_con):
+    if po.value(cost_om_con) != 0:
         cost_con = (
             cost_om_con
             * weight

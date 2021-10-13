@@ -38,7 +38,7 @@ def get_param(backend_model, var, dims):
         logger.debug(
             "get_param: var {} and dims {} leading to default lookup".format(var, dims)
         )
-        return backend_model.__calliope_defaults[var]
+        return backend_model.__calliope_defaults.get(var, po.Param.NoValue)
     except KeyError:  # try removing timestep
         try:
             if len(dims) > 2:
@@ -51,7 +51,7 @@ def get_param(backend_model, var, dims):
                     var, dims
                 )
             )
-            return backend_model.__calliope_defaults[var]
+            return backend_model.__calliope_defaults.get(var, po.Param.NoValue)
 
 
 def get_previous_timestep(timesteps, timestep):
@@ -197,7 +197,7 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
         return False
 
 
-def get_domain(var: xr.DataArray) -> str:
+def get_domain(var: xr.DataArray, default) -> str:
     def check_sign(var):
         if re.match("resource|loc_coordinates|cost*", var.name):
             return ""
@@ -208,7 +208,7 @@ def get_domain(var: xr.DataArray) -> str:
 
     if var.dtype.kind == "b":
         return "Boolean"
-    elif is_numeric_dtype(var.dtype):
+    elif is_numeric_dtype(var.dtype) and isinstance(default, (int, float)):
         return check_sign(var) + "Reals"
     else:
         return "Any"
@@ -216,11 +216,20 @@ def get_domain(var: xr.DataArray) -> str:
 
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
-        return val._value == po.Param.NoValue or po.value(val) is None
+        return val._value == po.Param.NoValue or val._value is None or po.value(val) is None
     elif val == po.Param.NoValue:
         return True
     else:
         return pd.isnull(val)
+
+
+def apply_equals(val) -> bool:
+    if invalid(val) or (isinstance(po.value(val), bool) and po.value(val) is False):
+        return False
+    elif np.isinf(po.value(val)):
+        raise ValueError(f"Cannot use inf for parameter {val.name}")
+    else:
+        return True
 
 
 def datetime_to_string(

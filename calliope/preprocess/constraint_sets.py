@@ -459,7 +459,7 @@ def generate_constraint_sets(model_run):
             if k not in ["locs", "techs", "exists"]
         }
         if any(
-            isinstance(default_group_config.get(_constraint, False), dict)
+            isinstance(default_group_config.get(_constraint, None), dict)
             and "default_carrier" in default_group_config[_constraint].keys()
             for _constraint in _constraints.keys()
         ):

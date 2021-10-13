@@ -50,7 +50,7 @@ def check_operate_params(model_data):
         if _is_in(loc_tech, var) and not model_data[var].loc[loc_tech].isnull().any():
             param = model_data[var].loc[loc_tech].values
         else:
-            param = defaults[var]
+            param = defaults.get(var, None)
         return param
 
     def _is_in(loc_tech, set_or_var):
@@ -208,7 +208,7 @@ def check_operate_params(model_data):
         if _is_in(loc_tech, "loc_techs_store"):
             storage_cap = model_data.storage_cap.loc[loc_tech].item()
             if not pd.isnull(storage_cap) and not pd.isnull(energy_cap):
-                if _get_param(loc_tech, "charge_rate") is not False:
+                if _get_param(loc_tech, "charge_rate") is not None:
                     charge_rate = model_data["charge_rate"].loc[loc_tech].item()
                     if storage_cap * charge_rate < energy_cap:
                         errors.append(
@@ -217,7 +217,7 @@ def check_operate_params(model_data):
                                 loc_tech
                             )
                         )
-                if _get_param(loc_tech, "energy_cap_per_storage_cap_max") is not False:
+                if not np.isinf(_get_param(loc_tech, "energy_cap_per_storage_cap_max")):
                     energy_cap_per_storage_cap_max = (
                         model_data["energy_cap_per_storage_cap_max"]
                         .loc[loc_tech]
@@ -230,7 +230,7 @@ def check_operate_params(model_data):
                                 loc_tech
                             )
                         )
-                if _get_param(loc_tech, "energy_cap_per_storage_cap_min") is not False:
+                if _get_param(loc_tech, "energy_cap_per_storage_cap_min") != 0:
                     energy_cap_per_storage_cap_min = (
                         model_data["energy_cap_per_storage_cap_min"]
                         .loc[loc_tech]
