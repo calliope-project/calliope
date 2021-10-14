@@ -489,22 +489,14 @@ class TestDemandShareGroupConstraints:
 class TestDemandShareDecisionGroupConstraints:
     @staticmethod
     def get_shares(model, sumlocs=True, carrier="electricity", con_contains=""):
-        demand = (
-            -1
-            * model.get_formatted_array("carrier_con")
-            .loc[{"carriers": carrier}]
-            .where(lambda x: x.techs.str.contains(con_contains))
-            .sum("techs", min_count=1)
-        )
-        supply = (
-            model.get_formatted_array("carrier_prod")
-            .loc[{"carriers": carrier}]
-        )
+        demand = -1 * model.get_formatted_array("carrier_con").loc[
+            {"carriers": carrier}
+        ].where(lambda x: x.techs.str.contains(con_contains)).sum("techs", min_count=1)
+        supply = model.get_formatted_array("carrier_prod").loc[{"carriers": carrier}]
         if sumlocs:
             return supply.sum("locs", min_count=1) / demand.sum("locs", min_count=1)
         else:
             return supply / demand
-
 
     def test_demand_share_per_timestep_decision_inf(self):
         model = build_model(
@@ -550,11 +542,11 @@ class TestDemandShareDecisionGroupConstraints:
         model.run()
         shares = self.get_shares(model, sumlocs=False)
 
-        assert all(shares.sel(techs="cheap_elec_supply", locs= "0") == 0.25)
-        assert all(shares.sel(techs="normal_elec_supply", locs= "0") == 0.75)
+        assert all(shares.sel(techs="cheap_elec_supply", locs="0") == 0.25)
+        assert all(shares.sel(techs="normal_elec_supply", locs="0") == 0.75)
 
-        assert all(shares.sel(techs="cheap_elec_supply", locs= "1") == 0.125)
-        assert all(shares.sel(techs="normal_elec_supply", locs= "1") == 0.875)
+        assert all(shares.sel(techs="cheap_elec_supply", locs="1") == 0.125)
+        assert all(shares.sel(techs="normal_elec_supply", locs="1") == 0.875)
 
     def test_demand_share_per_timestep_decision_inf_with_transmission(self):
         model = build_model(
@@ -564,9 +556,9 @@ class TestDemandShareDecisionGroupConstraints:
         model.run()
         shares = self.get_shares(model, sumlocs=False)
 
-        assert all(shares.sel(techs="cheap_elec_supply", locs= "0") == 0.125)
-        assert all(shares.sel(techs="normal_elec_supply", locs= "0") == 0.875)
-        assert all(shares.sel(techs="electricity_transmission:0", locs= "1") == 1.0)
+        assert all(shares.sel(techs="cheap_elec_supply", locs="0") == 0.125)
+        assert all(shares.sel(techs="normal_elec_supply", locs="0") == 0.875)
+        assert all(shares.sel(techs="electricity_transmission:0", locs="1") == 1.0)
 
     def test_demand_share_per_timestep_decision_inf_with_heat_constrain_electricity(
         self,
@@ -601,7 +593,9 @@ class TestDemandShareDecisionGroupConstraints:
         )
         model.run()
         shares_heat = self.get_shares(model, carrier="heat", con_contains="demand")
-        shares_elec = self.get_shares(model, carrier="electricity", con_contains="demand")
+        shares_elec = self.get_shares(
+            model, carrier="electricity", con_contains="demand"
+        )
 
         assert all(shares_heat.sel(techs="elec_to_heat") == 0.5)
         assert all(shares_heat.sel(techs="heating") == 0.5)
@@ -613,7 +607,9 @@ class TestDemandShareDecisionGroupConstraints:
         model = build_model(
             model_file="demand_share_decision.yaml",
             scenario="demand_share_per_timestep_decision_not_one",
-            override_dict={"run.relax_constraint.demand_share_per_timestep_decision_main_constraint": relax}
+            override_dict={
+                "run.relax_constraint.demand_share_per_timestep_decision_main_constraint": relax
+            },
         )
         model.run()
         shares = self.get_shares(model)
@@ -627,9 +623,12 @@ class TestDemandShareDecisionGroupConstraints:
         else:
             assert not all(shares.sel(techs="cheap_elec_supply") == 0.1)
             assert not all(shares.sel(techs="normal_elec_supply") == 0.9)
-            assert all(shares.sel(techs="normal_elec_supply").round(5) >= 0.9 * (1 - relax))
-            assert all(shares.sel(techs="normal_elec_supply").round(5) <= 0.9 * (1 + relax))
-
+            assert all(
+                shares.sel(techs="normal_elec_supply").round(5) >= 0.9 * (1 - relax)
+            )
+            assert all(
+                shares.sel(techs="normal_elec_supply").round(5) <= 0.9 * (1 + relax)
+            )
 
 
 @pytest.mark.filterwarnings(

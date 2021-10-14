@@ -6,13 +6,17 @@ from calliope.test.common.util import build_test_model as build_model
 from calliope.backend.pyomo.util import get_domain, get_param, invalid
 from calliope import AttrDict
 
+
 @pytest.fixture(scope="class")
 def model():
     return build_model({}, "simple_supply,two_hours,investment_costs")
 
+
 @pytest.fixture(scope="class")
 def defaults(model):
     return AttrDict.from_yaml_string(model._model_data.attrs["defaults"])
+
+
 class TestGetParam:
     def test_get_param_with_timestep_existing(self):
         """ """
@@ -68,7 +72,10 @@ class TestGetParam:
         )
         assert po.value(param) == 0  # see defaults.yaml
 
-    @pytest.mark.parametrize("dims", [("1::test_demand_elec", "2005-01-01 00:00:00"), ("1::test_supply_elec")])
+    @pytest.mark.parametrize(
+        "dims",
+        [("1::test_demand_elec", "2005-01-01 00:00:00"), ("1::test_supply_elec")],
+    )
     def test_get_param_no_default_defined(self, dims):
         """
         If a default is not defined, return po.Param.NoValue

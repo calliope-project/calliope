@@ -1805,7 +1805,8 @@ class TestMILPConstraints:
             )
             m.run(build_only=True)
         assert check_error_or_warning(
-            error, "Cannot use inf for parameter units_equals_systemwide[test_conversion_plus]"
+            error,
+            "Cannot use inf for parameter units_equals_systemwide[test_conversion_plus]",
         )
 
         m = build_model(

@@ -216,7 +216,11 @@ def get_domain(var: xr.DataArray, default) -> str:
 
 def invalid(val) -> bool:
     if isinstance(val, po.base.param._ParamData):
-        return val._value == po.Param.NoValue or val._value is None or po.value(val) is None
+        return (
+            val._value == po.Param.NoValue
+            or val._value is None
+            or po.value(val) is None
+        )
     elif val == po.Param.NoValue:
         return True
     else:

@@ -66,7 +66,9 @@ def save_netcdf(model_data, path, model=None):
     # FIXME: remove once xarray issue https://github.com/pydata/xarray/issues/2404 is resolved
     for coord_name, coord_data in model_data_copy.coords.items():
         if coord_data.dtype.kind == "O":
-            model_data_copy[coord_name] = coord_data.astype("<U{}".format(max([len(i.item()) for i in coord_data])))
+            model_data_copy[coord_name] = coord_data.astype(
+                "<U{}".format(max([len(i.item()) for i in coord_data]))
+            )
     # Convert `object` dtype variables where some contents could be boolean to float
     for var_name, var_data in model_data_copy.data_vars.items():
         if var_data.dtype.kind == "O":

@@ -18,7 +18,7 @@ from calliope.backend.pyomo.util import (
     get_loc_tech,
     split_comma_list,
     loc_tech_is_in,
-    apply_equals
+    apply_equals,
 )
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint

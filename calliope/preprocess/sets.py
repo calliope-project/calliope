@@ -319,7 +319,10 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k
         for k in sets.loc_techs_non_transmission
         if loc_techs_config[k].constraints.get("resource")
-        and not (loc_techs_config[k].constraints.get("resource") in ["inf", np.inf, "-inf", -np.inf])
+        and not (
+            loc_techs_config[k].constraints.get("resource")
+            in ["inf", np.inf, "-inf", -np.inf]
+        )
     )
 
     # `supply` technologies that specify a finite resource

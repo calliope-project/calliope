@@ -12,7 +12,12 @@ Capacity constraints for technologies (output, resource, area, and storage).
 import pyomo.core as po  # pylint: disable=import-error
 import numpy as np
 
-from calliope.backend.pyomo.util import apply_equals, get_param, split_comma_list, invalid
+from calliope.backend.pyomo.util import (
+    apply_equals,
+    get_param,
+    split_comma_list,
+    invalid,
+)
 from calliope import exceptions
 
 ORDER = 10  # order in which to invoke constraints relative to other constraint files
@@ -229,7 +234,9 @@ def energy_capacity_storage_equals_constraint_rule(backend_model, loc_tech):
             \\forall loc::tech \\in loc::techs_{store}
 
     """
-    energy_cap_per_storage_cap = get_param(backend_model, "energy_cap_per_storage_cap_equals", loc_tech)
+    energy_cap_per_storage_cap = get_param(
+        backend_model, "energy_cap_per_storage_cap_equals", loc_tech
+    )
     if apply_equals(energy_cap_per_storage_cap):
         return backend_model.energy_cap[loc_tech] == (
             backend_model.storage_cap[loc_tech] * energy_cap_per_storage_cap
