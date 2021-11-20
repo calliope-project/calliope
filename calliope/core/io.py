@@ -10,6 +10,7 @@ Functions to read and save model results.
 """
 
 import os
+import logging
 
 import xarray as xr
 
@@ -45,6 +46,7 @@ def save_netcdf(model_data, path, model=None):
     model_data_copy = model_data.copy()
 
     if model is not None and hasattr(model, "_model_run"):
+        logging.info("Adding model run data to model data attributes")
         # Attach _model_run and _debug_data to _model_data
         model_run_to_save = model._model_run.copy()
         if "timeseries_data" in model_run_to_save:
@@ -53,23 +55,27 @@ def save_netcdf(model_data, path, model=None):
         model_data_copy.attrs["_debug_data"] = model._debug_data.to_yaml()
 
     # Convert boolean attrs to ints
+    logging.info("Converting boolean attrs to ints")
     bool_attrs = [k for k, v in model_data_copy.attrs.items() if isinstance(v, bool)]
     for k in bool_attrs:
         model_data_copy.attrs[k] = int(model_data_copy.attrs[k])
 
     # Convert None attrs to 'None'
+    logging.info("Converting None attrs to 'None'")
     none_attrs = [k for k, v in model_data_copy.attrs.items() if v is None]
     for k in none_attrs:
         model_data_copy.attrs[k] = "None"
 
     # Convert `object` dtype coords to string
     # FIXME: remove once xarray issue https://github.com/pydata/xarray/issues/2404 is resolved
+    logging.info("Converting object coordinates to string")
     for coord_name, coord_data in model_data_copy.coords.items():
         if coord_data.dtype.kind == "O":
             model_data_copy[coord_name] = coord_data.astype(
                 "<U{}".format(max([len(i.item()) for i in coord_data]))
             )
     # Convert `object` dtype variables where some contents could be boolean to float
+    logging.info("Converting object variables with boolean content to float")
     for var_name, var_data in model_data_copy.data_vars.items():
         if var_data.dtype.kind == "O":
             try:
@@ -80,7 +86,7 @@ def save_netcdf(model_data, path, model=None):
                 )
             except ValueError:
                 continue
-
+    logging.info("Saving to NetCDF")
     model_data_copy.to_netcdf(path, format="netCDF4", encoding=encoding)
     model_data_copy.close()  # Force-close NetCDF file after writing
 
