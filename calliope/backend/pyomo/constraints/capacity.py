@@ -108,21 +108,21 @@ def get_capacity_constraint(
 
     decision_variable = getattr(backend_model, parameter)
 
-    if not _equals:
+    if _equals is None:
         _equals = get_param(backend_model, parameter + "_equals", loc_tech)
-    if not _max:
+    if _max is None:
         _max = get_param(backend_model, parameter + "_max", loc_tech)
-    if not _min:
+    if _min is None:
         _min = get_param(backend_model, parameter + "_min", loc_tech)
     if apply_equals(_equals):
-        if scale:
+        if scale is not None:
             _equals *= scale
         return decision_variable[loc_tech] == _equals
     else:
         if po.value(_min) == 0 and np.isinf(po.value(_max)):
             return po.Constraint.NoConstraint
         else:
-            if scale:
+            if scale is not None:
                 _max *= scale
                 _min *= scale
             return (_min, decision_variable[loc_tech], _max)
