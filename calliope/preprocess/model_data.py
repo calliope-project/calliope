@@ -574,7 +574,7 @@ def update_dtypes(model_data):
                 )
             else:
                 try:
-                    model_data[var_name] = var.astype(np.int, copy=False)
+                    model_data[var_name] = var.astype(int, copy=False)
                 except (ValueError, TypeError):
                     try:
                         model_data[var_name] = var.astype(float, copy=False)

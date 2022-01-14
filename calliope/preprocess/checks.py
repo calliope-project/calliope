@@ -736,7 +736,7 @@ def check_model_data(model_data):
     for loc_tech in set(model_data.loc_techs_demand.values).intersection(
         model_data.loc_techs_finite_resource.values
     ):
-        if any(model_data.resource.loc[loc_tech].values > 0):
+        if any(model_data.resource.sel(loc_techs_finite_resource=loc_tech).values > 0):
             errors.append(
                 "Positive resource given for demand loc_tech {}. All demands "
                 "must have negative resource".format(loc_tech)
