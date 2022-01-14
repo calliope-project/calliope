@@ -5,6 +5,20 @@ Release History
 
 0.6.8 (dev)
 ------------------
+|new| run configuration parameter to enable relaxation of the `demand_share_per_timestep_decision` constraint.
+
+|new| `storage_cap_min/equals/max` group constraints added.
+
+|changed| Updated to Pyomo 6.2, pandas 1.3, xarray 0.20, numpy 1.20.
+
+|changed| parameters defaulting to False now default to None, to avoid confusion with zero.
+
+|changed| `INFO` logging level includes logs for dataset cleaning steps before saving to NetCDF and for instantiation of timeseries clustering/resampling (if taking place).
+
+|fixed| `demand_share_per_timestep_decision` constraint set includes.
+
+|fixed| Mixed dtype xarray dataset variables, where one dtype is boolean, are converted to float if possible. This overcomes an error whereby the NetCDF file cannot be created due to a mixed dtype variable.
+
 
 0.6.7 (2021-06-29)
 ------------------
