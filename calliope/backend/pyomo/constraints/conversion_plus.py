@@ -15,7 +15,7 @@ from calliope.backend.pyomo.util import (
     get_param,
     split_comma_list,
     get_conversion_plus_io,
-    invalid
+    invalid,
 )
 
 ORDER = 20  # order in which to invoke constraints relative to other constraint files

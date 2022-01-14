@@ -207,7 +207,6 @@ class TestNationalScaleExampleModelSpores:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updating the Pyomo parameter.*:calliope.exceptions.ModelWarning"
     )
-
     def test_nationalscale_example_results_gurobi(self):
         pytest.importorskip("gurobipy")
         gurobi_data = self.example_tester("gurobi", "python")
