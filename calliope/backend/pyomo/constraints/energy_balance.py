@@ -211,6 +211,7 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     else:
         available_resource = resource * resource_scale
 
+    # NOTE: this is a boolean comparison, generalised to account for possible floatification of the input data
     if po.value(force_resource) == 1:
         return carrier_prod == available_resource
     elif min_use:
@@ -286,6 +287,7 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     # e.g. in the group constraints
     backend_model.required_resource[loc_tech, timestep] = required_resource
 
+    # NOTE: this is a boolean comparison, generalised to account for possible floatification of the input data
     if po.value(force_resource) == 1:
         return carrier_con == backend_model.required_resource[loc_tech, timestep]
     else:
@@ -351,7 +353,7 @@ def resource_availability_supply_plus_constraint_rule(
         )
     else:
         available_resource = resource * resource_scale
-
+    # NOTE: this is a boolean comparison, generalised to account for possible floatification of the input data
     if po.value(force_resource) == 1:
         return backend_model.resource_con[loc_tech, timestep] == available_resource
     else:

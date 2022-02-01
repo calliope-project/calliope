@@ -15,7 +15,7 @@ Release History
 
 |changed| `INFO` logging level includes logs for dataset cleaning steps before saving to NetCDF and for instantiation of timeseries clustering/resampling (if taking place).
 
-|fixed| `demand_share_per_timestep_decision` constraint set includes.
+|fixed| `demand_share_per_timestep_decision` constraint set includes all expected (location, technology, carrier) items. In the previous version, not all expected items were captured.
 
 |fixed| Mixed dtype xarray dataset variables, where one dtype is boolean, are converted to float if possible. This overcomes an error whereby the NetCDF file cannot be created due to a mixed dtype variable.
 
