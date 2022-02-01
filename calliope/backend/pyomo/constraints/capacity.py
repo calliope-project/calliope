@@ -324,7 +324,7 @@ def resource_area_constraint_rule(backend_model, loc_tech):
         backend_model, "resource_area_per_energy_cap", loc_tech
     )
 
-    if po.value(energy_cap_max) == 0 and not po.value(area_per_energy_cap):
+    if po.value(energy_cap_max) == 0 and invalid(area_per_energy_cap):
         # If a technology has no energy_cap here, we force resource_area to zero,
         # so as not to accrue spurious costs
         return backend_model.resource_area[loc_tech] == 0
