@@ -190,7 +190,7 @@ class TestDemandShareGroupConstraints:
     def test_systemwide_demand_share_max_constraint(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="demand_share_max_systemwide"
+            scenario="demand_share_max_systemwide",
         )
         model.run()
         cheap_generation = (
@@ -205,7 +205,7 @@ class TestDemandShareGroupConstraints:
     def test_systemwide_demand_share_min_constraint(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="demand_share_min_systemwide"
+            scenario="demand_share_min_systemwide",
         )
         model.run()
         expensive_generation = (
@@ -220,7 +220,7 @@ class TestDemandShareGroupConstraints:
     def test_systemwide_demand_share_equals_constraint(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="demand_share_equals_systemwide"
+            scenario="demand_share_equals_systemwide",
         )
         model.run()
         expensive_generation = (
@@ -235,7 +235,7 @@ class TestDemandShareGroupConstraints:
     def test_location_specific_demand_share_max_constraint(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="demand_share_max_location_0"
+            scenario="demand_share_max_location_0",
         )
         model.run()
         generation = (
@@ -281,7 +281,7 @@ class TestDemandShareGroupConstraints:
     def test_location_specific_demand_share_min_constraint(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="demand_share_min_location_0"
+            scenario="demand_share_min_location_0",
         )
         model.run()
         generation = (
@@ -304,7 +304,7 @@ class TestDemandShareGroupConstraints:
     def test_multiple_group_constraints(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="multiple_constraints"
+            scenario="multiple_constraints",
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
@@ -320,7 +320,7 @@ class TestDemandShareGroupConstraints:
     def test_multiple_group_carriers(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="multiple_carriers_max"
+            scenario="multiple_carriers_max",
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
@@ -346,7 +346,7 @@ class TestDemandShareGroupConstraints:
     def test_multiple_group_carriers_constraints(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="multiple_constraints_carriers"
+            scenario="multiple_constraints_carriers",
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
@@ -380,7 +380,7 @@ class TestDemandShareGroupConstraints:
     def test_different_locations_per_group_constraint(self):
         model = build_model(
             model_file="group_constraint_demand_share.yaml",
-            scenario="different_locations_per_group"
+            scenario="different_locations_per_group",
         )
         model.run()
         generation = model.get_formatted_array("carrier_prod").sum(
@@ -451,7 +451,8 @@ class TestDemandShareGroupConstraints:
 
     def test_demand_share_per_timestep_max(self):
         model = build_model(
-            model_file="group_constraint_demand_share.yaml", scenario="demand_share_per_timestep_max"
+            model_file="group_constraint_demand_share.yaml",
+            scenario="demand_share_per_timestep_max",
         )
         model.run()
         cheap_generation = (
@@ -465,7 +466,8 @@ class TestDemandShareGroupConstraints:
 
     def test_demand_share_per_timestep_min(self):
         model = build_model(
-            model_file="group_constraint_demand_share.yaml", scenario="demand_share_per_timestep_min"
+            model_file="group_constraint_demand_share.yaml",
+            scenario="demand_share_per_timestep_min",
         )
         model.run()
         expensive_generation = (
@@ -479,7 +481,8 @@ class TestDemandShareGroupConstraints:
 
     def test_demand_share_per_timestep_equals(self):
         model = build_model(
-            model_file="group_constraint_demand_share.yaml", scenario="demand_share_per_timestep_equals"
+            model_file="group_constraint_demand_share.yaml",
+            scenario="demand_share_per_timestep_equals",
         )
         model.run()
         expensive_generation = (
@@ -763,7 +766,8 @@ class TestResourceAreaGroupConstraints:
 class TestCostCapGroupConstraint:
     def test_systemwide_cost_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="cheap_cost_max_systemwide"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="cheap_cost_max_systemwide",
         )
         model.run()
         cheap_cost = (
@@ -806,7 +810,8 @@ class TestCostCapGroupConstraint:
 
     def test_systemwide_cost_var_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="cheap_cost_var_max_systemwide"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="cheap_cost_var_max_systemwide",
         )
         model.run()
         cheap_cost = (
@@ -832,7 +837,8 @@ class TestCostCapGroupConstraint:
 
     def test_systemwide_cost_min_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="expensive_cost_min_systemwide"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="expensive_cost_min_systemwide",
         )
         model.run()
         expensive_cost = (
@@ -848,7 +854,8 @@ class TestCostCapGroupConstraint:
 
     def test_systemwide_cost_equals_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="cheap_cost_equals_systemwide"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="cheap_cost_equals_systemwide",
         )
         model.run()
         cheap_cost = (
@@ -864,7 +871,8 @@ class TestCostCapGroupConstraint:
 
     def test_location_specific_cost_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="cheap_cost_max_location_0"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="cheap_cost_max_location_0",
         )
         model.run()
         cheap_cost0 = (
@@ -884,7 +892,8 @@ class TestCostCapGroupConstraint:
 
     def test_systemwide_emissions_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="emissions_max_systemwide"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="emissions_max_systemwide",
         )
         model.run()
         emissions = (
@@ -894,7 +903,8 @@ class TestCostCapGroupConstraint:
 
     def test_location_specific_emissions_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="emissions_max_location_0"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="emissions_max_location_0",
         )
         model.run()
         emissions0 = (
@@ -906,7 +916,8 @@ class TestCostCapGroupConstraint:
 
     def test_systemwide_clean_emissions_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="clean_emissions_max_systemwide"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="clean_emissions_max_systemwide",
         )
         model.run()
         clean_emissions = (
@@ -922,7 +933,8 @@ class TestCostCapGroupConstraint:
 
     def test_multiple_costs_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="multiple_costs_constraint"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="multiple_costs_constraint",
         )
         model.run()
         emissions = (
@@ -942,7 +954,8 @@ class TestCostCapGroupConstraint:
 
     def test_different_locations_per_cost_group_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="different_locations_per_group"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="different_locations_per_group",
         )
         model.run()
         cheap_cost = (
@@ -972,7 +985,8 @@ class TestCostCapGroupConstraint:
 
     def test_different_techs_per_cost_group_constraint(self):
         model = build_model(
-            model_file="group_constraint_cost_cap.yaml", scenario="different_techs_per_group"
+            model_file="group_constraint_cost_cap.yaml",
+            scenario="different_techs_per_group",
         )
         model.run()
         emissions = (
@@ -1537,14 +1551,18 @@ class TestStorageCapGroupConstraints:
         assert capacity.loc[{"techs": "expensive_elec_storage"}].sum().item() == 0
 
     def test_storage_cap_max_constraint(self):
-        model = build_model(model_file="group_constraint_storage_cap.yaml", scenario="storage_cap_max")
+        model = build_model(
+            model_file="group_constraint_storage_cap.yaml", scenario="storage_cap_max"
+        )
         model.run()
         capacity = model.get_formatted_array("storage_cap")
         cheap_capacity = capacity.loc[{"techs": "cheap_elec_storage"}].sum().item()
         assert round(cheap_capacity, 5) <= 5
 
     def test_storage_cap_min_constraint(self):
-        model = build_model(model_file="group_constraint_storage_cap.yaml", scenario="storage_cap_min")
+        model = build_model(
+            model_file="group_constraint_storage_cap.yaml", scenario="storage_cap_min"
+        )
         model.run()
         capacity = model.get_formatted_array("storage_cap")
         expensive_capacity = (
@@ -1554,7 +1572,8 @@ class TestStorageCapGroupConstraints:
 
     def test_storage_cap_equals_constraint(self):
         model = build_model(
-            model_file="group_constraint_storage_cap.yaml", scenario="storage_cap_equals"
+            model_file="group_constraint_storage_cap.yaml",
+            scenario="storage_cap_equals",
         )
         model.run()
         capacity = model.get_formatted_array("storage_cap")
@@ -1565,7 +1584,8 @@ class TestStorageCapGroupConstraints:
 
     def test_storage_cap_min_max_constraint(self):
         model = build_model(
-            model_file="group_constraint_storage_cap.yaml", scenario="storage_cap_min_max"
+            model_file="group_constraint_storage_cap.yaml",
+            scenario="storage_cap_min_max",
         )
         model.run()
         capacity = model.get_formatted_array("storage_cap")

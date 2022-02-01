@@ -210,6 +210,7 @@ def get_domain(var: xr.DataArray, default) -> str:
     Returns:
         str: Domain name recognised by Pyomo.
     """
+
     def check_sign(var):
         if re.match("resource|loc_coordinates|cost*", var.name):
             return ""
