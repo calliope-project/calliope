@@ -428,7 +428,9 @@ class TestRegeneratePersistentConstraints:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
     )
-    def test_update_param_with_regeneration_one_dim_from_build_only(self, model_persistent_build_only):
+    def test_update_param_with_regeneration_one_dim_from_build_only(
+        self, model_persistent_build_only
+    ):
         model2 = model_persistent_build_only.backend.rerun()
 
         model_persistent_build_only.backend.update_param(
@@ -512,6 +514,6 @@ class TestRegeneratePersistentConstraints:
 
     def test_opt_exists_on_rerun_from_build_only(self, model_persistent_build_only):
         assert model_persistent_build_only.backend._opt is None
-        new_model = model_persistent_build_only.backend.rerun()
+        model_persistent_build_only.backend.rerun()
 
         assert model_persistent_build_only.backend._opt.name == "gurobi_persistent"
