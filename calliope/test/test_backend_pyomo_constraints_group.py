@@ -1839,6 +1839,10 @@ class TestCarrierProdGroupConstraints:
         assert model._model_data.attrs["termination_condition"] != "optimal"
 
 
+
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*defines force_resource but not a finite resourc.*:calliope.exceptions.ModelWarning"
+)
 class TestCarrierConGroupConstraints:
     def test_no_carrier_con_constraint(self, model_file):
         model = build_model(model_file=model_file)

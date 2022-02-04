@@ -656,7 +656,7 @@ class TestCostConstraints:
         arg3 = [
             "monetary",
             "1::test_transmission_elec:0",
-            m._backend_model.timesteps[1],
+            m._backend_model.timesteps.at(1),
         ]
         has_cost = get_indexed_constraint_body(arg1, arg2, tuple(arg3)).to_string()
 

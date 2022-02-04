@@ -167,7 +167,7 @@ class TestModelRun:
         )
 
     @pytest.mark.filterwarnings(
-        "ignore:(?s).*includes commas:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*includes commas.*:calliope.exceptions.ModelWarning"
     )
     def test_scenario_name_overlaps_overrides(self):
         """

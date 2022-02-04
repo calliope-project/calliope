@@ -476,7 +476,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
                     timestep
                 ]
             elif current_timestep == 0 and run_config["cyclic_storage"]:
-                previous_step = backend_model.timesteps[-1]
+                previous_step = backend_model.timesteps.at(-1)
             else:
                 previous_step = get_previous_timestep(backend_model.timesteps, timestep)
             storage_loss = get_param(backend_model, "storage_loss", loc_tech)
@@ -542,7 +542,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
         ):
             previous_step = model_data_dict["lookup_cluster_last_timestep"][timestep]
         elif current_timestep == 0 and run_config["cyclic_storage"]:
-            previous_step = backend_model.timesteps[-1]
+            previous_step = backend_model.timesteps.at(-1)
         else:
             previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         storage_loss = get_param(backend_model, "storage_loss", loc_tech)
@@ -643,7 +643,7 @@ def storage_initial_rule(backend_model, loc_tech):
         time_resolution = 24
     else:
         storage = backend_model.storage
-        final_step = backend_model.timesteps[-1]
+        final_step = backend_model.timesteps.at(-1)
         time_resolution = backend_model.timestep_resolution[final_step]
 
     return (

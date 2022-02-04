@@ -56,7 +56,7 @@ def get_param(backend_model, var, dims):
 
 def get_previous_timestep(timesteps, timestep):
     """Get the timestamp for the timestep previous to the input timestep"""
-    return timesteps[timesteps.ord(timestep) - 1]
+    return timesteps.at(timesteps.ord(timestep) - 1)
 
 
 @memoize
