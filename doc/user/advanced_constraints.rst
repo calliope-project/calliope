@@ -377,7 +377,15 @@ Note that when computing the share for ``demand_share`` constraints, only ``dema
    * - ``resource_area_equals``
      - –
      - Exact resource area used by a set of technologies across a set of locations.
-
+   * - ``storage_cap_min``
+     - –
+     - Minimum installed storage capacity from a set of technologies across a set of locations.
+   * - ``storage_cap_max``
+     - –
+     - Maximum installed storage capacity from a set of technologies across a set of locations.
+   * - ``storage_cap_equals``
+     - –
+     - Exact installed storage capacity from a set of technologies across a set of locations.
 
 For specifics of the mathematical formulation of the available group constraints, see :ref:`constraint_group` in the mathematical formulation section.
 
@@ -392,6 +400,8 @@ The ``demand_share_per_timestep_decision`` constraint is a special case amongst 
 It can also be set to ``.inf`` to permit Calliope to decide on the fraction of total demand to cover by the constraint. This can be necessary in cases where there are sources of carrier consumption other than demand in the locations covered by the group constraint: when using conversion techs or when there are losses from storage and transmission, as the share may then be higher than 1, leading to an infeasible model if it is forced to ``1.0``.
 
 This constraint can be useful in large-scale models where individual technologies should not fluctuate in their relative share from time step to time step, for example, when modelling the relative share of heating demand from different heating technologies.
+
+.. note:: In some model setups, numerical issues in the solving process can cause model infeasibility due to this group constraint. It may therefore be necessary to 'relax' this constraint, such that the requirement for a technology to have a specific demand share in each timestep is relax by a few percent. To enfore this relaxation, you can set the run configuration option ``run.relax_constraint.demand_share_per_timestep_decision_main_constraint`` to something other than ``0`` (default). E.g. a value of 0.01 will set a 1% relaxation (``lhs == rhs`` -> ``lhs >= 0.99 * rhs`` & ``lhs <= 1.01 * rhs``).
 
 .. Warning:: It is easy to create an infeasible model by setting several conflicting group constraints, in particular when ``demand_share_per_timestep_decision`` is involved. Make sure you think through the implications when setting up these constraints!
 
