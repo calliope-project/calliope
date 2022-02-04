@@ -50,10 +50,11 @@ steps:
       conda info -a
     displayName: Configure and update conda
 
-  - bash: |
+  - bash: |  # cbc -quit may be required to make sure that cbc is 'reset' such that its timeout time fits within pyomo's strict limit (see: https://github.com/Pyomo/pyomo/issues/2102)
       python utils/conda_create.py requirements.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       source activate calliope
       conda install -y -c conda-forge coincbc
+      cbc -quit
       pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
     displayName: Set up environment and run tests (UNIX)
