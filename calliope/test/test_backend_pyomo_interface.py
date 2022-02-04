@@ -380,6 +380,15 @@ class TestRegeneratePersistentConstraints:
         m.run()
         return m
 
+    @pytest.fixture
+    def model_persistent_build_only(model):
+        m = build_model(
+            {"run.solver": "gurobi_persistent", "run.solver_io": "python"},
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.run(build_only=True)
+        return m
+
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
     )
@@ -415,6 +424,28 @@ class TestRegeneratePersistentConstraints:
         model2 = model_persistent.backend.rerun()
         for i in ["1::test_supply_elec", "0::test_supply_elec"]:
             assert model2.results.energy_cap.loc[i] == 5
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
+    )
+    def test_update_param_with_regeneration_one_dim_from_build_only(self, model_persistent_build_only):
+        model2 = model_persistent_build_only.backend.rerun()
+
+        model_persistent_build_only.backend.update_param(
+            "energy_cap_max", {"1::test_supply_elec": 5, "0::test_supply_elec": 5}
+        )
+        model_persistent_build_only.backend.regenerate_persistent_solver(
+            constraints={
+                "energy_capacity_constraint": [
+                    "1::test_supply_elec",
+                    "0::test_supply_elec",
+                ]
+            }
+        )
+        model3 = model_persistent_build_only.backend.rerun()
+        for i in ["1::test_supply_elec", "0::test_supply_elec"]:
+            assert model2.results.energy_cap.loc[i] != 5
+            assert model3.results.energy_cap.loc[i] == 5
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updating the Pyomo parameter:calliope.exceptions.ModelWarning"
@@ -478,3 +509,9 @@ class TestRegeneratePersistentConstraints:
         with pytest.raises(exceptions.ModelError) as excinfo:
             model.backend.regenerate_persistent_solver(obj=True)
         assert check_error_or_warning(excinfo, "Can only regenerate persistent solvers")
+
+    def test_opt_exists_on_rerun_from_build_only(self, model_persistent_build_only):
+        assert model_persistent_build_only.backend._opt is None
+        new_model = model_persistent_build_only.backend.rerun()
+
+        assert model_persistent_build_only.backend._opt.name == "gurobi_persistent"
