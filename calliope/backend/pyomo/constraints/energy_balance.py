@@ -211,7 +211,8 @@ def balance_supply_constraint_rule(backend_model, loc_tech, timestep):
     else:
         available_resource = resource * resource_scale
 
-    if po.value(force_resource):
+    # NOTE: this is a boolean comparison, generalised to account for possible floatification of the input data
+    if po.value(force_resource) == 1:
         return carrier_prod == available_resource
     elif min_use:
         return min_use * available_resource <= carrier_prod <= available_resource
@@ -286,7 +287,8 @@ def balance_demand_constraint_rule(backend_model, loc_tech, timestep):
     # e.g. in the group constraints
     backend_model.required_resource[loc_tech, timestep] = required_resource
 
-    if po.value(force_resource):
+    # NOTE: this is a boolean comparison, generalised to account for possible floatification of the input data
+    if po.value(force_resource) == 1:
         return carrier_con == backend_model.required_resource[loc_tech, timestep]
     else:
         return carrier_con >= backend_model.required_resource[loc_tech, timestep]
@@ -351,8 +353,8 @@ def resource_availability_supply_plus_constraint_rule(
         )
     else:
         available_resource = resource * resource_scale
-
-    if po.value(force_resource):
+    # NOTE: this is a boolean comparison, generalised to account for possible floatification of the input data
+    if po.value(force_resource) == 1:
         return backend_model.resource_con[loc_tech, timestep] == available_resource
     else:
         return backend_model.resource_con[loc_tech, timestep] <= available_resource
@@ -474,7 +476,7 @@ def balance_supply_plus_constraint_rule(backend_model, loc_tech, timestep):
                     timestep
                 ]
             elif current_timestep == 0 and run_config["cyclic_storage"]:
-                previous_step = backend_model.timesteps[-1]
+                previous_step = backend_model.timesteps.at(-1)
             else:
                 previous_step = get_previous_timestep(backend_model.timesteps, timestep)
             storage_loss = get_param(backend_model, "storage_loss", loc_tech)
@@ -540,7 +542,7 @@ def balance_storage_constraint_rule(backend_model, loc_tech, timestep):
         ):
             previous_step = model_data_dict["lookup_cluster_last_timestep"][timestep]
         elif current_timestep == 0 and run_config["cyclic_storage"]:
-            previous_step = backend_model.timesteps[-1]
+            previous_step = backend_model.timesteps.at(-1)
         else:
             previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         storage_loss = get_param(backend_model, "storage_loss", loc_tech)
@@ -641,7 +643,7 @@ def storage_initial_rule(backend_model, loc_tech):
         time_resolution = 24
     else:
         storage = backend_model.storage
-        final_step = backend_model.timesteps[-1]
+        final_step = backend_model.timesteps.at(-1)
         time_resolution = backend_model.timestep_resolution[final_step]
 
     return (

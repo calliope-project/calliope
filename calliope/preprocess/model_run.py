@@ -196,9 +196,13 @@ def apply_overrides(config, scenario=None, override_dict=None):
 
     if scenario:
         scenario_overrides = load_overrides_from_scenario(config_model, scenario)
-        if not all(i in config_model.get("overrides", {}) for i in scenario_overrides):
+        _missing = set(scenario_overrides).difference(
+            config_model.get("overrides", {}).keys()
+        )
+        if _missing:
             raise exceptions.ModelError(
-                "Scenario definition must be a list of override or other scenario names."
+                "Scenario definition must be a list of override or other scenario names. "
+                f"Could not find scenarios/overrides {_missing}"
             )
         else:
             logger.info(
@@ -451,7 +455,8 @@ def load_overrides_from_scenario(config_model, scenario):
     for override in scenario_list:
         if isinstance(override, dict):
             raise exceptions.ModelError(
-                "Scenario definition must be a list of override or other scenario names."
+                "Scenario definition must be a list of override or other scenario names. "
+                "Received a dictionary instead"
             )
         if override in config_model.get("scenarios", {}).keys():
             scenario_overrides.update(

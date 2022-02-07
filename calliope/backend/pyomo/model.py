@@ -85,13 +85,13 @@ def generate_model(model_data):
     )
 
     for k, v in model_data_dict["data"].items():
+        _default = backend_model.__calliope_defaults.get(k, None)
         _kwargs = {
             "initialize": v,
             "mutable": True,
-            "within": getattr(po, get_domain(model_data[k])),
+            "within": getattr(po, get_domain(model_data[k], default=_default)),
         }
-        if not pd.isnull(backend_model.__calliope_defaults.get(k, None)):
-            _kwargs["default"] = backend_model.__calliope_defaults[k]
+        _kwargs["default"] = _default
         # In operate mode, e.g. energy_cap is a parameter, not a decision variable,
         # so add those in.
         if (

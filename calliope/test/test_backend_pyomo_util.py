@@ -4,11 +4,17 @@ import pyomo.core as po
 
 from calliope.test.common.util import build_test_model as build_model
 from calliope.backend.pyomo.util import get_domain, get_param, invalid
+from calliope import AttrDict
 
 
 @pytest.fixture(scope="class")
 def model():
     return build_model({}, "simple_supply,two_hours,investment_costs")
+
+
+@pytest.fixture(scope="class")
+def defaults(model):
+    return AttrDict.from_yaml_string(model._model_data.attrs["defaults"])
 
 
 class TestGetParam:
@@ -19,7 +25,7 @@ class TestGetParam:
         param = get_param(
             m._backend_model,
             "resource",
-            ("1::test_demand_elec", m._backend_model.timesteps[1]),
+            ("1::test_demand_elec", m._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == -5  # see demand_elec.csv
 
@@ -30,7 +36,7 @@ class TestGetParam:
         param = get_param(
             m._backend_model,
             "energy_eff",
-            ("1::test_supply_elec", m._backend_model.timesteps[1]),
+            ("1::test_supply_elec", m._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == 0.9  # see test model.yaml
 
@@ -54,7 +60,7 @@ class TestGetParam:
         param = get_param(
             m._backend_model,
             "parasitic_eff",
-            ("1::test_supply_plus", m._backend_model.timesteps[1]),
+            ("1::test_supply_plus", m._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == 1  # see defaults.yaml
 
@@ -66,19 +72,18 @@ class TestGetParam:
         )
         assert po.value(param) == 0  # see defaults.yaml
 
-    def test_get_param_no_default_defined(self):
+    @pytest.mark.parametrize(
+        "dims",
+        [("1::test_demand_elec", "2005-01-01 00:00:00"), ("1::test_supply_elec")],
+    )
+    def test_get_param_no_default_defined(self, dims):
         """
-        If a default is not defined, raise KeyError
+        If a default is not defined, return po.Param.NoValue
         """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run()
-        with pytest.raises(KeyError):
-            get_param(
-                m._backend_model,
-                "random_param",
-                ("1::test_demand_elec", m._backend_model.timesteps[1]),
-            )
-            get_param(m._backend_model, "random_param", ("1::test_supply_elec"))
+
+        assert get_param(m._backend_model, "random_param", dims) == po.Param.NoValue
 
 
 class TestGetDomain:
@@ -92,8 +97,8 @@ class TestGetDomain:
             ("names", "Any"),
         ),
     )
-    def test_dtypes(self, model, var, domain):
-        assert get_domain(model._model_data[var]) == domain
+    def test_dtypes(self, model, defaults, var, domain):
+        assert get_domain(model._model_data[var], defaults.get(var, None)) == domain
 
 
 class TestValueValidity:

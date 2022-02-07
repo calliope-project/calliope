@@ -76,8 +76,8 @@ class TestNationalScaleExampleModelSenseChecks:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
-    @pytest.importorskip("gurobipy")
     def test_nationalscale_example_results_gurobi(self):
+        pytest.importorskip("gurobipy")
         self.example_tester(solver="gurobi", solver_io="python")
 
     def test_nationalscale_example_results_cplex(self):
@@ -204,8 +204,11 @@ class TestNationalScaleExampleModelSpores:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning"
     )
-    @pytest.importorskip("gurobipy")
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updating the Pyomo parameter.*:calliope.exceptions.ModelWarning"
+    )
     def test_nationalscale_example_results_gurobi(self):
+        pytest.importorskip("gurobipy")
         gurobi_data = self.example_tester("gurobi", "python")
         gurobi_persistent_data = self.example_tester("gurobi_persistent", "python")
         assert np.allclose(gurobi_data.energy_cap, gurobi_persistent_data.energy_cap)
@@ -485,15 +488,15 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_urban_example_results_area(self):
         self.example_tester("per_area")
 
-    @pytest.importorskip("gurobipy")
     def test_urban_example_results_area_gurobi(self):
+        pytest.importorskip("gurobipy")
         self.example_tester("per_area", solver="gurobi", solver_io="python")
 
     def test_urban_example_results_cap(self):
         self.example_tester("per_cap")
 
-    @pytest.importorskip("gurobipy")
     def test_urban_example_results_cap_gurobi(self):
+        pytest.importorskip("gurobipy")
         self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")

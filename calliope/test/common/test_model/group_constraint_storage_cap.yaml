@@ -1,0 +1,106 @@
+
+model:
+    name: Energy capacity group constraint test model
+    timeseries_data_path: 'timeseries_data'
+    subset_time: ['2005-01-01 00:00', '2005-01-01 05:00']
+
+run:
+    mode: plan
+    solver: cbc
+
+techs:
+    cheap_supply:
+        essentials:
+            name: Cheap supply tech
+            carrier: electricity
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: 8
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 1
+    expensive_supply:
+        essentials:
+            name: Expensive supply
+            carrier: electricity
+            parent: supply
+        constraints:
+            lifetime: 25
+            energy_cap_max: 10
+            resource: file=supply_simple.csv
+        costs:
+            monetary:
+                interest_rate: 0.1
+                energy_cap: 10
+                om_prod: 1
+    cheap_elec_storage:
+        essentials:
+            name: Electricity storage
+            carrier: electricity
+            parent: storage
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+            storage_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                storage_cap: 0.01
+    expensive_elec_storage:
+        essentials:
+            name: Expensive electricity storage
+            carrier: electricity
+            parent: storage
+        constraints:
+            lifetime: 25
+            energy_cap_max: .inf
+            storage_cap_max: .inf
+        costs:
+            monetary:
+                interest_rate: 0.1
+                storage_cap: 1
+    electricity_demand:
+        essentials:
+            name: Electricity demand
+            carrier: electricity
+            parent: demand
+        constraints:
+            resource: file=demand_simple.csv
+
+locations:
+    0:
+        techs:
+            cheap_supply:
+            expensive_supply:
+            cheap_elec_storage:
+            expensive_elec_storage:
+            electricity_demand:
+
+overrides:
+    cap_min:
+        group_constraints.example_storage_cap_constraint:
+            storage_cap_min: 4
+    cap_max:
+        group_constraints.example_storage_cap_constraint:
+            storage_cap_max: 5
+    cap_equals:
+        group_constraints.example_storage_cap_constraint:
+            storage_cap_equals: 6
+    cap_max_cheap_storage:
+        group_constraints.example_storage_cap_max_constraint:
+            storage_cap_max: 2
+            techs: ["cheap_elec_storage"]
+    cap_cheap_storage:
+        group_constraints.example_storage_cap_constraint:
+            techs: ["cheap_elec_storage"]
+    cap_expensive_storage:
+        group_constraints.example_storage_cap_constraint:
+            techs: ["expensive_elec_storage"]
+
+scenarios:
+    storage_cap_max: [cap_max, cap_cheap_storage]
+    storage_cap_min:  [cap_min, cap_expensive_storage]
+    storage_cap_equals:  [cap_equals, cap_expensive_storage]
+    storage_cap_min_max: [cap_max_cheap_storage, cap_min]

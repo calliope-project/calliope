@@ -162,7 +162,7 @@ def add_time_dimension(data, model_run):
         timeseries_data_series = pd.DataFrame(
             index=tskeys.index, columns=data.timesteps.values, data=timeseries_data
         ).stack()
-        timeseries_data_series.index.rename("timesteps", -1, inplace=True)
+        timeseries_data_series.index.set_names("timesteps", level=-1, inplace=True)
 
         # 7) Add time dimension to the relevent DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated

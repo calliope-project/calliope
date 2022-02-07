@@ -650,35 +650,6 @@ def check_final(model_run):
                 "Time series `{}` contains non-unique timestamp values.".format(k)
             )
 
-    # Warn if loc/tech is defined in group constraint that doesn't exist in the model
-    for i in ["locs", "techs"]:
-        config_i = "locations" if i == "locs" else i
-        _missing = set()
-        for group, group_vals in model_run.get("group_constraints", {}).items():
-            if i in group_vals.keys() and set(group_vals[i]).difference(
-                model_run[config_i].keys()
-            ):
-                _missing.update(
-                    set(group_vals[i]).difference(model_run[config_i].keys())
-                )
-                model_run["group_constraints"][group][i] = list(
-                    set(group_vals[i]).intersection(model_run[config_i].keys())
-                )
-                if model_run["group_constraints"][group][i] == []:
-                    model_warnings.append(
-                        "Constraint group `{}` will be completely ignored since "
-                        "none of the defined {} are valid for this model.".format(
-                            group, i
-                        )
-                    )
-                    model_run["group_constraints"][group]["exists"] = False
-        if _missing:
-            model_warnings.append(
-                "Possible misspelling in group constraints: {0} {1} given in "
-                "group constraints, but not defined as {0} in the model. They "
-                "will be ignored in the optimisation run".format(i, _missing)
-            )
-
     # Warn if objective cost class is not defined elsewhere in the model
     objective_cost_class = set(model_run.run.objective_options.cost_class.keys())
     cost_classes = model_run.sets.costs
@@ -765,7 +736,7 @@ def check_model_data(model_data):
     for loc_tech in set(model_data.loc_techs_demand.values).intersection(
         model_data.loc_techs_finite_resource.values
     ):
-        if any(model_data.resource.loc[loc_tech].values > 0):
+        if any(model_data.resource.sel(loc_techs_finite_resource=loc_tech).values > 0):
             errors.append(
                 "Positive resource given for demand loc_tech {}. All demands "
                 "must have negative resource".format(loc_tech)

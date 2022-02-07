@@ -656,7 +656,7 @@ class TestCostConstraints:
         arg3 = [
             "monetary",
             "1::test_transmission_elec:0",
-            m._backend_model.timesteps[1],
+            m._backend_model.timesteps.at(1),
         ]
         has_cost = get_indexed_constraint_body(arg1, arg2, tuple(arg3)).to_string()
 
@@ -1064,13 +1064,13 @@ class TestCapacityConstraints:
         override = {
             "locations.0.techs.test_supply_elec.constraints.energy_cap_equals": np.inf
         }
-        with pytest.raises(exceptions.ModelError) as error:
+        with pytest.raises(ValueError) as error:
             m = build_model(override, "simple_supply,two_hours,investment_costs")
             m.run(build_only=True)
 
         assert check_error_or_warning(
             error,
-            "Cannot use inf for energy_cap_equals for loc:tech `0::test_supply_elec`",
+            "Cannot use inf for parameter energy_cap_equals['0::test_supply_elec']",
         )
 
     def test_techs_energy_capacity_systemwide_constraint(self):
@@ -1106,7 +1106,7 @@ class TestCapacityConstraints:
         )
 
         # Check that setting `_equals` to infinity is caught:
-        with pytest.raises(exceptions.ModelError) as error:
+        with pytest.raises(ValueError) as error:
             m = build_model(
                 {
                     "techs.test_supply_elec.constraints.energy_cap_equals_systemwide": np.inf
@@ -1117,7 +1117,7 @@ class TestCapacityConstraints:
 
         assert check_error_or_warning(
             error,
-            "Cannot use inf for energy_cap_equals_systemwide for tech `test_supply_elec`",
+            "Cannot use inf for parameter energy_cap_equals_systemwide[test_supply_elec]",
         )
 
         m = build_model(
@@ -1805,7 +1805,8 @@ class TestMILPConstraints:
             )
             m.run(build_only=True)
         assert check_error_or_warning(
-            error, "Cannot use inf for energy_cap_equals_systemwide"
+            error,
+            "Cannot use inf for parameter units_equals_systemwide[test_conversion_plus]",
         )
 
         m = build_model(

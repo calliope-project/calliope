@@ -38,7 +38,7 @@ def get_param(backend_model, var, dims):
         logger.debug(
             "get_param: var {} and dims {} leading to default lookup".format(var, dims)
         )
-        return backend_model.__calliope_defaults[var]
+        return backend_model.__calliope_defaults.get(var, po.Param.NoValue)
     except KeyError:  # try removing timestep
         try:
             if len(dims) > 2:
@@ -51,12 +51,12 @@ def get_param(backend_model, var, dims):
                     var, dims
                 )
             )
-            return backend_model.__calliope_defaults[var]
+            return backend_model.__calliope_defaults.get(var, po.Param.NoValue)
 
 
 def get_previous_timestep(timesteps, timestep):
     """Get the timestamp for the timestep previous to the input timestep"""
-    return timesteps[timesteps.ord(timestep) - 1]
+    return timesteps.at(timesteps.ord(timestep) - 1)
 
 
 @memoize
@@ -197,7 +197,20 @@ def loc_tech_is_in(backend_model, loc_tech, model_set):
         return False
 
 
-def get_domain(var: xr.DataArray) -> str:
+def get_domain(var: xr.DataArray, default) -> str:
+    """
+    Get the Pyomo 'domain' of an array of input data. This is required when
+    initialising a pyomo Parameter. An initial attempt will be made to infer the array's
+    domain, based on its dtype. If that fails, the result will be "Any".
+
+    Args:
+        var (xr.DataArray): Calliope model parameter.
+        default ([type]): default value of the parameter (e.g. from config/defaults.yaml).
+
+    Returns:
+        str: Domain name recognised by Pyomo.
+    """
+
     def check_sign(var):
         if re.match("resource|loc_coordinates|cost*", var.name):
             return ""
@@ -208,19 +221,55 @@ def get_domain(var: xr.DataArray) -> str:
 
     if var.dtype.kind == "b":
         return "Boolean"
-    elif is_numeric_dtype(var.dtype):
+    elif is_numeric_dtype(var.dtype) and isinstance(default, (int, float)):
         return check_sign(var) + "Reals"
     else:
         return "Any"
 
 
 def invalid(val) -> bool:
+    """
+    Check whether an optimisation parameter is initialised and/or set to None.
+
+    Args:
+        val: Pyomo Parameter object or any other type.
+
+    Returns:
+        bool: True if the parameter is not valid for use in setting a constraint/objective
+    """
     if isinstance(val, po.base.param._ParamData):
-        return val._value == po.Param.NoValue or po.value(val) is None
+        return (
+            val._value == po.Param.NoValue
+            or val._value is None
+            or po.value(val) is None
+        )
     elif val == po.Param.NoValue:
         return True
     else:
         return pd.isnull(val)
+
+
+def apply_equals(val) -> bool:
+    """
+    Check if a constraint should enforce a variable to be an exact value, rather than
+    allowing a range. E.g. If a user sets `energy_cap_equals`, it is applied in
+    preference of `energy_cap_min` and `energy_cap_max`.
+
+    Args:
+        val: Pyomo parameter value for the `..._equals` parameter in question.
+
+    Raises:
+        ValueError: Cannot set a variable to equal infinity; an exception is raised if this is attempted.
+
+    Returns:
+        bool: If True, setting the variable to `val` is the correct course of action.
+    """
+    if invalid(val) or (isinstance(po.value(val), bool) and po.value(val) is False):
+        return False
+    elif np.isinf(po.value(val)):
+        raise ValueError(f"Cannot use inf for parameter {val.name}")
+    else:
+        return True
 
 
 def datetime_to_string(

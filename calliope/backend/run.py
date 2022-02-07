@@ -655,7 +655,10 @@ def run_operate(model_data, timings, backend, build_only):
             result_array.append(_results)
 
             # Set up initial storage for the next iteration
-            if "loc_techs_store" in model_data.dims.keys() and _termination in ["optimal", "feasible"]:
+            if "loc_techs_store" in model_data.dims.keys() and _termination in [
+                "optimal",
+                "feasible",
+            ]:
                 storage_initial = (
                     _results.storage.loc[{"timesteps": window_ends.index[i]}].drop_vars(
                         "timesteps"
@@ -670,7 +673,10 @@ def run_operate(model_data, timings, backend, build_only):
                 )
 
             # Set up total operated units for the next iteration
-            if "loc_techs_milp" in model_data.dims.keys() and _termination in ["optimal", "feasible"]:
+            if "loc_techs_milp" in model_data.dims.keys() and _termination in [
+                "optimal",
+                "feasible",
+            ]:
                 operated_units = _results.operating_units.sum("timesteps").astype(int)
                 model_data["operated_units"].loc[{}] += operated_units.values
                 backend_model.operated_units.store_values(

@@ -15,6 +15,7 @@ from calliope.backend.pyomo.util import (
     get_param,
     split_comma_list,
     get_conversion_plus_io,
+    invalid,
 )
 
 ORDER = 20  # order in which to invoke constraints relative to other constraint files
@@ -237,7 +238,7 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
         cost_om_prod = get_param(
             backend_model, "cost_om_prod", (cost, loc_tech, timestep)
         )
-        if cost_om_prod:
+        if not invalid(cost_om_prod):
             var_cost += (
                 cost_om_prod
                 * weight
@@ -248,7 +249,7 @@ def cost_var_conversion_plus_constraint_rule(backend_model, cost, loc_tech, time
         cost_om_con = get_param(
             backend_model, "cost_om_con", (cost, loc_tech, timestep)
         )
-        if cost_om_con:
+        if not invalid(cost_om_con):
             var_cost += (
                 cost_om_con
                 * weight

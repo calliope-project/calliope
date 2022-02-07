@@ -18,6 +18,7 @@ from calliope.backend.pyomo.util import (
     get_loc_tech,
     split_comma_list,
     loc_tech_is_in,
+    apply_equals,
 )
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
@@ -447,7 +448,7 @@ def energy_capacity_max_purchase_milp_constraint_rule(backend_model, loc_tech):
     energy_cap_equals = get_param(backend_model, "energy_cap_equals", loc_tech)
     energy_cap_scale = get_param(backend_model, "energy_cap_scale", loc_tech)
 
-    if po.value(energy_cap_equals):
+    if apply_equals(energy_cap_equals):
         return backend_model.energy_cap[loc_tech] == (
             energy_cap_equals * energy_cap_scale * backend_model.purchased[loc_tech]
         )
@@ -505,7 +506,7 @@ def storage_capacity_max_purchase_milp_constraint_rule(backend_model, loc_tech):
     storage_cap_max = get_param(backend_model, "storage_cap_max", loc_tech)
     storage_cap_equals = get_param(backend_model, "storage_cap_equals", loc_tech)
 
-    if po.value(storage_cap_equals):
+    if apply_equals(storage_cap_equals):
         return backend_model.storage_cap[loc_tech] == (
             storage_cap_equals * backend_model.purchased[loc_tech]
         )
@@ -648,12 +649,8 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
     max_systemwide = get_param(backend_model, "units_max_systemwide", tech)
     equals_systemwide = get_param(backend_model, "units_equals_systemwide", tech)
 
-    if np.isinf(po.value(max_systemwide)) and not equals_systemwide:
+    if np.isinf(po.value(max_systemwide)) and not apply_equals(equals_systemwide):
         return po.Constraint.NoConstraint
-    elif equals_systemwide and np.isinf(po.value(equals_systemwide)):
-        raise ValueError(
-            "Cannot use inf for energy_cap_equals_systemwide for tech `{}`".format(tech)
-        )
 
     sum_expr_units = sum(
         backend_model.units[loc_tech]
@@ -666,7 +663,7 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
         if loc_tech_is_in(backend_model, loc_tech, "loc_techs_purchase")
     )
 
-    if equals_systemwide:
+    if apply_equals(equals_systemwide):
         return sum_expr_units + sum_expr_purchase == equals_systemwide * multiplier
     else:
         return sum_expr_units + sum_expr_purchase <= max_systemwide * multiplier

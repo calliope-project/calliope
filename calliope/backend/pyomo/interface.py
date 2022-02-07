@@ -214,7 +214,7 @@ def rerun_pyomo_model(model_data, backend_model, opt):
     new_calliope_model = calliope.Model(config=None, model_data=new_model_data)
     new_calliope_model._timings = timings
 
-    return new_calliope_model
+    return opt, new_calliope_model
 
 
 def add_pyomo_constraint(
@@ -343,9 +343,11 @@ class BackendInterfaceMethods:
     activate_constraint.__doc__ = activate_pyomo_constraint.__doc__
 
     def rerun(self, *args, **kwargs):
-        return rerun_pyomo_model(
+        _opt, new_model = rerun_pyomo_model(
             self._model_data, self._backend, self._opt, *args, **kwargs
         )
+        self._opt = _opt
+        return new_model
 
     rerun.__doc__ = rerun_pyomo_model.__doc__
 

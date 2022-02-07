@@ -121,6 +121,12 @@ class Model(object):
             _model_data = self._model_data_original
         else:
             _model_data = apply_time_clustering(self._model_data_original, model_run)
+            log_time(
+                logger,
+                self._timings,
+                "model_data_clustered",
+                comment="Model: time resampling/clustering complete",
+            )
         self._model_data = final_timedimension_processing(_model_data)
         log_time(
             logger,

@@ -10,6 +10,7 @@ Functions to read and save model results.
 """
 
 import os
+import logging
 
 import xarray as xr
 
@@ -42,40 +43,50 @@ def read_netcdf(path):
 
 def save_netcdf(model_data, path, model=None):
     encoding = {k: {"zlib": True, "complevel": 4} for k in model_data.data_vars}
-
-    original_model_data_attrs = model_data.attrs
-    model_data_attrs = model_data.attrs.copy()
+    model_data_copy = model_data.copy()
 
     if model is not None and hasattr(model, "_model_run"):
+        logging.info("Adding model run data to model data attributes")
         # Attach _model_run and _debug_data to _model_data
         model_run_to_save = model._model_run.copy()
         if "timeseries_data" in model_run_to_save:
             del model_run_to_save["timeseries_data"]  # Can't be serialised!
-        model_data_attrs["_model_run"] = model_run_to_save.to_yaml()
-        model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
+        model_data_copy.attrs["_model_run"] = model_run_to_save.to_yaml()
+        model_data_copy.attrs["_debug_data"] = model._debug_data.to_yaml()
 
     # Convert boolean attrs to ints
-    bool_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, bool)]
+    logging.info("Converting boolean attrs to ints")
+    bool_attrs = [k for k, v in model_data_copy.attrs.items() if isinstance(v, bool)]
     for k in bool_attrs:
-        model_data_attrs[k] = int(model_data_attrs[k])
+        model_data_copy.attrs[k] = int(model_data_copy.attrs[k])
 
     # Convert None attrs to 'None'
-    none_attrs = [k for k, v in model_data_attrs.items() if v is None]
+    logging.info("Converting None attrs to 'None'")
+    none_attrs = [k for k, v in model_data_copy.attrs.items() if v is None]
     for k in none_attrs:
-        model_data_attrs[k] = "None"
+        model_data_copy.attrs[k] = "None"
 
     # Convert `object` dtype coords to string
     # FIXME: remove once xarray issue https://github.com/pydata/xarray/issues/2404 is resolved
-    for k, v in model_data.coords.items():
-        if v.dtype == "O":
-            model_data[k] = v.astype("<U{}".format(max([len(i.item()) for i in v])))
-
-    try:
-        model_data.attrs = model_data_attrs
-        model_data.to_netcdf(path, format="netCDF4", encoding=encoding)
-        model_data.close()  # Force-close NetCDF file after writing
-    finally:  # Revert model_data.attrs back
-        model_data.attrs = original_model_data_attrs
+    logging.info("Converting object coordinates to string")
+    for coord_name, coord_data in model_data_copy.coords.items():
+        if coord_data.dtype.kind == "O":
+            model_data_copy[coord_name] = coord_data.astype(str)
+    # Convert `object` dtype variables where some contents could be boolean to float
+    logging.info("Converting object variables with boolean content to float")
+    for var_name, var_data in model_data_copy.data_vars.items():
+        if var_data.dtype.kind == "O":
+            try:
+                model_data_copy[var_name] = var_data.astype(float)
+                exceptions.warn(
+                    f"'{var_name}' contains mixed data types. "
+                    "All its values will be converted to float in the saved NetCDF"
+                )
+            except ValueError:
+                continue
+    logging.info("Saving to NetCDF")
+    model_data_copy.to_netcdf(path, format="netCDF4", encoding=encoding)
+    model_data_copy.close()  # Force-close NetCDF file after writing
 
 
 def save_csv(model_data, path, dropna=True):

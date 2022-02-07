@@ -474,12 +474,11 @@ def group_constraints_to_dataset(model_run):
     group_constraints = model_run["group_constraints"]
 
     for constr_name in model_run.constraint_sets["group_constraints"]:
-        dims = ["group_names_" + constr_name]
+        constr_group_name = f"group_names_{constr_name}"
+        dims = [constr_group_name]
         constr = checks.DEFAULTS.group_constraints.default_group.get(constr_name, None)
-        if constr is not None:
-            group_names = model_run.constraint_sets.get(
-                f"group_names_{constr_name}", None
-            )
+        group_names = model_run.constraint_sets.get(constr_group_name, None)
+        if group_names is not None:
             if isinstance(constr, dict):
                 if "default_carrier" in constr.keys():
                     data = [
@@ -502,7 +501,7 @@ def group_constraints_to_dataset(model_run):
         else:
             continue
 
-        data_dict["group_" + constr_name] = {"dims": dims, "data": data}
+        data_dict[f"group_{constr_name}"] = {"dims": dims, "data": data}
 
     return data_dict
 
@@ -564,12 +563,18 @@ def update_dtypes(model_data):
             no_nans = var.where(var != "nan", drop=True)
             model_data[var_name] = var.where(var != "nan")
 
-            if (no_nans.isin(["True", "False", "0", "1"]) | no_nans.isin([0, 1]) | no_nans.isin([True, False])).all():
+            if (
+                no_nans.isin(["True", "False", "0", "1"])
+                | no_nans.isin([0, 1])
+                | no_nans.isin([True, False])
+            ).all():
                 # Turn to bool
-                model_data[var_name] = var.isin(["True", "1"]) | var.isin([1]) | var.isin([True])
+                model_data[var_name] = (
+                    var.isin(["True", "1"]) | var.isin([1]) | var.isin([True])
+                )
             else:
                 try:
-                    model_data[var_name] = var.astype(np.int, copy=False)
+                    model_data[var_name] = var.astype(int, copy=False)
                 except (ValueError, TypeError):
                     try:
                         model_data[var_name] = var.astype(float, copy=False)

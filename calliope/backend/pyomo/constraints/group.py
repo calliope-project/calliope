@@ -59,6 +59,17 @@ def load_constraints(backend_model):
                 ),
             )
 
+        if "group_storage_cap_{}".format(sense) in model_data_dict:
+            setattr(
+                backend_model,
+                "group_storage_cap_{}_constraint".format(sense),
+                po.Constraint(
+                    getattr(backend_model, "group_names_storage_cap_{}".format(sense)),
+                    [sense],
+                    rule=storage_cap_constraint_rule,
+                ),
+            )
+
         if "group_resource_area_{}".format(sense) in model_data_dict:
             setattr(
                 backend_model,
@@ -198,14 +209,27 @@ def load_constraints(backend_model):
             )
 
     if "group_demand_share_per_timestep_decision" in model_data_dict:
-        backend_model.group_demand_share_per_timestep_decision_main_constraint = (
-            po.Constraint(
-                backend_model.group_names_demand_share_per_timestep_decision,
-                backend_model.loc_tech_carriers_demand_share_per_timestep_lhs,
-                backend_model.timesteps,
-                rule=demand_share_per_timestep_decision_main_constraint_rule,
+        relaxation = backend_model.__calliope_run_config["relax_constraint"][
+            "demand_share_per_timestep_decision_main_constraint"
+        ]
+        if relaxation == 0:
+            sense_scale = [("equals", 1)]
+        else:
+            sense_scale = [("min", 1 - relaxation), ("max", 1 + relaxation)]
+        for group_name in backend_model.group_names_demand_share_per_timestep_decision:
+            setattr(
+                backend_model,
+                f"group_demand_share_per_timestep_decision_{group_name}_constraint",
+                po.Constraint(
+                    [group_name],
+                    get_group_lhs_and_rhs_loc_tech_carriers(backend_model, group_name)[
+                        0
+                    ],
+                    backend_model.timesteps,
+                    sense_scale,
+                    rule=demand_share_per_timestep_decision_main_constraint_rule,
+                ),
             )
-        )
         backend_model.group_demand_share_per_timestep_decision_sum_constraint = (
             po.Constraint(
                 backend_model.group_names_demand_share_per_timestep_decision,
@@ -334,7 +358,7 @@ def demand_share_per_timestep_constraint_rule(
 
 
 def demand_share_per_timestep_decision_main_constraint_rule(
-    backend_model, group_name, loc_tech_carrier, timestep
+    backend_model, group_name, loc_tech_carrier, timestep, sense, scale
 ):
     """
     Allows the model to decide on how a fraction demand for a carrier is met
@@ -368,6 +392,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
     lhs = backend_model.carrier_prod[loc_tech_carrier, timestep]
     rhs = (
         -1
+        * scale
         * sum(
             backend_model.required_resource[
                 rhs_loc_tech_carrier.rsplit("::", 1)[0], timestep
@@ -377,7 +402,7 @@ def demand_share_per_timestep_decision_main_constraint_rule(
         * backend_model.demand_share_per_timestep_decision[loc_tech_carrier]
     )
 
-    return equalizer(lhs, rhs, "min")
+    return equalizer(lhs, rhs, sense)
 
 
 def demand_share_per_timestep_decision_sum_constraint_rule(backend_model, group_name):
@@ -686,8 +711,7 @@ def energy_cap_constraint_rule(backend_model, constraint_group, what):
 
 def storage_cap_constraint_rule(backend_model, constraint_group, what):
     """
-    Enforce upper and lower bounds for storage_cap of storage_cap
-    for groups of technologies and locations.
+    Enforce upper and lower bounds of storage_cap for groups of technologies and locations.
 
     .. container:: scrolling-wrapper
 
