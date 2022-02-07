@@ -3,15 +3,16 @@
 Release History
 ===============
 
-0.6.8 (dev)
+0.6.8 (2022-02-07)
 ------------------
+
 |new| run configuration parameter to enable relaxation of the `demand_share_per_timestep_decision` constraint.
 
 |new| `storage_cap_min/equals/max` group constraints added.
 
 |changed| Updated to Pyomo 6.2, pandas 1.3, xarray 0.20, numpy 1.20.
 
-|changed| parameters defaulting to False now default to None, to avoid confusion with zero.
+|changed| |backwards-incompatible| parameters defaulting to False now default to None, to avoid confusion with zero. To 'switch off' a constraint, a user should now set it to 'null' rather than 'false' in their YAML configuration.
 
 |changed| `INFO` logging level includes logs for dataset cleaning steps before saving to NetCDF and for instantiation of timeseries clustering/resampling (if taking place).
 
