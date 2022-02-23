@@ -309,9 +309,11 @@ def run_spores(
 
     _error_on_malformed_input()
 
+    init_spore = _initialise_spores_number()
+
     if backend_rerun:
         model_data = _combine_spores_results_and_inputs(
-            backend_rerun, xr.Dataset(), 0, model_data=model_data
+            backend_rerun, xr.Dataset(), init_spore, model_data=model_data
         )
     run_config = UpdateObserverDict(
         initial_yaml_string=model_data.attrs["run_config"],
@@ -333,8 +335,6 @@ def run_spores(
     results, backend_model, opt = _initialise_backend_model()
     if build_only:
         return results, backend_model, opt
-
-    init_spore = _initialise_spores_number()
 
     if spores_config["skip_cost_op"]:
         cumulative_spores_scores = init_spores_scores.copy()
