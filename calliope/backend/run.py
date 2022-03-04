@@ -309,12 +309,6 @@ def run_spores(
 
     _error_on_malformed_input()
 
-    init_spore = _initialise_spores_number()
-
-    if backend_rerun:
-        model_data = _combine_spores_results_and_inputs(
-            backend_rerun, xr.Dataset(), init_spore, model_data=model_data
-        )
     run_config = UpdateObserverDict(
         initial_yaml_string=model_data.attrs["run_config"],
         name="run_config",
@@ -322,6 +316,14 @@ def run_spores(
     )
 
     spores_config = run_config["spores_options"]
+
+    init_spore = _initialise_spores_number()
+
+    if backend_rerun:
+        model_data = _combine_spores_results_and_inputs(
+            backend_rerun, xr.Dataset(), init_spore, model_data=model_data
+        )
+
     if "spores" in model_data.dims and model_data.spores.size == 1:
         model_data = model_data.squeeze("spores")
 
