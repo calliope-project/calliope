@@ -487,7 +487,7 @@ def generate_constraint_sets(model_run):
                 exceptions.warn(
                     f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology combinations"
                 )
-                break
+                continue
             constraint_sets[
                 "group_constraint_loc_techs_{}".format(group_constraint_name)
             ] = loc_techs
