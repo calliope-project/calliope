@@ -27,10 +27,39 @@ constraints:
               then: resource * resource_scale
           carrier_prod_div_energy_eff: carrier_prod / energy_eff
 
-    # start: balance_supply_plus
-    balance_supply_plus:  # bryn | include_storage[node, tech]=false
+    balance_supply_plus:  # bryn
         foreach: [nodes, techs, carriers, timesteps]
-        eq: resource_con * resource_eff == carrier_prod_incl_losses
+        options:
+        - where: [inheritance(supply_plus), and, not include_storage=True]
+          eq: resource_con * resource_eff == carrier_prod_incl_losses
+
+        - where: [inheritance(supply_plus), and, not include_storage=True, and, storage_inter_cluster, and, lookup_cluster_first_timestep=True]
+          eq: resource_con * resource_eff == carrier_prod_incl_losses
+
+        - where: [inheritance(supply_plus), and, include_storage=True, and, run.cyclic_storage=true, and, timestep = timesteps[0]]
+          eq: storage[node, tech, timestep] == ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step] + resource_con[node, tech, timestep] * resource_eff[node, tech] - carrier_prod_incl_losses
+          components:
+            previous_step:
+                elements: timesteps[-1]
+                within: timesteps
+
+        - where: [inheritance(supply_plus), and, include_storage=True, and, not run.cyclic_storage=true, and, timestep = timesteps[0]]
+          eq: storage[node, tech, timestep] == storage_initial[node, tech] * storage_cap[node, tech] + resource_con[node, tech, timestep] * resource_eff[node, tech] - carrier_prod_incl_losses
+
+        - where: [inheritance(supply_plus), and, include_storage=True, and, timestep > timesteps[0]]
+          eq: storage[node, tech, timestep] == ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step] + resource_con[node, tech, timestep] * resource_eff[node, tech] - carrier_prod_incl_losses
+          components:
+            previous_step:
+                elements: timesteps[index(timestep) - 1]
+                within: timesteps
+
+        - where: [inheritance(supply_plus), and, include_storage=True, and, timestep > timesteps[0], and, clusters, and, lookup_cluster_first_timestep=True]
+          eq: storage[node, tech, timestep] == ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step] + resource_con[node, tech, timestep] * resource_eff[node, tech] - carrier_prod_incl_losses
+          components:
+            previous_step:
+                elements: lookup_cluster_last_timestep[timestep]
+                within: timesteps
+
         components:
             carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
                 - if: energy_eff * parasitic_eff == 0
@@ -38,76 +67,6 @@ constraints:
                 - if: energy_eff * parasitic_eff > 0
                 then: carrier_prod / (energy_eff * parasitic_eff)
 
-    # start: balance_supply_plus
-    balance_supply_plus_no_storage:  # bryn | include_storage[node, tech]=false
-        foreach: [node, tech, carrier, timestep]
-        eq: resource_con * resource_eff == carrier_prod_incl_losses
-        components:
-            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
-                - if: energy_eff * parasitic_eff == 0
-                  then: 0
-                - if: energy_eff * parasitic_eff > 0
-                  then: carrier_prod / (energy_eff * parasitic_eff)
-
-    balance_supply_plus_with_storage_first_timestep_cyclic:  # bryn | include_storage[node, tech]=true & run.cyclic_storage=true & timestep = timesteps[0]
-        foreach: [node in nodes, tech in techs, carrier in carriers, timestep in timesteps]
-        eq: storage[node, tech, timestep] == ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step] + resource_con[node, tech, timestep] * resource_eff[node, tech] - carrier_prod_incl_losses
-        components:
-            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
-                - if: energy_eff[node, tech] * parasitic_eff[node, tech] == 0
-                  then: 0
-                - if: energy_eff[node, tech] * parasitic_eff[node, tech] > 0
-                  then: carrier_prod[node, tech, timestep] / (energy_eff[node, tech] * parasitic_eff[node, tech])
-            previous_step:
-                elements: timesteps[-1]
-                within: timesteps
-
-    balance_supply_plus_with_storage_first_timestep_not_cyclic:  # bryn | include_storage[node, tech]=true
-        foreach: [nodes, techs, carriers, timesteps]
-        eq: storage == storage_initial * storage_cap + resource_con * resource_eff - carrier_prod_incl_losses
-        components:
-            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
-                - if: energy_eff * parasitic_eff == 0
-                  then: 0
-                - if: energy_eff * parasitic_eff > 0
-                  then: carrier_prod / (energy_eff * parasitic_eff)
-
-    balance_supply_plus_with_storage_not_first_timestep:  # bryn | include_storage[node, tech]=true
-        foreach: [nodes, techs, carriers, timesteps]
-        eq: storage == storage_previous_step + resource_con * resource_eff - carrier_prod_incl_losses
-        components:
-            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
-                - if: energy_eff * parasitic_eff == 0
-                  then: 0
-                - if: energy_eff * parasitic_eff > 0
-                  then: carrier_prod / (energy_eff * parasitic_eff)
-            storage_previous_step:
-                  eq: ((1 - storage_loss) ** timestep_resolution[previous_step] * storage[node, tech, previous_step]
-                  where: [previous_step=timesteps[index(timestep) - 1]]
-
-    balance_supply_plus_with_storage_inter_cluster:  # bryn | include_storage[node, tech]=true & hasattr(backend_model, "storage_inter_cluster") &  lookup_cluster_first_timestep[timestep]
-        foreach: [nodes, techs, carriers, timesteps]
-        eq: storage == resource_con * resource_eff - carrier_prod_incl_losses
-        components:
-            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
-                - if: energy_eff * parasitic_eff == 0
-                  then: 0
-                - if: energy_eff * parasitic_eff > 0
-                  then: carrier_prod / (energy_eff * parasitic_eff)
-
-    balance_supply_plus_with_storage_clusters:  # bryn | include_storage[node, tech]=true & hasattr(backend_model, "clusters") &  lookup_cluster_first_timestep[timestep]
-        foreach: [nodes, techs, carriers, timesteps]
-        eq: storage == resource_con * resource_eff - carrier_prod_incl_losses
-        components:
-            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
-                - if: energy_eff * parasitic_eff == 0
-                  then: 0
-                - if: energy_eff * parasitic_eff > 0
-                  then: carrier_prod / (energy_eff * parasitic_eff)
-            storage_previous_step:
-                  eq: ((1 - storage_loss) ** timestep_resolution[previous_step] * storage[node, tech, previous_step]
-                  where: [previous_step=lookup_cluster_last_timestep[timestep]]
-    # end: balance_supply_plus
 
     asynchronous_con_milp:
       foreach: [node, tech, timestep]
