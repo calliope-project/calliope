@@ -1,0 +1,122 @@
+constraints:
+
+
+    carrier_production_max: # alice - is that it?
+      foreach: [node, tech, timestep]
+      eq: carrier_prod <= energy_cap * timestep_resolution * parasitic eff
+
+
+    balance_supply: # kasia
+        foreach: [carrier, node, tech, timestep]
+        eq:
+          - if: energy_eff == 0
+            then: carrier_prod == 0
+          - if: force_resource == 1
+            then: carrier_prod_div_energy_eff == available_resource
+          - if: min_use
+            then: min_use * available_resource <= carrier_prod_div_energy_eff <= available_resource
+          - else:
+            then: carrier_prod_div_energy_eff <= available_resource
+        components:
+          available_resource:
+            - if: resource_unit == energy_per_area
+              then: resource * resource_scale * resource_area
+            - if: resource_unit == energy_per_cap
+              then: resource * resource_scale * energy_cap
+            - else:
+              then: resource * resource_scale
+          carrier_prod_div_energy_eff: carrier_prod / energy_eff
+
+    # start: balance_supply_plus
+    balance_supply_plus:  # bryn | include_storage[node, tech]=false
+        foreach: [nodes, techs, carriers, timesteps]
+        eq: resource_con * resource_eff == carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff * parasitic_eff == 0
+                then: 0
+                - if: energy_eff * parasitic_eff > 0
+                then: carrier_prod / (energy_eff * parasitic_eff)
+
+    # start: balance_supply_plus
+    balance_supply_plus_no_storage:  # bryn | include_storage[node, tech]=false
+        foreach: [node, tech, carrier, timestep]
+        eq: resource_con * resource_eff == carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff * parasitic_eff == 0
+                  then: 0
+                - if: energy_eff * parasitic_eff > 0
+                  then: carrier_prod / (energy_eff * parasitic_eff)
+
+    balance_supply_plus_with_storage_first_timestep_cyclic:  # bryn | include_storage[node, tech]=true & run.cyclic_storage=true & timestep = timesteps[0]
+        foreach: [node in nodes, tech in techs, carrier in carriers, timestep in timesteps]
+        eq: storage[node, tech, timestep] == ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step] + resource_con[node, tech, timestep] * resource_eff[node, tech] - carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff[node, tech] * parasitic_eff[node, tech] == 0
+                  then: 0
+                - if: energy_eff[node, tech] * parasitic_eff[node, tech] > 0
+                  then: carrier_prod[node, tech, timestep] / (energy_eff[node, tech] * parasitic_eff[node, tech])
+            previous_step:
+                elements: timesteps[-1]
+                within: timesteps
+
+    balance_supply_plus_with_storage_first_timestep_not_cyclic:  # bryn | include_storage[node, tech]=true
+        foreach: [nodes, techs, carriers, timesteps]
+        eq: storage == storage_initial * storage_cap + resource_con * resource_eff - carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff * parasitic_eff == 0
+                  then: 0
+                - if: energy_eff * parasitic_eff > 0
+                  then: carrier_prod / (energy_eff * parasitic_eff)
+
+    balance_supply_plus_with_storage_not_first_timestep:  # bryn | include_storage[node, tech]=true
+        foreach: [nodes, techs, carriers, timesteps]
+        eq: storage == storage_previous_step + resource_con * resource_eff - carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff * parasitic_eff == 0
+                  then: 0
+                - if: energy_eff * parasitic_eff > 0
+                  then: carrier_prod / (energy_eff * parasitic_eff)
+            storage_previous_step:
+                  eq: ((1 - storage_loss) ** timestep_resolution[previous_step] * storage[node, tech, previous_step]
+                  where: [previous_step=timesteps[index(timestep) - 1]]
+
+    balance_supply_plus_with_storage_inter_cluster:  # bryn | include_storage[node, tech]=true & hasattr(backend_model, "storage_inter_cluster") &  lookup_cluster_first_timestep[timestep]
+        foreach: [nodes, techs, carriers, timesteps]
+        eq: storage == resource_con * resource_eff - carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff * parasitic_eff == 0
+                  then: 0
+                - if: energy_eff * parasitic_eff > 0
+                  then: carrier_prod / (energy_eff * parasitic_eff)
+
+    balance_supply_plus_with_storage_clusters:  # bryn | include_storage[node, tech]=true & hasattr(backend_model, "clusters") &  lookup_cluster_first_timestep[timestep]
+        foreach: [nodes, techs, carriers, timesteps]
+        eq: storage == resource_con * resource_eff - carrier_prod_incl_losses
+        components:
+            carrier_prod_incl_losses:  # or work out how to do this in a separate constraint
+                - if: energy_eff * parasitic_eff == 0
+                  then: 0
+                - if: energy_eff * parasitic_eff > 0
+                  then: carrier_prod / (energy_eff * parasitic_eff)
+            storage_previous_step:
+                  eq: ((1 - storage_loss) ** timestep_resolution[previous_step] * storage[node, tech, previous_step]
+                  where: [previous_step=lookup_cluster_last_timestep[timestep]]
+    # end: balance_supply_plus
+
+    asynchronous_con_milp:
+      foreach: [node, tech, timestep]
+      eq: -1 * carrier_con_sum <= 1 - prod_con_switch * bigM
+      components:
+        carrier_con_sum:
+          sum: carrier_con
+          over: [carrier]
+
+    cost_investment:
+
+
