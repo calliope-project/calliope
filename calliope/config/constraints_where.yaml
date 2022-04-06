@@ -47,7 +47,7 @@ constraints:
     balance_supply_plus:
         foreach: [carrier in carriers, node in nodes, tech in techs, timestep in timesteps]
         where: [inheritance(supply_plus)]
-        eq: storage_at_timestep_end == storage_at_timestep_start + available_resource - carrier_prod_incl_losses
+        eq: storage_at_timestep_end = storage_at_timestep_start + available_resource - carrier_prod_incl_losses
         components:
             carrier_prod_incl_losses:
                 - where: [energy_eff=0, or, parasitic_eff=0]
@@ -99,7 +99,7 @@ constraints:
             (1 + cost_om_annual_investment_fraction[cost, node, tech]) *
             (cost_energy + cost_resource + cost_storage + cost_area + cost_of_purchase) *
             number_of_years * cost_depreciation_rate[cost, node, tech]
-        equation_components:
+        components:
             cost_energy:
                 - where: [cost_energy_cap>0]
                   eq: cost_energy_cap[node, tech] * energy_cap[node, tech]
@@ -130,8 +130,8 @@ constraints:
             number_of_years:
                 - where: []
                   eq: >
-                    sum{timestep_resolution[timestep], over=timestep} *
-                    sum{timestep_weights[timestep], over=timestep} / 8760
+                    sum{timestep_resolution[timestep], over=[timestep in timesteps]} *
+                    sum{timestep_weights[timestep], over=[timestep in timesteps]} / 8760
 
     cost_var:
         foreach: [cost in costs, node in nodes, tech in techs, timestep in timesteps]
@@ -157,7 +157,7 @@ constraints:
                   select: get_carrier{primary_carrier_out}
                   on_dimension: carriers
                 - where: []
-                  select: get_carrier{carrier, carrier_tiers="out"}
+                  select: get_carrier{carrier, carrier_tiers="out"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
                   on_dimension: carriers
 
             carrier_in:
@@ -165,5 +165,5 @@ constraints:
                   select: get_carrier{primary_carrier_in}
                   on_dimension: carriers
                 - where: []
-                  select: get_carrier{carrier, carrier_tiers="in"} # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
+                  select: get_carrier{carrier, carrier_tiers="in"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
                   on_dimension: carriers

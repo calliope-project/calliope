@@ -14,40 +14,29 @@ constraints:
 
     balance_supply:
         foreach: [carrier in carriers, node in nodes, tech in techs, timestep in timesteps]
-        if: resource & inheritance(supply)]
-        eq: min_resource <= carrier_prod_div_energy_eff <= max_resource
+        where: [resource, and, inheritance(supply)]
+        eq:
+          - if: energy_eff[node, tech, timestep] == 0
+            then: carrier_prod[carrier, node, tech, timestep] == 0
+          - if: force_resource[node, tech] == True
+            then: carrier_prod_div_energy_eff == available_resource
+          - if: resource_min_use[node, tech]
+            then: resource_min_use[node, tech] * available_resource <= carrier_prod_div_energy_eff <= available_resource
+          - else: carrier_prod_div_energy_eff <= available_resource
         components:
-          min_resource:
-            - if: energy_eff[node, tech, timestep] == 0
-              eq: 0
-            - if: force_resource[node, tech] == True
-              eq: available_resource
-            - if: resource_min_use[node, tech] > 0
-              eq: resource_min_use[node, tech] * available_resource
-            - else:
-              eq: 0
-          max_resource:
-            - if: energy_eff[node, tech] == 0
-              eq: 0
-            - else:
-              eq: available_resource
           available_resource:
             - if: resource_unit[node, tech] == 'energy_per_area'
-              eq: resource[node, tech, timestep] * resource_scale[node, tech] * resource_area[node, tech]
-            - if: resource_unit == 'energy_per_cap'
-              eq: resource[node, tech, timestep] * resource_scale[node, tech] * energy_cap[node, tech]
-            - if: resource_unit == 'energy'
-              eq: resource[node, tech, timestep] * resource_scale[node, tech]
-          carrier_prod_div_energy_eff:
-            - if: energy_eff == 0
-              eq: carrier_prod[carrier, node, tech, timestep]
-            - else:
-              eq: carrier_prod[carrier, node, tech, timestep] / energy_eff[node, tech, timestep]
+              then: resource[node, tech, timestep] * resource_scale[node, tech] * resource_area[node, tech]
+            - if: resource_unit[node, tech] == 'energy_per_cap'
+              then: resource[node, tech, timestep] * resource_scale[node, tech] * energy_cap[node, tech]
+            - else: resource[node, tech, timestep] * resource_scale[node, tech]
+          carrier_prod_div_energy_eff: carrier_prod[carrier, node, tech, timestep] / energy_eff[node, tech, timestep]
 
     balance_supply_plus:
         foreach: [carrier in carriers, node in nodes, tech in techs, timestep in timesteps]
-        if: inheritance(supply_plus)]
-        eq: storage_at_timestep_end == storage_at_timestep_start + available_resource - carrier_prod_incl_losses
+        where: [inheritance(supply_plus)]
+        eq:
+            - if: storage_at_timestep_end == storage_at_timestep_start + available_resource - carrier_prod_incl_losses
         components:
             carrier_prod_incl_losses:
                 - if: energy_eff[node, tech] == 0 | parasitic_eff == 0
