@@ -4,7 +4,178 @@ helper_functions:
     get_carrier:  # datasets linking technologies to carriers have carrier as a dimension and binary values to say whether a carrier is linked to a technology. So we need a function to grab the carrier name from this dataset.
     sum:  # sum a variable/parameter over one or more of its indexed dimensions
     exists:  # check if a input/decision variable exists
+    contains:  # string comparison to check the contents of an index item
 constraints:
+    energy_capacity_per_storage_capacity_min:
+        foreach: [node in nodes, tech in techs]
+        where: [energy_cap_per_storage_cap_min, and, not energy_cap_per_storage_cap_equals, and, not run.mode='operate']
+        equation: energy_cap[node, tech] >= storage_cap[node, tech] * energy_cap_per_storage_cap_min[node, tech]
+
+    energy_capacity_per_storage_capacity_max:
+        foreach: [node in nodes, tech in techs]
+        where: [energy_cap_per_storage_cap_max, and, not energy_cap_per_storage_cap_equals, and, not run.mode='operate']
+        equation: energy_cap[node, tech] <= storage_cap[node, tech] * energy_cap_per_storage_cap_max[node, tech]
+
+    energy_capacity_per_storage_capacity_equals:
+        foreach: [node in nodes, tech in techs]
+        where: [energy_cap_per_storage_cap_equals, and, not run.mode='operate']
+        equation: energy_cap[node, tech] = storage_cap[node, tech] * energy_cap_per_storage_cap_equals[node, tech]
+
+    resource_capacity_equals_energy_capacity:
+        foreach: [node in nodes, tech in techs]
+        where: [resource_cap_equals_energy_cap=True, and, not run.mode='operate']
+        equation: resource_cap[node, tech] = energy_cap[node, tech]
+
+    force_zero_resource_area:
+        foreach: [node in nodes, tech in techs]
+        where: [[resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_unit='energy_per_area'], and, not run.mode='operate', and, energy_cap_max=0]
+        equation: resource_area[node, tech] = 0
+
+    resource_area_per_energy_capacity:
+        foreach: [node in nodes, tech in techs]
+        where: [resource_area_per_energy_cap, and, not run.mode='operate']
+        equation: resource_area[node, tech] = energy_cap[node, tech] * area_per_energy_cap[node, tech]
+
+    resource_area_capacity_per_loc:
+        foreach: [node in nodes]
+        where: [available_area, and, [resource_area_min, or, resource_area_max, or, resource_area_equals, or, resource_area_per_energy_cap, or, resource_unit='energy_per_area'], and, not run.mode='operate']
+        equation: sum{resource_area[node, tech], over=[tech in techs]} <= available_area  # here, not all system "techs" will be defined for the decision variable "resource_area", so the summation needs handle this gracefully.
+
+    balance_conversion_plus_primary:
+        foreach: [node in nodes, tech in techs, timestep in timesteps]
+        where: [inheritance(conversion_plus), and, carrier_ratios!=0]
+        equation: carrier_prod_sum == -1 * carrier_con_sum * energy_eff[node, tech, timestep]
+        components:
+            carrier_prod_sum: >
+                sum{
+                carrier_prod[carrier_out, node, tech, timestep] /
+                carrier_ratios[tier_out, carrier_out, node, tech, timestep],
+                over=[carrier_out in carriers_out]
+                }
+            carrier_con_sum: >
+                sum{
+                carrier_con[carrier_in, node, tech, timestep] /
+                carrier_ratios[tier_in, carrier_in, node, tech, timestep],
+                over=[carrier_in in carriers_in]
+                }
+        index_items:
+            tier_out:
+                select: "out"
+                on_dimension: carrier_tiers
+            tier_out:
+                select: "in"
+                on_dimension: carrier_tiers
+            carriers_out:
+                select: get_carrier{carrier, carrier_tiers="out"}
+                on_dimension: carriers
+            carriers_in:
+                select: get_carrier{carrier, carrier_tiers="in"}
+                on_dimension: carriers
+
+    carrier_production_max_conversion_plus:
+        foreach: [node in nodes, tech in techs, timestep in timesteps]
+        where: [inheritance(conversion_plus), and, not cap_method='integer']
+        equation: carrier_prod_sum <= timestep_resolution[timestep] * energy_cap[node, tech]
+        components:
+            carrier_prod_sum: >
+                sum{carrier_prod[carrier_out, node, tech, timestep],
+                over=[carrier_out in carriers_out]}
+            carriers_out:
+                select: get_carrier{carrier, carrier_tiers="out"}
+                on_dimension: carriers
+
+    carrier_production_min_conversion_plus:
+        foreach: [node in nodes, tech in techs, timestep in timesteps]
+        where: [energy_cap_min_use, and, inheritance(conversion_plus), and, not cap_method='integer', and, carrier_ratios!=0]
+        equation: carrier_prod_sum >= timestep_resolution[timestep] * energy_cap[node, tech] * energy_cap_min_use[node, tech, timestep]
+        components:
+            carrier_prod_sum: >
+                sum{carrier_prod[carrier_out, node, tech, timestep],
+                over=[carrier_out in carriers_out]}
+            carriers_out:
+                select: get_carrier{carrier, carrier_tiers="out"}
+                on_dimension: carriers
+
+    balance_conversion_plus_prod_non_primary:
+        foreach: [node in nodes, tech in techs, carrier_tier in carrier_tiers, timestep in timesteps]
+        where: [inheritance(conversion_plus), and, carrier_ratios!=0]
+        subset:
+            carrier_tiers: [out_2, out_3]
+        equation: primary_carrier_prod_sum = non_primary_carrier_prod_sum
+        components:
+            primary_carrier_prod_sum: >
+                sum{
+                carrier_prod[carrier_out, node, tech, timestep] /
+                carrier_ratios[primary_tier, carrier_out, node, tech, timestep],
+                over=[carrier_out in carriers_out_primary]
+                }
+            non_primary_carrier_prod_sum: >
+                sum{
+                carrier_prod[carrier_out, node, tech, timestep] /
+                carrier_ratios[tier, carrier_out, node, tech, timestep],
+                over=[carrier_out in carriers_out_non_primary]
+                }
+        index_items:
+            primary_tier:
+                select: "out"
+                on_dimension: carrier_tiers
+            carriers_out_primary:
+                select: get_carrier{carrier, carrier_tiers="out"}
+                on_dimension: carriers
+            carriers_out_non_primary:
+                select: get_carrier{carrier, carrier_tiers=tier} # here, "tier" needs to be parsed as a function input argument, not a string
+                on_dimension: carriers
+
+    balance_conversion_plus_con_non_primary:
+        foreach: [node in nodes, tech in techs, carrier_tier in carrier_tiers, timestep in timesteps]
+        where: [inheritance(conversion_plus), and, carrier_ratios!=0]
+        subset:
+            carrier_tiers: [in_2, in_3]
+        equation: primary_carrier_con_sum = non_primary_carrier_con_sum
+        components:
+            primary_carrier_con_sum: >
+                sum{
+                carrier_con[carrier_in, node, tech, timestep] /
+                carrier_ratios[primary_tier, carrier_in, node, tech, timestep],
+                over=[carrier_in in carriers_in_primary]
+                }
+            non_primary_carrier_con_sum: >
+                sum{
+                carrier_con[carrier_in, node, tech, timestep] /
+                carrier_ratios[tier, carrier_in, node, tech, timestep],
+                over=[carrier_in in carriers_in_non_primary]
+                }
+        index_items:
+            primary_tier:
+                select: "in"
+                on_dimension: carrier_tiers
+            carriers_in_primary:
+                select: get_carrier{carrier, carrier_tiers="in"} # this needs to return a list of strings
+                on_dimension: carriers
+            carriers_in_non_primary:
+                select: get_carrier{carrier, carrier_tiers=tier} # here, "tier" needs to be parsed as a function input argument, not a string. This needs to return a list of strings
+                on_dimension: carriers
+
+    conversion_plus_prod_con_to_zero:
+        foreach: [nodes, techs, carriers, carrier_tiers, timesteps]
+        where: [carrier_ratios=0, and, inheritance(conversion_plus)]
+        equation:
+            - if: contains{carrier_tier, "out"}
+              then: carrier_prod[carrier, node, tech, timestep] = 0
+            - if: contains{carrier_tier, "in"}
+              then: carrier_con[carrier, node, tech, timestep] = 0
+
+    balance_conversion:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(conversion)]
+        equation: >
+            carrier_prod[carrier_out, node, tech, timestep] =
+            -1 * carrier_con[carrier_in, node, tech, timestep] *
+            energy_eff[node, tech, timestep]
+        index_items:
+            carrier_out: get_carrier{carrier, "out"}  # this needs to return a string
+            carrier_in: get_carrier{carrier, "in"}
+
     carrier_production_max:
         foreach: [node in nodes, tech in techs, timestep in timesteps]
         where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
@@ -12,6 +183,63 @@ constraints:
             carrier_tiers: [out]  # this is from subsets.py (i.e., we would merge the two)
         equation: "carrier_prod[carrier, node, tech, timestep] <= energy_cap[node, tech] * timestep_resolution[timestep] * parasitic_eff[node, tech, timestep]"
 
+    carrier_production_min:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, energy_cap_min_use, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
+        subset:
+            carrier_tiers: [out]
+        equation: carrier_prod[carrier, node, tech, timestep] >= energy_cap[node, tech] * timestep_resolution[timestep] * energy_cap_min_use[node, tech, timestep]
+
+
+    carrier_consumption_max:
+        foreach: [nodes, techs, carriers, timesteps]
+        where: [carrier, and, [inheritance(transmission), or, inheritance(demand), or, inheritance(storage)], and, [not cap_method='integer', or, inheritance(demand)], and, allowed_carrier_con=True, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
+        subset:
+            carrier_tiers: [in]
+        equation: -1 * carrier_con[carrier, node, tech, timestep] <= energy_cap[node, tech] * timestep_resolution[timestep]
+
+    resource_max:
+        foreach: [nodes, techs, timesteps]
+        where: [inheritance(supply_plus), and, [run.mode='plan', or, [run.mode='operate', and, resource_cap]]]
+        equation: resource_con[node, tech, timestep] <= timestep_resolution[timestep] * resource_cap[node, tech]
+
+    storage_max:
+        foreach: [nodes, techs, timesteps]
+        where: [include_storage=True, and, not model.time.function_options.storage_inter_cluster=True]
+        equation: storage[node, tech, timestep] <= storage_cap[node, tech]
+
+    storage_discharge_depth:
+        foreach: [nodes, techs, timesteps]
+        where: [storage_discharge_depth]
+        equation: storage[node, tech, timestep] >= storage_discharge_depth[node, tech] * storage_cap[node, tech]
+
+    prod_ramping:  # updated from core constraint to focus only on 'carrier_prod', not the net sum of 'carrier_prod' and 'carrier_con'
+        foreach: [node in nodes, tech in techs, carrier in carriers, timestep in timesteps, direction in directions]
+        where: [energy_ramping, and, [run.mode='plan', or, [run.mode='operate', and, energy_cap]]]
+        subset:
+            carrier_tiers: [out, out_2, out_3]
+        equation:
+            - if: direction == "up"
+              then: diff <= ramp_limit
+            - if: direction == "down"
+              then: -1 * ramp_limit <= diff
+        components:
+            ramp_limit: energy_ramping[node, tech, timestep] * energy_cap[node, tech]
+            diff: >
+                carrier_prod[carrier, node, tech, timestep] / timestep_resolution[timestep] -
+                carrier_prod[carrier, node, tech, previous_step] / timestep_resolution[previous_step]
+        sets:
+            directions: ["up", "down"]
+        index_items:
+            previous_step:
+                select:
+                    - if: include_storage[node, tech] == True & run.cyclic_storage == True & get_index{timesteps}==0
+                      then: get_item{timesteps, -1}
+                    - if: include_storage[node, tech] == True & get_index{timesteps}>0
+                      then: get_item{timesteps, get_index{timestep} - 1}  # could be a lookup table, like below
+                    - if: include_storage[node, tech] == True & get_index{timesteps}>0 & clusters & lookup_cluster_first_timestep[timestep] == True
+                      then: lookup_cluster_last_timestep[timestep]
+                on_dimension: timesteps
 
     balance_supply:
         foreach: [carrier in carriers, node in nodes, tech in techs, timestep in timesteps]
