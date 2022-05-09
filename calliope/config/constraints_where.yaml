@@ -6,94 +6,80 @@ helper_functions:
 constraints:
     carrier_production_max:
         foreach: [node in nodes, tech in techs, timestep in timesteps]
-        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True]
-        subset:
-            carrier_tiers: [out]  # this is from subsets.py (i.e., we would merge the two)
-        eq: "carrier_prod[carrier, node, tech, timestep] <= energy_cap[node, tech] * timestep_resolution[timestep] * parasitic_eff[node, tech, timestep]"
-
+        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True, and, subset(carrier_tiers, ['out'])]
+        equation: "carrier_prod[carrier, node, tech, timestep] <= energy_cap[node, tech] * timestep_resolution[timestep] * parasitic_eff[node, tech, timestep]"
 
     balance_supply:
         foreach: [carrier in carriers, node in nodes, tech in techs, timestep in timesteps]
         where: [resource, and, inheritance(supply)]
-        eq: min_resource <= carrier_prod_div_energy_eff <= max_resource
+        equations:
+            - where: [energy_eff=0]
+              expression: carrier_prod[carrier, node, tech, timestep] == 0
+            - where: [force_resource=True, and, not energy_eff=0]
+              expression: carrier_prod_div_energy_eff == available_resource
+            - where: [resource_min_use, and, not force_resource=True, and, not energy_eff=0]
+              expression: resource_min_use[node, tech] * available_resource <= carrier_prod_div_energy_eff <= available_resource
+            - where: [not resource_min_use, and, not force_resource=True, and, not energy_eff=0]
+              expression: carrier_prod_div_energy_eff <= available_resource
         components:
-          min_resource:
-            - where: [energy_eff=0]
-              eq: 0
-            - where: [force_resource=True]
-              eq: available_resource
-            - where: [resource_min_use]
-              eq: resource_min_use[node, tech] * available_resource
-            - where: []
-              eq: 0
-          max_resource:
-            - where: [energy_eff=0]
-              eq: 0
-            - where: []
-              eq: available_resource
-          available_resource:
-            - where: [resource_unit='energy_per_area']
-              eq: resource[node, tech, timestep] * resource_scale[node, tech] * resource_area[node, tech]
-            - where: [resource_unit='energy_per_cap']
-              eq: resource[node, tech, timestep] * resource_scale[node, tech] * energy_cap[node, tech]
-            - where: [resource_unit='energy']
-              eq: resource[node, tech, timestep] * resource_scale[node, tech]
+            available_resource:
+                - where: [resource_unit='energy_per_area']
+                  expression: resource[node, tech, timestep] * resource_scale[node, tech] * resource_area[node, tech]
+                - where: [resource_unit='energy_per_cap']
+                  expression: resource[node, tech, timestep] * resource_scale[node, tech] * energy_cap[node, tech]
+                - where: [resource_unit='energy']
+                  expression: resource[node, tech, timestep] * resource_scale[node, tech]
           carrier_prod_div_energy_eff:
-            - where: [energy_eff=0]
-              eq: carrier_prod[carrier, node, tech, timestep]
-            - where: []
-              eq: carrier_prod[carrier, node, tech, timestep] / energy_eff[node, tech, timestep]
+                - expression: carrier_prod[carrier, node, tech, timestep] / energy_eff[node, tech, timestep]
 
     balance_supply_plus:
         foreach: [carrier in carriers, node in nodes, tech in techs, timestep in timesteps]
         where: [inheritance(supply_plus)]
-        eq: storage_at_timestep_end = storage_at_timestep_start + available_resource - carrier_prod_incl_losses
+        equations:
+            - where: [include_storage=False]
+              expression: available_resource == carrier_prod_incl_losses
+            - where: [include_storage=True]
+              expression: storage[node, tech, timestep] == storage_at_timestep_start + available_resource - carrier_prod_incl_losses
         components:
             carrier_prod_incl_losses:
                 - where: [energy_eff=0, or, parasitic_eff=0]
-                  eq: 0
-                - where: []
-                  eq: carrier_prod[carrier, node, tech, timestep] / (energy_eff[node, tech, timestep] * parasitic_eff[node, tech, timestep])
+                  expression: 0
+                - where: [not energy_eff=0, and, not parasitic_eff=0]
+                  expression: carrier_prod[carrier, node, tech, timestep] / (energy_eff[node, tech, timestep] * parasitic_eff[node, tech, timestep])
             available_resource:
                 - where: []
-                  eq: resource_con[node, tech, timestep] * resource_eff[node, tech, timestep]
+                  expression: resource_con[node, tech, timestep] * resource_eff[node, tech, timestep]
             storage_at_timestep_start:
-                - where: [include_storage=False]
-                  eq: 0
-                - where: [include_storage=True, and, not run.cyclic_storage=true, and, get_index(timestep)=0]
-                  eq: storage_initial[node, tech] * storage_cap[node, tech]
-                - where: [include_storage=True, and, storage_inter_cluster, and, lookup_cluster_first_timestep=True]
-                  eq: 0
-                - where: []
-                  eq: ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step]
-            storage_at_timestep_end:
-                - where: [include_storage=False]
-                  eq: 0
-                - where: [include_storage=True]
-                  eq: storage[node, tech, timestep]
+                - where: [not run.cyclic_storage=true, and, get_index(timestep)=0]
+                  expression: storage_initial[node, tech] * storage_cap[node, tech]
+                - where: [storage_inter_cluster, and, lookup_cluster_first_timestep=True]
+                  expression: 0
+                - where: [not storage_inter_cluster, or, [storage_inter_cluster, and, not lookup_cluster_first_timestep=True], or, run.cyclic_storage=true, or, [not run.cyclic_storage=true, and, get_index(timestep)>0]]
+                  expression: ((1 - storage_loss[node, tech]) ** timestep_resolution[previous_step]) * storage[node, tech, previous_step]
+        index_items:
             previous_step:
-                - where: [include_storage=True, and, run.cyclic_storage=True, and, get_index(timesteps)=0]
-                  select: get_item{timesteps, -1}
+                - where: [run.cyclic_storage=True, and, get_index(timesteps)=0]
+                  expression: get_item{timesteps, -1}
                   on_dimension: timesteps
-                - where: [include_storage=True and get_index(timesteps)>0]
-                  select: get_item{timesteps, get_index{timestep} - 1}  # could be a lookup table, like below
+                - where: [get_index(timesteps)>0, and, [not clusters, or, not lookup_cluster_first_timestep=True], and, not run.cyclic_storage=True]
+                  expression: get_item{timesteps, get_index{timestep} - 1}  # could be a lookup table, like below
                   on_dimension: timesteps
-                - where: [include_storage=True, and, get_index(timesteps)>0, and, clusters, and, lookup_cluster_first_timestep=True]
-                  select: lookup_cluster_last_timestep[timestep]
+                - where: [get_index(timesteps)>0, and, clusters, and, lookup_cluster_first_timestep=True]
+                  expression: lookup_cluster_last_timestep[timestep]
                   on_dimension: timesteps
 
     asynchronous_con_milp:
-      foreach: [node in nodes, tech in techs, timestep in timesteps]
-      eq: -1 * carrier_con[carrier_in, node, tech, timestep] <= 1 - prod_con_switch[node, tech, timestep] * bigM
-      components:
-        carrier_in:
-            - where: []
-              select: get_carrier{carrier, carrier_tiers="in"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
-              on_dimension: carriers
+        foreach: [node in nodes, tech in techs, timestep in timesteps]
+        equation: -1 * carrier_con[carrier_in, node, tech, timestep] <= 1 - prod_con_switch[node, tech, timestep] * bigM
+        index_items:
+            carrier_in: &non_conversion_plus_carrier_in
+                - where: [not inheritance(conversion_plus)]
+                  expression: get_carrier{carrier, carrier_tiers="in"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
+                  on_dimension: carriers
 
     cost_investment:
         foreach: [cost in costs, node in nodes, tech in techs]
-        eq: >
+        equation: >
             cost_investment[cost, node, tech] =
             cost_om_annual[cost, node, tech] * energy_cap[node, tech] * number_of_years +
             (1 + cost_om_annual_investment_fraction[cost, node, tech]) *
@@ -102,68 +88,63 @@ constraints:
         components:
             cost_energy:
                 - where: [cost_energy_cap>0]
-                  eq: cost_energy_cap[node, tech] * energy_cap[node, tech]
-                - where: []
-                  eq: 0
+                  expression: cost_energy_cap[node, tech] * energy_cap[node, tech]
+                - where: [cost_energy_cap=0]
+                  expression: 0
             cost_resource:
                 - where: [cost_resource_cap>0]
-                  eq: cost_resource_cap[node, tech] * resource_cap[node, tech]
-                - where: []
-                  eq: 0
+                  expression: cost_resource_cap[node, tech] * resource_cap[node, tech]
+                - where: [cost_resource_cap=0]
+                  expression: 0
             cost_storage:
                 - where: [cost_storage_cap>0]
-                  eq: cost_storage_cap[node, tech] * storage_cap[node, tech]
-                - where: []
-                  eq: 0
+                  expression: cost_storage_cap[node, tech] * storage_cap[node, tech]
+                - where: [cost_storage_cap=0]
+                  expression: 0
             cost_area:
                 - where: [cost_resource_area>0]
-                  eq: cost_resource_area[node, tech] * resource_area[node, tech]
-                - where: []
-                  eq: 0
+                  expression: cost_resource_area[node, tech] * resource_area[node, tech]
+                - where: [cost_resource_area=0]
+                  expression: 0
             cost_of_purchase:
                 - where: [cap_method='binary', and, cost_purchase>0]
-                  eq: cost_purchase[node, tech] * purchased[node, tech]
-                - if: [cap_method='integer', and, cost_purchase>0]
-                  eq: cost_purchase[node, tech] * units[node, tech]
-                - where: []
-                  eq: 0
+                  expression: cost_purchase[node, tech] * purchased[node, tech]
+                - where: [cap_method='integer', and, cost_purchase>0]
+                  expression: cost_purchase[node, tech] * units[node, tech]
+                - where: [not cap_method='integer', and, not cap_method='binary']
+                  expression: 0
             number_of_years:
-                - where: []
-                  eq: >
+                - expression: >
                     sum{timestep_resolution[timestep], over=[timestep in timesteps]} *
                     sum{timestep_weights[timestep], over=[timestep in timesteps]} / 8760
 
     cost_var:
         foreach: [cost in costs, node in nodes, tech in techs, timestep in timesteps]
-        eq: cost_var[cost, node, tech, timestep] = (cost_prod + cost_con) * timestep_weights[timestep]
+        equation: cost_var[cost, node, tech, timestep] = (cost_prod + cost_con) * timestep_weights[timestep]
 
         components:
             cost_prod:
-                - where: []
-                  eq: cost_om_prod[cost, node, tech, timestep] * carrier_prod[carrier_out, node, tech, timestep]
-
+                - expression: cost_om_prod[cost, node, tech, timestep] * carrier_prod[carrier_out, node, tech, timestep]
             cost_con:
                 - where: [cost_om_con>0, and, inheritance(supply_plus)]
-                  eq: cost_om_con[cost, node, tech, timestep] * resource_con[node, tech, timestep]
+                  expression: cost_om_con[cost, node, tech, timestep] * resource_con[node, tech, timestep]
                 - where: [cost_om_con>0, and, inheritance(supply), and, energy_eff>0]
-                  eq: cost_om_con[cost, node, tech, timestep] * carrier_prod[carrier_out, node, tech, timestep] / energy_eff[node, tech, timestep]
+                  expression: cost_om_con[cost, node, tech, timestep] * carrier_prod[carrier_out, node, tech, timestep] / energy_eff[node, tech, timestep]
                 - where: [cost_om_con>0, and, [not inheritance(supply), and, not inheritance(supply_plus)]]
-                  eq: cost_om_con[cost, node, tech, timestep] * -1 * carrier_con[carrier_in, node, tech, timestep]
-                - where: []
-                  eq: 0
+                  expression: cost_om_con[cost, node, tech, timestep] * -1 * carrier_con[carrier_in, node, tech, timestep]
+                - where: [cost_om_con=0, or, [cost_om_con>0, and, energy_eff=0, and, inheritance(supply)]]
+                  expression: 0
 
             carrier_out:
                 - where: [inheritance(conversion_plus)]
-                  select: get_carrier{primary_carrier_out}
+                  expression: get_carrier{primary_carrier_out}
                   on_dimension: carriers
-                - where: []
-                  select: get_carrier{carrier, carrier_tiers="out"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
+                - where: [not inheritance(conversion_plus)]
+                  expression: get_carrier{carrier, carrier_tiers="out"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
                   on_dimension: carriers
 
             carrier_in:
                 - where: [inheritance(conversion_plus)]
-                  select: get_carrier{primary_carrier_in}
+                  expression: get_carrier{primary_carrier_in}
                   on_dimension: carriers
-                - where: []
-                  select: get_carrier{carrier, carrier_tiers="in"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
-                  on_dimension: carriers
+                - *non_conversion_plus_carrier_in
