@@ -6,7 +6,7 @@ helper_functions:
 constraints:
     carrier_production_max:
         foreach: [node in nodes, tech in techs, timestep in timesteps]
-        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True, and, subset(carrier_tiers, ['out'])]
+        where: [carrier, and, not inheritance(conversion_plus), and, not cap_method='integer', and, allowed_carrier_prod=True, and, "subset(carrier_tiers=['out'])"]
         equation: "carrier_prod[carrier, node, tech, timestep] <= energy_cap[node, tech] * timestep_resolution[timestep] * parasitic_eff[node, tech, timestep]"
 
     balance_supply:
@@ -29,7 +29,7 @@ constraints:
                   expression: resource[node, tech, timestep] * resource_scale[node, tech] * energy_cap[node, tech]
                 - where: [resource_unit='energy']
                   expression: resource[node, tech, timestep] * resource_scale[node, tech]
-          carrier_prod_div_energy_eff:
+            carrier_prod_div_energy_eff:
                 - expression: carrier_prod[carrier, node, tech, timestep] / energy_eff[node, tech, timestep]
 
     balance_supply_plus:
@@ -59,10 +59,10 @@ constraints:
         index_items:
             previous_step:
                 - where: [run.cyclic_storage=True, and, get_index(timesteps)=0]
-                  expression: get_item{timesteps, -1}
+                  expression: get_item(timesteps, -1)
                   on_dimension: timesteps
                 - where: [get_index(timesteps)>0, and, [not clusters, or, not lookup_cluster_first_timestep=True], and, not run.cyclic_storage=True]
-                  expression: get_item{timesteps, get_index{timestep} - 1}  # could be a lookup table, like below
+                  expression: get_item(timesteps, get_index(timestep) - 1)  # could be a lookup table, like below
                   on_dimension: timesteps
                 - where: [get_index(timesteps)>0, and, clusters, and, lookup_cluster_first_timestep=True]
                   expression: lookup_cluster_last_timestep[timestep]
@@ -74,7 +74,7 @@ constraints:
         index_items:
             carrier_in: &non_conversion_plus_carrier_in
                 - where: [not inheritance(conversion_plus)]
-                  expression: get_carrier{carrier, carrier_tiers="in"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
+                  expression: get_carrier(carrier, carrier_tiers="in")  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
                   on_dimension: carriers
 
     cost_investment:
@@ -115,8 +115,8 @@ constraints:
                   expression: 0
             number_of_years:
                 - expression: >
-                    sum{timestep_resolution[timestep], over=[timestep in timesteps]} *
-                    sum{timestep_weights[timestep], over=[timestep in timesteps]} / 8760
+                    sum(timestep_resolution[timestep], over=[timestep in timesteps]) *
+                    sum(timestep_weights[timestep], over=[timestep in timesteps]) / 8760
 
     cost_var:
         foreach: [cost in costs, node in nodes, tech in techs, timestep in timesteps]
@@ -137,14 +137,14 @@ constraints:
 
             carrier_out:
                 - where: [inheritance(conversion_plus)]
-                  expression: get_carrier{primary_carrier_out}
+                  expression: get_carrier(primary_carrier_out)
                   on_dimension: carriers
                 - where: [not inheritance(conversion_plus)]
-                  expression: get_carrier{carrier, carrier_tiers="out"}  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
+                  expression: get_carrier(carrier, carrier_tiers="out")  # "carrier" here refers to a model dataset, which is confusing. Need to deal with this.
                   on_dimension: carriers
 
             carrier_in:
                 - where: [inheritance(conversion_plus)]
-                  expression: get_carrier{primary_carrier_in}
+                  expression: get_carrier(primary_carrier_in)
                   on_dimension: carriers
                 - *non_conversion_plus_carrier_in
