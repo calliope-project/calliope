@@ -686,7 +686,7 @@ def run_operate(model_data, run_config, timings, backend, build_only):
                     storage_initial.coords
                 ] = storage_initial.values
                 backend_model.storage_initial.store_values(
-                    storage_initial.to_series().dropna().to_dict()
+                    storage_initial.to_series().dropna().clip(lower=0.).to_dict()
                 )
 
             # Set up total operated units for the next iteration
