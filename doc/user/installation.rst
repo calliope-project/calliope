@@ -37,6 +37,14 @@ To use Calliope, you need to activate the ``calliope`` environment each time
 
 You are now ready to use Calliope together with the free and open source GLPK solver. However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result). Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step. Read the next section for more information on installing alternative solvers.
 
+.. note::
+
+  Some users have reported issues with the recommended installation method, especially on Windows. In such cases, alternative ways to install the software migh be helpful. They are listed below.
+
+  Option 1. Instead of using ``conda``, use ``mamba`` (a more efficient implementation of ``conda``). First install mamba in your base conda environment (``conda install mamba -n base -c conda-forge``), then proceed with calliope's installation as before, simply using ``mamba`` in place of ``conda``.
+
+  Option 2. Install calliope via ``pip`` after creating the environment. First, create a generic conda environment and name it 'calliope' (``conda create -n calliope``). Then, install calliope via ``pip`` (``pip install calliope``).
+
 Updating an existing installation
 =================================
 
