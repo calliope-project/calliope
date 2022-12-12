@@ -11,4 +11,4 @@ dependencies:
     - nbconvert  # To generate HTML files from example notebooks
     - pip
     - pip:
-        - "git+https://github.com/readthedocs/readthedocs-sphinx-search@master"
+        - "git+https://github.com/readthedocs/readthedocs-sphinx-search@main"
