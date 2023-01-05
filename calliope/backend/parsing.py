@@ -46,9 +46,7 @@ def parse_constraint_equations(constraint, constraint_name):
     for eq_index, equation in enumerate(equations):
 
         # Get all components in the equation
-        eq_components = find_and_replace_components(
-            equation["expression"], find_only=True
-        )
+        eq_components = find_components(equation["expression"])
 
         # Get variations of components
         eq_component_names = [i.replace("COMPONENT:", "") for i in eq_components]
@@ -75,20 +73,17 @@ def parse_constraint_equations(constraint, constraint_name):
     return expanded_equations
 
 
-def find_and_replace_components(parse_results, find_only=False):
+def find_components(parse_results):
     """
-    Recursively find and replace components
+    Recursively find components
     """
     components = []
     for item in parse_results:
         if isinstance(item, equation_parser.EvalComponent):
             components.append(str(item))
-            if not find_only:
-                pass
-                # FIXME: do the replacement
 
         elif hasattr(item, "value") and hasattr(item.value, "len"):
-            components.extend(find_and_replace_components(item.value))
+            components.extend(find_components(item.value))
 
     return set(components)
 
