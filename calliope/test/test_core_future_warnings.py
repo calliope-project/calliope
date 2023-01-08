@@ -25,4 +25,4 @@ class TestDeprecationWarnings:
         assert check_error_or_warning(warning, "`locations` has been renamed")
 
         model.run()
-        assert model.get_formatted_array("carrier_prod").sum() == 420
+        assert model.results.carrier_prod.sum() == 420

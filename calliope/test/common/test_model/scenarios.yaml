@@ -253,7 +253,6 @@ overrides:
         run.mode: spores
         run.spores_options:
             score_cost_class: 'spores_score'
-            slack_cost_class: 'monetary'
             slack: 0.1
             spores_number: 3
         run.objective_options.cost_class: {'monetary': 1, 'spores_score': 0}
