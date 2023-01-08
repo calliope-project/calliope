@@ -11,19 +11,19 @@ pool:
 strategy:
   maxParallel: 8
   matrix:
-    linux-py3.7:
-      IMAGE_NAME: ubuntu-latest
-      PYTHON_VERSION: 3.7
     linux-py3.8:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.8
+    linux-py3.9:
+      IMAGE_NAME: ubuntu-latest
+      PYTHON_VERSION: 3.9
       CODECOV: True  # Only run on one build
-    macos-py3.8:
+    macos-py3.9:
       IMAGE_NAME: macOS-latest
-      PYTHON_VERSION: 3.8
-    windows-py3.8:
+      PYTHON_VERSION: 3.9
+    windows-py3.9:
       IMAGE_NAME: windows-latest
-      PYTHON_VERSION: 3.8
+      PYTHON_VERSION: 3.9
 
 steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -51,24 +51,26 @@ steps:
     displayName: Configure and update conda
 
   - bash: |
-      python utils/conda_create.py requirements.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
+      conda config --add channels conda-forge
+      conda create --yes --quiet -n calliope python=$(PYTHON_VERSION)
+      conda env update --file requirements.yml --name calliope
+    displayName: Set up environment
+
+  - bash: |
+      conda install --yes -n calliope coin-or-cbc
       source activate calliope
-      conda install -y -c conda-forge coincbc
       pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
-    displayName: Set up environment and run tests (UNIX)
+    displayName: Install calliope and run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
-  # Must manually activate base environment else conda_create.py fails
   - script: |
       set PATH=cbc/bin;%PATH%
       call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
-      call activate base
-      python utils/conda_create.py requirements.yml --python_version=$(PYTHON_VERSION) --channels conda-forge defaults --run
       call activate calliope
       pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
-    displayName: Set up environment and run tests (Windows)
+    displayName: Install calliope and run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - task: PublishTestResults@2
