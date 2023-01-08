@@ -34,6 +34,16 @@ steps:
     displayName: Enable conda (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
+  - task: Cache@2
+    displayName: Use cached Anaconda environment
+    inputs:
+      key: 'conda | "$(Agent.OS)" | requirements.yml'
+      restoreKeys: |
+        python | "$(Agent.OS)"
+        python
+      path: $(CONDA)/envs/calliope
+      cacheHitVar: CONDA_CACHE_RESTORED
+
   - powershell: |
       wget https://www.coin-or.org/download/binary/Cbc/Cbc-2.10-win64-msvc15-md.zip -O cbc.zip
       7z x cbc.zip -ocbc
@@ -55,9 +65,14 @@ steps:
       conda create --yes --quiet -n calliope python=$(PYTHON_VERSION)
       conda env update --file requirements.yml --name calliope
     displayName: Set up environment
+    condition: eq(variables.CONDA_CACHE_RESTORED, 'false')
 
   - bash: |
       conda install --yes -n calliope coin-or-cbc
+    displayName: Install coincbc (UNIX)
+    condition: and(ne(variables['Agent.OS'], 'Windows_NT'), eq(variables.CONDA_CACHE_RESTORED, 'false'))
+
+  - bash: |
       source activate calliope
       pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
