@@ -44,10 +44,20 @@ steps:
       path: $(CONDA)/envs/calliope
       cacheHitVar: CONDA_CACHE_RESTORED
 
-  - powershell: |
-      wget https://www.coin-or.org/download/binary/Cbc/Cbc-2.10-win64-msvc15-md.zip -O cbc.zip
-      7z x cbc.zip -ocbc
-    displayName: Download and set path for CBC (Windows)
+  - powershell: wget https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.8/Cbc-releases.2.10.8-w64-msvc17-md.zip -O cbc.zip
+    displayName: Download CBC (Windows)
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+  - task: ExtractFiles@1
+    inputs:
+      archiveFilePatterns: 'cbc.zip' # string. Required. Archive file patterns. Default: **/*.zip.
+      destinationFolder: $(agent.builddirectory)\cbc # string. Required. Destination folder.
+      cleanDestinationFolder: true # boolean. Required. Clean destination folder before extracting. Default: true.
+      overwriteExistingFiles: false # boolean. Required. Overwrite existing files. Default: false.
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+  - powershell: Write-Host "##vso[task.prependpath]$(agent.builddirectory)\cbc\bin"
+    displayName: set path for CBC (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - bash: sudo chown -R $USER $CONDA
@@ -75,17 +85,25 @@ steps:
   - bash: |
       source activate calliope
       pip install --no-cache-dir --verbose -e .
+    displayName: Install calliope (UNIX)
+    condition: and(ne(variables['Agent.OS'], 'Windows_NT'), eq(variables.CONDA_CACHE_RESTORED, 'false'))
+
+  - script: |
+      call activate calliope
+      pip install --no-cache-dir --verbose -e .
+    displayName: Install calliope (Windows)
+    condition: and(eq(variables['Agent.OS'], 'Windows_NT'), eq(variables.CONDA_CACHE_RESTORED, 'false'))
+
+  - bash: |
+      source activate calliope
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
-    displayName: Install calliope and run tests (UNIX)
+    displayName: Run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
   - script: |
-      set PATH=cbc/bin;%PATH%
-      call "%VSPATH%\VC\Auxiliary\Build\vcvarsall.bat" x86
       call activate calliope
-      pip install --no-cache-dir --verbose -e .
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
-    displayName: Install calliope and run tests (Windows)
+    displayName: Run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
   - task: PublishTestResults@2
