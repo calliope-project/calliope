@@ -27,7 +27,11 @@ With Miniconda installed, you can create a new environment called ``"calliope"``
 
   .. code-block:: fishshell
 
-    $ conda create -c conda-forge -n calliope calliope
+    $ conda create -c conda-forge -n calliope calliope python=3.9
+
+Python version 3.9 is specified as it is the version which we test the package against most thoroughly (on both UNIX and Windows operating systems).
+We test with Python versions 3.7 and 3.8 on Linux.
+We do not test for Python versions <3.7 or >3.9.
 
 To use Calliope, you need to activate the ``calliope`` environment each time
 
