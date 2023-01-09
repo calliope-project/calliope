@@ -6,6 +6,8 @@ Release History
 0.6.9 (dev)
 -----------
 
+|changed| Multi-platform CI tests are run on Python 3.9 instead of Python 3.8. Linux tests are also run for versions 3.7 and 3.8.
+
 |fixed| Malformed carrier-specific group constraints are skipped without skipping all subsequent group constraints.
 
 
