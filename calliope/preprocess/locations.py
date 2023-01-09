@@ -440,7 +440,7 @@ def check_costs_and_compute_depreciation_rates(
         plant_life = tech_config.constraints.get_key("lifetime", 0)
         interest = tech_config.costs[cost].get_key("interest_rate", None)
 
-        # Only need depreciation rate for technologies that have investment costs
+        # Only need depreciation rate for technologies that have non-annualised investment costs
         if any(
             any(j in i for j in ["_area", "_cap", "purchase"])
             for i in tech_config.costs[cost].keys()

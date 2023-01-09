@@ -59,6 +59,15 @@ def get_previous_timestep(timesteps, timestep):
     return timesteps.at(timesteps.ord(timestep) - 1)
 
 
+def get_depreciation_rate(backend_model, idx):
+    """Safely extract depreciation rate data"""
+    depreciation_rates = getattr(backend_model, "cost_depreciation_rate", None)
+    if depreciation_rates is not None and idx in depreciation_rates.index_set():
+        return depreciation_rates[idx]
+    else:
+        return 1
+
+
 @memoize
 def get_loc_tech_carriers(backend_model, loc_carrier):
     """
