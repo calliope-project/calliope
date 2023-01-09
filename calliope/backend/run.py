@@ -445,6 +445,17 @@ def run_operate(model_data, timings, backend, build_only):
         comment="Backend: starting model run in operational mode",
     )
 
+    def _ensure_positive(da: xr.DataArray) -> xr.DataArray:
+        if (da < 0).any():
+            most_negative = da.min().item()
+            exceptions.print_warnings_and_raise_errors(
+                warnings=[
+                    f"Found negative values for array '{da.name}' as low as {most_negative:.0E}. "
+                    "All negative values will be clipped to zero to continue operation mode"
+                ]
+            )
+        return da.clip(min=0.0, keep_attrs=True)
+
     defaults = UpdateObserverDict(
         initial_yaml_string=model_data.attrs["defaults"],
         name="defaults",
@@ -678,12 +689,14 @@ def run_operate(model_data, timings, backend, build_only):
                         "timesteps"
                     )
                     / model_data.storage_cap
-                )
+                ).rename("storage_initial")
                 model_data["storage_initial"].loc[
                     storage_initial.coords
                 ] = storage_initial.values
+
+                storage_initial_no_negative = _ensure_positive(storage_initial)
                 backend_model.storage_initial.store_values(
-                    storage_initial.to_series().dropna().to_dict()
+                    storage_initial_no_negative.to_series().dropna().to_dict()
                 )
 
             # Set up total operated units for the next iteration
