@@ -27,11 +27,10 @@ With Miniconda installed, you can create a new environment called ``"calliope"``
 
   .. code-block:: fishshell
 
-    $ conda create -c conda-forge -n calliope calliope python=3.9
+    $ conda create -c conda-forge -n calliope calliope
 
-Python version 3.9 is specified as it is the version which we test the package against most thoroughly (on both UNIX and Windows operating systems).
-We test with Python versions 3.7 and 3.8 on Linux.
-We do not test for Python versions <3.7 or >3.9.
+This will install calliope with the latest Python version that we undertake cross-platform tests for: v3.9.
+We also test with Python versions 3.7 and 3.8 on Linux and installing with these versions is possible on all operating systems.
 
 To use Calliope, you need to activate the ``calliope`` environment each time
 
@@ -45,7 +44,7 @@ You are now ready to use Calliope together with the free and open source GLPK so
 
     If you are having trouble with the recommended installation method, you can try the following troubleshooting methods:
 
-    1. Instead of using ``conda``, use ``mamba`` (a more efficient implementation of ``conda``). First install mamba in your base conda environment (``conda install mamba -n base -c conda-forge``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda``: ``mamba create -c conda-forge -n calliope calliope python=3.9``.
+    1. Instead of using ``conda``, use ``mamba`` (a more efficient implementation of ``conda``). First install mamba in your base conda environment (``conda install mamba -n base -c conda-forge``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda`` (``mamba create -c conda-forge -n calliope calliope``).
 
     2. Install calliope via ``pip`` after creating an empty conda environment. First, create an empty environment and name it 'calliope' (``conda create -n calliope python=3.9``). Then, activate the ``calliope`` environment before installing the calliope package via ``pip`` (``pip install calliope``).
 
