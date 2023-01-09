@@ -8,6 +8,10 @@ Release History
 
 |changed| Multi-platform CI tests are run on Python 3.9 instead of Python 3.8. Linux tests are also run for versions 3.7 and 3.8.
 
+|fixed| SPORES mode scoring will ignore technologies with energy capacities that are equal to their minimum capacities (i.e., `energy_cap_min`) or which have fixed energy capacities (`energy_cap_equals`).
+
+|fixed| SPORE number is retained when continuing a model run in SPORES mode when solutions already exist for SPORE >= 1. Previously, the SPORE number would be reset to zero.
+
 
 0.6.8 (2022-02-07)
 ------------------
