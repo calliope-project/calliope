@@ -3,6 +3,11 @@
 Release History
 ===============
 
+0.6.9 (dev)
+-----------
+
+|fixed| Spurious negative values in `storage_inital` in operate mode are ignored in subsequent optimisation runs (#379). Negative values are a result of optimisation tolerances allowing a strictly positive decision variable to end up with (very small in magnitude) negative values. Forcing these to zero between operate mode runs ensures that Pyomo doesn't raise an exception that input values are outside the valid domain (NonNegativeReals).
+
 0.6.8 (2022-02-07)
 ------------------
 
