@@ -187,9 +187,21 @@ def run_spores(
     def _cap_loc_score_default(results):
         # Define default scoring function, based on integer scoring method
         # TODO: make it possible to point to a custom function instead of this one
-        cap_loc_score = xr.where(results.energy_cap > 1e-3, 100, 0).loc[
-            {"loc_techs": results.loc_techs_investment_cost}
-        ]
+
+        # First, we ensure that we don't erroneously score techs that have to be there no matter what.
+        if "energy_cap_min" in model_data.data_vars.keys():
+            min_cap = model_data.energy_cap_min.fillna(0)
+        else:
+            min_cap = 0
+
+        if "energy_cap_equals" in model_data.data_vars.keys():
+            forced_energy_cap = model_data.energy_cap_equals.fillna(min_cap)
+        else:
+            forced_energy_cap = min_cap
+
+        cap_loc_score = xr.where(
+            results.energy_cap - forced_energy_cap > 1e-3, 100, 0
+        ).loc[{"loc_techs": results.loc_techs_investment_cost}]
         return cap_loc_score.to_series().rename_axis(index="loc_techs_investment_cost")
 
     # Define function to update "spores_score" after each iteration of the method
@@ -309,10 +321,6 @@ def run_spores(
 
     _error_on_malformed_input()
 
-    if backend_rerun:
-        model_data = _combine_spores_results_and_inputs(
-            backend_rerun, xr.Dataset(), 0, model_data=model_data
-        )
     run_config = UpdateObserverDict(
         initial_yaml_string=model_data.attrs["run_config"],
         name="run_config",
@@ -320,6 +328,14 @@ def run_spores(
     )
 
     spores_config = run_config["spores_options"]
+
+    init_spore = _initialise_spores_number()
+
+    if backend_rerun:
+        model_data = _combine_spores_results_and_inputs(
+            backend_rerun, xr.Dataset(), init_spore, model_data=model_data
+        )
+
     if "spores" in model_data.dims and model_data.spores.size == 1:
         model_data = model_data.squeeze("spores")
 
@@ -333,8 +349,6 @@ def run_spores(
     results, backend_model, opt = _initialise_backend_model()
     if build_only:
         return results, backend_model, opt
-
-    init_spore = _initialise_spores_number()
 
     if spores_config["skip_cost_op"]:
         cumulative_spores_scores = init_spores_scores.copy()
