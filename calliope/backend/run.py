@@ -434,10 +434,12 @@ def run_operate(model_data, timings, backend, build_only):
     def _ensure_positive(da: xr.DataArray) -> xr.DataArray:
         if (da < 0).any():
             most_negative = da.min().item()
-            exceptions.print_warnings_and_raise_errors(warnings=[
-                f"Found negative values for array '{da.name}' as low as {most_negative:.0E}. "
+            exceptions.print_warnings_and_raise_errors(
+                warnings=[
+                    f"Found negative values for array '{da.name}' as low as {most_negative:.0E}. "
                     "All negative values will be clipped to zero to continue operation mode"
-            ])
+                ]
+            )
         return da.clip(min=0.0, keep_attrs=True)
 
     defaults = UpdateObserverDict(
