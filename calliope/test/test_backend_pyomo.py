@@ -579,6 +579,19 @@ class TestCostConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, "cost_investment_constraint")
 
+    @pytest.mark.parametrize(
+        "scenario",
+        ["om_annual_costs_with_depreciation", "om_annual_costs_without_depreciation"],
+    )
+    def test_loc_techs_om_annual_cost_investment_constraint(self, scenario):
+        """
+        sets.loc_techs_investment_cost,
+        """
+        m = build_model({}, f"simple_supply,two_hours,{scenario}")
+        m.run(build_only=True)
+        assert hasattr(m._backend_model, "cost_investment_constraint")
+        assert not hasattr(m._backend_model, "cost_var_constraint")
+
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_techs_cost_investment_milp_constraint(self):
         m = build_model(

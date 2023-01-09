@@ -16,6 +16,7 @@ from calliope.backend.pyomo.util import (
     get_timestep_weight,
     loc_tech_is_in,
     invalid,
+    get_depreciation_rate,
 )
 
 ORDER = 10  # order in which to invoke constraints relative to other constraint files
@@ -165,9 +166,7 @@ def cost_investment_constraint_rule(backend_model, cost, loc_tech):
     cost_om_annual = get_param(backend_model, "cost_om_annual", (cost, loc_tech))
 
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict["data"]["cost_depreciation_rate"].get(
-        (cost, loc_tech), 0
-    )
+    depreciation_rate = get_depreciation_rate(backend_model, (cost, loc_tech))
 
     cost_cap = (
         depreciation_rate

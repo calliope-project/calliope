@@ -243,7 +243,10 @@ def costs_to_dataset(model_run):
         """
         return the set of loc_techs over which the given cost should be built
         """
-        if any(i in cost for i in ["_cap", "depreciation_rate", "purchase", "area"]):
+        if any(
+            i in cost
+            for i in ["_cap", "depreciation_rate", "purchase", "area", "om_annual"]
+        ):
             return "loc_techs_investment_cost"
         elif any(i in cost for i in ["om_", "export"]):
             return "loc_techs_om_cost"
@@ -545,6 +548,7 @@ def add_attributes(model_run):
                 "cost_{}".format(k): v
                 for k, v in default_tech_dict["costs"]["default_cost"].items()
             },
+            **{"cost_depreciation_rate": 1},  # we generate this parameter internally
             **default_location_dict,
             **default_group_constraint_dict,
         }

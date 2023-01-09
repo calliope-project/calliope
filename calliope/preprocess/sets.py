@@ -447,7 +447,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k
         for k in loc_techs_costs
         if any(
-            "_cap" in i or ".purchase" in i or "_area" in i
+            "_cap" in i or ".purchase" in i or "_area" in i or "om_annual" in i
             for i in loc_techs_config[k].costs.keys_nested()
         )
     )
@@ -455,7 +455,7 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k
         for k in loc_techs_transmission_costs
         if any(
-            "_cap" in i or ".purchase" in i or "_area" in i
+            "_cap" in i or ".purchase" in i or "_area" in i or "om_annual" in i
             for i in loc_techs_transmission_config[k].costs.keys_nested()
         )
     )
@@ -465,13 +465,17 @@ def generate_loc_tech_sets(model_run, simple_sets):
         k
         for k in loc_techs_costs
         if any(
-            "om_" in i or "export" in i for i in loc_techs_config[k].costs.keys_nested()
+            ("om_" in i or "export" in i) and "om_annual" not in i
+            for i in loc_techs_config[k].costs.keys_nested()
         )
     )
     loc_techs_transmission_om_costs = set(
         k
         for k in loc_techs_transmission_costs
-        if any("om_" in i for i in loc_techs_transmission_config[k].costs.keys_nested())
+        if any(
+            "om_" in i and "om_annual" not in i
+            for i in loc_techs_transmission_config[k].costs.keys_nested()
+        )
     )
 
     # Any export costs

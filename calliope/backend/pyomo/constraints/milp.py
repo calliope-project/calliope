@@ -19,6 +19,7 @@ from calliope.backend.pyomo.util import (
     split_comma_list,
     loc_tech_is_in,
     apply_equals,
+    get_depreciation_rate,
 )
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_constraint
@@ -558,12 +559,8 @@ def update_costs_investment_units_milp_constraint(backend_model, cost, loc_tech)
             \\times cost_{purchase}(cost, loc::tech) * timestep_{weight} * depreciation
             \\quad \\forall cost \\in costs, \\forall loc::tech \\in loc::techs_{cost_{investment}, milp}
     """
-    model_data_dict = backend_model.__calliope_model_data
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict["data"]["cost_depreciation_rate"][
-        (cost, loc_tech)
-    ]
-
+    depreciation_rate = get_depreciation_rate(backend_model, (cost, loc_tech))
     cost_purchase = get_param(backend_model, "cost_purchase", (cost, loc_tech))
     cost_of_purchase = (
         backend_model.units[loc_tech] * cost_purchase * ts_weight * depreciation_rate
@@ -590,11 +587,8 @@ def update_costs_investment_purchase_milp_constraint(backend_model, cost, loc_te
             \\quad \\forall cost \\in costs, \\forall loc::tech \\in loc::techs_{cost_{investment}, purchase}
 
     """
-    model_data_dict = backend_model.__calliope_model_data
     ts_weight = get_timestep_weight(backend_model)
-    depreciation_rate = model_data_dict["data"]["cost_depreciation_rate"][
-        (cost, loc_tech)
-    ]
+    depreciation_rate = get_depreciation_rate(backend_model, (cost, loc_tech))
 
     cost_purchase = get_param(backend_model, "cost_purchase", (cost, loc_tech))
     cost_of_purchase = (

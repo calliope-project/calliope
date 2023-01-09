@@ -1627,6 +1627,20 @@ class TestDataset:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="simple_storage,one_day")
 
+    @pytest.mark.parametrize(
+        "scenario",
+        ["om_annual_costs_with_depreciation", "om_annual_costs_without_depreciation"],
+    )
+    def test_om_annual_without_depreciation_captured_in_set(self, scenario):
+        """
+        It should be possible to have loc_techs_investment without depreciation_rate
+        if only defining om_annual for a technology.
+        """
+        m = build_model({}, f"simple_supply,two_hours,{scenario}")
+
+        assert "0::test_supply_elec" in m._model_data.loc_techs_investment_cost
+        assert "depreciation_rate" not in m._model_data.data_vars.keys()
+
     # FIXME: What are the *required* arrays?
     def test_missing_array(self):
         """
