@@ -473,7 +473,8 @@ def generate_constraint_sets(model_run):
             )
             if any(len(val) == 0 for val in loc_tech_carrier_dict.values()):
                 exceptions.warn(
-                    f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology::carrier combinations"
+                    f"Constraint group `{group_constraint_name}` will be completely "
+                    "ignored since there are no valid location::technology::carrier combinations"
                 )
                 continue
             else:
@@ -485,7 +486,8 @@ def generate_constraint_sets(model_run):
         else:
             if len(loc_techs) == 0:
                 exceptions.warn(
-                    f"Constraint group `{group_constraint_name}` will be completely ignored since there are no valid location::technology combinations"
+                    f"Constraint group `{group_constraint_name}` will be completely "
+                    "ignored since there are no valid location::technology combinations"
                 )
                 continue
             constraint_sets[
