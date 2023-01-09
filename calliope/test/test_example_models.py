@@ -162,7 +162,7 @@ class TestNationalScaleExampleModelSpores:
                 "model.subset_time": ["2005-01-01", "2005-01-03"],
                 "run.solver": solver,
                 "run.solver_io": solver_io,
-                **override_dict_kwargs
+                **override_dict_kwargs,
             },
             scenario="spores",
         )
@@ -210,9 +210,7 @@ class TestNationalScaleExampleModelSpores:
     )
     def test_nationalscale_example_results_gurobi(self):
         pytest.importorskip("gurobipy")
-        gurobi_data = self.example_tester(
-            solver="gurobi", solver_io="python"
-        )
+        gurobi_data = self.example_tester(solver="gurobi", solver_io="python")
         gurobi_persistent_data = self.example_tester(
             solver="gurobi_persistent", solver_io="python"
         )
@@ -264,14 +262,29 @@ class TestNationalScaleExampleModelSpores:
         def _spores_with_override(override_dict):
             result_without_override = self.example_tester()
             result_with_override = self.example_tester(**override_dict)
-            assert result_without_override.energy_cap.round(5).equals(result_with_override.energy_cap.round(5))
-            assert result_without_override.cost.sel(costs="spores_score").round(5).to_series().drop(
-                "region1::ccgt", level="loc_techs_cost"
-            ).equals(result_with_override.cost.sel(costs="spores_score").round(5).to_series().drop(
-                "region1::ccgt", level="loc_techs_cost"
-            ))
-            assert result_without_override.cost.sel(costs="spores_score", loc_techs_cost="region1::ccgt").sum() > 0
+            assert result_without_override.energy_cap.round(5).equals(
+                result_with_override.energy_cap.round(5)
+            )
+            assert (
+                result_without_override.cost.sel(costs="spores_score")
+                .round(5)
+                .to_series()
+                .drop("region1::ccgt", level="loc_techs_cost")
+                .equals(
+                    result_with_override.cost.sel(costs="spores_score")
+                    .round(5)
+                    .to_series()
+                    .drop("region1::ccgt", level="loc_techs_cost")
+                )
+            )
+            assert (
+                result_without_override.cost.sel(
+                    costs="spores_score", loc_techs_cost="region1::ccgt"
+                ).sum()
+                > 0
+            )
             return result_with_override, result_without_override
+
         return _spores_with_override
 
     @pytest.mark.parametrize("override", ("energy_cap_min", "energy_cap_equals"))
@@ -279,13 +292,18 @@ class TestNationalScaleExampleModelSpores:
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {
-            f"locations.region1.techs.ccgt.constraints.{override}": 30000
-        }
+        override_dict = {f"locations.region1.techs.ccgt.constraints.{override}": 30000}
         result_with_override, _ = spores_with_override(override_dict)
-        assert result_with_override.cost.sel(costs="spores_score", loc_techs_cost="region1::ccgt").sum() == 0
+        assert (
+            result_with_override.cost.sel(
+                costs="spores_score", loc_techs_cost="region1::ccgt"
+            ).sum()
+            == 0
+        )
 
-    def test_ignore_forced_energy_cap_spores_some_ccgt_score(self, spores_with_override):
+    def test_ignore_forced_energy_cap_spores_some_ccgt_score(
+        self, spores_with_override
+    ):
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
@@ -293,18 +311,30 @@ class TestNationalScaleExampleModelSpores:
             f"locations.region1.techs.ccgt.constraints.energy_cap_min": 15000
         }
         result_with_override, _ = spores_with_override(override_dict)
-        assert result_with_override.cost.sel(costs="spores_score", loc_techs_cost="region1::ccgt").sum() > 0
+        assert (
+            result_with_override.cost.sel(
+                costs="spores_score", loc_techs_cost="region1::ccgt"
+            ).sum()
+            > 0
+        )
 
-    def test_ignore_forced_energy_cap_spores_no_double_counting(self, spores_with_override):
+    def test_ignore_forced_energy_cap_spores_no_double_counting(
+        self, spores_with_override
+    ):
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
         override_dict = {
             f"locations.region1.techs.ccgt.constraints.energy_cap_min": 15000,
-            f"locations.region1.techs.ccgt.constraints.energy_cap_equals": 30000
+            f"locations.region1.techs.ccgt.constraints.energy_cap_equals": 30000,
         }
         result_with_override, _ = spores_with_override(override_dict)
-        assert result_with_override.cost.sel(costs="spores_score", loc_techs_cost="region1::ccgt").sum() == 0
+        assert (
+            result_with_override.cost.sel(
+                costs="spores_score", loc_techs_cost="region1::ccgt"
+            ).sum()
+            == 0
+        )
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:

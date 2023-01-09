@@ -199,9 +199,9 @@ def run_spores(
         else:
             forced_energy_cap = min_cap
 
-        cap_loc_score = xr.where(results.energy_cap - forced_energy_cap > 1e-3, 100, 0).loc[
-            {"loc_techs": results.loc_techs_investment_cost}
-        ]
+        cap_loc_score = xr.where(
+            results.energy_cap - forced_energy_cap > 1e-3, 100, 0
+        ).loc[{"loc_techs": results.loc_techs_investment_cost}]
         return cap_loc_score.to_series().rename_axis(index="loc_techs_investment_cost")
 
     # Define function to update "spores_score" after each iteration of the method
