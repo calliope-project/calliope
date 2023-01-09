@@ -3,6 +3,12 @@
 Release History
 ===============
 
+0.6.9 (dev)
+-----------
+
+|fixed| Malformed carrier-specific group constraints are skipped without skipping all subsequent group constraints.
+
+
 0.6.8 (2022-02-07)
 ------------------
 
