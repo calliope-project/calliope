@@ -330,6 +330,13 @@ overrides:
                     monetary:
                         om_annual: 10
 
+    om_annual_fraction_costs:
+        tech_groups:
+            supply:
+                costs:
+                    monetary:
+                        om_annual_investment_fraction: 10
+
     explicit_cost_class:
         run.objective_options.cost_class.monetary: 1
 

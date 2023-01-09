@@ -581,7 +581,7 @@ class TestCostConstraints:
 
     @pytest.mark.parametrize(
         "scenario",
-        ["om_annual_costs_with_depreciation", "om_annual_costs_without_depreciation"],
+        ["om_annual_costs_with_depreciation", "om_annual_costs_without_depreciation", "om_annual_fraction_costs"],
     )
     def test_loc_techs_om_annual_cost_investment_constraint(self, scenario):
         """
