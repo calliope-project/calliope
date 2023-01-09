@@ -47,7 +47,7 @@ You are now ready to use Calliope together with the free and open source GLPK so
 
     1. Instead of using ``conda``, use ``mamba`` (a more efficient implementation of ``conda``). First install mamba in your base conda environment (``conda install mamba -n base -c conda-forge``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda``: ``mamba create -c conda-forge -n calliope calliope python=3.9``.
 
-    2. Install calliope via ``pip`` after creating an empty conda environment. First, create an empty environment and name it 'calliope' (``conda create -n calliope -c conda-forge python=3.9``). Then activate the ``calliope`` environment before installing the calliope package via ``pip`` (``pip install calliope``).
+    2. Install calliope via ``pip`` after creating an empty conda environment. First, create an empty environment and name it 'calliope' (``conda create -n calliope python=3.9``). Then, activate the ``calliope`` environment before installing the calliope package via ``pip`` (``pip install calliope``).
 
 Updating an existing installation
 =================================
