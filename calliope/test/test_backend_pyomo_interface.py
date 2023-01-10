@@ -192,23 +192,24 @@ class TestBackendRerun:
             excinfo, "The results of rerunning the backend model are only available"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
+    )
     def test_update_and_rerun(self, model):
         """
         test that the function rerun works
         """
         model.backend.update_param("energy_cap_max", {"1::test_supply_elec": 20})
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            new_model = model.backend.rerun()
+        new_model = model.backend.rerun()
 
         assert (
             new_model.inputs.energy_cap_max.loc[{"loc_techs": "1::test_supply_elec"}]
             == 20
         )
 
-        assert check_error_or_warning(
-            excinfo, "The results of rerunning the backend model are only available"
-        )
-
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
+    )
     def test_rerun_spores(self, model):
         model = calliope.examples.national_scale(
             override_dict={
@@ -335,6 +336,9 @@ class TestAddConstraint:
             excinfo, "Pyomo backend model object has no attribute 'not_a_set'"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
+    )
     def test_added_constraint(self, model):
         """
         Test the successful addition of a constraint which only allows carrier

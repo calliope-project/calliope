@@ -215,7 +215,7 @@ def solve_model(
     if "warmstart" in solve_kwargs.keys() and solver in ["glpk", "cbc"]:
         if solve_kwargs.pop("warmstart") is True:
             exceptions.warn(
-                "The chosen solver, {}, does not suport warmstart, which may "
+                "The chosen solver, {}, does not support warmstart, which may "
                 "impact performance.".format(solver)
             )
 
