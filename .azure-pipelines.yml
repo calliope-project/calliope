@@ -5,15 +5,15 @@ trigger:
       - "0.6"
   paths:
     exclude:
-      - doc
-      - paper
+      - "doc/*"
+      - "paper/*"
       - "*.md"
-      - LICENSE
-      - Makefile
-      - CITATION
-      - AUTHORS
-      - .hound.yml
-      - .pre-commit-config.yaml
+      - "LICENSE"
+      - "Makefile"
+      - "CITATION"
+      - "AUTHORS"
+      - ".hound.yml"
+      - ".pre-commit-config.yaml"
 
 pr:
   autoCancel: true
@@ -23,15 +23,15 @@ pr:
       - "0.6"
   paths:
     exclude:
-      - doc
-      - paper
+      - "doc/*"
+      - "paper/*"
       - "*.md"
-      - LICENSE
-      - Makefile
-      - CITATION
-      - AUTHORS
-      - .hound.yml
-      - .pre-commit-config.yaml
+      - "LICENSE"
+      - "Makefile"
+      - "CITATION"
+      - "AUTHORS"
+      - ".hound.yml"
+      - ".pre-commit-config.yaml"
 
 pool:
   vmImage: $(IMAGE_NAME)
