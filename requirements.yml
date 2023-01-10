@@ -4,7 +4,7 @@ channels:
     - conda-forge
 
 dependencies:
-    - click
+    - click >=7,<8
     - coverage >= 4.4
     - codecov
     - glpk=4.61
