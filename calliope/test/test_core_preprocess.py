@@ -1128,7 +1128,10 @@ class TestChecks:
             build_model(
                 override_dict=override(param), scenario="simple_storage,one_day"
             )
-    @pytest.mark.filterwarnings("ignore:(?s).*Updated from coordinate system.*:calliope.exceptions.ModelWarning")
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updated from coordinate system.*:calliope.exceptions.ModelWarning"
+    )
     def test_incorrect_location_coordinates(self):
         """
         Either all or no locations must have `coordinates` defined and, if all
@@ -1272,7 +1275,9 @@ class TestChecks:
             str(i) for i in excinfo.list
         ]
 
-    @pytest.mark.filterwarnings("ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning")
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+    )
     def test_carrier_ratio_from_file(self):
         """
         It is possible to load a timeseries carrier_ratio from file
