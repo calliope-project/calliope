@@ -1,16 +1,59 @@
 trigger:
-  - master
-  - "*"
+  branches:
+    include:
+      - "master"
+      - "0.6"
+  paths:
+    exclude:
+      - ".gitattributes"
+      - ".github"
+      - ".gitignore"
+      - ".hound.yml"
+      - ".pre-commit-config.yaml"
+      - ".readthedocs.yml"
+      - "AUTHORS"
+      - "CITATION"
+      - "LICENSE"
+      - "Makefile"
+      - "changelog.rst"
+      - "doc"
+      - "paper"
+      - "requirements_docs.yml"
+      - "*.md"
 
 pr:
-  - master
+  autoCancel: true  # new PR commits will cancel current pipeline jobs in favour of latest commit
+  branches:
+    include:
+      - "master"
+      - "0.6"
+  paths:
+    exclude:
+      - ".gitattributes"
+      - ".github/*"
+      - ".gitignore"
+      - ".hound.yml"
+      - ".pre-commit-config.yaml"
+      - ".readthedocs.yml"
+      - "AUTHORS"
+      - "CITATION"
+      - "LICENSE"
+      - "Makefile"
+      - "changelog.rst"
+      - "doc"
+      - "paper"
+      - "requirements_docs.yml"
+      - "*.md"
 
 pool:
   vmImage: $(IMAGE_NAME)
 
 strategy:
-  maxParallel: 8
+  maxParallel: 10  # free limit is 10 parallel jobs
   matrix:
+    linux-py3.7:
+      IMAGE_NAME: ubuntu-latest
+      PYTHON_VERSION: 3.7
     linux-py3.8:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.8
@@ -94,8 +137,9 @@ steps:
     displayName: Install calliope (Windows)
     condition: and(eq(variables['Agent.OS'], 'Windows_NT'), eq(variables.CONDA_CACHE_RESTORED, 'false'))
 
-  - bash: |
+  - bash: |  # cbc -quit may be required to make sure that cbc is 'reset' such that its timeout time fits within pyomo's strict limit (see: https://github.com/Pyomo/pyomo/issues/2102)
       source activate calliope
+      cbc -quit
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
     displayName: Run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
