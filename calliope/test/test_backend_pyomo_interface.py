@@ -210,6 +210,9 @@ class TestBackendRerun:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
     )
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_rerun_spores(self, model):
         model = calliope.examples.national_scale(
             override_dict={
@@ -225,6 +228,9 @@ class TestBackendRerun:
             assert hasattr(new_model, i)
         assert "spores" in new_model.results.dims
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_rerun_spores_fail_on_rerun_with_results(self, model):
         model = calliope.examples.national_scale(
             override_dict={

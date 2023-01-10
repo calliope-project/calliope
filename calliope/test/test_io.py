@@ -152,6 +152,9 @@ class TestIO:
             with open(out_path, "r") as f:
                 assert "\nmin \nobj:\n+1 cost(monetary__region1_1__csp_)" in f.read()
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_save_per_spore(self):
         with tempfile.TemporaryDirectory() as tempdir:
             os.mkdir(os.path.join(tempdir, "output"))

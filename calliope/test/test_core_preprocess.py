@@ -627,6 +627,9 @@ class TestChecks:
             warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_non_string_score_cost_class(self):
         """
         Check that the score_cost_class for spores scoring is a string
@@ -640,6 +643,9 @@ class TestChecks:
             excinfo, "`run.spores_options.score_cost_class` must be a string"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_no_spore_group_constraint(self):
         """
         Ensure an error is raised if pointing to a non-existent group constraint

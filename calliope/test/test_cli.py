@@ -42,6 +42,9 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, "output.nc"))
             assert os.path.isfile(os.path.join(tempdir, "results.html"))
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_save_per_spore(self):
         runner = CliRunner()
 

@@ -154,6 +154,9 @@ class TestNationalScaleExampleModelOperate:
         self.example_tester()
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+)
 class TestNationalScaleExampleModelSpores:
     def example_tester(self, solver="cbc", solver_io=None, **override_dict_kwargs):
 
