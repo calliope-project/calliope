@@ -42,11 +42,14 @@ You are now ready to use Calliope together with the free and open source GLPK so
 
 .. note::
 
-    If you are having trouble with the recommended installation method, you can try the following troubleshooting methods:
+    Windows users may have trouble with the recommended installation method, due to conda not solving the environment successfully.
+    If this occurs, we recommend using the more efficient reimplementation of ``conda``: `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_.
+    First install mamba in your base conda environment (``conda install -c conda-forge -n base mamba``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda`` (``mamba create -c conda-forge -n calliope calliope``).
 
-    1. Instead of using ``conda``, use ``mamba`` (a more efficient implementation of ``conda``). First install mamba in your base conda environment (``conda install mamba -n base -c conda-forge``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda`` (``mamba create -c conda-forge -n calliope calliope``).
+.. warning::
 
-    2. Install calliope via ``pip`` after creating an empty conda environment. First, create an empty environment and name it 'calliope' (``conda create -n calliope python=3.9``). Then, activate the ``calliope`` environment before installing the calliope package via ``pip`` (``pip install calliope``).
+    Although possible, we do not recommend installing Calliope directly via ``pip`` (``pip install calliope``).
+    Non-python binaries are not installed with ``pip``, some of which are necessary for stable operation (e.g., `libnetcdf`).
 
 Updating an existing installation
 =================================

@@ -30,7 +30,8 @@ Then install all development requirements for Calliope into a new environment, c
 
   .. code-block:: fishshell
 
-   $ conda env create -f requirements.yml -n calliope_dev
+   $ conda create -n calliope_dev python=3.9
+   $ conda env update -f requirements.yml -n calliope_dev
    $ conda activate calliope_dev
 
 Finally install Calliope itself as an editable installation with pip:
