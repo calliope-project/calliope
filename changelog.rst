@@ -3,8 +3,8 @@
 Release History
 ===============
 
-0.6.9 (dev)
------------
+0.6.9 (2023-01-10)
+------------------
 
 |changed| Updated to Python 3.9, with compatibility testing continuing for versions 3.8 and 3.9. Multi-platform CI tests are run on Python 3.9 instead of Python 3.8. CI tests on a Linux machine are also run for versions 3.7 and 3.8. This has been explicitly mentioned in the documentation.
 
