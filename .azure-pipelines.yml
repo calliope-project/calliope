@@ -1,9 +1,49 @@
 trigger:
-  - master
-  - "*"
+  branches:
+    include:
+      - "master"
+      - "0.6"
+  paths:
+    exclude:
+      - ".gitattributes"
+      - ".github"
+      - ".gitignore"
+      - ".hound.yml"
+      - ".pre-commit-config.yaml"
+      - ".readthedocs.yml"
+      - "AUTHORS"
+      - "CITATION"
+      - "LICENSE"
+      - "Makefile"
+      - "changelog.rst"
+      - "doc"
+      - "paper"
+      - "requirements_docs.yml"
+      - "*.md"
 
 pr:
-  - master
+  autoCancel: true  # new PR commits will cancel current pipeline jobs in favour of latest commit
+  branches:
+    include:
+      - "master"
+      - "0.6"
+  paths:
+    exclude:
+      - ".gitattributes"
+      - ".github/*"
+      - ".gitignore"
+      - ".hound.yml"
+      - ".pre-commit-config.yaml"
+      - ".readthedocs.yml"
+      - "AUTHORS"
+      - "CITATION"
+      - "LICENSE"
+      - "Makefile"
+      - "changelog.rst"
+      - "doc"
+      - "paper"
+      - "requirements_docs.yml"
+      - "*.md"
 
 pool:
   vmImage: $(IMAGE_NAME)
