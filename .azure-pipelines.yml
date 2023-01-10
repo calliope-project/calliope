@@ -1,9 +1,37 @@
 trigger:
-  - master
-  - "*"
+  branches:
+    include:
+      - master
+      - "0.6"
+  paths:
+    exclude:
+      - doc
+      - paper
+      - "*.md"
+      - LICENSE
+      - Makefile
+      - CITATION
+      - AUTHORS
+      - .hound.yml
+      - .pre-commit-config.yaml
 
 pr:
-  - master
+  autoCancel: true
+  branches:
+    include:
+      - master
+      - "0.6"
+  paths:
+    exclude:
+      - doc
+      - paper
+      - "*.md"
+      - LICENSE
+      - Makefile
+      - CITATION
+      - AUTHORS
+      - .hound.yml
+      - .pre-commit-config.yaml
 
 pool:
   vmImage: $(IMAGE_NAME)
