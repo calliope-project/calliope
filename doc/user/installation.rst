@@ -49,7 +49,7 @@ You are now ready to use Calliope together with the free and open source GLPK so
 .. warning::
 
     Although possible, we do not recommend installing Calliope directly via ``pip`` (``pip install calliope``).
-    With ``pip``, non-python binaries are not installed, some of which are necessary for stable operation (e.g., `libnetcdf`).
+    Non-python binaries are not installed with ``pip``, some of which are necessary for stable operation (e.g., `libnetcdf`).
 
 Updating an existing installation
 =================================
