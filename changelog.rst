@@ -6,7 +6,11 @@ Release History
 0.6.9 (dev)
 -----------
 
-|changed| Multi-platform CI tests are run on Python 3.9 instead of Python 3.8. Linux tests are also run for versions 3.7 and 3.8. This has been explicitly mentioned in the documentation.
+|changed| Updated to Python 3.9, with compatibility testing continuing for versions 3.8 and 3.9. Multi-platform CI tests are run on Python 3.9 instead of Python 3.8. CI tests on a Linux machine are also run for versions 3.7 and 3.8. This has been explicitly mentioned in the documentation.
+
+|changed| Updated to Click 8.0.
+
+|changed| Updated CBC Windows binary link in documentation to version 2.10.8.
 
 |fixed| SPORES mode scoring will ignore technologies with energy capacities that are equal to their minimum capacities (i.e., `energy_cap_min`) or which have fixed energy capacities (`energy_cap_equals`).
 
