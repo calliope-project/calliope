@@ -606,7 +606,7 @@ def run_operate(model_data, timings, backend, build_only):
 
         # Update relevent Pyomo Params in intermediate instances
         else:
-            warmstart = True
+            warmstart = False if solver in ["glpk", "cbc"] else True
             end_timestep = horizon_ends.index[i]
             timesteps = slice(start_timestep, end_timestep)
             window_model_data = model_data.loc[dict(timesteps=timesteps)]
@@ -644,7 +644,7 @@ def run_operate(model_data, timings, backend, build_only):
                 comment="Backend: iteration {}: sending model to solver".format(i + 1),
             )
             # After iteration 1, warmstart = True, which should speed up the process
-            # Note: Warmstart isn't possible with GLPK (dealt with later on)
+            # Note: Warmstart isn't possible with GLPK or CBC (dealt with later on)
             _results, _opt = backend.solve_model(
                 backend_model,
                 solver=solver,

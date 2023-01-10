@@ -86,6 +86,9 @@ class TestIO:
             model_from_disk = calliope.read_netcdf(out_path)
             # FIXME test for some data in model_from_disk
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
+    )
     def test_rerun_save_read_netcdf_with_mixed_dtype(self, model):
         new_model = model.backend.rerun()
         assert model._model_data.force_resource.dtype.kind == "f"
@@ -149,6 +152,9 @@ class TestIO:
             with open(out_path, "r") as f:
                 assert "\nmin \nobj:\n+1 cost(monetary__region1_1__csp_)" in f.read()
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_save_per_spore(self):
         with tempfile.TemporaryDirectory() as tempdir:
             os.mkdir(os.path.join(tempdir, "output"))

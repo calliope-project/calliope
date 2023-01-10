@@ -627,6 +627,9 @@ class TestChecks:
             warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_non_string_score_cost_class(self):
         """
         Check that the score_cost_class for spores scoring is a string
@@ -640,6 +643,9 @@ class TestChecks:
             excinfo, "`run.spores_options.score_cost_class` must be a string"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Monetary cost class with a weight of 1 is still included in the objective:calliope.exceptions.ModelWarning"
+    )
     def test_no_spore_group_constraint(self):
         """
         Ensure an error is raised if pointing to a non-existent group constraint
@@ -1123,6 +1129,9 @@ class TestChecks:
                 override_dict=override(param), scenario="simple_storage,one_day"
             )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updated from coordinate system.*:calliope.exceptions.ModelWarning"
+    )
     def test_incorrect_location_coordinates(self):
         """
         Either all or no locations must have `coordinates` defined and, if all
@@ -1257,7 +1266,7 @@ class TestChecks:
                     heat: 1.0
             """
         )
-        with pytest.warns(None) as excinfo:
+        with pytest.warns() as excinfo:
             build_model(
                 override_dict=override, scenario="simple_conversion_plus,one_day"
             )
@@ -1266,6 +1275,9 @@ class TestChecks:
             str(i) for i in excinfo.list
         ]
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+    )
     def test_carrier_ratio_from_file(self):
         """
         It is possible to load a timeseries carrier_ratio from file
@@ -1276,14 +1288,12 @@ class TestChecks:
                 carrier_out.heat: file=carrier_ratio.csv
             """
         )
-        with pytest.warns(None) as excinfo:
-            build_model(
-                override_dict=override, scenario="simple_conversion_plus,one_day"
-            )
 
-        assert "Cannot load data from file for configuration" not in [
-            str(i) for i in excinfo.list
-        ]
+        model = build_model(
+            override_dict=override, scenario="simple_conversion_plus,one_day"
+        )
+
+        assert "timesteps" in model._model_data.carrier_ratios.dims
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):

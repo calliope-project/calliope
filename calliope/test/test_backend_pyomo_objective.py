@@ -62,6 +62,9 @@ class TestCostMinimisationObjective:
             for i in range(len(cost_class))
         ) == approx(po.value(model._backend_model.obj))
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
+    )
     def test_update_cost_classes_weights(self):
         model = build_model(
             model_file="weighted_obj_func.yaml", scenario="weighted_objective"
