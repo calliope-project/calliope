@@ -29,6 +29,9 @@ With Miniconda installed, you can create a new environment called ``"calliope"``
 
     $ conda create -c conda-forge -n calliope calliope
 
+This will install calliope with the latest Python version that we undertake cross-platform tests for: v3.9.
+We also test with Python versions 3.7 and 3.8 on Linux and installing with these versions is possible on all operating systems.
+
 To use Calliope, you need to activate the ``calliope`` environment each time
 
   .. code-block:: fishshell
@@ -36,6 +39,17 @@ To use Calliope, you need to activate the ``calliope`` environment each time
     $ conda activate calliope
 
 You are now ready to use Calliope together with the free and open source GLPK solver. However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result). Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step. Read the next section for more information on installing alternative solvers.
+
+.. note::
+
+    Windows users may have trouble with the recommended installation method, due to conda not solving the environment successfully.
+    If this occurs, we recommend using the more efficient reimplementation of ``conda``: `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_.
+    First install mamba in your base conda environment (``conda install -c conda-forge -n base mamba``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda`` (``mamba create -c conda-forge -n calliope calliope``).
+
+.. warning::
+
+    Although possible, we do not recommend installing Calliope directly via ``pip`` (``pip install calliope``).
+    Non-python binaries are not installed with ``pip``, some of which are necessary for stable operation (e.g., `libnetcdf`).
 
 Updating an existing installation
 =================================
@@ -56,7 +70,7 @@ You need at least one of the solvers supported by Pyomo installed. CBC (open-sou
 CBC
 ---
 
-`CBC <https://projects.coin-or.org/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ```conda install -c conda-forge coincbc```. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_, but can be found within their `list of binaries <https://www.coin-or.org/download/binary/Cbc/>`_. We recommend you download the relevant binary for `CBC 2.10 <https://www.coin-or.org/download/binary/Cbc/Cbc-2.10-win64-msvc15-md.zip>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
+`CBC <https://projects.coin-or.org/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ```conda install -c conda-forge coincbc```. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://projects.coin-or.org/Cbc>`_, but can be found within their `binary archive <https://www.coin-or.org/download/binary/Cbc/>`_ and are included in their `package releases on GitHub <https://github.com/coin-or/Cbc/releases>`_. The GitHub releases are more up-to-date. We recommend you download the relevant binary for `CBC 2.10.8 <https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.8/Cbc-releases.2.10.8-w64-msvc17-md.zip>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 GLPK
 ----
