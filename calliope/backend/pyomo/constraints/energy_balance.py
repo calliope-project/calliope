@@ -586,7 +586,7 @@ def balance_storage_inter_cluster_rule(backend_model, loc_tech, datestep):
         storage_intra = 0
     else:
         if current_datestep == 0 and run_config["cyclic_storage"]:
-            previous_step = backend_model.datesteps[-1]
+            previous_step = backend_model.datesteps.at(-1)
         else:
             previous_step = get_previous_timestep(backend_model.datesteps, datestep)
         storage_loss = get_param(backend_model, "storage_loss", loc_tech)
@@ -639,7 +639,7 @@ def storage_initial_rule(backend_model, loc_tech):
     storage_loss = get_param(backend_model, "storage_loss", loc_tech)
     if hasattr(backend_model, "storage_inter_cluster"):
         storage = backend_model.storage_inter_cluster
-        final_step = backend_model.datesteps[-1]
+        final_step = backend_model.datesteps.at(-1)
         time_resolution = 24
     else:
         storage = backend_model.storage

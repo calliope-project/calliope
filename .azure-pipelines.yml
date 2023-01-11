@@ -80,7 +80,7 @@ steps:
   - task: Cache@2
     displayName: Use cached Anaconda environment
     inputs:
-      key: 'conda | "$(Agent.OS)" | requirements.yml'
+      key: 'conda | "$(Agent.OS)" | requirements.yml | requirements.txt'
       restoreKeys: |
         python | "$(Agent.OS)"
         python
@@ -117,6 +117,7 @@ steps:
       conda config --add channels conda-forge
       conda create --yes --quiet -n calliope python=$(PYTHON_VERSION)
       conda env update --file requirements.yml --name calliope
+      conda env update --file requirements.txt --name calliope
     displayName: Set up environment
     condition: eq(variables.CONDA_CACHE_RESTORED, 'false')
 

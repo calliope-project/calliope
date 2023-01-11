@@ -30,6 +30,9 @@ class TestModel:
 
         model.info()
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Cost classes `{'monetary'}` are defined:calliope.exceptions.ModelWarning"
+    )
     def test_info_minimal_model(self):
         this_path = os.path.dirname(__file__)
         model_location = os.path.join(

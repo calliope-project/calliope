@@ -139,7 +139,7 @@ def add_time_dimension(data, model_run):
             continue
 
         # 5) remove all before '=' and split filename and location column
-        tskeys = tskeys.str.split("=").str[1].str.rsplit(":", 1)
+        tskeys = tskeys.str.split("=").str[1].str.rsplit(":", n=1)
         if isinstance(tskeys.index, pd.MultiIndex):
             tskeys.index = tskeys.index.remove_unused_levels()
 

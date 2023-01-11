@@ -410,7 +410,7 @@ def get_clusters(
                 "Used Hartigan's rule to determine that"
                 "a good number of clusters is {}.".format(k)
             )
-        clustered_data = sk_cluster.KMeans(k).fit(X)
+        clustered_data = sk_cluster.KMeans(k, n_init=10).fit(X)
 
     elif func == "hierarchical":
         if not k:

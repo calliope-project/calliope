@@ -12,6 +12,9 @@ from calliope.test.common.util import (
 )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestClustering:
     @pytest.fixture
     def model_national(self, scope="module"):
@@ -274,9 +277,10 @@ class TestClustering:
                 "model.time.function_options.how": "closest",
             },
         }
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            model = build_test_model(override3, scenario="simple_supply")
 
-        model = build_test_model(override3, scenario="simple_supply")
-
+        assert check_error_or_warning(excinfo, "Creating 2 fewer clusters")
         assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0])
 
     @python36_or_higher
@@ -340,6 +344,9 @@ class TestClustering:
         assert check_error_or_warning(error, "Missing cluster days")
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestMasks:
     @pytest.fixture
     def model_national(self, scope="module"):
@@ -764,6 +771,9 @@ class TestMasks:
         assert dtindex.equals(mask)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestResampling:
     def test_15min_masking_1D_resampling_to_2h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
@@ -1035,6 +1045,9 @@ class TestFuncs:
         assert "2005-01-01 22:00" not in result_timesteps
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestLoadTimeseries:
     def test_invalid_csv_columns(self):
         override = {

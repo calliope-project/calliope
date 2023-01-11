@@ -30,8 +30,9 @@ Then install all development requirements for Calliope into a new environment, c
 
   .. code-block:: fishshell
 
-   $ conda create -n calliope_dev python=3.9
-   $ conda env update -f requirements.yml -n calliope_dev
+   $ conda create -n calliope_dev python=3.9 # to ensure the correct python version is installed
+   $ conda env update -f requirements.yml -n calliope_dev # to install the calliope non-python dependencies and testing/coverage python packages
+   $ conda env update -f requirements.txt -n calliope_dev # to install the pinned calliope python dependencies
    $ conda activate calliope_dev
 
 Finally install Calliope itself as an editable installation with pip:
@@ -39,6 +40,8 @@ Finally install Calliope itself as an editable installation with pip:
   .. code-block:: fishshell
 
    $ pip install -e calliope
+
+Only calliope itself should be installed from pip, the rest will have been installed from conda and will be marked as `Requirement already satisfied` on running the above command.
 
 .. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. If you are running on a Unix system, then you can run ``conda install coincbc`` to also install the CBC solver. To install solvers other than CBC, and for Windows systems, see our :ref:`solver installation instructions <install_solvers>`.
 
