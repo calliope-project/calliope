@@ -457,7 +457,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         )
 
     def example_tester_mean(self, solver="cbc", solver_io=None):
-        model = self.model_runner(
+        self.model_runner(
             solver=solver,
             expected_total_cost=45110416.434,  # was 22172253.328 when clustering with sklearn < v0.24
             expected_levelised_cost=0.126098,  # was 0.127783 when clustering with sklearn < v0.24
