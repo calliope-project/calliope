@@ -4,7 +4,13 @@ Release History
 ===============
 
 0.6.10 (dev)
-------------------
+------------
+
+|changed| |backwards-incompatible| Updated to Numpy ~= 1.23, Pandas 1.5, Pyomo 6.4, Ruamel.yaml 0.17, Scikit-learn 1.2, Xarray 2022.3. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. `In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed <https://scikit-learn.org/stable/whats_new/v0.24.html#changed-models>`_. This change will lead to different optimisation results if using `K-Means clustering <https://calliope.readthedocs.io/en/v0.6.9/user/advanced_features.html#time-resolution-adjustment>`_ in your model.
+
+|changed| Installation instructions for developers have changed since we no longer duplicate pinned packages between the developement/testing requirements file (`requirements.yml`) and the package requirements file (`requirements.txt`). See `the documentation <https://calliope.readthedocs.io/en/v0.6.9/user/installation.html>`_ for updated instructions.
+
+|fixed| Set ordering in the model dataset is consistent before and after optimising a model with clustered timeseries. Previously, the link between clusters and timesteps would become mixed following optimisation, so running `model.run(force_rerun=True)` would yield a different result.
 
 
 0.6.9 (2023-01-10)
@@ -271,7 +277,7 @@ Release History
 0.6.1 (2018-05-04)
 ------------------
 
-|new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
+|new| Addition of user-defined datestep clustering, accessed by `clustering_func`: `file=filename.csv:column` in time aggregation config
 
 |new| Added ``layout_updates`` and ``plotly_kwarg_updates`` parameters to plotting functions to override the generated Plotly configuration and layout
 

@@ -9,5 +9,5 @@ pandas ~= 1.5.2
 plotly ~= 3.10.0
 pyomo ~= 6.4.4
 ruamel.yaml ~= 0.17.21
-scikit-learn ~=1.2.0
-xarray ~=2022.3.0
+scikit-learn ~= 1.2.0
+xarray ~= 2022.3.0
