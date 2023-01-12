@@ -26,7 +26,7 @@ First, clone the repository:
 
    $ git clone https://github.com/calliope-project/calliope
 
-Then install all development requirements for Calliope into a new environment, calling it e.g. ``calliope_dev``:
+Then install all development requirements for Calliope into a new environment, calling it e.g. ``calliope_dev``, followed by installing Calliope itself as an editable installation with pip:
 
   .. code-block:: fishshell
 
@@ -34,11 +34,6 @@ Then install all development requirements for Calliope into a new environment, c
    $ conda env update -f requirements.yml -n calliope_dev # to install the calliope non-python dependencies and testing/coverage python packages
    $ conda env update -f requirements.txt -n calliope_dev # to install the pinned calliope python dependencies
    $ conda activate calliope_dev
-
-Finally install Calliope itself as an editable installation with pip:
-
-  .. code-block:: fishshell
-
    $ pip install -e calliope
 
 Only calliope itself should be installed from pip, the rest will have been installed from conda and will be marked as `Requirement already satisfied` on running the above command.
