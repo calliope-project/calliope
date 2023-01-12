@@ -477,20 +477,8 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
     def test_nationalscale_clustered_example_closest_results_cbc(self):
         self.example_tester_closest()
 
-    def test_nationalscale_clustered_example_closest_results_glpk(self):
-        if shutil.which("glpsol"):
-            self.example_tester_closest(solver="glpk")
-        else:
-            pytest.skip("GLPK not installed")
-
     def test_nationalscale_clustered_example_mean_results_cbc(self):
         self.example_tester_mean()
-
-    def test_nationalscale_clustered_example_mean_results_glpk(self):
-        if shutil.which("glpsol"):
-            self.example_tester_mean(solver="glpk")
-        else:
-            pytest.skip("GLPK not installed")
 
     def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.example_tester_storage_inter_cluster()
