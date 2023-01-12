@@ -5,8 +5,6 @@ max-line-length = 88
 extend-ignore =
     # See https://github.com/PyCQA/pycodestyle/issues/373
     E203,
-    # Ignore E231 until https://github.com/psf/black/issues/1288 is resolved
-    E231,
     # E501: line too long
     E501,
 exclude = .git,__pycache__,dist,doc
