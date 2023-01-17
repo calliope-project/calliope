@@ -1,4 +1,3 @@
-import itertools
 from typing import Dict, KeysView, List
 
 from typing_extensions import NotRequired, TypedDict, Required
@@ -81,8 +80,12 @@ class ParsedConstraint:
         """
         self.name = constraint_name
         self._unparsed = constraint
-        self._warnings = []  # capture warnings and errors to dump after processing, to make it easier for a user to fix the constraint YAML.
-        self._errors = []  # capture warnings and errors to dump after processing, to make it easier for a user to fix the constraint YAML.
+        self._warnings = (
+            []
+        )  # capture warnings and errors to dump after processing, to make it easier for a user to fix the constraint YAML.
+        self._errors = (
+            []
+        )  # capture warnings and errors to dump after processing, to make it easier for a user to fix the constraint YAML.
 
         self.get_sets(constraint, model_data.dims.keys())
 

@@ -7,6 +7,7 @@ import xarray as xr
 
 from calliope.backend import parsing
 
+
 def string_to_dict(yaml_string):
     yaml_loader = yaml.YAML(typ="safe", pure=True)
     return yaml_loader.load(StringIO(yaml_string))
@@ -124,4 +125,3 @@ class TestParsingForEach:
             assert constraint_obj._errors == [
                 f"Constraint sets {set(missing_sets)} must be given as dimensions in the model dataset"
             ]
-
