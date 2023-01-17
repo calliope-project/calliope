@@ -19,6 +19,7 @@ dependencies:
     - pandas=1.2
     - pre-commit
     - pyomo=6.0
+    - pyparsing ~= 3.0.9
     - pytest-cov
     - pytest-xdist  # pytest distributed testing plugin
     - pytest
