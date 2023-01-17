@@ -30,7 +30,7 @@ Then install all development requirements for Calliope into a new environment, c
 
   .. code-block:: fishshell
 
-   $ conda create -n calliope_dev python=3.9 # to ensure the correct python version is installed
+   $ conda create -c conda-forge -n calliope_dev python=3.9 # to ensure the correct python version is installed
    $ conda env update -f requirements.yml -n calliope_dev # to install the calliope non-python dependencies and testing/coverage python packages
    $ conda env update -f requirements.txt -n calliope_dev # to install the pinned calliope python dependencies
    $ conda activate calliope_dev
