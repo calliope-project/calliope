@@ -74,7 +74,7 @@ class TestParsingForEach:
     )
     def test_parse_foreach(self, input_string, expected_result):
         parsed_string = parsing.parse_foreach(input_string)
-        assert parsed_string[0] == {
+        assert parsed_string == {
             "set_iterator": expected_result[0],
             "set_name": expected_result[1],
         }

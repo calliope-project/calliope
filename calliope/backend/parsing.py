@@ -7,7 +7,7 @@ import xarray as xr
 
 
 class ForEach(TypedDict):
-    set_item: str
+    set_iterator: str
     set_name: str
 
 
@@ -41,9 +41,8 @@ def parse_constraint_equations(constraint, constraint_name):
     return None
 
 
-def parse_foreach(
-    foreach_string: str,
-) -> ForEach:  # TODO: wrap in exception capture to pass more readable message about parsing errors to the user?
+# TODO: wrap in exception capture to pass more readable message about parsing errors to the user?
+def parse_foreach(foreach_string: str) -> ForEach:
     """
     Extract information on the sets to loop over for a constraint and the
     name assigned to the set items in the constraint equation expression(s).
@@ -52,12 +51,12 @@ def parse_foreach(
         foreach_string (str): String of the form "A in B"
 
     Returns:
-        ForEach: String parsed to dictionary {"set_item": "A", "set_name": "B"}
+        ForEach: Dictionary with separated set_iterator and set_name {"set_iterator": "A", "set_name": "B"}
     """
-    object_ = pp.Word(pp.alphas + "_", pp.alphanums + "_")
-    dim_expr = object_ + pp.Suppress("in") + object_
-    dim_expr.setParseAction(lambda t: {"set_iterator": t[0], "set_name": t[1]})
-    parsed_string = dim_expr.parse_string(foreach_string, parseAll=True)
+    set_iterator = pp.pyparsing_common.identifier.set_results_name("set_iterator")
+    set_name = set_iterator.copy().set_results_name("set_name")
+    dim_expr = set_iterator + pp.Suppress("in") + set_name
+    parsed_string = dim_expr.parse_string(foreach_string, parseAll=True).asDict()
     return parsed_string
 
 
@@ -96,7 +95,7 @@ class ParsedConstraint:
             constraint (Constraint): Dictionary describing the constraint definition
             model_data_dims (KeysView[str]): List of dimensions in calliope.Model._model_data
         """
-        self.sets = [parse_foreach(_string)[0] for _string in constraint["foreach"]]
+        self.sets = [parse_foreach(_string) for _string in constraint["foreach"]]
         self.set_names = [_set["set_name"] for _set in self.sets]
         self.set_iterators = [_set["set_iterator"] for _set in self.sets]
 
