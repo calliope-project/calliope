@@ -80,7 +80,7 @@ steps:
   - task: Cache@2
     displayName: Use cached Anaconda environment
     inputs:
-      key: 'conda | "$(Agent.OS)" | $(PYTHON_VERSION) | requirements.yml'
+      key: 'conda | "$(Agent.OS)" | "$(PYTHON_VERSION)" | requirements.yml'
       restoreKeys: |
         python | "$(Agent.OS)"
         python
