@@ -36,7 +36,7 @@ To contribute changes:
 3. Add your name to the ``AUTHORS`` file
 4. Commit your changes to the feature branch after running black to format your code (formatting is automatic if the ``pre-commit`` hooks have been installed; see [below](#codeconvention) for more info)
 5. Push the branch to GitHub (``git push origin new-fix-or-feature``)
-6. On GitHub, create a new [pull request](https://github.com/calliope-project/calliope/pull/new/master) from the feature branch
+6. On GitHub, create a new [pull request](https://github.com/calliope-project/calliope/pull/new/main) from the feature branch
 
 Our [development guide](http://calliope.readthedocs.io/en/latest/user/develop.html) gives a more detailed description of each step, if you're new to working with GitHub.
 

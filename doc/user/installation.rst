@@ -96,7 +96,7 @@ Another commercial alternative is `CPLEX <https://www.ibm.com/products/ilog-cple
 Python module requirements
 ==========================
 
-Refer to `requirements/base.yml <https://github.com/calliope-project/calliope/blob/master/requirements/base.yml>`_ in the Calliope repository for a full and up-to-date listing of required third-party packages.
+Refer to `requirements.txt <https://github.com/calliope-project/calliope/blob/main/requirements.txt>`_ in the Calliope repository for a full and up-to-date listing of required third-party packages.
 
 Some of the key packages Calliope relies on are:
 

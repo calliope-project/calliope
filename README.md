@@ -1,5 +1,5 @@
 [![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square)](https://gitter.im/calliope-project/calliope)
-[![Master branch build status](https://img.shields.io/azure-devops/build/calliope-project/371cbbaa-fa6b-4efb-9b23-c4283a8e33eb/1?style=flat-square)](https://dev.azure.com/calliope-project/calliope/_build?definitionId=1)
+[![Main branch build status](https://img.shields.io/azure-devops/build/calliope-project/371cbbaa-fa6b-4efb-9b23-c4283a8e33eb/1?style=flat-square)](https://dev.azure.com/calliope-project/calliope/_build?definitionId=1)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?style=flat-square)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://img.shields.io/codecov/c/github/calliope-project/calliope?style=flat-square&token=b4fd170f0e7b43679a8bf649719e1cea)](https://codecov.io/gh/calliope-project/calliope)
 [![PyPI version](https://img.shields.io/pypi/v/calliope.svg?style=flat-square)](https://pypi.python.org/pypi/calliope)
@@ -8,7 +8,7 @@
 
 ---
 
-<img src="https://raw.githubusercontent.com/calliope-project/calliope/master/doc/_static/logo.png" width="364">
+<img src="https://raw.githubusercontent.com/calliope-project/calliope/main/doc/_static/logo.png" width="364">
 
 *A multi-scale energy systems modelling framework* | [www.callio.pe](http://www.callio.pe/)
 
@@ -65,11 +65,11 @@ To contribute changes:
 5. Push the branch to GitHub (`git push origin my-new-feature`)
 6. On GitHub, create a new pull request from the feature branch
 
-See our [contribution guidelines](https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md) for more information -- and [join us on Gitter](https://gitter.im/calliope-project/calliope) to ask questions or discuss code.
+See our [contribution guidelines](https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md) for more information -- and [join us on Gitter](https://gitter.im/calliope-project/calliope) to ask questions or discuss code.
 
 ## What's new
 
-See changes made in recent versions in the [changelog](https://github.com/calliope-project/calliope/blob/master/changelog.rst).
+See changes made in recent versions in the [changelog](https://github.com/calliope-project/calliope/blob/main/changelog.rst).
 
 ## Citing Calliope
 
