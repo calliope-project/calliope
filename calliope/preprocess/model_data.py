@@ -11,8 +11,9 @@ time-varying parameters.
 """
 
 import collections
+import io
 
-import ruamel.yaml
+import ruamel.yaml as ruamel_yaml
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -540,8 +541,9 @@ def add_attributes(model_run):
             ]
         else:
             default_group_constraint_dict["group_" + k] = k_default
-
-    attr_dict["defaults"] = ruamel.yaml.dump(
+    yaml = ruamel_yaml.YAML()
+    stream = io.StringIO()
+    yaml.dump(
         {
             **default_tech_dict["constraints"],
             **{
@@ -551,8 +553,10 @@ def add_attributes(model_run):
             **{"cost_depreciation_rate": 1},  # we generate this parameter internally
             **default_location_dict,
             **default_group_constraint_dict,
-        }
+        },
+        stream,
     )
+    attr_dict["defaults"] = stream.getvalue()
 
     return attr_dict
 
@@ -573,9 +577,12 @@ def update_dtypes(model_data):
                 | no_nans.isin([True, False])
             ).all():
                 # Turn to bool
-                model_data[var_name] = (
-                    var.isin(["True", "1"]) | var.isin([1]) | var.isin([True])
-                )
+                if var.dtype.kind == "U":
+                    model_data[var_name] = var.isin(["True", "1"])
+                else:
+                    model_data[var_name] = (
+                        var.isin(["True", "1"]) | var.isin([1]) | var.isin([True])
+                    )
             else:
                 try:
                     model_data[var_name] = var.astype(int, copy=False)

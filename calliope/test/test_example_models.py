@@ -392,6 +392,9 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 class TestNationalScaleClusteredExampleModelSenseChecks:
     def model_runner(
         self,
+        expected_total_cost=None,
+        expected_levelised_cost=None,
+        expected_capacity_factor=None,
         solver="cbc",
         solver_io=None,
         how="closest",
@@ -414,110 +417,80 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             override["run.solver_io"] = solver_io
 
         model = calliope.examples.time_clustering(override_dict=override)
+        timesteps = model._model_data.timesteps.copy(deep=True)
+
         model.run()
 
-        return model
+        # make sure the dimension items have not been accidentally reordered
+        assert timesteps.equals(model._model_data.timesteps)
+
+        if expected_total_cost is not None:
+            # Full 1-hourly model run: 22389323.5 with cyclic storage, 22389455.6 without
+            assert float(model.results.cost.sum()) == approx(expected_total_cost)
+
+        if expected_levelised_cost is not None:
+            # Full 1-hourly model run: 0.316745 with cyclic storage, 0.316745 without
+            assert float(
+                model.results.systemwide_levelised_cost.loc[
+                    {"carriers": "power", "techs": "battery"}
+                ].item()
+            ) == approx(expected_levelised_cost, abs=0.000001)
+
+        if expected_capacity_factor is not None:
+            # Full 1-hourly model run: 0.067998 with cycling storage, 0.067998 without
+            assert float(
+                model.results.systemwide_capacity_factor.loc[
+                    {"carriers": "power", "techs": "battery"}
+                ].item()
+            ) == approx(expected_capacity_factor, abs=0.000001)
+
+        return None
 
     def example_tester_closest(self, solver="cbc", solver_io=None):
-        model = self.model_runner(solver=solver, solver_io=solver_io, how="closest")
-        # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(49670627.15297682)
-
-        # Full 1-hourly model run: 0.296973
-        assert float(
-            model.results.systemwide_levelised_cost.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.137105, abs=0.000001)
-
-        # Full 1-hourly model run: 0.064362
-        assert float(
-            model.results.systemwide_capacity_factor.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.064501, abs=0.000001)
+        self.model_runner(
+            solver=solver,
+            expected_total_cost=51711873.177,  # was 49670627.15297682 when clustering with sklearn < v0.24
+            expected_levelised_cost=0.111456,  # was 0.137105 when clustering with sklearn < v0.24
+            expected_capacity_factor=0.074809,  # was 0.064501 when clustering with sklearn < v0.24
+            solver_io=solver_io,
+            how="closest",
+        )
 
     def example_tester_mean(self, solver="cbc", solver_io=None):
-        model = self.model_runner(solver=solver, solver_io=solver_io, how="mean")
-        # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(22172253.328)
-
-        # Full 1-hourly model run: 0.296973
-        assert float(
-            model.results.systemwide_levelised_cost.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.127783, abs=0.000001)
-
-        # Full 1-hourly model run: 0.064362
-        assert float(
-            model.results.systemwide_capacity_factor.loc[dict(carriers="power")]
-            .to_pandas()
-            .T["battery"]
-        ) == approx(0.044458, abs=0.000001)
+        self.model_runner(
+            solver=solver,
+            expected_total_cost=45110416.434,  # was 22172253.328 when clustering with sklearn < v0.24
+            expected_levelised_cost=0.126098,  # was 0.127783 when clustering with sklearn < v0.24
+            expected_capacity_factor=0.047596,  # was 0.044458 when clustering with sklearn < v0.24
+            solver_io=solver_io,
+            how="mean",
+        )
 
     def example_tester_storage_inter_cluster(self):
-        model = self.model_runner(storage_inter_cluster=True)
-
-        # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(21825515.304)
-
-        # Full 1-hourly model run: 0.296973
-        assert float(
-            model.results.systemwide_levelised_cost.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.100760, abs=0.000001)
-
-        # Full 1-hourly model run: 0.064362
-        assert float(
-            model.results.systemwide_capacity_factor.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.091036, abs=0.000001)
+        self.model_runner(
+            expected_total_cost=33353390.626,  # was 21825515.304 when clustering with sklearn < v0.24
+            expected_levelised_cost=0.115866,  # was 0.100760 when clustering with sklearn < v0.24
+            expected_capacity_factor=0.074167,  # was 0.091036 when clustering with sklearn < v0.24
+            storage_inter_cluster=True,
+        )
 
     def test_nationalscale_clustered_example_closest_results_cbc(self):
         self.example_tester_closest()
 
-    def test_nationalscale_clustered_example_closest_results_glpk(self):
-        if shutil.which("glpsol"):
-            self.example_tester_closest(solver="glpk")
-        else:
-            pytest.skip("GLPK not installed")
-
     def test_nationalscale_clustered_example_mean_results_cbc(self):
         self.example_tester_mean()
-
-    @pytest.mark.skip(
-        reason="GLPK is useless and delivering different results on different operating systems"
-    )
-    def test_nationalscale_clustered_example_mean_results_glpk(self):
-        if shutil.which("glpsol"):
-            self.example_tester_mean(solver="glpk")
-        else:
-            pytest.skip("GLPK not installed")
 
     def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.example_tester_storage_inter_cluster()
 
     def test_storage_inter_cluster_cyclic(self):
-        model = self.model_runner(storage_inter_cluster=True, cyclic=True)
-        # Full 1-hourly model run: 22312488.670967
-        assert float(model.results.cost.sum()) == approx(18904055.722)
-
-        # Full 1-hourly model run: 0.296973
-        assert float(
-            model.results.systemwide_levelised_cost.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.122564, abs=0.000001)
-
-        # Full 1-hourly model run: 0.064362
-        assert float(
-            model.results.systemwide_capacity_factor.loc[
-                {"carriers": "power", "techs": "battery"}
-            ].item()
-        ) == approx(0.075145, abs=0.000001)
+        self.model_runner(
+            expected_total_cost=18838244.197,  # was 18904055.722 when clustering with sklearn < v0.24
+            expected_levelised_cost=0.133110,  # was 0.122564 when clustering with sklearn < v0.24
+            expected_capacity_factor=0.071411,  # was 0.075145 when clustering with sklearn < v0.24
+            storage_inter_cluster=True,
+            cyclic=True,
+        )
 
     def test_storage_inter_cluster_no_storage(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:

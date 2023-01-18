@@ -16,6 +16,9 @@ from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import constraint_sets, defaults, check_error_or_warning
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestModelRun:
     def test_model_from_dict(self):
         """
@@ -545,6 +548,9 @@ class TestModelRun:
             )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestChecks:
     def test_unrecognised_config_keys(self):
         """
@@ -1275,9 +1281,6 @@ class TestChecks:
             str(i) for i in excinfo.list
         ]
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
-    )
     def test_carrier_ratio_from_file(self):
         """
         It is possible to load a timeseries carrier_ratio from file
@@ -1573,6 +1576,9 @@ class TestChecks:
             "storage_discharge_depth is currently not allowed when time clustering is active.",
         )
 
+
+class TestChecksWithWarning:
+    # This warning is ignored in the main class since it comes up on almost every function
     def test_warn_on_undefined_cost_classes(self):
 
         with pytest.warns(exceptions.ModelWarning) as warn:
@@ -1587,6 +1593,9 @@ class TestChecks:
         )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
+)
 class TestDataset:
 
     # FIXME: What are we testing here?
@@ -1596,19 +1605,20 @@ class TestDataset:
         """
 
     @pytest.mark.parametrize(
-        "model,expected_constraint_set",
+        "model_name,expected_constraint_set",
         [
-            (calliope.examples.national_scale(), constraint_sets["model_national"]),
-            (calliope.examples.urban_scale(), constraint_sets["model_urban"]),
-            (calliope.examples.milp(), constraint_sets["model_milp"]),
+            ("national_scale", constraint_sets["model_national"]),
+            ("urban_scale", constraint_sets["model_urban"]),
+            ("milp", constraint_sets["model_milp"]),
         ],
     )
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_unassigned_sets(self, model, expected_constraint_set):
+    def test_unassigned_sets(self, model_name, expected_constraint_set):
         """
         Check that all sets in which there are possible loc:techs are assigned
         and have been filled
         """
+        model = getattr(calliope.examples, model_name)()
         for set_name, set_vals in model._model_data.coords.items():
             if "constraint" in set_name:
                 assert set(set_vals.values) == set(expected_constraint_set[set_name])

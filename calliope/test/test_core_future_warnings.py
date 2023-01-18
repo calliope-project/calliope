@@ -4,6 +4,9 @@ import calliope
 from calliope.test.common.util import build_test_model as build_model
 
 
+@pytest.mark.filterwarnings(
+    "ignore:(?s).*Cost classes `{'monetary'}` are defined:calliope.exceptions.ModelWarning"
+)
 class TestFutureWarnings:
     def test_group_share_warning(self):
         override = {

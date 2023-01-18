@@ -267,6 +267,7 @@ def get_result_array(backend_model, model_data):
     the backend (instead of being passed by calliope.Model().inputs) are also
     added to calliope.Model()._model_data in-place.
     """
+
     all_variables = {
         i.name: get_var(backend_model, i.name)
         for i in backend_model.component_objects()

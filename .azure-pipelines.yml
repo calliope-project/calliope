@@ -51,9 +51,6 @@ pool:
 strategy:
   maxParallel: 10  # free limit is 10 parallel jobs
   matrix:
-    linux-py3.7:
-      IMAGE_NAME: ubuntu-latest
-      PYTHON_VERSION: 3.7
     linux-py3.8:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.8
@@ -80,7 +77,7 @@ steps:
   - task: Cache@2
     displayName: Use cached Anaconda environment
     inputs:
-      key: 'conda | "$(Agent.OS)" | requirements.yml'
+      key: 'conda | "$(Agent.OS)" | requirements.yml | requirements.txt'
       restoreKeys: |
         python | "$(Agent.OS)"
         python
@@ -117,6 +114,7 @@ steps:
       conda config --add channels conda-forge
       conda create --yes --quiet -n calliope python=$(PYTHON_VERSION)
       conda env update --file requirements.yml --name calliope
+      conda env update --file requirements.txt --name calliope
     displayName: Set up environment
     condition: eq(variables.CONDA_CACHE_RESTORED, 'false')
 

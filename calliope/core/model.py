@@ -233,13 +233,10 @@ class Model(object):
                     debug_yaml, keys[:-1], "yaml_add_eol_comment", (v, keys[-1])
                 )
 
-        dumper = ruamel_yaml.dumper.RoundTripDumper
-        dumper.ignore_aliases = lambda self, data: True
-
+        yaml.representer.ignore_aliases = lambda self, *data: True
+        yaml.default_flow_style = False
         with open(path, "w") as f:
-            ruamel_yaml.dump(
-                debug_yaml, stream=f, Dumper=dumper, default_flow_style=False
-            )
+            yaml.dump(debug_yaml, stream=f)
 
     def run(self, force_rerun=False, **kwargs):
         """
