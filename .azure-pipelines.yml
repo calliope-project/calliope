@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - "master"
+      - "main"
       - "0.6"
   paths:
     exclude:
@@ -25,7 +25,7 @@ pr:
   autoCancel: true  # new PR commits will cancel current pipeline jobs in favour of latest commit
   branches:
     include:
-      - "master"
+      - "main"
       - "0.6"
   paths:
     exclude:
@@ -77,7 +77,7 @@ steps:
   - task: Cache@2
     displayName: Use cached Anaconda environment
     inputs:
-      key: 'conda | "$(Agent.OS)" | requirements.yml | requirements.txt'
+      key: 'conda | "$(Agent.OS)" | "$(PYTHON_VERSION)" | requirements.yml | requirements.txt'
       restoreKeys: |
         python | "$(Agent.OS)"
         python
@@ -135,16 +135,16 @@ steps:
     displayName: Install calliope (Windows)
     condition: and(eq(variables['Agent.OS'], 'Windows_NT'), eq(variables.CONDA_CACHE_RESTORED, 'false'))
 
-  - bash: |  # cbc -quit may be required to make sure that cbc is 'reset' such that its timeout time fits within pyomo's strict limit (see: https://github.com/Pyomo/pyomo/issues/2102)
+  - bash: |  # cbc -quit may be required to make sure that cbc is 'reset' so its timeout time fits within pyomo's strict limit (see: https://github.com/Pyomo/pyomo/issues/2102)
       source activate calliope
       cbc -quit
-      py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
+      py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning --dist=loadscope
     displayName: Run tests (UNIX)
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
   - script: |
       call activate calliope
-      py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning
+      py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning --dist=loadscope
     displayName: Run tests (Windows)
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
