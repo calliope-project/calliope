@@ -135,7 +135,7 @@ steps:
     displayName: Install calliope (Windows)
     condition: and(eq(variables['Agent.OS'], 'Windows_NT'), eq(variables.CONDA_CACHE_RESTORED, 'false'))
 
-  - bash: |  # cbc -quit may be required to make sure that cbc is 'reset' such that its timeout time fits within pyomo's strict limit (see: https://github.com/Pyomo/pyomo/issues/2102)
+  - bash: |  # cbc -quit may be required to make sure that cbc is 'reset' so its timeout time fits within pyomo's strict limit (see: https://github.com/Pyomo/pyomo/issues/2102)
       source activate calliope
       cbc -quit
       py.test -n 2 --junitxml=junit/test-results.xml --cov=calliope --cov-report=term-missing --cov-report=xml -W ignore::FutureWarning --dist=loadscope
