@@ -36,7 +36,7 @@ Then install all development requirements for Calliope into a new environment, c
    $ conda env update -f requirements.yml -n calliope_dev # to install the calliope non-python dependencies and testing/coverage python packages
    $ conda env update -f requirements.txt -n calliope_dev # to install the pinned calliope python dependencies
    $ conda activate calliope_dev
-   $ pip install -e calliope
+   $ pip install -e . # installs from your local clone of the calliope repository
 
 Only calliope itself should be installed from pip, the rest will have been installed from conda and will be marked as `Requirement already satisfied` on running the above command.
 
@@ -257,13 +257,15 @@ Create release
 * Commit with message "Release vXXXX", then add a "vXXXX" tag, push both to GitHub
 * Create a release through the GitHub web interface, using the same tag, titling it "Release vXXXX" (required for Zenodo to pull it in)
 * Upload new release to PyPI: ``make all-dist``
-* Update the conda-forge package:
-    * Fork `conda-forge/calliope-feedstock <https://github.com/conda-forge/calliope-feedstock>`_, and update ``recipe/meta.yaml`` with:
-        * Version number: ``{% set version = "XXXX" %}``
-        * SHA256 of latest version from PyPI: ``{% set sha256 = "XXXX" %}``
-        * Reset ``build: number: 0`` if it is not already at zero
-        * If necessary, carry over any changed requirements from ``setup.py`` or ``requirements/base.yml``
-    * Submit a pull request from an appropriately named branch in your fork (e.g. ``vXXXX``) to the `conda-forge/calliope-feedstock <https://github.com/conda-forge/calliope-feedstock>`_ repository
+* Update the conda-forge package using the `Calliope feedstock <https://github.com/conda-forge/calliope-feedstock>`_:
+    * Wait for the the `regro-cf-autotick-bot` to open a pull request automatically (can take several hours)
+    * Check that ``recipe/meta.yaml`` in the pull request is up-to-date with:
+        * Version number: ``{% set version = "XXXX" %}`` (should be automatically updated)
+        * SHA256 of latest version from PyPI: ``{% set sha256 = "XXXX" %}`` (should be automatically updated)
+        * Reset ``build: number: 0`` if it is not already at zero (should be automatically updated)
+        * Range of python versions supported
+        * Requirement version pinning, to match any changes in ``requirements.txt`` and ``requirements.yml``
+    ^ Any necessary updates can be made direclty on the PR by pushing directly to the bot's branch or by using the GIthub interactive editing interface.
 
 Post-release
 ------------

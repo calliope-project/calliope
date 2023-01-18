@@ -208,7 +208,7 @@ def _production_data(model, timesteps, timestep):
             techs_production = locs_techs_carriers_production.sel(
                 carriers=carrier, locs=location
             ).to_pandas()
-            for tech, prod in techs_production.loc[:, timestep].iteritems():
+            for tech, prod in techs_production.loc[:, timestep].items():
                 if prod and prod > 0:
                     # if some energy is at stake
 
