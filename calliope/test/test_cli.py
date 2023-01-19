@@ -31,18 +31,21 @@ class TestCLI:
 
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(
-                cli.run, [
+                cli.run,
+                [
                     _MODEL_NATIONAL,
                     "--save_netcdf=output.nc",
                     # FIXME: should be CBC but a timeout error causes issues on OSX CI
                     # (likely fixed by updating pyomo)
-                    "--override_dict={'run.solver': 'glpk'}"
-                ]
+                    "--override_dict={'run.solver': 'glpk'}",
+                ],
             )
             assert result.exit_code == 0
             assert os.path.isfile(os.path.join(tempdir, "output.nc"))
 
-    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+    @pytest.mark.xfail(
+        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+    )
     def test_save_per_spore(self):
         runner = CliRunner()
 

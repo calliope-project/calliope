@@ -103,7 +103,7 @@ def vincenty(coord1, coord2):
         cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda
         sigma = np.arctan2(sinSigma, cosSigma)
         sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma
-        cosSqAlpha = 1 - sinAlpha ** 2
+        cosSqAlpha = 1 - sinAlpha**2
         try:
             cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha
         except ZeroDivisionError:
@@ -112,14 +112,14 @@ def vincenty(coord1, coord2):
         LambdaPrev = Lambda
         Lambda = L + (1 - C) * f * sinAlpha * (
             sigma
-            + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM ** 2))
+            + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM**2))
         )
         if abs(Lambda - LambdaPrev) < thresh:
             break  # successful convergence
     else:
         return None  # failure to converge
 
-    uSq = cosSqAlpha * (a ** 2 - b ** 2) / (b ** 2)
+    uSq = cosSqAlpha * (a**2 - b**2) / (b**2)
     A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)))
     B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)))
     deltaSigma = (
@@ -130,12 +130,12 @@ def vincenty(coord1, coord2):
             + B
             / 4
             * (
-                cosSigma * (-1 + 2 * cos2SigmaM ** 2)
+                cosSigma * (-1 + 2 * cos2SigmaM**2)
                 - B
                 / 6
                 * cos2SigmaM
-                * (-3 + 4 * sinSigma ** 2)
-                * (-3 + 4 * cos2SigmaM ** 2)
+                * (-3 + 4 * sinSigma**2)
+                * (-3 + 4 * cos2SigmaM**2)
             )
         )
     )

@@ -390,7 +390,7 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
             return po.quicksum(
                 getattr(backend_model, var_name)[node, tech]
                 for node in backend_model.nodes
-                if [node, tech] in getattr(backend_model, var_name)._index
+                if [node, tech] in getattr(backend_model, var_name).index_set()
             )
         else:
             return 0
@@ -398,7 +398,7 @@ def unit_capacity_systemwide_milp_constraint_rule(backend_model, tech):
     sum_expr_units = _sum("units")
     sum_expr_purchase = _sum("purchased")
 
-    if equals_systemwide:
+    if po.value(equals_systemwide):
         return sum_expr_units + sum_expr_purchase == equals_systemwide
     else:
         return sum_expr_units + sum_expr_purchase <= max_systemwide
@@ -424,7 +424,7 @@ def asynchronous_con_milp_constraint_rule(backend_model, node, tech, timestep):
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
             for carrier in backend_model.carriers
             if [carrier, node, tech, timestep]
-            in getattr(backend_model, var_name)._index
+            in getattr(backend_model, var_name).index_set()
         )
 
     return (
@@ -454,7 +454,7 @@ def asynchronous_prod_milp_constraint_rule(backend_model, node, tech, timestep):
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
             for carrier in backend_model.carriers
             if [carrier, node, tech, timestep]
-            in getattr(backend_model, var_name)._index
+            in getattr(backend_model, var_name).index_set()
         )
 
     return (

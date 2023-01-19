@@ -627,8 +627,8 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
             # Don't allow slicing outside the range of input data
             if (
-                subset_time[0].date() < timeseries_data.index[0]
-                or subset_time[1].date() > timeseries_data.index[-1]
+                pd.Timestamp(subset_time[0].date()) < timeseries_data.index[0]
+                or pd.Timestamp(subset_time[1].date()) > timeseries_data.index[-1]
             ):
                 raise exceptions.ModelError(
                     "subset time range {} is outside the input data time range "

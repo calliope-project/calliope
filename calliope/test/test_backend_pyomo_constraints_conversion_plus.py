@@ -113,7 +113,7 @@ class TestBuildConversionPlusConstraints:
             m._backend_model, "cost_var", "carrier_prodcon".replace(flow, "")
         )
         assert all(
-            "test_conversion_plus" in i for i in m._backend_model.cost_var._index
+            "test_conversion_plus" in i for i in m._backend_model.cost_var.index_set()
         )
 
     @pytest.mark.filterwarnings(

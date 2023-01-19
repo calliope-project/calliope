@@ -49,7 +49,8 @@ def minmax_cost_optimization(backend_model):
                     for [carrier, node, timestep] in backend_model.carriers
                     * backend_model.nodes
                     * backend_model.timesteps
-                    if [carrier, node, timestep] in backend_model.unmet_demand._index
+                    if [carrier, node, timestep]
+                    in backend_model.unmet_demand.index_set()
                 )
                 * backend_model.bigM
             )
@@ -63,7 +64,7 @@ def minmax_cost_optimization(backend_model):
                 po.quicksum(
                     backend_model.cost[class_name, node, tech]
                     for [node, tech] in backend_model.nodes * backend_model.techs
-                    if [class_name, node, tech] in backend_model.cost._index
+                    if [class_name, node, tech] in backend_model.cost.index_set()
                 )
                 * weight
                 for class_name, weight in backend_model.objective_cost_class.items()

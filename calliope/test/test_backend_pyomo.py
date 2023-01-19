@@ -621,7 +621,7 @@ class TestCostConstraints:
 
 class TestExportConstraints:
     # export.py
-    def test_loc_carriers_update_system_balance_constraint(self):
+    def test_loc_carriers_system_balance_no_export(self):
         """
         i for i in sets.loc_carriers if sets.loc_techs_export
         and any(['{0}::{2}'.format(*j.split('::')) == i
@@ -635,6 +635,7 @@ class TestExportConstraints:
         )
         assert not export_exists
 
+    def test_loc_carriers_system_balance_export(self):
         m = build_model({}, "supply_export,two_hours,investment_costs")
         m.run(build_only=True)
 
@@ -824,7 +825,7 @@ class TestCapacityConstraints:
             m.run(build_only=True)
             expr = m._backend_model.resource_cap[("b", "test_supply_plus")]
             assert expr.lb == 0
-            assert expr.ub == np.inf
+            assert expr.ub == None
 
         else:
             m = build_model(
@@ -845,7 +846,7 @@ class TestCapacityConstraints:
                 assert expr.lb == 10
             if override == "min":
                 assert expr.lb == 10
-                assert expr.ub == np.inf
+                assert expr.ub == None
 
     def test_loc_techs_resource_capacity_equals_energy_capacity_constraint(self):
         """
@@ -1000,7 +1001,8 @@ class TestCapacityConstraints:
             {}, "supply_milp,two_hours,investment_costs"
         )  # demand still is in loc_techs
         m.run(build_only=True)
-        assert all(i.ub is not None for i in m._backend_model.energy_cap.values())
+        assert m._backend_model.energy_cap[("a", "test_demand_elec")].ub is None
+        assert m._backend_model.energy_cap[("a", "test_supply_elec")].ub == 10
 
     @pytest.mark.xfail(reason="This will be caught by typedconfig")
     def test_loc_techs_energy_capacity_constraint_warning_on_infinite_equals(self):
