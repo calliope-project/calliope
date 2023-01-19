@@ -825,7 +825,7 @@ class TestCapacityConstraints:
             m.run(build_only=True)
             expr = m._backend_model.resource_cap[("b", "test_supply_plus")]
             assert expr.lb == 0
-            assert expr.ub == None
+            assert expr.ub is None
 
         else:
             m = build_model(
@@ -846,7 +846,7 @@ class TestCapacityConstraints:
                 assert expr.lb == 10
             if override == "min":
                 assert expr.lb == 10
-                assert expr.ub == None
+                assert expr.ub is None
 
     def test_loc_techs_resource_capacity_equals_energy_capacity_constraint(self):
         """
