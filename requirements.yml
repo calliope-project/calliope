@@ -4,6 +4,7 @@ channels:
     - conda-forge
 
 dependencies:
+    - bottleneck
     - coverage >= 4.4
     - codecov
     - glpk = 5.0
