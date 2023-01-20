@@ -37,8 +37,6 @@ HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x
 COMPONENT_CLASSIFIER = "$"
 
 
-
-
 class EvalFunction:
     def __init__(self, tokens):
         token_dict = tokens.as_dict()
@@ -124,6 +122,7 @@ class EvalUnindexedParameterOrVariable:
 
     def eval(self):
         return {"param_or_var_name": self.name}
+
 
 class EvalNumber:
     def __init__(self, tokens):

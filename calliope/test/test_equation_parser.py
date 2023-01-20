@@ -402,5 +402,3 @@ class TestEquationParserElements:
         with pytest.raises(pyparsing.ParseException) as excinfo:
             helper_function.parse_string(string_val, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
-
-
