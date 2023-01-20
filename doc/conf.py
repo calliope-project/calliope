@@ -141,7 +141,7 @@ mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?
 
 numpydoc_show_class_members = False  # numpydoc: don't do autosummary
 
-nbviewer_url = "https://nbviewer.ipython.org/url/calliope.readthedocs.io/"
+nbviewer_url = "https://nbviewer.org/url/calliope.readthedocs.io/"
 
 extlinks = {"nbviewer_docs": (nbviewer_url + docs_base_url + "%s", None)}
 

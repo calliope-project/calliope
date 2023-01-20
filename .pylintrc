@@ -1,7 +1,7 @@
 # Based on the Apache-2.0 licensed https://github.com/ClusterHQ/flocker/blob/master/.pylintrc
 # Inspiration from https://codewithoutrules.com/2016/10/19/pylint/
 
-[MASTER]
+[MAIN]
 
 # Specify a configuration file.
 #rcfile=

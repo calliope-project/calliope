@@ -2,9 +2,9 @@
 Development guide
 =================
 
-Contributions are very welcome! See our `contributors guide on GitHub <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_ for information on how to contribute.
+Contributions are very welcome! See our `contributors guide on GitHub <https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md>`_ for information on how to contribute.
 
-The code lives on GitHub at `calliope-project/calliope <https://github.com/calliope-project/calliope>`_. Development takes place in the ``master`` branch. Stable versions are tagged off of ``master`` with `semantic versioning <http://semver.org/>`_.
+The code lives on GitHub at `calliope-project/calliope <https://github.com/calliope-project/calliope>`_. Development takes place in the ``main`` branch. Stable versions are tagged off of ``main`` with `semantic versioning <http://semver.org/>`_.
 
 Tests are included and can be run with ``py.test`` from the project's root directory.
 
@@ -18,7 +18,7 @@ Installing a development version
 
 As when installing a stable version, using ``conda`` is recommended.
 
-To actively contribute to Calliope development, or simply track the latest development version, you'll instead want to clone our GitHub repository. This will provide you with the master branch in a known location on your local device.
+To actively contribute to Calliope development, or simply track the latest development version, you'll instead want to clone our GitHub repository. This will provide you with the main branch in a known location on your local device.
 
 First, clone the repository:
 
@@ -110,12 +110,12 @@ The Model object begins as an empty class. Once called, it becomes an empty obje
 Contribution workflow
 ---------------------
 
-Have a bug fix or feature addition you'd like to see in the next stable release of Calliope? First, be sure to check out our list of `open <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen>`_ and `closed <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed>`_ issues to see whether this is something someone else has mentioned, or perhaps has even fixed. If it's there, you can add to the discussion, give it a thumbs up, or look to implement the change yourself. If it isn't there, then feel free to open your own issue, or you can head straight to implementing it. The below instructions are a more detailed description of our `contribution guidelines <https://github.com/calliope-project/calliope/blob/master/CONTRIBUTING.md>`_, which you can refer to if you're already comfortable with using pytest and GitHub flows.
+Have a bug fix or feature addition you'd like to see in the next stable release of Calliope? First, be sure to check out our list of `open <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen>`_ and `closed <https://github.com/calliope-project/calliope/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aclosed>`_ issues to see whether this is something someone else has mentioned, or perhaps has even fixed. If it's there, you can add to the discussion, give it a thumbs up, or look to implement the change yourself. If it isn't there, then feel free to open your own issue, or you can head straight to implementing it. The below instructions are a more detailed description of our `contribution guidelines <https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md>`_, which you can refer to if you're already comfortable with using pytest and GitHub flows.
 
 Implementing a change
 ---------------------
 
-When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope master branch and can be 'cloned' to provide you with the repository on your own device
+When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope main branch and can be 'cloned' to provide you with the repository on your own device
 
   .. code-block:: fishshell
 
@@ -129,7 +129,7 @@ If you want the local version of your fork to be in the same folder as your loca
 
 Following the instructions for :ref:`installing a development environment of Calliope <installing_dev>`, you can create an environment specific to this installation of Calliope.
 
-In making changes to your local version, it's a good idea to create a branch first, to not have your master branch diverge from that of the main Calliope repository
+In making changes to your local version, it's a good idea to create a branch first, to not have your main branch diverge from that of the main Calliope repository
 
   .. code-block:: fishshell
 
@@ -168,14 +168,14 @@ If you're happy with your commit(s) then it is time to 'push' everything online 
 
 Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://help.github.com/articles/about-pull-requests/>`_. One of the core Calliope team will review the pull request and either accept it or request some changes before it's merged into the main Calliope repository. If any changes are requested, you can make those changes on your local branch, commit them, and push them online -- your pull request will update automatically with those changes.
 
-Once a pull request has been accepted, you can return your fork back to its master branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project master
+Once a pull request has been accepted, you can return your fork back to its main branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project main
 
   .. code-block:: fishshell
 
    $ git remote add upstream https://github.com/calliope-project/calliope
-   $ git fetch upstream master
-   $ git checkout master
-   $ git merge upstream/master
+   $ git fetch upstream main
+   $ git checkout main
+   $ git merge upstream/main
 
 Contribution checklist
 ----------------------
@@ -267,7 +267,7 @@ Create release
 Post-release
 ------------
 
-* Update changelog, adding a new vXXXX-dev heading, and update ``_version.py`` accordingly, in preparation for the next master commit
+* Update changelog, adding a new vXXXX-dev heading, and update ``_version.py`` accordingly, in preparation for the next main commit
 
 * Update the ``calliope_version`` setting in all example models to match the new version, but without the ``-dev`` string (so ``0.6.0-dev`` is ``0.6.0`` for the example models)
 

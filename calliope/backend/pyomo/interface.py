@@ -83,7 +83,7 @@ def update_pyomo_param(backend_model, opt, param, update_dict):
         )
 
 
-def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, obj=False):
+def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, variables=None, obj=False):
     """
     Having updated a Pyomo Param or several of them, this function can be used
     to regenerate associated constraints in a persistent solver interface, such
@@ -95,8 +95,13 @@ def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, obj
     ----------
     constraints : dict of lists or None, default = None
         Names of constraints as keys and list of constraint index items as values,
-        e.g. `{"energy_capacity_constraint": [("X1", "pv")]}` or `{"cost_constraint": [("monetary", "X1", "pv"), ("monetary", "X2", "pv")])}`.
+        e.g. `{"cost_constraint": [("monetary", "X1", "pv"), ("monetary", "X2", "pv")])}`.
         Order of index values can be inferred by inspecting the constraint.
+    variables :  dict of lists or None, default = None
+        Names of variables whose attributes are to be updated,
+        This is particularly necessary if changing parameter values
+        which dictate a variable's upper or lower bound (e.g. `energy_cap_max` for `energy_cap`).
+        E.g. `{"energy_cap": [("X1", "pv")]}`
     obj : bool, default = False
         If True, will also regenerate the objective function.
     """
@@ -112,6 +117,10 @@ def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, obj
             for idx in constraint_idx:
                 opt.remove_constraint(getattr(backend_model, constraint_name)[idx])
                 opt.add_constraint(getattr(backend_model, constraint_name)[idx])
+    if variables is not None:
+        for variable_name, variable_idx in variables.items():
+            for idx in variable_idx:
+                opt.update_var(getattr(backend_model, variable_name)[idx])
 
     return opt
 
