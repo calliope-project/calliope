@@ -1141,7 +1141,9 @@ class TestChecks:
                 override_dict=override(param), scenario="simple_storage,one_day"
             )
 
-    @pytest.mark.filterwarnings("ignore:(?s).*Updated from coordinate system:calliope.exceptions.ModelWarning")
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updated from coordinate system:calliope.exceptions.ModelWarning"
+    )
     def test_incorrect_node_coordinates(self):
         """
         Either all or no nodes must have `coordinates` defined and, if all

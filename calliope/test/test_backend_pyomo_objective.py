@@ -62,7 +62,6 @@ class TestCostMinimisationObjective:
             for i in range(len(cost_class))
         ) == approx(po.value(model._backend_model.obj))
 
-
     @pytest.mark.filterwarnings(
         "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
     )
