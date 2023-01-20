@@ -132,6 +132,9 @@ class TestBuildConversionPlusConstraints:
             m._backend_model, "balance_conversion_plus_non_primary_constraint"
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*`test_conversion_plus` gives a carrier ratio for `heat`:calliope.exceptions.ModelWarning"
+    )
     @pytest.mark.parametrize("tier", ("in_2", "in_3", "out_2", "out_3"))
     @pytest.mark.parametrize("carriers", ("coal", ["coal", "heat"]))
     def test_loc_techs_balance_conversion_plus_non_primary_constraint(

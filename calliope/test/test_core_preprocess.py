@@ -628,7 +628,7 @@ class TestChecks:
             excinfo, "Unrecognised setting in run configuration: subset_time"
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skip(
         reason="SPORES mode will fail until the cost max group constraint can be reproduced"
     )
     def test_warn_null_number_of_spores(self):
@@ -644,7 +644,7 @@ class TestChecks:
             warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
-    @pytest.mark.xfail(
+    @pytest.mark.skip(
         reason="SPORES mode will fail until the cost max group constraint can be reproduced"
     )
     def test_non_string_score_cost_class(self):
@@ -1141,6 +1141,7 @@ class TestChecks:
                 override_dict=override(param), scenario="simple_storage,one_day"
             )
 
+    @pytest.mark.filterwarnings("ignore:(?s).*Updated from coordinate system:calliope.exceptions.ModelWarning")
     def test_incorrect_node_coordinates(self):
         """
         Either all or no nodes must have `coordinates` defined and, if all

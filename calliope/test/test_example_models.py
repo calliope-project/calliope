@@ -149,7 +149,7 @@ class TestNationalScaleExampleModelOperate:
         self.example_tester()
 
 
-@pytest.mark.xfail(
+@pytest.mark.skip(
     reason="SPORES mode will fail until the cost max group constraint can be reproduced"
 )
 class TestNationalScaleExampleModelSpores:

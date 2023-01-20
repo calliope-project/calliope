@@ -227,7 +227,7 @@ def string_to_datetime(
         if attr == "coords" and set_name in model_data:
             model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
         elif set_name in model_data:
-            model_data[set_name] = (
-                model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            model_data[set_name] = xr.apply_ufunc(
+                pd.to_datetime, model_data[set_name], keep_attrs=True
             )
     return model_data
