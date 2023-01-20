@@ -25,7 +25,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
 
-from typing import Tuple, List, Optional
+from typing import Tuple, List
 
 import pyparsing as pp
 

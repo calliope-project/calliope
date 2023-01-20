@@ -477,7 +477,7 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         "helper_func_string", ["dummy_func_1({})", "dummy_func_1(dummy_func_1({}))"]
     )
-    def test_function_one_arg_allowed_valid_string(
+    def test_function_one_arg_allowed_invalid_string(
         self, helper_function_one_parser_in_args, helper_func_string
     ):
         parser_, valid_string, invalid_string = helper_function_one_parser_in_args
