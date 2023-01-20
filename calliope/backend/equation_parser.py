@@ -25,14 +25,12 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
 
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import pyparsing as pp
 
 
 pp.ParserElement.enablePackrat()
-
-HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
 
 COMPONENT_CLASSIFIER = "$"
 
@@ -47,22 +45,26 @@ class EvalFunction:
     def __repr__(self):
         return f"{str(self.name)}(args={self.args}, kwargs={self.kwargs})"
 
-    def eval(self):
+    def eval(self, allowed_helper_func_dict: dict):
         args_ = []
         for arg in self.args:
             if not isinstance(arg, list):
                 args_.append(arg.eval())
             else:  # evaluate nested function
-                args_.append(arg[0].eval())
+                args_.append(arg[0].eval(allowed_helper_func_dict))
 
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
             if not isinstance(kwarg_val, list):
                 kwargs_[kwarg_name] = kwarg_val.eval()
             else:  # evaluate nested function
-                kwargs_[kwarg_name] = kwarg_val[0].eval()
+                kwargs_[kwarg_name] = kwarg_val[0].eval(allowed_helper_func_dict)
 
-        return {"function": self.name.eval(), "args": args_, "kwargs": kwargs_}
+        return {
+            "function": self.name.eval(allowed_helper_func_dict),
+            "args": args_,
+            "kwargs": kwargs_,
+        }
 
 
 class EvalHelperFuncName:
@@ -74,9 +76,10 @@ class EvalHelperFuncName:
     def __repr__(self):
         return str(self.name)
 
-    def eval(self):
-        if self.name not in HELPER_FUNCS.keys():
-            # Maybe shouldn't be a parse exception since it happens on evaluation
+    def eval(self, allowed_helper_func_dict: dict):
+        if self.name not in allowed_helper_func_dict.keys():
+            # FIXME: Maybe shouldn't be a parse exception since it happens on evaluation
+            # calliope.exceptions.ModelError? KeyError?
             raise pp.ParseException(
                 self.instring, self.loc, "Invalid helper function defined"
             )
@@ -136,11 +139,9 @@ class EvalNumber:
 
 
 def helper_function_parser(
-    indexed_param_or_var: pp.ParserElement,
-    component: pp.ParserElement,
-    unindexed_param_or_var: pp.ParserElement,
-    number: pp.ParserElement,
     generic_identifier: pp.ParserElement,
+    allowed_parser_elements_in_args: List[pp.ParserElement],
+    allow_function_in_function: bool = True,
 ) -> pp.ParserElement:
     """
     Parsing grammar to process helper functions of the form `helper_function(*args, **kwargs)`.
@@ -153,25 +154,24 @@ def helper_function_parser(
     Calling an unavailable helper will lead to a raised exception on evaluating the
     parsed element.
 
+    Based partially on: # https://stackoverflow.com/questions/61807705/pyparsing-generic-python-function-args-and-kwargs
+
     Args:
-        indexed_param_or_var (pp.ParserElement):
-            Parser for indexed parameters or variables, e.g. "foo[bar]"
-        component (pp.ParserElement):
-            Parser for constraint components, e.g. "$foo"
-        unindexed_param_or_var (pp.ParserElement):
-            Parser for unindezed parameters or variables, e.g. "foo"
-        number (pp.ParserElement):
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
+        allowed_parser_elements_in_args (List[pp.ParserElement]):
+            List of parser elements that can be arguments in the function (e.g., "number", "indexed_param_or_var").
+        allow_function_in_function (bool, optional):
+            If True, allows functions to be defined inside functions.
+            Nested functions are evaluated from the greatest level of nesting up to the main helper function.
+            Defaults to True.
 
     Returns:
         pp.ParserElement:
             Parser for functions which will call the function with the specified
             arguments on evaluation.
     """
-    # https://stackoverflow.com/questions/61807705/pyparsing-generic-python-function-args-and-kwargs
 
     helper_function = pp.Forward()
 
@@ -181,11 +181,11 @@ def helper_function_parser(
     helper_function_name = generic_identifier.set_results_name("helper_function_name")
     helper_function_name.set_parse_action(EvalHelperFuncName)
 
-    arg_values = (
-        pp.Group(helper_function)
-        | number
-        | ((indexed_param_or_var | component | unindexed_param_or_var) + pp.NotAny("="))
-    )
+    if allow_function_in_function:
+        allowed_parser_elements_in_args.insert(0, pp.Group(helper_function))
+
+    arg_values = pp.MatchFirst(allowed_parser_elements_in_args) + pp.NotAny("=")
+
     # define function arguments
     arglist = pp.delimitedList(arg_values.copy())
     args = pp.Group(arglist).set_results_name("args")

@@ -10,6 +10,7 @@ from calliope.test.common.util import check_error_or_warning
 
 
 COMPONENT_CLASSIFIER = equation_parser.COMPONENT_CLASSIFIER
+HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
 
 
 @pytest.fixture
@@ -46,7 +47,50 @@ def component(identifier):
 @pytest.fixture
 def helper_function(number, indexed_param, component, unindexed_param, identifier):
     return equation_parser.helper_function_parser(
-        indexed_param, component, unindexed_param, number, identifier
+        identifier,
+        allowed_parser_elements_in_args=[
+            indexed_param,
+            component,
+            unindexed_param,
+            number,
+        ],
+    )
+
+
+@pytest.fixture
+def helper_function_no_nesting(
+    number, indexed_param, component, unindexed_param, identifier
+):
+    return equation_parser.helper_function_parser(
+        identifier,
+        allowed_parser_elements_in_args=[
+            indexed_param,
+            component,
+            unindexed_param,
+            number,
+        ],
+        allow_function_in_function=False,
+    )
+
+
+@pytest.fixture(
+    params=[
+        ("number", "1.0", ["$foo", "foo", "foo[bar]"]),
+        ("indexed_param", "foo[bar]", ["1.0", "foo", "$foo"]),
+        ("component", "$foo", ["1.0", "foo", "foo[bar]"]),
+        ("unindexed_param", "foo", ["1.0", "$foo", "foo[bar]"]),
+    ]
+)
+def helper_function_one_parser_in_args(identifier, request):
+    parser_element, valid_string, invalid_string = request.param
+    return (
+        equation_parser.helper_function_parser(
+            identifier,
+            allowed_parser_elements_in_args=[request.getfixturevalue(parser_element)],
+            allow_function_in_function=True,
+        ),
+        valid_string,
+        invalid_string,
     )
 
 
@@ -365,7 +409,7 @@ class TestEquationParserElements:
     )
     def test_function(self, helper_function, string_val, expected):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval() == expected
+        assert parsed_[0].eval(HELPER_FUNCS) == expected
 
     @pytest.mark.parametrize(
         "string_val",
@@ -382,7 +426,7 @@ class TestEquationParserElements:
     def test_missing_function(self, string_val, helper_function):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            parsed_[0].eval()
+            parsed_[0].eval(HELPER_FUNCS)
         assert check_error_or_warning(excinfo, "Invalid helper function defined")
 
     @pytest.mark.parametrize(
@@ -398,7 +442,47 @@ class TestEquationParserElements:
             "()dummy_func_1",  # function name after brackets
         ],
     )
-    def test_fail_function(self, helper_function, string_val):
+    def test_function_invalid_string(self, helper_function, string_val):
         with pytest.raises(pyparsing.ParseException) as excinfo:
             helper_function.parse_string(string_val, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
+
+    def test_function_nesting_not_allowed_valid_string(
+        self, helper_function_no_nesting
+    ):
+        helper_function_no_nesting.parse_string(
+            "dummy_func_1(1, $foo, foo, foo[bar])", parse_all=True
+        )
+
+    @pytest.mark.parametrize("args", ["dummy_func_1(1)", "x=dummy_func_1(1)"])
+    def test_function_nesting_not_allowed_invalid_string(
+        self, helper_function_no_nesting, args
+    ):
+        with pytest.raises(pyparsing.ParseException) as excinfo:
+            helper_function_no_nesting.parse_string(
+                f"dummy_func_1({args})", parse_all=True
+            )
+        assert check_error_or_warning(excinfo, "Expected")
+
+    @pytest.mark.parametrize(
+        "helper_func_string", ["dummy_func_1({})", "dummy_func_1(dummy_func_1({}))"]
+    )
+    def test_function_one_arg_allowed_valid_string(
+        self, helper_function_one_parser_in_args, helper_func_string
+    ):
+        parser_, valid_string, invalid_string = helper_function_one_parser_in_args
+
+        parser_.parse_string(helper_func_string.format(valid_string), parse_all=True)
+
+    @pytest.mark.parametrize(
+        "helper_func_string", ["dummy_func_1({})", "dummy_func_1(dummy_func_1({}))"]
+    )
+    def test_function_one_arg_allowed_valid_string(
+        self, helper_function_one_parser_in_args, helper_func_string
+    ):
+        parser_, valid_string, invalid_string = helper_function_one_parser_in_args
+
+        for string_ in invalid_string:
+            with pytest.raises(pyparsing.ParseException) as excinfo:
+                parser_.parse_string(helper_func_string.format(string_), parse_all=True)
+            assert check_error_or_warning(excinfo, "Expected")
