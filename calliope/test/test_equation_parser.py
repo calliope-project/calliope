@@ -103,9 +103,7 @@ class TestEquationParserElements:
             "Foo1",
             "FOO_1_BAR",
             "FOO__",
-            "_foo",  # FIXME: should break - no leading underscore allowed
-            "__type__",
-        ],  # TODO: protect python methods
+        ],
     )
     @pytest.mark.parametrize("parser", ["identifier", "unindexed_param"])
     def test_identifiers(self, string_val, parser, request):
@@ -128,11 +126,13 @@ class TestEquationParserElements:
             "0",  # number
             "1foo",  # number at start
             "1e2",  # number
-            "1/2",  # number
-            "2+2",  # number
+            "1/2",  # number + arithmetic
+            "2+2",  # number + arithmetic
             "inf",  # We capture infinity and evaluate as a number
             "INF",  # We capture infinity and evaluate as a number
             ".inf",  # We capture infinity and evaluate as a number
+            "_foo",  # leading underscores not allowed
+            "__type__",  # leading underscores not allowed
         ],
     )
     @pytest.mark.parametrize("parser", ["identifier", "unindexed_param"])

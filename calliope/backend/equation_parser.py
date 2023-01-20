@@ -316,7 +316,7 @@ def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
 
     inf_kw = pp.Combine(pp.Opt(pp.Suppress(".")) + pp.Keyword("inf", caseless=True))
     number = pp.pyparsing_common.number | inf_kw
-    generic_identifier = ~inf_kw + pp.Word(pp.alphas + "_", pp.alphanums + "_")
+    generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
 
     number.setParseAction(EvalNumber)
 
