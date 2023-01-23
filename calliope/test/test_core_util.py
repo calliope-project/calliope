@@ -193,6 +193,7 @@ class TestPandasExport:
         model.inputs[variable_name].to_dataframe()
 
 
+@pytest.mark.serial  # Cannot mix up the order of tests in this class by running in parallel
 class TestObservedDict:
     def as_yaml(self, _dict, strip=False):
         if strip is True:
