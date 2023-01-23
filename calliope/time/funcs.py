@@ -277,8 +277,8 @@ def resample(data, timesteps, resolution):
     """
 
     def _resample(var, how):
-        return getattr(var.resample(timesteps=resolution, keep_attrs=True), how)(
-            "timesteps"
+        return getattr(var.resample(timesteps=resolution), how)(
+            "timesteps", keep_attrs=True
         )
 
     # get a copy of the dataset with only timeseries variables,

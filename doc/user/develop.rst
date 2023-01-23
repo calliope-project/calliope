@@ -26,18 +26,19 @@ First, clone the repository:
 
    $ git clone https://github.com/calliope-project/calliope
 
-Then install all development requirements for Calliope into a new environment, calling it e.g. ``calliope_dev``:
+Then install all development requirements for Calliope into a new environment, calling it e.g. ``calliope_dev``, followed by installing Calliope itself as an editable installation with pip:
 
   .. code-block:: fishshell
 
-   $ conda env create -f requirements.yml -n calliope_dev
+   $ cd calliope
+   $ conda config --add channels conda-forge # since we cannot explicitly request it with `conda env update`, we add the `conda-forge` package channel to the user's conda configuration file.
+   $ conda create -n calliope_dev python=3.9 # to ensure the correct python version is installed
+   $ conda env update -f requirements.yml -n calliope_dev # to install the calliope non-python dependencies and testing/coverage python packages
+   $ conda env update -f requirements.txt -n calliope_dev # to install the pinned calliope python dependencies
    $ conda activate calliope_dev
+   $ pip install -e . # installs from your local clone of the calliope repository
 
-Finally install Calliope itself as an editable installation with pip:
-
-  .. code-block:: fishshell
-
-   $ pip install -e calliope
+Only calliope itself should be installed from pip, the rest will have been installed from conda and will be marked as `Requirement already satisfied` on running the above command.
 
 .. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. If you are running on a Unix system, then you can run ``conda install coincbc`` to also install the CBC solver. To install solvers other than CBC, and for Windows systems, see our :ref:`solver installation instructions <install_solvers>`.
 
@@ -256,13 +257,15 @@ Create release
 * Commit with message "Release vXXXX", then add a "vXXXX" tag, push both to GitHub
 * Create a release through the GitHub web interface, using the same tag, titling it "Release vXXXX" (required for Zenodo to pull it in)
 * Upload new release to PyPI: ``make all-dist``
-* Update the conda-forge package:
-    * Fork `conda-forge/calliope-feedstock <https://github.com/conda-forge/calliope-feedstock>`_, and update ``recipe/meta.yaml`` with:
-        * Version number: ``{% set version = "XXXX" %}``
-        * SHA256 of latest version from PyPI: ``{% set sha256 = "XXXX" %}``
-        * Reset ``build: number: 0`` if it is not already at zero
-        * If necessary, carry over any changed requirements from ``setup.py`` or ``requirements/base.yml``
-    * Submit a pull request from an appropriately named branch in your fork (e.g. ``vXXXX``) to the `conda-forge/calliope-feedstock <https://github.com/conda-forge/calliope-feedstock>`_ repository
+* Update the conda-forge package using the `Calliope feedstock <https://github.com/conda-forge/calliope-feedstock>`_:
+    * Wait for the the `regro-cf-autotick-bot` to open a pull request automatically (can take several hours)
+    * Check that ``recipe/meta.yaml`` in the pull request is up-to-date with:
+        * Version number: ``{% set version = "XXXX" %}`` (should be automatically updated)
+        * SHA256 of latest version from PyPI: ``{% set sha256 = "XXXX" %}`` (should be automatically updated)
+        * Reset ``build: number: 0`` if it is not already at zero (should be automatically updated)
+        * Range of python versions supported
+        * Requirement version pinning, to match any changes in ``requirements.txt`` and ``requirements.yml``
+    ^ Any necessary updates can be made direclty on the PR by pushing directly to the bot's branch or by using the GIthub interactive editing interface.
 
 Post-release
 ------------
