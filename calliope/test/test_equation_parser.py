@@ -1,3 +1,6 @@
+import operator
+import random
+
 import pytest
 import numpy as np
 import pyparsing
@@ -92,6 +95,23 @@ def helper_function_one_parser_in_args(identifier, request):
         valid_string,
         invalid_string,
     )
+
+
+@pytest.fixture
+def eval_kwargs():
+    return {"helper_func_dict": HELPER_FUNCS, "test": True}
+
+
+@pytest.fixture
+def arithmetic(helper_function, number, indexed_param, component, unindexed_param):
+    return equation_parser.arithmetic_parser(
+        helper_function, indexed_param, component, unindexed_param, number
+    )
+
+
+@pytest.fixture
+def equation_comparison(arithmetic):
+    return equation_parser.equation_comparison_parser(arithmetic)
 
 
 class TestEquationParserElements:
@@ -407,9 +427,9 @@ class TestEquationParserElements:
             ),
         ],
     )
-    def test_function(self, helper_function, string_val, expected):
+    def test_function(self, helper_function, string_val, expected, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval(helper_func_dict=HELPER_FUNCS, test=True) == expected
+        assert parsed_[0].eval(**eval_kwargs) == expected
 
     @pytest.mark.parametrize(
         "string_val",
@@ -423,10 +443,10 @@ class TestEquationParserElements:
             "ummy_func_1()",
         ],
     )
-    def test_function_protected_name(self, string_val, helper_function):
+    def test_missing_function(self, string_val, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            parsed_[0].eval(helper_func_dict=HELPER_FUNCS, test=True)
+            parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(excinfo, "Invalid helper function defined")
 
     @pytest.mark.parametrize(
@@ -486,3 +506,188 @@ class TestEquationParserElements:
             with pytest.raises(pyparsing.ParseException) as excinfo:
                 parser_.parse_string(helper_func_string.format(string_), parse_all=True)
             assert check_error_or_warning(excinfo, "Expected")
+
+
+class TestEquationParserArithmetic:
+    numbers = [2, 100, 0.02, "1e2", "2e-2", "inf"]
+
+    @pytest.fixture(params=numbers)
+    def float1(self, request):
+        return float(request.param)
+
+    @pytest.fixture(params=numbers)
+    def float2(self, request):
+        return float(request.param)
+
+    @pytest.mark.parametrize(
+        ["sign", "sign_name"],
+        [("+", "add"), ("-", "sub"), ("*", "mul"), ("/", "truediv"), ("**", "pow")],
+    )
+    def test_addition_multiplication(self, float1, float2, sign, sign_name, arithmetic, eval_kwargs):
+        string_ = f"{float1} {sign} {float2}"
+        parsed_ = arithmetic.parse_string(string_, parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        if np.isinf(float1) and np.isinf(float2) and sign in ["-", "/"]:
+            assert np.isnan(evaluated_)
+        else:
+            assert evaluated_ == getattr(operator, sign_name)(float1, float2)
+
+    @pytest.mark.parametrize(["sign", "sign_name"], [("+", "pos"), ("-", "neg")])
+    def test_sign(self, float1, sign, sign_name, arithmetic, eval_kwargs):
+        string_ = f"{sign}{float1}"
+        parsed_ = arithmetic.parse_string(string_, parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        if np.isinf(float1):
+            assert np.isinf(evaluated_)
+        else:
+            assert evaluated_ == getattr(operator, sign_name)(float1)
+
+    @pytest.mark.parametrize(
+        ["equation_string", "expected"],
+        [
+            ("1+2*2", 5),
+            ("-1 - 2", -3),
+            ("-1 + 2**-2", -0.75),
+            ("2 * 3 + -2 - -3", 7),
+            ("100 / 10 + 3 * 5 - 2**3 + -5", 12),
+            ("(1e5 * 10 / 1000 - 16**0.5) + (10 + 100) * (10) - 1/2", 2095.5),
+        ],
+    )
+    def test_mashup(self, equation_string, expected, arithmetic, eval_kwargs):
+        parsed_ = arithmetic.parse_string(equation_string, parse_all=True)
+        assert parsed_[0].eval(**eval_kwargs) == expected
+
+    @pytest.mark.parametrize("number_", numbers)
+    @pytest.mark.parametrize("component_", ["$foo", "$bar1"])
+    @pytest.mark.parametrize("unindexed_param_", ["foo", "bar1"])
+    @pytest.mark.parametrize("indexed_param_", ["foo[bar]", "bar1[foo, bar]"])
+    @pytest.mark.parametrize(
+        "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foo], x=1)"]
+    )
+    def test_non_numbers(
+        self,
+        number_,
+        component_,
+        unindexed_param_,
+        indexed_param_,
+        helper_function_,
+        arithmetic,
+    ):
+        items = [
+            number_,
+            component_,
+            unindexed_param_,
+            indexed_param_,
+            helper_function_,
+        ]
+        random.shuffle(items)
+        equation_string = f"({items[0]} / {items[1]}) + {items[1]} - {items[2]} * {items[3]}**-{items[4]}"
+        # We can't evaluate this since not all elements evaluate to numbers.
+        # Here we simply test that parsing is successful
+        arithmetic.parse_string(equation_string, parse_all=True)
+
+
+class TestEquationParserComparison:
+
+    EXPR_PARAMS_AND_EXPECTED_EVAL = {
+        0: 0.0,
+        -1: -1.0,
+        1e2: 100,
+        "1/2": 0.5,
+        "2**2": 4,
+        ".inf": np.inf,
+        "param_1": {"param_or_var_name": "param_1"},
+        "foo[foo, bar]": {"param_or_var_name": "foo", "dimensions": ["foo", "bar"]},
+        "foo[bar]": {"param_or_var_name": "foo", "dimensions": ["bar"]},
+        "$foo": {"component": "foo"},
+        "dummy_func_1(1, foo[bar], $foo, x=dummy_func_2(1, y=2), foo=bar)": {
+            "function": "dummy_func_1",
+            "args": [
+                1,
+                {"param_or_var_name": "foo", "dimensions": ["bar"]},
+                {"component": "foo"},
+            ],
+            "kwargs": {
+                "x": {"function": "dummy_func_2", "args": [1], "kwargs": {"y": 2}},
+                "foo": {"param_or_var_name": "bar"},
+            },
+        },
+    }
+
+    @pytest.fixture(params=EXPR_PARAMS_AND_EXPECTED_EVAL.keys())
+    def var_left(self, request):
+        return request.param
+
+    @pytest.fixture(params=EXPR_PARAMS_AND_EXPECTED_EVAL.keys())
+    def var_right(self, request):
+        return request.param
+
+    @pytest.fixture
+    def expected_left(self, var_left):
+        return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_left]
+
+    @pytest.fixture
+    def expected_right(self, var_right):
+        return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_right]
+
+    @pytest.fixture(params=["<", "<=", ">", ">=", "=="])
+    def operator(self, request):
+        return request.param
+
+    @pytest.fixture
+    def single_equation_simple(self, var_left, var_right, operator):
+        return f"{var_left} {operator} {var_right}"
+
+    def test_simple_equation(
+        self,
+        single_equation_simple,
+        expected_left,
+        expected_right,
+        operator,
+        equation_comparison,
+        eval_kwargs
+    ):
+
+        parsed_constraint = equation_comparison.parse_string(
+            single_equation_simple, parse_all=True
+        )
+        evaluated_expression = parsed_constraint[0]
+
+        assert evaluated_expression.value[0].eval(**eval_kwargs) == expected_left
+        assert evaluated_expression.value[2].eval(**eval_kwargs) == expected_right
+        assert evaluated_expression.value[1] == operator
+
+    @pytest.mark.parametrize(
+        ["equation_string", "expected"],
+        [
+            ("1<2", True),
+            ("1 > 2", False),
+            ("1  ==  2", False),
+            ("(1) <= (2)", True),
+            ("1 >= 2", False),
+            ("1 >= 2", False),
+            ("1 * 3 < 1e2", True),
+            ("-1 >= -0.1 / 2", False),
+            ("2**2 == 4 * 1 / 1 * 1**1", True),
+            ("(1 + 3) * 2 > 9 + -1", False),
+        ],
+    )
+    def test_evaluation(self, equation_string, expected, equation_comparison, eval_kwargs):
+        parsed_equation = equation_comparison.parse_string(
+            equation_string, parse_all=True
+        )
+        assert parsed_equation[0].eval(**eval_kwargs) is expected
+
+    @pytest.mark.parametrize(
+        "equation_string",
+        [
+            "1 + 2 <",  # missing RHS
+            "== 1 + 2 ",  # missing LHS
+            "1 = 2",  # unallowed operator
+            "1 (<= 2)",  # weird brackets
+            "foo.bar <= 2",  # unparsable string
+        ],
+    )
+    def test_fail_evaluation(self, equation_string, equation_comparison):
+        with pytest.raises(pyparsing.ParseException):
+            equation_comparison.parse_string(equation_string, parse_all=True)
