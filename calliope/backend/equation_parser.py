@@ -35,6 +35,117 @@ pp.ParserElement.enablePackrat()
 COMPONENT_CLASSIFIER = "$"
 
 
+def operatorOperands(tokenlist):
+    "Generator to extract operators and operands in pairs"
+
+    it = iter(tokenlist)
+    while 1:
+        try:
+            yield (next(it), next(it))
+        except StopIteration:
+            break
+
+
+class EvalSignOp:
+    "Class to evaluate expressions with a leading + or - sign"
+
+    def __init__(self, tokens):
+        self.sign, self.value = tokens[0]
+
+    def __repr__(self):
+        return str(f"{self.sign}_{self.value}")
+
+    def eval(self, **kwargs):
+        mult = {"+": 1, "-": -1}[self.sign]
+        return mult * self.value.eval(**kwargs)
+
+
+class EvalPowerOp:
+    "Class to evaluate multiplication and division expressions"
+
+    def __init__(self, tokens):
+        self.value = tokens[0]
+
+    def __repr__(self):
+        return str(self.value)
+
+    def eval(self, **kwargs):
+        res = self.value[-1].eval(**kwargs)
+        for val in self.value[-3::-2]:
+            res = val.eval(**kwargs) ** res
+        return res
+
+
+class EvalMultOp:
+    "Class to evaluate multiplication and division expressions"
+
+    def __init__(self, tokens):
+        self.value = tokens[0]
+
+    def __repr__(self):
+        return str(self.value)
+
+    def eval(self, **kwargs):
+        prod = self.value[0].eval(**kwargs)
+        for op, val in operatorOperands(self.value[1:]):
+            if op == "*":
+                prod *= val.eval(**kwargs)
+            if op == "/":
+                prod /= val.eval(**kwargs)
+        return prod
+
+
+class EvalAddOp:
+    "Class to evaluate addition and subtraction expressions"
+
+    def __init__(self, tokens):
+        self.value = tokens[0]
+
+    def __repr__(self):
+        return str(self.value)
+
+    def eval(self, **kwargs):
+        sum = self.value[0].eval(**kwargs)
+        for op, val in operatorOperands(self.value[1:]):
+            if op == "+":
+                sum += val.eval(**kwargs)
+            if op == "-":
+                sum -= val.eval(**kwargs)
+        return sum
+
+
+class EvalComparisonOp:
+    "Class to evaluate comparison expressions"
+
+    opMap = {
+        "<": lambda a, b: a < b,
+        "<=": lambda a, b: a <= b,
+        ">": lambda a, b: a > b,
+        ">=": lambda a, b: a >= b,
+        "!=": lambda a, b: a != b,
+        "=": lambda a, b: a == b,  # FIXME
+        "==": lambda a, b: a == b,
+    }
+
+    def __init__(self, tokens):
+        self.value = tokens[0]
+
+    def __repr__(self):
+        return str(self.value)
+
+    def eval(self, **kwargs):
+        val1 = self.value[0].eval(**kwargs)
+        for op, val in operatorOperands(self.value[1:]):
+            fn = self.opMap[op]
+            val2 = val.eval(**kwargs)
+            if not fn(val1, val2):
+                break
+            val1 = val2
+        else:
+            return True
+        return False
+
+
 class EvalFunction:
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
@@ -413,6 +524,81 @@ def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserEle
     unindexed_param_or_var.set_parse_action(EvalUnindexedParameterOrVariable)
 
     return unindexed_param_or_var
+
+
+def arithmetic_parser(
+    helper_function: pp.ParserElement, indexed_param_or_var: pp.ParserElement, component: pp.ParserElement, unindexed_param_or_var: pp.ParserElement, number: pp.ParserElement
+) -> pp.ParserElement:
+    """
+    Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
+    Can handle the difference between a sign (e.g., -1,+1) and a addition/subtraction (0 - 1, 0 + 1).
+
+    Whitespace is ignored on parsing (i.e., "1+1+foo" is equivalent to "1 + 1 + foo").
+
+    Args:
+        helper_function (pp.ParserElement):
+            Parsing grammar to process helper functions of the form `helper_function(*args, **kwargs)`.
+        indexed_param_or_var (pp.ParserElement):
+            Parser for indexed parameters or variables, e.g. "foo[bar]"
+        component (pp.ParserElement):
+            Parser for constraint components, e.g. "$foo"
+        unindexed_param_or_var (pp.ParserElement):
+            Parser for unindezed parameters or variables, e.g. "foo"
+        number (pp.ParserElement):
+            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
+
+    Returns:
+        pp.ParserElement:
+            Parser for strings which use arithmetic operations to combine other parser elements.
+    """
+    signop = pp.oneOf("+ -")
+    multop = pp.oneOf("* /")
+    plusop = pp.oneOf("+ -")
+    expop = pp.Literal("**")
+
+    arithmetic = pp.infixNotation(
+        # the order matters if two could capture the same string, e.g. "inf".
+        helper_function
+        | indexed_param_or_var
+        | component
+        | number
+        | unindexed_param_or_var,
+        [
+            (signop, 1, pp.opAssoc.RIGHT, EvalSignOp),
+            (expop, 2, pp.opAssoc.LEFT, EvalPowerOp),
+            (multop, 2, pp.opAssoc.LEFT, EvalMultOp),
+            (plusop, 2, pp.opAssoc.LEFT, EvalAddOp),
+        ],
+    )
+
+    return arithmetic
+
+
+def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement:
+    """
+    Parsing grammar to combine equation elements either side of a comparison operator
+    (< <= > >= ==).
+
+    Whitespace is ignored on parsing (i.e., "1+foo==$bar" is equivalent to "1 + 1 == $bar").
+
+    Args:
+        arithmetic (pp.ParserElement):
+            Parser for arithmetic operations to combine other parser elements.
+
+    Returns:
+        pp.ParserElement:
+            Parser for strings of the form "LHS OPERATOR RHS".
+    """
+
+    comparison_operators = pp.oneOf("< <= > >= ==")
+    equation_comparison = pp.infixNotation(
+        arithmetic,
+        [
+            (comparison_operators, 2, pp.opAssoc.LEFT, EvalComparisonOp),
+        ],
+    )
+
+    return equation_comparison
 
 
 def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
