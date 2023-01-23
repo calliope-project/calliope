@@ -45,26 +45,30 @@ class EvalFunction:
     def __repr__(self):
         return f"{str(self.name)}(args={self.args}, kwargs={self.kwargs})"
 
-    def eval(self, allowed_helper_func_dict: dict):
+    def eval(self, **kwargs):
         args_ = []
         for arg in self.args:
             if not isinstance(arg, list):
                 args_.append(arg.eval())
             else:  # evaluate nested function
-                args_.append(arg[0].eval(allowed_helper_func_dict))
+                args_.append(arg[0].eval(**kwargs))
 
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
             if not isinstance(kwarg_val, list):
                 kwargs_[kwarg_name] = kwarg_val.eval()
             else:  # evaluate nested function
-                kwargs_[kwarg_name] = kwarg_val[0].eval(allowed_helper_func_dict)
+                kwargs_[kwarg_name] = kwarg_val[0].eval(**kwargs)
 
-        return {
-            "function": self.name.eval(allowed_helper_func_dict),
-            "args": args_,
-            "kwargs": kwargs_,
-        }
+        helper_function = self.name.eval(**kwargs)
+        if kwargs.get("test", False):
+            return {
+                "function": helper_function,
+                "args": args_,
+                "kwargs": kwargs_,
+            }
+        else:
+            return helper_function(*args_, **kwargs_)
 
 
 class EvalHelperFuncName:
@@ -76,14 +80,17 @@ class EvalHelperFuncName:
     def __repr__(self):
         return str(self.name)
 
-    def eval(self, allowed_helper_func_dict: dict):
-        if self.name not in allowed_helper_func_dict.keys():
+    def eval(self, helper_func_dict, **kwargs):
+        if self.name not in helper_func_dict.keys():
             # FIXME: Maybe shouldn't be a parse exception since it happens on evaluation
             # calliope.exceptions.ModelError? KeyError?
             raise pp.ParseException(
                 self.instring, self.loc, "Invalid helper function defined"
             )
-        return str(self.name)
+        if kwargs.get("test", False):
+            return str(self.name)
+        else:
+            return helper_func_dict[self.name](**kwargs)
 
 
 class EvalIndexedParameterOrVariable:
@@ -98,7 +105,7 @@ class EvalIndexedParameterOrVariable:
     def __repr__(self):
         return "INDEXED_PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self):
+    def eval(self, **kwargs):
         return {"param_or_var_name": self.name, "dimensions": self.args}
 
 
@@ -109,7 +116,7 @@ class EvalComponent:
     def __repr__(self):
         return "COMPONENT:" + str(self.name)
 
-    def eval(self):
+    def eval(self, **kwargs):
         return {"component": self.name}
 
 
@@ -123,7 +130,7 @@ class EvalUnindexedParameterOrVariable:
     def __repr__(self):
         return "UNINDEXED_PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self):
+    def eval(self, **kwargs):
         return {"param_or_var_name": self.name}
 
 
@@ -134,7 +141,7 @@ class EvalNumber:
     def __repr__(self):
         return "NUM:" + str(self.value)
 
-    def eval(self):
+    def eval(self, **kwargs):
         return float(self.value)
 
 
@@ -203,7 +210,7 @@ def helper_function_parser(
         pp.Combine(helper_function_name + lpar) + helper_func_args + rpar
     )
 
-    helper_function.setParseAction(EvalFunction)
+    helper_function.set_parse_action(EvalFunction)
 
     return helper_function
 
@@ -252,7 +259,7 @@ def indexed_param_or_var_parser(
     )
     indexed_param_or_var = pp.Combine(indexed_param_name + lspar) + index_items + rspar
 
-    indexed_param_or_var.setParseAction(EvalIndexedParameterOrVariable)
+    indexed_param_or_var.set_parse_action(EvalIndexedParameterOrVariable)
 
     return indexed_param_or_var
 
@@ -275,7 +282,7 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     """
 
     component = pp.Combine(pp.Suppress(COMPONENT_CLASSIFIER) + generic_identifier)
-    component.setParseAction(EvalComponent)
+    component.set_parse_action(EvalComponent)
 
     return component
 
@@ -296,7 +303,7 @@ def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserEle
     """
 
     unindexed_param_or_var = generic_identifier.copy()
-    unindexed_param_or_var.setParseAction(EvalUnindexedParameterOrVariable)
+    unindexed_param_or_var.set_parse_action(EvalUnindexedParameterOrVariable)
 
     return unindexed_param_or_var
 
@@ -317,6 +324,6 @@ def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
     number = pp.pyparsing_common.number | inf_kw
     generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
 
-    number.setParseAction(EvalNumber)
+    number.set_parse_action(EvalNumber)
 
     return number, generic_identifier

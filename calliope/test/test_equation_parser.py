@@ -1,6 +1,3 @@
-import operator
-import random
-
 import pytest
 import numpy as np
 import pyparsing
@@ -10,7 +7,10 @@ from calliope.test.common.util import check_error_or_warning
 
 
 COMPONENT_CLASSIFIER = equation_parser.COMPONENT_CLASSIFIER
-HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
+HELPER_FUNCS = {
+    "dummy_func_1": lambda **kwargs: lambda x: x * 10,
+    "dummy_func_2": lambda **kwargs: lambda x, y: x + y,
+}
 
 
 @pytest.fixture
@@ -409,7 +409,7 @@ class TestEquationParserElements:
     )
     def test_function(self, helper_function, string_val, expected):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval(HELPER_FUNCS) == expected
+        assert parsed_[0].eval(helper_func_dict=HELPER_FUNCS, test=True) == expected
 
     @pytest.mark.parametrize(
         "string_val",
@@ -423,10 +423,10 @@ class TestEquationParserElements:
             "ummy_func_1()",
         ],
     )
-    def test_missing_function(self, string_val, helper_function):
+    def test_function_protected_name(self, string_val, helper_function):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            parsed_[0].eval(HELPER_FUNCS)
+            parsed_[0].eval(helper_func_dict=HELPER_FUNCS, test=True)
         assert check_error_or_warning(excinfo, "Invalid helper function defined")
 
     @pytest.mark.parametrize(
@@ -442,7 +442,7 @@ class TestEquationParserElements:
             "()dummy_func_1",  # function name after brackets
         ],
     )
-    def test_function_invalid_string(self, helper_function, string_val):
+    def test_function_malformed_string(self, helper_function, string_val):
         with pytest.raises(pyparsing.ParseException) as excinfo:
             helper_function.parse_string(string_val, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
