@@ -3,6 +3,7 @@
 Release History
 ===============
 
+
 0.7.0 (dev)
 -----------
 
@@ -27,6 +28,57 @@ Internal changes
 |changed| Timestamps are converted to strings when generating sets in Pyomo. This reduces the time and memory footprint of variable/constraint generation.
 
 |changed| Costs are now Pyomo expressions rather than decision variables.
+
+
+0.6.10 (2023-01-18)
+-------------------
+
+|changed| |backwards-incompatible| Updated to Numpy v1.23, Pandas v1.5, Pyomo v6.4, Ruamel.yaml v0.17, Scikit-learn v1.2, Xarray v2022.3, GLPK v5. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. `In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed <https://scikit-learn.org/stable/whats_new/v0.24.html#changed-models>`_. This change will lead to different optimisation results if using `K-Means clustering <https://calliope.readthedocs.io/en/v0.6.10/user/advanced_features.html#time-resolution-adjustment>`_ in your model.
+
+|changed| |backwards-incompatible| Removed support for Python version 3.7 since some updated dependencies are not available in this version.
+
+|changed| Installation instructions for developers have changed since we no longer duplicate pinned packages between the developement/testing requirements file (`requirements.yml`) and the package requirements file (`requirements.txt`). See `the documentation <https://calliope.readthedocs.io/en/v0.6.10/user/installation.html>`_ for updated instructions.
+
+|fixed| Set ordering in the model dataset is consistent before and after optimising a model with clustered timeseries. Previously, the link between clusters and timesteps would become mixed following optimisation, so running `model.run(force_rerun=True)` would yield a different result.
+
+
+0.6.9 (2023-01-10)
+------------------
+
+|changed| Updated to Python 3.9, with compatibility testing continuing for versions 3.8 and 3.9. Multi-platform CI tests are run on Python 3.9 instead of Python 3.8. CI tests on a Linux machine are also run for versions 3.7 and 3.8. This has been explicitly mentioned in the documentation.
+
+|changed| Updated to Click 8.0.
+
+|changed| Updated CBC Windows binary link in documentation to version 2.10.8.
+
+|fixed| SPORES mode scoring will ignore technologies with energy capacities that are equal to their minimum capacities (i.e., `energy_cap_min`) or which have fixed energy capacities (`energy_cap_equals`).
+
+|fixed| SPORE number is retained when continuing a model run in SPORES mode when solutions already exist for SPORE >= 1. Previously, the SPORE number would be reset to zero.
+
+|fixed| Malformed carrier-specific group constraints are skipped without skipping all subsequent group constraints.
+
+|fixed| Spurious negative values in `storage_inital` in operate mode are ignored in subsequent optimisation runs (#379). Negative values are a result of optimisation tolerances allowing a strictly positive decision variable to end up with (very small in magnitude) negative values. Forcing these to zero between operate mode runs ensures that Pyomo doesn't raise an exception that input values are outside the valid domain (NonNegativeReals).
+
+|fixed| `om_annual` investment costs will be calculated for technologies with only an `om_annual` cost defined in their configuration (#373). Previously, no investment costs would be calculated in this edge case.
+
+
+0.6.8 (2022-02-07)
+------------------
+
+|new| run configuration parameter to enable relaxation of the `demand_share_per_timestep_decision` constraint.
+
+|new| `storage_cap_min/equals/max` group constraints added.
+
+|changed| Updated to Pyomo 6.2, pandas 1.3, xarray 0.20, numpy 1.20.
+
+|changed| |backwards-incompatible| parameters defaulting to False now default to None, to avoid confusion with zero. To 'switch off' a constraint, a user should now set it to 'null' rather than 'false' in their YAML configuration.
+
+|changed| `INFO` logging level includes logs for dataset cleaning steps before saving to NetCDF and for instantiation of timeseries clustering/resampling (if taking place).
+
+|fixed| `demand_share_per_timestep_decision` constraint set includes all expected (location, technology, carrier) items. In the previous version, not all expected items were captured.
+
+|fixed| Mixed dtype xarray dataset variables, where one dtype is boolean, are converted to float if possible. This overcomes an error whereby the NetCDF file cannot be created due to a mixed dtype variable.
+
 
 0.6.7 (2021-06-29)
 ------------------
@@ -191,7 +243,7 @@ Internal changes
 
 |fixed| Unknown technology parameters are detected and the user is warned.
 
-|fixed| Loc::techs with empty cost classes (i.e. value is None) are handled by a warning and cost class deletion, instead of messy failure.
+|fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
 
 0.6.3 (2018-10-03)
 ------------------
@@ -254,7 +306,7 @@ Internal changes
 0.6.1 (2018-05-04)
 ------------------
 
-|new| Addition of user-defined datestep clustering, accessed by `clustering_func`:`file=filename.csv:column` in time aggregation config
+|new| Addition of user-defined datestep clustering, accessed by `clustering_func`: `file=filename.csv:column` in time aggregation config
 
 |new| Added ``layout_updates`` and ``plotly_kwarg_updates`` parameters to plotting functions to override the generated Plotly configuration and layout
 

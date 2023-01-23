@@ -35,14 +35,14 @@ def reserve_margin_constraint_rule(backend_model, carrier):
     techs = [idx[-1] for idx in backend_model.carrier["out", carrier, :].index()]
     return po.quicksum(  # Sum all supply capacity for this carrier
         backend_model.energy_cap[node, tech]
-        for node, tech in backend_model.energy_cap._index
+        for node, tech in backend_model.energy_cap.index_set()
         if tech in techs
     ) >= po.quicksum(  # Sum all demand for this carrier and timestep
         backend_model.carrier_con[carrier, node, tech, max_demand_timestep]
         for tech in techs
         for node in backend_model.nodes
         if [carrier, node, tech, max_demand_timestep]
-        in backend_model.carrier_con._index
+        in backend_model.carrier_con.index_set()
     ) * -1 * (
         1 / max_demand_time_res
     ) * (

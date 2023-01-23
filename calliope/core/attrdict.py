@@ -32,7 +32,7 @@ _MISSING = __Missing()
 
 def _yaml_load(src):
     """Load YAML from a file object or path with useful parser errors"""
-
+    yaml = ruamel_yaml.YAML(typ="safe")
     if not isinstance(src, str):
         try:
             src_name = src.name
@@ -44,7 +44,7 @@ def _yaml_load(src):
     else:
         src_name = "<yaml string>"
     try:
-        result = ruamel_yaml.safe_load(src)
+        result = yaml.load(src)
         if not isinstance(result, dict):
             raise ValueError("Could not parse {} as YAML".format(src_name))
         return result

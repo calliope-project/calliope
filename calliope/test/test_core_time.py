@@ -235,9 +235,9 @@ class TestClustering:
             ],
         )
 
-    @python36_or_higher
-    def test_predefined_clusters(self):
-        override = {
+    @pytest.fixture
+    def predefined_cluster_override(self):
+        return {
             "model.subset_time": ["2005-01-01", "2005-01-04"],
             "model.time": {
                 "function": "apply_clustering",
@@ -248,14 +248,16 @@ class TestClustering:
             },
         }
 
-        model = build_test_model(override, scenario="simple_supply")
+    def test_predefined_clusters(self, predefined_cluster_override):
+
+        model = build_test_model(predefined_cluster_override, scenario="simple_supply")
 
         assert np.array_equal(
             model._model_data.clusters.to_pandas().unique(), [0, 1, 2]
         )
 
         override2 = {
-            **override,
+            **predefined_cluster_override,
             **{
                 "model.time.function_options.clustering_func": "file=cluster_days.csv:b"
             },
@@ -267,8 +269,12 @@ class TestClustering:
             model._model_data.clusters.to_pandas().unique(), [0, 1, 2]
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Creating 2 fewer clusters:calliope.exceptions.ModelWarning"
+    )
+    def test_predefined_clusters_closest(self, predefined_cluster_override):
         override3 = {
-            **override,
+            **predefined_cluster_override,
             **{
                 "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
                 "model.time.function_options.how": "closest",
@@ -279,7 +285,6 @@ class TestClustering:
 
         assert np.array_equal(model._model_data.clusters.to_pandas().unique(), [0])
 
-    @python36_or_higher
     def test_predefined_clusters_fail(self):
         override = {
             "model.subset_time": ["2005-01-01", "2005-01-04"],

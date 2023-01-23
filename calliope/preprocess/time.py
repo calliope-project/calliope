@@ -138,7 +138,7 @@ def add_time_dimension(data, model_run):
         tskeys = (
             tskeys.str.split("=")
             .str[1]
-            .str.rsplit(":", 1, expand=True)
+            .str.rsplit(":", n=1, expand=True)
             .reset_index()
             .rename(columns={0: "source", 1: "column"})
             .set_index(["source", "column"])
@@ -172,18 +172,21 @@ def add_time_dimension(data, model_run):
     # and timestep n + 1 for all timesteps
     # Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
     # Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
-    data["timestep_resolution"] = data.timesteps.diff(
-        "timesteps", label="lower"
-    ).reindex({"timesteps": data.timesteps}).ffill("timesteps").rename(
-        "timestep_resolution"
-    ) / pd.Timedelta(
-        "1 hour"
+    timestep_resolution = (
+        data.timesteps.diff("timesteps", label="lower")
+        .reindex({"timesteps": data.timesteps})
+        .rename("timestep_resolution")
     )
+
     if len(data.timesteps) == 1:
         exceptions.warn(
             "Only one timestep defined. Inferring timestep resolution to be 1 hour"
         )
-        data["timestep_resolution"] = data["timestep_resolution"].fillna(1)
+        timestep_resolution = timestep_resolution.fillna(pd.Timedelta("1 hour"))
+    else:
+        timestep_resolution = timestep_resolution.ffill("timesteps")
+
+    data["timestep_resolution"] = timestep_resolution / pd.Timedelta("1 hour")
 
     data["timestep_weights"] = xr.DataArray(
         np.ones(len(data.timesteps)), dims=["timesteps"]
@@ -225,10 +228,10 @@ def update_dtypes(model_data):
                 model_data[var_name] = var.isin(["True", 1, "1"])
             else:
                 try:
-                    model_data[var_name] = var.astype(np.int, copy=False)
+                    model_data[var_name] = var.astype(np.int_, copy=False)
                 except (ValueError, OverflowError):
                     try:
-                        model_data[var_name] = var.astype(np.float, copy=False)
+                        model_data[var_name] = var.astype(np.float_, copy=False)
                     except ValueError:
                         None
     return model_data
