@@ -166,7 +166,7 @@ class ModelDataFactory:
             self.node_dict, ["links", "techs"], **kwargs
         )
         if not link_data_dict:
-            self.link_techs = pd.DataFrame([None])
+            self.link_techs = pd.Series([None])
         else:
             df_link = self._dict_to_df(
                 link_data_dict,
@@ -175,7 +175,7 @@ class ModelDataFactory:
                 var_name="node_tech",
             )
             self._get_link_remotes(link_data_dict)
-            df = df.append(df_link)
+            df = pd.concat([df, df_link])
 
         df = self._all_df_to_true(df)
 
@@ -330,7 +330,7 @@ class ModelDataFactory:
         df_link_tech_data = df.reindex(self.link_techs.values)
         df_link_tech_data.index = self.link_techs.index
         df = (
-            df.append(df_link_tech_data)
+            pd.concat([df, df_link_tech_data])
             .drop(self.link_techs.unique(), errors="ignore")
             .dropna(how="all")
             .stack(idx_to_stack)
@@ -427,10 +427,12 @@ class ModelDataFactory:
                     self.model_data[var_name] = var.isin(["True", 1, "1"])
                 else:
                     try:
-                        self.model_data[var_name] = var.astype(np.int, copy=False)
+                        self.model_data[var_name] = var.astype(np.int_, copy=False)
                     except (ValueError, OverflowError):
                         try:
-                            self.model_data[var_name] = var.astype(np.float, copy=False)
+                            self.model_data[var_name] = var.astype(
+                                np.float_, copy=False
+                            )
                         except ValueError:
                             None
 

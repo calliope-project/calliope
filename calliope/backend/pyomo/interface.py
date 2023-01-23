@@ -83,7 +83,9 @@ def update_pyomo_param(backend_model, opt, param, update_dict):
         )
 
 
-def regenerate_persistent_pyomo_solver(backend_model, opt, constraints=None, variables=None, obj=False):
+def regenerate_persistent_pyomo_solver(
+    backend_model, opt, constraints=None, variables=None, obj=False
+):
     """
     Having updated a Pyomo Param or several of them, this function can be used
     to regenerate associated constraints in a persistent solver interface, such

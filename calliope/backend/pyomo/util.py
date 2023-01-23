@@ -56,7 +56,7 @@ def get_param(backend_model, var, dims):
 
 def get_previous_timestep(timesteps, timestep):
     """Get the timestamp for the timestep previous to the input timestep"""
-    return timesteps[timesteps.ord(timestep) - 1]
+    return timesteps.at(timesteps.ord(timestep) - 1)
 
 
 @memoize
@@ -128,9 +128,17 @@ def get_var(backend_model, var, dims=None, sparse=False, expr=False):
     if result.empty:
         raise exceptions.BackendError("Variable {} has no data.".format(var))
 
-    result = result.rename_axis(index=dims)
+    result_with_dim_names = result.rename_axis(index=dims)
 
-    return xr.DataArray.from_series(result)
+    da = xr.DataArray.from_series(result_with_dim_names)
+
+    # Order of dimension set items is sorted by pd.Series above and may no longer match
+    # the input calliope data set order. So we reorder the array dimensions here.
+    da_resorted = da.reindex(
+        **{dim: getattr(backend_model, dim)._ordered_values for dim in dims}
+    )
+
+    return da_resorted
 
 
 def loc_tech_is_in(backend_model, loc_tech, model_set):
@@ -219,7 +227,7 @@ def string_to_datetime(
         if attr == "coords" and set_name in model_data:
             model_data.coords[set_name] = model_data[set_name].astype("datetime64[ns]")
         elif set_name in model_data:
-            model_data[set_name] = (
-                model_data[set_name].fillna(pd.NaT).astype("datetime64[ns]")
+            model_data[set_name] = xr.apply_ufunc(
+                pd.to_datetime, model_data[set_name], keep_attrs=True
             )
     return model_data

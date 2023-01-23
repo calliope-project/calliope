@@ -36,7 +36,7 @@ def cost_expression_rule(backend_model, cost, node, tech):
         cost_var = po.quicksum(
             backend_model.cost_var[cost, node, tech, timestep]
             for timestep in backend_model.timesteps
-            if [cost, node, tech, timestep] in backend_model.cost_var._index
+            if [cost, node, tech, timestep] in backend_model.cost_var.index_set()
         )
     else:
         cost_var = 0
@@ -139,7 +139,7 @@ def cost_investment_expression_rule(backend_model, cost, node, tech):
     )
 
     # Transmission technologies exist at two locations, thus their cost is divided by 2
-    if backend_model.inheritance[tech].value.endswith("transmission"):
+    if po.value(backend_model.inheritance[tech]).endswith("transmission"):
         cost_cap = cost_cap / 2
 
     cost_fractional_om = cost_om_annual_investment_fraction * cost_cap
@@ -187,24 +187,24 @@ def cost_var_expression_rule(backend_model, cost, node, tech, timestep):
     cost_om_prod = get_param(
         backend_model, "cost_om_prod", (cost, node, tech, timestep)
     )
-    if backend_model.inheritance[tech].value.endswith("conversion_plus"):
+    if po.value(backend_model.inheritance[tech]).endswith("conversion_plus"):
         carriers = [backend_model.primary_carrier_out[:, tech].index()[0][0]]
         all_costs.append(cost_om_prod * _sum("carrier_prod", carriers=carriers))
     else:
         all_costs.append(cost_om_prod * _sum("carrier_prod"))
 
     cost_om_con = get_param(backend_model, "cost_om_con", (cost, node, tech, timestep))
-    if cost_om_con:
+    if po.value(cost_om_con):
         if loc_tech_is_in(backend_model, (node, tech), "resource_con_index"):
             all_costs.append(
                 cost_om_con * backend_model.resource_con[node, tech, timestep]
             )
-        elif backend_model.inheritance[tech].value.endswith("supply"):
+        elif po.value(backend_model.inheritance[tech]).endswith("supply"):
             energy_eff = get_param(backend_model, "energy_eff", (node, tech, timestep))
             # in case energy_eff is zero, to avoid an infinite value
             if po.value(energy_eff) > 0:
                 all_costs.append(cost_om_con * (_sum("carrier_prod") / energy_eff))
-        elif backend_model.inheritance[tech].value.endswith("conversion_plus"):
+        elif po.value(backend_model.inheritance[tech]).endswith("conversion_plus"):
             carriers = [backend_model.primary_carrier_in[:, tech].index()[0][0]]
             all_costs.append(
                 cost_om_con * (-1) * _sum("carrier_con", carriers=carriers)

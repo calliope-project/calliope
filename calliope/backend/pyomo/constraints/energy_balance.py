@@ -38,7 +38,7 @@ def system_balance_constraint_rule(backend_model, carrier, node, timestep):
             getattr(backend_model, var_name)[carrier, node, tech, timestep]
             for tech in backend_model.techs
             if [carrier, node, tech, timestep]
-            in getattr(backend_model, var_name)._index
+            in getattr(backend_model, var_name).index_set()
         )
 
     carrier_prod = _sum("carrier_prod")
@@ -347,7 +347,7 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
         )
 
     # A) Case where no storage allowed
-    if not backend_model.include_storage[node, tech]:
+    if not po.value(backend_model.include_storage[node, tech]):
         return (
             backend_model.resource_con[node, tech, timestep] * resource_eff
             == carrier_prod
@@ -363,21 +363,19 @@ def balance_supply_plus_constraint_rule(backend_model, carrier, node, tech, time
                 get_param(backend_model, "storage_initial", (node, tech))
                 * backend_model.storage_cap[node, tech]
             )
-        elif (
-            hasattr(backend_model, "storage_inter_cluster")
-            and backend_model.lookup_cluster_first_timestep[timestep]
+        elif hasattr(backend_model, "storage_inter_cluster") and po.value(
+            backend_model.lookup_cluster_first_timestep[timestep]
         ):
             storage_previous_step = 0
         else:
-            if (
-                hasattr(backend_model, "clusters")
-                and backend_model.lookup_cluster_first_timestep[timestep]
+            if hasattr(backend_model, "clusters") and po.value(
+                backend_model.lookup_cluster_first_timestep[timestep]
             ):
                 previous_step = backend_model.lookup_cluster_last_timestep[
                     timestep
                 ].value
             elif current_timestep == 0 and run_config["cyclic_storage"]:
-                previous_step = backend_model.timesteps[-1]
+                previous_step = backend_model.timesteps.at(-1)
             else:
                 previous_step = get_previous_timestep(backend_model.timesteps, timestep)
             storage_loss = get_param(backend_model, "storage_loss", (node, tech))
@@ -429,19 +427,17 @@ def balance_storage_constraint_rule(backend_model, carrier, node, tech, timestep
             get_param(backend_model, "storage_initial", (node, tech))
             * backend_model.storage_cap[node, tech]
         )
-    elif (
-        hasattr(backend_model, "storage_inter_cluster")
-        and backend_model.lookup_cluster_first_timestep[timestep]
+    elif hasattr(backend_model, "storage_inter_cluster") and po.value(
+        backend_model.lookup_cluster_first_timestep[timestep]
     ):
         storage_previous_step = 0
     else:
-        if (
-            hasattr(backend_model, "clusters")
-            and backend_model.lookup_cluster_first_timestep[timestep]
+        if hasattr(backend_model, "clusters") and po.value(
+            backend_model.lookup_cluster_first_timestep[timestep]
         ):
             previous_step = backend_model.lookup_cluster_last_timestep[timestep].value
         elif current_timestep == 0 and run_config["cyclic_storage"]:
-            previous_step = backend_model.timesteps[-1]
+            previous_step = backend_model.timesteps.at(-1)
         else:
             previous_step = get_previous_timestep(backend_model.timesteps, timestep)
         storage_loss = get_param(backend_model, "storage_loss", (node, tech))
@@ -540,11 +536,11 @@ def storage_initial_constraint_rule(backend_model, node, tech):
     storage_loss = get_param(backend_model, "storage_loss", (node, tech))
     if hasattr(backend_model, "storage_inter_cluster"):
         storage = backend_model.storage_inter_cluster
-        final_step = backend_model.datesteps[-1]
+        final_step = backend_model.datesteps.at(-1)
         time_resolution = 24
     else:
         storage = backend_model.storage
-        final_step = backend_model.timesteps[-1]
+        final_step = backend_model.timesteps.at(-1)
         time_resolution = backend_model.timestep_resolution[final_step]
 
     return (

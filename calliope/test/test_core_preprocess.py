@@ -113,9 +113,7 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_2")
 
         assert (
-            model._model_run.nodes[
-                "a"
-            ].techs.test_supply_gas.constraints.energy_cap_max
+            model._model_run.nodes["a"].techs.test_supply_gas.constraints.energy_cap_max
             == 20
         )
         assert (
@@ -630,7 +628,9 @@ class TestChecks:
             excinfo, "Unrecognised setting in run configuration: subset_time"
         )
 
-    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+    @pytest.mark.skip(
+        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+    )
     def test_warn_null_number_of_spores(self):
         """
         Check that spores number is greater than 0 if spores run mode is selected
@@ -644,7 +644,9 @@ class TestChecks:
             warn, "spores run mode is selected, but a number of 0 spores is requested"
         )
 
-    @pytest.mark.xfail(reason="SPORES mode will fail until the cost max group constraint can be reproduced")
+    @pytest.mark.skip(
+        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
+    )
     def test_non_string_score_cost_class(self):
         """
         Check that the score_cost_class for spores scoring is a string
@@ -1139,6 +1141,9 @@ class TestChecks:
                 override_dict=override(param), scenario="simple_storage,one_day"
             )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Updated from coordinate system:calliope.exceptions.ModelWarning"
+    )
     def test_incorrect_node_coordinates(self):
         """
         Either all or no nodes must have `coordinates` defined and, if all
@@ -1231,10 +1236,14 @@ class TestChecks:
         ]
 
         for link in removed_prod_links:
-            assert link not in set(i[1:3] for i in m._backend_model.carrier_prod._index)
+            assert link not in set(
+                i[1:3] for i in m._backend_model.carrier_prod.index_set()
+            )
 
         for link in removed_con_links:
-            assert link not in set(i[1:3] for i in m._backend_model.carrier_con._index)
+            assert link not in set(
+                i[1:3] for i in m._backend_model.carrier_con.index_set()
+            )
 
     def test_carrier_ratio_for_inexistent_carrier(self):
         """
@@ -1272,7 +1281,7 @@ class TestChecks:
                     heat: 1.0
             """
         )
-        with pytest.warns(None) as excinfo:
+        with pytest.warns() as excinfo:
             build_model(
                 override_dict=override, scenario="simple_conversion_plus,one_day"
             )
@@ -1291,7 +1300,7 @@ class TestChecks:
                 carrier_out.heat: file=carrier_ratio.csv
             """
         )
-        with pytest.warns(None) as excinfo:
+        with pytest.warns() as excinfo:
             build_model(
                 override_dict=override, scenario="simple_conversion_plus,one_day"
             )
