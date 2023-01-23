@@ -513,3 +513,32 @@ def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
     number.set_parse_action(EvalNumber)
 
     return number, generic_identifier
+
+
+def generate_equation_parser(set_iterators):
+
+    number, identifier = setup_base_parser_elements()
+
+    unindexed_param = unindexed_param_parser(identifier)
+
+    indexed_param = indexed_param_or_var_parser(identifier, set_iterators)
+
+    component = component_parser(identifier)
+
+    helper_function = helper_function_parser(
+        identifier,
+        allowed_parser_elements_in_args=[
+            indexed_param,
+            component,
+            unindexed_param,
+            number
+        ]
+    )
+
+    arithmetic = arithmetic_parser(
+        helper_function, indexed_param, component, unindexed_param, number
+    )
+
+    equation_comparison = equation_comparison_parser(arithmetic)
+
+    return equation_comparison

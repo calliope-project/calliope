@@ -114,6 +114,11 @@ def equation_comparison(arithmetic):
     return equation_parser.equation_comparison_parser(arithmetic)
 
 
+@pytest.fixture
+def generate_equation():
+    return equation_parser.generate_equation_parser(["foo", "bar"])
+
+
 class TestEquationParserElements:
     @pytest.mark.parametrize(
         ["string_val", "expected"],
@@ -672,8 +677,11 @@ class TestEquationParserComparison:
             ("(1 + 3) * 2 > 9 + -1", False),
         ],
     )
-    def test_evaluation(self, equation_string, expected, equation_comparison, eval_kwargs):
-        parsed_equation = equation_comparison.parse_string(
+    # "equation_comparison" and "generate_equation" should yield the same result
+    @pytest.mark.parametrize("func_string", ["equation_comparison", "generate_equation"])
+    def test_evaluation(self, equation_string, expected, func_string, eval_kwargs, request):
+        parser_func = request.getfixturevalue(func_string)
+        parsed_equation = parser_func.parse_string(
             equation_string, parse_all=True
         )
         assert parsed_equation[0].eval(**eval_kwargs) is expected
@@ -688,6 +696,9 @@ class TestEquationParserComparison:
             "foo.bar <= 2",  # unparsable string
         ],
     )
-    def test_fail_evaluation(self, equation_string, equation_comparison):
+    # "equation_comparison" and "generate_equation" should yield the same result
+    @pytest.mark.parametrize("func_string", ["equation_comparison", "generate_equation"])
+    def test_fail_evaluation(self, equation_string, func_string, request):
+        parser_func = request.getfixturevalue(func_string)
         with pytest.raises(pyparsing.ParseException):
-            equation_comparison.parse_string(equation_string, parse_all=True)
+            parser_func.parse_string(equation_string, parse_all=True)
