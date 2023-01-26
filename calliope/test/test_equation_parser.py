@@ -36,7 +36,7 @@ def unindexed_param(identifier):
 
 @pytest.fixture
 def indexed_param(identifier):
-    return equation_parser.indexed_param_or_var_parser(identifier, ["foo", "bar"])
+    return equation_parser.indexed_param_or_var_parser(identifier)
 
 
 @pytest.fixture
@@ -211,6 +211,7 @@ class TestEquationParserElements:
             "foo[foo, baz]",  # one set iterator is valid, but not the other
         ],
     )
+    @pytest.mark.xfail(reason="Moved check for missing iterator out of equation parsing")
     def test_fail_missing_iterator_indexed_param(self, indexed_param, string_val):
         with pytest.raises(KeyError):
             indexed_param.parse_string(string_val, parse_all=True)
@@ -220,6 +221,8 @@ class TestEquationParserElements:
         [
             "foo [bar]",  # space between param name and set iterator reference
             "foo[foo bar]",  # missing delimination
+            "foo[]",  # missing set iterator
+            "[bar]",  # missing set name
             "foo(bar)",  # incorrect brackets
         ],
     )

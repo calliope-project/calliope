@@ -215,9 +215,7 @@ def helper_function_parser(
     return helper_function
 
 
-def indexed_param_or_var_parser(
-    generic_identifier: pp.ParserElement, set_iterators: List[str]
-) -> pp.ParserElement:
+def indexed_param_or_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     """
     Parsing grammar to process strings representing indexed model parameters or variables,
     e.g. "resource[node, tech]".
@@ -233,8 +231,6 @@ def indexed_param_or_var_parser(
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
-        set_iterators (List[str]):
-            Allowed set iterators on which the parameters can be indexed, e.g. ["node", "tech"].
 
     Returns:
         pp.ParserElement:
@@ -242,21 +238,12 @@ def indexed_param_or_var_parser(
             of index items as separate entries on.
     """
 
-    def _missing_iterator(instring, loc, expr, err):
-        # TODO: pass this to the ParsedConstraint error catcher to handle
-        raise KeyError(err)
-
     lspar = pp.Suppress("[")
     rspar = pp.Suppress("]")
 
-    indexed_param_name = generic_identifier.set_results_name("param_or_var_name")
+    indexed_param_name = generic_identifier("param_or_var_name")
 
-    set_iterator = pp.one_of(set_iterators, as_keyword=True)
-    set_iterator.set_fail_action(_missing_iterator)
-
-    index_items = pp.Group(pp.delimitedList(set_iterator)).set_results_name(
-        "index_items"
-    )
+    index_items = pp.Group(pp.delimitedList(generic_identifier))("index_items")
     indexed_param_or_var = pp.Combine(indexed_param_name + lspar) + index_items + rspar
 
     indexed_param_or_var.set_parse_action(EvalIndexedParameterOrVariable)
