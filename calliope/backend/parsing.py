@@ -1,6 +1,6 @@
 from typing import Dict, KeysView, List, Optional
-
 from typing_extensions import NotRequired, TypedDict, Required
+from functools import partial
 
 import pyparsing as pp
 import xarray as xr
@@ -89,19 +89,16 @@ class ParsedConstraint:
         foreach_parser = self._foreach_parser()
 
         for string_ in self._unparsed["foreach"]:
+            error_handler = partial(self._add_error, string_, "foreach")
             parsed_ = self._parse_string(foreach_parser, string_, "foreach")
             if parsed_ is not None:
                 parsed_dict = parsed_.as_dict()
                 set_iterator = parsed_dict["set_iterator"]
                 set_name = parsed_dict["set_name"]
                 if set_iterator in self.sets.keys():
-                    self._errors.append(
-                        f"(foreach, {string_}): Found duplicate set iterator `{set_iterator}`."
-                    )
+                    error_handler(f"Found duplicate set iterator `{set_iterator}`.")
                 if set_name not in model_data_dims:
-                    self._errors.append(
-                        f"(foreach, {string_}): `{set_name}` not a valid model set name."
-                    )
+                    error_handler(f"`{set_name}` not a valid model set name.")
                 else:
                     self.sets[set_iterator] = parsed_dict["set_name"]
 
@@ -129,6 +126,19 @@ class ParsedConstraint:
         except pp.ParseException as excinfo:
             self._is_valid = False
             parsed = None
-            self._errors.append(f"({string_type}, {parse_string}): {excinfo}")
+            self._add_error(parse_string, string_type, excinfo)
 
         return parsed
+
+    def _add_error(self, instring: str, string_type: str, error_message: str) -> None:
+        """Add error message to the list self._errors following a predefined structure of
+        `(string_type, instring): error`, e.g. `(foreach, a in A): Found duplicate set iterator`.
+
+        Args:
+            instring (str): String being parsed where the error was caught.
+            string_type (str):
+                Location in the constraint definition where the string was defined,
+                e.g., "foreach", "equations", "components".
+            error_message (str): Description of error.
+        """
+        self._errors.append(f"({string_type}, {instring}): {error_message}")
